@@ -1,0 +1,11 @@
+{
+  "domain": "cable_modem_monitor",
+  "name": "Cable Modem Monitor",
+  "codeowners": ["@kwschulz"],
+  "config_flow": true,
+  "documentation": "https://github.com/kwschulz/cable_modem_monitor",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/kwschulz/cable_modem_monitor/issues",
+  "requirements": ["beautifulsoup4==4.12.2", "requests==2.31.0"],
+  "version": "1.0.0"
+}
