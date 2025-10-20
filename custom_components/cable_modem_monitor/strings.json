@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Enter your cable modem's IP address",
+        "data": {
+          "host": "IP Address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the modem. Please verify the IP address and ensure the modem's web interface is accessible.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This modem is already configured"
+    }
+  }
+}
