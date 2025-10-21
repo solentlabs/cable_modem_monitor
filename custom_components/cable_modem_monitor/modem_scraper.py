@@ -185,9 +185,10 @@ class ModemScraper:
                                     _LOGGER.debug("Skipping Total row to avoid double-counting errors")
                                     continue
 
+                                freq_mhz = self._extract_float(cols[4].text)  ***REMOVED*** Freq column in MHz
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
-                                    "frequency": self._extract_float(cols[4].text),  ***REMOVED*** Freq column
+                                    "frequency": freq_mhz * 1_000_000 if freq_mhz is not None else None,  ***REMOVED*** Convert MHz to Hz
                                     "power": self._extract_float(cols[5].text),      ***REMOVED*** Pwr column
                                     "snr": self._extract_float(cols[6].text),        ***REMOVED*** SNR column
                                     "corrected": self._extract_number(cols[7].text),
@@ -233,18 +234,19 @@ class ModemScraper:
                 headers = [td.text.strip() for td in header_row.find_all("td", class_="moto-param-header-s")]
 
                 ***REMOVED*** Look for upstream-specific headers
-                if headers and any(keyword in " ".join(headers).lower() for keyword in ["upstream", "transmit", "symbol rate"]):
+                if headers and any(keyword in " ".join(headers).lower() for keyword in ["upstream", "transmit", "symbol rate", "symb", "freq. (mhz)"]):
                     _LOGGER.debug(f"Found upstream channel table with headers: {headers}")
                     rows = table.find_all("tr")[1:]  ***REMOVED*** Skip header row
 
                     for row in rows:
                         cols = row.find_all("td")
-                        if len(cols) >= 6:  ***REMOVED*** Typical upstream: Channel, Lock, Type, ID, Freq, Power
+                        if len(cols) >= 7:  ***REMOVED*** Typical upstream: Channel, Lock, Type, ID, Symb Rate, Freq, Power
                             try:
+                                freq_mhz = self._extract_float(cols[5].text)  ***REMOVED*** Freq column in MHz
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
-                                    "frequency": self._extract_float(cols[4].text),  ***REMOVED*** Freq column
-                                    "power": self._extract_float(cols[5].text),      ***REMOVED*** Power column
+                                    "frequency": freq_mhz * 1_000_000 if freq_mhz is not None else None,  ***REMOVED*** Convert MHz to Hz
+                                    "power": self._extract_float(cols[6].text),      ***REMOVED*** Power column
                                 }
 
                                 ***REMOVED*** Skip channel if all critical values are None (invalid data)
