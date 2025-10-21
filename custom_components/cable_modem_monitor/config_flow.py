@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, DOMAIN
+from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS, DOMAIN
 from .modem_scraper import ModemScraper
 
 _LOGGER = logging.getLogger(__name__)
@@ -118,12 +118,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
         current_username = self.config_entry.data.get(CONF_USERNAME, "admin")
+        current_history_days = self.config_entry.data.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
 
         options_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=current_host): str,
                 vol.Optional(CONF_USERNAME, default=current_username): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
+                vol.Required(CONF_HISTORY_DAYS, default=current_history_days): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=365)
+                ),
             }
         )
 

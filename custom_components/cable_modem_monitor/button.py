@@ -25,8 +25,11 @@ async def async_setup_entry(
     """Set up Cable Modem Monitor button."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # Add restart button
-    async_add_entities([ModemRestartButton(coordinator, entry)])
+    # Add restart button and clear history button
+    async_add_entities([
+        ModemRestartButton(coordinator, entry),
+        ClearHistoryButton(coordinator, entry),
+    ])
 
 
 class ModemRestartButton(CoordinatorEntity, ButtonEntity):
@@ -69,3 +72,39 @@ class ModemRestartButton(CoordinatorEntity, ButtonEntity):
             _LOGGER.info("Modem restart initiated successfully")
         else:
             _LOGGER.error("Failed to restart modem")
+
+
+class ClearHistoryButton(CoordinatorEntity, ButtonEntity):
+    """Button to clear old historical data."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = "Clear History"
+        self._attr_unique_id = f"{entry.entry_id}_clear_history_button"
+        self._attr_icon = "mdi:delete-clock"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": f"Cable Modem {entry.data['host']}",
+            "manufacturer": "Cable Modem",
+            "model": "Monitor",
+        }
+
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        _LOGGER.info("Clear history button pressed")
+
+        # Get configured retention days from config entry
+        from .const import CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS
+        days_to_keep = self._entry.data.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
+
+        # Call the clear_history service
+        await self.hass.services.async_call(
+            DOMAIN,
+            "clear_history",
+            {"days_to_keep": days_to_keep},
+            blocking=True,
+        )
+
+        _LOGGER.info(f"History cleared, kept last {days_to_keep} days")

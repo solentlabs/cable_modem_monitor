@@ -54,6 +54,17 @@ This integration will be available through HACS for easier installation and upda
    - Search for "Cable Modem Monitor"
    - Enter the IP address
 
+### Configuration Options
+
+After installation, you can configure additional settings:
+
+1. Go to **Settings → Devices & Services**
+2. Find **Cable Modem Monitor** and click **Configure**
+3. Available options:
+   - **Modem IP Address**: Update if your modem's IP changes
+   - **Username/Password**: Update authentication credentials
+   - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
+
 ## Available Sensors
 
 ### Connection Status
@@ -82,6 +93,7 @@ This integration will be available through HACS for easier installation and upda
 
 ### Controls
 - `button.restart_modem`: Restart your cable modem remotely
+- `button.clear_history`: Clear old historical data (keeps last 30 days)
 
 ## Understanding the Values
 
@@ -112,6 +124,16 @@ Here's an example of a simple, clean dashboard showing all key modem health metr
 
 ![Cable Modem Health Dashboard](dashboard-screenshot.png)
 
+### Example Graphs
+
+Track your signal quality over time with history graphs:
+
+![Downstream Power Levels](downstream-power-levels.png)
+*Downstream power levels across all channels - ideal range is -7 to +7 dBmV*
+
+![Signal-to-Noise Ratio](signal-to-noise-ratio.png)
+*Signal-to-Noise Ratio for all channels - higher is better, aim for above 40 dB*
+
 Create a dashboard to monitor your modem health:
 
 ```yaml
@@ -128,6 +150,7 @@ cards:
       - sensor.total_corrected_errors
       - sensor.total_uncorrected_errors
       - button.restart_modem
+      - button.clear_history
 
   - type: history-graph
     title: Downstream Power Levels
@@ -286,6 +309,49 @@ If your modem isn't working:
 By default, the integration polls your modem every 5 minutes. This is defined in `const.py` as `DEFAULT_SCAN_INTERVAL = 300` (seconds).
 
 To change this, edit the value in `custom_components/cable_modem_monitor/const.py` and restart Home Assistant.
+
+## Managing Historical Data
+
+The integration stores all sensor data in Home Assistant's database for historical tracking and trend analysis. Over time, this data can grow large.
+
+### Clear History Button
+
+The easiest way to clean up old data is using the **Clear History** button:
+- Found in Settings → Devices & Services → Cable Modem Monitor device page
+- Uses the retention period configured in settings (default: 30 days)
+- To change retention period: Settings → Devices & Services → Cable Modem Monitor → Configure → History Retention
+- Keeps recent data for trend analysis
+
+### Clear History Service
+
+For more control, use the `cable_modem_monitor.clear_history` service:
+
+```yaml
+service: cable_modem_monitor.clear_history
+data:
+  days_to_keep: 60  # Keep 60 days of history
+```
+
+You can call this service:
+- Manually via Developer Tools → Services
+- In an automation to run periodically
+- In a script for custom maintenance workflows
+
+**Example Automation** - Clear history monthly:
+```yaml
+automation:
+  - alias: "Cable Modem - Monthly History Cleanup"
+    trigger:
+      - platform: time
+        at: "03:00:00"
+    condition:
+      - condition: template
+        value_template: "{{ now().day == 1 }}"  # First day of month
+    action:
+      - service: cable_modem_monitor.clear_history
+        data:
+          days_to_keep: 90  # Keep 3 months of data
+```
 
 ## Privacy & Security
 

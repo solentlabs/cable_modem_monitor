@@ -27,13 +27,27 @@
         "data": {
           "host": "Modem IP Address",
           "username": "Username",
-          "password": "Password (leave blank to keep existing)"
+          "password": "Password (leave blank to keep existing)",
+          "history_days": "History Retention (days)"
+        },
+        "data_description": {
+          "history_days": "Number of days to keep when clearing history (1-365)"
         }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect with the new settings. Please verify the information.",
       "unknown": "An unexpected error occurred"
+    }
+  },
+  "entity": {
+    "button": {
+      "restart_modem": {
+        "name": "Restart Modem"
+      },
+      "clear_history": {
+        "name": "Clear History"
+      }
     }
   },
   "services": {
