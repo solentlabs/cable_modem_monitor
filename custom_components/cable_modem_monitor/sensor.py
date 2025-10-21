@@ -34,6 +34,14 @@ async def async_setup_entry(
     entities.append(ModemTotalCorrectedSensor(coordinator, entry))
     entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
 
+    ***REMOVED*** Add channel count sensors
+    entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
+    entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+
+    ***REMOVED*** Add software version and uptime sensors
+    entities.append(ModemSoftwareVersionSensor(coordinator, entry))
+    entities.append(ModemSystemUptimeSensor(coordinator, entry))
+
     ***REMOVED*** Add per-channel downstream sensors
     if coordinator.data.get("downstream"):
         for idx, channel in enumerate(coordinator.data["downstream"]):
@@ -300,3 +308,69 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
             if ch.get("channel") == self._channel:
                 return ch.get("frequency")
         return None
+
+
+class ModemDownstreamChannelCountSensor(ModemSensorBase):
+    """Sensor for downstream channel count."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Downstream Channel Count"
+        self._attr_unique_id = f"{entry.entry_id}_downstream_channel_count"
+        self._attr_icon = "mdi:numeric"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("downstream_channel_count", 0)
+
+
+class ModemUpstreamChannelCountSensor(ModemSensorBase):
+    """Sensor for upstream channel count."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Upstream Channel Count"
+        self._attr_unique_id = f"{entry.entry_id}_upstream_channel_count"
+        self._attr_icon = "mdi:numeric"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("upstream_channel_count", 0)
+
+
+class ModemSoftwareVersionSensor(ModemSensorBase):
+    """Sensor for modem software version."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Software Version"
+        self._attr_unique_id = f"{entry.entry_id}_software_version"
+        self._attr_icon = "mdi:information-outline"
+
+    @property
+    def native_value(self) -> str:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("software_version", "Unknown")
+
+
+class ModemSystemUptimeSensor(ModemSensorBase):
+    """Sensor for modem system uptime."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "System Uptime"
+        self._attr_unique_id = f"{entry.entry_id}_system_uptime"
+        self._attr_icon = "mdi:clock-outline"
+
+    @property
+    def native_value(self) -> str:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("system_uptime", "Unknown")

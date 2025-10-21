@@ -13,6 +13,8 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
 - **Connection Status**: Monitor modem online/offline state
+- **System Information**: Software version, uptime, and channel counts
+- **Modem Control**: Restart your modem directly from Home Assistant
 - **Historical Data**: All metrics are stored for trend analysis
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
 
@@ -55,6 +57,12 @@ This integration will be available through HACS for easier installation and upda
 ***REMOVED******REMOVED******REMOVED*** Connection Status
 - `sensor.modem_connection_status`: Overall connection state (online/offline)
 
+***REMOVED******REMOVED******REMOVED*** System Information
+- `sensor.software_version`: Modem firmware/software version
+- `sensor.system_uptime`: How long the modem has been running
+- `sensor.downstream_channel_count`: Number of active downstream channels
+- `sensor.upstream_channel_count`: Number of active upstream channels
+
 ***REMOVED******REMOVED******REMOVED*** Summary Sensors
 - `sensor.total_corrected_errors`: Total corrected errors across all downstream channels
 - `sensor.total_uncorrected_errors`: Total uncorrected errors across all downstream channels
@@ -69,6 +77,9 @@ This integration will be available through HACS for easier installation and upda
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Upstream Sensors (for each channel)
 - `sensor.upstream_ch_X_power`: Transmit power level in dBmV
 - `sensor.upstream_ch_X_frequency`: Channel frequency in Hz
+
+***REMOVED******REMOVED******REMOVED*** Controls
+- `button.restart_modem`: Restart your cable modem remotely
 
 ***REMOVED******REMOVED*** Understanding the Values
 
@@ -104,8 +115,13 @@ cards:
     title: Cable Modem Status
     entities:
       - sensor.modem_connection_status
+      - sensor.software_version
+      - sensor.system_uptime
+      - sensor.downstream_channel_count
+      - sensor.upstream_channel_count
       - sensor.total_corrected_errors
       - sensor.total_uncorrected_errors
+      - button.restart_modem
 
   - type: history-graph
     title: Downstream Power Levels
@@ -124,7 +140,7 @@ cards:
       - sensor.downstream_ch_3_snr
 
   - type: history-graph
-    title: Error Rates
+    title: Error Rates (Trend Analysis)
     hours_to_show: 24
     entities:
       - sensor.total_corrected_errors
@@ -163,6 +179,45 @@ automation:
         data:
           title: "Cable Modem Alert"
           message: "Low signal quality detected on downstream channel 1."
+```
+
+***REMOVED******REMOVED******REMOVED*** Alert on Channel Count Changes
+
+```yaml
+automation:
+  - alias: "Cable Modem - Channel Count Changed"
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.downstream_channel_count
+          - sensor.upstream_channel_count
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != 'unavailable' }}"
+    action:
+      - service: notify.notify
+        data:
+          title: "Cable Modem Alert"
+          message: "Channel count changed: {{ trigger.to_state.name }} is now {{ trigger.to_state.state }}"
+```
+
+***REMOVED******REMOVED******REMOVED*** Auto-Restart on Network Issues
+
+```yaml
+automation:
+  - alias: "Cable Modem - Auto Restart on High Errors"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.total_uncorrected_errors
+        above: 1000
+    action:
+      - service: notify.notify
+        data:
+          title: "Cable Modem Alert"
+          message: "High error count detected. Restarting modem..."
+      - service: button.press
+        target:
+          entity_id: button.restart_modem
 ```
 
 ***REMOVED******REMOVED*** Troubleshooting

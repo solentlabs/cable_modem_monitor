@@ -65,7 +65,6 @@ class ModemScraper:
             ***REMOVED*** MotoConnection.asp is the primary page for Motorola modems (MB series)
             urls_to_try = [
                 f"{self.base_url}/MotoConnection.asp",
-                f"{self.base_url}/MotoHome.asp",
                 f"{self.base_url}/cmSignalData.htm",
                 f"{self.base_url}/cmSignal.html",
                 f"{self.base_url}/",
@@ -107,12 +106,40 @@ class ModemScraper:
                 ch.get("uncorrected", 0) for ch in downstream_channels
             )
 
+            ***REMOVED*** Fetch additional data from MotoHome.asp (version, channel counts)
+            software_version = "Unknown"
+            system_uptime = "Unknown"
+            upstream_channel_count = len(upstream_channels)  ***REMOVED*** Default to parsed count
+            downstream_channel_count = len(downstream_channels)  ***REMOVED*** Default to parsed count
+
+            ***REMOVED*** Get uptime from main connection page (soup already has MotoConnection.asp)
+            system_uptime = self._parse_system_uptime(soup)
+
+            try:
+                _LOGGER.info("Fetching additional data from MotoHome.asp")
+                home_response = self.session.get(f"{self.base_url}/MotoHome.asp", timeout=10)
+                if home_response.status_code == 200:
+                    home_soup = BeautifulSoup(home_response.text, "html.parser")
+                    software_version = self._parse_software_version(home_soup)
+                    ***REMOVED*** Parse channel counts from MotoHome page
+                    reported_counts = self._parse_channel_counts(home_soup)
+                    if reported_counts.get("downstream") is not None:
+                        downstream_channel_count = reported_counts["downstream"]
+                    if reported_counts.get("upstream") is not None:
+                        upstream_channel_count = reported_counts["upstream"]
+            except Exception as e:
+                _LOGGER.warning(f"Could not fetch MotoHome.asp data: {e}")
+
             return {
                 "connection_status": "online" if downstream_channels else "offline",
                 "downstream": downstream_channels,
                 "upstream": upstream_channels,
                 "total_corrected": total_corrected,
                 "total_uncorrected": total_uncorrected,
+                "downstream_channel_count": downstream_channel_count,
+                "upstream_channel_count": upstream_channel_count,
+                "software_version": software_version,
+                "system_uptime": system_uptime,
             }
 
         except Exception as e:
@@ -227,3 +254,129 @@ class ModemScraper:
             return float(cleaned) if cleaned else 0.0
         except ValueError:
             return 0.0
+
+    def _parse_software_version(self, soup: BeautifulSoup) -> str:
+        """Parse software version from modem page."""
+        try:
+            ***REMOVED*** Look for "Software Version" label in cells with class="moto-param-name"
+            ***REMOVED*** The value will be in the next cell with class="moto-param-value"
+            rows = soup.find_all("tr")
+
+            for row in rows:
+                ***REMOVED*** Find cells with the specific class for parameter names
+                name_cell = row.find("td", class_="moto-param-name")
+                if name_cell and "Software Version" in name_cell.text:
+                    ***REMOVED*** Get the corresponding value cell
+                    value_cell = row.find("td", class_="moto-param-value")
+                    if value_cell:
+                        version = value_cell.text.strip()
+                        if version and version != "N/A":
+                            _LOGGER.debug(f"Found software version: {version}")
+                            return version
+
+            _LOGGER.debug("Software version not found")
+            return "Unknown"
+
+        except Exception as e:
+            _LOGGER.error(f"Error parsing software version: {e}")
+            return "Unknown"
+
+    def _parse_system_uptime(self, soup: BeautifulSoup) -> str:
+        """Parse system uptime from MotoConnection.asp page."""
+        try:
+            ***REMOVED*** Look for "System Up Time" label, value is in cell with class='moto-content-value'
+            rows = soup.find_all("tr")
+
+            for row in rows:
+                cells = row.find_all("td")
+                ***REMOVED*** Look for a cell containing "System Up Time" text
+                for i, cell in enumerate(cells):
+                    if "System Up Time" in cell.text:
+                        ***REMOVED*** The value should be in the next cell with class moto-content-value
+                        value_cell = row.find("td", class_="moto-content-value")
+                        if value_cell:
+                            uptime = value_cell.text.strip()
+                            if uptime and uptime != "N/A":
+                                _LOGGER.debug(f"Found system uptime: {uptime}")
+                                return uptime
+
+            _LOGGER.debug("System uptime not found")
+            return "Unknown"
+
+        except Exception as e:
+            _LOGGER.error(f"Error parsing system uptime: {e}")
+            return "Unknown"
+
+    def _parse_channel_counts(self, soup: BeautifulSoup) -> dict:
+        """Parse channel counts from MotoHome.asp page."""
+        result = {"downstream": None, "upstream": None}
+
+        try:
+            ***REMOVED*** Look for channel count rows on MotoHome.asp
+            ***REMOVED*** Structure: <td class="moto-param-name">Downstream</td> followed by <td class="moto-param-value">24</td>
+            rows = soup.find_all("tr")
+
+            for row in rows:
+                cells = row.find_all("td", class_="moto-param-name")
+                if cells:
+                    label = cells[0].text.strip().lower()
+                    ***REMOVED*** Look for "Downstream" or "Upstream" labels (indented with nbsp)
+                    if "downstream" in label:
+                        ***REMOVED*** Get the value from the next cell
+                        value_cells = row.find_all("td", class_="moto-param-value")
+                        if value_cells and value_cells[0].text.strip():
+                            try:
+                                result["downstream"] = int(value_cells[0].text.strip())
+                                _LOGGER.debug(f"Found downstream channel count: {result['downstream']}")
+                            except ValueError:
+                                pass
+                    elif "upstream" in label:
+                        value_cells = row.find_all("td", class_="moto-param-value")
+                        if value_cells and value_cells[0].text.strip():
+                            try:
+                                result["upstream"] = int(value_cells[0].text.strip())
+                                _LOGGER.debug(f"Found upstream channel count: {result['upstream']}")
+                            except ValueError:
+                                pass
+
+        except Exception as e:
+            _LOGGER.error(f"Error parsing channel counts: {e}")
+
+        return result
+
+    def restart_modem(self) -> bool:
+        """Restart the cable modem."""
+        try:
+            ***REMOVED*** Login first if credentials are provided
+            if not self._login():
+                _LOGGER.error("Failed to log in to modem for restart")
+                return False
+
+            ***REMOVED*** Common Motorola modem restart endpoints
+            restart_urls = [
+                f"{self.base_url}/goform/Reboot",
+                f"{self.base_url}/goform/restart",
+                f"{self.base_url}/restart.cgi",
+            ]
+
+            for url in restart_urls:
+                try:
+                    _LOGGER.info(f"Attempting to restart modem via {url}")
+                    response = self.session.post(url, timeout=10)
+
+                    if response.status_code in [200, 302]:
+                        _LOGGER.info(f"Modem restart initiated successfully via {url}")
+                        return True
+                    else:
+                        _LOGGER.warning(f"Restart attempt returned status {response.status_code} from {url}")
+
+                except requests.RequestException as e:
+                    _LOGGER.debug(f"Failed restart attempt via {url}: {e}")
+                    continue
+
+            _LOGGER.error("All modem restart attempts failed")
+            return False
+
+        except Exception as e:
+            _LOGGER.error(f"Error restarting modem: {e}")
+            return False
