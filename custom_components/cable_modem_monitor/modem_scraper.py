@@ -174,6 +174,12 @@ class ModemScraper:
                         cols = row.find_all("td")
                         if len(cols) >= 9:  ***REMOVED*** Channel, Lock, Modulation, ID, Freq, Pwr, SNR, Corrected, Uncorrected
                             try:
+                                ***REMOVED*** Skip the "Total" row at the bottom of the table
+                                channel_text = cols[0].text.strip()
+                                if channel_text.lower() == "total":
+                                    _LOGGER.debug("Skipping Total row to avoid double-counting errors")
+                                    continue
+
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
                                     "frequency": self._extract_float(cols[4].text),  ***REMOVED*** Freq column

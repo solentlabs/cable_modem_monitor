@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [1.2.1] - 2025-10-21
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Error totals double-counting** - Fixed bug where Total row from modem table was being counted as a channel
+- Error sensors now show correct values (previously were exactly double the actual errors)
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- Added check to skip "Total" row in downstream channel table parsing
+- Prevents Total row (4489/8821) from being added to per-channel sums
+
 ***REMOVED******REMOVED*** [1.2.0] - 2025-10-21
 
 ***REMOVED******REMOVED******REMOVED*** Fixed
