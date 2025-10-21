@@ -98,12 +98,17 @@ class ModemScraper:
             # Parse upstream channels
             upstream_channels = self._parse_upstream_channels(soup)
 
-            # Calculate totals
+            # Validate that we got some valid data
+            if not downstream_channels and not upstream_channels:
+                _LOGGER.error("No valid channel data parsed from modem - skipping update")
+                raise ValueError("No valid channel data available")
+
+            # Calculate totals (only include non-None values)
             total_corrected = sum(
-                ch.get("corrected", 0) for ch in downstream_channels
+                ch.get("corrected") or 0 for ch in downstream_channels if ch.get("corrected") is not None
             )
             total_uncorrected = sum(
-                ch.get("uncorrected", 0) for ch in downstream_channels
+                ch.get("uncorrected") or 0 for ch in downstream_channels if ch.get("uncorrected") is not None
             )
 
             # Fetch additional data from MotoHome.asp (version, channel counts)
@@ -188,6 +193,17 @@ class ModemScraper:
                                     "corrected": self._extract_number(cols[7].text),
                                     "uncorrected": self._extract_number(cols[8].text),
                                 }
+
+                                # Skip channel if all critical values are None (invalid data)
+                                if all(v is None for k, v in channel_data.items() if k != "channel"):
+                                    _LOGGER.warning(f"Skipping downstream channel with all null values: {cols[0].text}")
+                                    continue
+
+                                # Skip if channel number itself is None
+                                if channel_data["channel"] is None:
+                                    _LOGGER.warning("Skipping downstream channel with invalid channel number")
+                                    continue
+
                                 channels.append(channel_data)
                                 _LOGGER.debug(f"Parsed downstream channel {channel_data['channel']}: {channel_data}")
                             except Exception as e:
@@ -230,6 +246,17 @@ class ModemScraper:
                                     "frequency": self._extract_float(cols[4].text),  # Freq column
                                     "power": self._extract_float(cols[5].text),      # Power column
                                 }
+
+                                # Skip channel if all critical values are None (invalid data)
+                                if all(v is None for k, v in channel_data.items() if k != "channel"):
+                                    _LOGGER.warning(f"Skipping upstream channel with all null values: {cols[0].text}")
+                                    continue
+
+                                # Skip if channel number itself is None
+                                if channel_data["channel"] is None:
+                                    _LOGGER.warning("Skipping upstream channel with invalid channel number")
+                                    continue
+
                                 channels.append(channel_data)
                                 _LOGGER.debug(f"Parsed upstream channel {channel_data['channel']}: {channel_data}")
                             except Exception as e:
@@ -243,23 +270,23 @@ class ModemScraper:
 
         return channels
 
-    def _extract_number(self, text: str) -> int:
+    def _extract_number(self, text: str) -> int | None:
         """Extract integer from text."""
         try:
             # Remove common units and extract number
             cleaned = "".join(c for c in text if c.isdigit() or c == "-")
-            return int(cleaned) if cleaned else 0
+            return int(cleaned) if cleaned else None
         except ValueError:
-            return 0
+            return None
 
-    def _extract_float(self, text: str) -> float:
+    def _extract_float(self, text: str) -> float | None:
         """Extract float from text."""
         try:
             # Remove units (dB, dBmV, MHz, etc.) and extract number
             cleaned = "".join(c for c in text if c.isdigit() or c in ".-")
-            return float(cleaned) if cleaned else 0.0
+            return float(cleaned) if cleaned else None
         except ValueError:
-            return 0.0
+            return None
 
     def _parse_software_version(self, soup: BeautifulSoup) -> str:
         """Parse software version from modem page."""

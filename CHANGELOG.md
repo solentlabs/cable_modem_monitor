@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-10-21
+
+### Fixed
+- **Zero values in history** - Integration now properly validates and skips updates when modem returns invalid/empty data
+- Prevents recording of 0 values during modem connection issues or reboots
+- Improved data extraction methods to return `None` instead of `0` for invalid data
+- Added validation to skip channel data when all values are null/invalid
+
+### Added
+- **Diagnostics support** - Integration now provides downloadable diagnostics via Home Assistant UI
+- Diagnostics include channel data, error counts, connection status, and last error information
+- Documentation for cleaning up existing zero values from history (`cleanup_zero_values.md`)
+
+### Technical
+- `_extract_number()` and `_extract_float()` now return `None` instead of `0` when parsing fails
+- Skip channel parsing when all critical values are `None`
+- Skip entire update if no valid downstream or upstream channels are parsed
+- Added comprehensive diagnostics platform for troubleshooting
+- Improved error calculations to handle `None` values properly
+
 ## [1.2.1] - 2025-10-21
 
 ### Fixed
@@ -105,6 +125,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modem-specific HTML parsing may need adjustment for some models
 - Limited to HTTP (no HTTPS support for modem connections)
 
+[1.2.2]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.2
+[1.2.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.1
 [1.2.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.0
 [1.1.3]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.3
 [1.1.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.1
