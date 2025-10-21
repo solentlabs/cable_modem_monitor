@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [1.4.0] - 2025-10-21
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Clear History Button** - New UI button entity to clean up old historical data
+  - Appears alongside Restart Modem button in device page
+  - Uses configurable retention period from settings
+  - One-click cleanup without using Developer Tools
+- **Configurable History Retention** - New configuration option for history management
+  - Set retention period: 1-365 days (default: 30 days)
+  - Configure via Settings → Devices & Services → Cable Modem Monitor → Configure
+  - Button automatically uses configured retention value
+- **Example Graphs in Documentation** - Added two new screenshots showing real signal data
+  - Downstream Power Levels graph with all channels
+  - Signal-to-Noise Ratio graph with all channels
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Enhanced Documentation** - Comprehensive updates to README.md
+  - New "Configuration Options" section explaining all settings
+  - Expanded "Managing Historical Data" section
+  - Updated dashboard YAML examples to include Clear History button
+  - Added visual examples of historical graphs
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- Added `CONF_HISTORY_DAYS` and `DEFAULT_HISTORY_DAYS` constants to const.py
+- Extended config_flow.py options flow with history_days field (1-365 validation)
+- Added `ClearHistoryButton` class to button.py
+- Updated translations/en.json with button and configuration translations
+- Button reads retention setting from config entry data
+
 ***REMOVED******REMOVED*** [1.3.0] - 2025-10-21
 
 ***REMOVED******REMOVED******REMOVED*** Added
