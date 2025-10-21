@@ -242,6 +242,12 @@ class ModemScraper:
                         cols = row.find_all("td")
                         if len(cols) >= 7:  ***REMOVED*** Typical upstream: Channel, Lock, Type, ID, Symb Rate, Freq, Power
                             try:
+                                ***REMOVED*** Skip "Not Locked" channels
+                                lock_status = cols[1].text.strip() if len(cols) > 1 else ""
+                                if "not locked" in lock_status.lower():
+                                    _LOGGER.debug(f"Skipping not locked upstream channel: {cols[0].text}")
+                                    continue
+
                                 freq_mhz = self._extract_float(cols[5].text)  ***REMOVED*** Freq column in MHz
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
@@ -249,14 +255,19 @@ class ModemScraper:
                                     "power": self._extract_float(cols[6].text),      ***REMOVED*** Power column
                                 }
 
-                                ***REMOVED*** Skip channel if all critical values are None (invalid data)
-                                if all(v is None for k, v in channel_data.items() if k != "channel"):
-                                    _LOGGER.warning(f"Skipping upstream channel with all null values: {cols[0].text}")
+                                ***REMOVED*** Skip channel if all critical values are None or zero (invalid data)
+                                if all(v is None or v == 0 for k, v in channel_data.items() if k != "channel"):
+                                    _LOGGER.warning(f"Skipping upstream channel with all null/zero values: {cols[0].text}")
                                     continue
 
                                 ***REMOVED*** Skip if channel number itself is None
                                 if channel_data["channel"] is None:
                                     _LOGGER.warning("Skipping upstream channel with invalid channel number")
+                                    continue
+
+                                ***REMOVED*** Skip if frequency is 0 (unlocked channel)
+                                if channel_data["frequency"] == 0 or channel_data["frequency"] is None:
+                                    _LOGGER.debug(f"Skipping upstream channel {channel_data['channel']} with zero frequency")
                                     continue
 
                                 channels.append(channel_data)
