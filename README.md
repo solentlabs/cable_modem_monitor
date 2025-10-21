@@ -31,19 +31,31 @@ This integration is designed for cable modems with web-based status pages. It ha
 
 ***REMOVED******REMOVED*** Installation
 
-***REMOVED******REMOVED******REMOVED*** Method 1: Manual Installation
+***REMOVED******REMOVED******REMOVED*** Method 1: HACS (Recommended - Coming Soon)
 
-1. Download or clone this repository
-2. Copy the `custom_components/cable_modem_monitor` folder to your Home Assistant's `config/custom_components/` directory
-3. Restart Home Assistant
-4. Go to Settings → Devices & Services
-5. Click "+ Add Integration"
-6. Search for "Cable Modem Monitor"
-7. Enter your modem's IP address (typically `192.168.100.1`)
+Once approved for HACS default repository:
 
-***REMOVED******REMOVED******REMOVED*** Method 2: HACS (Coming Soon)
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the three dots (⋮) menu → "Custom repositories"
+4. Add this repository URL: `https://github.com/kwschulz/cable_modem_monitor`
+5. Category: Integration
+6. Click "Add"
+7. Search for "Cable Modem Monitor" in HACS
+8. Click "Download"
+9. Restart Home Assistant
+10. Add the integration: Settings → Devices & Services → Add Integration → Cable Modem Monitor
 
-This integration will be available through HACS for easier installation and updates.
+***REMOVED******REMOVED******REMOVED*** Method 2: Manual Installation
+
+1. Download the [latest release](https://github.com/kwschulz/cable_modem_monitor/releases/latest)
+2. Extract the zip file
+3. Copy the `custom_components/cable_modem_monitor` folder to your Home Assistant's `config/custom_components/` directory
+4. Restart Home Assistant
+5. Go to Settings → Devices & Services
+6. Click "+ Add Integration"
+7. Search for "Cable Modem Monitor"
+8. Enter your modem's IP address (typically `192.168.100.1`)
 
 ***REMOVED******REMOVED*** Configuration
 
