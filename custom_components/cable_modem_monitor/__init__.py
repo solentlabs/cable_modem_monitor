@@ -1,13 +1,16 @@
 """The Cable Modem Monitor integration."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 import logging
+import sqlite3
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 
 from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .modem_scraper import ModemScraper
@@ -15,6 +18,13 @@ from .modem_scraper import ModemScraper
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
+
+SERVICE_CLEAR_HISTORY = "clear_history"
+SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
+    {
+        vol.Required("days_to_keep"): cv.positive_int,
+    }
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -50,6 +60,123 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    ***REMOVED*** Register services
+    async def handle_clear_history(call: ServiceCall) -> None:
+        """Handle the clear_history service call."""
+        days_to_keep = call.data.get("days_to_keep", 30)
+
+        _LOGGER.info(f"Clearing cable modem history older than {days_to_keep} days")
+
+        def clear_db_history():
+            """Clear history from database (runs in executor)."""
+            try:
+                ***REMOVED*** Calculate cutoff timestamp
+                cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+                cutoff_ts = cutoff_date.timestamp()
+
+                ***REMOVED*** Connect to Home Assistant database
+                db_path = hass.config.path("home-assistant_v2.db")
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+
+                ***REMOVED*** Find all cable modem sensor entity IDs
+                cursor.execute("""
+                    SELECT metadata_id, entity_id FROM states_meta
+                    WHERE entity_id LIKE 'sensor.downstream_ch_%'
+                       OR entity_id LIKE 'sensor.upstream_ch_%'
+                       OR entity_id LIKE 'sensor.total_%'
+                       OR entity_id IN (
+                           'sensor.downstream_channel_count',
+                           'sensor.upstream_channel_count',
+                           'sensor.modem_connection_status',
+                           'sensor.software_version',
+                           'sensor.system_uptime'
+                       )
+                """)
+
+                metadata_ids = [row[0] for row in cursor.fetchall()]
+
+                if not metadata_ids:
+                    _LOGGER.warning("No cable modem sensors found in database")
+                    conn.close()
+                    return 0
+
+                ***REMOVED*** Delete old states
+                placeholders = ",".join("?" * len(metadata_ids))
+                cursor.execute(
+                    f"DELETE FROM states WHERE metadata_id IN ({placeholders}) AND last_updated_ts < ?",
+                    (*metadata_ids, cutoff_ts)
+                )
+                states_deleted = cursor.rowcount
+
+                ***REMOVED*** Find statistics metadata IDs
+                cursor.execute("""
+                    SELECT id FROM statistics_meta
+                    WHERE statistic_id LIKE 'sensor.downstream_ch_%'
+                       OR statistic_id LIKE 'sensor.upstream_ch_%'
+                       OR statistic_id LIKE 'sensor.total_%'
+                       OR statistic_id IN (
+                           'sensor.downstream_channel_count',
+                           'sensor.upstream_channel_count',
+                           'sensor.modem_connection_status',
+                           'sensor.software_version',
+                           'sensor.system_uptime'
+                       )
+                """)
+
+                stats_metadata_ids = [row[0] for row in cursor.fetchall()]
+
+                ***REMOVED*** Delete old statistics
+                stats_deleted = 0
+                if stats_metadata_ids:
+                    placeholders = ",".join("?" * len(stats_metadata_ids))
+                    cursor.execute(
+                        f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) AND start_ts < ?",
+                        (*stats_metadata_ids, cutoff_ts)
+                    )
+                    stats_deleted = cursor.rowcount
+
+                    cursor.execute(
+                        f"DELETE FROM statistics_short_term WHERE metadata_id IN ({placeholders}) AND start_ts < ?",
+                        (*stats_metadata_ids, cutoff_ts)
+                    )
+                    stats_deleted += cursor.rowcount
+
+                conn.commit()
+
+                ***REMOVED*** Vacuum to reclaim space
+                cursor.execute("VACUUM")
+
+                conn.close()
+
+                _LOGGER.info(
+                    f"Cleared {states_deleted} state records and {stats_deleted} statistics records "
+                    f"older than {days_to_keep} days"
+                )
+
+                return states_deleted + stats_deleted
+
+            except Exception as e:
+                _LOGGER.error(f"Error clearing history: {e}")
+                return 0
+
+        ***REMOVED*** Run in executor since it's blocking I/O
+        deleted = await hass.async_add_executor_job(clear_db_history)
+
+        if deleted > 0:
+            _LOGGER.info(f"Successfully cleared {deleted} historical records")
+        else:
+            _LOGGER.warning("No records were deleted")
+
+    ***REMOVED*** Register the service only once (check if it's already registered)
+    if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_HISTORY):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CLEAR_HISTORY,
+            handle_clear_history,
+            schema=SERVICE_CLEAR_HISTORY_SCHEMA,
+        )
+
     return True
 
 
@@ -57,6 +184,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
+
+        ***REMOVED*** Unregister service if this is the last entry
+        if not hass.data[DOMAIN]:
+            hass.services.async_remove(DOMAIN, SERVICE_CLEAR_HISTORY)
 
     return unload_ok
 

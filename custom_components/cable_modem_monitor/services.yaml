@@ -1,0 +1,14 @@
+clear_history:
+  name: Clear History
+  description: Clear historical data for cable modem sensors older than a specified date
+  fields:
+    days_to_keep:
+      name: Days to Keep
+      description: Number of days of history to keep (older data will be deleted)
+      required: true
+      example: 30
+      selector:
+        number:
+          min: 1
+          max: 365
+          unit_of_measurement: days

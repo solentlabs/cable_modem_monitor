@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor Setup",
+        "description": "Enter the connection details for your cable modem",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username (optional)",
+          "password": "Password (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the modem. Please check the IP address and credentials.",
+      "unknown": "An unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This modem is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "connection_settings": {
+        "title": "Cable Modem Settings",
+        "description": "Update connection settings for your cable modem.\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave password blank to keep the existing password.",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password (leave blank to keep existing)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect with the new settings. Please verify the information.",
+      "unknown": "An unexpected error occurred"
+    }
+  },
+  "services": {
+    "clear_history": {
+      "name": "Clear History",
+      "description": "Clear historical data for cable modem sensors older than a specified number of days",
+      "fields": {
+        "days_to_keep": {
+          "name": "Days to Keep",
+          "description": "Number of days of history to keep (older data will be deleted)"
+        }
+      }
+    }
+  }
+}

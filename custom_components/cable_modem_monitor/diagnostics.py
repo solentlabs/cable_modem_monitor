@@ -27,9 +27,6 @@ async def async_get_config_entry_diagnostics(
         },
         "coordinator": {
             "last_update_success": coordinator.last_update_success,
-            "last_update_time": coordinator.last_update_success_time.isoformat()
-            if coordinator.last_update_success_time
-            else None,
             "update_interval": str(coordinator.update_interval),
         },
         "modem_data": {

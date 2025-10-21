@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [1.3.0] - 2025-10-21
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Options Flow** - Users can now reconfigure the integration without reinstalling
+  - Update modem IP address through UI
+  - Change username/password through UI
+  - Leave password blank to keep existing password
+- **Clear History Service** - New service to clean up old historical data
+  - `cable_modem_monitor.clear_history` service
+  - Specify days to keep (deletes older data)
+  - Cleans both states and statistics tables
+  - Automatically vacuums database to reclaim space
+- **Translation Support** - Added English translations for config flow and services
+- **Service Definitions** - Added services.yaml for proper service documentation
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Connection Status Improvements** - Now distinguishes between network issues and modem issues
+  - `unreachable`: Cannot connect to modem (network/auth problem - Home Assistant issue)
+  - `offline`: Modem responds but no channels detected (modem is actually down)
+- **Sensor Availability** - All measurement sensors now become "unavailable" during connection failures
+  - Charts no longer show drops to 0 during outages
+  - Historical data gaps instead of misleading zero values
+  - Connection status sensor remains available to show offline/unreachable state
+- **Version Bump** - Updated to v1.3.0
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Diagnostics Download** - Fixed AttributeError when downloading diagnostics
+  - Removed invalid `last_update_success_time` attribute reference
+  - Diagnostics now successfully export all modem data
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- Added `OptionsFlowHandler` class to config_flow.py for reconfiguration support
+- Added clear_history service handler in __init__.py with SQLite database operations
+- Modified sensor base class to control availability based on connection status
+- Updated modem_scraper.py to return "unreachable" instead of "offline" for connection failures
+- Added translations/en.json for internationalization support
+
 ***REMOVED******REMOVED*** [1.2.2] - 2025-10-21
 
 ***REMOVED******REMOVED******REMOVED*** Fixed
@@ -125,6 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modem-specific HTML parsing may need adjustment for some models
 - Limited to HTTP (no HTTPS support for modem connections)
 
+[1.3.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.3.0
 [1.2.2]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.2
 [1.2.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.1
 [1.2.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.0

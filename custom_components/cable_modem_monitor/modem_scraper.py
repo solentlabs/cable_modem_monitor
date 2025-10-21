@@ -59,7 +59,7 @@ class ModemScraper:
             ***REMOVED*** Login first if credentials are provided
             if not self._login():
                 _LOGGER.error("Failed to log in to modem")
-                return {"connection_status": "offline", "downstream": [], "upstream": []}
+                return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
             ***REMOVED*** Try common Motorola modem signal data URLs
             ***REMOVED*** MotoConnection.asp is the primary page for Motorola modems (MB series)
@@ -88,7 +88,7 @@ class ModemScraper:
 
             if not html:
                 _LOGGER.error("Could not fetch data from any known modem URL")
-                return {"connection_status": "offline", "downstream": [], "upstream": []}
+                return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
             soup = BeautifulSoup(html, "html.parser")
 
@@ -149,7 +149,7 @@ class ModemScraper:
 
         except Exception as e:
             _LOGGER.error(f"Error fetching modem data: {e}")
-            return {"connection_status": "offline", "downstream": [], "upstream": []}
+            return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
     def _parse_downstream_channels(self, soup: BeautifulSoup) -> list:
         """Parse downstream channel data from HTML."""

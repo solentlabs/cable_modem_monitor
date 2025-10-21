@@ -91,6 +91,16 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
             "model": "Monitor",
         }
 
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        ***REMOVED*** Make sensors unavailable when modem is offline so charts skip the data point
+        ***REMOVED*** instead of showing 0/None values
+        return (
+            self.coordinator.last_update_success
+            and self.coordinator.data.get("connection_status") == "online"
+        )
+
 
 class ModemConnectionStatusSensor(ModemSensorBase):
     """Sensor for modem connection status."""
@@ -101,6 +111,11 @@ class ModemConnectionStatusSensor(ModemSensorBase):
         self._attr_name = "Modem Connection Status"
         self._attr_unique_id = f"{entry.entry_id}_connection_status"
         self._attr_icon = "mdi:router-network"
+
+    @property
+    def available(self) -> bool:
+        """Connection status sensor is always available to show offline state."""
+        return self.coordinator.last_update_success
 
     @property
     def native_value(self) -> str:

@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
@@ -40,7 +40,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         _LOGGER.error(f"Error connecting to modem: {err}")
         raise CannotConnect from err
 
-    if modem_data.get("connection_status") == "offline":
+    if modem_data.get("connection_status") in ["offline", "unreachable"]:
         raise CannotConnect
 
     ***REMOVED*** Return info that you want to store in the config entry.
@@ -51,6 +51,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Cable Modem Monitor."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -75,6 +81,60 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for Cable Modem Monitor."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        return await self.async_step_connection_settings()
+
+    async def async_step_connection_settings(self, user_input=None):
+        """Handle connection settings configuration."""
+        errors = {}
+
+        if user_input is not None:
+            ***REMOVED*** Validate the connection with new settings
+            try:
+                await validate_input(self.hass, user_input)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except Exception:  ***REMOVED*** pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                ***REMOVED*** Update the config entry with new data
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=user_input
+                )
+                return self.async_create_entry(title="", data={})
+
+        ***REMOVED*** Pre-fill form with current values
+        current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
+        current_username = self.config_entry.data.get(CONF_USERNAME, "admin")
+
+        options_schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST, default=current_host): str,
+                vol.Optional(CONF_USERNAME, default=current_username): str,
+                vol.Optional(CONF_PASSWORD, default=""): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="connection_settings",
+            data_schema=options_schema,
+            errors=errors,
+            description_placeholders={
+                "current_host": current_host,
+                "current_username": current_username,
+            },
         )
 
 
