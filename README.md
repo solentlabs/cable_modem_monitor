@@ -2,6 +2,8 @@
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
+![Cable Modem Health Dashboard](dashboard-screenshot.png)
+
 ***REMOVED******REMOVED*** Features
 
 - **Easy Setup**: Configure via Home Assistant UI - no YAML editing required
@@ -105,6 +107,10 @@ This integration will be available through HACS for easier installation and upda
 - **Monitor trends**: Sudden increases may indicate line issues
 
 ***REMOVED******REMOVED*** Example Dashboard
+
+Here's an example of a simple, clean dashboard showing all key modem health metrics:
+
+![Cable Modem Health Dashboard](dashboard-screenshot.png)
 
 Create a dashboard to monitor your modem health:
 
