@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST, default="192.168.100.1"): str,
-        vol.Optional(CONF_USERNAME, default="admin"): str,
+        vol.Optional(CONF_USERNAME, default=""): str,
         vol.Optional(CONF_PASSWORD, default=""): str,
     }
 )
@@ -128,7 +128,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         ***REMOVED*** Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
-        current_username = self.config_entry.data.get(CONF_USERNAME, "admin")
+        current_username = self.config_entry.data.get(CONF_USERNAME, "")
         current_history_days = self.config_entry.data.get(
             CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS
         )

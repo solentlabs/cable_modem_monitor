@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [1.6.1] - 2025-10-22
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Improved Authentication UX** - Changed username default from "admin" to empty string for modems without authentication
+  - Makes it clearer that credentials are optional
+  - Reduces confusion for users with modems like ARRIS SB6141 that don't require login
+- **Enhanced Error Messages** - Better diagnostics to distinguish connection failures from parsing failures
+  - Error messages now clarify when auth is optional
+  - Guides users to enable debug logging for unsupported modems
+  - Provides clear instructions for requesting modem support
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Better Debug Logging** - Improved logging for unsupported modem HTML formats
+  - Logs successful connection URL and HTML structure details
+  - Reduced log verbosity for connection attempts (moved to debug level)
+  - Helps diagnose when modem connects but HTML format isn't recognized
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- Updated config_flow.py: Changed CONF_USERNAME default from "admin" to ""
+- Updated modem_scraper.py: Added HTML structure logging and better error messages
+- Updated strings.json and translations/en.json: Enhanced error messages and field descriptions
+
+***REMOVED******REMOVED*** [1.6.0] - 2025-10-22
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Technicolor TC4400 Support** - Added support for TC4400 cable modems
+  - Added `/cmconnectionstatus.html` URL endpoint
+  - Based on research from philfry's check_tc4400 project (see ATTRIBUTION.md)
+- **Comprehensive Sensor Tests** - Added tests/test_sensor.py with 17 test functions
+  - Tests all sensor types: connection status, error counters, channel counts, system info
+  - Tests edge cases: missing data, None values, invalid data
+  - All 64 tests passing (47 existing + 17 new)
+- **Ruff Configuration** - Added .ruff.toml for project-wide code quality standards
+  - 120-character line limit for better readability
+  - McCabe complexity limit of 12 for parsing functions
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Code Quality Improvements** - Fixed line length violations across codebase
+  - Improved SQL query formatting in __init__.py
+  - Better readability in modem_scraper.py parsing logic
+
 ***REMOVED******REMOVED*** [1.4.0] - 2025-10-21
 
 ***REMOVED******REMOVED******REMOVED*** Added

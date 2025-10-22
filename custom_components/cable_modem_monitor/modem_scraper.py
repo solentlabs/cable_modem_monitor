@@ -76,19 +76,20 @@ class ModemScraper:
             ]
 
             html = None
+            successful_url = None
             for url in urls_to_try:
                 try:
-                    _LOGGER.info(f"Attempting to fetch {url}")
+                    _LOGGER.debug(f"Attempting to fetch {url}")
                     response = self.session.get(url, timeout=10)
-                    _LOGGER.info(f"Response from {url}: status={response.status_code}")
                     if response.status_code == 200:
                         html = response.text
-                        _LOGGER.info(f"Successfully fetched data from {url}")
+                        successful_url = url
+                        _LOGGER.info(f"Successfully connected to modem at {url} (HTML length: {len(html)} bytes)")
                         break
                     else:
-                        _LOGGER.warning(f"Got status {response.status_code} from {url}")
+                        _LOGGER.debug(f"Got status {response.status_code} from {url}")
                 except requests.RequestException as e:
-                    _LOGGER.error(f"Failed to fetch from {url}: {type(e).__name__}: {e}")
+                    _LOGGER.debug(f"Failed to fetch from {url}: {type(e).__name__}: {e}")
                     continue
 
             if not html:
@@ -96,6 +97,16 @@ class ModemScraper:
                 return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
             soup = BeautifulSoup(html, "html.parser")
+
+            ***REMOVED*** Log HTML structure for debugging
+            tables = soup.find_all("table")
+            _LOGGER.debug(f"Found {len(tables)} tables in HTML from {successful_url}")
+            if tables:
+                for i, table in enumerate(tables[:3]):  ***REMOVED*** Log first 3 tables only
+                    headers = table.find_all("td", class_="moto-param-header-s")
+                    if headers:
+                        header_text = [h.text.strip() for h in headers[:5]]  ***REMOVED*** First 5 headers
+                        _LOGGER.debug(f"Table {i+1} headers (Motorola style): {header_text}")
 
             ***REMOVED*** Parse downstream channels
             downstream_channels = self._parse_downstream_channels(soup)
@@ -105,7 +116,15 @@ class ModemScraper:
 
             ***REMOVED*** Validate that we got some valid data
             if not downstream_channels and not upstream_channels:
-                _LOGGER.error("No valid channel data parsed from modem - skipping update")
+                _LOGGER.error(
+                    f"No valid channel data parsed from modem. Connection to {successful_url} succeeded "
+                    f"but HTML format not recognized (found {len(soup.find_all('table'))} tables). "
+                    "Your modem model may not be supported yet. To add support, please: "
+                    "1) Open this URL in your browser: %s "
+                    "2) Right-click -> View Page Source "
+                    "3) Save and share the HTML at https://github.com/kwschulz/cable_modem_monitor/issues",
+                    successful_url
+                )
                 raise ValueError("No valid channel data available")
 
             ***REMOVED*** Calculate totals (only include non-None values)

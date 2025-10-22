@@ -3,17 +3,17 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor Setup",
-        "description": "Enter the connection details for your cable modem",
+        "description": "Enter your cable modem's IP address and credentials. The IP is typically 192.168.100.1 for Motorola modems. Leave username/password blank if your modem doesn't require authentication.",
         "data": {
-          "host": "Modem IP Address",
-          "username": "Username (optional)",
-          "password": "Password (optional)"
+          "host": "Modem IP Address (e.g., 192.168.100.1)",
+          "username": "Username (optional, typically 'admin')",
+          "password": "Password (optional, stored securely)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the modem. Please check the IP address and credentials.",
-      "unknown": "An unexpected error occurred"
+      "cannot_connect": "Failed to connect to the modem. Please verify: 1) IP address is correct (typically 192.168.100.1), 2) If modem requires authentication, username/password are correct (leave blank if no auth needed), 3) Modem's web interface is accessible from Home Assistant's network. If connection works but setup still fails, your modem model may not be supported yet - please enable debug logging to help us add support.",
+      "unknown": "Unexpected error occurred. Check Home Assistant logs for details."
     },
     "abort": {
       "already_configured": "This modem is already configured"
@@ -23,11 +23,11 @@
     "step": {
       "connection_settings": {
         "title": "Cable Modem Settings",
-        "description": "Update connection settings for your cable modem.\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave password blank to keep the existing password.",
+        "description": "Update connection settings for your cable modem.\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave username/password blank if your modem doesn't require authentication. Leave password blank to keep existing password.",
         "data": {
           "host": "Modem IP Address",
-          "username": "Username",
-          "password": "Password (leave blank to keep existing)",
+          "username": "Username (optional)",
+          "password": "Password (optional, leave blank to keep existing)",
           "scan_interval": "Polling Interval (seconds)",
           "history_days": "History Retention (days)"
         },
