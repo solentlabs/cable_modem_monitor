@@ -1,0 +1,14 @@
+***REMOVED*** Ruff configuration for Cable Modem Monitor
+
+***REMOVED*** Increase line length limit to 120 characters (more realistic for this codebase)
+***REMOVED*** Most violations are in complex SQL queries, logging statements, and HTML parsing
+***REMOVED*** that are hard to split without hurting readability
+line-length = 120
+
+[lint]
+***REMOVED*** Enable pycodestyle (E), Pyflakes (F), warnings (W), and McCabe complexity (C90)
+select = ["E", "F", "W", "C90"]
+
+[lint.mccabe]
+***REMOVED*** Maximum McCabe complexity
+max-complexity = 12

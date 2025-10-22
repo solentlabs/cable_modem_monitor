@@ -12,7 +12,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
-from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    CONF_HOST,
+    CONF_USERNAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+)
 from .modem_scraper import ModemScraper
 
 _LOGGER = logging.getLogger(__name__)
@@ -107,10 +114,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                 ***REMOVED*** Delete old states
                 placeholders = ",".join("?" * len(metadata_ids))
-                cursor.execute(
-                    f"DELETE FROM states WHERE metadata_id IN ({placeholders}) AND last_updated_ts < ?",
-                    (*metadata_ids, cutoff_ts)
+                query = (
+                    f"DELETE FROM states WHERE metadata_id IN ({placeholders}) "
+                    f"AND last_updated_ts < ?"
                 )
+                cursor.execute(query, (*metadata_ids, cutoff_ts))
                 states_deleted = cursor.rowcount
 
                 ***REMOVED*** Find statistics metadata IDs
@@ -134,16 +142,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 stats_deleted = 0
                 if stats_metadata_ids:
                     placeholders = ",".join("?" * len(stats_metadata_ids))
-                    cursor.execute(
-                        f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) AND start_ts < ?",
-                        (*stats_metadata_ids, cutoff_ts)
+
+                    query = (
+                        f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) "
+                        f"AND start_ts < ?"
                     )
+                    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
                     stats_deleted = cursor.rowcount
 
-                    cursor.execute(
-                        f"DELETE FROM statistics_short_term WHERE metadata_id IN ({placeholders}) AND start_ts < ?",
-                        (*stats_metadata_ids, cutoff_ts)
+                    query_short = (
+                        f"DELETE FROM statistics_short_term "
+                        f"WHERE metadata_id IN ({placeholders}) AND start_ts < ?"
                     )
+                    cursor.execute(query_short, (*stats_metadata_ids, cutoff_ts))
                     stats_deleted += cursor.rowcount
 
                 conn.commit()
@@ -154,7 +165,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 conn.close()
 
                 _LOGGER.info(
-                    f"Cleared {states_deleted} state records and {stats_deleted} statistics records "
+                    f"Cleared {states_deleted} state records and "
+                    f"{stats_deleted} statistics records "
                     f"older than {days_to_keep} days"
                 )
 

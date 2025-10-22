@@ -46,7 +46,10 @@ class ModemScraper:
                 _LOGGER.info("Login successful - verified by accessing protected page")
                 return True
             else:
-                _LOGGER.error(f"Login failed - could not access protected page (status={test_response.status_code}, length={len(test_response.text)})")
+                _LOGGER.error(
+                    f"Login failed - could not access protected page "
+                    f"(status={test_response.status_code}, length={len(test_response.text)})"
+                )
                 return False
 
         except requests.RequestException as e:
@@ -61,13 +64,15 @@ class ModemScraper:
                 _LOGGER.error("Failed to log in to modem")
                 return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
-            ***REMOVED*** Try common Motorola modem signal data URLs
-            ***REMOVED*** MotoConnection.asp is the primary page for Motorola modems (MB series)
+            ***REMOVED*** Try common modem signal data URLs
+            ***REMOVED*** Based on research: Motorola MB series, Technicolor TC4400, Arris
+            ***REMOVED*** See ATTRIBUTION.md for research sources
             urls_to_try = [
-                f"{self.base_url}/MotoConnection.asp",
-                f"{self.base_url}/cmSignalData.htm",
-                f"{self.base_url}/cmSignal.html",
-                f"{self.base_url}/",
+                f"{self.base_url}/MotoConnection.asp",      ***REMOVED*** Motorola MB series
+                f"{self.base_url}/cmconnectionstatus.html", ***REMOVED*** Technicolor TC4400
+                f"{self.base_url}/cmSignalData.htm",        ***REMOVED*** Generic/Arris
+                f"{self.base_url}/cmSignal.html",           ***REMOVED*** Generic/Arris
+                f"{self.base_url}/",                        ***REMOVED*** Root fallback
             ]
 
             html = None
@@ -186,9 +191,11 @@ class ModemScraper:
                                     continue
 
                                 freq_mhz = self._extract_float(cols[4].text)  ***REMOVED*** Freq column in MHz
+                                ***REMOVED*** Convert MHz to Hz
+                                freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
-                                    "frequency": freq_mhz * 1_000_000 if freq_mhz is not None else None,  ***REMOVED*** Convert MHz to Hz
+                                    "frequency": freq_hz,
                                     "power": self._extract_float(cols[5].text),      ***REMOVED*** Pwr column
                                     "snr": self._extract_float(cols[6].text),        ***REMOVED*** SNR column
                                     "corrected": self._extract_number(cols[7].text),
@@ -252,15 +259,19 @@ class ModemScraper:
                                     continue
 
                                 freq_mhz = self._extract_float(cols[5].text)  ***REMOVED*** Freq column in MHz
+                                ***REMOVED*** Convert MHz to Hz
+                                freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
                                 channel_data = {
                                     "channel": self._extract_number(cols[0].text),
-                                    "frequency": freq_mhz * 1_000_000 if freq_mhz is not None else None,  ***REMOVED*** Convert MHz to Hz
+                                    "frequency": freq_hz,
                                     "power": self._extract_float(cols[6].text),      ***REMOVED*** Power column
                                 }
 
                                 ***REMOVED*** Skip channel if all critical values are None or zero (invalid data)
                                 if all(v is None or v == 0 for k, v in channel_data.items() if k != "channel"):
-                                    _LOGGER.warning(f"Skipping upstream channel with all null/zero values: {cols[0].text}")
+                                    _LOGGER.warning(
+                                        f"Skipping upstream channel with all null/zero values: {cols[0].text}"
+                                    )
                                     continue
 
                                 ***REMOVED*** Skip if channel number itself is None
@@ -270,7 +281,9 @@ class ModemScraper:
 
                                 ***REMOVED*** Skip if frequency is 0 (unlocked channel)
                                 if channel_data["frequency"] == 0 or channel_data["frequency"] is None:
-                                    _LOGGER.debug(f"Skipping upstream channel {channel_data['channel']} with zero frequency")
+                                    _LOGGER.debug(
+                                        f"Skipping upstream channel {channel_data['channel']} with zero frequency"
+                                    )
                                     continue
 
                                 channels.append(channel_data)

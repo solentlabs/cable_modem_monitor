@@ -129,16 +129,23 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         ***REMOVED*** Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
         current_username = self.config_entry.data.get(CONF_USERNAME, "admin")
-        current_history_days = self.config_entry.data.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
-        current_scan_interval = self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        current_history_days = self.config_entry.data.get(
+            CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS
+        )
+        current_scan_interval = self.config_entry.data.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
 
         options_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=current_host): str,
                 vol.Optional(CONF_USERNAME, default=current_username): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
-                vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval): vol.All(
-                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
+                vol.Required(
+                    CONF_SCAN_INTERVAL, default=current_scan_interval
+                ): vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
                 ),
                 vol.Required(CONF_HISTORY_DAYS, default=current_history_days): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=365)
