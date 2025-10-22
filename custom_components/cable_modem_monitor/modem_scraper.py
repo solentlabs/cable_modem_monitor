@@ -108,11 +108,14 @@ class ModemScraper:
                         header_text = [h.text.strip() for h in headers[:5]]  ***REMOVED*** First 5 headers
                         _LOGGER.debug(f"Table {i+1} headers (Motorola style): {header_text}")
 
-            ***REMOVED*** Parse downstream channels
+            ***REMOVED*** Try Motorola-style parsing first
             downstream_channels = self._parse_downstream_channels(soup)
-
-            ***REMOVED*** Parse upstream channels
             upstream_channels = self._parse_upstream_channels(soup)
+
+            ***REMOVED*** If Motorola parsing failed, try ARRIS SB6141 format
+            if not downstream_channels and not upstream_channels:
+                _LOGGER.debug("Motorola parsing found no channels, trying ARRIS SB6141 format")
+                downstream_channels, upstream_channels = self._parse_arris_sb6141(soup)
 
             ***REMOVED*** Validate that we got some valid data
             if not downstream_channels and not upstream_channels:
@@ -424,6 +427,169 @@ class ModemScraper:
             _LOGGER.error(f"Error parsing channel counts: {e}")
 
         return result
+
+    def _parse_arris_sb6141(self, soup: BeautifulSoup) -> tuple[list, list]:
+        """Parse ARRIS SB6141 format (transposed tables where columns are channels)."""
+        downstream_channels = []
+        upstream_channels = []
+
+        try:
+            tables = soup.find_all("table")
+            _LOGGER.debug(f"Parsing ARRIS SB6141 format from {len(tables)} tables")
+
+            ***REMOVED*** Find tables by looking for "Channel ID" row
+            for table in tables:
+                rows = table.find_all("tr")
+                if not rows:
+                    continue
+
+                ***REMOVED*** Check if this table has channel data (look for "Channel ID" row)
+                row_labels = []
+                for row in rows:
+                    cells = row.find_all("td")
+                    if cells and len(cells) > 0:
+                        label = cells[0].text.strip()
+                        row_labels.append(label)
+
+                ***REMOVED*** Detect table type by its labels
+                has_channel_id = "Channel ID" in row_labels
+                has_power_level = any("Power Level" in label for label in row_labels)
+                has_snr = "Signal to Noise Ratio" in row_labels
+                has_downstream_mod = "Downstream Modulation" in row_labels
+                has_symbol_rate = "Symbol Rate" in row_labels
+                has_upstream_mod = "Upstream Modulation" in row_labels
+
+                if has_channel_id and has_power_level:
+                    ***REMOVED*** Check if it's downstream or upstream
+                    if has_snr or has_downstream_mod:
+                        ***REMOVED*** Downstream table
+                        _LOGGER.debug("Found ARRIS downstream table")
+                        downstream_channels = self._parse_arris_transposed_table(
+                            rows, ["Channel ID", "Frequency", "Signal to Noise Ratio", "Power Level"]
+                        )
+                    elif has_symbol_rate or has_upstream_mod:
+                        ***REMOVED*** Upstream table
+                        _LOGGER.debug("Found ARRIS upstream table")
+                        upstream_channels = self._parse_arris_transposed_table(
+                            rows, ["Channel ID", "Frequency", "Power Level"], is_upstream=True
+                        )
+                elif "Total Correctable Codewords" in row_labels:
+                    ***REMOVED*** Signal stats table - merge with downstream channels
+                    _LOGGER.debug("Found ARRIS signal stats table")
+                    self._merge_arris_error_stats(downstream_channels, rows)
+
+            _LOGGER.debug(
+                f"ARRIS parsing found {len(downstream_channels)} downstream, "
+                f"{len(upstream_channels)} upstream"
+            )
+
+        except Exception as e:
+            _LOGGER.error(f"Error parsing ARRIS SB6141 format: {e}")
+
+        return downstream_channels, upstream_channels
+
+    def _parse_arris_transposed_table(
+        self, rows: list, required_fields: list, is_upstream: bool = False
+    ) -> list:
+        """Parse ARRIS transposed table where columns are channels."""
+        channels = []
+
+        try:
+            ***REMOVED*** Build a map of row_label -> [values for each channel]
+            data_map = {}
+            channel_count = 0
+
+            for row in rows:
+                cells = row.find_all("td")
+                if not cells or len(cells) < 2:
+                    continue
+
+                label = cells[0].text.strip()
+                values = [cell.text.strip() for cell in cells[1:]]  ***REMOVED*** Skip first cell (label)
+
+                ***REMOVED*** Normalize label and handle nested tables in Power Level row
+                if "Power Level" in label:
+                    label = "Power Level"
+                    ***REMOVED*** ARRIS SB6141 has nested table in Power Level row - skip first value
+                    ***REMOVED*** which contains the nested table text
+                    if values and "Downstream Power Level reading" in values[0]:
+                        values = values[1:]  ***REMOVED*** Skip nested table text
+
+                ***REMOVED*** Update channel count from longest row
+                if len(values) > channel_count:
+                    channel_count = len(values)
+
+                data_map[label] = values
+
+            _LOGGER.debug(f"Transposed table has {channel_count} channels with labels: {list(data_map.keys())}")
+
+            ***REMOVED*** Now transpose: create one channel dict per column
+            for i in range(channel_count):
+                channel_data = {}
+
+                ***REMOVED*** Extract channel ID
+                if "Channel ID" in data_map and i < len(data_map["Channel ID"]):
+                    channel_id = self._extract_number(data_map["Channel ID"][i])
+                    if channel_id is None:
+                        continue
+                    channel_data["channel"] = channel_id
+
+                ***REMOVED*** Extract frequency (already in Hz for ARRIS)
+                if "Frequency" in data_map and i < len(data_map["Frequency"]):
+                    freq_text = data_map["Frequency"][i]
+                    ***REMOVED*** ARRIS format: "519000000 Hz" - extract number
+                    freq_hz = self._extract_number(freq_text)
+                    channel_data["frequency"] = freq_hz
+
+                ***REMOVED*** Extract power level
+                if "Power Level" in data_map and i < len(data_map["Power Level"]):
+                    power_text = data_map["Power Level"][i]
+                    channel_data["power"] = self._extract_float(power_text)
+
+                if not is_upstream:
+                    ***REMOVED*** Downstream-specific fields
+                    if "Signal to Noise Ratio" in data_map and i < len(data_map["Signal to Noise Ratio"]):
+                        snr_text = data_map["Signal to Noise Ratio"][i]
+                        channel_data["snr"] = self._extract_float(snr_text)
+
+                    ***REMOVED*** Initialize error counters (will be filled from stats table)
+                    channel_data["corrected"] = None
+                    channel_data["uncorrected"] = None
+
+                ***REMOVED*** Skip if missing required data
+                if channel_data.get("channel") is not None:
+                    channels.append(channel_data)
+                    _LOGGER.debug(f"Parsed ARRIS channel {channel_data.get('channel')}: {channel_data}")
+
+        except Exception as e:
+            _LOGGER.error(f"Error parsing ARRIS transposed table: {e}")
+
+        return channels
+
+    def _merge_arris_error_stats(self, downstream_channels: list, stats_rows: list) -> None:
+        """Merge error statistics from signal stats table into downstream channels."""
+        try:
+            ***REMOVED*** Parse stats table (also transposed)
+            data_map = {}
+            for row in stats_rows:
+                cells = row.find_all("td")
+                if not cells or len(cells) < 2:
+                    continue
+
+                label = cells[0].text.strip()
+                values = [cell.text.strip() for cell in cells[1:]]
+                data_map[label] = values
+
+            ***REMOVED*** Match channels by index
+            for i, channel in enumerate(downstream_channels):
+                if "Total Correctable Codewords" in data_map and i < len(data_map["Total Correctable Codewords"]):
+                    channel["corrected"] = self._extract_number(data_map["Total Correctable Codewords"][i])
+
+                if "Total Uncorrectable Codewords" in data_map and i < len(data_map["Total Uncorrectable Codewords"]):
+                    channel["uncorrected"] = self._extract_number(data_map["Total Uncorrectable Codewords"][i])
+
+        except Exception as e:
+            _LOGGER.error(f"Error merging ARRIS error stats: {e}")
 
     def restart_modem(self) -> bool:
         """Restart the cable modem."""

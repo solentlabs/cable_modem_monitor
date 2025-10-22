@@ -6,13 +6,14 @@ Help us support your cable modem! This guide explains how to provide information
 
 ✅ **Confirmed Working:**
 - Motorola MB series (MB7420, MB8600, etc.)
-- Arris cable modems (SB6183, SB8200, etc.)
-
-❓ **Being Investigated:**
-- Technicolor TC4400 (research based on [philfry's check_tc4400 project](https://github.com/philfry/check_tc4400))
+- Arris SB6183, SB8200 (newer models)
+- Arris SB6141 (older model with different HTML format)
+- Technicolor TC4400
 
 ❌ **Known Incompatible:**
 - None reported yet
+
+**Note:** Many other modems may work if they use similar web interface formats. If your modem doesn't work, please share an HTML sample!
 
 ---
 

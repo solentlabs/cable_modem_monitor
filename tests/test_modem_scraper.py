@@ -197,5 +197,80 @@ class TestRealWorldScenarios:
                 f"Upstream channel {ch['channel']} frequency {freq_mhz} MHz out of range"
 
 
+class TestARRISSB6141:
+    """Test ARRIS SB6141 modem parsing (transposed table format)."""
+
+    @pytest.fixture
+    def arris_sb6141_html(self):
+        """Load ARRIS SB6141 signal data HTML fixture."""
+        fixture_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'arris_sb6141_signal.html')
+        with open(fixture_path, 'r') as f:
+            return f.read()
+
+    def test_arris_sb6141_downstream_parsing(self, arris_sb6141_html):
+        """Test parsing ARRIS SB6141 downstream channels."""
+        scraper = ModemScraper("192.168.100.1")
+        soup = BeautifulSoup(arris_sb6141_html, 'html.parser')
+
+        downstream, upstream = scraper._parse_arris_sb6141(soup)
+
+        ***REMOVED*** Should have 8 downstream channels based on fixture
+        assert len(downstream) == 8, f"Expected 8 downstream channels, got {len(downstream)}"
+
+        ***REMOVED*** Check first channel (ID=10)
+        ch = downstream[0]
+        assert ch['channel'] == 10
+        assert ch['frequency'] == 519000000  ***REMOVED*** Hz
+        assert ch['snr'] == 39.0  ***REMOVED*** dB
+        assert ch['power'] == 5.0  ***REMOVED*** dBmV
+        assert ch['corrected'] == 573
+        assert ch['uncorrected'] == 823
+
+        ***REMOVED*** Check last channel (ID=4)
+        ch = downstream[7]
+        assert ch['channel'] == 4
+        assert ch['frequency'] == 471000000
+        assert ch['snr'] == 39.0
+        assert ch['power'] == 5.0
+        assert ch['corrected'] == 552
+        assert ch['uncorrected'] == 761
+
+    def test_arris_sb6141_upstream_parsing(self, arris_sb6141_html):
+        """Test parsing ARRIS SB6141 upstream channels."""
+        scraper = ModemScraper("192.168.100.1")
+        soup = BeautifulSoup(arris_sb6141_html, 'html.parser')
+
+        downstream, upstream = scraper._parse_arris_sb6141(soup)
+
+        ***REMOVED*** Should have 4 upstream channels based on fixture
+        assert len(upstream) == 4, f"Expected 4 upstream channels, got {len(upstream)}"
+
+        ***REMOVED*** Check first channel (ID=7)
+        ch = upstream[0]
+        assert ch['channel'] == 7
+        assert ch['frequency'] == 30600000  ***REMOVED*** Hz
+        assert ch['power'] == 49.0  ***REMOVED*** dBmV
+
+        ***REMOVED*** Check last channel (ID=6)
+        ch = upstream[3]
+        assert ch['channel'] == 6
+        assert ch['frequency'] == 24200000
+        assert ch['power'] == 47.0
+
+    def test_arris_sb6141_error_stats_merged(self, arris_sb6141_html):
+        """Test that error stats are properly merged into downstream channels."""
+        scraper = ModemScraper("192.168.100.1")
+        soup = BeautifulSoup(arris_sb6141_html, 'html.parser')
+
+        downstream, _ = scraper._parse_arris_sb6141(soup)
+
+        ***REMOVED*** All downstream channels should have corrected/uncorrected values
+        for ch in downstream:
+            assert ch['corrected'] is not None, f"Channel {ch['channel']} missing corrected errors"
+            assert ch['uncorrected'] is not None, f"Channel {ch['channel']} missing uncorrected errors"
+            assert ch['corrected'] >= 0, "Corrected errors should be non-negative"
+            assert ch['uncorrected'] >= 0, "Uncorrected errors should be non-negative"
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

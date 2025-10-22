@@ -32,8 +32,10 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 This integration is designed for cable modems with web-based status pages. It has been tested with:
 
-- Motorola cable modems
-- Arris cable modems (many Motorola-compatible)
+- **Motorola MB series** (MB7420, MB8600, etc.)
+- **Arris SB6183, SB8200** (newer models)
+- **Arris SB6141** (older model)
+- **Technicolor TC4400**
 
 **Note**: The integration may work with other brands. If your modem has a web interface showing downstream/upstream channel data, it's worth trying!
 
