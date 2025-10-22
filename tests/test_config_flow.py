@@ -5,15 +5,15 @@ import sys
 import os
 
 ***REMOVED*** Add parent directory to path to import the module
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'cable_modem_monitor'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
 
-from config_flow import (
+from cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
     OptionsFlowHandler,
     CannotConnect,
     validate_input,
 )
-from const import (
+from cable_modem_monitor.const import (
     CONF_HOST,
     CONF_USERNAME,
     CONF_PASSWORD,
@@ -72,7 +72,7 @@ class TestValidateInput:
             CONF_PASSWORD: "password",
         }
 
-    @patch('config_flow.ModemScraper')
+    @patch('cable_modem_monitor.config_flow.ModemScraper')
     async def test_validate_input_success(self, mock_scraper_class, mock_hass, valid_input):
         """Test successful validation."""
         ***REMOVED*** Mock scraper to return valid data
@@ -93,7 +93,7 @@ class TestValidateInput:
 
         assert result["title"] == "Cable Modem 192.168.100.1"
 
-    @patch('config_flow.ModemScraper')
+    @patch('cable_modem_monitor.config_flow.ModemScraper')
     async def test_validate_input_connection_failure(self, mock_scraper_class, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
         ***REMOVED*** Mock scraper to raise exception
