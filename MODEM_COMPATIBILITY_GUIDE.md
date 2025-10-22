@@ -9,10 +9,17 @@ Help us support your cable modem! This guide explains how to provide information
 - Arris cable modems (SB6183, SB8200, etc.)
 
 ❓ **Being Investigated:**
-- Technicolor TC4400
+- Technicolor TC4400 (research based on [philfry's check_tc4400 project](https://github.com/philfry/check_tc4400))
 
 ❌ **Known Incompatible:**
 - None reported yet
+
+---
+
+***REMOVED******REMOVED*** Acknowledgments
+
+Research for modem compatibility has been aided by:
+- **philfry's check_tc4400** (https://github.com/philfry/check_tc4400) - TC4400 monitoring script that helped identify the modem's web interface structure and `/cmconnectionstatus.html` endpoint
 
 ---
 
