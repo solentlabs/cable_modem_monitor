@@ -92,7 +92,7 @@ class TestValidateInput:
 
         result = await validate_input(mock_hass, valid_input)
 
-        assert result["title"] == "Cable Modem 192.168.100.1"
+        assert result["title"] == "Cable Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
     @patch('cable_modem_monitor.config_flow.ModemScraper')
