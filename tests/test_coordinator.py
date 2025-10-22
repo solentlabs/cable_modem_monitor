@@ -6,9 +6,9 @@ import sys
 import os
 
 ***REMOVED*** Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'cable_modem_monitor'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
 
-from const import (
+from cable_modem_monitor.const import (
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
