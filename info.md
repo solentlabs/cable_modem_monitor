@@ -2,7 +2,7 @@
 
 Monitor your cable modem's signal quality, power levels, and error rates directly in Home Assistant. Perfect for tracking internet connection health and identifying potential issues before they cause problems.
 
-![Cable Modem Health Dashboard](dashboard-screenshot.png)
+![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
 
 ***REMOVED******REMOVED*** Features
 

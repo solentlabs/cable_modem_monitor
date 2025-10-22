@@ -10,7 +10,7 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
 
-![Cable Modem Health Dashboard](dashboard-screenshot.png)
+![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
 
 ***REMOVED******REMOVED*** Features
 
@@ -93,7 +93,11 @@ After installation, you can configure additional settings:
 3. Available options:
    - **Modem IP Address**: Update if your modem's IP changes
    - **Username/Password**: Update authentication credentials
+   - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 300 - 5 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
+
+![Cable Modem Configuration Settings](images/cable-modem-settings.png)
+*Configuration options available through the Settings UI*
 
 ***REMOVED******REMOVED*** Available Sensors
 
@@ -152,16 +156,16 @@ After installation, you can configure additional settings:
 
 Here's an example of a simple, clean dashboard showing all key modem health metrics:
 
-![Cable Modem Health Dashboard](dashboard-screenshot.png)
+![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
 
 ***REMOVED******REMOVED******REMOVED*** Example Graphs
 
 Track your signal quality over time with history graphs:
 
-![Downstream Power Levels](downstream-power-levels.png)
+![Downstream Power Levels](images/downstream-power-levels.png)
 *Downstream power levels across all channels - ideal range is -7 to +7 dBmV*
 
-![Signal-to-Noise Ratio](signal-to-noise-ratio.png)
+![Signal-to-Noise Ratio](images/signal-to-noise-ratio.png)
 *Signal-to-Noise Ratio for all channels - higher is better, aim for above 40 dB*
 
 Create a dashboard to monitor your modem health:
