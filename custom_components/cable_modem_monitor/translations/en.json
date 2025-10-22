@@ -28,9 +28,11 @@
           "host": "Modem IP Address",
           "username": "Username",
           "password": "Password (leave blank to keep existing)",
+          "scan_interval": "Polling Interval (seconds)",
           "history_days": "History Retention (days)"
         },
         "data_description": {
+          "scan_interval": "How often to check modem status (60-1800 seconds). Recommended: 300 (5 minutes) to avoid overloading the modem. Lower values may cause device strain.",
           "history_days": "Number of days to keep when clearing history (1-365)"
         }
       }
