@@ -1,6 +1,6 @@
 """Tests for Cable Modem Monitor sensors."""
 import pytest
-from unittest.mock import Mock, MagicMock, AsyncMock
+from unittest.mock import Mock
 import sys
 import os
 

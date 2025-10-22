@@ -1,6 +1,6 @@
 """Tests for Cable Modem Monitor coordinator functionality."""
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock
 from datetime import timedelta
 import sys
 import os
