@@ -36,9 +36,7 @@ This integration is designed for cable modems with web-based status pages. It ha
 
 ***REMOVED******REMOVED*** Installation
 
-***REMOVED******REMOVED******REMOVED*** Method 1: HACS (Recommended - Coming Soon)
-
-Once approved for HACS default repository:
+***REMOVED******REMOVED******REMOVED*** Method 1: HACS (Recommended)
 
 1. Open HACS in Home Assistant
 2. Go to "Integrations"
