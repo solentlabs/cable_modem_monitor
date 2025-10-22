@@ -8,12 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ***REMOVED******REMOVED*** [Unreleased]
 
 ***REMOVED******REMOVED******REMOVED*** Added
-- **ARRIS SB6141 Support** - Added parser for ARRIS SB6141 modem (older model with transposed table format)
+- **ARRIS SB6141 Support (Testing)** - Added parser for ARRIS SB6141 modem (awaiting user confirmation)
   - Handles unique HTML structure where columns represent channels instead of rows
   - Parses downstream channels with power, SNR, frequency, and error statistics
   - Parses upstream channels with power and frequency
   - Added comprehensive test coverage with 3 new tests
-  - Contributed by vreihen via HTML sample from community forum
+  - Based on HTML sample contributed by vreihen from community forum
+  - **Status**: Parser implemented and tested, awaiting real-world confirmation from user
 
 ***REMOVED******REMOVED******REMOVED*** Technical
 - Added `_parse_arris_sb6141()` method for ARRIS-specific parsing
