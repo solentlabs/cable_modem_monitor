@@ -72,6 +72,7 @@ class TestValidateInput:
             CONF_PASSWORD: "password",
         }
 
+    @pytest.mark.asyncio
     @patch('cable_modem_monitor.config_flow.ModemScraper')
     async def test_validate_input_success(self, mock_scraper_class, mock_hass, valid_input):
         """Test successful validation."""
@@ -93,6 +94,7 @@ class TestValidateInput:
 
         assert result["title"] == "Cable Modem 192.168.100.1"
 
+    @pytest.mark.asyncio
     @patch('cable_modem_monitor.config_flow.ModemScraper')
     async def test_validate_input_connection_failure(self, mock_scraper_class, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
