@@ -15,7 +15,7 @@ CONF_SCAN_INTERVAL = "scan_interval"
 ***REMOVED***   "Polling more than once per second can overload servers"
 ***REMOVED*** - Network Device Polling: https://community.broadcom.com/communities/community-home/digestviewer/viewthread?MID=824934
 ***REMOVED***   "Client data polling should not be lower than 5 minutes"
-DEFAULT_SCAN_INTERVAL = 300  ***REMOVED*** 5 minutes - industry standard for network monitoring
+DEFAULT_SCAN_INTERVAL = 600  ***REMOVED*** 10 minutes - balanced default for network monitoring
 DEFAULT_HISTORY_DAYS = 30  ***REMOVED*** Default number of days to keep history
 MIN_SCAN_INTERVAL = 60  ***REMOVED*** 1 minute - minimum to avoid device strain
 MAX_SCAN_INTERVAL = 1800  ***REMOVED*** 30 minutes - maximum useful interval
