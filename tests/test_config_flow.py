@@ -39,8 +39,8 @@ class TestConfigFlow:
         assert MAX_SCAN_INTERVAL == 1800
 
     def test_scan_interval_default_value(self):
-        """Test that default scan interval is 300s (5 minutes)."""
-        assert DEFAULT_SCAN_INTERVAL == 300
+        """Test that default scan interval is 600s (10 minutes)."""
+        assert DEFAULT_SCAN_INTERVAL == 600
 
     def test_scan_interval_range_valid(self):
         """Test that scan interval range makes sense."""
@@ -192,8 +192,8 @@ class TestConfigConstants:
 
     def test_defaults_are_reasonable(self):
         """Test that default values make sense."""
-        # Scan interval: 5 minutes
-        assert DEFAULT_SCAN_INTERVAL == 300
+        # Scan interval: 10 minutes
+        assert DEFAULT_SCAN_INTERVAL == 600
 
         # History: 30 days
         assert DEFAULT_HISTORY_DAYS == 30
@@ -219,3 +219,13 @@ class TestOptionsFlow:
     def test_options_flow_has_connection_settings_step(self):
         """Test that options flow has connection settings step."""
         assert hasattr(OptionsFlowHandler, 'async_step_connection_settings')
+
+    def test_options_flow_can_instantiate_without_arguments(self):
+        """Test that OptionsFlowHandler can be instantiated without arguments.
+
+        This prevents the TypeError that caused a 500 error when trying to
+        access the configuration UI in Home Assistant.
+        """
+        # This should not raise TypeError
+        handler = OptionsFlowHandler()
+        assert handler is not None

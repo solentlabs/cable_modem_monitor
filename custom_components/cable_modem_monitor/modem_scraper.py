@@ -191,18 +191,36 @@ class ModemScraper:
             for table in tables:
                 # Check if this table contains downstream channel data
                 # Look for headers: Channel, Lock Status, Modulation, etc.
-                header_row = table.find("tr")
-                if not header_row:
+                # Use direct children only (recursive=False) to avoid nested table issues
+                all_rows = table.find_all("tr", recursive=False)
+
+                # If no direct children, try one level deeper (for tables wrapped in tbody)
+                if not all_rows:
+                    tbody = table.find("tbody")
+                    if tbody:
+                        all_rows = tbody.find_all("tr", recursive=False)
+
+                if not all_rows:
                     continue
 
-                headers = [td.text.strip() for td in header_row.find_all("td", class_="moto-param-header-s")]
+                # Find the header row by looking for moto-param-header-s class
+                header_row = None
+                headers = []
+                for row in all_rows:
+                    potential_headers = [td.text.strip() for td in row.find_all("td", class_="moto-param-header-s")]
+                    if potential_headers and "Channel" in potential_headers:
+                        header_row = row
+                        headers = potential_headers
+                        break
 
                 # If we found the header row with channel data headers
-                if headers and "Channel" in headers:
+                if header_row and headers:
                     _LOGGER.debug(f"Found downstream channel table with headers: {headers}")
-                    rows = table.find_all("tr")[1:]  # Skip header row
+                    # Get all rows after the header row
+                    header_index = all_rows.index(header_row)
+                    data_rows = all_rows[header_index + 1:]  # Skip header row
 
-                    for row in rows:
+                    for row in data_rows:
                         cols = row.find_all("td")
                         if len(cols) >= 9:  # Channel, Lock, Modulation, ID, Freq, Pwr, SNR, Corrected, Uncorrected
                             try:
@@ -256,21 +274,39 @@ class ModemScraper:
             tables = soup.find_all("table")
 
             for table in tables:
-                header_row = table.find("tr")
-                if not header_row:
+                # Use direct children only (recursive=False) to avoid nested table issues
+                all_rows = table.find_all("tr", recursive=False)
+
+                # If no direct children, try one level deeper (for tables wrapped in tbody)
+                if not all_rows:
+                    tbody = table.find("tbody")
+                    if tbody:
+                        all_rows = tbody.find_all("tr", recursive=False)
+
+                if not all_rows:
                     continue
 
-                headers = [td.text.strip() for td in header_row.find_all("td", class_="moto-param-header-s")]
+                # Find the header row by looking for moto-param-header-s class
+                header_row = None
+                headers = []
+                for row in all_rows:
+                    potential_headers = [td.text.strip() for td in row.find_all("td", class_="moto-param-header-s")]
+                    if potential_headers:
+                        # Look for upstream-specific headers (must have symb rate, not SNR which is downstream)
+                        headers_text = " ".join(potential_headers).lower()
+                        is_upstream = ("symb" in headers_text or "symbol rate" in headers_text) and "snr" not in headers_text
+                        if is_upstream:
+                            header_row = row
+                            headers = potential_headers
+                            break
 
-                # Look for upstream-specific headers (must have symb rate, not SNR which is downstream)
-                headers_text = " ".join(headers).lower()
-                is_upstream = ("symb" in headers_text or "symbol rate" in headers_text) and "snr" not in headers_text
-
-                if headers and is_upstream:
+                if header_row and headers:
                     _LOGGER.debug(f"Found upstream channel table with headers: {headers}")
-                    rows = table.find_all("tr")[1:]  # Skip header row
+                    # Get all rows after the header row
+                    header_index = all_rows.index(header_row)
+                    data_rows = all_rows[header_index + 1:]  # Skip header row
 
-                    for row in rows:
+                    for row in data_rows:
                         cols = row.find_all("td")
                         if len(cols) >= 7:  # Typical upstream: Channel, Lock, Type, ID, Symb Rate, Freq, Power
                             try:

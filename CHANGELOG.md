@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2025-10-23
+
+### Fixed
+- **Nested Table Parsing** - Fixed HTML parsing for modems with nested table structures
+  - Some Motorola modems were showing "0 tables found" despite successful connection
+  - Updated `_parse_downstream_channels()` and `_parse_upstream_channels()` to use `recursive=False` when searching for table rows
+  - Prevents duplicate channel data from being parsed
+  - All 67 tests pass
+- **Deprecated config_entry Warning** - Removed explicit `self.config_entry` assignment in OptionsFlowHandler
+  - Fixes Home Assistant 2025.12 deprecation warning
+  - `config_entry` is now provided automatically by the base class
+
+### Changed
+- **Default Polling Interval** - Increased from 5 minutes (300s) to 10 minutes (600s)
+  - Reduces load on modem and Home Assistant
+  - Still within industry best practices (5-10 minute range)
+  - Users can adjust via configuration options if needed
+- **Attribution** - Updated credit to @captain-coredump in v1.7.0 release notes
+
 ## [1.7.0] - 2025-10-22
 
 ### Added
@@ -13,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Parses downstream channels with power, SNR, frequency, and error statistics
   - Parses upstream channels with power and frequency
   - Added comprehensive test coverage with 3 new tests
-  - Based on HTML sample contributed by vreihen from community forum
+  - Based on HTML sample contributed by @captain-coredump from community forum
   - **Status**: Parser implemented and tested, awaiting real-world confirmation from user
 
 ### Technical

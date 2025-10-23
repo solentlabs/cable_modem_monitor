@@ -22,9 +22,9 @@ class TestCoordinatorInterval:
         """Test default scan interval converts to timedelta correctly."""
         interval = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
 
-        # Should be 5 minutes
-        assert interval.total_seconds() == 300
-        assert interval == timedelta(minutes=5)
+        # Should be 10 minutes
+        assert interval.total_seconds() == 600
+        assert interval == timedelta(minutes=10)
 
     def test_minimum_scan_interval_as_timedelta(self):
         """Test minimum scan interval converts to timedelta correctly."""

@@ -98,7 +98,7 @@ After installation, you can configure additional settings:
 3. Available options:
    - **Modem IP Address**: Update if your modem's IP changes
    - **Username/Password**: Update authentication credentials
-   - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 300 - 5 minutes)
+   - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
 
 ![Cable Modem Configuration Settings](images/cable-modem-settings.png)
@@ -350,7 +350,7 @@ If your modem isn't working:
 
 ## Update Interval
 
-By default, the integration polls your modem every 5 minutes. This is defined in `const.py` as `DEFAULT_SCAN_INTERVAL = 300` (seconds).
+By default, the integration polls your modem every 10 minutes. This is defined in `const.py` as `DEFAULT_SCAN_INTERVAL = 600` (seconds).
 
 To change this, edit the value in `custom_components/cable_modem_monitor/const.py` and restart Home Assistant.
 
