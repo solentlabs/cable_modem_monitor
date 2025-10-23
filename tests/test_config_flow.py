@@ -39,8 +39,8 @@ class TestConfigFlow:
         assert MAX_SCAN_INTERVAL == 1800
 
     def test_scan_interval_default_value(self):
-        """Test that default scan interval is 300s (5 minutes)."""
-        assert DEFAULT_SCAN_INTERVAL == 300
+        """Test that default scan interval is 600s (10 minutes)."""
+        assert DEFAULT_SCAN_INTERVAL == 600
 
     def test_scan_interval_range_valid(self):
         """Test that scan interval range makes sense."""
@@ -192,8 +192,8 @@ class TestConfigConstants:
 
     def test_defaults_are_reasonable(self):
         """Test that default values make sense."""
-        ***REMOVED*** Scan interval: 5 minutes
-        assert DEFAULT_SCAN_INTERVAL == 300
+        ***REMOVED*** Scan interval: 10 minutes
+        assert DEFAULT_SCAN_INTERVAL == 600
 
         ***REMOVED*** History: 30 days
         assert DEFAULT_HISTORY_DAYS == 30
