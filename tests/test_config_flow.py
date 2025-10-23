@@ -219,3 +219,13 @@ class TestOptionsFlow:
     def test_options_flow_has_connection_settings_step(self):
         """Test that options flow has connection settings step."""
         assert hasattr(OptionsFlowHandler, 'async_step_connection_settings')
+
+    def test_options_flow_can_instantiate_without_arguments(self):
+        """Test that OptionsFlowHandler can be instantiated without arguments.
+
+        This prevents the TypeError that caused a 500 error when trying to
+        access the configuration UI in Home Assistant.
+        """
+        ***REMOVED*** This should not raise TypeError
+        handler = OptionsFlowHandler()
+        assert handler is not None
