@@ -200,13 +200,13 @@ cards:
       - sensor.cable_modem_modem_connection_status
       - sensor.cable_modem_software_version
       - sensor.cable_modem_system_uptime
-      - sensor.cable_modem_last_boot_time
+      - entity: sensor.cable_modem_last_boot_time
+        format: relative  # Shows "X days ago" instead of full timestamp
       - sensor.cable_modem_downstream_channel_count
       - sensor.cable_modem_upstream_channel_count
       - sensor.cable_modem_total_corrected_errors
       - sensor.cable_modem_total_uncorrected_errors
       - button.cable_modem_restart_modem
-      - button.cable_modem_clear_history
 
   - type: history-graph
     title: Downstream Power Levels
@@ -231,6 +231,45 @@ cards:
       - sensor.cable_modem_total_corrected_errors
       - sensor.cable_modem_total_uncorrected_errors
 ```
+
+### Last Boot Time Display Options
+
+The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize how it displays:
+
+**Relative time (recommended)** - Shows "29 days ago":
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: relative
+```
+
+**Date only** - Shows "2024-10-24":
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: date
+```
+
+**Time only** - Shows "03:15:00":
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: time
+```
+
+**Full datetime** - Shows "2024-10-24 03:15:00":
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: datetime
+```
+
+**Custom template** (for maximum control):
+```yaml
+type: markdown
+content: >
+  Last Reboot: {{
+    as_timestamp(states('sensor.cable_modem_last_boot_time'))
+    | timestamp_custom('%B %d, %Y at %I:%M %p')
+  }}
+```
+*Shows: "September 25, 2024 at 03:15 AM"*
 
 ## Automation Examples
 
