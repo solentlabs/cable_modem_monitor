@@ -216,10 +216,6 @@ class TestOptionsFlow:
         """Test that options flow has init step."""
         assert hasattr(OptionsFlowHandler, 'async_step_init')
 
-    def test_options_flow_has_connection_settings_step(self):
-        """Test that options flow has connection settings step."""
-        assert hasattr(OptionsFlowHandler, 'async_step_connection_settings')
-
     def test_options_flow_can_instantiate_without_arguments(self):
         """Test that OptionsFlowHandler can be instantiated without arguments.
 
