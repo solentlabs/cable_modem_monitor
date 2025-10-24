@@ -130,19 +130,42 @@ grep -r "sensor\.total_" .
 
 ***REMOVED******REMOVED******REMOVED*** Data and History
 
-**Historical Data**:
-- If using Option 1 (fresh install), old history remains in the database but won't be associated with new entities
-- If using Option 2 (rename entities), history is preserved
-- Consider using the `clear_history` service to remove old data:
-  ```yaml
-  service: cable_modem_monitor.clear_history
-  data:
-    days_to_keep: 30
-  ```
+**Important: History May Be Lost During Automatic Migration**
 
-**Statistics**:
-- Long-term statistics for old entity IDs will remain separate
+The v2.0 upgrade includes automatic entity ID migration that attempts to preserve your history. However, due to the way Home Assistant's recorder works, **some historical data may be lost or orphaned** during the migration process.
+
+**What Happens:**
+- The integration automatically migrates entity IDs on startup (e.g., `sensor.downstream_ch_1_power` → `sensor.cable_modem_downstream_ch_1_power`)
+- Home Assistant's recorder attempts to migrate the history to the new entity IDs
+- If conflicts occur (from previous delete/re-add cycles), some history may become orphaned
+- Error sensor history is most commonly affected due to the complexity of migrations
+
+**Why This Happens:**
+- Multiple delete/re-add cycles during testing create duplicate entity registrations
+- Database conflicts between old and new entity IDs
+- Recorder migration limitations with renamed entities
+
+**Recommendation:**
+1. **Accept the history loss** - v2.0 is a major version upgrade with breaking changes
+2. **Clean up orphaned data** using the clear_history service:
+   ```yaml
+   service: cable_modem_monitor.clear_history
+   data:
+     days_to_keep: 30  ***REMOVED*** Removes data older than 30 days
+   ```
+3. **Move forward** - New entities will build fresh, accurate history going forward
+
+**Will Orphaned Records Be Deleted Automatically?**
+
+No, orphaned records will NOT be deleted automatically. Home Assistant's retention policy only applies to active entities. Orphaned records (from deleted/renamed entities) remain in the database indefinitely unless you:
+- Use the `clear_history` service (recommended)
+- Manually purge old data using Developer Tools → Services → Recorder: Purge
+- Use a database cleanup tool
+
+**Statistics:**
+- Long-term statistics for old entity IDs will remain separate from new entities
 - New entities will start fresh statistics
+- Old statistics are not automatically merged
 
 ***REMOVED******REMOVED******REMOVED*** Troubleshooting
 
