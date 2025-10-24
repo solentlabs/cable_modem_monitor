@@ -363,7 +363,7 @@ class TestEntityNaming:
 
         ***REMOVED*** Test channel sensor
         channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-        assert channel_sensor.name == "Downstream Ch 5 Power"
+        assert channel_sensor.name == "DS Ch 5 Power"
         assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
 
 

@@ -184,16 +184,18 @@ class MotorolaMBParser(ModemParser):
 
                     for row in data_rows:
                         cols = row.find_all("td")
-                        ***REMOVED*** Upstream: Channel Type, Channel ID, Freq, Power
-                        if len(cols) >= 4:
+                        ***REMOVED*** Upstream table columns: Channel, Lock Status, Channel Type, Channel ID, Symb Rate, Freq (MHz), Pwr (dBmV)
+                        if len(cols) >= 7:
                             try:
-                                freq_mhz = self._extract_float(cols[2].text)
+                                ***REMOVED*** Extract frequency from column 5 (0-indexed)
+                                freq_mhz = self._extract_float(cols[5].text)
                                 freq_hz = (
                                     freq_mhz * 1_000_000
                                     if freq_mhz is not None
                                     else None
                                 )
 
+                                ***REMOVED*** Extract channel number from column 0
                                 channel_id = self._extract_number(cols[0].text)
                                 if channel_id is None:
                                     _LOGGER.warning(
@@ -201,11 +203,20 @@ class MotorolaMBParser(ModemParser):
                                     )
                                     continue
 
+                                lock_status = cols[1].text.strip() if len(cols) > 1 else None
+
+                                ***REMOVED*** Skip channels that are not locked (inactive channels)
+                                if lock_status and "not locked" in lock_status.lower():
+                                    _LOGGER.debug(
+                                        f"Skipping upstream channel {channel_id}: not locked"
+                                    )
+                                    continue
+
                                 channel_data = {
                                     "channel_id": str(channel_id),
                                     "frequency": freq_hz,
-                                    "power": self._extract_float(cols[3].text),
-                                    "modulation": cols[1].text.strip() if len(cols) > 1 else None,
+                                    "power": self._extract_float(cols[6].text),  ***REMOVED*** Power is in column 6
+                                    "modulation": lock_status,
                                 }
 
                                 ***REMOVED*** Skip if all critical values are None

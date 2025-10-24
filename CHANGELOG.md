@@ -30,10 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Simplified Configuration Flow** - Reduced from two steps to single-step options flow
   - Entity naming configuration removed (now hard-coded)
   - Cleaner, more intuitive configuration experience
-- **Cleaner Sensor Names** - Removed redundant prefixes from channel sensor display names
-  - Downstream: "Downstream Ch 1 Power" → "Ch 1 Power"
-  - Upstream: "Upstream Ch 1 Power" → "Ch 1 Power"
-  - Reduces redundancy in dashboard cards with section headers
+- **Industry-Standard Sensor Names** - Channel sensors use DS/US abbreviations following industry standards
+  - Downstream: "Downstream Ch 1 Power" → "DS Ch 1 Power"
+  - Upstream: "Upstream Ch 1 Power" → "US Ch 1 Power"
+  - Shorter names reduce redundancy in dashboard cards
+  - Follows cable industry standard abbreviations (DS = Downstream, US = Upstream)
   - Entity IDs remain unchanged (still include downstream/upstream in the ID)
 - **Improved Code Quality** - Code review and cleanup
   - Removed unused imports
@@ -41,13 +42,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added clarity comments explaining v2.0+ parser architecture
   - Better documentation throughout codebase
 
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Upstream Channel Sensors** - Fixed upstream sensors not being created
+  - Relaxed validation to allow upstream channels without frequency data
+  - Fixed Motorola parser reading frequency from wrong column (was column 2, now column 5)
+  - Fixed power reading from wrong column (was column 3, now column 6)
+  - Upstream frequencies now display correctly in Hz
+  - Only active "Locked" channels are shown (inactive "Not Locked" channels are filtered out)
+  - Resolves issue where no upstream sensors appeared despite modem reporting 5 active channels
+
 ***REMOVED******REMOVED******REMOVED*** Technical
 - Added `async_migrate_entity_ids()` function in __init__.py for automatic migration
 - Simplified config_flow.py to single-step options flow
 - Removed deprecated CONF_ENTITY_PREFIX and related constants
-- Updated sensor display names to remove redundant prefixes
+- Updated sensor display names to use DS/US prefixes
 - Updated clear_history service to use parameterized SQL queries
 - All parser comments now reference v2.0+ (v1.8 was never released)
+- Modified `base_parser.validate_upstream()` to make frequency optional
+- Fixed Motorola MB parser upstream channel column indices
+- Added filtering for "Not Locked" upstream channels in Motorola parser
 
 ***REMOVED******REMOVED******REMOVED*** Migration Notes
 - **Recommended**: Fresh install (cleanest approach)

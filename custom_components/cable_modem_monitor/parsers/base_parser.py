@@ -115,7 +115,11 @@ class ModemParser(ABC):
         Returns:
             True if channel is valid, False otherwise
         """
-        required = ["channel_id", "frequency", "power"]
-        return all(
-            field in channel and channel[field] is not None for field in required
+        ***REMOVED*** Require channel_id and power, but frequency is optional
+        ***REMOVED*** (some modems don't report upstream frequency)
+        return (
+            "channel_id" in channel
+            and channel["channel_id"] is not None
+            and "power" in channel
+            and channel["power"] is not None
         )
