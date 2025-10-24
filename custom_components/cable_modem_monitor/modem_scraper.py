@@ -93,7 +93,15 @@ class ModemScraper:
                     continue
 
             if not html:
-                _LOGGER.error("Could not fetch data from any known modem URL")
+                _LOGGER.error(
+                    "Could not fetch data from any known modem URL. "
+                    "Tried: %s. "
+                    "Troubleshooting: 1) Verify modem IP is correct (check router admin page), "
+                    "2) Test if modem web interface works in browser, "
+                    "3) Check if authentication is required (username/password), "
+                    "4) Ensure Home Assistant can reach modem's network.",
+                    ", ".join(urls)
+                )
                 return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
             soup = BeautifulSoup(html, "html.parser")
@@ -116,7 +124,10 @@ class ModemScraper:
                 return {"connection_status": "offline", "downstream": [], "upstream": []}
 
             ***REMOVED*** Parse using detected parser
-            _LOGGER.info(f"Using parser: {parser.name} ({parser.manufacturer})")
+            _LOGGER.info(
+                f"✓ Detected modem: {parser.name} ({parser.manufacturer}) "
+                f"- Supported models: {', '.join(parser.models)}"
+            )
             downstream_channels = parser.parse_downstream(soup)
             upstream_channels = parser.parse_upstream(soup)
             system_info = parser.parse_system_info(soup)
@@ -133,7 +144,11 @@ class ModemScraper:
             if not downstream_channels and not upstream_channels:
                 _LOGGER.error(
                     f"Parser '{parser.name}' found no valid channel data. "
-                    "HTML structure may have changed or data is unavailable."
+                    f"Expected at least 1 downstream or upstream channel, found 0. "
+                    "Possible causes: 1) Modem is initializing/offline, "
+                    "2) HTML structure changed (firmware update?), "
+                    "3) Data tables not accessible. "
+                    "Enable debug logging for detailed parsing information."
                 )
                 return {"connection_status": "offline", "downstream": [], "upstream": []}
 
