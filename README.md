@@ -195,38 +195,39 @@ cards:
   - type: entities
     title: Cable Modem Status
     entities:
-      - sensor.modem_connection_status
-      - sensor.software_version
-      - sensor.system_uptime
-      - sensor.downstream_channel_count
-      - sensor.upstream_channel_count
-      - sensor.total_corrected_errors
-      - sensor.total_uncorrected_errors
-      - button.restart_modem
-      - button.clear_history
+      - sensor.cable_modem_modem_connection_status
+      - sensor.cable_modem_software_version
+      - sensor.cable_modem_system_uptime
+      - sensor.cable_modem_last_boot_time
+      - sensor.cable_modem_downstream_channel_count
+      - sensor.cable_modem_upstream_channel_count
+      - sensor.cable_modem_total_corrected_errors
+      - sensor.cable_modem_total_uncorrected_errors
+      - button.cable_modem_restart_modem
+      - button.cable_modem_clear_history
 
   - type: history-graph
     title: Downstream Power Levels
     hours_to_show: 24
     entities:
-      - sensor.downstream_ch_1_power
-      - sensor.downstream_ch_2_power
-      - sensor.downstream_ch_3_power
+      - sensor.cable_modem_downstream_ch_1_power
+      - sensor.cable_modem_downstream_ch_2_power
+      - sensor.cable_modem_downstream_ch_3_power
 
   - type: history-graph
     title: Signal-to-Noise Ratio
     hours_to_show: 24
     entities:
-      - sensor.downstream_ch_1_snr
-      - sensor.downstream_ch_2_snr
-      - sensor.downstream_ch_3_snr
+      - sensor.cable_modem_downstream_ch_1_snr
+      - sensor.cable_modem_downstream_ch_2_snr
+      - sensor.cable_modem_downstream_ch_3_snr
 
   - type: history-graph
     title: Error Rates (Trend Analysis)
     hours_to_show: 24
     entities:
-      - sensor.total_corrected_errors
-      - sensor.total_uncorrected_errors
+      - sensor.cable_modem_total_corrected_errors
+      - sensor.cable_modem_total_uncorrected_errors
 ```
 
 ## Automation Examples
@@ -238,7 +239,7 @@ automation:
   - alias: "Cable Modem - High Uncorrected Errors"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.total_uncorrected_errors
+        entity_id: sensor.cable_modem_total_uncorrected_errors
         above: 100
     action:
       - service: notify.notify
@@ -254,7 +255,7 @@ automation:
   - alias: "Cable Modem - Low SNR Warning"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.downstream_ch_1_snr
+        entity_id: sensor.cable_modem_downstream_ch_1_snr
         below: 30
     action:
       - service: notify.notify
@@ -271,8 +272,8 @@ automation:
     trigger:
       - platform: state
         entity_id:
-          - sensor.downstream_channel_count
-          - sensor.upstream_channel_count
+          - sensor.cable_modem_downstream_channel_count
+          - sensor.cable_modem_upstream_channel_count
     condition:
       - condition: template
         value_template: "{{ trigger.from_state.state != 'unavailable' }}"
@@ -290,7 +291,7 @@ automation:
   - alias: "Cable Modem - Auto Restart on High Errors"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.total_uncorrected_errors
+        entity_id: sensor.cable_modem_total_uncorrected_errors
         above: 1000
     action:
       - service: notify.notify
@@ -299,7 +300,7 @@ automation:
           message: "High error count detected. Restarting modem..."
       - service: button.press
         target:
-          entity_id: button.restart_modem
+          entity_id: button.cable_modem_restart_modem
 ```
 
 ## Troubleshooting
