@@ -111,6 +111,16 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
 
         for entity_entry, old_entity_id, new_entity_id in migrations:
             try:
+                ***REMOVED*** Check if target entity ID already exists (from another integration)
+                existing_entity = entity_reg.async_get(new_entity_id)
+                if existing_entity and existing_entity.platform != DOMAIN:
+                    _LOGGER.warning(
+                        f"Cannot migrate {old_entity_id} -> {new_entity_id}: "
+                        f"Target entity ID already exists (platform: {existing_entity.platform}). "
+                        f"Skipping migration for this entity."
+                    )
+                    continue
+
                 entity_reg.async_update_entity(
                     entity_entry.entity_id,
                     new_entity_id=new_entity_id
