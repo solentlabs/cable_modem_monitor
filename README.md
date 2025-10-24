@@ -23,10 +23,13 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
 - **Connection Status**: Monitor modem online/offline state
-- **System Information**: Software version, uptime, and channel counts
+- **System Information**: Software version, uptime, channel counts, and last boot time
+- **Configurable Entity Naming**: Choose from default, domain prefix, IP prefix, or custom naming
+- **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
 - **Modem Control**: Restart your modem directly from Home Assistant
 - **Historical Data**: All metrics are stored for trend analysis
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
+- **Extensible**: Plugin architecture makes adding new modem models easy
 
 ***REMOVED******REMOVED*** Supported Modems
 
@@ -100,6 +103,11 @@ After installation, you can configure additional settings:
    - **Username/Password**: Update authentication credentials
    - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
+   - **Entity Naming**: Choose how entities are named:
+     - **Default**: No prefix (e.g., "Modem Connection Status")
+     - **Domain**: Add "Cable Modem" prefix (e.g., "Cable Modem Modem Connection Status")
+     - **IP Address**: Use modem IP as prefix (e.g., "192_168_100_1 Modem Connection Status")
+     - **Custom**: Define your own prefix (e.g., "Living Room Modem Connection Status")
 
 ![Cable Modem Configuration Settings](images/cable-modem-settings.png)
 
@@ -115,6 +123,7 @@ After installation, you can configure additional settings:
 ***REMOVED******REMOVED******REMOVED*** System Information
 - `sensor.software_version`: Modem firmware/software version
 - `sensor.system_uptime`: How long the modem has been running
+- `sensor.last_boot_time`: When the modem last rebooted (timestamp device class)
 - `sensor.downstream_channel_count`: Number of active downstream channels
 - `sensor.upstream_channel_count`: Number of active upstream channels
 
@@ -396,6 +405,36 @@ automation:
         data:
           days_to_keep: 90  ***REMOVED*** Keep 3 months of data
 ```
+
+***REMOVED******REMOVED*** Contributing
+
+***REMOVED******REMOVED******REMOVED*** Adding Support for Your Modem
+
+This integration uses a plugin architecture that makes adding new modem models easy! If your modem isn't supported yet, you can add a parser for it.
+
+**Quick Start:**
+1. Copy `custom_components/cable_modem_monitor/parsers/parser_template.py` to a new file
+2. Follow the step-by-step instructions in the template
+3. Implement the 3 required methods: `can_parse()`, `parse_downstream()`, `parse_upstream()`
+4. Test with your modem's HTML
+5. Submit a pull request!
+
+**What You Need:**
+- Your modem's HTML page (save from browser or curl)
+- ~30 minutes to implement
+- Basic Python knowledge (the template guides you through it)
+
+**Benefits of the Plugin System:**
+- Zero changes to core code needed
+- Auto-discovery - your parser is automatically loaded
+- Isolated - can't break existing parsers
+- Template-driven - clear examples and instructions
+
+See existing parsers in `custom_components/cable_modem_monitor/parsers/` for reference:
+- `motorola_mb.py` - Standard table parsing
+- `arris_sb6141.py` - Transposed table format
+
+**Need Help?** Open an issue on GitHub with your modem model and we'll help you create a parser!
 
 ***REMOVED******REMOVED*** Privacy & Security
 
