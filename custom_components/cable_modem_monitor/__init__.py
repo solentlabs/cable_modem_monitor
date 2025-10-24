@@ -132,6 +132,21 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cable Modem Monitor from a config entry."""
+    ***REMOVED*** Migrate config entry data to remove old entity prefix settings
+    new_data = dict(entry.data)
+    removed_keys = []
+
+    ***REMOVED*** Remove v1.x entity prefix configuration keys
+    old_config_keys = ["entity_prefix", "custom_prefix"]
+    for key in old_config_keys:
+        if key in new_data:
+            removed_keys.append(key)
+            new_data.pop(key)
+
+    if removed_keys:
+        hass.config_entries.async_update_entry(entry, data=new_data)
+        _LOGGER.info(f"Removed deprecated config keys: {removed_keys}")
+
     ***REMOVED*** Migrate entity IDs to v2.0 naming scheme
     await async_migrate_entity_ids(hass, entry)
 
