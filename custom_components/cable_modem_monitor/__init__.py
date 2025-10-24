@@ -34,8 +34,124 @@ SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
 )
 
 
+async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Migrate entity IDs to include cable_modem_ prefix for v2.0."""
+    from homeassistant.helpers import entity_registry as er
+
+    entity_reg = er.async_get(hass)
+
+    ***REMOVED*** Mapping of old entity ID patterns to new ones
+    ***REMOVED*** This handles migration from pre-v2.0 versions to v2.0 entity naming
+    ***REMOVED*** Simplified patterns - we only support migrating from no-prefix to cable_modem_ prefix
+    old_patterns_to_new = {
+        ***REMOVED*** Note: Custom/IP prefixes were never released, so we only handle no-prefix entities
+        ***REMOVED*** Downstream channels
+        r'^sensor\.downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
+            'sensor.cable_modem_downstream_ch_{}_{}',
+        ***REMOVED*** Upstream channels
+        r'^sensor\.upstream_ch_(\d+)_(power|frequency)$':
+            'sensor.cable_modem_upstream_ch_{}_{}',
+        ***REMOVED*** Summary sensors (match with or without _errors suffix)
+        r'^sensor\.total_(corrected|uncorrected)(?:_errors)?$':
+            'sensor.cable_modem_total_{}_errors',
+        ***REMOVED*** Channel counts
+        r'^sensor\.downstream_channel_count$':
+            'sensor.cable_modem_downstream_channel_count',
+        r'^sensor\.upstream_channel_count$':
+            'sensor.cable_modem_upstream_channel_count',
+        ***REMOVED*** Status and info
+        r'^sensor\.modem_connection_status$':
+            'sensor.cable_modem_connection_status',
+        r'^sensor\.software_version$':
+            'sensor.cable_modem_software_version',
+        r'^sensor\.system_uptime$':
+            'sensor.cable_modem_system_uptime',
+        r'^sensor\.last_boot_time$':
+            'sensor.cable_modem_last_boot_time',
+        ***REMOVED*** Button
+        r'^button\.restart_modem$':
+            'button.cable_modem_restart_modem',
+    }
+
+    import re
+
+    migrations = []
+
+    ***REMOVED*** Find all entities belonging to this integration
+    for entity_entry in entity_reg.entities.values():
+        if entity_entry.platform != DOMAIN:
+            continue
+
+        if entity_entry.config_entry_id != entry.entry_id:
+            continue
+
+        old_entity_id = entity_entry.entity_id
+
+        ***REMOVED*** Skip if already has cable_modem_ prefix
+        if 'cable_modem_' in old_entity_id:
+            continue
+
+        ***REMOVED*** Try to match against patterns and generate new entity ID
+        for pattern, template in old_patterns_to_new.items():
+            match = re.match(pattern, old_entity_id)
+            if match:
+                ***REMOVED*** Extract all captured groups
+                groups = match.groups()
+
+                ***REMOVED*** Generate new entity ID
+                if '{}' in template:
+                    new_entity_id = template.format(*groups)
+                else:
+                    new_entity_id = template
+
+                migrations.append((entity_entry, old_entity_id, new_entity_id))
+                break
+
+    ***REMOVED*** Perform migrations
+    if migrations:
+        _LOGGER.info(f"Migrating {len(migrations)} entity IDs to v2.0 naming scheme")
+
+        for entity_entry, old_entity_id, new_entity_id in migrations:
+            try:
+                ***REMOVED*** Check if target entity ID already exists (from another integration)
+                existing_entity = entity_reg.async_get(new_entity_id)
+                if existing_entity and existing_entity.platform != DOMAIN:
+                    _LOGGER.warning(
+                        f"Cannot migrate {old_entity_id} -> {new_entity_id}: "
+                        f"Target entity ID already exists (platform: {existing_entity.platform}). "
+                        f"Skipping migration for this entity."
+                    )
+                    continue
+
+                entity_reg.async_update_entity(
+                    entity_entry.entity_id,
+                    new_entity_id=new_entity_id
+                )
+                _LOGGER.info(f"Migrated {old_entity_id} -> {new_entity_id}")
+            except Exception as e:
+                _LOGGER.error(f"Failed to migrate {old_entity_id}: {e}")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cable Modem Monitor from a config entry."""
+    ***REMOVED*** Migrate config entry data to remove old entity prefix settings
+    new_data = dict(entry.data)
+    removed_keys = []
+
+    ***REMOVED*** Remove v1.x entity prefix configuration keys
+    old_config_keys = ["entity_prefix", "custom_prefix"]
+    for key in old_config_keys:
+        if key in new_data:
+            removed_keys.append(key)
+            new_data.pop(key)
+
+    if removed_keys:
+        hass.config_entries.async_update_entry(entry, data=new_data)
+        _LOGGER.info(f"Removed deprecated config keys: {removed_keys}")
+
+    ***REMOVED*** Migrate entity IDs to v2.0 naming scheme
+    await async_migrate_entity_ids(hass, entry)
+
     host = entry.data[CONF_HOST]
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
@@ -74,10 +190,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ***REMOVED*** Register services
     async def handle_clear_history(call: ServiceCall) -> None:
         """Handle the clear_history service call."""
-        days_to_keep = call.data.get("days_to_keep", 30)
+        from homeassistant.helpers import entity_registry as er
 
+        days_to_keep = call.data.get("days_to_keep", 30)
         _LOGGER.info(f"Clearing cable modem history older than {days_to_keep} days")
 
+        ***REMOVED*** Get entity registry
+        entity_reg = er.async_get(hass)
+
+        ***REMOVED*** Find all entities belonging to this integration
+        cable_modem_entities = []
+        for entity_entry in entity_reg.entities.values():
+            if entity_entry.platform == DOMAIN:
+                cable_modem_entities.append(entity_entry.entity_id)
+
+        if not cable_modem_entities:
+            _LOGGER.warning("No cable modem entities found in registry")
+            return
+
+        _LOGGER.info(f"Found {len(cable_modem_entities)} cable modem entities to purge")
+
+        ***REMOVED*** Use Home Assistant's official recorder purge service
         def clear_db_history():
             """Clear history from database (runs in executor)."""
             try:
@@ -90,25 +223,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 conn = sqlite3.connect(db_path)
                 cursor = conn.cursor()
 
-                ***REMOVED*** Find all cable modem sensor entity IDs
-                cursor.execute("""
-                    SELECT metadata_id, entity_id FROM states_meta
-                    WHERE entity_id LIKE 'sensor.downstream_ch_%'
-                       OR entity_id LIKE 'sensor.upstream_ch_%'
-                       OR entity_id LIKE 'sensor.total_%'
-                       OR entity_id IN (
-                           'sensor.downstream_channel_count',
-                           'sensor.upstream_channel_count',
-                           'sensor.modem_connection_status',
-                           'sensor.software_version',
-                           'sensor.system_uptime'
-                       )
-                """)
+                ***REMOVED*** Find metadata IDs for our entities
+                placeholders = ",".join("?" * len(cable_modem_entities))
+                cursor.execute(
+                    f"SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN ({placeholders})",
+                    cable_modem_entities
+                )
 
                 metadata_ids = [row[0] for row in cursor.fetchall()]
 
                 if not metadata_ids:
-                    _LOGGER.warning("No cable modem sensors found in database")
+                    _LOGGER.warning("No cable modem sensors found in database states")
                     conn.close()
                     return 0
 
@@ -121,20 +246,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 cursor.execute(query, (*metadata_ids, cutoff_ts))
                 states_deleted = cursor.rowcount
 
-                ***REMOVED*** Find statistics metadata IDs
-                cursor.execute("""
-                    SELECT id FROM statistics_meta
-                    WHERE statistic_id LIKE 'sensor.downstream_ch_%'
-                       OR statistic_id LIKE 'sensor.upstream_ch_%'
-                       OR statistic_id LIKE 'sensor.total_%'
-                       OR statistic_id IN (
-                           'sensor.downstream_channel_count',
-                           'sensor.upstream_channel_count',
-                           'sensor.modem_connection_status',
-                           'sensor.software_version',
-                           'sensor.system_uptime'
-                       )
-                """)
+                ***REMOVED*** Find statistics metadata IDs using entity_id list from registry
+                ***REMOVED*** Use parameterized query to safely match entity IDs
+                placeholders = ",".join("?" * len(cable_modem_entities))
+                stats_query = f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"
+                cursor.execute(stats_query, cable_modem_entities)
 
                 stats_metadata_ids = [row[0] for row in cursor.fetchall()]
 

@@ -321,3 +321,185 @@ class TestSensorDataHandling:
 
         ***REMOVED*** Should handle None gracefully
         assert sensor.native_value is None or sensor.native_value == "Unknown"
+
+
+class TestEntityNaming:
+    """Test entity naming with different prefix configurations."""
+
+    @pytest.fixture
+    def mock_coordinator(self):
+        """Create mock coordinator."""
+        coordinator = Mock()
+        coordinator.data = {
+            "connection_status": "online",
+            "total_corrected": 100,
+            "downstream": [],
+            "upstream": [],
+        }
+        coordinator.last_update_success = True
+        return coordinator
+
+    def test_sensor_naming(self, mock_coordinator):
+        """Test sensor naming has correct display names and unique IDs."""
+        from cable_modem_monitor.sensor import (
+            ModemConnectionStatusSensor,
+            ModemTotalCorrectedSensor,
+            ModemDownstreamPowerSensor
+        )
+
+        entry = Mock()
+        entry.entry_id = "test"
+        entry.data = {"host": "192.168.100.1"}
+
+        ***REMOVED*** Test connection status sensor
+        connection_sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
+        assert connection_sensor.name == "Modem Connection Status"
+        assert connection_sensor.unique_id == "test_cable_modem_connection_status"
+
+        ***REMOVED*** Test error sensor
+        error_sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
+        assert error_sensor.name == "Total Corrected Errors"
+        assert error_sensor.unique_id == "test_cable_modem_total_corrected"
+
+        ***REMOVED*** Test channel sensor
+        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
+        assert channel_sensor.name == "DS Ch 5 Power"
+        assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
+
+
+class TestLastBootTimeSensor:
+    """Test last boot time sensor functionality."""
+
+    @pytest.fixture
+    def mock_coordinator(self):
+        """Create mock coordinator with uptime data."""
+        coordinator = Mock()
+        coordinator.data = {
+            "connection_status": "online",
+            "system_uptime": "2 days 5 hours",
+        }
+        coordinator.last_update_success = True
+        return coordinator
+
+    @pytest.fixture
+    def mock_entry(self):
+        """Create mock config entry."""
+        entry = Mock()
+        entry.entry_id = "test"
+        entry.data = {"host": "192.168.100.1"}
+        return entry
+
+    def test_parse_uptime_days_hours(self):
+        """Test parsing uptime with days and hours."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("2 days 5 hours")
+        expected = (2 * 86400) + (5 * 3600)  ***REMOVED*** 2 days + 5 hours
+        assert result == expected
+
+    def test_parse_uptime_hours_only(self):
+        """Test parsing uptime with only hours."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("3 hours")
+        expected = 3 * 3600
+        assert result == expected
+
+    def test_parse_uptime_with_minutes(self):
+        """Test parsing uptime with hours and minutes."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("3 hours 45 minutes")
+        expected = (3 * 3600) + (45 * 60)
+        assert result == expected
+
+    def test_parse_uptime_complex(self):
+        """Test parsing complex uptime string."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("5 days 12 hours 30 minutes 15 seconds")
+        expected = (5 * 86400) + (12 * 3600) + (30 * 60) + 15
+        assert result == expected
+
+    def test_parse_uptime_unknown(self):
+        """Test parsing Unknown uptime."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("Unknown")
+        assert result is None
+
+    def test_parse_uptime_empty(self):
+        """Test parsing empty uptime."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds("")
+        assert result is None
+
+    def test_parse_uptime_none(self):
+        """Test parsing None uptime."""
+        from cable_modem_monitor.sensor import parse_uptime_to_seconds
+
+        result = parse_uptime_to_seconds(None)
+        assert result is None
+
+    def test_last_boot_time_calculation(self, mock_coordinator, mock_entry):
+        """Test last boot time calculation from uptime."""
+        from cable_modem_monitor.sensor import ModemLastBootTimeSensor
+        from datetime import datetime, timedelta
+        from homeassistant.util import dt as dt_util
+
+        sensor = ModemLastBootTimeSensor(mock_coordinator, mock_entry)
+
+        ***REMOVED*** Get the calculated last boot time
+        last_boot = sensor.native_value
+
+        ***REMOVED*** Should return a datetime object
+        assert isinstance(last_boot, datetime)
+
+        ***REMOVED*** Calculate expected boot time (2 days 5 hours ago)
+        uptime_seconds = (2 * 86400) + (5 * 3600)
+        now = dt_util.now()
+        expected_boot = now - timedelta(seconds=uptime_seconds)
+
+        ***REMOVED*** Should be within a few seconds of expected (allow for execution time)
+        time_diff = abs((last_boot - expected_boot).total_seconds())
+        assert time_diff < 5  ***REMOVED*** Within 5 seconds
+
+    def test_last_boot_time_unknown_uptime(self, mock_entry):
+        """Test last boot time with unknown uptime."""
+        from cable_modem_monitor.sensor import ModemLastBootTimeSensor
+
+        coordinator = Mock()
+        coordinator.data = {"system_uptime": "Unknown"}
+        coordinator.last_update_success = True
+
+        sensor = ModemLastBootTimeSensor(coordinator, mock_entry)
+
+        ***REMOVED*** Should return None for unknown uptime
+        assert sensor.native_value is None
+
+    def test_last_boot_time_missing_uptime(self, mock_entry):
+        """Test last boot time with missing uptime data."""
+        from cable_modem_monitor.sensor import ModemLastBootTimeSensor
+
+        coordinator = Mock()
+        coordinator.data = {}  ***REMOVED*** No uptime data
+        coordinator.last_update_success = True
+
+        sensor = ModemLastBootTimeSensor(coordinator, mock_entry)
+
+        ***REMOVED*** Should return None when uptime is missing
+        assert sensor.native_value is None
+
+    def test_last_boot_time_sensor_attributes(self, mock_coordinator, mock_entry):
+        """Test last boot time sensor attributes."""
+        from cable_modem_monitor.sensor import ModemLastBootTimeSensor
+        from homeassistant.components.sensor import SensorDeviceClass
+
+        sensor = ModemLastBootTimeSensor(mock_coordinator, mock_entry)
+
+        ***REMOVED*** Check sensor attributes
+        assert sensor.name == "Last Boot Time"
+        assert sensor.unique_id == "test_cable_modem_last_boot_time"
+        assert sensor.icon == "mdi:restart"
+        assert sensor.device_class == SensorDeviceClass.TIMESTAMP

@@ -21,19 +21,22 @@
   },
   "options": {
     "step": {
-      "connection_settings": {
-        "title": "Cable Modem Settings",
-        "description": "Update connection settings for your cable modem.\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave username/password blank if your modem doesn't require authentication. Leave password blank to keep existing password.",
+      "init": {
+        "title": "Cable Modem Monitor Settings",
+        "description": "Configure your cable modem connection and monitoring preferences.\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave username/password blank if your modem doesn't require authentication. Leave password blank to keep existing password.",
         "data": {
           "host": "Modem IP Address",
           "username": "Username (optional)",
-          "password": "Password (optional, leave blank to keep existing)",
+          "password": "Password (leave blank to keep current)",
           "scan_interval": "Polling Interval (seconds)",
-          "history_days": "History Retention (days)"
+          "history_days": "Days of History to Keep"
         },
         "data_description": {
-          "scan_interval": "How often to check modem status (60-1800 seconds). Recommended: 300 (5 minutes) to avoid overloading the modem. Lower values may cause device strain.",
-          "history_days": "Number of days to keep when clearing history (1-365)"
+          "host": "The IP address of your cable modem (typically 192.168.100.1 for Motorola modems)",
+          "username": "Username for modem web interface (leave blank if not required)",
+          "password": "Password for modem web interface (leave blank to keep existing password, or if not required)",
+          "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems.",
+          "history_days": "Number of days of historical data to retain (1-365 days). Use the clear_history service to remove older data and free up database space."
         }
       }
     },

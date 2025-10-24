@@ -93,42 +93,64 @@ class ModemScraper:
                     continue
 
             if not html:
-                _LOGGER.error("Could not fetch data from any known modem URL")
+                _LOGGER.error(
+                    "Could not fetch data from any known modem URL. "
+                    "Tried: %s. "
+                    "Troubleshooting: 1) Verify modem IP is correct (check router admin page), "
+                    "2) Test if modem web interface works in browser, "
+                    "3) Check if authentication is required (username/password), "
+                    "4) Ensure Home Assistant can reach modem's network.",
+                    ", ".join(urls)
+                )
                 return {"connection_status": "unreachable", "downstream": [], "upstream": []}
 
             soup = BeautifulSoup(html, "html.parser")
 
-            ***REMOVED*** Log HTML structure for debugging
-            tables = soup.find_all("table")
-            _LOGGER.debug(f"Found {len(tables)} tables in HTML from {successful_url}")
-            if tables:
-                for i, table in enumerate(tables[:3]):  ***REMOVED*** Log first 3 tables only
-                    headers = table.find_all("td", class_="moto-param-header-s")
-                    if headers:
-                        header_text = [h.text.strip() for h in headers[:5]]  ***REMOVED*** First 5 headers
-                        _LOGGER.debug(f"Table {i+1} headers (Motorola style): {header_text}")
+            ***REMOVED*** === NEW: Use parser plugin system ===
+            from .parsers import detect_parser
 
-            ***REMOVED*** Try Motorola-style parsing first
-            downstream_channels = self._parse_downstream_channels(soup)
-            upstream_channels = self._parse_upstream_channels(soup)
+            parser = detect_parser(soup, successful_url, html)
 
-            ***REMOVED*** If Motorola parsing failed, try ARRIS SB6141 format
-            if not downstream_channels and not upstream_channels:
-                _LOGGER.debug("Motorola parsing found no channels, trying ARRIS SB6141 format")
-                downstream_channels, upstream_channels = self._parse_arris_sb6141(soup)
-
-            ***REMOVED*** Validate that we got some valid data
-            if not downstream_channels and not upstream_channels:
+            if not parser:
                 _LOGGER.error(
-                    f"No valid channel data parsed from modem. Connection to {successful_url} succeeded "
-                    f"but HTML format not recognized (found {len(soup.find_all('table'))} tables). "
+                    f"No compatible parser found for modem at {successful_url}. "
+                    f"Connection succeeded but HTML format not recognized (found {len(soup.find_all('table'))} tables). "
                     "Your modem model may not be supported yet. To add support, please: "
                     "1) Open this URL in your browser: %s "
                     "2) Right-click -> View Page Source "
                     "3) Save and share the HTML at https://github.com/kwschulz/cable_modem_monitor/issues",
                     successful_url
                 )
-                raise ValueError("No valid channel data available")
+                return {"connection_status": "offline", "downstream": [], "upstream": []}
+
+            ***REMOVED*** Parse using detected parser
+            _LOGGER.info(
+                f"✓ Detected modem: {parser.name} ({parser.manufacturer}) "
+                f"- Supported models: {', '.join(parser.models)}"
+            )
+            downstream_channels = parser.parse_downstream(soup)
+            upstream_channels = parser.parse_upstream(soup)
+            system_info = parser.parse_system_info(soup)
+
+            ***REMOVED*** Validate channels
+            downstream_channels = [
+                ch for ch in downstream_channels if parser.validate_downstream(ch)
+            ]
+            upstream_channels = [
+                ch for ch in upstream_channels if parser.validate_upstream(ch)
+            ]
+
+            ***REMOVED*** Validate that we got some valid data
+            if not downstream_channels and not upstream_channels:
+                _LOGGER.error(
+                    f"Parser '{parser.name}' found no valid channel data. "
+                    f"Expected at least 1 downstream or upstream channel, found 0. "
+                    "Possible causes: 1) Modem is initializing/offline, "
+                    "2) HTML structure changed (firmware update?), "
+                    "3) Data tables not accessible. "
+                    "Enable debug logging for detailed parsing information."
+                )
+                return {"connection_status": "offline", "downstream": [], "upstream": []}
 
             ***REMOVED*** Calculate totals (only include non-None values)
             total_corrected = sum(
@@ -138,41 +160,41 @@ class ModemScraper:
                 ch.get("uncorrected") or 0 for ch in downstream_channels if ch.get("uncorrected") is not None
             )
 
-            ***REMOVED*** Fetch additional data from MotoHome.asp (version, channel counts)
-            software_version = "Unknown"
-            system_uptime = "Unknown"
-            upstream_channel_count = len(upstream_channels)  ***REMOVED*** Default to parsed count
-            downstream_channel_count = len(downstream_channels)  ***REMOVED*** Default to parsed count
-
-            ***REMOVED*** Get uptime from main connection page (soup already has MotoConnection.asp)
-            system_uptime = self._parse_system_uptime(soup)
-
-            try:
-                _LOGGER.info("Fetching additional data from MotoHome.asp")
-                home_response = self.session.get(f"{self.base_url}/MotoHome.asp", timeout=10)
-                if home_response.status_code == 200:
-                    home_soup = BeautifulSoup(home_response.text, "html.parser")
-                    software_version = self._parse_software_version(home_soup)
-                    ***REMOVED*** Parse channel counts from MotoHome page
-                    reported_counts = self._parse_channel_counts(home_soup)
-                    if reported_counts.get("downstream") is not None:
-                        downstream_channel_count = reported_counts["downstream"]
-                    if reported_counts.get("upstream") is not None:
-                        upstream_channel_count = reported_counts["upstream"]
-            except Exception as e:
-                _LOGGER.warning(f"Could not fetch MotoHome.asp data: {e}")
-
-            return {
-                "connection_status": "online" if downstream_channels else "offline",
+            ***REMOVED*** Build result with parser-provided system info
+            result = {
+                "connection_status": "online" if (downstream_channels or upstream_channels) else "offline",
                 "downstream": downstream_channels,
                 "upstream": upstream_channels,
                 "total_corrected": total_corrected,
                 "total_uncorrected": total_uncorrected,
-                "downstream_channel_count": downstream_channel_count,
-                "upstream_channel_count": upstream_channel_count,
-                "software_version": software_version,
-                "system_uptime": system_uptime,
+                "downstream_channel_count": system_info.get("downstream_channel_count") or len(downstream_channels),
+                "upstream_channel_count": system_info.get("upstream_channel_count") or len(upstream_channels),
+                "software_version": system_info.get("software_version", "Unknown"),
+                "system_uptime": system_info.get("system_uptime", "Unknown"),
             }
+
+            ***REMOVED*** For Motorola modems, try to fetch additional data from MotoHome.asp
+            ***REMOVED*** This is Motorola-specific and should eventually move into the Motorola parser
+            if parser.manufacturer == "Motorola":
+                try:
+                    _LOGGER.debug("Fetching additional Motorola-specific data from MotoHome.asp")
+                    home_response = self.session.get(f"{self.base_url}/MotoHome.asp", timeout=10)
+                    if home_response.status_code == 200:
+                        home_soup = BeautifulSoup(home_response.text, "html.parser")
+                        software_version = self._parse_software_version(home_soup)
+                        if software_version and software_version != "Unknown":
+                            result["software_version"] = software_version
+
+                        ***REMOVED*** Parse channel counts from MotoHome page
+                        reported_counts = self._parse_channel_counts(home_soup)
+                        if reported_counts.get("downstream") is not None:
+                            result["downstream_channel_count"] = reported_counts["downstream"]
+                        if reported_counts.get("upstream") is not None:
+                            result["upstream_channel_count"] = reported_counts["upstream"]
+                except Exception as e:
+                    _LOGGER.warning(f"Could not fetch MotoHome.asp data: {e}")
+
+            return result
 
         except Exception as e:
             _LOGGER.error(f"Error fetching modem data: {e}")

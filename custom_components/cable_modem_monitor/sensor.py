@@ -1,6 +1,9 @@
 """Sensor platform for Cable Modem Monitor."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+import re
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -13,8 +16,52 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import (
+    CONF_HOST,
+    DOMAIN,
+)
+
+
+def parse_uptime_to_seconds(uptime_str: str) -> int | None:
+    """Parse uptime string to total seconds.
+
+    Args:
+        uptime_str: Uptime string like "2 days 5 hours" or "3 hours 45 minutes"
+
+    Returns:
+        Total seconds or None if parsing fails
+    """
+    if not uptime_str or uptime_str == "Unknown":
+        return None
+
+    try:
+        total_seconds = 0
+
+        ***REMOVED*** Parse days
+        days_match = re.search(r'(\d+)\s*day', uptime_str, re.IGNORECASE)
+        if days_match:
+            total_seconds += int(days_match.group(1)) * 86400
+
+        ***REMOVED*** Parse hours
+        hours_match = re.search(r'(\d+)\s*hour', uptime_str, re.IGNORECASE)
+        if hours_match:
+            total_seconds += int(hours_match.group(1)) * 3600
+
+        ***REMOVED*** Parse minutes
+        minutes_match = re.search(r'(\d+)\s*min', uptime_str, re.IGNORECASE)
+        if minutes_match:
+            total_seconds += int(minutes_match.group(1)) * 60
+
+        ***REMOVED*** Parse seconds
+        seconds_match = re.search(r'(\d+)\s*sec', uptime_str, re.IGNORECASE)
+        if seconds_match:
+            total_seconds += int(seconds_match.group(1))
+
+        return total_seconds if total_seconds > 0 else None
+    except Exception:
+        return None
 
 
 async def async_setup_entry(
@@ -41,11 +88,14 @@ async def async_setup_entry(
     ***REMOVED*** Add software version and uptime sensors
     entities.append(ModemSoftwareVersionSensor(coordinator, entry))
     entities.append(ModemSystemUptimeSensor(coordinator, entry))
+    entities.append(ModemLastBootTimeSensor(coordinator, entry))
 
     ***REMOVED*** Add per-channel downstream sensors
     if coordinator.data.get("downstream"):
         for idx, channel in enumerate(coordinator.data["downstream"]):
-            channel_num = channel.get("channel", idx + 1)
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to index+1 if neither exists (shouldn't happen in practice)
+            channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
             entities.extend(
                 [
                     ModemDownstreamPowerSensor(coordinator, entry, channel_num),
@@ -66,7 +116,9 @@ async def async_setup_entry(
     ***REMOVED*** Add per-channel upstream sensors
     if coordinator.data.get("upstream"):
         for idx, channel in enumerate(coordinator.data["upstream"]):
-            channel_num = channel.get("channel", idx + 1)
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to index+1 if neither exists (shouldn't happen in practice)
+            channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
             entities.extend(
                 [
                     ModemUpstreamPowerSensor(coordinator, entry, channel_num),
@@ -109,7 +161,7 @@ class ModemConnectionStatusSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Modem Connection Status"
-        self._attr_unique_id = f"{entry.entry_id}_connection_status"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_connection_status"
         self._attr_icon = "mdi:router-network"
 
     @property
@@ -130,7 +182,7 @@ class ModemTotalCorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Total Corrected Errors"
-        self._attr_unique_id = f"{entry.entry_id}_total_corrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_corrected"
         self._attr_icon = "mdi:alert-circle-check"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -147,7 +199,7 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Total Uncorrected Errors"
-        self._attr_unique_id = f"{entry.entry_id}_total_uncorrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_uncorrected"
         self._attr_icon = "mdi:alert-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -166,8 +218,8 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Power"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_{channel}_power"
+        self._attr_name = f"DS Ch {channel} Power"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -176,7 +228,10 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("downstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("power")
         return None
 
@@ -190,8 +245,8 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} SNR"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_{channel}_snr"
+        self._attr_name = f"DS Ch {channel} SNR"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_snr"
         self._attr_native_unit_of_measurement = "dB"
         self._attr_icon = "mdi:signal-variant"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -200,7 +255,10 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("downstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("snr")
         return None
 
@@ -214,8 +272,8 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_{channel}_frequency"
+        self._attr_name = f"DS Ch {channel} Frequency"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -225,7 +283,10 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("downstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("frequency")
         return None
 
@@ -239,8 +300,8 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Corrected"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_{channel}_corrected"
+        self._attr_name = f"DS Ch {channel} Corrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_corrected"
         self._attr_icon = "mdi:check-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -248,7 +309,10 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("downstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("corrected")
         return None
 
@@ -262,8 +326,8 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Uncorrected"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_{channel}_uncorrected"
+        self._attr_name = f"DS Ch {channel} Uncorrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_uncorrected"
         self._attr_icon = "mdi:alert-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -271,7 +335,10 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("downstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("uncorrected")
         return None
 
@@ -285,8 +352,8 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Upstream Ch {channel} Power"
-        self._attr_unique_id = f"{entry.entry_id}_upstream_{channel}_power"
+        self._attr_name = f"US Ch {channel} Power"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -295,7 +362,10 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("upstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("power")
         return None
 
@@ -309,8 +379,8 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Upstream Ch {channel} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_upstream_{channel}_frequency"
+        self._attr_name = f"US Ch {channel} Frequency"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -320,7 +390,10 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("upstream", []):
-            if ch.get("channel") == self._channel:
+            ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
+            ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
+            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
+            if ch_num == self._channel:
                 return ch.get("frequency")
         return None
 
@@ -332,7 +405,7 @@ class ModemDownstreamChannelCountSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Downstream Channel Count"
-        self._attr_unique_id = f"{entry.entry_id}_downstream_channel_count"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_channel_count"
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
@@ -349,7 +422,7 @@ class ModemUpstreamChannelCountSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Upstream Channel Count"
-        self._attr_unique_id = f"{entry.entry_id}_upstream_channel_count"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_channel_count"
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
@@ -366,7 +439,7 @@ class ModemSoftwareVersionSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Software Version"
-        self._attr_unique_id = f"{entry.entry_id}_software_version"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_software_version"
         self._attr_icon = "mdi:information-outline"
 
     @property
@@ -382,10 +455,39 @@ class ModemSystemUptimeSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "System Uptime"
-        self._attr_unique_id = f"{entry.entry_id}_system_uptime"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_system_uptime"
         self._attr_icon = "mdi:clock-outline"
 
     @property
     def native_value(self) -> str:
         """Return the state of the sensor."""
         return self.coordinator.data.get("system_uptime", "Unknown")
+
+
+class ModemLastBootTimeSensor(ModemSensorBase):
+    """Sensor for modem last boot time (calculated from uptime)."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Last Boot Time"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_last_boot_time"
+        self._attr_icon = "mdi:restart"
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the last boot time as a datetime object."""
+        uptime_str = self.coordinator.data.get("system_uptime")
+        if not uptime_str or uptime_str == "Unknown":
+            return None
+
+        ***REMOVED*** Parse uptime string to seconds
+        uptime_seconds = parse_uptime_to_seconds(uptime_str)
+        if uptime_seconds is None:
+            return None
+
+        ***REMOVED*** Calculate last boot time: current time - uptime
+        now = dt_util.now()
+        last_boot = now - timedelta(seconds=uptime_seconds)
+        return last_boot

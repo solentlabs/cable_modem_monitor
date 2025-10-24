@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [2.0.0] - 2025-10-24
+
+***REMOVED******REMOVED******REMOVED*** Breaking Changes
+- **Entity Naming Standardization** - All sensor entity IDs now use the hard-coded `cable_modem_` prefix
+  - **Before (v1.x)**: Entity IDs could vary (no prefix or domain prefix)
+  - **After (v2.0)**: All entity IDs consistently use `sensor.cable_modem_*` format
+  - Automatic migration included - entity IDs will be renamed on first startup
+  - Configuration options for entity prefixes have been removed
+  - See UPGRADING.md for detailed migration guide
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Automatic Entity ID Migration** - Seamlessly upgrades entity IDs from pre-v2.0 to v2.0 naming
+  - Runs automatically on integration startup
+  - Includes safety checks to prevent conflicts with other integrations
+  - Logs all migrations for debugging
+  - Preserves history where possible (some loss may occur due to database conflicts)
+- **Enhanced Configuration Descriptions** - Detailed field descriptions in options flow
+  - Clear instructions for password handling (leave blank to keep existing)
+  - Current host/username displayed for context
+  - Helpful descriptions for scan interval and history retention settings
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Simplified Configuration Flow** - Reduced from two steps to single-step options flow
+  - Entity naming configuration removed (now hard-coded)
+  - Cleaner, more intuitive configuration experience
+- **Industry-Standard Sensor Names** - Channel sensors use DS/US abbreviations following industry standards
+  - Downstream: "Downstream Ch 1 Power" → "DS Ch 1 Power"
+  - Upstream: "Upstream Ch 1 Power" → "US Ch 1 Power"
+  - Shorter names reduce redundancy in dashboard cards
+  - Follows cable industry standard abbreviations (DS = Downstream, US = Upstream)
+  - Entity IDs remain unchanged (still include downstream/upstream in the ID)
+- **Improved Code Quality** - Code review and cleanup
+  - Removed unused imports
+  - Fixed SQL injection potential with parameterized queries
+  - Added clarity comments explaining v2.0+ parser architecture
+  - Better documentation throughout codebase
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Upstream Channel Sensors** - Fixed upstream sensors not being created
+  - Relaxed validation to allow upstream channels without frequency data
+  - Fixed Motorola parser reading frequency from wrong column (was column 2, now column 5)
+  - Fixed power reading from wrong column (was column 3, now column 6)
+  - Upstream frequencies now display correctly in Hz
+  - Only active "Locked" channels are shown (inactive "Not Locked" channels are filtered out)
+  - Resolves issue where no upstream sensors appeared despite modem reporting 5 active channels
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- Added `async_migrate_entity_ids()` function in __init__.py for automatic migration
+- Simplified config_flow.py to single-step options flow
+- Removed deprecated CONF_ENTITY_PREFIX and related constants
+- Updated sensor display names to use DS/US prefixes
+- Updated clear_history service to use parameterized SQL queries
+- All parser comments now reference v2.0+ (v1.8 was never released)
+- Modified `base_parser.validate_upstream()` to make frequency optional
+- Fixed Motorola MB parser upstream channel column indices
+- Added filtering for "Not Locked" upstream channels in Motorola parser
+
+***REMOVED******REMOVED******REMOVED*** Migration Notes
+- **Recommended**: Fresh install (cleanest approach)
+- **Alternative**: Automatic migration will rename entities on first startup
+- **History**: Some history loss may occur during migration due to database conflicts
+- **Orphaned Data**: Old records from renamed entities persist - use clear_history service to clean up
+- **Documentation**: See UPGRADING.md for complete migration guide
+
 ***REMOVED******REMOVED*** [1.7.1] - 2025-10-23
 
 ***REMOVED******REMOVED******REMOVED*** Fixed

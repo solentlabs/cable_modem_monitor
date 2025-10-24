@@ -88,6 +88,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(user_input[CONF_HOST])
                 self._abort_if_unique_id_configured()
 
+                ***REMOVED*** Add default values for fields not in initial setup
+                user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+                user_input.setdefault(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
+
                 return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(
@@ -100,10 +104,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        return await self.async_step_connection_settings()
-
-    async def async_step_connection_settings(self, user_input=None):
-        """Handle connection settings configuration."""
         errors = {}
 
         if user_input is not None:
@@ -116,7 +116,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                ***REMOVED*** Update the config entry with new data
+                ***REMOVED*** Preserve existing password if user left it blank
+                if not user_input.get(CONF_PASSWORD):
+                    user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+
+                ***REMOVED*** Update the config entry with all settings
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=user_input
                 )
@@ -150,7 +154,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         return self.async_show_form(
-            step_id="connection_settings",
+            step_id="init",
             data_schema=options_schema,
             errors=errors,
             description_placeholders={

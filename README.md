@@ -7,6 +7,8 @@
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
+> **⚠️ Upgrading from v1.x?** See [UPGRADING.md](UPGRADING.md) for important information about v2.0 breaking changes.
+
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
 
@@ -23,10 +25,13 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
 - **Connection Status**: Monitor modem online/offline state
-- **System Information**: Software version, uptime, and channel counts
+- **System Information**: Software version, uptime, channel counts, and last boot time
+- **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
+- **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
 - **Modem Control**: Restart your modem directly from Home Assistant
 - **Historical Data**: All metrics are stored for trend analysis
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
+- **Extensible**: Plugin architecture makes adding new modem models easy
 
 ***REMOVED******REMOVED*** Supported Modems
 
@@ -100,6 +105,11 @@ After installation, you can configure additional settings:
    - **Username/Password**: Update authentication credentials
    - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
+   - **Entity Naming**: Choose how entities are named:
+     - **Default**: No prefix (e.g., "Modem Connection Status")
+     - **Domain**: Add "Cable Modem" prefix (e.g., "Cable Modem Modem Connection Status")
+     - **IP Address**: Use modem IP as prefix (e.g., "192_168_100_1 Modem Connection Status")
+     - **Custom**: Define your own prefix (e.g., "Living Room Modem Connection Status")
 
 ![Cable Modem Configuration Settings](images/cable-modem-settings.png)
 
@@ -115,6 +125,7 @@ After installation, you can configure additional settings:
 ***REMOVED******REMOVED******REMOVED*** System Information
 - `sensor.software_version`: Modem firmware/software version
 - `sensor.system_uptime`: How long the modem has been running
+- `sensor.last_boot_time`: When the modem last rebooted (timestamp device class)
 - `sensor.downstream_channel_count`: Number of active downstream channels
 - `sensor.upstream_channel_count`: Number of active upstream channels
 
@@ -123,15 +134,15 @@ After installation, you can configure additional settings:
 - `sensor.total_uncorrected_errors`: Total uncorrected errors across all downstream channels
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Downstream Sensors (for each channel)
-- `sensor.downstream_ch_X_power`: Power level in dBmV
-- `sensor.downstream_ch_X_snr`: Signal-to-Noise Ratio in dB
-- `sensor.downstream_ch_X_frequency`: Channel frequency in Hz
-- `sensor.downstream_ch_X_corrected`: Corrected errors (if available)
-- `sensor.downstream_ch_X_uncorrected`: Uncorrected errors (if available)
+- `sensor.cable_modem_downstream_ch_X_power`: Power level in dBmV (displays as "DS Ch X Power")
+- `sensor.cable_modem_downstream_ch_X_snr`: Signal-to-Noise Ratio in dB (displays as "DS Ch X SNR")
+- `sensor.cable_modem_downstream_ch_X_frequency`: Channel frequency in Hz (displays as "DS Ch X Frequency")
+- `sensor.cable_modem_downstream_ch_X_corrected`: Corrected errors (displays as "DS Ch X Corrected")
+- `sensor.cable_modem_downstream_ch_X_uncorrected`: Uncorrected errors (displays as "DS Ch X Uncorrected")
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Upstream Sensors (for each channel)
-- `sensor.upstream_ch_X_power`: Transmit power level in dBmV
-- `sensor.upstream_ch_X_frequency`: Channel frequency in Hz
+- `sensor.cable_modem_upstream_ch_X_power`: Transmit power level in dBmV (displays as "US Ch X Power")
+- `sensor.cable_modem_upstream_ch_X_frequency`: Channel frequency in Hz (displays as "US Ch X Frequency")
 
 ***REMOVED******REMOVED******REMOVED*** Controls
 - `button.restart_modem`: Restart your cable modem remotely
@@ -186,39 +197,83 @@ cards:
   - type: entities
     title: Cable Modem Status
     entities:
-      - sensor.modem_connection_status
-      - sensor.software_version
-      - sensor.system_uptime
-      - sensor.downstream_channel_count
-      - sensor.upstream_channel_count
-      - sensor.total_corrected_errors
-      - sensor.total_uncorrected_errors
-      - button.restart_modem
-      - button.clear_history
+      - sensor.cable_modem_modem_connection_status
+      - sensor.cable_modem_software_version
+      - sensor.cable_modem_system_uptime
+      - entity: sensor.cable_modem_last_boot_time
+        format: relative  ***REMOVED*** Shows "X days ago" instead of full timestamp
+      - sensor.cable_modem_downstream_channel_count
+      - sensor.cable_modem_upstream_channel_count
+      - sensor.cable_modem_total_corrected_errors
+      - sensor.cable_modem_total_uncorrected_errors
+      - button.cable_modem_restart_modem
 
   - type: history-graph
     title: Downstream Power Levels
     hours_to_show: 24
     entities:
-      - sensor.downstream_ch_1_power
-      - sensor.downstream_ch_2_power
-      - sensor.downstream_ch_3_power
+      - sensor.cable_modem_downstream_ch_1_power
+      - sensor.cable_modem_downstream_ch_2_power
+      - sensor.cable_modem_downstream_ch_3_power
 
   - type: history-graph
     title: Signal-to-Noise Ratio
     hours_to_show: 24
     entities:
-      - sensor.downstream_ch_1_snr
-      - sensor.downstream_ch_2_snr
-      - sensor.downstream_ch_3_snr
+      - sensor.cable_modem_downstream_ch_1_snr
+      - sensor.cable_modem_downstream_ch_2_snr
+      - sensor.cable_modem_downstream_ch_3_snr
 
   - type: history-graph
     title: Error Rates (Trend Analysis)
     hours_to_show: 24
     entities:
-      - sensor.total_corrected_errors
-      - sensor.total_uncorrected_errors
+      - sensor.cable_modem_total_corrected_errors
+      - sensor.cable_modem_total_uncorrected_errors
 ```
+
+***REMOVED******REMOVED******REMOVED*** Last Boot Time Display Options
+
+The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize how it displays:
+
+**Relative time (recommended)** - Compact and informative:
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: relative
+```
+*Shows: "29 days ago"*
+
+**Date only** - Just the date:
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: date
+```
+*Shows: "2025-09-25"*
+
+**Time only** - Just the time:
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: time
+```
+*Shows: "00:38:00"*
+
+**Full datetime (fits in UI)** - Date and time:
+```yaml
+- entity: sensor.cable_modem_last_boot_time
+  format: datetime
+```
+*Shows: "2025-09-25 00:38:00"*
+
+**Custom template** - For more control (may be too long for some UIs):
+```yaml
+type: markdown
+content: >
+  Last Reboot: {{
+    as_timestamp(states('sensor.cable_modem_last_boot_time'))
+    | timestamp_custom('%Y-%m-%d %H:%M')
+  }}
+```
+*Shows: "Last Reboot: 2025-09-25 00:38"*
 
 ***REMOVED******REMOVED*** Automation Examples
 
@@ -229,7 +284,7 @@ automation:
   - alias: "Cable Modem - High Uncorrected Errors"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.total_uncorrected_errors
+        entity_id: sensor.cable_modem_total_uncorrected_errors
         above: 100
     action:
       - service: notify.notify
@@ -245,7 +300,7 @@ automation:
   - alias: "Cable Modem - Low SNR Warning"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.downstream_ch_1_snr
+        entity_id: sensor.cable_modem_downstream_ch_1_snr
         below: 30
     action:
       - service: notify.notify
@@ -262,8 +317,8 @@ automation:
     trigger:
       - platform: state
         entity_id:
-          - sensor.downstream_channel_count
-          - sensor.upstream_channel_count
+          - sensor.cable_modem_downstream_channel_count
+          - sensor.cable_modem_upstream_channel_count
     condition:
       - condition: template
         value_template: "{{ trigger.from_state.state != 'unavailable' }}"
@@ -281,7 +336,7 @@ automation:
   - alias: "Cable Modem - Auto Restart on High Errors"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.total_uncorrected_errors
+        entity_id: sensor.cable_modem_total_uncorrected_errors
         above: 1000
     action:
       - service: notify.notify
@@ -290,10 +345,14 @@ automation:
           message: "High error count detected. Restarting modem..."
       - service: button.press
         target:
-          entity_id: button.restart_modem
+          entity_id: button.cable_modem_restart_modem
 ```
 
 ***REMOVED******REMOVED*** Troubleshooting
+
+> **📖 For detailed troubleshooting help, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+>
+> Covers: entity ID cleanup, upstream sensors not appearing, duplicate entities, migration issues, and more.
 
 ***REMOVED******REMOVED******REMOVED*** Integration doesn't appear
 1. Check that files are in `/config/custom_components/cable_modem_monitor/`
@@ -396,6 +455,36 @@ automation:
         data:
           days_to_keep: 90  ***REMOVED*** Keep 3 months of data
 ```
+
+***REMOVED******REMOVED*** Contributing
+
+***REMOVED******REMOVED******REMOVED*** Adding Support for Your Modem
+
+This integration uses a plugin architecture that makes adding new modem models easy! If your modem isn't supported yet, you can add a parser for it.
+
+**Quick Start:**
+1. Copy `custom_components/cable_modem_monitor/parsers/parser_template.py` to a new file
+2. Follow the step-by-step instructions in the template
+3. Implement the 3 required methods: `can_parse()`, `parse_downstream()`, `parse_upstream()`
+4. Test with your modem's HTML
+5. Submit a pull request!
+
+**What You Need:**
+- Your modem's HTML page (save from browser or curl)
+- ~30 minutes to implement
+- Basic Python knowledge (the template guides you through it)
+
+**Benefits of the Plugin System:**
+- Zero changes to core code needed
+- Auto-discovery - your parser is automatically loaded
+- Isolated - can't break existing parsers
+- Template-driven - clear examples and instructions
+
+See existing parsers in `custom_components/cable_modem_monitor/parsers/` for reference:
+- `motorola_mb.py` - Standard table parsing
+- `arris_sb6141.py` - Transposed table format
+
+**Need Help?** Open an issue on GitHub with your modem model and we'll help you create a parser!
 
 ***REMOVED******REMOVED*** Privacy & Security
 
