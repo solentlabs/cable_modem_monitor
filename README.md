@@ -350,6 +350,10 @@ automation:
 
 ***REMOVED******REMOVED*** Troubleshooting
 
+> **📖 For detailed troubleshooting help, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+>
+> Covers: entity ID cleanup, upstream sensors not appearing, duplicate entities, migration issues, and more.
+
 ***REMOVED******REMOVED******REMOVED*** Integration doesn't appear
 1. Check that files are in `/config/custom_components/cable_modem_monitor/`
 2. Restart Home Assistant
