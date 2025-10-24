@@ -339,130 +339,32 @@ class TestEntityNaming:
         coordinator.last_update_success = True
         return coordinator
 
-    def test_default_naming(self, mock_coordinator):
-        """Test default naming (no prefix)."""
-        from cable_modem_monitor.sensor import ModemConnectionStatusSensor
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {"host": "192.168.100.1"}  ***REMOVED*** No entity_prefix key
-
-        sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-
-        ***REMOVED*** Default should be no prefix
-        assert sensor.name == "Modem Connection Status"
-
-    def test_domain_prefix_naming(self, mock_coordinator):
-        """Test domain prefix naming."""
-        from cable_modem_monitor.sensor import ModemConnectionStatusSensor
-        from cable_modem_monitor.const import CONF_ENTITY_PREFIX, ENTITY_PREFIX_DOMAIN
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {
-            "host": "192.168.100.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_DOMAIN
-        }
-
-        sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-
-        ***REMOVED*** Domain mode: No prefix in display name (entity_id has cable_modem_ prefix)
-        assert sensor.name == "Modem Connection Status"
-
-    def test_ip_address_prefix_naming(self, mock_coordinator):
-        """Test IP address prefix naming."""
-        from cable_modem_monitor.sensor import ModemConnectionStatusSensor
-        from cable_modem_monitor.const import CONF_ENTITY_PREFIX, ENTITY_PREFIX_IP
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {
-            "host": "192.168.100.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_IP
-        }
-
-        sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-
-        ***REMOVED*** Should use sanitized IP as prefix
-        assert sensor.name == "192_168_100_1 Modem Connection Status"
-
-    def test_custom_prefix_naming(self, mock_coordinator):
-        """Test custom prefix naming."""
-        from cable_modem_monitor.sensor import ModemConnectionStatusSensor
-        from cable_modem_monitor.const import (
-            CONF_ENTITY_PREFIX,
-            CONF_CUSTOM_PREFIX,
-            ENTITY_PREFIX_CUSTOM
+    def test_sensor_naming(self, mock_coordinator):
+        """Test sensor naming has correct display names and unique IDs."""
+        from cable_modem_monitor.sensor import (
+            ModemConnectionStatusSensor,
+            ModemTotalCorrectedSensor,
+            ModemDownstreamPowerSensor
         )
 
         entry = Mock()
         entry.entry_id = "test"
-        entry.data = {
-            "host": "192.168.100.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_CUSTOM,
-            CONF_CUSTOM_PREFIX: "Living Room"
-        }
+        entry.data = {"host": "192.168.100.1"}
 
-        sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
+        ***REMOVED*** Test connection status sensor
+        connection_sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
+        assert connection_sensor.name == "Modem Connection Status"
+        assert connection_sensor.unique_id == "test_cable_modem_connection_status"
 
-        ***REMOVED*** Should use custom prefix
-        assert sensor.name == "Living Room Modem Connection Status"
+        ***REMOVED*** Test error sensor
+        error_sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
+        assert error_sensor.name == "Total Corrected Errors"
+        assert error_sensor.unique_id == "test_cable_modem_total_corrected"
 
-    def test_custom_prefix_with_trailing_space(self, mock_coordinator):
-        """Test custom prefix with trailing space."""
-        from cable_modem_monitor.sensor import ModemConnectionStatusSensor
-        from cable_modem_monitor.const import (
-            CONF_ENTITY_PREFIX,
-            CONF_CUSTOM_PREFIX,
-            ENTITY_PREFIX_CUSTOM
-        )
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {
-            "host": "192.168.100.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_CUSTOM,
-            CONF_CUSTOM_PREFIX: "Basement "  ***REMOVED*** Already has space
-        }
-
-        sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-
-        ***REMOVED*** Should not add extra space
-        assert sensor.name == "Basement Modem Connection Status"
-
-    def test_naming_on_error_sensor(self, mock_coordinator):
-        """Test naming works on different sensor types."""
-        from cable_modem_monitor.sensor import ModemTotalCorrectedSensor
-        from cable_modem_monitor.const import CONF_ENTITY_PREFIX, ENTITY_PREFIX_DOMAIN
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {
-            "host": "192.168.100.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_DOMAIN
-        }
-
-        sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
-
-        ***REMOVED*** Domain mode: No prefix in display name (entity_id has cable_modem_ prefix)
-        assert sensor.name == "Total Corrected Errors"
-
-    def test_naming_on_channel_sensor(self, mock_coordinator):
-        """Test naming works on per-channel sensors."""
-        from cable_modem_monitor.sensor import ModemDownstreamPowerSensor
-        from cable_modem_monitor.const import CONF_ENTITY_PREFIX, ENTITY_PREFIX_IP
-
-        entry = Mock()
-        entry.entry_id = "test"
-        entry.data = {
-            "host": "10.0.0.1",
-            CONF_ENTITY_PREFIX: ENTITY_PREFIX_IP
-        }
-
-        sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-
-        ***REMOVED*** Should apply prefix to channel sensors
-        assert sensor.name == "10_0_0_1 Downstream Ch 5 Power"
+        ***REMOVED*** Test channel sensor
+        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
+        assert channel_sensor.name == "Downstream Ch 5 Power"
+        assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
 
 
 class TestLastBootTimeSensor:
@@ -598,6 +500,6 @@ class TestLastBootTimeSensor:
 
         ***REMOVED*** Check sensor attributes
         assert sensor.name == "Last Boot Time"
-        assert sensor.unique_id == "test_last_boot_time"
+        assert sensor.unique_id == "test_cable_modem_last_boot_time"
         assert sensor.icon == "mdi:restart"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP

@@ -74,10 +74,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ***REMOVED*** Register services
     async def handle_clear_history(call: ServiceCall) -> None:
         """Handle the clear_history service call."""
-        days_to_keep = call.data.get("days_to_keep", 30)
+        from homeassistant.components import recorder
+        from homeassistant.helpers import entity_registry as er
 
+        days_to_keep = call.data.get("days_to_keep", 30)
         _LOGGER.info(f"Clearing cable modem history older than {days_to_keep} days")
 
+        ***REMOVED*** Get entity registry
+        entity_reg = er.async_get(hass)
+
+        ***REMOVED*** Find all entities belonging to this integration
+        cable_modem_entities = []
+        for entity_entry in entity_reg.entities.values():
+            if entity_entry.platform == DOMAIN:
+                cable_modem_entities.append(entity_entry.entity_id)
+
+        if not cable_modem_entities:
+            _LOGGER.warning("No cable modem entities found in registry")
+            return
+
+        _LOGGER.info(f"Found {len(cable_modem_entities)} cable modem entities to purge")
+
+        ***REMOVED*** Use Home Assistant's official recorder purge service
         def clear_db_history():
             """Clear history from database (runs in executor)."""
             try:
@@ -90,25 +108,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 conn = sqlite3.connect(db_path)
                 cursor = conn.cursor()
 
-                ***REMOVED*** Find all cable modem sensor entity IDs
-                cursor.execute("""
-                    SELECT metadata_id, entity_id FROM states_meta
-                    WHERE entity_id LIKE 'sensor.downstream_ch_%'
-                       OR entity_id LIKE 'sensor.upstream_ch_%'
-                       OR entity_id LIKE 'sensor.total_%'
-                       OR entity_id IN (
-                           'sensor.downstream_channel_count',
-                           'sensor.upstream_channel_count',
-                           'sensor.modem_connection_status',
-                           'sensor.software_version',
-                           'sensor.system_uptime'
-                       )
-                """)
+                ***REMOVED*** Find metadata IDs for our entities
+                placeholders = ",".join("?" * len(cable_modem_entities))
+                cursor.execute(
+                    f"SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN ({placeholders})",
+                    cable_modem_entities
+                )
 
                 metadata_ids = [row[0] for row in cursor.fetchall()]
 
                 if not metadata_ids:
-                    _LOGGER.warning("No cable modem sensors found in database")
+                    _LOGGER.warning("No cable modem sensors found in database states")
                     conn.close()
                     return 0
 
@@ -121,20 +131,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 cursor.execute(query, (*metadata_ids, cutoff_ts))
                 states_deleted = cursor.rowcount
 
-                ***REMOVED*** Find statistics metadata IDs
-                cursor.execute("""
-                    SELECT id FROM statistics_meta
-                    WHERE statistic_id LIKE 'sensor.downstream_ch_%'
-                       OR statistic_id LIKE 'sensor.upstream_ch_%'
-                       OR statistic_id LIKE 'sensor.total_%'
-                       OR statistic_id IN (
-                           'sensor.downstream_channel_count',
-                           'sensor.upstream_channel_count',
-                           'sensor.modem_connection_status',
-                           'sensor.software_version',
-                           'sensor.system_uptime'
-                       )
-                """)
+                ***REMOVED*** Find statistics metadata IDs using entity_id list from registry
+                ***REMOVED*** Build dynamic query to match any of our entities
+                stats_patterns = []
+                for entity_id in cable_modem_entities:
+                    stats_patterns.append(f"statistic_id = '{entity_id}'")
+
+                stats_query = "SELECT id FROM statistics_meta WHERE " + " OR ".join(stats_patterns)
+                cursor.execute(stats_query)
 
                 stats_metadata_ids = [row[0] for row in cursor.fetchall()]
 

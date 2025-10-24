@@ -7,6 +7,8 @@
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
+> **⚠️ Upgrading from v1.x?** See [UPGRADING.md](UPGRADING.md) for important information about v2.0 breaking changes.
+
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
 
@@ -24,7 +26,7 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
 - **Connection Status**: Monitor modem online/offline state
 - **System Information**: Software version, uptime, channel counts, and last boot time
-- **Configurable Entity Naming**: Choose from default, domain prefix, IP prefix, or custom naming
+- **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
 - **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
 - **Modem Control**: Restart your modem directly from Home Assistant
 - **Historical Data**: All metrics are stored for trend analysis

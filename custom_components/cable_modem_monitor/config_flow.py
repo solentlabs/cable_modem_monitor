@@ -17,16 +17,10 @@ from .const import (
     CONF_PASSWORD,
     CONF_HISTORY_DAYS,
     CONF_SCAN_INTERVAL,
-    CONF_ENTITY_PREFIX,
-    CONF_CUSTOM_PREFIX,
     DEFAULT_HISTORY_DAYS,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
-    ENTITY_PREFIX_DEFAULT,
-    ENTITY_PREFIX_DOMAIN,
-    ENTITY_PREFIX_IP,
-    ENTITY_PREFIX_CUSTOM,
     DOMAIN,
 )
 from .modem_scraper import ModemScraper
@@ -97,8 +91,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ***REMOVED*** Add default values for fields not in initial setup
                 user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
                 user_input.setdefault(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
-                ***REMOVED*** Default to domain prefix (cable_modem_) for new installations
-                user_input.setdefault(CONF_ENTITY_PREFIX, ENTITY_PREFIX_DOMAIN)
 
                 return self.async_create_entry(title=info["title"], data=user_input)
 
@@ -110,16 +102,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Cable Modem Monitor."""
 
-    def __init__(self) -> None:
-        """Initialize options flow."""
-        self._connection_data = {}
-
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        return await self.async_step_connection_settings()
-
-    async def async_step_connection_settings(self, user_input=None):
-        """Handle connection settings configuration."""
         errors = {}
 
         if user_input is not None:
@@ -136,9 +120,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 if not user_input.get(CONF_PASSWORD):
                     user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
 
-                ***REMOVED*** Save connection data and move to entity naming step
-                self._connection_data = user_input
-                return await self.async_step_entity_naming()
+                ***REMOVED*** Update the config entry with all settings
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=user_input
+                )
+                return self.async_create_entry(title="", data={})
 
         ***REMOVED*** Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
@@ -168,58 +154,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         return self.async_show_form(
-            step_id="connection_settings",
+            step_id="init",
             data_schema=options_schema,
             errors=errors,
             description_placeholders={
                 "current_host": current_host,
                 "current_username": current_username,
             },
-        )
-
-    async def async_step_entity_naming(self, user_input=None):
-        """Handle entity naming configuration."""
-        if user_input is not None:
-            ***REMOVED*** Merge connection data with entity naming preferences
-            final_data = {**self._connection_data, **user_input}
-
-            ***REMOVED*** Update the config entry with all settings
-            self.hass.config_entries.async_update_entry(
-                self.config_entry, data=final_data
-            )
-            return self.async_create_entry(title="", data={})
-
-        ***REMOVED*** Get current entity naming settings
-        current_prefix = self.config_entry.data.get(
-            CONF_ENTITY_PREFIX, ENTITY_PREFIX_DEFAULT
-        )
-        current_custom = self.config_entry.data.get(CONF_CUSTOM_PREFIX, "")
-
-        ***REMOVED*** Build entity naming schema
-        entity_naming_schema = vol.Schema(
-            {
-                vol.Required(CONF_ENTITY_PREFIX, default=current_prefix): vol.In(
-                    {
-                        ENTITY_PREFIX_DEFAULT: "Default (no prefix)",
-                        ENTITY_PREFIX_DOMAIN: "Domain (cable_modem_)",
-                        ENTITY_PREFIX_IP: "IP Address",
-                        ENTITY_PREFIX_CUSTOM: "Custom",
-                    }
-                ),
-            }
-        )
-
-        ***REMOVED*** Add custom prefix field only if custom is selected
-        if current_prefix == ENTITY_PREFIX_CUSTOM:
-            entity_naming_schema = entity_naming_schema.extend(
-                {
-                    vol.Required(CONF_CUSTOM_PREFIX, default=current_custom): str,
-                }
-            )
-
-        return self.async_show_form(
-            step_id="entity_naming",
-            data_schema=entity_naming_schema,
         )
 
 
