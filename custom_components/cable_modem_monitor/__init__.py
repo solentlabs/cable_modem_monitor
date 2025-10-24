@@ -34,8 +34,97 @@ SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
 )
 
 
+async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Migrate entity IDs to include cable_modem_ prefix for v2.0."""
+    from homeassistant.helpers import entity_registry as er
+
+    entity_reg = er.async_get(hass)
+
+    ***REMOVED*** Mapping of old entity ID patterns to new ones
+    ***REMOVED*** This handles migration from v1.x (no prefix, IP prefix, custom prefix) to v2.0 (cable_modem_ prefix)
+    old_patterns_to_new = {
+        ***REMOVED*** Downstream channels
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
+            'sensor.cable_modem_downstream_ch_{}_{}',
+        ***REMOVED*** Upstream channels
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?upstream_ch_(\d+)_(power|frequency)$':
+            'sensor.cable_modem_upstream_ch_{}_{}',
+        ***REMOVED*** Summary sensors
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?total_(corrected|uncorrected)$':
+            'sensor.cable_modem_total_{}',
+        ***REMOVED*** Channel counts
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?downstream_channel_count$':
+            'sensor.cable_modem_downstream_channel_count',
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?upstream_channel_count$':
+            'sensor.cable_modem_upstream_channel_count',
+        ***REMOVED*** Status and info
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?modem_connection_status$':
+            'sensor.cable_modem_connection_status',
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?software_version$':
+            'sensor.cable_modem_software_version',
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?system_uptime$':
+            'sensor.cable_modem_system_uptime',
+        r'^sensor\.(\d+_\d+_\d+_\d+_)?last_boot_time$':
+            'sensor.cable_modem_last_boot_time',
+        ***REMOVED*** Button
+        r'^button\.(\d+_\d+_\d+_\d+_)?restart_modem$':
+            'button.cable_modem_restart_modem',
+    }
+
+    import re
+
+    migrations = []
+
+    ***REMOVED*** Find all entities belonging to this integration
+    for entity_entry in entity_reg.entities.values():
+        if entity_entry.platform != DOMAIN:
+            continue
+
+        if entity_entry.config_entry_id != entry.entry_id:
+            continue
+
+        old_entity_id = entity_entry.entity_id
+
+        ***REMOVED*** Skip if already has cable_modem_ prefix
+        if 'cable_modem_' in old_entity_id:
+            continue
+
+        ***REMOVED*** Try to match against patterns and generate new entity ID
+        for pattern, template in old_patterns_to_new.items():
+            match = re.match(pattern, old_entity_id)
+            if match:
+                ***REMOVED*** Extract relevant groups (skip the prefix group)
+                groups = [g for g in match.groups()[1:] if g is not None]
+
+                ***REMOVED*** Generate new entity ID
+                if '{}' in template:
+                    new_entity_id = template.format(*groups)
+                else:
+                    new_entity_id = template
+
+                migrations.append((entity_entry, old_entity_id, new_entity_id))
+                break
+
+    ***REMOVED*** Perform migrations
+    if migrations:
+        _LOGGER.info(f"Migrating {len(migrations)} entity IDs to v2.0 naming scheme")
+
+        for entity_entry, old_entity_id, new_entity_id in migrations:
+            try:
+                entity_reg.async_update_entity(
+                    entity_entry.entity_id,
+                    new_entity_id=new_entity_id
+                )
+                _LOGGER.info(f"Migrated {old_entity_id} -> {new_entity_id}")
+            except Exception as e:
+                _LOGGER.error(f"Failed to migrate {old_entity_id}: {e}")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cable Modem Monitor from a config entry."""
+    ***REMOVED*** Migrate entity IDs to v2.0 naming scheme
+    await async_migrate_entity_ids(hass, entry)
+
     host = entry.data[CONF_HOST]
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
