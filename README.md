@@ -269,7 +269,7 @@ content: >
     | timestamp_custom('%B %d, %Y at %I:%M %p')
   }}
 ```
-*Shows: "September 25, 2024 at 03:15 AM"*
+*Example output: "September 25, 2025 at 12:38 AM"*
 
 ***REMOVED******REMOVED*** Automation Examples
 
