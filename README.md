@@ -236,40 +236,44 @@ cards:
 
 The `sensor.cable_modem_last_boot_time` is a timestamp sensor. You can customize how it displays:
 
-**Relative time (recommended)** - Shows "29 days ago":
+**Relative time (recommended)** - Compact and informative:
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: relative
 ```
+*Shows: "29 days ago"*
 
-**Date only** - Shows "2024-10-24":
+**Date only** - Just the date:
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: date
 ```
+*Shows: "2025-09-25"*
 
-**Time only** - Shows "03:15:00":
+**Time only** - Just the time:
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: time
 ```
+*Shows: "00:38:00"*
 
-**Full datetime** - Shows "2024-10-24 03:15:00":
+**Full datetime (fits in UI)** - Date and time:
 ```yaml
 - entity: sensor.cable_modem_last_boot_time
   format: datetime
 ```
+*Shows: "2025-09-25 00:38:00"*
 
-**Custom template** (for maximum control):
+**Custom template** - For more control (may be too long for some UIs):
 ```yaml
 type: markdown
 content: >
   Last Reboot: {{
     as_timestamp(states('sensor.cable_modem_last_boot_time'))
-    | timestamp_custom('%B %d, %Y at %I:%M %p')
+    | timestamp_custom('%Y-%m-%d %H:%M')
   }}
 ```
-*Example output: "September 25, 2025 at 12:38 AM"*
+*Shows: "Last Reboot: 2025-09-25 00:38"*
 
 ***REMOVED******REMOVED*** Automation Examples
 
