@@ -218,7 +218,7 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Power"
+        self._attr_name = f"Ch {channel} Power"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
@@ -245,7 +245,7 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} SNR"
+        self._attr_name = f"Ch {channel} SNR"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_snr"
         self._attr_native_unit_of_measurement = "dB"
         self._attr_icon = "mdi:signal-variant"
@@ -272,7 +272,7 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Frequency"
+        self._attr_name = f"Ch {channel} Frequency"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
@@ -300,7 +300,7 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Corrected"
+        self._attr_name = f"Ch {channel} Corrected"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_corrected"
         self._attr_icon = "mdi:check-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -326,7 +326,7 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Downstream Ch {channel} Uncorrected"
+        self._attr_name = f"Ch {channel} Uncorrected"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_uncorrected"
         self._attr_icon = "mdi:alert-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -352,7 +352,7 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Upstream Ch {channel} Power"
+        self._attr_name = f"Ch {channel} Power"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
@@ -379,7 +379,7 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
-        self._attr_name = f"Upstream Ch {channel} Frequency"
+        self._attr_name = f"Ch {channel} Frequency"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
