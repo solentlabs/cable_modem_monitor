@@ -366,8 +366,8 @@ class TestEntityNaming:
 
         sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
 
-        ***REMOVED*** Should add "Cable Modem " prefix
-        assert sensor.name == "Cable Modem Modem Connection Status"
+        ***REMOVED*** Domain mode: No prefix in display name (entity_id has cable_modem_ prefix)
+        assert sensor.name == "Modem Connection Status"
 
     def test_ip_address_prefix_naming(self, mock_coordinator):
         """Test IP address prefix naming."""
@@ -444,8 +444,8 @@ class TestEntityNaming:
 
         sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
 
-        ***REMOVED*** Should apply prefix to error sensors too
-        assert sensor.name == "Cable Modem Total Corrected Errors"
+        ***REMOVED*** Domain mode: No prefix in display name (entity_id has cable_modem_ prefix)
+        assert sensor.name == "Total Corrected Errors"
 
     def test_naming_on_channel_sensor(self, mock_coordinator):
         """Test naming works on per-channel sensors."""
