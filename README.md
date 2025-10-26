@@ -502,6 +502,11 @@ MIT License - see LICENSE file for details
 - [GitHub Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
 - [Home Assistant Community Forum](https://community.home-assistant.io/)
 
+***REMOVED******REMOVED*** Resources
+
+- [Home Assistant Releases](https://github.com/home-assistant/core/releases)
+- [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
+
 ***REMOVED******REMOVED*** Credits
 
 Created for monitoring Cox Cable Motorola modems, but designed to work with various cable modem brands.

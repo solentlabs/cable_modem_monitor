@@ -188,6 +188,47 @@ No, orphaned records will NOT be deleted automatically. Home Assistant's retenti
 - Search for old entity IDs
 - Delete orphaned entities manually
 
+**Entities Missing `cable_modem_` Prefix After Reinstall**
+
+If you have performed a fresh install (removed and re-added the integration) and your entities are still missing the `cable_modem_` prefix (e.g., you see `sensor.ds_ch_1_power` instead of `sensor.cable_modem_ds_ch_1_power`), it's likely that old entity references are still present in your Home Assistant configuration.
+
+This can happen even after a reinstall if Home Assistant has cached the old entity structure. Here is a more thorough procedure to ensure a completely clean reinstallation:
+
+**1. Remove the Integration**
+
+- Go to **Settings → Devices & Services**.
+- Find **Cable Modem Monitor** and click the three dots (⋮) → **Delete**.
+
+**2. Check for Orphaned Entities**
+
+- Go to **Settings → Devices & Services → Entities**.
+- Search for any entities that still have the old naming scheme (e.g., `sensor.ds_ch_1_power`, `sensor.us_ch_1_power`).
+- If you find any, select them and click **"Remove Entity"**.
+- **Note:** If you are unable to delete the entity directly, you may need to re-associate it with the correct sensor first. Click on the entity, then click the gear icon (settings), and in the "Entity ID" field, type in the correct, new entity ID (e.g., `sensor.cable_modem_ds_ch_1_power`). After re-associating, you should be able to remove the old, orphaned entity.
+
+**3. Restart Home Assistant**
+
+- This is a crucial step to ensure the entity registry is updated.
+- Go to **Developer Tools → YAML** and click **"Restart"**.
+
+**4. Verify Removal**
+
+- After restarting, go back to **Settings → Devices & Services → Entities**.
+- Search again for the old entity names to ensure they are completely gone.
+
+**5. Reinstall the Integration**
+
+- Now, reinstall the integration via HACS or manually.
+- Go to **Settings → Devices & Services → Add Integration**.
+- Search for "Cable Modem Monitor" and complete the setup.
+
+**6. Verify the New Entities**
+
+- After the integration is re-added, go to **Settings → Devices & Services → Entities**.
+- All your cable modem entities should now have the correct `cable_modem_` prefix.
+
+This more forceful cleanup process should resolve the issue of the missing prefix.
+
 ***REMOVED******REMOVED******REMOVED*** Getting Help
 
 If you encounter issues:
