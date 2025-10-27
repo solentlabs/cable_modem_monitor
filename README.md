@@ -38,14 +38,17 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 This integration is designed for cable modems with web-based status pages.
 
 **Confirmed Working:**
-- **Motorola MB7621** (other MB series models likely compatible)
+- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611 (unified parser with auto-detection)
+  - Supports both plain and Base64-encoded password authentication
+  - Full downstream/upstream channel monitoring
+  - System info and uptime tracking
 - **Arris SB6183, SB8200** (newer models - reported by community)
 
-**Being Tested:**
-- **Arris SB6141** (parser added, awaiting user confirmation)
-- **Technicolor TC4400** (parser added, awaiting user confirmation)
+**Parsers Available (awaiting community testing):**
+- **Arris SB6141** - Parser implemented with test fixtures
+- **Technicolor TC4400** - Parser implemented with test fixtures
 
-**Note**: The integration may work with other brands. If your modem has a web interface showing downstream/upstream channel data, it's worth trying!
+**Note**: The integration uses a plugin architecture that makes adding new modem models easy. If your modem has a web interface showing downstream/upstream channel data, it's worth trying! See the [Contributing](***REMOVED***contributing) section to add support for your modem.
 
 ***REMOVED******REMOVED*** Installation
 
@@ -119,34 +122,41 @@ After installation, you can configure additional settings:
 
 ***REMOVED******REMOVED*** Available Sensors
 
+All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification.
+
 ***REMOVED******REMOVED******REMOVED*** Connection Status
-- `sensor.modem_connection_status`: Overall connection state (online/offline)
+- `sensor.cable_modem_connection_status`: Overall connection state (online/offline)
 
 ***REMOVED******REMOVED******REMOVED*** System Information
-- `sensor.software_version`: Modem firmware/software version
-- `sensor.system_uptime`: How long the modem has been running
-- `sensor.last_boot_time`: When the modem last rebooted (timestamp device class)
-- `sensor.downstream_channel_count`: Number of active downstream channels
-- `sensor.upstream_channel_count`: Number of active upstream channels
+- `sensor.cable_modem_software_version`: Modem firmware/software version
+- `sensor.cable_modem_system_uptime`: How long the modem has been running
+- `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
+- `sensor.cable_modem_downstream_channel_count`: Number of active downstream channels
+- `sensor.cable_modem_upstream_channel_count`: Number of active upstream channels
 
 ***REMOVED******REMOVED******REMOVED*** Summary Sensors
-- `sensor.total_corrected_errors`: Total corrected errors across all downstream channels
-- `sensor.total_uncorrected_errors`: Total uncorrected errors across all downstream channels
+- `sensor.cable_modem_total_corrected_errors`: Total corrected errors across all downstream channels
+- `sensor.cable_modem_total_uncorrected_errors`: Total uncorrected errors across all downstream channels
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Downstream Sensors (for each channel)
-- `sensor.cable_modem_downstream_ch_X_power`: Power level in dBmV (displays as "DS Ch X Power")
-- `sensor.cable_modem_downstream_ch_X_snr`: Signal-to-Noise Ratio in dB (displays as "DS Ch X SNR")
-- `sensor.cable_modem_downstream_ch_X_frequency`: Channel frequency in Hz (displays as "DS Ch X Frequency")
-- `sensor.cable_modem_downstream_ch_X_corrected`: Corrected errors (displays as "DS Ch X Corrected")
-- `sensor.cable_modem_downstream_ch_X_uncorrected`: Uncorrected errors (displays as "DS Ch X Uncorrected")
+Replace `X` with the channel number (1-32 depending on your modem):
+- `sensor.cable_modem_ds_ch_X_power`: Power level in dBmV (displays as "Cable Modem DS Ch X Power")
+- `sensor.cable_modem_ds_ch_X_snr`: Signal-to-Noise Ratio in dB (displays as "Cable Modem DS Ch X SNR")
+- `sensor.cable_modem_ds_ch_X_frequency`: Channel frequency in Hz (displays as "Cable Modem DS Ch X Frequency")
+- `sensor.cable_modem_ds_ch_X_corrected`: Corrected errors (displays as "Cable Modem DS Ch X Corrected")
+- `sensor.cable_modem_ds_ch_X_uncorrected`: Uncorrected errors (displays as "Cable Modem DS Ch X Uncorrected")
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Upstream Sensors (for each channel)
-- `sensor.cable_modem_upstream_ch_X_power`: Transmit power level in dBmV (displays as "US Ch X Power")
-- `sensor.cable_modem_upstream_ch_X_frequency`: Channel frequency in Hz (displays as "US Ch X Frequency")
+Replace `X` with the channel number (1-8 depending on your modem):
+- `sensor.cable_modem_us_ch_X_power`: Transmit power level in dBmV (displays as "Cable Modem US Ch X Power")
+- `sensor.cable_modem_us_ch_X_frequency`: Channel frequency in Hz (displays as "Cable Modem US Ch X Frequency")
 
 ***REMOVED******REMOVED******REMOVED*** Controls
-- `button.restart_modem`: Restart your cable modem remotely
-- `button.clear_history`: Clear old historical data (keeps last 30 days)
+- `button.cable_modem_restart_modem`: Restart your cable modem remotely
+
+***REMOVED******REMOVED******REMOVED*** Services
+- `cable_modem_monitor.clear_history`: Clear old historical data (keeps specified number of days)
+- `cable_modem_monitor.cleanup_entities`: Remove orphaned entities from registry (useful after upgrades)
 
 ***REMOVED******REMOVED*** Understanding the Values
 
@@ -189,7 +199,7 @@ Track your signal quality over time with history graphs:
 
 *Signal-to-Noise Ratio for all channels - higher is better, aim for above 40 dB*
 
-Create a dashboard to monitor your modem health:
+Create a comprehensive dashboard to monitor your modem health. This example shows all 24 downstream channels (typical for Motorola MB7621), 5 upstream channels, and error tracking:
 
 ```yaml
 type: vertical-stack
@@ -197,40 +207,171 @@ cards:
   - type: entities
     title: Cable Modem Status
     entities:
-      - sensor.cable_modem_modem_connection_status
-      - sensor.cable_modem_software_version
-      - sensor.cable_modem_system_uptime
+      - entity: sensor.cable_modem_connection_status
+        name: Status
+      - entity: sensor.cable_modem_software_version
+        name: Software Version
+      - entity: sensor.cable_modem_system_uptime
+        name: Uptime
       - entity: sensor.cable_modem_last_boot_time
-        format: relative  ***REMOVED*** Shows "X days ago" instead of full timestamp
-      - sensor.cable_modem_downstream_channel_count
-      - sensor.cable_modem_upstream_channel_count
+        name: Last Boot
+        format: date
+      - entity: sensor.cable_modem_downstream_channel_count
+        name: Downstream Channel Count
+      - entity: sensor.cable_modem_upstream_channel_count
+        name: Upstream Channel Count
+      - entity: sensor.cable_modem_total_corrected_errors
+        name: Total Corrected Errors
+      - entity: sensor.cable_modem_total_uncorrected_errors
+        name: Total Uncorrected Errors
+      - entity: button.cable_modem_restart_modem
+    show_header_toggle: false
+    state_color: false
+  - type: history-graph
+    title: Downstream Power Levels (dBmV)
+    hours_to_show: 24
+    entities:
+      - entity: sensor.cable_modem_ds_ch_1_power
+        name: Ch 1
+      - entity: sensor.cable_modem_ds_ch_2_power
+        name: Ch 2
+      - entity: sensor.cable_modem_ds_ch_3_power
+        name: Ch 3
+      - entity: sensor.cable_modem_ds_ch_4_power
+        name: Ch 4
+      - entity: sensor.cable_modem_ds_ch_5_power
+        name: Ch 5
+      - entity: sensor.cable_modem_ds_ch_6_power
+        name: Ch 6
+      - entity: sensor.cable_modem_ds_ch_7_power
+        name: Ch 7
+      - entity: sensor.cable_modem_ds_ch_8_power
+        name: Ch 8
+      - entity: sensor.cable_modem_ds_ch_9_power
+        name: Ch 9
+      - entity: sensor.cable_modem_ds_ch_10_power
+        name: Ch 10
+      - entity: sensor.cable_modem_ds_ch_11_power
+        name: Ch 11
+      - entity: sensor.cable_modem_ds_ch_12_power
+        name: Ch 12
+      - entity: sensor.cable_modem_ds_ch_13_power
+        name: Ch 13
+      - entity: sensor.cable_modem_ds_ch_14_power
+        name: Ch 14
+      - entity: sensor.cable_modem_ds_ch_15_power
+        name: Ch 15
+      - entity: sensor.cable_modem_ds_ch_16_power
+        name: Ch 16
+      - entity: sensor.cable_modem_ds_ch_17_power
+        name: Ch 17
+      - entity: sensor.cable_modem_ds_ch_18_power
+        name: Ch 18
+      - entity: sensor.cable_modem_ds_ch_19_power
+        name: Ch 19
+      - entity: sensor.cable_modem_ds_ch_20_power
+        name: Ch 20
+      - entity: sensor.cable_modem_ds_ch_21_power
+        name: Ch 21
+      - entity: sensor.cable_modem_ds_ch_22_power
+        name: Ch 22
+      - entity: sensor.cable_modem_ds_ch_23_power
+        name: Ch 23
+      - entity: sensor.cable_modem_ds_ch_24_power
+        name: Ch 24
+  - type: history-graph
+    title: Downstream Signal-to-Noise Ratio (dB)
+    hours_to_show: 24
+    entities:
+      - entity: sensor.cable_modem_ds_ch_1_snr
+        name: Ch 1
+      - entity: sensor.cable_modem_ds_ch_2_snr
+        name: Ch 2
+      - entity: sensor.cable_modem_ds_ch_3_snr
+        name: Ch 3
+      - entity: sensor.cable_modem_ds_ch_4_snr
+        name: Ch 4
+      - entity: sensor.cable_modem_ds_ch_5_snr
+        name: Ch 5
+      - entity: sensor.cable_modem_ds_ch_6_snr
+        name: Ch 6
+      - entity: sensor.cable_modem_ds_ch_7_snr
+        name: Ch 7
+      - entity: sensor.cable_modem_ds_ch_8_snr
+        name: Ch 8
+      - entity: sensor.cable_modem_ds_ch_9_snr
+        name: Ch 9
+      - entity: sensor.cable_modem_ds_ch_10_snr
+        name: Ch 10
+      - entity: sensor.cable_modem_ds_ch_11_snr
+        name: Ch 11
+      - entity: sensor.cable_modem_ds_ch_12_snr
+        name: Ch 12
+      - entity: sensor.cable_modem_ds_ch_13_snr
+        name: Ch 13
+      - entity: sensor.cable_modem_ds_ch_14_snr
+        name: Ch 14
+      - entity: sensor.cable_modem_ds_ch_15_snr
+        name: Ch 15
+      - entity: sensor.cable_modem_ds_ch_16_snr
+        name: Ch 16
+      - entity: sensor.cable_modem_ds_ch_17_snr
+        name: Ch 17
+      - entity: sensor.cable_modem_ds_ch_18_snr
+        name: Ch 18
+      - entity: sensor.cable_modem_ds_ch_19_snr
+        name: Ch 19
+      - entity: sensor.cable_modem_ds_ch_20_snr
+        name: Ch 20
+      - entity: sensor.cable_modem_ds_ch_21_snr
+        name: Ch 21
+      - entity: sensor.cable_modem_ds_ch_22_snr
+        name: Ch 22
+      - entity: sensor.cable_modem_ds_ch_23_snr
+        name: Ch 23
+      - entity: sensor.cable_modem_ds_ch_24_snr
+        name: Ch 24
+  - type: history-graph
+    title: Upstream Power Levels (dBmV)
+    hours_to_show: 24
+    entities:
+      - entity: sensor.cable_modem_us_ch_1_power
+        name: US Ch 1
+      - entity: sensor.cable_modem_us_ch_2_power
+        name: US Ch 2
+      - entity: sensor.cable_modem_us_ch_3_power
+        name: US Ch 3
+      - entity: sensor.cable_modem_us_ch_4_power
+        name: US Ch 4
+      - entity: sensor.cable_modem_us_ch_5_power
+        name: US Ch 5
+  - type: history-graph
+    title: Upstream Frequency (MHz)
+    hours_to_show: 24
+    entities:
+      - entity: sensor.cable_modem_us_ch_1_frequency
+        name: US Ch 1
+      - entity: sensor.cable_modem_us_ch_2_frequency
+        name: US Ch 2
+      - entity: sensor.cable_modem_us_ch_3_frequency
+        name: US Ch 3
+      - entity: sensor.cable_modem_us_ch_4_frequency
+        name: US Ch 4
+      - entity: sensor.cable_modem_us_ch_5_frequency
+        name: US Ch 5
+  - type: history-graph
+    title: Corrected Errors (Total)
+    hours_to_show: 24
+    entities:
       - sensor.cable_modem_total_corrected_errors
-      - sensor.cable_modem_total_uncorrected_errors
-      - button.cable_modem_restart_modem
-
   - type: history-graph
-    title: Downstream Power Levels
+    title: Uncorrected Errors (Total)
     hours_to_show: 24
     entities:
-      - sensor.cable_modem_downstream_ch_1_power
-      - sensor.cable_modem_downstream_ch_2_power
-      - sensor.cable_modem_downstream_ch_3_power
-
-  - type: history-graph
-    title: Signal-to-Noise Ratio
-    hours_to_show: 24
-    entities:
-      - sensor.cable_modem_downstream_ch_1_snr
-      - sensor.cable_modem_downstream_ch_2_snr
-      - sensor.cable_modem_downstream_ch_3_snr
-
-  - type: history-graph
-    title: Error Rates (Trend Analysis)
-    hours_to_show: 24
-    entities:
-      - sensor.cable_modem_total_corrected_errors
       - sensor.cable_modem_total_uncorrected_errors
 ```
+
+**Note**: This dashboard example includes all 24 downstream channels. If your modem has fewer channels (e.g., 16 or 8), simply remove the extra channel entries. If you have more channels, add them by following the same pattern with entity_ids like `sensor.cable_modem_ds_ch_X_power` where X is the channel number.
 
 ***REMOVED******REMOVED******REMOVED*** Last Boot Time Display Options
 

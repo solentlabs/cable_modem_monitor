@@ -12,6 +12,22 @@ class ArrisSB6141Parser(ModemParser):
     name = "ARRIS SB6141"
     manufacturer = "ARRIS"
     models = ["SB6141"]
+    auth_type = "form"
+
+    def login(self, session, base_url, username, password) -> bool:
+        """ARRIS modems do not have a login page."""
+        return True
+
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+        """Parse all data from the modem."""
+        downstream_channels = self.parse_downstream(soup)
+        upstream_channels = self.parse_upstream(soup)
+
+        return {
+            "downstream": downstream_channels,
+            "upstream": upstream_channels,
+            "system_info": {},
+        }
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

@@ -28,15 +28,13 @@
           "host": "Modem IP Address",
           "username": "Username (optional)",
           "password": "Password (leave blank to keep current)",
-          "scan_interval": "Polling Interval (seconds)",
-          "history_days": "Days of History to Keep"
+          "scan_interval": "Polling Interval (seconds)"
         },
         "data_description": {
           "host": "The IP address of your cable modem (typically 192.168.100.1 for Motorola modems)",
           "username": "Username for modem web interface (leave blank if not required)",
           "password": "Password for modem web interface (leave blank to keep existing password, or if not required)",
-          "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems.",
-          "history_days": "Number of days of historical data to retain (1-365 days). Use the clear_history service to remove older data and free up database space."
+          "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems."
         }
       }
     },
@@ -50,8 +48,8 @@
       "restart_modem": {
         "name": "Restart Modem"
       },
-      "clear_history": {
-        "name": "Clear History"
+      "cleanup_entities": {
+        "name": "Cleanup Entities"
       }
     }
   },
