@@ -32,94 +32,26 @@ class ModemParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
-        """
-        Parse downstream channel data.
-
-        Returns:
-            List of dicts, each representing one downstream channel:
-            [
-                {
-                    "channel_id": "1",
-                    "frequency": 591000000,  ***REMOVED*** Hz
-                    "power": 5.2,            ***REMOVED*** dBmV
-                    "snr": 40.5,             ***REMOVED*** dB
-                    "modulation": "QAM256",  ***REMOVED*** optional
-                    "corrected": 123,        ***REMOVED*** optional
-                    "uncorrected": 0,        ***REMOVED*** optional
-                },
-                ...
-            ]
-        """
+    def login(self, session, base_url, username, password) -> bool:
+        """Log in to the modem."""
         raise NotImplementedError
 
     @abstractmethod
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """
-        Parse upstream channel data.
+        Parse all data from the modem.
+
+        Args:
+            soup: BeautifulSoup object of the main page
+            session: Optional requests.Session for fetching additional pages
+            base_url: Optional base URL of the modem (e.g., "http://192.168.100.1")
 
         Returns:
-            List of dicts, each representing one upstream channel:
-            [
-                {
-                    "channel_id": "1",
-                    "frequency": 36500000,  ***REMOVED*** Hz
-                    "power": 42.0,          ***REMOVED*** dBmV
-                    "modulation": "QPSK",   ***REMOVED*** optional
-                },
-                ...
-            ]
-        """
-        raise NotImplementedError
-
-    def parse_system_info(self, soup: BeautifulSoup) -> dict:
-        """
-        Parse system information (optional).
-
-        Returns:
-            Dict with optional fields:
+            Dict with all parsed data:
             {
-                "software_version": "1.0.0.15",
-                "hardware_version": "v1.0",
-                "system_uptime": "5 days, 3 hours",
-                "downstream_channel_count": 24,
-                "upstream_channel_count": 4,
+                "downstream": [],
+                "upstream": [],
+                "system_info": {},
             }
         """
-        return {}
-
-    def validate_downstream(self, channel: dict) -> bool:
-        """
-        Validate a downstream channel dict.
-        Override if parser has special validation needs.
-
-        Args:
-            channel: Channel dict to validate
-
-        Returns:
-            True if channel is valid, False otherwise
-        """
-        required = ["channel_id", "frequency", "power", "snr"]
-        return all(
-            field in channel and channel[field] is not None for field in required
-        )
-
-    def validate_upstream(self, channel: dict) -> bool:
-        """
-        Validate an upstream channel dict.
-        Override if parser has special validation needs.
-
-        Args:
-            channel: Channel dict to validate
-
-        Returns:
-            True if channel is valid, False otherwise
-        """
-        ***REMOVED*** Require channel_id and power, but frequency is optional
-        ***REMOVED*** (some modems don't report upstream frequency)
-        return (
-            "channel_id" in channel
-            and channel["channel_id"] is not None
-            and "power" in channel
-            and channel["power"] is not None
-        )
+        raise NotImplementedError

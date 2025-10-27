@@ -33,6 +33,9 @@ SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_CLEANUP_ENTITIES = "cleanup_entities"
+SERVICE_CLEANUP_ENTITIES_SCHEMA = vol.Schema({})
+
 
 async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Migrate entity IDs to include cable_modem_ prefix for v2.0."""
@@ -45,12 +48,18 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
     ***REMOVED*** Simplified patterns - we only support migrating from no-prefix to cable_modem_ prefix
     old_patterns_to_new = {
         ***REMOVED*** Note: Custom/IP prefixes were never released, so we only handle no-prefix entities
-        ***REMOVED*** Downstream channels
+        ***REMOVED*** Downstream channels (full names)
         r'^sensor\.downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
             'sensor.cable_modem_downstream_ch_{}_{}',
-        ***REMOVED*** Upstream channels
+        ***REMOVED*** Downstream channels (short names - ds_ch)
+        r'^sensor\.ds_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
+            'sensor.cable_modem_ds_ch_{}_{}',
+        ***REMOVED*** Upstream channels (full names)
         r'^sensor\.upstream_ch_(\d+)_(power|frequency)$':
             'sensor.cable_modem_upstream_ch_{}_{}',
+        ***REMOVED*** Upstream channels (short names - us_ch)
+        r'^sensor\.us_ch_(\d+)_(power|frequency)$':
+            'sensor.cable_modem_us_ch_{}_{}',
         ***REMOVED*** Summary sensors (match with or without _errors suffix)
         r'^sensor\.total_(corrected|uncorrected)(?:_errors)?$':
             'sensor.cable_modem_total_{}_errors',
@@ -157,7 +166,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
-    scraper = ModemScraper(host, username, password)
+    from .parsers import get_parsers
+
+    ***REMOVED*** Get parsers in executor to avoid blocking I/O in async context
+    parsers = await hass.async_add_executor_job(get_parsers)
+    scraper = ModemScraper(host, username, password, parsers)
 
     async def async_update_data():
         """Fetch data from the modem."""
@@ -300,13 +313,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             _LOGGER.warning("No records were deleted")
 
-    ***REMOVED*** Register the service only once (check if it's already registered)
+    async def handle_cleanup_entities(call: ServiceCall) -> None:
+        """Handle cleanup_entities service call."""
+        from homeassistant.helpers import entity_registry as er
+
+        _LOGGER.info("Starting orphaned entity cleanup")
+
+        entity_reg = er.async_get(hass)
+
+        ***REMOVED*** Find all cable modem entities
+        all_cable_modem = [
+            entity_entry
+            for entity_entry in entity_reg.entities.values()
+            if entity_entry.platform == DOMAIN
+        ]
+
+        ***REMOVED*** Separate active from orphaned
+        ***REMOVED*** An entity is orphaned if it has no config_entry_id
+        active = [e for e in all_cable_modem if e.config_entry_id]
+        orphaned = [e for e in all_cable_modem if not e.config_entry_id]
+
+        _LOGGER.info(
+            f"Found {len(all_cable_modem)} total cable modem entities: "
+            f"{len(active)} active, {len(orphaned)} orphaned"
+        )
+
+        if not orphaned:
+            _LOGGER.info("No orphaned entities found - cleanup not needed")
+            return
+
+        ***REMOVED*** Remove orphaned entities
+        removed_count = 0
+        for entity_entry in orphaned:
+            try:
+                entity_reg.async_remove(entity_entry.entity_id)
+                _LOGGER.debug(f"Removed orphaned entity: {entity_entry.entity_id}")
+                removed_count += 1
+            except Exception as e:
+                _LOGGER.error(f"Failed to remove {entity_entry.entity_id}: {e}")
+
+        _LOGGER.info(f"Successfully removed {removed_count} orphaned entities")
+
+    ***REMOVED*** Register the services only once (check if they're already registered)
     if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_HISTORY):
         hass.services.async_register(
             DOMAIN,
             SERVICE_CLEAR_HISTORY,
             handle_clear_history,
             schema=SERVICE_CLEAR_HISTORY_SCHEMA,
+        )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_CLEANUP_ENTITIES):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CLEANUP_ENTITIES,
+            handle_cleanup_entities,
+            schema=SERVICE_CLEANUP_ENTITIES_SCHEMA,
         )
 
     return True
@@ -317,9 +379,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
 
-        ***REMOVED*** Unregister service if this is the last entry
+        ***REMOVED*** Unregister services if this is the last entry
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_CLEAR_HISTORY)
+            hass.services.async_remove(DOMAIN, SERVICE_CLEANUP_ENTITIES)
 
     return unload_ok
 

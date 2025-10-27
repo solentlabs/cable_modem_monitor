@@ -1,0 +1,29 @@
+import pytest
+from unittest.mock import Mock
+
+from custom_components.cable_modem_monitor.modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.parsers.motorola_mb import MotorolaMBParser
+
+class TestAuth:
+    """Test the authentication system."""
+
+    def test_form_auth(self, mocker):
+        """Test form-based authentication."""
+        scraper = ModemScraper("192.168.100.1", "admin", "password", parsers=[MotorolaMBParser])
+        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1"))
+        mocker.patch.object(scraper, '_detect_parser', return_value=MotorolaMBParser())
+        mock_login = mocker.patch.object(MotorolaMBParser, 'login', return_value=True)
+        scraper.get_modem_data()
+
+        mock_login.assert_called_once()
+
+    def test_basic_auth(self, mocker):
+        """Test basic HTTP authentication."""
+        from custom_components.cable_modem_monitor.parsers.technicolor_tc4400 import TechnicolorTC4400Parser
+        scraper = ModemScraper("192.168.100.1", "admin", "password", parsers=[TechnicolorTC4400Parser])
+        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1"))
+        mocker.patch.object(scraper, '_detect_parser', return_value=TechnicolorTC4400Parser())
+        mock_login = mocker.patch.object(TechnicolorTC4400Parser, 'login', return_value=True)
+        scraper.get_modem_data()
+
+        mock_login.assert_called_once()

@@ -17,9 +17,7 @@ from cable_modem_monitor.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
-    CONF_HISTORY_DAYS,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_HISTORY_DAYS,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
 )
@@ -46,11 +44,6 @@ class TestConfigFlow:
         """Test that scan interval range makes sense."""
         ***REMOVED*** Min should be less than default, default less than max
         assert MIN_SCAN_INTERVAL < DEFAULT_SCAN_INTERVAL < MAX_SCAN_INTERVAL
-
-    def test_history_days_default_value(self):
-        """Test that default history retention is 30 days."""
-        assert DEFAULT_HISTORY_DAYS == 30
-
 
 class TestValidateInput:
     """Test input validation."""
@@ -151,27 +144,6 @@ class TestScanIntervalValidation:
             assert MIN_SCAN_INTERVAL <= interval <= MAX_SCAN_INTERVAL
 
 
-class TestHistoryDaysValidation:
-    """Test history days validation logic."""
-
-    def test_history_days_minimum(self):
-        """Test minimum history retention is at least 1 day."""
-        ***REMOVED*** Minimum should be at least 1 day
-        assert 1 <= DEFAULT_HISTORY_DAYS
-
-    def test_history_days_maximum(self):
-        """Test maximum history retention is reasonable."""
-        ***REMOVED*** Maximum should be 365 days (1 year)
-        ***REMOVED*** This is enforced in config_flow vol.Range(min=1, max=365)
-        max_history_days = 365
-        assert DEFAULT_HISTORY_DAYS <= max_history_days
-
-    def test_history_days_default_reasonable(self):
-        """Test default history retention is reasonable."""
-        ***REMOVED*** 30 days is a good default
-        assert DEFAULT_HISTORY_DAYS == 30
-
-
 class TestConfigConstants:
     """Test configuration constants are properly defined."""
 
@@ -182,7 +154,6 @@ class TestConfigConstants:
             CONF_USERNAME,
             CONF_PASSWORD,
             CONF_SCAN_INTERVAL,
-            CONF_HISTORY_DAYS,
         ]
 
         ***REMOVED*** All should be strings
@@ -194,9 +165,6 @@ class TestConfigConstants:
         """Test that default values make sense."""
         ***REMOVED*** Scan interval: 10 minutes
         assert DEFAULT_SCAN_INTERVAL == 600
-
-        ***REMOVED*** History: 30 days
-        assert DEFAULT_HISTORY_DAYS == 30
 
         ***REMOVED*** Min interval: 1 minute
         assert MIN_SCAN_INTERVAL == 60

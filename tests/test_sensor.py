@@ -353,17 +353,17 @@ class TestEntityNaming:
 
         ***REMOVED*** Test connection status sensor
         connection_sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-        assert connection_sensor.name == "Modem Connection Status"
+        assert connection_sensor.name == "Cable Modem Connection Status"
         assert connection_sensor.unique_id == "test_cable_modem_connection_status"
 
         ***REMOVED*** Test error sensor
         error_sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
-        assert error_sensor.name == "Total Corrected Errors"
+        assert error_sensor.name == "Cable Modem Total Corrected Errors"
         assert error_sensor.unique_id == "test_cable_modem_total_corrected"
 
         ***REMOVED*** Test channel sensor
         channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-        assert channel_sensor.name == "DS Ch 5 Power"
+        assert channel_sensor.name == "Cable Modem DS Ch 5 Power"
         assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
 
 
@@ -499,7 +499,68 @@ class TestLastBootTimeSensor:
         sensor = ModemLastBootTimeSensor(mock_coordinator, mock_entry)
 
         ***REMOVED*** Check sensor attributes
-        assert sensor.name == "Last Boot Time"
+        assert sensor.name == "Cable Modem Last Boot Time"
         assert sensor.unique_id == "test_cable_modem_last_boot_time"
         assert sensor.icon == "mdi:restart"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP
+
+
+class TestLanStatsSensors:
+    """Test LAN statistics sensors."""
+
+    @pytest.fixture
+    def mock_coordinator(self):
+        """Create mock coordinator with LAN stats data."""
+        coordinator = Mock()
+        coordinator.data = {
+            "lan_stats": {
+                "eth0": {
+                    "received_bytes": 71019856907,
+                    "received_packets": 108821473,
+                    "received_errors": 0,
+                    "received_drops": 0,
+                    "transmitted_bytes": 475001588006,
+                    "transmitted_packets": 395114324,
+                    "transmitted_errors": 0,
+                    "transmitted_drops": 0,
+                }
+            }
+        }
+        coordinator.last_update_success = True
+        return coordinator
+
+    @pytest.fixture
+    def mock_entry(self):
+        """Create mock config entry."""
+        entry = Mock()
+        entry.entry_id = "test"
+        entry.data = {"host": "192.168.100.1"}
+        return entry
+
+    def test_lan_received_bytes_sensor(self, mock_coordinator, mock_entry):
+        """Test LAN received bytes sensor."""
+        from cable_modem_monitor.sensor import ModemLanReceivedBytesSensor
+
+        sensor = ModemLanReceivedBytesSensor(mock_coordinator, mock_entry, "eth0")
+        assert sensor.native_value == 71019856907
+
+    def test_lan_received_packets_sensor(self, mock_coordinator, mock_entry):
+        """Test LAN received packets sensor."""
+        from cable_modem_monitor.sensor import ModemLanReceivedPacketsSensor
+
+        sensor = ModemLanReceivedPacketsSensor(mock_coordinator, mock_entry, "eth0")
+        assert sensor.native_value == 108821473
+
+    def test_lan_transmitted_bytes_sensor(self, mock_coordinator, mock_entry):
+        """Test LAN transmitted bytes sensor."""
+        from cable_modem_monitor.sensor import ModemLanTransmittedBytesSensor
+
+        sensor = ModemLanTransmittedBytesSensor(mock_coordinator, mock_entry, "eth0")
+        assert sensor.native_value == 475001588006
+
+    def test_lan_transmitted_packets_sensor(self, mock_coordinator, mock_entry):
+        """Test LAN transmitted packets sensor."""
+        from cable_modem_monitor.sensor import ModemLanTransmittedPacketsSensor
+
+        sensor = ModemLanTransmittedPacketsSensor(mock_coordinator, mock_entry, "eth0")
+        assert sensor.native_value == 395114324

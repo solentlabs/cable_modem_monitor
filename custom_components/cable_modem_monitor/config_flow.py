@@ -15,15 +15,14 @@ from .const import (
     CONF_HOST,
     CONF_USERNAME,
     CONF_PASSWORD,
-    CONF_HISTORY_DAYS,
     CONF_SCAN_INTERVAL,
-    DEFAULT_HISTORY_DAYS,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
     DOMAIN,
 )
 from .modem_scraper import ModemScraper
+from .parsers import get_parsers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +41,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     username = data.get(CONF_USERNAME)
     password = data.get(CONF_PASSWORD)
 
-    scraper = ModemScraper(host, username, password)
+    ***REMOVED*** Get parsers in executor to avoid blocking I/O in async context
+    parsers = await hass.async_add_executor_job(get_parsers)
+    scraper = ModemScraper(host, username, password, parsers)
 
     ***REMOVED*** Test the connection
     try:
@@ -90,7 +91,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 ***REMOVED*** Add default values for fields not in initial setup
                 user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-                user_input.setdefault(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)
 
                 return self.async_create_entry(title=info["title"], data=user_input)
 
@@ -129,9 +129,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         ***REMOVED*** Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
         current_username = self.config_entry.data.get(CONF_USERNAME, "")
-        current_history_days = self.config_entry.data.get(
-            CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS
-        )
         current_scan_interval = self.config_entry.data.get(
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
         )
@@ -146,9 +143,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ): vol.All(
                     vol.Coerce(int),
                     vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
-                ),
-                vol.Required(CONF_HISTORY_DAYS, default=current_history_days): vol.All(
-                    vol.Coerce(int), vol.Range(min=1, max=365)
                 ),
             }
         )

@@ -16,142 +16,135 @@ class TechnicolorTC4400Parser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Technicolor TC4400 modem."""
-        ***REMOVED*** Check URL for TC4400 specific endpoint
-        if "cmconnectionstatus.html" in url.lower():
+        return "cmconnectionstatus.html" in url.lower() or "cmswinfo.html" in url.lower() or ("Board ID:" in html and "Build Timestamp:" in html)
+
+    def login(self, session, username, password) -> bool:
+        """Log in to the modem using Basic HTTP Authentication."""
+        if not username or not password:
+            _LOGGER.debug("No credentials provided, skipping login")
             return True
 
-        ***REMOVED*** Check for Technicolor-specific markers in HTML
-        ***REMOVED*** Note: This parser needs real HTML samples to improve detection
-        title = soup.find("title")
-        if title and "Technicolor" in title.text:
-            return True
+        session.auth = (username, password)
+        return True
 
-        return False
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+        """Parse all data from the modem."""
+        downstream_channels = self._parse_downstream(soup)
+        upstream_channels = self._parse_upstream(soup)
+        system_info = self._parse_system_info(soup)
 
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+        return {
+            "downstream": downstream_channels,
+            "upstream": upstream_channels,
+            "system_info": system_info,
+        }
+
+    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """
         Parse downstream channel data from Technicolor TC4400.
-
-        Note: This is a placeholder implementation.
-        TC4400 parser needs real HTML samples to implement proper parsing.
-        Community users with TC4400 modems should provide HTML samples.
         """
         channels = []
-
         try:
-            ***REMOVED*** TODO: Implement TC4400-specific parsing when HTML samples available
-            ***REMOVED*** For now, try generic table parsing similar to Motorola
-            tables = soup.find_all("table")
-            _LOGGER.debug(f"TC4400: Found {len(tables)} tables to parse")
-
-            for table in tables:
-                rows = table.find_all("tr")
-                if len(rows) < 2:  ***REMOVED*** Need header + data
-                    continue
-
-                ***REMOVED*** Look for downstream channel indicators
-                header_row = rows[0]
-                header_text = " ".join([th.text.strip().lower() for th in header_row.find_all(['th', 'td'])])
-
-                if any(keyword in header_text for keyword in ['downstream', 'channel', 'frequency', 'power', 'snr']):
-                    _LOGGER.debug(f"TC4400: Found potential downstream table with header: {header_text}")
-
-                    ***REMOVED*** Try to parse rows
-                    for row in rows[1:]:
-                        cols = row.find_all(['td', 'th'])
-                        if len(cols) >= 4:  ***REMOVED*** At least channel, freq, power, snr
-                            try:
-                                channel_data = {
-                                    "channel_id": str(self._extract_number(cols[0].text) or len(channels) + 1),
-                                    "frequency": self._parse_frequency(cols[1].text),
-                                    "power": self._extract_float(cols[2].text),
-                                    "snr": self._extract_float(cols[3].text),
-                                }
-
-                                ***REMOVED*** Only add if we got valid data
-                                if channel_data["frequency"] and channel_data["power"] and channel_data["snr"]:
-                                    channels.append(channel_data)
-                                    _LOGGER.debug(f"TC4400: Parsed downstream channel: {channel_data}")
-                            except Exception as e:
-                                _LOGGER.debug(f"TC4400: Error parsing row: {e}")
-                                continue
-
-            if not channels:
-                _LOGGER.warning(
-                    "TC4400 parser found no downstream channels. "
-                    "HTML structure may be different than expected. "
-                    "Please share HTML sample at: https://github.com/kwschulz/cable_modem_monitor/issues"
-                )
-
+            downstream_table = soup.find("th", text="Downstream Channel Status").find_parent("table")
+            for row in downstream_table.find_all("tr")[2:]:
+                cols = row.find_all("td")
+                if len(cols) == 13:
+                    channel_data = {
+                        "channel_id": self._extract_number(cols[1].text),
+                        "lock_status": cols[2].text.strip(),
+                        "channel_type": cols[3].text.strip(),
+                        "bonding_status": cols[4].text.strip(),
+                        "frequency": self._parse_frequency(cols[5].text),
+                        "width": self._parse_frequency(cols[6].text),
+                        "snr": self._extract_float(cols[7].text),
+                        "power": self._extract_float(cols[8].text),
+                        "modulation": cols[9].text.strip(),
+                        "unerrored_codewords": self._extract_number(cols[10].text),
+                        "corrected": self._extract_number(cols[11].text),
+                        "uncorrectable": self._extract_number(cols[12].text),
+                    }
+                    channels.append(channel_data)
         except Exception as e:
             _LOGGER.error(f"Error parsing TC4400 downstream channels: {e}")
 
         return channels
 
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
         """
         Parse upstream channel data from Technicolor TC4400.
-
-        Note: This is a placeholder implementation.
         """
         channels = []
-
         try:
-            tables = soup.find_all("table")
-
-            for table in tables:
-                rows = table.find_all("tr")
-                if len(rows) < 2:
-                    continue
-
-                header_row = rows[0]
-                header_text = " ".join([th.text.strip().lower() for th in header_row.find_all(['th', 'td'])])
-
-                if any(keyword in header_text for keyword in ['upstream', 'channel', 'frequency', 'power']):
-                    _LOGGER.debug(f"TC4400: Found potential upstream table with header: {header_text}")
-
-                    for row in rows[1:]:
-                        cols = row.find_all(['td', 'th'])
-                        if len(cols) >= 3:  ***REMOVED*** At least channel, freq, power
-                            try:
-                                channel_data = {
-                                    "channel_id": str(self._extract_number(cols[0].text) or len(channels) + 1),
-                                    "frequency": self._parse_frequency(cols[1].text),
-                                    "power": self._extract_float(cols[2].text),
-                                }
-
-                                if channel_data["frequency"] and channel_data["power"]:
-                                    channels.append(channel_data)
-                                    _LOGGER.debug(f"TC4400: Parsed upstream channel: {channel_data}")
-                            except Exception as e:
-                                _LOGGER.debug(f"TC4400: Error parsing row: {e}")
-                                continue
-
-            if not channels:
-                _LOGGER.warning(
-                    "TC4400 parser found no upstream channels. "
-                    "HTML structure may be different than expected."
-                )
-
+            upstream_table = soup.find("th", text="Upstream Channel Status").find_parent("table")
+            for row in upstream_table.find_all("tr")[2:]:
+                cols = row.find_all("td")
+                if len(cols) == 9:
+                    channel_data = {
+                        "channel_id": self._extract_number(cols[1].text),
+                        "lock_status": cols[2].text.strip(),
+                        "channel_type": cols[3].text.strip(),
+                        "bonding_status": cols[4].text.strip(),
+                        "frequency": self._parse_frequency(cols[5].text),
+                        "width": self._parse_frequency(cols[6].text),
+                        "power": self._extract_float(cols[7].text),
+                        "modulation": cols[8].text.strip(),
+                    }
+                    channels.append(channel_data)
         except Exception as e:
             _LOGGER.error(f"Error parsing TC4400 upstream channels: {e}")
 
         return channels
 
+    def _parse_system_info(self, soup: BeautifulSoup) -> dict:
+        """Parse system information from Technicolor TC4400."""
+        info = {}
+        try:
+            rows = soup.find_all("tr")
+            for row in rows:
+                header_cell = row.find("td", class_="hd")
+                if header_cell:
+                    header = header_cell.text.strip()
+                    value_cell = header_cell.find_next_sibling("td")
+                    if value_cell:
+                        value = value_cell.text.strip()
+                        if header == "Standard Specification Compliant":
+                            info["standard_specification_compliant"] = value
+                        elif header == "Hardware Version":
+                            info["hardware_version"] = value
+                        elif header == "Software Version":
+                            info["software_version"] = value
+                        elif header == "Cable Modem MAC Address":
+                            info["mac_address"] = value
+                        elif header == "System Up Time":
+                            info["system_uptime"] = value
+                        elif header == "Network Access":
+                            info["network_access"] = value
+                        elif header == "Cable Modem IPv4 Address":
+                            info["ipv4_address"] = value
+                        elif header == "Cable Modem IPv6 Address":
+                            info["ipv6_address"] = value
+                        elif header == "Board Temperature":
+                            info["board_temperature"] = value
+                else:
+                    header_cell = row.find("td", text="Cable Modem Serial Number")
+                    if header_cell:
+                        value_cell = header_cell.find_next_sibling("td")
+                        if value_cell:
+                            info["serial_number"] = value_cell.text.strip()
+        except Exception as e:
+            _LOGGER.error(f"Error parsing TC4400 system info: {e}")
+
+        return info
+
     def _parse_frequency(self, text: str) -> int | None:
         """Parse frequency, handling both Hz and MHz formats."""
         try:
-            ***REMOVED*** Extract number
             freq = self._extract_float(text)
             if freq is None:
                 return None
-
-            ***REMOVED*** Check if it's in MHz (TC4400 might use MHz)
             if "mhz" in text.lower() or (freq > 0 and freq < 2000):
-                ***REMOVED*** Convert MHz to Hz
                 return int(freq * 1_000_000)
             else:
-                ***REMOVED*** Already in Hz
                 return int(freq)
         except Exception:
             return None
