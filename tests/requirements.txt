@@ -1,1 +1,13 @@
-pytest-mock
+# Test framework
+pytest>=8.0.0
+pytest-mock>=3.12.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Home Assistant core (minimal version for type checking)
+homeassistant>=2024.1.0
+
+# Required by integration
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=5.0.0
