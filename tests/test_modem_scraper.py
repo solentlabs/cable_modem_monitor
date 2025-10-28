@@ -52,8 +52,8 @@ class TestModemScraper:
         mock_parser_instance.login.assert_called_once_with(scraper.session, scraper.base_url, scraper.username, scraper.password)
         mock_parser_instance.parse.assert_called_once()
 
-    def test_fetch_data_tries_xb7_endpoint_first(self, mocker):
-        """Test that the scraper tries the XB7 endpoint first."""
+    def test_fetch_data_url_ordering(self, mocker):
+        """Test that the scraper tries URLs in the correct order when all fail."""
         scraper = ModemScraper("192.168.100.1")
 
         ***REMOVED*** Mock the session.get to track which URLs are tried
@@ -68,26 +68,28 @@ class TestModemScraper:
         assert result is None
 
         ***REMOVED*** Verify URLs were tried in correct order
+        ***REMOVED*** Technicolor modems (XB7, TC4400) should be tried first
         calls = [call[0][0] for call in mock_get.call_args_list]
-        assert calls[0] == "http://192.168.100.1/network_setup.jst"  ***REMOVED*** XB7 should be first
-        assert calls[1] == "http://192.168.100.1/MotoConnection.asp"
+        assert calls[0] == "http://192.168.100.1/network_setup.jst"  ***REMOVED*** Technicolor XB7, TC4400
+        assert calls[1] == "http://192.168.100.1/MotoConnection.asp"  ***REMOVED*** Motorola MB series
         assert len(calls) == 6  ***REMOVED*** Total URLs to try
 
-    def test_fetch_data_succeeds_with_xb7_endpoint(self, mocker):
-        """Test that the scraper successfully fetches from XB7 endpoint."""
+    def test_fetch_data_stops_on_first_success(self, mocker):
+        """Test that the scraper stops trying URLs after first successful response."""
         scraper = ModemScraper("192.168.100.1")
 
+        ***REMOVED*** Mock successful response on first URL (tests Technicolor XB7, TC4400)
         mock_get = mocker.patch.object(scraper.session, 'get')
         mock_response = mocker.Mock()
         mock_response.status_code = 200
-        mock_response.text = "<html><body>XB7 Data</body></html>"
+        mock_response.text = "<html><body>Modem Data</body></html>"
         mock_get.return_value = mock_response
 
         html, url = scraper._fetch_data()
 
-        ***REMOVED*** Should succeed on first try with XB7 endpoint
-        assert html == "<html><body>XB7 Data</body></html>"
+        ***REMOVED*** Should succeed on first try
+        assert html == "<html><body>Modem Data</body></html>"
         assert url == "http://192.168.100.1/network_setup.jst"
 
-        ***REMOVED*** Should only have tried once
+        ***REMOVED*** Should only have tried once (stop on first success)
         assert mock_get.call_count == 1
