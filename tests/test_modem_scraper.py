@@ -51,3 +51,43 @@ class TestModemScraper:
         ***REMOVED*** Assert that the parser instance's login method was called
         mock_parser_instance.login.assert_called_once_with(scraper.session, scraper.base_url, scraper.username, scraper.password)
         mock_parser_instance.parse.assert_called_once()
+
+    def test_fetch_data_tries_xb7_endpoint_first(self, mocker):
+        """Test that the scraper tries the XB7 endpoint first."""
+        scraper = ModemScraper("192.168.100.1")
+
+        ***REMOVED*** Mock the session.get to track which URLs are tried
+        mock_get = mocker.patch.object(scraper.session, 'get')
+        mock_response = mocker.Mock()
+        mock_response.status_code = 404  ***REMOVED*** Force it to try all URLs
+        mock_get.return_value = mock_response
+
+        result = scraper._fetch_data()
+
+        ***REMOVED*** Should try all URLs and return None (all failed)
+        assert result is None
+
+        ***REMOVED*** Verify URLs were tried in correct order
+        calls = [call[0][0] for call in mock_get.call_args_list]
+        assert calls[0] == "http://192.168.100.1/network_setup.jst"  ***REMOVED*** XB7 should be first
+        assert calls[1] == "http://192.168.100.1/MotoConnection.asp"
+        assert len(calls) == 6  ***REMOVED*** Total URLs to try
+
+    def test_fetch_data_succeeds_with_xb7_endpoint(self, mocker):
+        """Test that the scraper successfully fetches from XB7 endpoint."""
+        scraper = ModemScraper("192.168.100.1")
+
+        mock_get = mocker.patch.object(scraper.session, 'get')
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = "<html><body>XB7 Data</body></html>"
+        mock_get.return_value = mock_response
+
+        html, url = scraper._fetch_data()
+
+        ***REMOVED*** Should succeed on first try with XB7 endpoint
+        assert html == "<html><body>XB7 Data</body></html>"
+        assert url == "http://192.168.100.1/network_setup.jst"
+
+        ***REMOVED*** Should only have tried once
+        assert mock_get.call_count == 1
