@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [2.3.0] - 2025-10-28
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Technicolor XB7 Support** - Full parser implementation for XB7 cable modems
+  - Supports 34 downstream + 5 upstream channels
+  - Handles transposed table layout (similar to ARRIS SB6141)
+  - Parses mixed frequency formats (both "609 MHz" text and "350000000" raw Hz)
+  - Includes XB7-specific upstream fields: symbol rate and channel type
+  - Parses error codewords (correctable/uncorrectable)
+  - Detection by URL pattern (`network_setup.jst`) and content
+  - Basic HTTP Authentication support
+  - Used by Rogers (Canada), Comcast
+  - Resolves [***REMOVED***2](https://github.com/kwschulz/cable_modem_monitor/issues/2)
+
+***REMOVED******REMOVED******REMOVED*** Test Coverage
+- Added 27 comprehensive tests for XB7 parser:
+  - 3 detection tests
+  - 2 authentication tests
+  - 9 downstream parsing tests
+  - 9 upstream parsing tests
+  - 2 system info tests
+  - 2 integration tests
+- **Total test suite: 108 tests passing** (was 81, added 27 new tests)
+
+***REMOVED******REMOVED******REMOVED*** Technical
+- New file: `custom_components/cable_modem_monitor/parsers/technicolor_xb7.py`
+- New test file: `tests/test_parser_technicolor_xb7.py`
+- HTML fixture: `tests/fixtures/technicolor_xb7_network_setup.html`
+- XB7-specific upstream channel fields:
+  - `symbol_rate`: Integer (2560, 5120, 0)
+  - `channel_type`: String (TDMA, ATDMA, TDMA_AND_ATDMA, OFDMA)
+
+***REMOVED******REMOVED******REMOVED*** Thanks
+Special thanks to @esand for providing detailed HTML samples and modem information!
+
+***REMOVED******REMOVED*** [2.2.1] - 2025-10-28
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- Updated manifest version and documentation images
+
+***REMOVED******REMOVED*** [2.2.0] - 2025-10-28
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **TC-4400 Authentication** - Corrected login method signature for TC4400 parser
+
+***REMOVED******REMOVED*** [2.1.0] - 2025-10-28
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Cleanup Entities Button** - One-click cleanup of orphaned entities from entity registry
+  - Useful after upgrades or entity ID changes
+  - Displays notification showing how many entities were removed
+  - Available in device controls alongside Restart Modem button
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Standardized Entity Naming** - All entities now use `cable_modem_` prefix
+  - Provides consistent naming across all sensors
+  - Makes entities easier to find and identify
+  - Previous entity prefix configuration options removed (simpler UX)
+
 ***REMOVED******REMOVED*** [2.0.0] - 2025-10-24
 
 ***REMOVED******REMOVED******REMOVED*** Breaking Changes

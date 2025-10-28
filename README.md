@@ -47,6 +47,12 @@ This integration is designed for cable modems with web-based status pages.
 **Parsers Available (awaiting community testing):**
 - **Arris SB6141** - Parser implemented with test fixtures
 - **Technicolor TC4400** - Parser implemented with test fixtures
+- **Technicolor XB7 (CGM4331COM)** - Full parser with 27 comprehensive tests
+  - 34 downstream channels (handles mixed frequency formats: MHz text and raw Hz)
+  - 5 upstream channels with XB7-specific fields (symbol rate, channel type)
+  - Supports both default and bridged modes
+  - Used by Rogers (Canada), Comcast
+  - URL pattern: `http://10.0.0.1/network_setup.jst`
 
 **Note**: The integration uses a plugin architecture that makes adding new modem models easy. If your modem has a web interface showing downstream/upstream channel data, it's worth trying! See the [Contributing](***REMOVED***contributing) section to add support for your modem.
 
