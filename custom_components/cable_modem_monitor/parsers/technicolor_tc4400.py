@@ -18,7 +18,7 @@ class TechnicolorTC4400Parser(ModemParser):
         """Detect if this is a Technicolor TC4400 modem."""
         return "cmconnectionstatus.html" in url.lower() or "cmswinfo.html" in url.lower() or ("Board ID:" in html and "Build Timestamp:" in html)
 
-    def login(self, session, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> bool:
         """Log in to the modem using Basic HTTP Authentication."""
         if not username or not password:
             _LOGGER.debug("No credentials provided, skipping login")
