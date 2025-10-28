@@ -2,6 +2,7 @@
 import os
 import sys
 from bs4 import BeautifulSoup
+from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from custom_components.cable_modem_monitor.parsers.technicolor_tc4400 import TechnicolorTC4400Parser
 
@@ -65,3 +66,59 @@ def test_technicolor_tc4400_parser():
     assert upstream_channels[0]["width"] == 6400000
     assert upstream_channels[0]["power"] == 47.0
     assert upstream_channels[0]["modulation"] == "ATDMA"
+
+def test_tc4400_login_with_credentials():
+    """Test that TC-4400 parser properly sets Basic HTTP Authentication with credentials."""
+    parser = TechnicolorTC4400Parser()
+    session = Mock()
+
+    ***REMOVED*** Test with credentials - should set session.auth
+    result = parser.login(session, "http://192.168.0.1", "admin", "password")
+
+    assert result is True
+    assert session.auth == ("admin", "password")
+
+def test_tc4400_login_without_credentials():
+    """Test that TC-4400 parser handles missing credentials gracefully."""
+    parser = TechnicolorTC4400Parser()
+    session = Mock()
+
+    ***REMOVED*** Test without username
+    result = parser.login(session, "http://192.168.0.1", "", "password")
+    assert result is True
+
+    ***REMOVED*** Test without password
+    session2 = Mock()
+    result = parser.login(session2, "http://192.168.0.1", "admin", "")
+    assert result is True
+
+    ***REMOVED*** Test without both
+    session3 = Mock()
+    result = parser.login(session3, "http://192.168.0.1", "", "")
+    assert result is True
+
+def test_tc4400_login_signature():
+    """Test that login method accepts all required parameters including base_url.
+
+    This test verifies the fix for GitHub Issue ***REMOVED***1 where the login signature
+    was missing the base_url parameter, causing authentication to fail.
+    """
+    parser = TechnicolorTC4400Parser()
+    session = Mock()
+
+    ***REMOVED*** This should not raise TypeError - all 4 parameters should be accepted
+    result = parser.login(session, "http://192.168.0.1", "admin", "password")
+    assert result is True
+
+    ***REMOVED*** Verify the signature matches what ModemScraper.login() calls
+    ***REMOVED*** ModemScraper calls: parser.login(session, base_url, username, password)
+    import inspect
+    sig = inspect.signature(parser.login)
+    params = list(sig.parameters.keys())
+
+    ***REMOVED*** Should have: session, base_url, username, password (self is implicit)
+    assert len(params) == 4
+    assert params[0] == "session"
+    assert params[1] == "base_url"
+    assert params[2] == "username"
+    assert params[3] == "password"
