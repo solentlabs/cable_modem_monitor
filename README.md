@@ -42,10 +42,13 @@ This integration is designed for cable modems with web-based status pages.
   - Supports both plain and Base64-encoded password authentication
   - Full downstream/upstream channel monitoring
   - System info and uptime tracking
+- **ARRIS SB6141** - Confirmed working by @captain-coredump ([Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant))
+  - Transposed table layout parser
+  - All 57 entities displaying correctly
+  - Note: Last Boot Time, Software Version, and System Uptime may show "Unknown" if modem doesn't provide this data
 - **Arris SB6183, SB8200** (newer models - reported by community)
 
 **Parsers Available (awaiting community testing):**
-- **Arris SB6141** - Parser implemented with test fixtures
 - **Technicolor TC4400** - Parser implemented with test fixtures
 - **Technicolor XB7 (CGM4331COM)** - Full parser with 27 comprehensive tests
   - 34 downstream channels (handles mixed frequency formats: MHz text and raw Hz)

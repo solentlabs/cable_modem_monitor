@@ -32,9 +32,14 @@ Monitor your cable modem's signal quality, power levels, and error rates directl
 
 ***REMOVED******REMOVED*** Supported Modems
 
-Designed for cable modems with web interfaces, tested with:
-- Motorola MB series
-- Arris cable modems
+**Confirmed Working:**
+- Motorola MB series (MB7420, MB7621, MB8600, MB8611)
+- ARRIS SB6141
+- Arris SB6183, SB8200
+
+**Parsers Available:**
+- Technicolor TC4400
+- Technicolor XB7 (CGM4331COM)
 
 May work with other brands that have similar web status pages.
 

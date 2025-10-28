@@ -37,8 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `symbol_rate`: Integer (2560, 5120, 0)
   - `channel_type`: String (TDMA, ATDMA, TDMA_AND_ATDMA, OFDMA)
 
+***REMOVED******REMOVED******REMOVED*** Community Updates
+- **ARRIS SB6141** confirmed working by @captain-coredump on [Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant)
+  - All 57 entities displaying correctly
+  - Parser fully functional with v2.0.0+
+
 ***REMOVED******REMOVED******REMOVED*** Thanks
-Special thanks to @esand for providing detailed HTML samples and modem information!
+- Special thanks to @esand for providing detailed HTML samples and modem information for XB7 support!
+- Thanks to @captain-coredump for confirming ARRIS SB6141 compatibility and providing valuable testing feedback
 
 ***REMOVED******REMOVED*** [2.2.1] - 2025-10-28
 

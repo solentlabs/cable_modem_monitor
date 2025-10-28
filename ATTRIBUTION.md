@@ -53,6 +53,10 @@ This integration relies on the following open source libraries:
 
 ***REMOVED******REMOVED*** Community Contributions
 
+***REMOVED******REMOVED******REMOVED*** Hardware Testing & Samples
+- **@captain-coredump** - Confirmed ARRIS SB6141 compatibility, provided HTML samples and testing feedback ([Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant))
+- **@esand** - Provided Technicolor XB7 HTML samples and detailed modem information (Issue ***REMOVED***2)
+
 ***REMOVED******REMOVED******REMOVED*** User Contributions
 - Users who report modem compatibility issues
 - Contributors who provide HTML samples for new modem support
@@ -129,5 +133,5 @@ Questions about attribution or credits?
 
 ---
 
-**Last Updated:** 2025-10-22
-**Document Version:** 1.0
+**Last Updated:** 2025-10-28
+**Document Version:** 1.1
