@@ -3,6 +3,7 @@ import logging
 import base64
 from bs4 import BeautifulSoup
 from .base_parser import ModemParser
+from ..utils import extract_number, extract_float
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ class MotorolaMBParser(ModemParser):
     name = "Motorola MB Series"
     manufacturer = "Motorola"
     models = ["MB7420", "MB7621", "MB8600", "MB8611"]
+    auth_type = "form"
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
@@ -100,21 +102,21 @@ class MotorolaMBParser(ModemParser):
                         cols = row.find_all("td")
                         if len(cols) >= 9:
                             try:
-                                channel_id = self._extract_number(cols[0].text)
+                                channel_id = extract_number(cols[0].text)
                                 if channel_id is None:
                                     _LOGGER.debug(f"Skipping row - could not extract channel_id from: {cols[0].text}")
                                     continue
 
-                                freq_mhz = self._extract_float(cols[4].text)
+                                freq_mhz = extract_float(cols[4].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
 
                                 channel_data = {
                                     "channel_id": str(channel_id),
                                     "frequency": freq_hz,
-                                    "power": self._extract_float(cols[5].text),
-                                    "snr": self._extract_float(cols[6].text),
-                                    "corrected": self._extract_number(cols[7].text),
-                                    "uncorrected": self._extract_number(cols[8].text),
+                                    "power": extract_float(cols[5].text),
+                                    "snr": extract_float(cols[6].text),
+                                    "corrected": extract_number(cols[7].text),
+                                    "uncorrected": extract_number(cols[8].text),
                                     "modulation": cols[2].text.strip(),
                                 }
                                 _LOGGER.debug(f"Parsed downstream channel: {channel_data}")
@@ -142,7 +144,7 @@ class MotorolaMBParser(ModemParser):
                         cols = row.find_all("td")
                         if len(cols) >= 7:
                             try:
-                                channel_id = self._extract_number(cols[0].text)
+                                channel_id = extract_number(cols[0].text)
                                 if channel_id is None:
                                     _LOGGER.debug(f"Skipping row - could not extract channel_id from: {cols[0].text}")
                                     continue
@@ -152,13 +154,13 @@ class MotorolaMBParser(ModemParser):
                                     _LOGGER.debug(f"Skipping channel {channel_id} - not locked (status: {lock_status})")
                                     continue
 
-                                freq_mhz = self._extract_float(cols[5].text)
+                                freq_mhz = extract_float(cols[5].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
 
                                 channel_data = {
                                     "channel_id": str(channel_id),
                                     "frequency": freq_hz,
-                                    "power": self._extract_float(cols[6].text),
+                                    "power": extract_float(cols[6].text),
                                     "modulation": cols[2].text.strip(),
                                 }
                                 _LOGGER.debug(f"Parsed upstream channel: {channel_data}")
@@ -177,30 +179,14 @@ class MotorolaMBParser(ModemParser):
         """Parse system information from Motorola MB modem."""
         info = {}
         try:
-            sw_version_tag = soup.find("td", text=lambda t: t and "Software Version" in t)
+            sw_version_tag = soup.find("td", string=lambda t: t and "Software Version" in t)
             if sw_version_tag:
                 info["software_version"] = sw_version_tag.find_next_sibling("td").text.strip()
 
-            uptime_tag = soup.find("td", text=lambda t: t and "System Up Time" in t)
+            uptime_tag = soup.find("td", string=lambda t: t and "System Up Time" in t)
             if uptime_tag:
                 info["system_uptime"] = uptime_tag.find_next_sibling("td").text.strip()
         except Exception as e:
             _LOGGER.error(f"Error parsing system info: {e}")
 
         return info
-
-    def _extract_number(self, text: str) -> int | None:
-        """Extract integer from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c == "-")
-            return int(cleaned) if cleaned else None
-        except ValueError:
-            return None
-
-    def _extract_float(self, text: str) -> float | None:
-        """Extract float from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c in ".-")
-            return float(cleaned) if cleaned else None
-        except ValueError:
-            return None

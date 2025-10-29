@@ -70,8 +70,8 @@ class TestModemScraper:
         ***REMOVED*** Verify URLs were tried in correct order
         ***REMOVED*** Technicolor modems (XB7, TC4400) should be tried first
         calls = [call[0][0] for call in mock_get.call_args_list]
-        assert calls[0] == "http://192.168.100.1/network_setup.jst"  ***REMOVED*** Technicolor XB7, TC4400
-        assert calls[1] == "http://192.168.100.1/MotoConnection.asp"  ***REMOVED*** Motorola MB series
+        assert calls[0] == "http://192.168.100.1/network_setup.jst"     ***REMOVED*** Technicolor XB7, TC4400
+        assert calls[1] == "http://192.168.100.1/MotoConnection.asp"    ***REMOVED*** Motorola MB series
         assert len(calls) == 6  ***REMOVED*** Total URLs to try
 
     def test_fetch_data_stops_on_first_success(self, mocker):

@@ -2,6 +2,7 @@
 import logging
 from bs4 import BeautifulSoup
 from .base_parser import ModemParser
+from ..utils import extract_number, extract_float
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ class TechnicolorTC4400Parser(ModemParser):
     name = "Technicolor TC4400"
     manufacturer = "Technicolor"
     models = ["TC4400"]
+    auth_type = "basic"
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
@@ -45,23 +47,23 @@ class TechnicolorTC4400Parser(ModemParser):
         """
         channels = []
         try:
-            downstream_table = soup.find("th", text="Downstream Channel Status").find_parent("table")
+            downstream_table = soup.find("th", string="Downstream Channel Status").find_parent("table")
             for row in downstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 13:
                     channel_data = {
-                        "channel_id": self._extract_number(cols[1].text),
+                        "channel_id": extract_number(cols[1].text),
                         "lock_status": cols[2].text.strip(),
                         "channel_type": cols[3].text.strip(),
                         "bonding_status": cols[4].text.strip(),
                         "frequency": self._parse_frequency(cols[5].text),
                         "width": self._parse_frequency(cols[6].text),
-                        "snr": self._extract_float(cols[7].text),
-                        "power": self._extract_float(cols[8].text),
+                        "snr": extract_float(cols[7].text),
+                        "power": extract_float(cols[8].text),
                         "modulation": cols[9].text.strip(),
-                        "unerrored_codewords": self._extract_number(cols[10].text),
-                        "corrected": self._extract_number(cols[11].text),
-                        "uncorrectable": self._extract_number(cols[12].text),
+                        "unerrored_codewords": extract_number(cols[10].text),
+                        "corrected": extract_number(cols[11].text),
+                        "uncorrected": extract_number(cols[12].text),
                     }
                     channels.append(channel_data)
         except Exception as e:
@@ -75,18 +77,18 @@ class TechnicolorTC4400Parser(ModemParser):
         """
         channels = []
         try:
-            upstream_table = soup.find("th", text="Upstream Channel Status").find_parent("table")
+            upstream_table = soup.find("th", string="Upstream Channel Status").find_parent("table")
             for row in upstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 9:
                     channel_data = {
-                        "channel_id": self._extract_number(cols[1].text),
+                        "channel_id": extract_number(cols[1].text),
                         "lock_status": cols[2].text.strip(),
                         "channel_type": cols[3].text.strip(),
                         "bonding_status": cols[4].text.strip(),
                         "frequency": self._parse_frequency(cols[5].text),
                         "width": self._parse_frequency(cols[6].text),
-                        "power": self._extract_float(cols[7].text),
+                        "power": extract_float(cols[7].text),
                         "modulation": cols[8].text.strip(),
                     }
                     channels.append(channel_data)
@@ -126,7 +128,7 @@ class TechnicolorTC4400Parser(ModemParser):
                         elif header == "Board Temperature":
                             info["board_temperature"] = value
                 else:
-                    header_cell = row.find("td", text="Cable Modem Serial Number")
+                    header_cell = row.find("td", string="Cable Modem Serial Number")
                     if header_cell:
                         value_cell = header_cell.find_next_sibling("td")
                         if value_cell:
@@ -139,7 +141,7 @@ class TechnicolorTC4400Parser(ModemParser):
     def _parse_frequency(self, text: str) -> int | None:
         """Parse frequency, handling both Hz and MHz formats."""
         try:
-            freq = self._extract_float(text)
+            freq = extract_float(text)
             if freq is None:
                 return None
             if "mhz" in text.lower() or (freq > 0 and freq < 2000):
@@ -147,20 +149,4 @@ class TechnicolorTC4400Parser(ModemParser):
             else:
                 return int(freq)
         except Exception:
-            return None
-
-    def _extract_number(self, text: str) -> int | None:
-        """Extract integer from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c == "-")
-            return int(cleaned) if cleaned else None
-        except ValueError:
-            return None
-
-    def _extract_float(self, text: str) -> float | None:
-        """Extract float from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c in ".-")
-            return float(cleaned) if cleaned else None
-        except ValueError:
             return None

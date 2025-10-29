@@ -2,6 +2,7 @@
 import logging
 from bs4 import BeautifulSoup
 from .base_parser import ModemParser
+from ..utils import extract_number, extract_float
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,8 +58,8 @@ class TechnicolorXB7Parser(ModemParser):
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the XB7 modem."""
-        downstream_channels = self.parse_downstream(soup)
-        upstream_channels = self.parse_upstream(soup)
+        downstream_channels = self._parse_downstream(soup)
+        upstream_channels = self._parse_upstream(soup)
         system_info = self._parse_system_info(soup)
 
         return {
@@ -67,7 +68,7 @@ class TechnicolorXB7Parser(ModemParser):
             "system_info": system_info,
         }
 
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """
         Parse downstream channel data from XB7.
 
@@ -114,7 +115,7 @@ class TechnicolorXB7Parser(ModemParser):
 
         return downstream_channels
 
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
         """
         Parse upstream channel data from XB7.
 
@@ -211,7 +212,7 @@ class TechnicolorXB7Parser(ModemParser):
 
                 ***REMOVED*** Extract channel ID
                 if "Channel ID" in data_map and i < len(data_map["Channel ID"]):
-                    channel_id = self._extract_number(data_map["Channel ID"][i])
+                    channel_id = extract_number(data_map["Channel ID"][i])
                     if channel_id is None:
                         continue
                     channel_data["channel_id"] = str(channel_id)
@@ -229,7 +230,7 @@ class TechnicolorXB7Parser(ModemParser):
                 ***REMOVED*** Extract power level
                 if "Power Level" in data_map and i < len(data_map["Power Level"]):
                     power_text = data_map["Power Level"][i]
-                    channel_data["power"] = self._extract_float(power_text)
+                    channel_data["power"] = extract_float(power_text)
 
                 ***REMOVED*** Extract modulation
                 if "Modulation" in data_map and i < len(data_map["Modulation"]):
@@ -241,7 +242,7 @@ class TechnicolorXB7Parser(ModemParser):
                     ***REMOVED*** Symbol Rate (XB7-specific)
                     if "Symbol Rate" in data_map and i < len(data_map["Symbol Rate"]):
                         symbol_rate_text = data_map["Symbol Rate"][i]
-                        symbol_rate = self._extract_number(symbol_rate_text)
+                        symbol_rate = extract_number(symbol_rate_text)
                         if symbol_rate is not None:
                             channel_data["symbol_rate"] = symbol_rate
 
@@ -253,7 +254,7 @@ class TechnicolorXB7Parser(ModemParser):
                     ***REMOVED*** Downstream-specific fields
                     if "SNR" in data_map and i < len(data_map["SNR"]):
                         snr_text = data_map["SNR"][i]
-                        channel_data["snr"] = self._extract_float(snr_text)
+                        channel_data["snr"] = extract_float(snr_text)
 
                     ***REMOVED*** Initialize error counters (will be filled from error table)
                     channel_data["corrected"] = None
@@ -329,16 +330,16 @@ class TechnicolorXB7Parser(ModemParser):
                         channel = {}
 
                         if i < len(data_map["Channel ID"]):
-                            channel_id = self._extract_number(data_map["Channel ID"][i])
+                            channel_id = extract_number(data_map["Channel ID"][i])
                             if channel_id is None:
                                 continue
                             channel["channel_id"] = str(channel_id)
 
                         if "Correctable Codewords" in data_map and i < len(data_map["Correctable Codewords"]):
-                            channel["corrected"] = self._extract_number(data_map["Correctable Codewords"][i])
+                            channel["corrected"] = extract_number(data_map["Correctable Codewords"][i])
 
                         if "Uncorrectable Codewords" in data_map and i < len(data_map["Uncorrectable Codewords"]):
-                            channel["uncorrected"] = self._extract_number(data_map["Uncorrectable Codewords"][i])
+                            channel["uncorrected"] = extract_number(data_map["Uncorrectable Codewords"][i])
 
                         error_channels.append(channel)
 
@@ -416,24 +417,8 @@ class TechnicolorXB7Parser(ModemParser):
 
         ***REMOVED*** Check if it contains "MHz"
         if "mhz" in text.lower():
-            freq_mhz = self._extract_float(text)
+            freq_mhz = extract_float(text)
             if freq_mhz is not None:
                 return int(freq_mhz * 1_000_000)
 
         return None
-
-    def _extract_number(self, text: str) -> int | None:
-        """Extract integer from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c == "-")
-            return int(cleaned) if cleaned else None
-        except ValueError:
-            return None
-
-    def _extract_float(self, text: str) -> float | None:
-        """Extract float from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c in ".-")
-            return float(cleaned) if cleaned else None
-        except ValueError:
-            return None

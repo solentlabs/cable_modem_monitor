@@ -11,6 +11,7 @@ class ModemParser(ABC):
     name: str = "Unknown"
     manufacturer: str = "Unknown"
     models: list[str] = []  ***REMOVED*** e.g., ["MB7621", "MB8600"]
+    auth_type: str = 'form'
 
     @classmethod
     @abstractmethod
@@ -55,3 +56,5 @@ class ModemParser(ABC):
             }
         """
         raise NotImplementedError
+
+    

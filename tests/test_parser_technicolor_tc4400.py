@@ -53,7 +53,7 @@ def test_technicolor_tc4400_parser():
     assert downstream_channels[0]["modulation"] == "QAM256"
     assert downstream_channels[0]["unerrored_codewords"] == 2893294930
     assert downstream_channels[0]["corrected"] == 201
-    assert downstream_channels[0]["uncorrectable"] == 449
+    assert downstream_channels[0]["uncorrected"] == 449
 
     ***REMOVED*** Test parsing of upstream channels
     upstream_channels = data["upstream"]

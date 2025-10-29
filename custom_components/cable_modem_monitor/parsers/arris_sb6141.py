@@ -2,6 +2,7 @@
 import logging
 from bs4 import BeautifulSoup
 from .base_parser import ModemParser
+from ..utils import extract_number, extract_float
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class ArrisSB6141Parser(ModemParser):
     name = "ARRIS SB6141"
     manufacturer = "ARRIS"
     models = ["SB6141"]
-    auth_type = "form"
+    auth_type = "none"
 
     def login(self, session, base_url, username, password) -> bool:
         """ARRIS modems do not have a login page."""
@@ -20,8 +21,8 @@ class ArrisSB6141Parser(ModemParser):
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""
-        downstream_channels = self.parse_downstream(soup)
-        upstream_channels = self.parse_upstream(soup)
+        downstream_channels = self._parse_downstream(soup)
+        upstream_channels = self._parse_upstream(soup)
 
         return {
             "downstream": downstream_channels,
@@ -51,7 +52,7 @@ class ArrisSB6141Parser(ModemParser):
 
         return False
 
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse downstream channel data from ARRIS SB6141."""
         downstream_channels = []
 
@@ -97,7 +98,7 @@ class ArrisSB6141Parser(ModemParser):
 
         return downstream_channels
 
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse upstream channel data from ARRIS SB6141."""
         upstream_channels = []
 
@@ -179,7 +180,7 @@ class ArrisSB6141Parser(ModemParser):
 
                 ***REMOVED*** Extract channel ID
                 if "Channel ID" in data_map and i < len(data_map["Channel ID"]):
-                    channel_id = self._extract_number(data_map["Channel ID"][i])
+                    channel_id = extract_number(data_map["Channel ID"][i])
                     if channel_id is None:
                         continue
                     channel_data["channel_id"] = str(channel_id)
@@ -188,13 +189,13 @@ class ArrisSB6141Parser(ModemParser):
                 if "Frequency" in data_map and i < len(data_map["Frequency"]):
                     freq_text = data_map["Frequency"][i]
                     ***REMOVED*** ARRIS format: "519000000 Hz" - extract number
-                    freq_hz = self._extract_number(freq_text)
+                    freq_hz = extract_number(freq_text)
                     channel_data["frequency"] = freq_hz
 
                 ***REMOVED*** Extract power level
                 if "Power Level" in data_map and i < len(data_map["Power Level"]):
                     power_text = data_map["Power Level"][i]
-                    channel_data["power"] = self._extract_float(power_text)
+                    channel_data["power"] = extract_float(power_text)
 
                 if not is_upstream:
                     ***REMOVED*** Downstream-specific fields
@@ -202,7 +203,7 @@ class ArrisSB6141Parser(ModemParser):
                         data_map["Signal to Noise Ratio"]
                     ):
                         snr_text = data_map["Signal to Noise Ratio"][i]
-                        channel_data["snr"] = self._extract_float(snr_text)
+                        channel_data["snr"] = extract_float(snr_text)
 
                     ***REMOVED*** Initialize error counters (will be filled from stats table)
                     channel_data["corrected"] = None
@@ -239,32 +240,16 @@ class ArrisSB6141Parser(ModemParser):
                 if "Total Correctable Codewords" in data_map and i < len(
                     data_map["Total Correctable Codewords"]
                 ):
-                    channel["corrected"] = self._extract_number(
+                    channel["corrected"] = extract_number(
                         data_map["Total Correctable Codewords"][i]
                     )
 
                 if "Total Uncorrectable Codewords" in data_map and i < len(
                     data_map["Total Uncorrectable Codewords"]
                 ):
-                    channel["uncorrected"] = self._extract_number(
+                    channel["uncorrected"] = extract_number(
                         data_map["Total Uncorrectable Codewords"][i]
                     )
 
         except Exception as e:
             _LOGGER.error(f"Error merging ARRIS error stats: {e}")
-
-    def _extract_number(self, text: str) -> int | None:
-        """Extract integer from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c == "-")
-            return int(cleaned) if cleaned else None
-        except ValueError:
-            return None
-
-    def _extract_float(self, text: str) -> float | None:
-        """Extract float from text."""
-        try:
-            cleaned = "".join(c for c in text if c.isdigit() or c in ".-")
-            return float(cleaned) if cleaned else None
-        except ValueError:
-            return None
