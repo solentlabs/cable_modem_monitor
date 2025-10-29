@@ -163,11 +163,16 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._entry = entry
+
+        # Get detected modem info from config entry, with fallback to generic values
+        manufacturer = entry.data.get("detected_manufacturer", "Unknown")
+        model = entry.data.get("detected_modem", "Cable Modem Monitor")
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": f"Cable Modem {entry.data['host']}",
-            "manufacturer": "Cable Modem",
-            "model": "Monitor",
+            "manufacturer": manufacturer,
+            "model": model,
         }
 
     @property
