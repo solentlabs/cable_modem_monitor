@@ -129,7 +129,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             # Validate the connection with new settings
             try:
-                await validate_input(self.hass, user_input)
+                info = await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:  # pylint: disable=broad-except
