@@ -183,10 +183,15 @@ class MotorolaMBParser(ModemParser):
             sw_version_tag = soup.find("td", text=lambda t: t and "Software Version" in t)
             if sw_version_tag:
                 info["software_version"] = sw_version_tag.find_next_sibling("td").text.strip()
+            else:
+                _LOGGER.debug("Software Version tag not found in HTML")
 
             uptime_tag = soup.find("td", text=lambda t: t and "System Up Time" in t)
             if uptime_tag:
                 info["system_uptime"] = uptime_tag.find_next_sibling("td").text.strip()
+                _LOGGER.debug(f"Found uptime: {info['system_uptime']}")
+            else:
+                _LOGGER.debug("System Up Time tag not found in HTML")
         except Exception as e:
             _LOGGER.error(f"Error parsing system info: {e}")
 
