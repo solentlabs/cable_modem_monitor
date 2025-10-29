@@ -6,6 +6,12 @@ CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_SCAN_INTERVAL = "scan_interval"
 
+# Modem detection cache fields
+CONF_DETECTED_MODEM = "detected_modem"
+CONF_DETECTED_MANUFACTURER = "detected_manufacturer"
+CONF_WORKING_URL = "working_url"
+CONF_LAST_DETECTION = "last_detection"
+
 # Polling interval defaults based on industry best practices
 # References:
 # - SNMP Polling: https://obkio.com/blog/snmp-polling/

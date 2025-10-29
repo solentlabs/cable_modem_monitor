@@ -16,6 +16,10 @@ from .const import (
     CONF_USERNAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_DETECTED_MODEM,
+    CONF_DETECTED_MANUFACTURER,
+    CONF_WORKING_URL,
+    CONF_LAST_DETECTION,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
@@ -40,10 +44,11 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     host = data[CONF_HOST]
     username = data.get(CONF_USERNAME)
     password = data.get(CONF_PASSWORD)
+    cached_url = data.get(CONF_WORKING_URL)  # Use cached URL if available
 
     # Get parsers in executor to avoid blocking I/O in async context
     parsers = await hass.async_add_executor_job(get_parsers)
-    scraper = ModemScraper(host, username, password, parsers)
+    scraper = ModemScraper(host, username, password, parsers, cached_url)
 
     # Test the connection
     try:
@@ -55,8 +60,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     if modem_data.get("connection_status") in ["offline", "unreachable"]:
         raise CannotConnect
 
+    # Get detection info to store for future use
+    detection_info = scraper.get_detection_info()
+
     # Return info that you want to store in the config entry.
-    return {"title": f"Cable Modem ({host})"}
+    return {
+        "title": f"Cable Modem ({host})",
+        "detection_info": detection_info,
+    }
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -92,6 +103,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # Add default values for fields not in initial setup
                 user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
+                # Store detection info from validation
+                detection_info = info.get("detection_info", {})
+                if detection_info:
+                    user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
+                    user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+                    user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
+                    from datetime import datetime
+                    user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+
                 return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(
@@ -119,6 +139,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 # Preserve existing password if user left it blank
                 if not user_input.get(CONF_PASSWORD):
                     user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+
+                # Update detection info from validation
+                detection_info = info.get("detection_info", {})
+                if detection_info:
+                    user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
+                    user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+                    user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
+                    from datetime import datetime
+                    user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+                else:
+                    # Preserve existing detection info if validation didn't return new info
+                    user_input[CONF_DETECTED_MODEM] = self.config_entry.data.get(CONF_DETECTED_MODEM, "Unknown")
+                    user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
+                    user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
+                    user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
 
                 # Update the config entry with all settings
                 self.hass.config_entries.async_update_entry(

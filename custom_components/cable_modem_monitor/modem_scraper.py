@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 class ModemScraper:
     """Scrape data from cable modem web interface."""
 
-    def __init__(self, host: str, username: str = None, password: str = None, parsers: List[Type[ModemParser]] = None):
+    def __init__(self, host: str, username: str = None, password: str = None, parsers: List[Type[ModemParser]] = None, cached_url: str = None):
         """Initialize the modem scraper."""
         self.host = host
         self.base_url = f"http://{host}"
@@ -21,6 +21,8 @@ class ModemScraper:
         self.session = requests.Session()
         self.parsers = parsers if parsers else []
         self.parser = None
+        self.cached_url = cached_url  # URL that worked last time
+        self.last_successful_url = None  # Track successful URL for this session
 
     def _login(self) -> bool:
         """Log in to the modem web interface."""
@@ -36,7 +38,7 @@ class ModemScraper:
 
     def _fetch_data(self) -> tuple[str, str] | None:
         """Fetch data from the modem."""
-        urls_to_try = [
+        all_urls = [
             (f"{self.base_url}/network_setup.jst", 'basic'),       # Technicolor XB7, TC4400
             (f"{self.base_url}/MotoConnection.asp", 'form'),      # Motorola MB series
             (f"{self.base_url}/cmconnectionstatus.html", 'none'), # Various cable modems
@@ -45,17 +47,34 @@ class ModemScraper:
             (f"{self.base_url}/", 'none'),                        # Fallback root page
         ]
 
+        # If we have a cached URL from previous successful connection, try it first
+        urls_to_try = []
+        if self.cached_url:
+            _LOGGER.debug(f"Using cached URL: {self.cached_url}")
+            # Find the cached URL entry in all_urls
+            cached_entry = next((u for u in all_urls if u[0] == self.cached_url), None)
+            if cached_entry:
+                urls_to_try.append(cached_entry)
+                # Add remaining URLs as fallback
+                urls_to_try.extend([u for u in all_urls if u[0] != self.cached_url])
+            else:
+                # Cached URL not in our list, try all URLs
+                urls_to_try = all_urls
+        else:
+            urls_to_try = all_urls
+
         for url, auth_type in urls_to_try:
             try:
                 _LOGGER.debug(f"Attempting to fetch {url}")
                 auth = None
                 if auth_type == 'basic' and self.username and self.password:
                     auth = (self.username, self.password)
-                
+
                 response = self.session.get(url, timeout=10, auth=auth)
 
                 if response.status_code == 200:
                     _LOGGER.info(f"Successfully connected to modem at {url} (HTML length: {len(response.text)} bytes)")
+                    self.last_successful_url = url  # Track successful URL
                     return response.text, url
                 else:
                     _LOGGER.debug(f"Got status {response.status_code} from {url}")
@@ -128,3 +147,13 @@ class ModemScraper:
         except Exception as e:
             _LOGGER.error(f"Error fetching modem data: {e}")
             return {"connection_status": "unreachable", "downstream": [], "upstream": []}
+
+    def get_detection_info(self) -> dict:
+        """Get information about detected modem and successful URL."""
+        if self.parser:
+            return {
+                "modem_name": self.parser.name,
+                "manufacturer": self.parser.manufacturer,
+                "successful_url": self.last_successful_url,
+            }
+        return {}
