@@ -114,39 +114,57 @@ class ModemScraper:
         try:
             fetched_data = self._fetch_data()
             if not fetched_data:
-                _LOGGER.error("Could not fetch data from any known modem URL.")
-                return {"connection_status": "unreachable", "downstream": [], "upstream": []}
+                return {"cable_modem_connection_status": "unreachable", "cable_modem_downstream": [], "cable_modem_upstream": []}
 
             html, successful_url = fetched_data
             self.parser = self._detect_parser(html, successful_url)
 
             if not self.parser:
                 _LOGGER.error(f"No compatible parser found for modem at {successful_url}.")
-                return {"connection_status": "offline", "downstream": [], "upstream": []}
+                return {"cable_modem_connection_status": "offline", "downstream": [], "upstream": []}
 
-            if not self._login():
-                _LOGGER.error("Failed to log in to modem")
-                return {"connection_status": "unreachable", "downstream": [], "upstream": []}
+            ***REMOVED*** Login and get authenticated HTML
+            login_result = self._login()
+            if isinstance(login_result, tuple):
+                success, authenticated_html = login_result
+                if not success:
+                    _LOGGER.error("Failed to log in to modem")
+                    return {"cable_modem_connection_status": "unreachable", "downstream": [], "upstream": []}
+                ***REMOVED*** Use the authenticated HTML from login if available
+                if authenticated_html:
+                    html = authenticated_html
+                    _LOGGER.debug(f"Using authenticated HTML from login ({len(html)} bytes)")
+            else:
+                ***REMOVED*** Old-style boolean return for parsers that don't return HTML
+                if not login_result:
+                    _LOGGER.error("Failed to log in to modem")
+                    return {"cable_modem_connection_status": "unreachable", "downstream": [], "upstream": []}
 
             data = self._parse_data(html)
 
             total_corrected = sum(ch.get("corrected") or 0 for ch in data["downstream"])
             total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in data["downstream"])
 
+            ***REMOVED*** Prefix system_info keys with cable_modem_
+            prefixed_system_info = {}
+            for key, value in data["system_info"].items():
+                prefixed_key = f"cable_modem_{key}"
+                prefixed_system_info[prefixed_key] = value
+
             return {
-                "connection_status": "online" if (data["downstream"] or data["upstream"]) else "offline",
-                "downstream": data["downstream"],
-                "upstream": data["upstream"],
-                "total_corrected": total_corrected,
-                "total_uncorrected": total_uncorrected,
-                "downstream_channel_count": len(data["downstream"]),
-                "upstream_channel_count": len(data["upstream"]),
-                **data["system_info"],
+                "cable_modem_connection_status": "online" if (data["downstream"] or data["upstream"]) else "offline",
+                "cable_modem_downstream": data["downstream"],
+                "cable_modem_upstream": data["upstream"],
+                "cable_modem_total_corrected": total_corrected,
+                "cable_modem_total_uncorrected": total_uncorrected,
+                "cable_modem_downstream_channel_count": len(data["downstream"]),
+                "cable_modem_upstream_channel_count": len(data["upstream"]),
+                **prefixed_system_info,
             }
 
         except Exception as e:
             _LOGGER.error(f"Error fetching modem data: {e}")
-            return {"connection_status": "unreachable", "downstream": [], "upstream": []}
+            return {"cable_modem_connection_status": "unreachable", "cable_modem_downstream": [], "cable_modem_upstream": []}
 
     def get_detection_info(self) -> dict:
         """Get information about detected modem and successful URL."""
@@ -157,3 +175,39 @@ class ModemScraper:
                 "successful_url": self.last_successful_url,
             }
         return {}
+
+    def restart_modem(self) -> bool:
+        """Restart the cable modem."""
+        try:
+            ***REMOVED*** Ensure we have fetched data and detected parser
+            if not self.parser:
+                fetched_data = self._fetch_data()
+                if not fetched_data:
+                    _LOGGER.error("Cannot restart modem: unable to connect")
+                    return False
+                html, successful_url = fetched_data
+                self.parser = self._detect_parser(html, successful_url)
+
+            if not self.parser:
+                _LOGGER.error("Cannot restart modem: no parser detected")
+                return False
+
+            ***REMOVED*** Check if parser supports restart
+            if not hasattr(self.parser, 'restart'):
+                _LOGGER.error(f"Parser {self.parser.name} does not support restart functionality")
+                return False
+
+            ***REMOVED*** Perform restart
+            _LOGGER.info(f"Attempting to restart modem using {self.parser.name} parser")
+            success = self.parser.restart(self.session, self.base_url)
+
+            if success:
+                _LOGGER.info("Modem restart command sent successfully")
+            else:
+                _LOGGER.error("Modem restart command failed")
+
+            return success
+
+        except Exception as e:
+            _LOGGER.error(f"Error restarting modem: {e}")
+            return False

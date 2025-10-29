@@ -23,7 +23,7 @@
     "step": {
       "init": {
         "title": "Cable Modem Monitor Settings",
-        "description": "Configure your cable modem connection and monitoring preferences.\n\nDetected Modem: {detected_modem} ({detected_manufacturer})\nLast Detection: {last_detection}\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave username/password blank if your modem doesn't require authentication. Leave password blank to keep existing password.",
+        "description": "Detected: {detected_modem} ({detected_manufacturer})\nLast Detection: {last_detection}\n\nLeave password blank to keep current.",
         "data": {
           "host": "Modem IP Address",
           "username": "Username (optional)",
@@ -31,10 +31,10 @@
           "scan_interval": "Polling Interval (seconds)"
         },
         "data_description": {
-          "host": "The IP address of your cable modem (typically 192.168.100.1 for Motorola modems)",
-          "username": "Username for modem web interface (leave blank if not required)",
-          "password": "Password for modem web interface (leave blank to keep existing password, or if not required)",
-          "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems."
+          "host": "IP address (typically 192.168.100.1)",
+          "username": "Optional - leave blank if not required",
+          "password": "Leave blank to keep current or if not required",
+          "scan_interval": "60-1800 seconds (default: 600)"
         }
       }
     },

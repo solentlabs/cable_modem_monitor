@@ -226,9 +226,9 @@ cards:
         name: Last Boot
         format: date
       - entity: sensor.cable_modem_downstream_channel_count
-        name: Downstream Channel Count
+        name: DS Channel Count
       - entity: sensor.cable_modem_upstream_channel_count
-        name: Upstream Channel Count
+        name: US Channel Count
       - entity: sensor.cable_modem_total_corrected_errors
         name: Total Corrected Errors
       - entity: sensor.cable_modem_total_uncorrected_errors

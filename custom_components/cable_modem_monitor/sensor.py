@@ -75,7 +75,7 @@ async def async_setup_entry(
     """Set up Cable Modem Monitor sensors."""
     _LOGGER.info(f"async_setup_entry called for {entry.entry_id}")
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.debug(f"Coordinator data has {len(coordinator.data.get('upstream', []))} upstream channels")
+    _LOGGER.debug(f"Coordinator data has {len(coordinator.data.get('cable_modem_upstream', []))} upstream channels")
 
     entities = []
 
@@ -96,8 +96,8 @@ async def async_setup_entry(
     entities.append(ModemLastBootTimeSensor(coordinator, entry))
 
     ***REMOVED*** Add per-channel downstream sensors
-    if coordinator.data.get("downstream"):
-        for idx, channel in enumerate(coordinator.data["downstream"]):
+    if coordinator.data.get("cable_modem_downstream"):
+        for idx, channel in enumerate(coordinator.data["cable_modem_downstream"]):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to index+1 if neither exists (shouldn't happen in practice)
             channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
@@ -119,9 +119,9 @@ async def async_setup_entry(
                 )
 
     ***REMOVED*** Add per-channel upstream sensors
-    if coordinator.data.get("upstream"):
-        _LOGGER.debug(f"Creating entities for {len(coordinator.data['upstream'])} upstream channels")
-        for idx, channel in enumerate(coordinator.data["upstream"]):
+    if coordinator.data.get("cable_modem_upstream"):
+        _LOGGER.debug(f"Creating entities for {len(coordinator.data['cable_modem_upstream'])} upstream channels")
+        for idx, channel in enumerate(coordinator.data["cable_modem_upstream"]):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to index+1 if neither exists (shouldn't happen in practice)
             channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
@@ -133,8 +133,8 @@ async def async_setup_entry(
             entities.extend([power_sensor, freq_sensor])
 
     ***REMOVED*** Add LAN stats sensors
-    if coordinator.data.get("lan_stats"):
-        for interface, stats in coordinator.data["lan_stats"].items():
+    if coordinator.data.get("cable_modem_lan_stats"):
+        for interface, stats in coordinator.data["cable_modem_lan_stats"].items():
             entities.extend(
                 [
                     ModemLanReceivedBytesSensor(coordinator, entry, interface),
@@ -168,6 +168,8 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
         model = entry.data.get("detected_modem", "Cable Modem Monitor")
 
+        _LOGGER.info(f"Setting device info - Manufacturer: {manufacturer}, Model: {model}, Entry data keys: {list(entry.data.keys())}")
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": f"Cable Modem {entry.data['host']}",
@@ -178,11 +180,13 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        ***REMOVED*** Make sensors unavailable when modem is offline so charts skip the data point
-        ***REMOVED*** instead of showing 0/None values
+        ***REMOVED*** Sensors remain available if coordinator succeeds, even if modem is temporarily offline
+        ***REMOVED*** This allows sensors to retain last known values during modem reboots
+        ***REMOVED*** Only mark unavailable if we truly can't reach the modem
+        status = self.coordinator.data.get("cable_modem_connection_status", "unknown")
         return (
             self.coordinator.last_update_success
-            and self.coordinator.data.get("connection_status") == "online"
+            and status in ("online", "offline")  ***REMOVED*** Available for both online and offline (just rebooting)
         )
 
 
@@ -204,7 +208,7 @@ class ModemConnectionStatusSensor(ModemSensorBase):
     @property
     def native_value(self) -> str:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("connection_status", "unknown")
+        return self.coordinator.data.get("cable_modem_connection_status", "unknown")
 
 
 class ModemTotalCorrectedSensor(ModemSensorBase):
@@ -221,7 +225,7 @@ class ModemTotalCorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("total_corrected", 0)
+        return self.coordinator.data.get("cable_modem_total_corrected", 0)
 
 
 class ModemTotalUncorrectedSensor(ModemSensorBase):
@@ -238,7 +242,7 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("total_uncorrected", 0)
+        return self.coordinator.data.get("cable_modem_total_uncorrected", 0)
 
 
 class ModemDownstreamPowerSensor(ModemSensorBase):
@@ -259,7 +263,7 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("downstream", []):
+        for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -286,7 +290,7 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("downstream", []):
+        for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -314,7 +318,7 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("downstream", []):
+        for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -340,7 +344,7 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("downstream", []):
+        for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -366,7 +370,7 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("downstream", []):
+        for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -393,7 +397,7 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("upstream", []):
+        for ch in self.coordinator.data.get("cable_modem_upstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -421,7 +425,7 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("upstream", []):
+        for ch in self.coordinator.data.get("cable_modem_upstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to 0 if neither exists (will not match, returns None)
             ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
@@ -436,7 +440,7 @@ class ModemDownstreamChannelCountSensor(ModemSensorBase):
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._attr_name = "Downstream Channel Count"
+        self._attr_name = "DS Channel Count"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_channel_count"
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -444,7 +448,7 @@ class ModemDownstreamChannelCountSensor(ModemSensorBase):
     @property
     def native_value(self) -> int:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("downstream_channel_count", 0)
+        return self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
 
 
 class ModemUpstreamChannelCountSensor(ModemSensorBase):
@@ -453,7 +457,7 @@ class ModemUpstreamChannelCountSensor(ModemSensorBase):
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._attr_name = "Upstream Channel Count"
+        self._attr_name = "US Channel Count"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_channel_count"
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -461,7 +465,7 @@ class ModemUpstreamChannelCountSensor(ModemSensorBase):
     @property
     def native_value(self) -> int:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("upstream_channel_count", 0)
+        return self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
 
 
 class ModemSoftwareVersionSensor(ModemSensorBase):
@@ -477,7 +481,7 @@ class ModemSoftwareVersionSensor(ModemSensorBase):
     @property
     def native_value(self) -> str:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("software_version", "Unknown")
+        return self.coordinator.data.get("cable_modem_software_version", "Unknown")
 
 
 class ModemSystemUptimeSensor(ModemSensorBase):
@@ -493,7 +497,7 @@ class ModemSystemUptimeSensor(ModemSensorBase):
     @property
     def native_value(self) -> str:
         """Return the state of the sensor."""
-        return self.coordinator.data.get("system_uptime", "Unknown")
+        return self.coordinator.data.get("cable_modem_system_uptime", "Unknown")
 
 
 class ModemLastBootTimeSensor(ModemSensorBase):
@@ -510,7 +514,7 @@ class ModemLastBootTimeSensor(ModemSensorBase):
     @property
     def native_value(self) -> datetime | None:
         """Return the last boot time as a datetime object."""
-        uptime_str = self.coordinator.data.get("system_uptime")
+        uptime_str = self.coordinator.data.get("cable_modem_system_uptime")
         if not uptime_str or uptime_str == "Unknown":
             return None
 
@@ -540,7 +544,7 @@ class ModemLanStatsSensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        lan_stats = self.coordinator.data.get("lan_stats", {})
+        lan_stats = self.coordinator.data.get("cable_modem_lan_stats", {})
         if self._interface in lan_stats:
             return lan_stats[self._interface].get(self._sensor_type)
         return None

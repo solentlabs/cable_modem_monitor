@@ -15,8 +15,8 @@ class TestModemScraper:
         parser = mocker.Mock()
         parser.can_parse.return_value = True
         parser.parse.return_value = {
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
             "system_info": {},
         }
         return parser
@@ -27,8 +27,8 @@ class TestModemScraper:
         mock_parser_instance = mocker.Mock(spec=ModemParser)
         mock_parser_instance.login.return_value = True
         mock_parser_instance.parse.return_value = {
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
             "system_info": {},
         }
 

@@ -21,11 +21,15 @@ class MotorolaMBParser(ModemParser):
         """Detect if this is a Motorola MB series modem."""
         return "Motorola Cable Modem" in soup.title.string
 
-    def login(self, session, base_url, username, password) -> bool:
-        """Log in to the modem using form-based authentication."""
+    def login(self, session, base_url, username, password) -> tuple[bool, str]:
+        """Log in to the modem using form-based authentication.
+
+        Returns:
+            tuple: (success: bool, authenticated_html: str)
+        """
         if not username or not password:
             _LOGGER.debug("No credentials provided, skipping login")
-            return True
+            return True, None
 
         login_url = f"{base_url}/goform/login"
 
@@ -47,14 +51,15 @@ class MotorolaMBParser(ModemParser):
             _LOGGER.debug(f"Login response: status={response.status_code}, url={response.url}")
 
             test_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
-            _LOGGER.debug(f"Login verification: test page status={test_response.status_code}")
+            _LOGGER.debug(f"Login verification: test page status={test_response.status_code}, length={len(test_response.text)}")
 
-            if test_response.status_code == 200 and len(test_response.text) > 1000:
-                _LOGGER.info(f"Login successful using {pwd_type} password")
-                return True
+            ***REMOVED*** Check for successful authentication - look for actual content, not login page
+            if test_response.status_code == 200 and len(test_response.text) > 10000:
+                _LOGGER.info(f"Login successful using {pwd_type} password (got {len(test_response.text)} bytes)")
+                return True, test_response.text
 
         _LOGGER.error("Login failed with both plain and Base64-encoded passwords")
-        return False
+        return False, None
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""
@@ -197,3 +202,52 @@ class MotorolaMBParser(ModemParser):
             _LOGGER.error(f"Error parsing system info: {e}")
 
         return info
+
+    def restart(self, session, base_url) -> bool:
+        """Restart the Motorola MB modem."""
+        try:
+            ***REMOVED*** First, access the security page to ensure we're authenticated
+            security_url = f"{base_url}/MotoSecurity.asp"
+            _LOGGER.debug(f"Accessing security page: {security_url}")
+            security_response = session.get(security_url, timeout=10)
+
+            if security_response.status_code != 200:
+                _LOGGER.error(f"Failed to access security page: {security_response.status_code}")
+                return False
+
+            ***REMOVED*** Now send the restart command to the correct endpoint
+            restart_url = f"{base_url}/goform/MotoSecurity"
+            _LOGGER.info(f"Sending restart command to {restart_url}")
+
+            ***REMOVED*** Use the exact POST data that the web interface sends
+            ***REMOVED*** MotoSecurityAction=1 triggers the reboot
+            restart_data = {
+                "UserId": "",
+                "OldPassword": "",
+                "NewUserId": "",
+                "Password": "",
+                "PasswordReEnter": "",
+                "MotoSecurityAction": "1"
+            }
+            response = session.post(restart_url, data=restart_data, timeout=10)
+            _LOGGER.debug(f"Restart response: status={response.status_code}, content_length={len(response.text)}")
+
+            ***REMOVED*** Motorola modems typically return 200 even when restart is initiated
+            if response.status_code == 200:
+                _LOGGER.info("Restart command sent successfully")
+                return True
+            else:
+                _LOGGER.error(f"Restart failed with status code: {response.status_code}")
+                return False
+
+        except ConnectionResetError:
+            ***REMOVED*** Connection reset is expected - modem reboots immediately and drops connection
+            _LOGGER.info("Restart command sent successfully (connection reset by rebooting modem)")
+            return True
+        except Exception as e:
+            ***REMOVED*** Check if it's a connection abort/reset wrapped in another exception
+            if "Connection aborted" in str(e) or "Connection reset" in str(e):
+                _LOGGER.info("Restart command sent successfully (connection reset by rebooting modem)")
+                return True
+            _LOGGER.error(f"Error sending restart command: {e}")
+            return False

@@ -272,7 +272,7 @@ If you encounter issues not covered here:
 | Downstream SNR | `sensor.cable_modem_downstream_ch_1_snr` | DS Ch 1 SNR |
 | Upstream Power | `sensor.cable_modem_upstream_ch_1_power` | US Ch 1 Power |
 | Upstream Frequency | `sensor.cable_modem_upstream_ch_1_frequency` | US Ch 1 Frequency |
-| Channel Count | `sensor.cable_modem_downstream_channel_count` | Downstream Channel Count |
+| Channel Count | `sensor.cable_modem_downstream_channel_count` | DS Channel Count |
 
 **Note:**
 - Entity IDs always include `cable_modem_` prefix

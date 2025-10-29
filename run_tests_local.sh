@@ -63,9 +63,9 @@ else
 fi
 echo ""
 
-***REMOVED*** Run tests
-echo -e "${YELLOW}Running tests with pytest...${NC}"
-if pytest tests/ -v --tb=short; then
+***REMOVED*** Run tests with coverage (single run)
+echo -e "${YELLOW}Running tests with coverage...${NC}"
+if pytest tests/ -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=term --cov-report=html; then
     echo ""
     echo -e "${GREEN}✓ All tests passed!${NC}"
     TEST_PASSED=true
@@ -74,11 +74,6 @@ else
     echo -e "${RED}✗ Tests failed${NC}"
     TEST_PASSED=false
 fi
-echo ""
-
-***REMOVED*** Run coverage report
-echo -e "${YELLOW}Generating coverage report...${NC}"
-pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=term --cov-report=html
 echo -e "${GREEN}✓ Coverage report generated (see htmlcov/index.html)${NC}"
 echo ""
 

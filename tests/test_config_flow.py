@@ -71,7 +71,7 @@ class TestValidateInput:
         ***REMOVED*** Mock scraper to return valid data
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
-            "software_version": "1.0.0",
+            "cable_modem_software_version": "1.0.0",
             "connection_status": "online",
         }
         mock_scraper_class.return_value = mock_scraper

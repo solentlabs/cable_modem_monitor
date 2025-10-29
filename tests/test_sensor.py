@@ -53,9 +53,9 @@ class TestConnectionStatusSensor:
         coordinator = Mock()
         ***REMOVED*** Use plain dict for data (sensors call .get() on it)
         coordinator.data = {
-            "connection_status": "online",
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_connection_status": "online",
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
         }
         return coordinator
 
@@ -80,7 +80,7 @@ class TestConnectionStatusSensor:
         """Test connection status sensor with offline status."""
         from cable_modem_monitor.sensor import ModemConnectionStatusSensor
 
-        mock_coordinator.data = {"connection_status": "unreachable"}
+        mock_coordinator.data = {"cable_modem_connection_status": "unreachable"}
         sensor = ModemConnectionStatusSensor(mock_coordinator, mock_entry)
 
         assert sensor.native_value == "unreachable"
@@ -94,10 +94,10 @@ class TestErrorSensors:
         """Create mock coordinator with error data."""
         coordinator = Mock()
         coordinator.data = {
-            "total_corrected": 1000,
-            "total_uncorrected": 5,
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_total_corrected": 1000,
+            "cable_modem_total_uncorrected": 5,
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
         }
         return coordinator
 
@@ -133,7 +133,7 @@ class TestErrorSensors:
         )
 
         mock_coordinator.data = {
-            "total_corrected": 0,
+            "cable_modem_total_corrected": 0,
             "total_uncorrected": 0,
         }
 
@@ -154,10 +154,10 @@ class TestChannelCountSensors:
         """Create mock coordinator with channel data."""
         coordinator = Mock()
         coordinator.data = {
-            "downstream_channel_count": 24,
-            "upstream_channel_count": 5,
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_downstream_channel_count": 24,
+            "cable_modem_upstream_channel_count": 5,
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
         }
         return coordinator
 
@@ -170,7 +170,7 @@ class TestChannelCountSensors:
         return entry
 
     def test_downstream_count(self, mock_coordinator, mock_entry):
-        """Test downstream channel count sensor."""
+        """Test downstream (DS) channel count sensor."""
         from cable_modem_monitor.sensor import ModemDownstreamChannelCountSensor
 
         sensor = ModemDownstreamChannelCountSensor(mock_coordinator, mock_entry)
@@ -178,7 +178,7 @@ class TestChannelCountSensors:
         assert sensor.native_value == 24
 
     def test_upstream_count(self, mock_coordinator, mock_entry):
-        """Test upstream channel count sensor."""
+        """Test upstream (US) channel count sensor."""
         from cable_modem_monitor.sensor import ModemUpstreamChannelCountSensor
 
         sensor = ModemUpstreamChannelCountSensor(mock_coordinator, mock_entry)
@@ -194,10 +194,10 @@ class TestSystemInfoSensors:
         """Create mock coordinator with system info."""
         coordinator = Mock()
         coordinator.data = {
-            "software_version": "1.0.0",
-            "system_uptime": "2 days 5 hours",
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_software_version": "1.0.0",
+            "cable_modem_system_uptime": "2 days 5 hours",
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
         }
         return coordinator
 
@@ -255,7 +255,7 @@ class TestSensorAttributes:
     def mock_coordinator(self):
         """Create mock coordinator."""
         coordinator = Mock()
-        coordinator.data = {"downstream": [], "upstream": []}
+        coordinator.data = {"cable_modem_downstream": [], "cable_modem_upstream": []}
         return coordinator
 
     @pytest.fixture
@@ -315,7 +315,7 @@ class TestSensorDataHandling:
         from cable_modem_monitor.sensor import ModemSoftwareVersionSensor
 
         coordinator = Mock()
-        coordinator.data = {"software_version": None}
+        coordinator.data = {"cable_modem_software_version": None}
 
         sensor = ModemSoftwareVersionSensor(coordinator, mock_entry)
 
@@ -332,9 +332,9 @@ class TestEntityNaming:
         coordinator = Mock()
         coordinator.data = {
             "connection_status": "online",
-            "total_corrected": 100,
-            "downstream": [],
-            "upstream": [],
+            "cable_modem_total_corrected": 100,
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
         }
         coordinator.last_update_success = True
         return coordinator
@@ -353,17 +353,17 @@ class TestEntityNaming:
 
         ***REMOVED*** Test connection status sensor
         connection_sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-        assert connection_sensor.name == "Cable Modem Connection Status"
+        assert connection_sensor.name == "Connection Status"
         assert connection_sensor.unique_id == "test_cable_modem_connection_status"
 
         ***REMOVED*** Test error sensor
         error_sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
-        assert error_sensor.name == "Cable Modem Total Corrected Errors"
+        assert error_sensor.name == "Total Corrected Errors"
         assert error_sensor.unique_id == "test_cable_modem_total_corrected"
 
         ***REMOVED*** Test channel sensor
         channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-        assert channel_sensor.name == "Cable Modem DS Ch 5 Power"
+        assert channel_sensor.name == "DS Ch 5 Power"
         assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
 
 
@@ -376,7 +376,7 @@ class TestLastBootTimeSensor:
         coordinator = Mock()
         coordinator.data = {
             "connection_status": "online",
-            "system_uptime": "2 days 5 hours",
+            "cable_modem_system_uptime": "2 days 5 hours",
         }
         coordinator.last_update_success = True
         return coordinator
@@ -470,7 +470,7 @@ class TestLastBootTimeSensor:
         from cable_modem_monitor.sensor import ModemLastBootTimeSensor
 
         coordinator = Mock()
-        coordinator.data = {"system_uptime": "Unknown"}
+        coordinator.data = {"cable_modem_system_uptime": "Unknown"}
         coordinator.last_update_success = True
 
         sensor = ModemLastBootTimeSensor(coordinator, mock_entry)
@@ -499,7 +499,7 @@ class TestLastBootTimeSensor:
         sensor = ModemLastBootTimeSensor(mock_coordinator, mock_entry)
 
         ***REMOVED*** Check sensor attributes
-        assert sensor.name == "Cable Modem Last Boot Time"
+        assert sensor.name == "Last Boot Time"
         assert sensor.unique_id == "test_cable_modem_last_boot_time"
         assert sensor.icon == "mdi:restart"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP
@@ -513,7 +513,7 @@ class TestLanStatsSensors:
         """Create mock coordinator with LAN stats data."""
         coordinator = Mock()
         coordinator.data = {
-            "lan_stats": {
+            "cable_modem_lan_stats": {
                 "eth0": {
                     "received_bytes": 71019856907,
                     "received_packets": 108821473,

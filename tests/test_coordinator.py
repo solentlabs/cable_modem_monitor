@@ -66,11 +66,11 @@ class TestModemDataUpdate:
         """Create a mock modem scraper."""
         scraper = Mock()
         scraper.get_modem_data.return_value = {
-            "software_version": "1.0.0",
-            "system_uptime": "1 day 2 hours",
+            "cable_modem_software_version": "1.0.0",
+            "cable_modem_system_uptime": "1 day 2 hours",
             "connection_status": "online",
-            "downstream_channel_count": 24,
-            "upstream_channel_count": 5,
+            "cable_modem_downstream_channel_count": 24,
+            "cable_modem_upstream_channel_count": 5,
             "downstream_channels": [],
             "upstream_channels": [],
             "total_corrected_errors": 100,
@@ -83,10 +83,10 @@ class TestModemDataUpdate:
         data = mock_scraper.get_modem_data()
 
         ***REMOVED*** Check required keys
-        assert "software_version" in data
+        assert "cable_modem_software_version" in data
         assert "connection_status" in data
-        assert "downstream_channel_count" in data
-        assert "upstream_channel_count" in data
+        assert "cable_modem_downstream_channel_count" in data
+        assert "cable_modem_upstream_channel_count" in data
 
     def test_scraper_handles_connection_failure(self):
         """Test that scraper can raise exceptions for connection failures."""
@@ -103,13 +103,13 @@ class TestModemDataUpdate:
         data = mock_scraper.get_modem_data()
 
         ***REMOVED*** String fields
-        assert isinstance(data["software_version"], str)
-        assert isinstance(data["system_uptime"], str)
+        assert isinstance(data["cable_modem_software_version"], str)
+        assert isinstance(data["cable_modem_system_uptime"], str)
         assert isinstance(data["connection_status"], str)
 
         ***REMOVED*** Integer fields
-        assert isinstance(data["downstream_channel_count"], int)
-        assert isinstance(data["upstream_channel_count"], int)
+        assert isinstance(data["cable_modem_downstream_channel_count"], int)
+        assert isinstance(data["cable_modem_upstream_channel_count"], int)
         assert isinstance(data["total_corrected_errors"], int)
         assert isinstance(data["total_uncorrected_errors"], int)
 

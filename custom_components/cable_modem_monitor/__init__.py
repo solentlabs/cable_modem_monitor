@@ -69,8 +69,10 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
             'sensor.cable_modem_downstream_channel_count',
         r'^sensor\.upstream_channel_count$':
             'sensor.cable_modem_upstream_channel_count',
-        ***REMOVED*** Status and info
+        ***REMOVED*** Status and info (with and without modem_ prefix)
         r'^sensor\.modem_connection_status$':
+            'sensor.cable_modem_connection_status',
+        r'^sensor\.connection_status$':
             'sensor.cable_modem_connection_status',
         r'^sensor\.software_version$':
             'sensor.cable_modem_software_version',
@@ -81,6 +83,8 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
         ***REMOVED*** Button
         r'^button\.restart_modem$':
             'button.cable_modem_restart_modem',
+        r'^button\.cleanup_entities$':
+            'button.cable_modem_cleanup_entities',
     }
 
     import re
@@ -198,6 +202,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    ***REMOVED*** Update device registry with detected modem info
+    from homeassistant.helpers import device_registry as dr
+    device_registry = dr.async_get(hass)
+
+    ***REMOVED*** Get or create the device
+    device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=f"Cable Modem {host}",
+    )
+
+    ***REMOVED*** Update manufacturer and model (these fields require async_update_device)
+    device_registry.async_update_device(
+        device.id,
+        manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
+        model=entry.data.get("detected_modem", "Cable Modem Monitor"),
+    )
+    _LOGGER.debug(f"Updated device registry: manufacturer={entry.data.get('detected_manufacturer')}, model={entry.data.get('detected_modem')}")
 
     ***REMOVED*** Register update listener to handle options changes
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
