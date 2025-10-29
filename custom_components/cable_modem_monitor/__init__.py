@@ -17,6 +17,7 @@ from .const import (
     CONF_USERNAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -165,12 +166,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    cached_url = entry.data.get(CONF_WORKING_URL)  ***REMOVED*** Get cached URL if available
 
     from .parsers import get_parsers
 
     ***REMOVED*** Get parsers in executor to avoid blocking I/O in async context
     parsers = await hass.async_add_executor_job(get_parsers)
-    scraper = ModemScraper(host, username, password, parsers)
+    scraper = ModemScraper(host, username, password, parsers, cached_url)
 
     async def async_update_data():
         """Fetch data from the modem."""
