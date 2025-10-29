@@ -179,11 +179,12 @@ class MotorolaMBParser(ModemParser):
         """Parse system information from Motorola MB modem."""
         info = {}
         try:
-            sw_version_tag = soup.find("td", string=lambda t: t and "Software Version" in t)
+            # Use text= instead of string= for BS4 compatibility with lambda functions
+            sw_version_tag = soup.find("td", text=lambda t: t and "Software Version" in t)
             if sw_version_tag:
                 info["software_version"] = sw_version_tag.find_next_sibling("td").text.strip()
 
-            uptime_tag = soup.find("td", string=lambda t: t and "System Up Time" in t)
+            uptime_tag = soup.find("td", text=lambda t: t and "System Up Time" in t)
             if uptime_tag:
                 info["system_uptime"] = uptime_tag.find_next_sibling("td").text.strip()
         except Exception as e:
