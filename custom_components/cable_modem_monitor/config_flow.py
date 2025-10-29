@@ -168,6 +168,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
         )
 
+        # Get detection info for display
+        detected_modem = self.config_entry.data.get(CONF_DETECTED_MODEM, "Not detected")
+        detected_manufacturer = self.config_entry.data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
+        last_detection = self.config_entry.data.get(CONF_LAST_DETECTION, "Never")
+
+        # Format last detection time if available
+        if last_detection and last_detection != "Never":
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(last_detection)
+                last_detection = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                pass
+
         options_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=current_host): str,
@@ -189,6 +203,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             description_placeholders={
                 "current_host": current_host,
                 "current_username": current_username,
+                "detected_modem": detected_modem,
+                "detected_manufacturer": detected_manufacturer,
+                "last_detection": last_detection,
             },
         )
 
