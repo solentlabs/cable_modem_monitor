@@ -9,11 +9,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class MotorolaGenericParser(ModemParser):
-    """Parser for Motorola MB series cable modems (MB7420, MB7621, MB8600, etc.)."""
+    """Parser for Motorola MB series cable modems (MB7420, MB8600, etc.)."""
 
     name = "Motorola MB Series"
     manufacturer = "Motorola"
-    models = ["MB7420", "MB7621", "MB8600", "MB8611"]
+    models = ["MB7420", "MB8600", "MB8611"]
 
     url_patterns = [
         {"path": "/MotoConnection.asp", "auth_method": "form"},

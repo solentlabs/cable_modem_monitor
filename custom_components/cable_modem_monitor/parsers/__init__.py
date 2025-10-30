@@ -41,10 +41,13 @@ def get_parsers() -> List[Type[ModemParser]]:
                 found_parser_in_module = False
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
+                    ***REMOVED*** Only register parsers defined in this module (not imported ones)
                     if isinstance(attr, type) and issubclass(attr, ModemParser) and attr is not ModemParser:
-                        parsers.append(attr)
-                        _LOGGER.info(f"Registered parser: {attr.name} ({attr.manufacturer}, models: {attr.models})")
-                        found_parser_in_module = True
+                        ***REMOVED*** Check if the parser is defined in this module (not imported)
+                        if attr.__module__ == module.__name__:
+                            parsers.append(attr)
+                            _LOGGER.info(f"Registered parser: {attr.name} ({attr.manufacturer}, models: {attr.models})")
+                            found_parser_in_module = True
                 if not found_parser_in_module:
                     _LOGGER.debug(f"No ModemParser subclass found in module: {full_module_name}")
             except Exception as e:

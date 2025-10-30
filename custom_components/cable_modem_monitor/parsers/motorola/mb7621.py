@@ -20,7 +20,8 @@ class MotorolaMB7621Parser(MotorolaGenericParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Motorola MB7621 modem."""
-        ***REMOVED*** More specific detection for MB7621 if available, otherwise rely on generic
-        if "MB7621" in html and "Motorola Cable Modem" in soup.title.string:
+        ***REMOVED*** Check for MB7621-specific indicators
+        if "MB7621" in html:
             return True
-        return super().can_parse(soup, url, html)
+        ***REMOVED*** If no MB7621-specific indicator, don't fall back to generic
+        return False
