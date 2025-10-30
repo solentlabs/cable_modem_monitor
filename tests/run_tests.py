@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 ***REMOVED*** Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components', 'cable_modem_monitor'))
 
-from modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 
 
 def load_fixture(filename):

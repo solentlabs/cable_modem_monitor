@@ -77,7 +77,7 @@ class ModemRestartButton(ModemButtonBase):
         ***REMOVED*** We need to access it from the coordinator's update method
         ***REMOVED*** For now, we'll create a new scraper instance
         from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_WORKING_URL
-        from .modem_scraper import ModemScraper
+        from .core.modem_scraper import ModemScraper
         from .parsers import get_parsers
 
         host = self._entry.data[CONF_HOST]

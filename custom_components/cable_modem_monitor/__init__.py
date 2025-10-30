@@ -23,7 +23,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from .modem_scraper import ModemScraper
+from .core.modem_scraper import ModemScraper
 
 _LOGGER = logging.getLogger(__name__)
 

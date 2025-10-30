@@ -229,7 +229,7 @@ Before creating an issue, gather:
 3. Add test fixtures in `tests/fixtures/`
 4. Create a pull request
 
-See `CONTRIBUTING.md` for developer guidelines.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for developer guidelines.
 
 ---
 
