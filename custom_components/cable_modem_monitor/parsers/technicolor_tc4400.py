@@ -13,7 +13,10 @@ class TechnicolorTC4400Parser(ModemParser):
     name = "Technicolor TC4400"
     manufacturer = "Technicolor"
     models = ["TC4400"]
-    auth_type = "basic"
+
+    url_patterns = [
+        {"path": "/cmconnectionstatus.html", "auth_method": "basic"},
+    ]
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

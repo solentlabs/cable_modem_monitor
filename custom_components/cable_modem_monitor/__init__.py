@@ -17,6 +17,8 @@ from .const import (
     CONF_USERNAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_MODEM_CHOICE,
+    CONF_PARSER_NAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -69,6 +71,10 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
             'sensor.cable_modem_downstream_channel_count',
         r'^sensor\.upstream_channel_count$':
             'sensor.cable_modem_upstream_channel_count',
+        r'^sensor\.ds_channel_count$':
+            'sensor.cable_modem_ds_channel_count',
+        r'^sensor\.us_channel_count$':
+            'sensor.cable_modem_us_channel_count',
         ***REMOVED*** Status and info (with and without modem_ prefix)
         r'^sensor\.modem_connection_status$':
             'sensor.cable_modem_connection_status',
@@ -171,12 +177,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     cached_url = entry.data.get(CONF_WORKING_URL)  ***REMOVED*** Get cached URL if available
+    parser_name = entry.data.get(CONF_PARSER_NAME)  ***REMOVED*** Get cached parser name if available
+    modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")  ***REMOVED*** Get user's modem selection
 
     from .parsers import get_parsers
 
     ***REMOVED*** Get parsers in executor to avoid blocking I/O in async context
     parsers = await hass.async_add_executor_job(get_parsers)
-    scraper = ModemScraper(host, username, password, parsers, cached_url)
+
+    ***REMOVED*** Respect user's explicit parser selection (Tier 1)
+    selected_parser = None
+    parser_name_for_tier2 = None
+
+    if modem_choice and modem_choice != "auto":
+        ***REMOVED*** Tier 1: User explicitly selected a parser - use only that one
+        for parser_class in parsers:
+            if parser_class.name == modem_choice:
+                selected_parser = parser_class()  ***REMOVED*** Instantiate the selected parser
+                _LOGGER.info(f"Using user-selected parser: {selected_parser.name}")
+                break
+        if not selected_parser:
+            _LOGGER.warning(f"User selected parser '{modem_choice}' not found, falling back to auto")
+    else:
+        ***REMOVED*** Tier 2/3: Auto mode - use cached parser name if available
+        parser_name_for_tier2 = parser_name
+
+    scraper = ModemScraper(
+        host,
+        username,
+        password,
+        parser=selected_parser if selected_parser else parsers,
+        cached_url=cached_url,
+        parser_name=parser_name_for_tier2,
+    )
 
     async def async_update_data():
         """Fetch data from the modem."""

@@ -159,6 +159,8 @@ async def async_setup_entry(
 class ModemSensorBase(CoordinatorEntity, SensorEntity):
     """Base class for modem sensors."""
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -172,9 +174,10 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Cable Modem {entry.data['host']}",
+            "name": "Cable Modem",
             "manufacturer": manufacturer,
             "model": model,
+            "configuration_url": f"http://{entry.data[CONF_HOST]}",
         }
 
     @property

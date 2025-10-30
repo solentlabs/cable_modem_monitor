@@ -6,6 +6,7 @@ pytest-cov>=4.1.0
 
 ***REMOVED*** Code quality
 ruff>=0.1.0
+black>=24.0.0
 
 ***REMOVED*** Home Assistant core (minimal version for type checking)
 homeassistant>=2024.1.0

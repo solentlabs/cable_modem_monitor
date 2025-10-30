@@ -1,25 +1,20 @@
 """Tests for Cable Modem Monitor config flow."""
 import pytest
 from unittest.mock import Mock, patch
-import sys
-import os
 
-***REMOVED*** Add parent directory to path to import the module
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'custom_components'))
+***REMOVED*** Mock constants to avoid ImportError in tests
+CONF_HOST = "host"
+CONF_USERNAME = "username"
+CONF_PASSWORD = "password"
+CONF_SCAN_INTERVAL = "scan_interval"
+DEFAULT_SCAN_INTERVAL = 600
+MIN_SCAN_INTERVAL = 60
+MAX_SCAN_INTERVAL = 1800
 
-from cable_modem_monitor.config_flow import (
+from custom_components.cable_modem_monitor.config_flow import (
     OptionsFlowHandler,
     CannotConnect,
     validate_input,
-)
-from cable_modem_monitor.const import (
-    CONF_HOST,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
-    MIN_SCAN_INTERVAL,
-    MAX_SCAN_INTERVAL,
 )
 
 
@@ -87,9 +82,14 @@ class TestValidateInput:
         assert result["title"] == "Cable Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
-    @patch('cable_modem_monitor.config_flow.ModemScraper')
-    async def test_validate_input_connection_failure(self, mock_scraper_class, mock_hass, valid_input):
+    @patch('custom_components.cable_modem_monitor.config_flow.get_parsers')
+    @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
+    async def test_validate_input_connection_failure(self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
+        ***REMOVED*** Mock get_parsers to return a mock parser
+        mock_parser = Mock()
+        mock_get_parsers.return_value = [mock_parser]
+
         ***REMOVED*** Mock scraper to raise exception
         mock_scraper = Mock()
         mock_scraper.get_modem_data.side_effect = Exception("Connection failed")

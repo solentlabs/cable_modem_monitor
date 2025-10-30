@@ -32,16 +32,19 @@ Monitor your cable modem's signal quality, power levels, and error rates directl
 
 ***REMOVED******REMOVED*** Supported Modems
 
-**Confirmed Working:**
-- Motorola MB series (MB7420, MB7621, MB8600, MB8611)
-- ARRIS SB6141
-- Arris SB6183, SB8200
+***REMOVED******REMOVED******REMOVED*** ✅ Confirmed Working
+- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
+- **ARRIS SB6141**
 
-**Parsers Available:**
-- Technicolor TC4400
-- Technicolor XB7 (CGM4331COM)
+***REMOVED******REMOVED******REMOVED*** ⚠️ Community Reported (Mixed Results)
+- **Arris SB6183**
+- **Arris SB8200**
 
-May work with other brands that have similar web status pages.
+***REMOVED******REMOVED******REMOVED*** 🧪 Experimental / Untested
+- **Technicolor TC4400**
+- **Technicolor XB7 (CGM4331COM)**
+
+For a complete and up-to-date list, please see the [Modem Compatibility Guide](./MODEM_COMPATIBILITY_GUIDE.md).
 
 ***REMOVED******REMOVED*** Quick Example
 

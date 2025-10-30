@@ -1,12 +1,16 @@
 {
   "domain": "cable_modem_monitor",
   "name": "Cable Modem Monitor",
-  "codeowners": ["@kwschulz"],
+  "codeowners": [
+    "@kwschulz"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/kwschulz/cable_modem_monitor",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/kwschulz/cable_modem_monitor/issues",
-  "requirements": ["beautifulsoup4==4.12.2"],
-  "version": "2.3.1",
+  "requirements": [
+    "beautifulsoup4==4.12.2"
+  ],
+  "version": "2.4.1",
   "integration_type": "device"
 }

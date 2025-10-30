@@ -4,17 +4,28 @@ Help us support your cable modem! This guide explains how to provide information
 
 ***REMOVED******REMOVED*** Currently Supported Modems
 
-✅ **Confirmed Working:**
+This integration relies on community contributions for modem support. Compatibility can vary based on firmware versions and ISP customizations.
+
+***REMOVED******REMOVED******REMOVED*** ✅ Confirmed Working
+These models are actively tested or have been confirmed to work reliably by the community.
+
 - **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
-- **ARRIS SB6141** - Confirmed by @captain-coredump ([Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant))
-- **Arris SB6183, SB8200** (newer models - reported by community)
+- **ARRIS SB6141**
 
-🧪 **Being Tested:**
-- **Technicolor TC4400** - Parser available, awaiting community confirmation
-- **Technicolor XB7 (CGM4331COM)** - Parser available (added v2.3.0), awaiting community confirmation
+***REMOVED******REMOVED******REMOVED*** ⚠️ Community Reported (Mixed Results)
+These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
 
-❌ **Known Incompatible:**
-- None reported yet
+- **Arris SB6183**
+- **Arris SB8200**
+
+***REMOVED******REMOVED******REMOVED*** 🧪 Experimental / Untested
+Parsers for these models exist in the code, but they have not been fully validated by the community. They may be incomplete or may not work at all.
+
+- **Technicolor TC4400**
+- **Technicolor XB7 (CGM4331COM)**
+
+***REMOVED******REMOVED******REMOVED*** ❌ Known Incompatible
+- None reported yet.
 
 **Note:** Many other modems may work if they use similar web interface formats. If your modem doesn't work, please share an HTML sample!
 

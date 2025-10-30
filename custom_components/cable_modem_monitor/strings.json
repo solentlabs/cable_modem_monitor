@@ -7,7 +7,11 @@
         "data": {
           "host": "Modem IP Address (e.g., 192.168.100.1)",
           "username": "Username (optional, typically 'admin')",
-          "password": "Password (optional, stored securely)"
+          "password": "Password (optional, stored securely)",
+          "modem_choice": "Modem Model"
+        },
+        "data_description": {
+          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it"
         }
       }
     },
@@ -28,12 +32,14 @@
           "host": "Modem IP Address",
           "username": "Username (optional)",
           "password": "Password (leave blank to keep current)",
+          "modem_choice": "Modem Model",
           "scan_interval": "Polling Interval (seconds)"
         },
         "data_description": {
           "host": "The IP address of your cable modem (typically 192.168.100.1 for Motorola modems)",
           "username": "Username for modem web interface (leave blank if not required)",
           "password": "Password for modem web interface (leave blank to keep existing password, or if not required)",
+          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it. Change this if auto-detection isn't working correctly.",
           "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems."
         }
       }

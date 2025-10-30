@@ -14,7 +14,11 @@ class MotorolaMBParser(ModemParser):
     name = "Motorola MB Series"
     manufacturer = "Motorola"
     models = ["MB7420", "MB7621", "MB8600", "MB8611"]
-    auth_type = "form"
+
+    url_patterns = [
+        {"path": "/MotoConnection.asp", "auth_method": "form"},
+        {"path": "/MotoHome.asp", "auth_method": "form"},
+    ]
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

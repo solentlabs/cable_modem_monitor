@@ -9,8 +9,9 @@ class TestAuth:
 
     def test_form_auth(self, mocker):
         """Test form-based authentication."""
-        scraper = ModemScraper("192.168.100.1", "admin", "password", parsers=[MotorolaMBParser])
-        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1"))
+        scraper = ModemScraper("192.168.100.1", "admin", "password", parser=[MotorolaMBParser])
+        ***REMOVED*** _fetch_data now returns (html, url, parser_class)
+        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1", MotorolaMBParser))
         mocker.patch.object(scraper, '_detect_parser', return_value=MotorolaMBParser())
         mock_login = mocker.patch.object(MotorolaMBParser, 'login', return_value=True)
         scraper.get_modem_data()
@@ -20,8 +21,9 @@ class TestAuth:
     def test_basic_auth(self, mocker):
         """Test basic HTTP authentication."""
         from custom_components.cable_modem_monitor.parsers.technicolor_tc4400 import TechnicolorTC4400Parser
-        scraper = ModemScraper("192.168.100.1", "admin", "password", parsers=[TechnicolorTC4400Parser])
-        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1"))
+        scraper = ModemScraper("192.168.100.1", "admin", "password", parser=[TechnicolorTC4400Parser])
+        ***REMOVED*** _fetch_data now returns (html, url, parser_class)
+        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1", TechnicolorTC4400Parser))
         mocker.patch.object(scraper, '_detect_parser', return_value=TechnicolorTC4400Parser())
         mock_login = mocker.patch.object(TechnicolorTC4400Parser, 'login', return_value=True)
         scraper.get_modem_data()

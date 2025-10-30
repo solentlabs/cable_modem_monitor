@@ -13,7 +13,10 @@ class TechnicolorXB7Parser(ModemParser):
     name = "Technicolor XB7"
     manufacturer = "Technicolor"
     models = ["XB7", "CGM4331COM"]
-    auth_type = "form"
+
+    url_patterns = [
+        {"path": "/network_setup.jst", "auth_method": "form"},
+    ]
 
     def login(self, session, base_url, username, password) -> tuple[bool, str]:
         """

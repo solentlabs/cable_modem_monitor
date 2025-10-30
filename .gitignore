@@ -15,8 +15,12 @@ build/
 
 ***REMOVED*** Virtual environment
 venv/
+.venv/
 env/
 ENV/
+
+***REMOVED*** Ruff cache
+.ruff_cache/
 
 ***REMOVED*** Test coverage
 .coverage

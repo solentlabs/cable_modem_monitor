@@ -3,14 +3,14 @@
 
 echo "Creating deployment package..."
 tar czf /tmp/cable_modem_deploy.tar.gz \
-    -C custom_components/cable_modem_monitor \
-    button.py sensor.py modem_scraper.py parsers/
+    -C custom_components \
+    cable_modem_monitor/
 
 echo "Copying to Home Assistant..."
 cat /tmp/cable_modem_deploy.tar.gz | ssh homeassistant "cat > /tmp/cable_modem_deploy.tar.gz"
 
 echo "Extracting on Home Assistant (may require password)..."
-ssh homeassistant "cd /config/custom_components/cable_modem_monitor && sudo tar xzf /tmp/cable_modem_deploy.tar.gz && sudo chown root:root button.py sensor.py && rm /tmp/cable_modem_deploy.tar.gz"
+ssh homeassistant "cd /config/custom_components && sudo tar xzf /tmp/cable_modem_deploy.tar.gz && sudo chown -R root:root cable_modem_monitor && rm /tmp/cable_modem_deploy.tar.gz"
 
 echo "Cleaning up local temp file..."
 rm /tmp/cable_modem_deploy.tar.gz
@@ -22,4 +22,10 @@ echo "Next steps:"
 echo "1. Go to Home Assistant"
 echo "2. Settings → System → Restart Home Assistant"
 echo "3. Wait for restart to complete"
-echo "4. Test the modem restart button again"
+echo "4. Test the new modular parser architecture!"
+echo ""
+echo "What's new:"
+echo "  - Parser-owned URL patterns"
+echo "  - 3-tier selection strategy (manual/cached/auto)"
+echo "  - Modem model dropdown in config"
+echo "  - Performance improvements with parser caching"

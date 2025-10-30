@@ -1,18 +1,25 @@
 ***REMOVED*** Cable Modem Monitor for Home Assistant
 
-[![Tests](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml)
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub Actions](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/kwschulz/cable_modem_monitor)](https://github.com/kwschulz/cable_modem_monitor/releases)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/github/v/release/kwschulz/cable_modem_monitor)](https://github.com/kwschulz/cable_modem_monitor/releases)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
-
-> **⚠️ Upgrading from v1.x?** See [UPGRADING.md](UPGRADING.md) for important information about v2.0 breaking changes.
 
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
 
 ![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
+
+***REMOVED******REMOVED*** Quick Links
+- [**Installation Guide**](***REMOVED***installation)
+- [**Supported Modems**](***REMOVED***supported-modems)
+- [**Troubleshooting Guide**](./docs/TROUBLESHOOTING.md)
+- [**Contributing Guide**](./CONTRIBUTING.md)
+
+---
 
 ***REMOVED******REMOVED*** Features
 
@@ -35,29 +42,27 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ***REMOVED******REMOVED*** Supported Modems
 
-This integration is designed for cable modems with web-based status pages.
+This integration relies on community contributions for modem support. Compatibility can vary based on firmware versions and ISP customizations. For a complete and up-to-date list, please see the [Modem Compatibility Guide](./docs/MODEM_COMPATIBILITY_GUIDE.md).
 
-**Confirmed Working:**
-- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611 (unified parser with auto-detection)
-  - Supports both plain and Base64-encoded password authentication
-  - Full downstream/upstream channel monitoring
-  - System info and uptime tracking
-- **ARRIS SB6141** - Confirmed working by @captain-coredump ([Community Forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant))
-  - Transposed table layout parser
-  - All 57 entities displaying correctly
-  - Note: Last Boot Time, Software Version, and System Uptime may show "Unknown" if modem doesn't provide this data
-- **Arris SB6183, SB8200** (newer models - reported by community)
+***REMOVED******REMOVED******REMOVED*** ✅ Confirmed Working
+These models are actively tested or have been confirmed to work reliably by the community.
 
-**Parsers Available (awaiting community testing):**
-- **Technicolor TC4400** - Parser implemented with test fixtures
-- **Technicolor XB7 (CGM4331COM)** - Full parser with 27 comprehensive tests
-  - 34 downstream channels (handles mixed frequency formats: MHz text and raw Hz)
-  - 5 upstream channels with XB7-specific fields (symbol rate, channel type)
-  - Supports both default and bridged modes
-  - Used by Rogers (Canada), Comcast
-  - URL pattern: `http://10.0.0.1/network_setup.jst`
+- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
+- **ARRIS SB6141**
 
-**Note**: The integration uses a plugin architecture that makes adding new modem models easy. If your modem has a web interface showing downstream/upstream channel data, it's worth trying! See the [Contributing](***REMOVED***contributing) section to add support for your modem.
+***REMOVED******REMOVED******REMOVED*** ⚠️ Community Reported (Mixed Results)
+These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
+
+- **Arris SB6183**
+- **Arris SB8200**
+
+***REMOVED******REMOVED******REMOVED*** 🧪 Experimental / Untested
+Parsers for these models exist in the code, but they have not been fully validated by the community. They may be incomplete or may not work at all.
+
+- **Technicolor TC4400**
+- **Technicolor XB7 (CGM4331COM)**
+
+**Have a different modem?** This integration uses a plugin architecture that makes adding new models easy. Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
 
 ***REMOVED******REMOVED*** Installation
 
@@ -149,16 +154,16 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Downstream Sensors (for each channel)
 Replace `X` with the channel number (1-32 depending on your modem):
-- `sensor.cable_modem_ds_ch_X_power`: Power level in dBmV (displays as "Cable Modem DS Ch X Power")
-- `sensor.cable_modem_ds_ch_X_snr`: Signal-to-Noise Ratio in dB (displays as "Cable Modem DS Ch X SNR")
-- `sensor.cable_modem_ds_ch_X_frequency`: Channel frequency in Hz (displays as "Cable Modem DS Ch X Frequency")
-- `sensor.cable_modem_ds_ch_X_corrected`: Corrected errors (displays as "Cable Modem DS Ch X Corrected")
-- `sensor.cable_modem_ds_ch_X_uncorrected`: Uncorrected errors (displays as "Cable Modem DS Ch X Uncorrected")
+- `sensor.cable_modem_downstream_ch_X_power`: Power level in dBmV
+- `sensor.cable_modem_downstream_ch_X_snr`: Signal-to-Noise Ratio in dB
+- `sensor.cable_modem_downstream_ch_X_frequency`: Channel frequency in Hz
+- `sensor.cable_modem_downstream_ch_X_corrected`: Corrected errors
+- `sensor.cable_modem_downstream_ch_X_uncorrected`: Uncorrected errors
 
 ***REMOVED******REMOVED******REMOVED*** Per-Channel Upstream Sensors (for each channel)
 Replace `X` with the channel number (1-8 depending on your modem):
-- `sensor.cable_modem_us_ch_X_power`: Transmit power level in dBmV (displays as "Cable Modem US Ch X Power")
-- `sensor.cable_modem_us_ch_X_frequency`: Channel frequency in Hz (displays as "Cable Modem US Ch X Frequency")
+- `sensor.cable_modem_upstream_ch_X_power`: Transmit power level in dBmV
+- `sensor.cable_modem_upstream_ch_X_frequency`: Channel frequency in Hz
 
 ***REMOVED******REMOVED******REMOVED*** Controls
 - `button.cable_modem_restart_modem`: Restart your cable modem remotely

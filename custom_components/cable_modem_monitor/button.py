@@ -12,9 +12,32 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN
+from .const import CONF_HOST, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ModemButtonBase(CoordinatorEntity, ButtonEntity):
+    """Base class for modem buttons."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator)
+        self._entry = entry
+
+        ***REMOVED*** Get detected modem info from config entry, with fallback to generic values
+        manufacturer = entry.data.get("detected_manufacturer", "Unknown")
+        model = entry.data.get("detected_modem", "Cable Modem Monitor")
+
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "Cable Modem",
+            "manufacturer": manufacturer,
+            "model": model,
+            "configuration_url": f"http://{entry.data[CONF_HOST]}",
+        }
 
 
 async def async_setup_entry(
@@ -33,22 +56,15 @@ async def async_setup_entry(
     ])
 
 
-class ModemRestartButton(CoordinatorEntity, ButtonEntity):
+class ModemRestartButton(ModemButtonBase):
     """Button to restart the cable modem."""
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the button."""
-        super().__init__(coordinator)
-        self._entry = entry
+        super().__init__(coordinator, entry)
         self._attr_name = "Restart Modem"
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
         self._attr_icon = "mdi:restart"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Cable Modem {entry.data['host']}",
-            "manufacturer": "Cable Modem",
-            "model": "Monitor",
-        }
 
     async def async_press(self) -> None:
         """Handle the button press."""
@@ -237,22 +253,15 @@ class ModemRestartButton(CoordinatorEntity, ButtonEntity):
             await self.coordinator.async_request_refresh()
 
 
-class CleanupEntitiesButton(CoordinatorEntity, ButtonEntity):
+class CleanupEntitiesButton(ModemButtonBase):
     """Button to clean up orphaned entities."""
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the button."""
-        super().__init__(coordinator)
-        self._entry = entry
+        super().__init__(coordinator, entry)
         self._attr_name = "Cleanup Entities"
         self._attr_unique_id = f"{entry.entry_id}_cleanup_entities_button"
         self._attr_icon = "mdi:broom"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Cable Modem {entry.data['host']}",
-            "manufacturer": "Cable Modem",
-            "model": "Monitor",
-        }
 
     async def async_press(self) -> None:
         """Handle the button press."""

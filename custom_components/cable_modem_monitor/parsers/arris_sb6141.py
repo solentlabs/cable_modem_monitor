@@ -13,7 +13,10 @@ class ArrisSB6141Parser(ModemParser):
     name = "ARRIS SB6141"
     manufacturer = "ARRIS"
     models = ["SB6141"]
-    auth_type = "none"
+
+    url_patterns = [
+        {"path": "/cmSignalData.htm", "auth_method": "none"},
+    ]
 
     def login(self, session, base_url, username, password) -> bool:
         """ARRIS modems do not have a login page."""
