@@ -67,7 +67,7 @@ class TestValidateInput:
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
             "cable_modem_software_version": "1.0.0",
-            "connection_status": "online",
+            "cable_modem_connection_status": "online",
         }
         mock_scraper_class.return_value = mock_scraper
 

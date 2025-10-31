@@ -30,34 +30,34 @@ async def async_get_config_entry_diagnostics(
             "update_interval": str(coordinator.update_interval),
         },
         "modem_data": {
-            "connection_status": data.get("connection_status", "unknown"),
-            "downstream_channel_count": data.get("downstream_channel_count", 0),
-            "upstream_channel_count": data.get("upstream_channel_count", 0),
-            "downstream_channels_parsed": len(data.get("downstream", [])),
-            "upstream_channels_parsed": len(data.get("upstream", [])),
-            "total_corrected_errors": data.get("total_corrected", 0),
-            "total_uncorrected_errors": data.get("total_uncorrected", 0),
-            "software_version": data.get("software_version", "Unknown"),
-            "system_uptime": data.get("system_uptime", "Unknown"),
+            "connection_status": data.get("cable_modem_connection_status", "unknown"),
+            "downstream_channel_count": data.get("cable_modem_downstream_channel_count", 0),
+            "upstream_channel_count": data.get("cable_modem_upstream_channel_count", 0),
+            "downstream_channels_parsed": len(data.get("cable_modem_downstream", [])),
+            "upstream_channels_parsed": len(data.get("cable_modem_upstream", [])),
+            "total_corrected_errors": data.get("cable_modem_total_corrected", 0),
+            "total_uncorrected_errors": data.get("cable_modem_total_uncorrected", 0),
+            "software_version": data.get("cable_modem_software_version", "Unknown"),
+            "system_uptime": data.get("cable_modem_system_uptime", "Unknown"),
         },
         "downstream_channels": [
             {
-                "channel": ch.get("channel"),
+                "channel": ch.get("channel_id"),
                 "frequency": ch.get("frequency"),
                 "power": ch.get("power"),
                 "snr": ch.get("snr"),
                 "corrected": ch.get("corrected"),
                 "uncorrected": ch.get("uncorrected"),
             }
-            for ch in data.get("downstream", [])
+            for ch in data.get("cable_modem_downstream", [])
         ],
         "upstream_channels": [
             {
-                "channel": ch.get("channel"),
+                "channel": ch.get("channel_id"),
                 "frequency": ch.get("frequency"),
                 "power": ch.get("power"),
             }
-            for ch in data.get("upstream", [])
+            for ch in data.get("cable_modem_upstream", [])
         ],
     }
 

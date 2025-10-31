@@ -285,7 +285,7 @@ class TestEntityNaming:
         """Create mock coordinator."""
         coordinator = Mock()
         coordinator.data = {
-            "connection_status": "online",
+            "cable_modem_connection_status": "online",
             "cable_modem_total_corrected": 100,
             "cable_modem_downstream": [],
             "cable_modem_upstream": [],
@@ -329,7 +329,7 @@ class TestLastBootTimeSensor:
         """Create mock coordinator with uptime data."""
         coordinator = Mock()
         coordinator.data = {
-            "connection_status": "online",
+            "cable_modem_connection_status": "online",
             "cable_modem_system_uptime": "2 days 5 hours",
         }
         coordinator.last_update_success = True

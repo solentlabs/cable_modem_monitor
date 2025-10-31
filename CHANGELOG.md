@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2025-10-30
+
+### Fixed
+- **Critical Bug Fix** - Fixed config flow validation that allowed setup to succeed even when modem was unreachable
+  - Changed `config_flow.py` to check correct key: `cable_modem_connection_status` instead of `connection_status`
+  - This bug caused sensors to show as "unavailable" with no data despite successful integration setup
+  - Resolves [#4](https://github.com/kwschulz/cable_modem_monitor/issues/4)
+- **Diagnostics Data Fix** - Updated `diagnostics.py` to use correct data keys with `cable_modem_` prefix
+  - Fixed all key names to match actual data structure returned by modem scraper
+  - Diagnostics now properly display connection status, channel counts, and system info
+- **Test Updates** - Updated all test files to use correct key names
+  - `test_config_flow.py`: Fixed connection status key in mock data
+  - `test_coordinator.py`: Fixed all data keys to match production code
+  - `test_sensor.py`: Updated mock coordinator data keys
+
+### Technical Details
+- The root cause was a key name mismatch introduced during v2.0 refactoring
+- `modem_scraper.py` returns `cable_modem_connection_status` but `config_flow.py` was checking `connection_status`
+- Since `.get()` returns `None` for missing keys, validation incorrectly passed
+- Users could "successfully" configure the integration but all entities remained unavailable
+
+## [2.4.1] - 2025-10-29
+
+### Added
+- **Parser Priority System** - Model-specific parsers now tried before generic parsers
+  - Ensures MB7621 uses its specific parser instead of generic Motorola parser
+  - Priority 100 for model-specific parsers, 50 for generic/fallback parsers
+  - Improves reliability and performance for supported models
+
+### Fixed
+- **MB7621 Auto-Detection Improvements**
+  - Parser now checks software info page (`/MotoSwInfo.asp`) first for better detection
+  - Prevents duplicate parser registration
+  - Improved detection reliability
+
+### Changed
+- **Code Organization** - Refactored codebase for better maintainability
+  - Organized parsers by manufacturer directories (motorola/, arris/, technicolor/)
+  - Created `core/` directory for modem_scraper
+  - Created `lib/` directory for shared utilities
+  - Cleaner, more scalable architecture
+
 ## [2.3.0] - 2025-10-28
 
 ### Added

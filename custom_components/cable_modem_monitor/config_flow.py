@@ -73,7 +73,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         _LOGGER.error(f"Error connecting to modem: {err}")
         raise CannotConnect from err
 
-    if modem_data.get("connection_status") in ["offline", "unreachable"]:
+    if modem_data.get("cable_modem_connection_status") in ["offline", "unreachable"]:
         raise CannotConnect
 
     # Get detection info to store for future use
@@ -105,7 +105,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        modem_choices = ["auto"] + [p.name for p in parsers]
+        # Sort by manufacturer (alphabetical), then by priority (descending) within each manufacturer
+        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority))
+        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
             try:
@@ -170,9 +172,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        modem_choices = ["auto"] + [p.name for p in parsers]
+        # Sort by manufacturer (alphabetical), then by priority (descending) within each manufacturer
+        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority))
+        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
+            # Preserve existing password if user left it blank (BEFORE validation)
+            if not user_input.get(CONF_PASSWORD):
+                user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+
+            # Preserve existing username if user left it blank (BEFORE validation)
+            if not user_input.get(CONF_USERNAME):
+                user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
+
             # Validate the connection with new settings
             try:
                 info = await validate_input(self.hass, user_input)
@@ -182,9 +194,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                # Preserve existing password if user left it blank
-                if not user_input.get(CONF_PASSWORD):
-                    user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
 
                 # Update detection info from validation
                 detection_info = info.get("detection_info", {})
