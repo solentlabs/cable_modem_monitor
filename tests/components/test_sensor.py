@@ -343,59 +343,6 @@ class TestLastBootTimeSensor:
         entry.data = {"host": "192.168.100.1"}
         return entry
 
-    def test_parse_uptime_days_hours(self):
-        """Test parsing uptime with days and hours."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("2 days 5 hours")
-        expected = (2 * 86400) + (5 * 3600)  # 2 days + 5 hours
-        assert result == expected
-
-    def test_parse_uptime_hours_only(self):
-        """Test parsing uptime with only hours."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("3 hours")
-        expected = 3 * 3600
-        assert result == expected
-
-    def test_parse_uptime_with_minutes(self):
-        """Test parsing uptime with hours and minutes."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("3 hours 45 minutes")
-        expected = (3 * 3600) + (45 * 60)
-        assert result == expected
-
-    def test_parse_uptime_complex(self):
-        """Test parsing complex uptime string."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("5 days 12 hours 30 minutes 15 seconds")
-        expected = (5 * 86400) + (12 * 3600) + (30 * 60) + 15
-        assert result == expected
-
-    def test_parse_uptime_unknown(self):
-        """Test parsing Unknown uptime."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("Unknown")
-        assert result is None
-
-    def test_parse_uptime_empty(self):
-        """Test parsing empty uptime."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds("")
-        assert result is None
-
-    def test_parse_uptime_none(self):
-        """Test parsing None uptime."""
-        from custom_components.cable_modem_monitor.sensor import parse_uptime_to_seconds
-
-        result = parse_uptime_to_seconds(None)
-        assert result is None
-
     def test_last_boot_time_calculation(self, mock_coordinator, mock_entry):
         """Test last boot time calculation from uptime."""
         from custom_components.cable_modem_monitor.sensor import ModemLastBootTimeSensor

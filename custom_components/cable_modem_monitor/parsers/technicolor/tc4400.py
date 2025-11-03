@@ -6,6 +6,10 @@ from custom_components.cable_modem_monitor.lib.utils import extract_number, extr
 
 _LOGGER = logging.getLogger(__name__)
 
+# During modem restart, power readings may be temporarily zero.
+# Ignore zero power readings during the first 5 minutes after boot.
+RESTART_WINDOW_SECONDS = 300
+
 
 class TechnicolorTC4400Parser(ModemParser):
     """Parser for Technicolor TC4400 cable modem."""
@@ -34,9 +38,10 @@ class TechnicolorTC4400Parser(ModemParser):
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""
-        downstream_channels = self._parse_downstream(soup)
-        upstream_channels = self._parse_upstream(soup)
+        # Parse system info first to get uptime for restart detection
         system_info = self._parse_system_info(soup)
+        downstream_channels = self._parse_downstream(soup, system_info)
+        upstream_channels = self._parse_upstream(soup, system_info)
 
         return {
             "downstream": downstream_channels,
@@ -44,16 +49,32 @@ class TechnicolorTC4400Parser(ModemParser):
             "system_info": system_info,
         }
 
-    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_downstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """
         Parse downstream channel data from Technicolor TC4400.
         """
+        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
+
+        uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
+        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        _LOGGER.debug(f"TC4400 Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+
         channels = []
         try:
             downstream_table = soup.find("th", string="Downstream Channel Status").find_parent("table")
             for row in downstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 13:
+                    snr = extract_float(cols[7].text)
+                    power = extract_float(cols[8].text)
+
+                    # During restart window, filter out zero values which are typically invalid
+                    if is_restarting:
+                        if power == 0:
+                            power = None
+                        if snr == 0:
+                            snr = None
+
                     channel_data = {
                         "channel_id": extract_number(cols[1].text),
                         "lock_status": cols[2].text.strip(),
@@ -61,8 +82,8 @@ class TechnicolorTC4400Parser(ModemParser):
                         "bonding_status": cols[4].text.strip(),
                         "frequency": self._parse_frequency(cols[5].text),
                         "width": self._parse_frequency(cols[6].text),
-                        "snr": extract_float(cols[7].text),
-                        "power": extract_float(cols[8].text),
+                        "snr": snr,
+                        "power": power,
                         "modulation": cols[9].text.strip(),
                         "unerrored_codewords": extract_number(cols[10].text),
                         "corrected": extract_number(cols[11].text),
@@ -74,16 +95,28 @@ class TechnicolorTC4400Parser(ModemParser):
 
         return channels
 
-    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """
         Parse upstream channel data from Technicolor TC4400.
         """
+        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
+
+        uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
+        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        _LOGGER.debug(f"TC4400 Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+
         channels = []
         try:
             upstream_table = soup.find("th", string="Upstream Channel Status").find_parent("table")
             for row in upstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 9:
+                    power = extract_float(cols[7].text)
+
+                    # During restart window, filter out zero power which is typically invalid
+                    if is_restarting and power == 0:
+                        power = None
+
                     channel_data = {
                         "channel_id": extract_number(cols[1].text),
                         "lock_status": cols[2].text.strip(),
@@ -91,7 +124,7 @@ class TechnicolorTC4400Parser(ModemParser):
                         "bonding_status": cols[4].text.strip(),
                         "frequency": self._parse_frequency(cols[5].text),
                         "width": self._parse_frequency(cols[6].text),
-                        "power": extract_float(cols[7].text),
+                        "power": power,
                         "modulation": cols[8].text.strip(),
                     }
                     channels.append(channel_data)

@@ -4,7 +4,7 @@ import sys
 from bs4 import BeautifulSoup
 from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from custom_components.cable_modem_monitor.parsers.technicolor.tc4400 import TechnicolorTC4400Parser
+from custom_components.cable_modem_monitor.parsers.technicolor.tc4400 import TechnicolorTC4400Parser, RESTART_WINDOW_SECONDS
 
 def load_fixture(filename):
     """Load a fixture file."""
@@ -122,3 +122,118 @@ def test_tc4400_login_signature():
     assert params[1] == "base_url"
     assert params[2] == "username"
     assert params[3] == "password"
+
+
+def test_tc4400_restart_detection_filters_zero_power():
+    """Test that zero power values are filtered during restart window."""
+    html = """
+    <html><body>
+    <table><tr><th colspan="13">Downstream Channel Status</th></tr>
+    <tr><td class="hd">Index</td><td class="hd">Channel ID</td><td class="hd">Lock Status</td>
+        <td class="hd">Channel Type</td><td class="hd">Bonding Group ID</td><td class="hd">Frequency (MHz)</td>
+        <td class="hd">Width (MHz)</td><td class="hd">SNR (dB)</td><td class="hd">Power (dBmV)</td>
+        <td class="hd">Modulation</td><td class="hd">Unerrored Codewords</td>
+        <td class="hd">Correctable Codewords</td><td class="hd">Uncorrectable Codewords</td></tr>
+    <tr><td>1</td><td>12</td><td>Locked</td><td>SC-QAM</td><td>Bonded</td>
+        <td>578</td><td>8</td><td>0</td><td>0</td><td>QAM256</td>
+        <td>100</td><td>0</td><td>0</td></tr>
+    </table>
+    <table><tr><td class="hd">System Up Time</td><td>0 days 00h:03m:45s</td></tr></table>
+    </body></html>
+    """
+
+    parser = TechnicolorTC4400Parser()
+    soup = BeautifulSoup(html, "html.parser")
+    data = parser.parse(soup)
+
+    # During restart (< 5 min), zero power/SNR should be filtered to None
+    assert len(data["downstream"]) == 1
+    assert data["downstream"][0]["power"] is None  # Filtered out
+    assert data["downstream"][0]["snr"] is None    # Filtered out
+    assert data["system_info"]["system_uptime"] == "0 days 00h:03m:45s"
+
+
+def test_tc4400_restart_detection_preserves_nonzero_power():
+    """Test that non-zero power values are preserved during restart window."""
+    html = """
+    <html><body>
+    <table><tr><th colspan="13">Downstream Channel Status</th></tr>
+    <tr><td class="hd">Index</td><td class="hd">Channel ID</td><td class="hd">Lock Status</td>
+        <td class="hd">Channel Type</td><td class="hd">Bonding Group ID</td><td class="hd">Frequency (MHz)</td>
+        <td class="hd">Width (MHz)</td><td class="hd">SNR (dB)</td><td class="hd">Power (dBmV)</td>
+        <td class="hd">Modulation</td><td class="hd">Unerrored Codewords</td>
+        <td class="hd">Correctable Codewords</td><td class="hd">Uncorrectable Codewords</td></tr>
+    <tr><td>1</td><td>12</td><td>Locked</td><td>SC-QAM</td><td>Bonded</td>
+        <td>578</td><td>8</td><td>40.1</td><td>3.0</td><td>QAM256</td>
+        <td>100</td><td>0</td><td>0</td></tr>
+    </table>
+    <table><tr><td class="hd">System Up Time</td><td>0 days 00h:02m:00s</td></tr></table>
+    </body></html>
+    """
+
+    parser = TechnicolorTC4400Parser()
+    soup = BeautifulSoup(html, "html.parser")
+    data = parser.parse(soup)
+
+    # During restart, non-zero values should be preserved
+    assert len(data["downstream"]) == 1
+    assert data["downstream"][0]["power"] == 3.0   # Preserved
+    assert data["downstream"][0]["snr"] == 40.1    # Preserved
+
+
+def test_tc4400_no_filtering_after_restart_window():
+    """Test that zero power values are NOT filtered after restart window."""
+    html = """
+    <html><body>
+    <table><tr><th colspan="13">Downstream Channel Status</th></tr>
+    <tr><td class="hd">Index</td><td class="hd">Channel ID</td><td class="hd">Lock Status</td>
+        <td class="hd">Channel Type</td><td class="hd">Bonding Group ID</td><td class="hd">Frequency (MHz)</td>
+        <td class="hd">Width (MHz)</td><td class="hd">SNR (dB)</td><td class="hd">Power (dBmV)</td>
+        <td class="hd">Modulation</td><td class="hd">Unerrored Codewords</td>
+        <td class="hd">Correctable Codewords</td><td class="hd">Uncorrectable Codewords</td></tr>
+    <tr><td>1</td><td>12</td><td>Locked</td><td>SC-QAM</td><td>Bonded</td>
+        <td>578</td><td>8</td><td>0</td><td>0</td><td>QAM256</td>
+        <td>100</td><td>0</td><td>0</td></tr>
+    </table>
+    <table><tr><td class="hd">System Up Time</td><td>0 days 00h:06m:00s</td></tr></table>
+    </body></html>
+    """
+
+    parser = TechnicolorTC4400Parser()
+    soup = BeautifulSoup(html, "html.parser")
+    data = parser.parse(soup)
+
+    # After restart window (>= 5 min), zero values should be kept
+    assert len(data["downstream"]) == 1
+    assert data["downstream"][0]["power"] == 0  # NOT filtered
+    assert data["downstream"][0]["snr"] == 0    # NOT filtered
+
+
+def test_tc4400_restart_detection_upstream_channels():
+    """Test that zero power values are filtered for upstream during restart."""
+    html = """
+    <html><body>
+    <table><tr><th colspan="9">Upstream Channel Status</th></tr>
+    <tr><td class="hd">Index</td><td class="hd">Channel ID</td><td class="hd">Lock Status</td>
+        <td class="hd">Channel Type</td><td class="hd">Bonding Group ID</td><td class="hd">Frequency (MHz)</td>
+        <td class="hd">Width (MHz)</td><td class="hd">Power (dBmV)</td><td class="hd">Modulation</td></tr>
+    <tr><td>1</td><td>1</td><td>Locked</td><td>SC-QAM</td><td>Bonded</td>
+        <td>30.8</td><td>6.4</td><td>0</td><td>ATDMA</td></tr>
+    </table>
+    <table><tr><td class="hd">System Up Time</td><td>0 days 00h:01m:30s</td></tr></table>
+    </body></html>
+    """
+
+    parser = TechnicolorTC4400Parser()
+    soup = BeautifulSoup(html, "html.parser")
+    data = parser.parse(soup)
+
+    # During restart, zero upstream power should be filtered
+    assert len(data["upstream"]) == 1
+    assert data["upstream"][0]["power"] is None  # Filtered out
+
+
+def test_tc4400_restart_window_constant():
+    """Test that the restart window constant is correctly defined."""
+    assert RESTART_WINDOW_SECONDS == 300
+    assert RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes

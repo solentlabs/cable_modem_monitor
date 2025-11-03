@@ -7,6 +7,10 @@ from custom_components.cable_modem_monitor.lib.utils import extract_number, extr
 
 _LOGGER = logging.getLogger(__name__)
 
+# During modem restart, power readings may be temporarily zero.
+# Ignore zero power readings during the first 5 minutes after boot.
+RESTART_WINDOW_SECONDS = 300
+
 
 class MotorolaGenericParser(ModemParser):
     """Parser for Motorola MB series cable modems (MB7420, MB8600, etc.)."""
@@ -68,10 +72,7 @@ class MotorolaGenericParser(ModemParser):
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""
-        downstream_channels = self._parse_downstream(soup)
-        upstream_channels = self._parse_upstream(soup)
-
-        # System info is on MotoConnection.asp page, try to parse from connection page first
+        # Parse system info first to get uptime
         system_info = self._parse_system_info(soup)
 
         # If software version not found and we have session/base_url, fetch MotoHome.asp
@@ -87,6 +88,9 @@ class MotorolaGenericParser(ModemParser):
             except Exception as e:
                 _LOGGER.error(f"Failed to fetch system info from MotoHome.asp: {e}")
 
+        downstream_channels = self._parse_downstream(soup, system_info)
+        upstream_channels = self._parse_upstream(soup, system_info)
+
         _LOGGER.debug(f"Final system_info being returned: {system_info}")
         return {
             "downstream": downstream_channels,
@@ -94,18 +98,24 @@ class MotorolaGenericParser(ModemParser):
             "system_info": system_info,
         }
 
-    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_downstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """Parse downstream channel data from Motorola MB modem."""
+        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
+
+        uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
+        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        _LOGGER.debug(f"Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+
         channels = []
         try:
             tables_found = soup.find_all("table", class_="moto-table-content")
             _LOGGER.debug(f"Found {len(tables_found)} tables with class 'moto-table-content'")
 
             for table in tables_found:
-                headers = [th.text.strip() for th in table.find_all("td", class_="moto-param-header-s")]
+                headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
                 _LOGGER.debug(f"Table headers found: {headers}")
 
-                if "Pwr (dBmV)" in headers and "SNR (dB)" in headers:
+                if any("Pwr" in h for h in headers) and any("SNR" in h for h in headers):
                     rows = table.find_all("tr")[1:]
                     _LOGGER.debug(f"Found downstream table with {len(rows)} rows")
 
@@ -120,12 +130,23 @@ class MotorolaGenericParser(ModemParser):
 
                                 freq_mhz = extract_float(cols[4].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
+                                
+                                power = extract_float(cols[5].text)
+                                snr = extract_float(cols[6].text)
+                                _LOGGER.debug(f"Ch {channel_id}: Raw Power={power}, Raw SNR={snr}")
+
+                                # During restart window, filter out zero values which are typically invalid
+                                if is_restarting:
+                                    if power == 0:
+                                        power = None
+                                    if snr == 0:
+                                        snr = None
 
                                 channel_data = {
                                     "channel_id": str(channel_id),
                                     "frequency": freq_hz,
-                                    "power": extract_float(cols[5].text),
-                                    "snr": extract_float(cols[6].text),
+                                    "power": power,
+                                    "snr": snr,
                                     "corrected": extract_number(cols[7].text),
                                     "uncorrected": extract_number(cols[8].text),
                                     "modulation": cols[2].text.strip(),
@@ -142,13 +163,18 @@ class MotorolaGenericParser(ModemParser):
         _LOGGER.info(f"Parsed {len(channels)} downstream channels")
         return channels
 
-    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """Parse upstream channel data from Motorola MB modem."""
+        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
+
+        uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
+        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        _LOGGER.debug(f"Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
         channels = []
         try:
             for table in soup.find_all("table", class_="moto-table-content"):
-                headers = [th.text.strip() for th in table.find_all("td", class_="moto-param-header-s")]
-                if "Symb. Rate (Ksym/sec)" in headers:
+                headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
+                if any("Symb. Rate" in h for h in headers):
                     rows = table.find_all("tr")[1:]
                     _LOGGER.debug(f"Found upstream table with {len(rows)} rows")
                     for row in rows:
@@ -168,10 +194,17 @@ class MotorolaGenericParser(ModemParser):
                                 freq_mhz = extract_float(cols[5].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
 
+                                power = extract_float(cols[6].text)
+                                _LOGGER.debug(f"Ch {channel_id}: Raw Power={power}")
+
+                                # During restart window, filter out zero power which is typically invalid
+                                if is_restarting and power == 0:
+                                    power = None
+
                                 channel_data = {
                                     "channel_id": str(channel_id),
                                     "frequency": freq_hz,
-                                    "power": extract_float(cols[6].text),
+                                    "power": power,
                                     "modulation": cols[2].text.strip(),
                                 }
                                 _LOGGER.debug(f"Parsed upstream channel: {channel_data}")
