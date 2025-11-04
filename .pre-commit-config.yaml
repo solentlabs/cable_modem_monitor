@@ -1,0 +1,47 @@
+***REMOVED*** Pre-commit hooks for Cable Modem Monitor
+***REMOVED*** Install: pip install pre-commit && pre-commit install
+***REMOVED*** Run manually: pre-commit run --all-files
+
+repos:
+  ***REMOVED*** Code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3
+        files: ^custom_components/cable_modem_monitor/.*\.py$
+
+  ***REMOVED*** Linting with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.2
+    hooks:
+      - id: ruff
+        args: [--fix, --select, "E,F,W,C90"]
+        files: ^custom_components/cable_modem_monitor/.*\.py$
+
+  ***REMOVED*** General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^tests/.*\.html$
+      - id: end-of-file-fixer
+        exclude: ^tests/.*\.html$
+      - id: check-yaml
+        exclude: ^\.github/workflows/
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  ***REMOVED*** Python-specific checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: debug-statements
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-docstring-first

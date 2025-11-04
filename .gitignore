@@ -1,28 +1,37 @@
+***REMOVED*** Python bytecode and compiled files & extensions
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-.vscode/
-.DS_Store
 *.pyc
+*.so
+
+***REMOVED*** Python environment markers
+.Python
+
+***REMOVED*** IDE and editor files
+.vscode/
 .idea/
+.DS_Store
+
+***REMOVED*** Logs and temporary files
 *.log
 .pytest_cache/
+
+***REMOVED*** Python package and distribution files
 *.egg-info/
 dist/
 build/
 
-***REMOVED*** Virtual environment
-venv/
+***REMOVED*** Virtual environments
 .venv/
+venv/
 env/
 ENV/
 
-***REMOVED*** Ruff cache
+***REMOVED*** Code quality and linting
 .ruff_cache/
 
-***REMOVED*** Test coverage
+***REMOVED*** Test coverage reports
 .coverage
-htmlcov/
 coverage.xml
+htmlcov/

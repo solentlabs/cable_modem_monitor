@@ -6,8 +6,9 @@ This ensures that the version number is consistent across the project.
 """
 import json
 import os
+from pathlib import Path
 
-def get_version_from_const():
+def get_version_from_const() -> str:
     """Reads the VERSION constant from const.py without importing the file."""
     script_dir = os.path.dirname(os.path.realpath(__file__))
     project_root = os.path.abspath(os.path.join(script_dir, '..'))
@@ -21,7 +22,7 @@ def get_version_from_const():
     
     raise ValueError("VERSION constant not found in const.py")
 
-def update_json_file(file_path, version):
+def update_json_file(file_path: str, version: str) -> None:
     """Reads a JSON file, updates the version, and writes it back."""
     if not os.path.exists(file_path):
         print(f"Skipping {file_path}: File not found.")
@@ -38,7 +39,7 @@ def update_json_file(file_path, version):
 
     print(f"Updated version in {file_path} to {version}")
 
-def main():
+def main() -> None:
     """Main function to update version numbers."""
     version = get_version_from_const()
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

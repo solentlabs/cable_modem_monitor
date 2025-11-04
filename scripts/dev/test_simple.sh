@@ -1,6 +1,12 @@
 ***REMOVED***!/bin/bash
 ***REMOVED*** Simple test runner - no virtual environment required
-***REMOVED*** Installs dependencies globally (or in user space)
+***REMOVED***
+***REMOVED*** Use this when:
+***REMOVED***   - You don't want to use a virtual environment
+***REMOVED***   - You're running in CI or a container
+***REMOVED***   - You prefer global or user-space installations
+***REMOVED***
+***REMOVED*** For isolated development with venv, use run_tests_local.sh instead
 
 set -e
 
