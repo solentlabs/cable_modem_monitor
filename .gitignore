@@ -12,6 +12,7 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+.claude/
 
 # Logs and temporary files
 *.log
