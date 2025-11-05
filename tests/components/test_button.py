@@ -9,6 +9,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from custom_components.cable_modem_monitor.button import (
     ModemRestartButton,
     CleanupEntitiesButton,
+    ResetEntitiesButton,
     async_setup_entry,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN
@@ -53,12 +54,13 @@ async def test_async_setup_entry(mock_coordinator, mock_config_entry):
 
     await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-    ***REMOVED*** Verify two buttons were added
+    ***REMOVED*** Verify three buttons were added (Restart, Cleanup, Reset)
     assert async_add_entities.call_count == 1
     added_entities = async_add_entities.call_args[0][0]
-    assert len(added_entities) == 2
+    assert len(added_entities) == 3
     assert isinstance(added_entities[0], ModemRestartButton)
     assert isinstance(added_entities[1], CleanupEntitiesButton)
+    assert isinstance(added_entities[2], ResetEntitiesButton)
 
 
 @pytest.mark.asyncio
@@ -379,3 +381,78 @@ async def test_cleanup_button_no_orphaned_entities(mock_coordinator, mock_config
         notification_data = notification_calls[0][0][2]
         assert "No orphaned entities" in notification_data["message"]
         assert "clean" in notification_data["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_reset_button_initialization(mock_coordinator, mock_config_entry):
+    """Test reset button initialization."""
+    button = ResetEntitiesButton(mock_coordinator, mock_config_entry)
+
+    assert button._attr_name == "Reset Entities"
+    assert button._attr_unique_id == "test_entry_id_reset_entities_button"
+    assert button._attr_icon == "mdi:refresh"
+    from homeassistant.helpers.entity import EntityCategory
+    assert button._attr_entity_category == EntityCategory.CONFIG
+
+
+@pytest.mark.asyncio
+async def test_reset_button_removes_all_entities_and_reloads(mock_coordinator, mock_config_entry):
+    """Test reset button removes all entities and reloads integration."""
+    hass = Mock(spec=HomeAssistant)
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+    hass.config_entries = Mock()
+    hass.config_entries.async_reload = AsyncMock()
+
+    button = ResetEntitiesButton(mock_coordinator, mock_config_entry)
+    button.hass = hass
+
+    ***REMOVED*** Mock entity registry with entities for this config entry
+    with patch("homeassistant.helpers.entity_registry.async_get") as mock_get_registry:
+        mock_registry = Mock()
+
+        ***REMOVED*** Create mock entities for this config entry
+        mock_entity_1 = Mock()
+        mock_entity_1.platform = DOMAIN
+        mock_entity_1.config_entry_id = "test_entry_id"
+        mock_entity_1.entity_id = "sensor.cable_modem_downstream_ch_1_power"
+
+        mock_entity_2 = Mock()
+        mock_entity_2.platform = DOMAIN
+        mock_entity_2.config_entry_id = "test_entry_id"
+        mock_entity_2.entity_id = "sensor.cable_modem_upstream_ch_1_power"
+
+        ***REMOVED*** Entity from different config entry (should not be removed)
+        mock_entity_other = Mock()
+        mock_entity_other.platform = DOMAIN
+        mock_entity_other.config_entry_id = "other_entry_id"
+        mock_entity_other.entity_id = "sensor.other_modem_power"
+
+        mock_registry.entities.values.return_value = [
+            mock_entity_1,
+            mock_entity_2,
+            mock_entity_other,
+        ]
+
+        mock_registry.async_remove = Mock()
+        mock_get_registry.return_value = mock_registry
+
+        await button.async_press()
+
+        ***REMOVED*** Verify only entities from this config entry were removed
+        assert mock_registry.async_remove.call_count == 2
+        removed_ids = [call[0][0] for call in mock_registry.async_remove.call_args_list]
+        assert "sensor.cable_modem_downstream_ch_1_power" in removed_ids
+        assert "sensor.cable_modem_upstream_ch_1_power" in removed_ids
+        assert "sensor.other_modem_power" not in removed_ids
+
+        ***REMOVED*** Verify integration was reloaded
+        hass.config_entries.async_reload.assert_called_once_with("test_entry_id")
+
+        ***REMOVED*** Verify success notification
+        notification_calls = [c for c in hass.services.async_call.call_args_list
+                             if c[0][0] == "persistent_notification"]
+        assert len(notification_calls) > 0
+        notification_data = notification_calls[0][0][2]
+        assert "Successfully removed 2 entities" in notification_data["message"]
+        assert "reloaded the integration" in notification_data["message"]
