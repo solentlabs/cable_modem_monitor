@@ -1,0 +1,156 @@
+
+<html xmlns="http://www.w3.org/1999/xhtml" id="html">
+<head>
+<meta name="viewport" content="width=1200">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Pragma" content="No-cache" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Expires" content="-1" />
+<meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+<link rel="shortcut icon"  href="image/mobile_motologin.png"/>
+<link rel="stylesheet" type="text/css" href="css/moto.css" />
+<title>MB8611</title>
+<script type="text/javascript" charset="utf-8" src="js/MotoMenu.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/initialJS.js"></script>
+
+<script language="javascript">
+var HNAP = new HNAP_XML();
+function GetMultiXML()
+{
+	GetMultiXML_1st();
+}
+
+function GetMultiXML_1st()
+{
+	var result_xml = new StringDoc();
+	if (result_xml != null)
+	{
+		result_xml.Set("GetMultipleHNAPs/GetMotoStatusSoftware");
+		result_xml.Set("GetMultipleHNAPs/GetMotoStatusXXX");
+		HNAP.SetXMLAsync("GetMultipleHNAPs", result_xml, function(xml)	{	GetMultiXML_2nd(xml);	});
+	}
+	else	
+	{	
+		if (DebugMode == 1)	
+			{	alert("[!!GetXML Error!!] Function: GetMultiXML_1st");	}	
+	}
+}
+
+function GetMultiXML_2nd(result_xml)
+{
+	var GetResult_xml = result_xml.Get("GetMultipleHNAPsResponse/GetMultipleHNAPsResult");
+	if (GetResult_xml == "OK")
+	{
+		document.getElementById("StatusSoftwareSpecVer").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareSpecVer");
+		document.getElementById("StatusSoftwareHdVer").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareHdVer");
+		document.getElementById("StatusSoftwareSfVer").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareSfVer");
+		document.getElementById("StatusSoftwareMac").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareMac");
+		document.getElementById("StatusSoftwareSerialNum").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareSerialNum");
+		document.getElementById("StatusSoftwareCertificate").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareCertificate");
+		document.getElementById("StatusSoftwareCustomerVer").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusSoftwareResponse/StatusSoftwareCustomerVer");
+		
+		document.getElementById("moto-new-top").style.display = '';
+		document.getElementById("moto-new-menu").style.display = '';
+		document.getElementById("moto-new-content").style.display = '';
+		document.getElementById("moto-apply-top").style.display = 'none';
+	}
+	else
+	{
+		if (DebugMode == 1)	
+			alert("[!!GetXML Error!!] Function: GetMultiXML_2nd");
+	}
+}
+
+$(document).ready( function()  {
+	loadMotoMenu("Status", "Software");
+	GetMultiXML();	
+});
+
+
+</script>
+</head>
+
+<body>
+
+<div id='moto-new-top' style='display:none'></div>
+<div id='moto-new-menu' style='display:none'></div>
+
+<div id='moto-new-content' style='display:none'>
+<table cellspacing='0' cellpadding='0' width='100%'>
+<tr>
+<td class='moto-content-title'>Software</td>
+</tr>
+<tr>
+<td>
+
+<form action=/goform/MotoSwInfo method=POST name="MotoSwInfo">
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Device Information</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'>&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0'>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Cable Specification Version</td>
+  <td class='moto-content-value'><span id="StatusSoftwareSpecVer"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Cable Specification Version:<br>Name and version of the cable modem specification that your cable modem complies with.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Hardware Version</td>
+  <td class='moto-content-value'><span id="StatusSoftwareHdVer"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Hardware Version:<br>Version number of your cable modem's printed circuit board.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Software Version</td>
+  <td class='moto-content-value'><span id="StatusSoftwareSfVer"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Software Version:<br>Version number of the software that runs on your cable modem.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Cable Modem MAC Address</td>
+  <td class='moto-content-value'><span id="StatusSoftwareMac"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Cable Modem MAC Address:<br>The MAC Address (physical address) of your cable modem's cable connection.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Cable Modem Serial Number</td>
+  <td class='moto-content-value'><span id="StatusSoftwareSerialNum"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Cable Modem Serial Number:<br>Your cable modem's serial number.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;CM Certificate</td>
+  <td class='moto-content-value'><span id="StatusSoftwareCertificate"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>CM Certificate:<br>This item should say <b style="font-family:Moto Sans Semibold,verdana,helvetica">Installed</b>. If it doesn't, your cable modem may be damaged or may have been tampered with.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;</td>
+  <td class='moto-content-value'><span id="StatusSoftwareCustomerVer"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>This item is for reference by service representatives.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </table>
+</td>
+</tr>
+</table>
+
+</form>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+<div id='moto-apply-top'>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,637 @@
+<html>
+   <head>
+      <meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>
+      <link rel="stylesheet" href='stylemain.css' type='text/css'>
+      <link rel="stylesheet" href='colors.css' type='text/css'>
+      <title>Residential Getway Configuration: Status - Connection</title>
+      <script language="javascript">
+<!-- hide
+function onLoadScript()
+{
+   setTimeout("window.location.reload();",10000);
+}
+function ApplyRgSetupButton()
+{
+    window.document.RgConnect.ApplyRgConnectAction.value = 1;
+}
+      </script>
+   </head>
+<body>
+<blockquote>
+    <h1>Status</h1>
+    <h3>Connection</h3>
+    This page displays information on the status of the cable modem's HFC and IP network connectivity.
+
+<form action=/goform/RgConnect method=POST name="RgConnect">
+<p>
+CM IP Prov Mode: Honor MDD
+<br>
+
+</p>
+</form>
+
+
+<p>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th colspan=3><b>Startup Procedure</b></th></tr>
+<tr align='center'><td class='hd'>Procedure</td><td class='hd'>Status</td><td class='hd'>Comment</td></tr>
+<tr><td><b>Acquire Downstream Channel</b></td><td>578000000 Hz</td><td>Locked</td></tr>
+<tr><td><b>Connectivity State</b></td><td>OK</td><td>Operational</td></tr>
+<tr><td><b>Boot State</b></td><td>OK</td><td>Operational</td></tr>
+<tr><td><b>Configuration File</b></td><td>OK</td><td>xxxx.cm</td></tr>
+<tr><td><b>Security</b></td><td>Enabled</td><td>BPI+</td></tr>
+</table><br>
+</p>
+
+<p>
+   <table border='1' cellpadding='4' cellspacing='0'>
+<tr><th colspan=13><b>Downstream Channel Status</b></th></tr>
+   <tr align='center'>
+      <td class='hd'>Channel Index</td>
+      <td class='hd'>Channel ID</td>
+      <td class='hd'>Lock Status</td>
+      <td class='hd'>Channel Type</td>
+      <td class='hd'>Bonding Status</td>
+      <td class='hd'>Center Frequency</td>
+      <td class='hd'>Channel Width</td>
+      <td class='hd'>SNR/MER Threshold Value</td>
+      <td class='hd'>Received Level</td>
+      <td class='hd'>Modulation/Profile ID</td>
+      <td class='hd'>Unerrored Codewords</td>
+      <td class='hd'>Corrected Codewords</td>
+      <td class='hd'>Uncorrectable Codewords</td>
+   </tr>
+   <tr align='center'>
+      <td>1</td>
+      <td>12</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>578000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.1 dB</td>
+      <td>3.0 dBmV</td>
+      <td>QAM256</td>
+      <td>2893294930</td>
+      <td>201</td>
+      <td>449</td>
+   </tr>
+   <tr align='center'>
+      <td>2</td>
+      <td>1</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>474000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>38.8 dB</td>
+      <td>1.2 dBmV</td>
+      <td>QAM256</td>
+      <td>2891506733</td>
+      <td>265</td>
+      <td>622</td>
+   </tr>
+   <tr align='center'>
+      <td>3</td>
+      <td>2</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>482000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>38.9 dB</td>
+      <td>1.0 dBmV</td>
+      <td>QAM256</td>
+      <td>2891507700</td>
+      <td>325</td>
+      <td>619</td>
+   </tr>
+   <tr align='center'>
+      <td>4</td>
+      <td>3</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>490000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>38.9 dB</td>
+      <td>1.0 dBmV</td>
+      <td>QAM256</td>
+      <td>345449877</td>
+      <td>46</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>5</td>
+      <td>4</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>498000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.2 dB</td>
+      <td>1.4 dBmV</td>
+      <td>QAM256</td>
+      <td>475182512</td>
+      <td>151</td>
+      <td>227</td>
+   </tr>
+   <tr align='center'>
+      <td>6</td>
+      <td>5</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>522000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.4 dB</td>
+      <td>1.4 dBmV</td>
+      <td>QAM256</td>
+      <td>2891512037</td>
+      <td>372</td>
+      <td>370</td>
+   </tr>
+   <tr align='center'>
+      <td>7</td>
+      <td>6</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>530000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.3 dB</td>
+      <td>1.5 dBmV</td>
+      <td>QAM256</td>
+      <td>2891514915</td>
+      <td>368</td>
+      <td>445</td>
+   </tr>
+   <tr align='center'>
+      <td>8</td>
+      <td>7</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>538000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.3 dB</td>
+      <td>2.0 dBmV</td>
+      <td>QAM256</td>
+      <td>2891516607</td>
+      <td>329</td>
+      <td>566</td>
+   </tr>
+   <tr align='center'>
+      <td>9</td>
+      <td>8</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>546000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.4 dB</td>
+      <td>2.2 dBmV</td>
+      <td>QAM256</td>
+      <td>2891518334</td>
+      <td>207</td>
+      <td>368</td>
+   </tr>
+   <tr align='center'>
+      <td>10</td>
+      <td>9</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>554000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.5 dB</td>
+      <td>2.0 dBmV</td>
+      <td>QAM256</td>
+      <td>475188991</td>
+      <td>128</td>
+      <td>165</td>
+   </tr>
+   <tr align='center'>
+      <td>11</td>
+      <td>10</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>562000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.8 dB</td>
+      <td>2.0 dBmV</td>
+      <td>QAM256</td>
+      <td>2891520674</td>
+      <td>187</td>
+      <td>307</td>
+   </tr>
+   <tr align='center'>
+      <td>12</td>
+      <td>11</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>570000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.9 dB</td>
+      <td>2.4 dBmV</td>
+      <td>QAM256</td>
+      <td>2891522495</td>
+      <td>250</td>
+      <td>504</td>
+   </tr>
+   <tr align='center'>
+      <td>13</td>
+      <td>13</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>586000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.1 dB</td>
+      <td>2.6 dBmV</td>
+      <td>QAM256</td>
+      <td>475198776</td>
+      <td>106</td>
+      <td>294</td>
+   </tr>
+   <tr align='center'>
+      <td>14</td>
+      <td>14</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>594000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.1 dB</td>
+      <td>2.7 dBmV</td>
+      <td>QAM256</td>
+      <td>2891525851</td>
+      <td>205</td>
+      <td>642</td>
+   </tr>
+   <tr align='center'>
+      <td>15</td>
+      <td>15</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>602000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.1 dB</td>
+      <td>3.0 dBmV</td>
+      <td>QAM256</td>
+      <td>472796865</td>
+      <td>48</td>
+      <td>176</td>
+   </tr>
+   <tr align='center'>
+      <td>16</td>
+      <td>16</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>618000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.9 dB</td>
+      <td>2.5 dBmV</td>
+      <td>QAM256</td>
+      <td>345481209</td>
+      <td>2</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>17</td>
+      <td>17</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>626000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.9 dB</td>
+      <td>2.2 dBmV</td>
+      <td>QAM256</td>
+      <td>345484512</td>
+      <td>6</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>18</td>
+      <td>18</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>634000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.2 dB</td>
+      <td>2.8 dBmV</td>
+      <td>QAM256</td>
+      <td>345484451</td>
+      <td>1</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>19</td>
+      <td>19</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>642000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.5 dB</td>
+      <td>3.3 dBmV</td>
+      <td>QAM256</td>
+      <td>345490239</td>
+      <td>2</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>20</td>
+      <td>20</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>650000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.6 dB</td>
+      <td>3.4 dBmV</td>
+      <td>QAM256</td>
+      <td>345493855</td>
+      <td>2</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>21</td>
+      <td>21</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>658000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.4 dB</td>
+      <td>2.9 dBmV</td>
+      <td>QAM256</td>
+      <td>345592137</td>
+      <td>14</td>
+      <td>21</td>
+   </tr>
+   <tr align='center'>
+      <td>22</td>
+      <td>22</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>666000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.4 dB</td>
+      <td>2.9 dBmV</td>
+      <td>QAM256</td>
+      <td>345499505</td>
+      <td>4</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>23</td>
+      <td>23</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>674000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.0 dB</td>
+      <td>2.9 dBmV</td>
+      <td>QAM256</td>
+      <td>345502608</td>
+      <td>15</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>24</td>
+      <td>24</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>682000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.1 dB</td>
+      <td>2.5 dBmV</td>
+      <td>QAM256</td>
+      <td>345601082</td>
+      <td>53</td>
+      <td>77</td>
+   </tr>
+   <tr align='center'>
+      <td>25</td>
+      <td>25</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>690000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.0 dB</td>
+      <td>2.3 dBmV</td>
+      <td>QAM256</td>
+      <td>345508534</td>
+      <td>22</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>26</td>
+      <td>26</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>698000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.3 dB</td>
+      <td>2.5 dBmV</td>
+      <td>QAM256</td>
+      <td>345513628</td>
+      <td>12</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>27</td>
+      <td>27</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>706000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.4 dB</td>
+      <td>3.3 dBmV</td>
+      <td>QAM256</td>
+      <td>475246238</td>
+      <td>1048</td>
+      <td>912</td>
+   </tr>
+   <tr align='center'>
+      <td>28</td>
+      <td>28</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>730000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.8 dB</td>
+      <td>2.0 dBmV</td>
+      <td>QAM256</td>
+      <td>345519189</td>
+      <td>77</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>29</td>
+      <td>29</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>738000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>40.0 dB</td>
+      <td>2.4 dBmV</td>
+      <td>QAM256</td>
+      <td>345520064</td>
+      <td>4</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>30</td>
+      <td>30</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>746000000 Hz</td>
+      <td>8000000 Hz</td>
+      <td>39.9 dB</td>
+      <td>2.4 dBmV</td>
+      <td>QAM256</td>
+      <td>345517729</td>
+      <td>4</td>
+      <td>0</td>
+   </tr>
+   <tr align='center'>
+      <td>31</td>
+      <td>193</td>
+      <td>Locked</td>
+      <td>OFDM</td>
+      <td>Bonded</td>
+      <td>823000000 Hz</td>
+      <td>110000 kHz</td>
+      <td>29.5 dB</td>
+      <td>-0.1 dBmV</td>
+      <td>0,1,2,3</td>
+      <td>947575889</td>
+      <td>98307383</td>
+      <td>379</td>
+   </tr>
+   <tr align='center'>
+      <td>32</td>
+      <td>194</td>
+      <td>Locked</td>
+      <td>OFDM</td>
+      <td>Bonded</td>
+      <td>441000000 Hz</td>
+      <td>62000 kHz</td>
+      <td>36.5 dB</td>
+      <td>0.0 dBmV</td>
+      <td>0,1,2,3</td>
+      <td>3767515539</td>
+      <td>2169856261</td>
+      <td>23803</td>
+   </tr>
+</table><br><br>
+
+</p>
+
+<p>
+   <table border='1' cellpadding='4' cellspacing='0'>
+<tr><th colspan=9><b>Upstream Channel Status</b></th></tr>
+   <tr align='center'>
+      <td class='hd'>Channel Index</td>
+      <td class='hd'>Channel ID</td>
+      <td class='hd'>Lock Status</td>
+      <td class='hd'>Channel Type</td>
+      <td class='hd'>Bonding Status</td>
+      <td class='hd'>Center Frequency</td>
+      <td class='hd'>Channel Width</td>
+      <td class='hd'>Transmit Level</td>
+      <td class='hd'>Modulation/Profile ID</td>
+   </tr>
+   <tr align='center'>
+      <td>1</td>
+      <td>1</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>30800000 Hz</td>
+      <td>6400000 Hz</td>
+      <td>47.0 dBmV</td>
+      <td>ATDMA</td>
+   </tr>
+   <tr align='center'>
+      <td>2</td>
+      <td>2</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>37200000 Hz</td>
+      <td>6400000 Hz</td>
+      <td>46.0 dBmV</td>
+      <td>ATDMA</td>
+   </tr>
+   <tr align='center'>
+      <td>3</td>
+      <td>3</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>44600000 Hz</td>
+      <td>6400000 Hz</td>
+      <td>46.0 dBmV</td>
+      <td>ATDMA</td>
+   </tr>
+   <tr align='center'>
+      <td>4</td>
+      <td>4</td>
+      <td>Locked</td>
+      <td>SC-QAM</td>
+      <td>Bonded</td>
+      <td>51000000 Hz</td>
+      <td>6400000 Hz</td>
+      <td>47.0 dBmV</td>
+      <td>ATDMA</td>
+   </tr>
+   <tr align='center'>
+      <td>5</td>
+      <td>41</td>
+      <td>Locked</td>
+      <td>OFDMA</td>
+      <td>Bonded</td>
+      <td>26100000 Hz</td>
+      <td>35000 kHz</td>
+      <td>40.0 dBmV</td>
+      <td>3, 4, 5, 6, 9, 10, 11, 12, 13</td>
+   </tr>
+</table><br><br>
+
+</p>
+
+<p>
+   <table border="1" cellpadding="4" cellspacing="0">
+      <tr align='center'><td class='hd'>CM IP Address</td><td class='hd'>Duration</td><td class='hd'>Expires</td></tr>
+      <tr><td>IPv4=10.</td><td>D: 07 H: 00 M: 00 S: 00</td><td>Tue Oct 28 21:43:49 2025
+</td></tr>
+      <tr><td>IPv6=</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+   </table><br>
+</p>
+
+<p>
+   <b>Current System Time:</b> Fri Oct 24 22:23:46 2025
+
+</p>
+
+</blockquote>
+</body>
+</html>
