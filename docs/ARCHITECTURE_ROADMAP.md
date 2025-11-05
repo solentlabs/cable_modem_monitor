@@ -1,7 +1,7 @@
 ***REMOVED*** Cable Modem Monitor - Complete Architecture & Implementation Roadmap
 
 **Version:** 2.0 (Enhanced with Integrated Features)
-**Date:** November 4, 2025
+**Date:** November 5, 2025
 **Status:** Comprehensive Implementation Guide
 
 ---
@@ -9,6 +9,96 @@
 ***REMOVED******REMOVED*** 🎯 Vision
 
 Transform Cable Modem Monitor from a code-based system to a **fully modular, data-driven, community-extensible platform** where anyone can add support for their modem without writing code.
+
+---
+
+***REMOVED******REMOVED*** 🚀 Version Targets
+
+| Version | Phases | Target Features | Status |
+|---------|--------|----------------|--------|
+| **v2.6.0** | Phase 0 | XB7 enhancements, Health monitoring, Reset button | 🎯 **Next Release** |
+| v3.0.0-alpha | Phase 1 | Complete auth abstraction | After v2.6.0 |
+| v3.0.0-beta | Phase 2 | HNAP/SOAP, MB8611 parser | After alpha |
+| v3.0.0 | Phase 3 | Enhanced discovery | **Major release** |
+| v4.0.0-alpha | Phase 4 | JSON configs (when needed) | If/when triggered |
+| v4.0.0 | Phase 5 | Config utility (if needed) | If/when triggered |
+
+**Current Focus:** Completing Phase 0 for v2.6.0 release
+
+**Version Strategy:**
+- **v2.6.0** = Quick wins (enhancements to existing features)
+- **v3.0.0** = Major refactor (Phases 1-3: auth abstraction, HNAP, discovery)
+- **v4.0.0** = Data-driven platform (if/when needed)
+
+---
+
+***REMOVED******REMOVED*** 📋 Implementation Guidelines
+
+***REMOVED******REMOVED******REMOVED*** Issue Management Policy
+
+**IMPORTANT:** When implementing fixes or features related to open issues:
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** ❌ DO NOT:
+- Close issues when pushing code changes
+- Use language like "Fixed Issue ***REMOVED***X" or "Closes ***REMOVED***X" in commits
+- Be overconfident that changes will work on user hardware
+- Merge PRs that claim to "fix" issues without user testing
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** ✅ DO:
+- Keep issues open until users confirm success on their hardware
+- Use softer language: "Attempt to fix", "Should address", "May resolve"
+- Explain reasoning and logic behind changes
+- Request user testing and feedback
+- Add comprehensive tests to verify logic
+- Document what was changed and why
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Commit Message Pattern:
+```
+Attempt to address Issue ***REMOVED***X: [Brief description]
+
+Changes:
+- [Change 1 with reasoning]
+- [Change 2 with reasoning]
+- Added tests for [scenarios]
+
+This should help with [problem], but requires user confirmation
+before closing. See Issue ***REMOVED***X for testing instructions.
+
+Related to ***REMOVED***X (remains open)
+```
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Issue Comment Pattern:
+```
+I've implemented changes that may address this issue:
+
+**What Changed:**
+- [Detailed list]
+
+**Why:**
+- [Reasoning for each change]
+
+**Testing:**
+- [Tests added and passing]
+- [What we tested]
+
+**Next Steps:**
+Please test v3.x.x with your modem and report back:
+- [ ] Does X work?
+- [ ] Are values correct?
+- [ ] Any errors in logs?
+
+This issue will remain open pending your confirmation.
+```
+
+***REMOVED******REMOVED******REMOVED*** Why This Matters
+
+We don't have physical access to users' modems. What works in tests may not work on real hardware due to:
+- Firmware variations
+- ISP configurations
+- Network conditions
+- HTML/XML structure differences
+
+**User confirmation is the only way to truly verify success.**
 
 ---
 
@@ -87,41 +177,46 @@ This roadmap consolidates ALL planned features into a single implementation time
 ***REMOVED******REMOVED******REMOVED*** Timeline Overview
 
 ```
-Phase 0: Quick Wins (Week 0)
+Phase 0: Quick Wins (Week 0) → v2.6.0 🎯 NEXT RELEASE
 ├─ XB7 System Info Enhancement (Close Issue ***REMOVED***2)
+├─ Timeout/Logging + Health Monitor (Close Issue ***REMOVED***5)
+│  ├─ Dual-layer diagnostics (ICMP + HTTP)
+│  └─ 4 diagnostic sensors
 ├─ Reset Entities Button
 └─ Documentation improvements
 
-Phase 1: Auth Abstraction (Weeks 1-4)
+Phase 1: Auth Abstraction (Weeks 1-4) → v3.0.0-alpha
 ├─ Enum-based strategies
 ├─ Dataclass configs
 ├─ HNAP support
 ├─ **Migrate XB7** to new auth (parser already exists)
 └─ Parser migrations
 
-Phase 2: New Protocols (Weeks 5-7)
+Phase 2: New Protocols (Weeks 5-7) → v3.0.0-beta
 ├─ MB8611 HNAP Parser
 ├─ Protocol validation
 └─ **Smart Polling Sensor** (added)
 
-Phase 3: Enhanced Discovery (Week 8)
+Phase 3: Enhanced Discovery (Week 8) → v3.0.0 (MAJOR RELEASE)
 ├─ Anonymous probing
 └─ Better detection
 
-Phase 4: Data-Driven Config (Weeks 9-11) [WHEN NEEDED]
+Phase 4: Data-Driven Config (Weeks 9-11) → v4.0.0-alpha [WHEN NEEDED]
 ├─ JSON schema design
 ├─ **Dynamic Metrics/Extra Attributes** (integrated)
 ├─ Generic parser
 └─ Community model
 
-Phase 5: Community Platform (Weeks 12-17+) [IF NEEDED]
+Phase 5: Community Platform (Weeks 12-17+) → v4.0.0 [IF NEEDED]
 ├─ Config utility (CLI)
 ├─ Config utility (HA integration)
 └─ Community infrastructure
 ```
 
-**Target: v3.0.0** = Phases 0-2 complete (8 weeks)
-**Target: v4.0.0** = Phases 3-5 complete (if demand warrants)
+**Rationale:**
+- **v2.6.0** = Incremental improvements (Phase 0)
+- **v3.0.0** = Major architectural refactor (Phases 1-3)
+- **v4.0.0** = Platform transformation (Phases 4-5, if needed)
 
 ---
 
@@ -272,6 +367,7 @@ This section shows where EVERY planned feature fits into the roadmap.
 |---------|--------|--------|------------|
 | **XB7 Support** | N/A | ✅ Done (v2.5.0) | High - Community request |
 | **XB7 System Info Enhancement** | **2-3 hours** | **Ready** | **High - Complete Issue ***REMOVED***2** |
+| **Timeout/Logging + Health Monitor** | **3-4 hours** | **Ready** | **High - Complete Issue ***REMOVED***5 + Diagnostics** |
 | **Reset Entities Button** | 1-2 hours | ✅ Ready | High - Modem replacement |
 | Documentation improvements | 2-3 hours | Ongoing | Medium - Support burden |
 | Troubleshooting guide | 2-3 hours | Needed | High - User self-service |
@@ -360,7 +456,7 @@ This section provides detailed implementation checklists for each phase, integra
 
 ---
 
-***REMOVED******REMOVED******REMOVED*** Phase 0: Quick Wins ⏱️ Est: 5-8 hours (Do First!)
+***REMOVED******REMOVED******REMOVED*** Phase 0: Quick Wins ⏱️ Est: 9-12 hours (Do First!)
 
 **Goal:** Ship high-value features with minimal effort
 
@@ -368,8 +464,208 @@ This section provides detailed implementation checklists for each phase, integra
 
 **Priority Order:**
 1. XB7 System Info Enhancement (2-3 hours) - Completes Issue ***REMOVED***2
-2. Reset Entities Button (1-2 hours) - High user value
-3. Documentation Improvements (2-3 hours) - Reduces support burden
+2. Timeout/Logging + Health Monitor (3-4 hours) - Completes Issue ***REMOVED***5 + Diagnostics
+3. Reset Entities Button (1-2 hours) - High user value
+4. Documentation Improvements (2-3 hours) - Reduces support burden
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Timeout/Logging + Health Monitoring (3-4 hours) ⭐ HIGH PRIORITY
+
+**Goal:** Fix improper exception handling, add modem health monitoring with dual-layer diagnostics
+
+**User Feedback (Issue ***REMOVED***5 - esand):**
+- ✅ Simple "Failed to log in to modem" message is good
+- ❌ Full stack trace being logged for timeouts (should be debug only)
+- ❌ Exception not properly caught in XB7 login method
+- 💡 **Feature request:** Event/notification system for login failures
+- 💡 **Enhancement:** Health check to distinguish network issues from auth issues
+
+**Problem:**
+When XB7 modem login times out, we don't know if it's an auth issue, network issue, or modem rebooting. Full stack traces create log noise.
+
+**File:** `custom_components/cable_modem_monitor/parsers/technicolor/xb7.py:67`
+
+**Current Code (Line 48-72):**
+```python
+def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
+    """Log in to XB7 modem using form-based authentication with redirect."""
+    if not username or not password:
+        _LOGGER.debug("No credentials provided for XB7 login")
+        return (False, None)
+
+    try:
+        ***REMOVED*** Submit login form
+        login_data = {"username": username, "password": password}
+        login_response = session.post(
+            f"{base_url}/check.jst", data=login_data, allow_redirects=True, timeout=10
+        )
+
+        ***REMOVED*** XB7 redirects to at_a_glance.jst on successful login
+        if "/at_a_glance.jst" in login_response.url:
+            _LOGGER.debug("XB7 login successful, fetching network setup page")
+            status_response = session.get(
+                f"{base_url}/network_setup.jst", timeout=10
+            )
+            return (True, status_response.text)
+        else:
+            _LOGGER.warning("XB7 login failed: unexpected redirect to %s", login_response.url)
+            return (False, None)
+    except Exception as e:
+        _LOGGER.error("XB7 login exception: %s", e, exc_info=True)  ***REMOVED*** ❌ Full stack trace
+        return (False, None)
+```
+
+**Implementation:**
+
+1. **Improve Exception Handling:**
+
+```python
+def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
+    """Log in to XB7 modem using form-based authentication with redirect."""
+    if not username or not password:
+        _LOGGER.debug("No credentials provided for XB7 login")
+        return (False, None)
+
+    try:
+        ***REMOVED*** Submit login form
+        login_data = {"username": username, "password": password}
+        login_response = session.post(
+            f"{base_url}/check.jst", data=login_data, allow_redirects=True, timeout=10
+        )
+
+        ***REMOVED*** XB7 redirects to at_a_glance.jst on successful login
+        if "/at_a_glance.jst" in login_response.url:
+            _LOGGER.debug("XB7 login successful, fetching network setup page")
+            status_response = session.get(
+                f"{base_url}/network_setup.jst", timeout=10
+            )
+            return (True, status_response.text)
+        else:
+            _LOGGER.warning("XB7 login failed: unexpected redirect to %s", login_response.url)
+            return (False, None)
+
+    except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
+        ***REMOVED*** Timeout is common when modem is busy/rebooting - log at debug level
+        _LOGGER.debug("XB7 login timeout (modem may be busy): %s", str(e))
+        return (False, None)
+
+    except requests.exceptions.ConnectionError as e:
+        ***REMOVED*** Connection errors should be logged but not with full stack trace
+        _LOGGER.warning("XB7 login connection error: %s", str(e))
+        return (False, None)
+
+    except requests.exceptions.RequestException as e:
+        ***REMOVED*** Other request errors
+        _LOGGER.warning("XB7 login request failed: %s", str(e))
+        _LOGGER.debug("XB7 login exception details:", exc_info=True)  ***REMOVED*** Full trace only at debug
+        return (False, None)
+
+    except Exception as e:
+        ***REMOVED*** Unexpected errors should still log details
+        _LOGGER.error("XB7 login unexpected exception: %s", str(e), exc_info=True)
+        return (False, None)
+```
+
+2. **Apply Same Pattern to Other Parsers:**
+
+Check other parsers for similar issues:
+- `parsers/technicolor/tc4400.py` - Uses HTTP Basic (less likely to timeout)
+- `parsers/motorola/mb7621.py` - Check login method
+- `parsers/motorola/generic.py` - Check login method
+
+3. **Update modem_scraper.py for Consistent Handling:**
+
+**File:** `custom_components/cable_modem_monitor/core/modem_scraper.py:264`
+
+Ensure the "Failed to log in to modem" message is consistent across all failure modes.
+
+4. **Add Modem Health Monitor:**
+
+Create `custom_components/cable_modem_monitor/core/health_monitor.py`:
+
+**Dual-Layer Health Check Architecture:**
+
+```
+Network Stack Diagnostics:
+┌─────────────────────────────────────┐
+│ Layer 7: HTTP HEAD                  │ ← Web server responsive?
+├─────────────────────────────────────┤
+│ Layer 3: ICMP Ping                  │ ← Network reachable?
+└─────────────────────────────────────┘
+
+Diagnostic Matrix:
+┌───────────┬───────────┬─────────────────────────────┐
+│ ICMP Ping │ HTTP HEAD │ Diagnosis                   │
+├───────────┼───────────┼─────────────────────────────┤
+│ ✅ Success│ ✅ Success│ Healthy - fully responsive  │
+│ ✅ Success│ ❌ Fail   │ Web server issue            │
+│ ❌ Fail   │ ✅ Success│ ICMP blocked (firewall)     │
+│ ❌ Fail   │ ❌ Fail   │ Network down / offline      │
+└───────────┴───────────┴─────────────────────────────┘
+```
+
+**Implementation:** See full `ModemHealthMonitor` class design in implementation notes
+
+**Key Features:**
+- Performs both ICMP ping and HTTP HEAD checks
+- Tracks success rate, latency, consecutive failures
+- Provides context for error logging
+- Foundation for diagnostic sensors
+
+5. **Integrate Health Monitor:**
+
+Update coordinator to run health checks before data fetches:
+
+```python
+***REMOVED*** In coordinator update cycle
+health_check = await health_monitor.check_health(base_url)
+
+if not success and health_check.failed:
+    _LOGGER.warning("Data fetch failed after health check failure - modem unresponsive")
+elif not success:
+    _LOGGER.warning("Data fetch failed but modem responding to pings - likely auth issue")
+```
+
+6. **Add Diagnostic Sensors:**
+
+Create new sensors in `sensor.py`:
+- `sensor.cable_modem_health_status` (healthy/degraded/unresponsive)
+- `sensor.cable_modem_ping_latency` (milliseconds)
+- `sensor.cable_modem_http_latency` (milliseconds)
+- `sensor.cable_modem_availability` (percentage)
+
+**Checklist:**
+- [ ] Update XB7 `login()` with specific exception handling
+- [ ] Implement `ModemHealthMonitor` class with dual-layer checks
+- [ ] Integrate health monitor with coordinator
+- [ ] Add health context to exception logging
+- [ ] Create 4 diagnostic sensors (health status, ping latency, HTTP latency, availability)
+- [ ] Test timeout behavior with health checks
+- [ ] Verify only debug messages appear for timeouts
+- [ ] Check other parsers for similar issues
+- [ ] Update `modem_scraper.py` if needed for consistency
+- [ ] Add test cases for timeout scenarios and health checks
+- [ ] Update documentation about logging levels and health monitoring
+- [ ] Consider future: Event system for login failures (defer to later)
+
+**User Value:**
+- **Closes Issue ***REMOVED***5** - User reported since Nov 5, 2025
+- Cleaner logs (no stack traces for common timeouts)
+- Better error diagnosis (network vs auth vs modem issues)
+- Network health visibility with diagnostic sensors
+- Users can create automations based on modem health
+- Early warning of degrading modem performance
+- Foundation for future event/notification system
+- Professional logging behavior
+
+**Benefits of Dual-Layer Health Checks:**
+- Distinguish "modem offline" from "web server crashed"
+- Identify when ISP/firewall blocks ICMP ping
+- Track latency trends over time
+- Provide context for login failures
+
+**Priority:** Should be done **alongside** XB7 System Info Enhancement since both affect XB7 parser.
+
+---
 
 ***REMOVED******REMOVED******REMOVED******REMOVED*** Reset Entities Button (1-2 hours) ✅ READY TO IMPLEMENT
 

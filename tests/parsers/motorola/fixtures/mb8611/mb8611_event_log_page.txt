@@ -1,0 +1,188 @@
+
+<html id="html">
+<head>
+<meta name="viewport" content="width=1200">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Pragma" content="No-cache" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Expires" content="-1" />
+<meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+<link rel="shortcut icon"  href="image/mobile_motologin.png"/>
+<link rel="stylesheet" type="text/css" href="css/moto.css" />
+<title>MB8611</title>
+<script type="text/javascript" charset="utf-8" src="js/MotoMenu.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/initialJS.js"></script>
+
+<script language="javascript">
+
+var HNAP = new HNAP_XML();
+
+function GetMultiXML()
+{
+	GetMultiXML_1st();
+}
+
+function GetMultiXML_1st()
+{
+	var result_xml = new StringDoc();
+	if (result_xml != null)
+	{
+		result_xml.Set("GetMultipleHNAPs/GetMotoStatusLog");
+		result_xml.Set("GetMultipleHNAPs/GetMotoStatusLogXXX");
+		HNAP.SetXMLAsync("GetMultipleHNAPs", result_xml, function(xml)	{	GetMultiXML_2nd(xml);	});
+	}
+	else	
+	{	
+		if (DebugMode == 1)	
+			{	alert("[!!GetXML Error!!] Function: GetMultiXML_1st");	}	
+	}
+}
+
+function GetMultiXML_2nd(result_xml)
+{
+	var GetResult_xml = result_xml.Get("GetMultipleHNAPsResponse/GetMultipleHNAPsResult");
+	if (GetResult_xml == "OK")
+	{
+		var idx;
+		var LogHtml = "<tr><td class='moto-param-header'>&nbsp;&nbsp;&nbsp;</td><td class='moto-param-header' width='15%'>Time&nbsp;</td>";
+		LogHtml += "<td class='moto-param-header'>&nbsp;</td><td class='moto-param-header' width='10%'>Priority&nbsp;</td>";
+		LogHtml += "<td class='moto-param-header'>&nbsp;</td><td class='moto-param-header'  width='75%'>Description&nbsp;</td></tr>";
+		var StatusLogList = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusLogResponse/MotoStatusLogList");
+		if(StatusLogList.length != '')
+		{
+			var LogEntry = StatusLogList.split("}-{");
+			for(idx = 0; idx < LogEntry.length; idx ++)
+			{
+				var BGcolor = "bgcolor='***REMOVED***DDDDDD'";
+				if(idx%2)
+					BGcolor = "";
+				var Item = LogEntry[idx].split("^");
+				LogHtml += "<tr "+BGcolor+"><td class='moto-param-value'>&nbsp;&nbsp;&nbsp;</td><td class='moto-param-value'>"+Item[0]+"<br>"+Item[1]+"</td>";
+				LogHtml += "<td class='moto-param-value'>&nbsp;</td><td class='moto-param-value'>"+Item[2]+"</td>";
+				LogHtml += "<td class='moto-param-value'>&nbsp;</td><td class='moto-param-value'>"+Item[3]+"</td></tr>";
+			}
+			if(idx%2 == 0)
+				LogHtml += "<tr bgcolor='***REMOVED***DDDDDD'><td colspan='6'>&nbsp;</td></tr>";
+		}
+		else
+		{
+			LogHtml += "<tr bgcolor='***REMOVED***DDDDDD'><td colspan='6'>&nbsp;</td></tr>";
+		}
+		LogHtml += "<tr><td colspan='6'>&nbsp;</td></tr>";
+		LogHtml += "<tr><td colspan='6'>&nbsp;&nbsp;&nbsp;<input class='moto-change-button' value='Clear' onclick='ClearLog()' type='button'></td></tr>";
+		LogHtml += "<tr><td colspan='6'>&nbsp;</td></tr>";
+        setTableInnerHTML(document.getElementById("MotoEventLog"), LogHtml);
+
+		document.getElementById("moto-new-top").style.display = '';
+		document.getElementById("moto-new-menu").style.display = '';
+		document.getElementById("moto-new-content").style.display = '';
+		document.getElementById("moto-apply-top").style.display = 'none';
+	}
+	else
+	{
+		if (DebugMode == 1)	
+			alert("[!!GetXML Error!!] Function: GetMultiXML_2nd");
+	}
+}
+
+$(document).ready( function()  {
+	loadMotoMenu("Status", "Log");
+	GetMultiXML();
+});
+	
+function SetResult_1st() {
+	var result_xml = new StringDoc();	
+	if (result_xml != null)
+	{
+		result_xml.Set("SetStatusLogSettings/MotoStatusLogAction", "1");
+		result_xml.Set("SetStatusLogSettings/MotoStatusLogXXX", "XXX");
+
+		document.getElementById("moto-new-top").style.display = 'none';
+		document.getElementById("moto-new-menu").style.display = 'none';
+		document.getElementById("moto-new-content").style.display = 'none';
+		document.getElementById("moto-apply-top").style.display = '';
+
+	 	HNAP.SetXMLAsync("SetStatusLogSettings", result_xml, function(xml)   {       SetResult_2nd(xml);     });
+	}
+	else
+	{
+		if (DebugMode == 1)
+		{
+			alert("[!!SetXML Error!!] Function: SetResult_1st");
+		}
+	}
+}
+
+function SetResult_2nd(result_xml)
+{
+	var SetResult_1st = result_xml.Get("SetStatusLogSettingsResponse/SetStatusLogSettingsResult");
+
+	if ((SetResult_1st == "UN-AUTH"))
+	{
+		window.location.reload();
+	}
+	else if ((SetResult_1st != "OK"))
+	{
+		alert(result_xml.Get("SetStatusLogSettingsResponse/SetStatusLogSettingsMSG"));
+	}
+	window.location.reload();
+}
+
+function ClearLog()
+{
+	SetResult_1st();
+}
+
+</script>
+</head>
+
+<body>
+
+<div id='moto-new-top' style='display:none'></div>
+<div id='moto-new-menu' style='display:none'></div>
+
+<div id='moto-new-content' style='display:none'>
+<table cellspacing='0' cellpadding='0' width='100%'>
+<tr>
+<td class='moto-content-title'>Event Log</td>
+</tr>
+<tr>
+<td>
+
+<form action=/goform/MotoSnmpLog method=POST name="MotoSnmpLog">
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Event Log</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class="moto-param-help"><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg" /><span>Event Log:<br />The Event Log displays information about your cable modem's connection to your service provider. This information may be particularly helpful if you experience problems with your connection.</span></a>&nbsp;&nbsp;</td> 
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td>
+<table class="moto-table-content" cellspacing='0' cellpadding='0' id='MotoEventLog'>
+
+</table>
+</td>
+</tr>
+</table>
+
+</form>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+<div id='moto-apply-top'>
+</div>
+
+</body>
+</html>

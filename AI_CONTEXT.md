@@ -44,6 +44,7 @@
 - Always verify test results before any GitHub operations
 - Maintain separation between public repo and private maintainer docs
 - Follow semantic versioning
+- **Line Endings**: Project uses LF (Unix-style) line endings enforced via `.gitattributes`. If files show as modified with equal insertions/deletions after commits, it's likely a line ending normalization issue - not real changes
 
 ***REMOVED******REMOVED*** Recent Development History
 

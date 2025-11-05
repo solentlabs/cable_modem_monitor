@@ -1,1 +1,11 @@
+***REMOVED*** Normalize all text files to LF line endings
+* text=auto eol=lf
+
+***REMOVED*** Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.gz binary
+*.tar binary
 *.har filter=lfs diff=lfs merge=lfs -text

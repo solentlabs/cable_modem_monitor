@@ -42,25 +42,28 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ***REMOVED******REMOVED*** Supported Modems
 
-This integration relies on community contributions for modem support. Compatibility can vary based on firmware versions and ISP customizations. For a complete and up-to-date list, please see the [Modem Compatibility Guide](./docs/MODEM_COMPATIBILITY_GUIDE.md).
+This integration relies on community contributions for modem support. Compatibility varies based on firmware versions and ISP customizations.
 
 ***REMOVED******REMOVED******REMOVED*** ✅ Confirmed Working
-These models are actively tested or have been confirmed to work reliably by the community.
+These models have test coverage and confirmed working by users:
 
-- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
-- **ARRIS SB6141**
+- **ARRIS SB6141** - Full support
+- **Motorola MB7621** - Full support
+- **Technicolor XB7 (CGM4331COM)** - Working (system info enhancements coming in v2.6.0)
 
-***REMOVED******REMOVED******REMOVED*** ⚠️ Community Reported (Mixed Results)
-These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
+***REMOVED******REMOVED******REMOVED*** 🔧 Partial Support / Known Issues
+Parsers exist but have known limitations:
 
-- **Arris SB6183**
-- **Arris SB8200**
+- **Technicolor TC4400** - Parser exists, investigating entity availability issues ([Issue ***REMOVED***1](https://github.com/kwschulz/cable_modem_monitor/issues/1))
+- **Motorola MB8611** - Requires HNAP/SOAP support (planned for v3.0.0, [Issue ***REMOVED***4](https://github.com/kwschulz/cable_modem_monitor/issues/4))
 
-***REMOVED******REMOVED******REMOVED*** 🧪 Experimental / Untested
-Parsers for these models exist in the code, but they have not been fully validated by the community. They may be incomplete or may not work at all.
+***REMOVED******REMOVED******REMOVED*** 📋 Requested Models
+Community members have requested support for these models:
 
-- **Technicolor TC4400**
-- **Technicolor XB7 (CGM4331COM)**
+- **Netgear CM600** - Awaiting HTML samples ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3))
+
+***REMOVED******REMOVED******REMOVED*** ℹ️ Motorola Generic Parser
+A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that use standard HTML pages (not HNAP/SOAP). Try "auto" detection during setup.
 
 **Have a different modem?** This integration uses a plugin architecture that makes adding new models easy. Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
 
@@ -212,6 +215,18 @@ Track your signal quality over time with history graphs:
 ![Signal-to-Noise Ratio](images/signal-to-noise-ratio.png)
 
 *Signal-to-Noise Ratio for all channels - higher is better, aim for above 40 dB*
+
+![Upstream Power Levels](images/upstream_power_levels.png)
+
+*Upstream power levels - ideal range is 35-50 dBmV*
+
+![Upstream Frequency](images/upstream_frequency.png)
+
+*Upstream frequency - should be stable*
+
+![Corrected Errors](images/corrected_errors.png)
+
+*Corrected and uncorrected errors - watch for sudden increases in uncorrected errors*
 
 Create a comprehensive dashboard to monitor your modem health. This example shows all 24 downstream channels (typical for Motorola MB7621), 5 upstream channels, and error tracking:
 

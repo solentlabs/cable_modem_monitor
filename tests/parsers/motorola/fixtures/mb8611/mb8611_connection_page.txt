@@ -1,0 +1,580 @@
+
+<html id="html">
+<head>
+<meta name="viewport" content="width=1200">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Pragma" content="No-cache" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Expires" content="-1" />
+<meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+<link rel="shortcut icon"  href="image/mobile_motologin.png"/>
+<link rel="stylesheet" type="text/css" href="css/moto.css" />
+<title>MB8611</title>
+<script type="text/javascript" charset="utf-8" src="js/MotoMenu.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/initialJS.js"></script>
+
+<script language="javascript">
+var bond_status="";
+
+var HNAP = new HNAP_XML();
+var current_action = 10;
+function GetMultiXML()
+{
+    GetMultiXML_1st();
+}
+
+function GetMultiXML_1st()
+{
+    var result_xml = new StringDoc();
+    if (result_xml != null)
+    {
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusStartupSequence");
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusConnectionInfo");	
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusDownstreamChannelInfo");	
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusUpstreamChannelInfo");
+        result_xml.Set("GetMultipleHNAPs/GetMotoLagStatus");
+		
+        HNAP.SetXMLAsync("GetMultipleHNAPs", result_xml, function(xml)	{	GetMultiXML_2nd(xml);	});
+    }
+    else	
+    {	
+        if (DebugMode == 1)	
+        {    alert("[!!GetXML Error!!] Function: GetMultiXML_1st"); }	
+    }
+}
+
+function GetMultiXML_2nd(result_xml)
+{
+    var idx;
+    var GetResult_xml = result_xml.Get("GetMultipleHNAPsResponse/GetMultipleHNAPsResult");
+    if (GetResult_xml == "OK")
+    {
+        document.getElementById("MotoConnDSFreq").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnDSFreq");
+        document.getElementById("MotoConnDSComment").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnDSComment");
+        document.getElementById("MotoConnConnectivityStatus").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnConnectivityStatus");
+        document.getElementById("MotoConnConnectivityComment").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnConnectivityComment");
+        document.getElementById("MotoConnBootStatus").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnBootStatus");
+        document.getElementById("MotoConnBootComment").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnBootComment");
+        document.getElementById("MotoConnConfigurationFileStatus").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnConfigurationFileStatus");
+        //document.getElementById("MotoConnConfigurationFileComment").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnConfigurationFileComment");	
+        document.getElementById("MotoConnSecurityStatus").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnSecurityStatus");
+        document.getElementById("MotoConnSecurityComment").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusStartupSequenceResponse/MotoConnSecurityComment");
+        document.getElementById("MotoConnSystemUpTime").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusConnectionInfoResponse/MotoConnSystemUpTime");
+        document.getElementById("MotoConnNetworkAccess").innerHTML = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusConnectionInfoResponse/MotoConnNetworkAccess");
+        document.getElementById("bond-status").value = result_xml.Get("GetMultipleHNAPsResponse/GetMotoLagStatusResponse/MotoLagCurrentStatus");
+        document.getElementById("bond-status").style.display = "inline";
+
+    GetMultiXML_1st_Channel();
+    }
+    else
+    {
+        if (DebugMode == 1)	
+            alert("[!!GetXML Error!!] Function: GetMultiXML_2nd");
+    }
+}
+
+function GetMultiXML_1st_Channel()
+{
+    var result_xml = new StringDoc();
+    if (result_xml != null)
+    {
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusDownstreamChannelInfo");	
+        result_xml.Set("GetMultipleHNAPs/GetMotoStatusUpstreamChannelInfo");			
+        HNAP.SetXMLAsync("GetMultipleHNAPs", result_xml, function(xml)	{	GetMultiXML_2nd_Channel(xml);	});
+    }
+    else	
+    {	
+        if (DebugMode == 1)	
+        {    alert("[!!GetXML Error!!] Function: GetMultiXML_1st"); }	
+    }
+}
+
+function GetMultiXML_2nd_Channel(result_xml)
+{
+    var GetResult_xml = result_xml.Get("GetMultipleHNAPsResponse/GetMultipleHNAPsResult");
+    if (GetResult_xml == "OK")
+    {
+        var DSChannelHtml = "<tr align='center'><td class='moto-param-header-s'>&nbsp;&nbsp;&nbsp;Channel</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Lock Status</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Modulation</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Channel ID</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Freq. (MHz)</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Pwr (dBmV)</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>SNR (dB)</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Corrected</td>";
+        DSChannelHtml += "<td class='moto-param-header-s'>Uncorrected</td></tr>";
+		
+        var DSChannelInfo = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusDownstreamChannelInfoResponse/MotoConnDownstreamChannel");
+        if(DSChannelInfo.length != '')
+        {
+            var DSChannel = DSChannelInfo.split("|+|");
+            for(idx = 0; idx < DSChannel.length; idx ++)
+            {
+                var DownstreamChanStatus = DSChannel[idx].split("^");
+                DSChannelHtml += "<tr align='center'><td class='moto-param-value'>&nbsp;&nbsp;&nbsp;"+DownstreamChanStatus[0]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[1]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[2]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[3]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[4]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[5]+"</td>";
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[6]+"</td>";	
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[7]+"</td>";	
+                DSChannelHtml += "<td class='moto-param-value'>"+DownstreamChanStatus[8]+"</td></tr>";				
+            }
+        }
+        setTableInnerHTML(document.getElementById("MotoConnDownstreamChannel"), DSChannelHtml);
+
+        var USChannelHtml = "<tr align='center'><td class='moto-param-header-s'>&nbsp;&nbsp;&nbsp;Channel</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Lock Status</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Channel Type</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Channel ID</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Symb. Rate (Ksym/sec)</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Freq. (MHz)</td>";
+        USChannelHtml += "<td class='moto-param-header-s'>Pwr (dBmV)</td></tr>";
+		
+        var USChannelInfo = result_xml.Get("GetMultipleHNAPsResponse/GetMotoStatusUpstreamChannelInfoResponse/MotoConnUpstreamChannel");
+        if(USChannelInfo.length != '')
+        {
+            var USChannel = USChannelInfo.split("|+|");
+            for(idx = 0; idx < USChannel.length; idx ++)
+            {
+                var UpstreamChannelStatus = USChannel[idx].split("^");
+                USChannelHtml += "<tr align='center'><td class='moto-param-value'>&nbsp;&nbsp;&nbsp;"+UpstreamChannelStatus[0]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[1]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[2]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[3]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[4]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[5]+"</td>";
+                USChannelHtml += "<td class='moto-param-value'>"+UpstreamChannelStatus[6]+"</td>";				
+            }
+        }
+        setTableInnerHTML(document.getElementById("MotoConnUpstreamChannel"), USChannelHtml);
+
+        document.getElementById("moto-new-top").style.display = '';
+        document.getElementById("moto-new-menu").style.display = '';
+        document.getElementById("moto-new-content").style.display = '';
+        document.getElementById("moto-reboot-top").style.display = 'none';
+        document.getElementById("moto-apply-top").style.display = 'none';
+    }
+    else
+    {
+        if (DebugMode == 1)	
+            alert("[!!GetXML Error!!] Function: GetMultiXML_2nd");
+    }
+}
+
+$(document).ready( function()  {
+	loadMotoMenu("Status", "Connection");
+	$("input, select").change(function () { 
+		changeFlag = true;
+    });
+	$("input").keypress(function () { 
+		changeFlag = true;
+	});
+	GetMultiXML();	
+});
+
+function bond_status_change() {
+	bond_status = document.getElementById("bond-status").value;
+}
+
+function SetResult_1st(action) {
+	
+    var result_xml = new StringDoc();
+	
+    if (result_xml != null)
+    {
+        result_xml.Set("SetMotoStatusDSTargetFreq/MotoStatusConnectionAction", ""+action);
+		
+        if(action == 0)
+        {
+            result_xml.Set("SetMotoStatusDSTargetFreq/MotoCmRescanTargetFreq", document.getElementById("MotoCmRescanTargetFreq").value);
+        }
+        else
+        {
+            result_xml.Set("SetMotoStatusDSTargetFreq/MotoStatusXXX", "XXX");
+        }
+
+        document.getElementById("moto-new-top").style.display = 'none';
+        document.getElementById("moto-new-menu").style.display = 'none';
+        document.getElementById("moto-new-content").style.display = 'none';
+        if(action == 1)
+        {
+        document.getElementById("moto-reboot-top").style.display = '';
+        document.getElementById("moto-apply-top").style.display = 'none';
+        }
+        else
+        {
+        document.getElementById("moto-reboot-top").style.display = 'none';
+        document.getElementById("moto-apply-top").style.display = '';
+        }
+
+        HNAP.SetXMLAsync("SetMotoStatusDSTargetFreq", result_xml, function(xml)   {       SetResult_2nd(xml);     });
+    } 
+    else 
+    {        
+        if (DebugMode == 1)     
+        {       
+            alert("[!!SetXML Error!!] Function: SetResult_1st");    
+        }       
+    }
+}
+
+function window_reload(){
+	window.location.reload();
+}
+function SetResult_2nd(result_xml)
+{
+    var SetResult_1st = result_xml.Get("SetMotoStatusDSTargetFreqResponse/SetMotoStatusDSTargetFreqResult");
+
+    
+    if ((SetResult_1st == "UN-AUTH"))
+    {
+	window.location.reload();
+    }
+    else if ((SetResult_1st == "OK"))
+    {
+        if (current_action == 0){
+            current_action = 10;
+            setTimeout("window_reload()", 1500);
+        }
+        window.location.reload();
+    }
+    else
+    {
+        alert(result_xml.Get("SetMotoStatusDSTargetFreqResponse/SetMotoStatusDSTargetFreqMSG"));
+        GetMultiXML();
+    }
+}
+
+function Apply(action)
+{
+    current_action = action ;
+    if(action == 0)
+    {
+        if((window.document.MotoConnection.MotoCmRescanTargetFreq.value.length > 15))
+        {
+            alert('Please enter less than 15 characters.');
+            return;
+        }
+    }
+
+    SetResult_1st(action);
+}
+
+function LoginAgain()
+{
+    window.location.href="Login.html"
+}
+
+
+function lagstatuschange(){
+    var result_xml = new StringDoc();
+	
+    if (result_xml != null)
+    {	
+		result_xml.Set("SetMotoLagStatus/MotoLagStatus", document.getElementById("bond-status").value);
+
+        HNAP.SetXMLAsync("SetMotoLagStatus", result_xml, function(xml)   {       lagstatuschange1(xml);     });
+    } 
+    else 
+    {        
+        if (DebugMode == 1)     
+        {       
+            alert("[!!SetXML Error!!] Function: lagstatuschange");    
+        }       
+    }
+
+}
+
+function waitSettingFinished() 
+{
+	window.location.reload();
+}
+
+function lagstatuschange1(result_xml)
+{
+    var SetResult_1st = result_xml.Get("SetMotoLagStatusResponse/SetMotoLagStatusResult");
+	
+    if ((SetResult_1st == "OK"))
+    {
+		document.getElementById("moto-content").style.display = 'none';
+		document.getElementById("moto-data-delay").style.display="none";
+		document.getElementById("moto-msg").style.display = '';
+		document.getElementById('divStatus').style.display = 'none';
+		document.getElementById('divMainMenu').style.display = 'none';
+		document.getElementById('divMainMenuMsg').style.display = '';
+		document.getElementById("MotoSecMsgTitle").innerHTML = "Configuring LAG ...";
+		document.getElementById("MotoSecMsgInfo").innerHTML = "Please wait 3 minutes, then click the button to log in again.";
+    }
+    else
+    {
+		alert(result_xml.Get("SetMotoLagStatusResponse/SetMotoLagStatusMSG"));
+        GetMultiXML();
+    }
+}
+
+</script>
+</head>
+
+<body>
+
+<div id='moto-new-top' style='display:none'></div>
+<div id='moto-new-menu' style='display:none'></div>
+
+<div id='moto-new-content' style='display:none'>
+<table cellspacing='0' cellpadding='0' width='100%'>
+<tr>
+<td class='moto-content-title'>Connection</td>
+</tr>
+<tr>
+<td>
+
+<form action=/goform/MotoConnection method=POST name="MotoConnection">
+
+
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Startup Sequence</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'>&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0'>
+  <tr>
+  <td class='moto-param-header'>&nbsp;&nbsp;&nbsp;Startup Step</td>
+  <td class='moto-param-header'>Status</td>
+  <td class='moto-param-header'>Comment</td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Startup Step:<br>The Startup Sequence shows steps in your Cable Modem's registration process. <br>
+If your modem doesn't come online, you can often tell which step is causing a problem by noting the first step that remains <b style="font-family:Moto Sans Semibold,verdana,helvetica">In Progress</b>.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Acquire Downstream Channel</td>
+  <td class='moto-content-value'><span id="MotoConnDSFreq"></span></td>
+  <td class='moto-content-value'><span id="MotoConnDSComment"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Acquire Downstream Channel:<br>The first step your cable modem takes is to lock on a downstream channel. If this step fails, it could be because there is no live coax cable connected to your modem, or because the signal is too weak or noisy to connect successfully.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Upstream Connection</td>
+  <td class='moto-content-value'><span id="MotoConnConnectivityStatus"></span></td>
+  <td class='moto-content-value'><span id="MotoConnConnectivityComment"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Upstream Connection:<br>The next step is to establish an upstream connection. If this step fails, it could be because the quality of the cable connection is marginal. (This step is sometimes referred to as the Connectivity State. This reflects negotiation of upstream frequency, time slot, synchronization for Forward Error Correction framing, and similar items.)</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Boot State</td>
+  <td class='moto-content-value'><span id="MotoConnBootStatus"></span></td>
+  <td class='moto-content-value'><span id="MotoConnBootComment"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Boot State:<br>
+<script language="javascript">
+<!-- hide me
+  document.writeln("In this step, your cable modem receives an IP Address and time of day information from the network. <br>If this step fails, it may be because of a network issue, or a problem with your account.");
+// show me -->
+</script>
+  </span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Configuration File</td>
+  <td class='moto-content-value'><span id="MotoConnConfigurationFileStatus"></span></td>
+  <td class='moto-content-value'><span id="MotoConnConfigurationFileComment"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Configuration File:<br>In the next step, your cable modem receives a configuration file from the network. This file configures your cable modem for the service level that you subscribe to. If this step fails, it could be because there is a problem with your account.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Security</td>
+  <td class='moto-content-value'><span id="MotoConnSecurityStatus"></span></td>
+  <td class='moto-content-value'><span id="MotoConnSecurityComment"></span></td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Security:<br>Finally, your cable modem exchanges tokens with your service provider to protect your Internet traffic. It is rare for this step to fail.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </table>
+</td>
+</tr>
+</table>
+
+<br>
+<br>
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Connection Status</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'>&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0'>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+  <td class='moto-content-value'><span id="MotoConnSystemUpTime"></span></td>
+  <td>&nbsp;</td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>System Up Time:<br>How long your cable modem has been connected to the Internet.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Network Access</td>
+  <td class='moto-content-value'><span id="MotoConnNetworkAccess"></span></td>
+  <td>&nbsp;</td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Network Access:<br>Network Access indicates whether your cable company lets you access the Internet. If you are connected but do not have access to the Internet, there may be a problem with your account.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </table>
+</td>
+</tr>
+</table>
+
+<br><br>
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Downstream Bonded Channels</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Downstream Bonded Channels:<br>Your cable modem is capable of connecting over multiple channels at the same time. When at least two channels are connected, this is called channel bonding. The Downstream Channel List shows the connection status of each channel, including indicators of connection quality. Channel bonding enables faster download speeds, and it also helps to smooth out spikes in traffic by spreading them across multiple channels.</span></a>&nbsp;&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td colspan=4>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0' id='MotoConnDownstreamChannel'>
+
+  </table>
+</td>
+</tr>
+</table>
+
+<br><br>
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Upstream Bonded Channels</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Upstream Bonded Channels:<br>Similar to downstream channel bonding, upstream channel bonding enables faster speeds. Upstream channel bonding also helps to smooth out spikes in traffic by spreading them across multiple channels. The Upstream Channel List shows the connection status of each bonded channel, including indicators of connection quality.</span></a>&nbsp;&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td colspan=4>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0' id='MotoConnUpstreamChannel'>
+
+  </table>
+</td>
+</tr>
+</table>
+
+<br><br>
+<table class="moto-table-title" cellspacing='0' cellpadding='0'>
+<tr>
+<td>
+  <table class='moto-table-content-title' cellspacing='0' cellpadding='0'>
+  <tr>
+<td class='moto-param-title'>&nbsp;&nbsp;&nbsp;Downstream Frequency Setting</td>
+<td class='moto-param-value'><img src="image/mototitle.jpg"/></td>
+<td class='moto-param-value'>&nbsp;</td>
+<td class='moto-param-help'>&nbsp;</td>
+</tr>
+  </table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing='0' cellpadding='0'>
+<tr>
+<td>&nbsp;&nbsp;&nbsp;Downstream Frequency Select</td>
+<td class='moto-content-value'><input type='text' id='MotoCmRescanTargetFreq' name="MotoCmRescanTargetFreq" size="15" maxlength="15" value=''></td>
+  <td class='moto-param-action'>
+  <input type='button' class='moto-change-button' name='' value='Save' onClick='Apply(0)'>&nbsp;&nbsp;
+  </td>
+  <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="image/motohelp.jpg"/><span>Downstream Frequency Setting:<br>If your service provider tells you to do so, enter a Downstream Frequency value here, in Hz.</span></a>&nbsp;&nbsp;</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0" style="display:none">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;LAG Enable/Disable</td>
+<td class="moto-param-value"><img src="image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>&nbsp;&nbsp;&nbsp;LAG(Link Aggregation Group, or Ethernet Port Bonding)</td>
+
+   <td>
+   	 <select style="display:none" name="MotoConnBondStatus" id="bond-status" size=1 value='2' onChange="bond_status_change();">
+		<option value=0>Disable</option>
+		<option value=1>Enable</option>
+	 </select>
+   </td>
+    
+   <td class="moto-param-action">
+  <input type="button" class="moto-change-button" name="" value="Save" onclick="lagstatuschange();">&nbsp;&nbsp;
+  </td>
+
+  <td class="moto-param-help"><a href="javascript:void(0);" class="tooltip"><img src="image/motohelp.jpg"><span>LAG Enable/Disable:<br>Enable LAG to bond two or more Ethernet (LAN) ports. Bonded ports allow you to achieve throughputs greater than 1 Gbps, if your service provider offers these speeds. To bond two ports, use LAN ports 1 & 2 on your MB8600.<br>
+  Note that you must connect the bonded ports to a device (typically a router or switch) that supports LAG. Do not enable LAG unless you have connected to a device that supports LAG.</span></a>&nbsp;&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody></table>
+<br><br>
+
+</form>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+
+<div id='moto-reboot-top' style='display:none'>
+	<table class='table-top' cellspacing='0' cellpadding='0' width='100%'>
+		<tr height='78px'>
+			<td width='112px' align='center'><img src='image/motolog.jpg' width='106px' height='78px'></td>
+			<td width='93px'>&nbsp;</td>
+			<td width='82px'>&nbsp;</td>
+			<td class='td-top-tail'>&nbsp;</td>
+		</tr>
+		<tr><td class='moto-reboot-title' colspan='4'>Rebooting...</td></tr>
+		<tr><td class='moto-reboot-msg' colspan='4'>Please wait 3 minutes, then click button to log in again.</td></tr>
+		<tr><td class='moto-reboot-msg' colspan='4' align='center'><input class="moto-long-button" type="button" value="Log in again" onclick="changeFlag=false;menuClick('Login')"></td></tr>
+	</table>
+</div>
+
+<div id='moto-apply-top'>
+</div>
+
+</body>
+</html>
