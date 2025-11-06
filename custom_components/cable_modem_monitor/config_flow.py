@@ -35,7 +35,49 @@ _LOGGER = logging.getLogger(__name__)
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
+    from urllib.parse import urlparse
+    import re
+
     host = data[CONF_HOST]
+
+    # Security: Validate host format to prevent injection attacks
+    if not host:
+        raise ValueError("Host cannot be empty")
+
+    # Validate host format (IP address, hostname, or URL)
+    host_clean = host.strip()
+
+    # Check for URL format
+    if host_clean.startswith(('http://', 'https://')):
+        try:
+            parsed = urlparse(host_clean)
+            if parsed.scheme not in ['http', 'https']:
+                raise ValueError("Only HTTP and HTTPS protocols are allowed")
+            if not parsed.netloc:
+                raise ValueError("Invalid URL format")
+            # Extract hostname for additional validation
+            hostname = parsed.hostname or parsed.netloc.split(':')[0]
+        except Exception as err:
+            raise ValueError(f"Invalid URL format: {err}")
+    else:
+        hostname = host_clean
+
+    # Validate hostname/IP format to prevent command injection
+    # Block shell metacharacters
+    invalid_chars = [';', '&', '|', '$', '`', '\n', '\r', '\t', '<', '>', '(', ')', '{', '}', '\\']
+    if any(char in hostname for char in invalid_chars):
+        raise ValueError("Invalid characters in host address")
+
+    # Validate format: IPv4, IPv6, or valid hostname
+    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+    ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
+    hostname_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+
+    if not (re.match(ipv4_pattern, hostname) or
+            re.match(ipv6_pattern, hostname) or
+            re.match(hostname_pattern, hostname)):
+        raise ValueError("Invalid host format. Must be a valid IP address or hostname")
+
     username = data.get(CONF_USERNAME)
     password = data.get(CONF_PASSWORD)
     modem_choice = data.get(CONF_MODEM_CHOICE)
@@ -117,8 +159,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
+            except (ValueError, TypeError) as err:
+                _LOGGER.error("Invalid input data: %s", err)
+                errors["base"] = "invalid_input"
+            except Exception as err:
+                # Log exception details for debugging, but sanitize error shown to user
+                _LOGGER.exception("Unexpected exception during validation")
                 errors["base"] = "unknown"
             else:
                 # Set unique ID to prevent duplicate entries
@@ -195,8 +241,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 info = await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
+            except (ValueError, TypeError) as err:
+                _LOGGER.error("Invalid input data in options flow: %s", err)
+                errors["base"] = "invalid_input"
+            except Exception as err:
+                # Log exception details for debugging, but sanitize error shown to user
+                _LOGGER.exception("Unexpected exception during options validation")
                 errors["base"] = "unknown"
             else:
 
