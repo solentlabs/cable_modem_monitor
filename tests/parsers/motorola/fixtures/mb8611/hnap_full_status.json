@@ -1,0 +1,35 @@
+{
+  "GetMultipleHNAPsResponse": {
+    "GetMotoStatusStartupSequenceResponse": {
+      "MotoConnDSFreq": "543000000 Hz",
+      "MotoConnDSComment": "Locked",
+      "MotoConnConnectivityStatus": "OK",
+      "MotoConnConnectivityComment": "Operational",
+      "MotoConnBootStatus": "OK",
+      "MotoConnBootComment": "Operational",
+      "MotoConnConfigurationFileStatus": "OK",
+      "MotoConnConfigurationFileComment": "",
+      "MotoConnSecurityStatus": "Enabled",
+      "MotoConnSecurityComment": "BPI+",
+      "GetMotoStatusStartupSequenceResult": "OK"
+    },
+    "GetMotoStatusConnectionInfoResponse": {
+      "MotoConnSystemUpTime": "47 days 21h:15m:38s",
+      "MotoConnNetworkAccess": "Allowed",
+      "GetMotoStatusConnectionInfoResult": "OK"
+    },
+    "GetMotoStatusDownstreamChannelInfoResponse": {
+      "MotoConnDownstreamChannel": "1^Locked^QAM256^20^543.0^ 1.4^45.1^41^0^|+|2^Locked^QAM256^1^429.0^ 1.3^45.4^26^0^|+|3^Locked^QAM256^2^435.0^ 1.5^45.4^11^0^|+|4^Locked^QAM256^3^441.0^ 1.7^45.4^12^0^|+|5^Locked^QAM256^4^447.0^ 2.1^45.7^20^0^|+|6^Locked^QAM256^5^453.0^ 2.3^45.8^19^0^|+|7^Locked^QAM256^6^459.0^ 2.3^45.8^34^0^|+|8^Locked^QAM256^7^465.0^ 2.3^45.8^26^0^|+|9^Locked^QAM256^8^471.0^ 2.0^45.8^26^0^|+|10^Locked^QAM256^9^477.0^ 2.1^45.4^18^0^|+|11^Locked^QAM256^10^483.0^ 2.2^45.5^47^0^|+|12^Locked^QAM256^11^489.0^ 2.3^45.7^114^0^|+|13^Locked^QAM256^12^495.0^ 2.5^45.7^67^0^|+|14^Locked^QAM256^13^501.0^ 2.6^45.8^23^0^|+|15^Locked^QAM256^14^507.0^ 2.6^46.0^26^0^|+|16^Locked^QAM256^15^513.0^ 2.4^46.0^47^0^|+|17^Locked^QAM256^16^519.0^ 1.9^45.6^52^0^|+|18^Locked^QAM256^17^525.0^ 1.7^45.4^43^0^|+|19^Locked^QAM256^18^531.0^ 1.4^45.3^31^0^|+|20^Locked^QAM256^19^537.0^ 1.3^45.1^38^0^|+|21^Locked^QAM256^21^549.0^ 1.6^45.0^31^0^|+|22^Locked^QAM256^22^555.0^ 1.7^45.3^28^0^|+|23^Locked^QAM256^23^561.0^ 1.8^45.3^29^0^|+|24^Locked^QAM256^24^567.0^ 1.9^45.3^13^0^|+|25^Locked^QAM256^25^573.0^ 1.6^45.2^32^0^|+|26^Locked^QAM256^26^579.0^ 1.7^45.2^35^0^|+|27^Locked^QAM256^27^585.0^ 1.5^45.1^30^0^|+|28^Locked^QAM256^28^591.0^ 1.5^44.1^30^0^|+|29^Locked^QAM256^29^597.0^ 1.7^44.9^39^0^|+|30^Locked^QAM256^30^603.0^ 1.6^45.1^18^0^|+|31^Locked^QAM256^31^609.0^ 1.7^45.0^0^0^|+|32^Locked^QAM256^32^615.0^ 1.6^45.1^0^0^|+|33^Locked^OFDM PLC^193^957.0^-4.1^41.1^936482395^23115^",
+      "GetMotoStatusDownstreamChannelInfoResult": "OK"
+    },
+    "GetMotoStatusUpstreamChannelInfoResponse": {
+      "MotoConnUpstreamChannel": "1^Locked^SC-QAM^17^5120^16.4^44.3^|+|2^Locked^SC-QAM^18^5120^22.8^44.3^|+|3^Locked^SC-QAM^19^5120^29.2^44.8^|+|4^Locked^SC-QAM^20^5120^35.6^45.5^",
+      "GetMotoStatusUpstreamChannelInfoResult": "OK"
+    },
+    "GetMotoLagStatusResponse": {
+      "MotoLagCurrentStatus": "0",
+      "GetMotoLagStatusResult": "OK"
+    },
+    "GetMultipleHNAPsResult": "OK"
+  }
+}
