@@ -7,31 +7,39 @@
 - Hardware Version: V1.0
 - Software Version: 8611-19.2.18
 - Serial: 2251-MB8611-30-1526
+- Protocol: HTTPS (port 443) with self-signed certificate
 
 ***REMOVED******REMOVED*** Files
 
 ***REMOVED******REMOVED******REMOVED*** HTML Pages (from web interface)
 
 1. **mb8611_login_page.txt**
+   - URL: `https://192.168.100.1/Login.html`
    - Login/authentication page
    - Shows HNAP JavaScript initialization
 
 2. **mb8611_landing_page.txt**
+   - URL: `https://192.168.100.1/MotoHome.html`
    - Main dashboard after login
    - Size: 8.5K
 
 3. **mb8611_connection_page.txt**
-   - Connection status page (likely contains channel data)
-   - Size: 26K (largest - probably has full channel tables)
+   - URL: `https://192.168.100.1/MotoStatusConnection.html`
+   - Connection status page (channel data)
+   - Size: 26K (largest - full channel tables)
    - Contains HNAP JavaScript references
 
 4. **mb8611_advanced_page.txt**
-   - Advanced settings page
+   - URL: `https://192.168.100.1/MotoStatusSoftware.html`
+   - Advanced settings/software page
    - Size: 6.7K
 
 5. **mb8611_event_log_page.txt**
+   - URL: `https://192.168.100.1/MotoStatusLog.html`
    - System event log
    - Size: 6.0K
+
+**Note:** User also mentioned `https://192.168.100.1/MotoStatusSecurity.html` for password reset/reboot/restart (not captured yet)
 
 ***REMOVED******REMOVED*** Notes
 
@@ -46,7 +54,8 @@
 
 ***REMOVED******REMOVED******REMOVED*** HNAP API Data (JSON format)
 
-6. **hnap_full_status.json** ✅ ADDED November 6, 2025
+6. **hnap_full_status.json** ✅ ADDED November 5, 2025
+   - URL: `POST https://192.168.100.1/HNAP1/`
    - Complete HNAP `GetMultipleHNAPs` response
    - Contains: Startup sequence, connection info, downstream/upstream channels
    - Format: JSON (HNAP uses JSON over HTTPS, not XML)
