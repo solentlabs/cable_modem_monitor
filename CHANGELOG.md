@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+***REMOVED******REMOVED*** [2.6.0] - TBD
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Health Monitoring System** - Dual-layer network diagnostics with 3 new sensors
+  - `sensor.cable_modem_health_status` - Overall health (healthy/degraded/icmp_blocked/unresponsive)
+  - `sensor.cable_modem_ping_latency` - ICMP ping response time in milliseconds
+  - `sensor.cable_modem_http_latency` - HTTP web server response time in milliseconds
+  - Runs on every coordinator poll (user-configurable 60-1800 seconds)
+  - HTTP check supports SSL self-signed certs, redirects, and HEAD→GET fallback
+- **XB7 System Information Enhancement** - New sensors for system details
+  - `sensor.cable_modem_system_uptime` - Human-readable uptime (e.g., "21 days 15h:20m:33s")
+  - `sensor.cable_modem_last_boot_time` - Calculated timestamp of last modem reboot
+  - `sensor.cable_modem_software_version` - Firmware/software version from modem
+  - Primary downstream channel detection (e.g., "Channel ID 10 is the Primary")
+- **Reset Entities Button** - Configuration button to reset all entities
+  - `button.cable_modem_reset_entities` - Removes all entities and reloads integration
+  - Preserves entity IDs and historical data (linked by entity_id)
+  - Useful after modem replacement or to fix entity registry issues
+  - Includes comprehensive documentation about HA storage architecture
+- **SSL Certificate Support (Planned)** - Support for HTTPS modems with self-signed certificates
+  - Adds `verify=False` to requests in modem_scraper.py
+  - Suppresses urllib3 SSL warnings
+  - Unblocks MB8611 and other HTTPS modems (Issue ***REMOVED***6)
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Improved Exception Handling** - Better timeout and connection error handling in XB7 parser
+  - Timeout errors logged at DEBUG level (reduces log noise during reboots)
+  - Connection errors logged at WARNING level
+  - Authentication errors logged at ERROR level
+  - Helps distinguish between network issues, modem reboots, and authentication problems
+
+***REMOVED******REMOVED******REMOVED*** Documentation
+- **TROUBLESHOOTING.md** - Comprehensive troubleshooting guide
+  - Connection and authentication issues
+  - Health monitoring diagnostic matrix
+  - Example automations for health alerts
+  - Timeout handling during modem reboots
+- **ARCHITECTURE_ROADMAP.md** - Updated with Phase 0 completion and v3.0 plans
+  - Complete implementation roadmap through v4.0
+  - Issue management policy
+  - Version targets and strategy
+
+***REMOVED******REMOVED******REMOVED*** Test Fixtures
+- **MB8611 Test Data** - Complete test fixtures for Motorola MB8611 (Issue ***REMOVED***4)
+  - HNAP JSON response with 33 downstream + 4 upstream channels
+  - HTML pages: Login, Home, Connection, Software, Event Log
+  - Ready for Phase 2 MB8611 parser implementation
+
+***REMOVED******REMOVED******REMOVED*** Technical Details
+- Health monitoring uses ModemHealthMonitor class in `core/health_monitor.py`
+- Health checks run async in parallel (ICMP + HTTP) during coordinator updates
+- XB7 parser enhancements use regex parsing for uptime and boot time calculation
+- Reset Entities button deletes entity registry entries but preserves recorder database
+- Integration maintains stable `unique_id` pattern: `{entry.entry_id}_cable_modem_{sensor_name}`
+
 ***REMOVED******REMOVED*** [2.5.0] - 2025-10-30
 
 ***REMOVED******REMOVED******REMOVED*** Fixed

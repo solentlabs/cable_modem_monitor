@@ -16,18 +16,17 @@ Transform Cable Modem Monitor from a code-based system to a **fully modular, dat
 
 | Version | Phases | Target Features | Status |
 |---------|--------|----------------|--------|
-| **v2.6.0** | Phase 0 | XB7 enhancements, Health monitoring, Reset button | 🎯 **Testing** |
-| **v2.6.1** | Patch | SSL certificate fix for MB8611/HTTPS modems (Issue ***REMOVED***6) | 🔴 **Critical Bug** |
-| v3.0.0-alpha | Phase 1 | Complete auth abstraction | After v2.6.1 |
+| **v2.6.0** | Phase 0 | XB7 enhancements, Health monitoring, Reset button, SSL fix | 📝 **Ready** |
+| v3.0.0-alpha | Phase 1 | Complete auth abstraction | After v2.6.0 |
 | v3.0.0-beta | Phase 2 | HNAP/SOAP, MB8611 parser, Netgear CM600 (Issue ***REMOVED***3) | After alpha |
 | v3.0.0 | Phase 3 | Enhanced discovery | **Major release** |
 | v4.0.0-alpha | Phase 4 | JSON configs (when needed) | If/when triggered |
 | v4.0.0 | Phase 5 | Config utility (if needed) | If/when triggered |
 
-**Current Focus:** Testing Phase 0 (v2.6.0), then v2.6.1 patch for SSL
+**Current Focus:** v2.6.0 ready for implementation
 
 **Version Strategy:**
-- **v2.6.0** = Quick wins (enhancements to existing features)
+- **v2.6.0** = Quick wins (Phase 0 + SSL fix for HTTPS modems)
 - **v3.0.0** = Major refactor (Phases 1-3: auth abstraction, HNAP, discovery)
 - **v4.0.0** = Data-driven platform (if/when needed)
 
@@ -362,38 +361,31 @@ flowchart TD
 
 This section shows where EVERY planned feature fits into the roadmap.
 
-***REMOVED******REMOVED******REMOVED*** Phase 0: Quick Wins (Can Do Now)
+***REMOVED******REMOVED******REMOVED*** Phase 0: Quick Wins + SSL Fix (v2.6.0)
 
 | Feature | Effort | Status | User Value |
 |---------|--------|--------|------------|
 | **XB7 Support** | N/A | ✅ Done (v2.5.0) | High - Community request |
-| **XB7 System Info Enhancement** | **2-3 hours** | **✅ Deployed** | **High - Complete Issue ***REMOVED***2** |
+| **XB7 System Info Enhancement** | **2-3 hours** | **✅ Complete** | **High - Complete Issue ***REMOVED***2** |
 | **Timeout/Logging + Health Monitor** | **3-4 hours** | **✅ Complete** | **High - Complete Issue ***REMOVED***5 + Diagnostics** |
 | **Reset Entities Button** | 1-2 hours | ✅ Complete | High - Modem replacement |
+| **SSL Certificate Fix** | **1 hour** | **📝 Planned** | **Critical - Unblocks MB8611 (Issue ***REMOVED***6)** |
 | Documentation improvements | 2-3 hours | ✅ Complete | Medium - Support burden |
 | Troubleshooting guide | 2-3 hours | ✅ Complete | High - User self-service |
 
-**Status:** Phase 0 fully complete (v2.6.0)
-**Note:** Health monitoring integration completed Nov 6 - coordinator now runs dual-layer diagnostics (ICMP + HTTP) with 3 diagnostic sensors:
-- Health Status (healthy/degraded/icmp_blocked/unresponsive)
-- Ping Latency (ms)
-- HTTP Latency (ms)
+**Status:** Phase 0 complete, SSL fix planned for v2.6.0
 
----
+**Health Monitoring (Complete):**
+- Dual-layer diagnostics (ICMP + HTTP) with 3 sensors:
+  - Health Status (healthy/degraded/icmp_blocked/unresponsive)
+  - Ping Latency (ms)
+  - HTTP Latency (ms)
 
-***REMOVED******REMOVED******REMOVED*** v2.6.1 Patch: SSL Certificate Fix (Critical Bug)
-
-| Feature | Effort | Status | User Impact |
-|---------|--------|--------|-------------|
-| **SSL Verification Bypass** | **1 hour** | **Planned** | **Critical - Unblocks MB8611 (Issue ***REMOVED***6)** |
-| urllib3 warning suppression | 30 min | Planned | Clean logs |
-| HTTPS modem testing | 1 hour | Needed | Verify fix works |
-| Documentation update | 30 min | Planned | Explain HTTPS support |
-
-**Problem:** MB8611 and other HTTPS modems fail with SSL certificate verification errors
-**Root Cause:** Self-signed certificates on modem web interfaces
-**Solution:** Add `verify=False` to requests in modem_scraper.py
-**Deliverable:** v2.6.1 - Quick patch release after v2.6.0 testing
+**SSL Fix (Planned for v2.6.0):**
+- **Problem:** MB8611 and other HTTPS modems fail with SSL certificate verification errors
+- **Root Cause:** Self-signed certificates on modem web interfaces
+- **Solution:** Add `verify=False` to requests in modem_scraper.py + urllib3 warning suppression
+- **Impact:** Unblocks HTTPS modems (MB8611, others)
 
 ---
 
