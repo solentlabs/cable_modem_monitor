@@ -1,10 +1,14 @@
 """Web scraper for cable modem data."""
 import logging
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 from typing import List, Type
 
 from ..parsers.base_parser import ModemParser
+
+# Disable SSL warnings for self-signed certificates (common on cable modems)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +29,7 @@ class ModemScraper:
         Initialize the modem scraper.
 
         Args:
-            host: Modem IP address
+            host: Modem IP address (or full URL with http:// or https://)
             username: Optional login username
             password: Optional login password
             parser: Either a single parser instance, a parser class, or list of parser classes
@@ -33,7 +37,12 @@ class ModemScraper:
             parser_name: Name of cached parser to use (skips auto-detection)
         """
         self.host = host
-        self.base_url = f"http://{host}"
+        # Support both plain IP addresses and full URLs (http:// or https://)
+        if host.startswith(('http://', 'https://')):
+            self.base_url = host.rstrip('/')
+        else:
+            # Try HTTPS first (MB8611 and newer modems), fallback to HTTP
+            self.base_url = f"https://{host}"
         self.username = username
         self.password = password
         self.session = requests.Session()
@@ -142,6 +151,7 @@ class ModemScraper:
     def _fetch_data(self) -> tuple[str, str, Type[ModemParser]] | None:
         """
         Fetch data from the modem using parser-defined URL patterns.
+        Automatically tries both HTTPS and HTTP protocols.
 
         Returns:
             tuple of (html, successful_url, parser_class) or None if failed
@@ -152,27 +162,39 @@ class ModemScraper:
             _LOGGER.error("No URL patterns available to try")
             return None
 
-        for url, auth_method, parser_class in urls_to_try:
-            try:
-                _LOGGER.debug(f"Attempting to fetch {url} (auth: {auth_method}, parser: {parser_class.name if parser_class else 'unknown'})")
-                auth = None
-                if auth_method == 'basic' and self.username and self.password:
-                    auth = (self.username, self.password)
+        # Try HTTPS first, then HTTP fallback for each URL
+        protocols_to_try = ['https', 'http'] if self.base_url.startswith('https://') else ['http']
 
-                response = self.session.get(url, timeout=10, auth=auth)
+        for protocol in protocols_to_try:
+            current_base_url = self.base_url.replace('https://', f'{protocol}://').replace('http://', f'{protocol}://')
 
-                if response.status_code == 200:
-                    _LOGGER.info(
-                        f"Successfully connected to {url} "
-                        f"(HTML: {len(response.text)} bytes, parser: {parser_class.name if parser_class else 'unknown'})"
-                    )
-                    self.last_successful_url = url
-                    return response.text, url, parser_class
-                else:
-                    _LOGGER.debug(f"Got status {response.status_code} from {url}")
-            except requests.RequestException as e:
-                _LOGGER.debug(f"Failed to fetch from {url}: {type(e).__name__}: {e}")
-                continue
+            for url, auth_method, parser_class in urls_to_try:
+                # Replace protocol in URL to match current attempt
+                url = url.replace(self.base_url, current_base_url)
+
+                try:
+                    _LOGGER.debug(f"Attempting to fetch {url} (auth: {auth_method}, parser: {parser_class.name if parser_class else 'unknown'})")
+                    auth = None
+                    if auth_method == 'basic' and self.username and self.password:
+                        auth = (self.username, self.password)
+
+                    # Use verify=False to accept self-signed SSL certificates (common on cable modems)
+                    response = self.session.get(url, timeout=10, auth=auth, verify=False)
+
+                    if response.status_code == 200:
+                        _LOGGER.info(
+                            f"Successfully connected to {url} "
+                            f"(HTML: {len(response.text)} bytes, parser: {parser_class.name if parser_class else 'unknown'})"
+                        )
+                        self.last_successful_url = url
+                        # Update base_url to the working protocol
+                        self.base_url = current_base_url
+                        return response.text, url, parser_class
+                    else:
+                        _LOGGER.debug(f"Got status {response.status_code} from {url}")
+                except requests.RequestException as e:
+                    _LOGGER.debug(f"Failed to fetch from {url}: {type(e).__name__}: {e}")
+                    continue
 
         return None
 

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.6.0] - TBD
+## [2.6.0] - 2025-11-06
 
 ### Added
 - **Health Monitoring System** - Dual-layer network diagnostics with 3 new sensors
@@ -24,9 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preserves entity IDs and historical data (linked by entity_id)
   - Useful after modem replacement or to fix entity registry issues
   - Includes comprehensive documentation about HA storage architecture
-- **SSL Certificate Support (Planned)** - Support for HTTPS modems with self-signed certificates
+- **SSL Certificate Support** - Support for HTTPS modems with self-signed certificates
   - Adds `verify=False` to requests in modem_scraper.py
   - Suppresses urllib3 SSL warnings
+  - Automatic HTTPS/HTTP protocol detection with fallback
   - Unblocks MB8611 and other HTTPS modems (Issue #6)
 
 ### Changed

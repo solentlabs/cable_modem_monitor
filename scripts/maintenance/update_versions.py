@@ -11,7 +11,7 @@ from pathlib import Path
 def get_version_from_const() -> str:
     """Reads the VERSION constant from const.py without importing the file."""
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    project_root = os.path.abspath(os.path.join(script_dir, '..'))
+    project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
     const_file_path = os.path.join(project_root, 'custom_components', 'cable_modem_monitor', 'const.py')
 
     with open(const_file_path, 'r') as f:
@@ -42,7 +42,7 @@ def update_json_file(file_path: str, version: str) -> None:
 def main() -> None:
     """Main function to update version numbers."""
     version = get_version_from_const()
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
     print(f"Syncing to version {version} from const.py...")
 

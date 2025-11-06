@@ -11,6 +11,6 @@
   "requirements": [
     "beautifulsoup4==4.12.2"
   ],
-  "version": "2.5.0",
+  "version": "2.6.0",
   "integration_type": "device"
 }

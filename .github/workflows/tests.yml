@@ -82,4 +82,35 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
-          ignore: brands  # Brands submission is optional
+
+  version-check:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate version consistency
+        run: |
+          # Get version from const.py
+          VERSION_CONST=$(python -c "import sys; sys.path.insert(0, 'custom_components/cable_modem_monitor'); from const import VERSION; print(VERSION)")
+
+          # Get version from manifest.json
+          VERSION_MANIFEST=$(python -c "import json; print(json.load(open('custom_components/cable_modem_monitor/manifest.json'))['version'])")
+
+          echo "const.py version: $VERSION_CONST"
+          echo "manifest.json version: $VERSION_MANIFEST"
+
+          if [ "$VERSION_CONST" != "$VERSION_MANIFEST" ]; then
+            echo "❌ Version mismatch detected!"
+            echo "Please run: python scripts/maintenance/update_versions.py"
+            exit 1
+          fi
+
+          echo "✅ All versions match: $VERSION_CONST"
