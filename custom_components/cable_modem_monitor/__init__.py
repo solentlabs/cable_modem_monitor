@@ -130,7 +130,7 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
 
     # Perform migrations
     if migrations:
-        _LOGGER.info(f"Migrating {len(migrations)} entity IDs to v2.0 naming scheme")
+        _LOGGER.info("Migrating %d entity IDs to v2.0 naming scheme", len(migrations))
 
         for entity_entry, old_entity_id, new_entity_id in migrations:
             try:
@@ -138,9 +138,10 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
                 existing_entity = entity_reg.async_get(new_entity_id)
                 if existing_entity and existing_entity.platform != DOMAIN:
                     _LOGGER.warning(
-                        f"Cannot migrate {old_entity_id} -> {new_entity_id}: "
-                        f"Target entity ID already exists (platform: {existing_entity.platform}). "
-                        f"Skipping migration for this entity."
+                        "Cannot migrate %s -> %s: "
+                        "Target entity ID already exists (platform: %s). "
+                        "Skipping migration for this entity.",
+                        old_entity_id, new_entity_id, existing_entity.platform
                     )
                     continue
 
@@ -148,9 +149,9 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
                     entity_entry.entity_id,
                     new_entity_id=new_entity_id
                 )
-                _LOGGER.info(f"Migrated {old_entity_id} -> {new_entity_id}")
+                _LOGGER.info("Migrated %s -> %s", old_entity_id, new_entity_id)
             except Exception as e:
-                _LOGGER.error(f"Failed to migrate {old_entity_id}: {e}")
+                _LOGGER.error("Failed to migrate %s: %s", old_entity_id, e)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -168,7 +169,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if removed_keys:
         hass.config_entries.async_update_entry(entry, data=new_data)
-        _LOGGER.info(f"Removed deprecated config keys: {removed_keys}")
+        _LOGGER.info("Removed deprecated config keys: %s", removed_keys)
 
     # Migrate entity IDs to v2.0 naming scheme
     await async_migrate_entity_ids(hass, entry)
@@ -196,10 +197,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for parser_class in parsers:
             if parser_class.name == modem_choice:
                 selected_parser = parser_class()  # Instantiate the selected parser
-                _LOGGER.info(f"Using user-selected parser: {selected_parser.name}")
+                _LOGGER.info("Using user-selected parser: %s", selected_parser.name)
                 break
         if not selected_parser:
-            _LOGGER.warning(f"User selected parser '{modem_choice}' not found, falling back to auto")
+            _LOGGER.warning("User selected parser '%s' not found, falling back to auto", modem_choice)
     else:
         # Tier 2/3: Auto mode - use cached parser name if available
         parser_name_for_tier2 = parser_name
@@ -274,7 +275,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
         model=entry.data.get("detected_modem", "Cable Modem Monitor"),
     )
-    _LOGGER.debug(f"Updated device registry: manufacturer={entry.data.get('detected_manufacturer')}, model={entry.data.get('detected_modem')}")
+    _LOGGER.debug("Updated device registry: manufacturer=%s, model=%s",
+                  entry.data.get('detected_manufacturer'), entry.data.get('detected_modem'))
 
     # Register update listener to handle options changes
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -285,7 +287,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         from homeassistant.helpers import entity_registry as er
 
         days_to_keep = call.data.get("days_to_keep", 30)
-        _LOGGER.info(f"Clearing cable modem history older than {days_to_keep} days")
+        _LOGGER.info("Clearing cable modem history older than %s days", days_to_keep)
 
         # Get entity registry
         entity_reg = er.async_get(hass)
@@ -300,7 +302,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("No cable modem entities found in registry")
             return
 
-        _LOGGER.info(f"Found {len(cable_modem_entities)} cable modem entities to purge")
+        _LOGGER.info("Found %s cable modem entities to purge", len(cable_modem_entities))
 
         # Use Home Assistant's official recorder purge service
         def clear_db_history():
@@ -316,11 +318,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 cursor = conn.cursor()
 
                 # Find metadata IDs for our entities
+                # Security: Using parameterized query with ? placeholders (not user input)
+                # The placeholders string only contains "?" characters, values are passed separately
                 placeholders = ",".join("?" * len(cable_modem_entities))
-                cursor.execute(
-                    f"SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN ({placeholders})",
-                    cable_modem_entities
-                )
+                query = "SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN (" + placeholders + ")"  # nosec B608
+                cursor.execute(query, cable_modem_entities)
 
                 metadata_ids = [row[0] for row in cursor.fetchall()]
 
@@ -330,37 +332,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     return 0
 
                 # Delete old states
+                # Security: Using parameterized query with ? placeholders (not user input)
+                # The placeholders string only contains "?" characters, values are passed separately
                 placeholders = ",".join("?" * len(metadata_ids))
                 query = (
-                    f"DELETE FROM states WHERE metadata_id IN ({placeholders}) "
-                    f"AND last_updated_ts < ?"
+                    "DELETE FROM states WHERE metadata_id IN (" + placeholders + ") "  # nosec B608
+                    "AND last_updated_ts < ?"
                 )
                 cursor.execute(query, (*metadata_ids, cutoff_ts))
                 states_deleted = cursor.rowcount
 
                 # Find statistics metadata IDs using entity_id list from registry
-                # Use parameterized query to safely match entity IDs
+                # Security: Using parameterized query with ? placeholders (not user input)
+                # The placeholders string only contains "?" characters, values are passed separately
                 placeholders = ",".join("?" * len(cable_modem_entities))
-                stats_query = f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"
+                stats_query = "SELECT id FROM statistics_meta WHERE statistic_id IN (" + placeholders + ")"  # nosec B608
                 cursor.execute(stats_query, cable_modem_entities)
 
                 stats_metadata_ids = [row[0] for row in cursor.fetchall()]
 
                 # Delete old statistics
+                # Security: Using parameterized queries with ? placeholders (not user input)
+                # The placeholders string only contains "?" characters, values are passed separately
                 stats_deleted = 0
                 if stats_metadata_ids:
                     placeholders = ",".join("?" * len(stats_metadata_ids))
 
                     query = (
-                        f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) "
-                        f"AND start_ts < ?"
+                        "DELETE FROM statistics WHERE metadata_id IN (" + placeholders + ") "  # nosec B608
+                        "AND start_ts < ?"
                     )
                     cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
                     stats_deleted = cursor.rowcount
 
                     query_short = (
-                        f"DELETE FROM statistics_short_term "
-                        f"WHERE metadata_id IN ({placeholders}) AND start_ts < ?"
+                        "DELETE FROM statistics_short_term "  # nosec B608
+                        "WHERE metadata_id IN (" + placeholders + ") AND start_ts < ?"
                     )
                     cursor.execute(query_short, (*stats_metadata_ids, cutoff_ts))
                     stats_deleted += cursor.rowcount
@@ -373,22 +380,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 conn.close()
 
                 _LOGGER.info(
-                    f"Cleared {states_deleted} state records and "
-                    f"{stats_deleted} statistics records "
-                    f"older than {days_to_keep} days"
+                    "Cleared %d state records and %d statistics records older than %d days",
+                    states_deleted, stats_deleted, days_to_keep
                 )
 
                 return states_deleted + stats_deleted
 
             except Exception as e:
-                _LOGGER.error(f"Error clearing history: {e}")
+                _LOGGER.error("Error clearing history: %s", e)
                 return 0
 
         # Run in executor since it's blocking I/O
         deleted = await hass.async_add_executor_job(clear_db_history)
 
         if deleted > 0:
-            _LOGGER.info(f"Successfully cleared {deleted} historical records")
+            _LOGGER.info("Successfully cleared %s historical records", deleted)
         else:
             _LOGGER.warning("No records were deleted")
 
@@ -426,12 +432,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entity_entry in orphaned:
             try:
                 entity_reg.async_remove(entity_entry.entity_id)
-                _LOGGER.debug(f"Removed orphaned entity: {entity_entry.entity_id}")
+                _LOGGER.debug("Removed orphaned entity: %s", entity_entry.entity_id)
                 removed_count += 1
             except Exception as e:
-                _LOGGER.error(f"Failed to remove {entity_entry.entity_id}: {e}")
+                _LOGGER.error("Failed to remove %s: %s", entity_entry.entity_id, e)
 
-        _LOGGER.info(f"Successfully removed {removed_count} orphaned entities")
+        _LOGGER.info("Successfully removed %s orphaned entities", removed_count)
 
     # Register the services only once (check if they're already registered)
     if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_HISTORY):

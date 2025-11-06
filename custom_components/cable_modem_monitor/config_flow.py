@@ -96,7 +96,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         for parser_class in all_parsers:
             if parser_class.name == modem_choice:
                 selected_parser = parser_class()  # Instantiate the parser
-                _LOGGER.info(f"User selected parser: {selected_parser.name}")
+                _LOGGER.info("User selected parser: %s", selected_parser.name)
                 break
     else:
         # Tier 2/3: Auto mode - use cached parser name if available
@@ -115,7 +115,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     try:
         modem_data = await hass.async_add_executor_job(scraper.get_modem_data)
     except Exception as err:
-        _LOGGER.error(f"Error connecting to modem: {err}")
+        _LOGGER.error("Error connecting to modem: %s", err)
         raise CannotConnect from err
 
     if modem_data.get("cable_modem_connection_status") in ["offline", "unreachable"]:
@@ -300,7 +300,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 from datetime import datetime
                 dt = datetime.fromisoformat(last_detection)
                 last_detection = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except Exception:
+            except (ValueError, TypeError):
+                # Invalid datetime format, keep original string
                 pass
 
         from homeassistant.helpers import selector

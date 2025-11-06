@@ -138,7 +138,7 @@ class ModemRestartButton(ModemButtonBase):
         try:
             # Set fast polling (10 seconds)
             self.coordinator.update_interval = timedelta(seconds=10)
-            _LOGGER.debug(f"Set polling interval to 10s (original: {original_interval})")
+            _LOGGER.debug("Set polling interval to 10s (original: %s)", original_interval)
 
             # Wait 5 seconds for modem to go offline
             await asyncio.sleep(5)
@@ -164,18 +164,18 @@ class ModemRestartButton(ModemButtonBase):
                     # If we have valid data and last_update_success is True, modem is responding
                     if self.coordinator.last_update_success and self.coordinator.data:
                         status = self.coordinator.data.get("cable_modem_connection_status")
-                        _LOGGER.info(f"Modem responding after {elapsed_time}s (status: {status})")
+                        _LOGGER.info("Modem responding after %ss (status: {status})", elapsed_time)
                         modem_responding = True
                         break
                     else:
-                        _LOGGER.debug(f"Modem not responding yet after {elapsed_time}s")
+                        _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
                 except Exception as e:
-                    _LOGGER.debug(f"Error during phase 1 monitoring: {e}")
+                    _LOGGER.debug("Error during phase 1 monitoring: %s", e)
                     await asyncio.sleep(10)
                     elapsed_time += 10
 
             if not modem_responding:
-                _LOGGER.error(f"Phase 1 failed: Modem did not respond after {phase1_max_wait}s")
+                _LOGGER.error("Phase 1 failed: Modem did not respond after %ss", phase1_max_wait)
                 await self.hass.services.async_call(
                     "persistent_notification",
                     "create",
@@ -210,14 +210,14 @@ class ModemRestartButton(ModemButtonBase):
                     # Check if modem has channels (fully online)
                     if self.coordinator.data.get("cable_modem_connection_status") == "online":
                         modem_fully_online = True
-                        _LOGGER.info(f"Modem fully online with channels after {total_elapsed}s total")
+                        _LOGGER.info("Modem fully online with channels after %ss total", total_elapsed)
                         break
                     else:
                         downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
                         upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-                        _LOGGER.debug(f"Phase 2: {phase2_elapsed}s - Channels: {downstream_count} down, {upstream_count} up")
+                        _LOGGER.debug("Phase 2: %ss - Channels: {downstream_count} down, {upstream_count} up", phase2_elapsed)
                 except Exception as e:
-                    _LOGGER.debug(f"Error during phase 2 monitoring: {e}")
+                    _LOGGER.debug("Error during phase 2 monitoring: %s", e)
                     await asyncio.sleep(10)
                     phase2_elapsed += 10
 
@@ -247,11 +247,11 @@ class ModemRestartButton(ModemButtonBase):
                 )
 
         except Exception as e:
-            _LOGGER.error(f"Critical error in restart monitoring: {e}")
+            _LOGGER.error("Critical error in restart monitoring: %s", e)
         finally:
             # ALWAYS restore original polling interval, even if there's an error
             self.coordinator.update_interval = original_interval
-            _LOGGER.info(f"Restored polling interval to {original_interval}")
+            _LOGGER.info("Restored polling interval to %s", original_interval)
             # Force one final refresh with restored interval
             await self.coordinator.async_request_refresh()
 
@@ -390,12 +390,12 @@ class ResetEntitiesButton(ModemButtonBase):
             if entity_entry.platform == DOMAIN and entity_entry.config_entry_id == self._entry.entry_id
         ]
 
-        _LOGGER.info(f"Found {len(entities_to_remove)} entities to remove")
+        _LOGGER.info("Found %s entities to remove", len(entities_to_remove))
 
         # Remove all entities
         for entity_id in entities_to_remove:
             entity_reg.async_remove(entity_id)
-            _LOGGER.debug(f"Removed entity: {entity_id}")
+            _LOGGER.debug("Removed entity: %s", entity_id)
 
         # Reload integration (recreates entities)
         _LOGGER.info("Reloading integration to recreate entities")

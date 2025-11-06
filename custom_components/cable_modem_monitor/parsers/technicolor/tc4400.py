@@ -57,7 +57,7 @@ class TechnicolorTC4400Parser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug(f"TC4400 Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+        _LOGGER.debug("TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
 
         channels = []
         try:
@@ -91,7 +91,7 @@ class TechnicolorTC4400Parser(ModemParser):
                     }
                     channels.append(channel_data)
         except Exception as e:
-            _LOGGER.error(f"Error parsing TC4400 downstream channels: {e}")
+            _LOGGER.error("Error parsing TC4400 downstream channels: %s", e)
 
         return channels
 
@@ -103,7 +103,7 @@ class TechnicolorTC4400Parser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug(f"TC4400 Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+        _LOGGER.debug("TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
 
         channels = []
         try:
@@ -129,7 +129,7 @@ class TechnicolorTC4400Parser(ModemParser):
                     }
                     channels.append(channel_data)
         except Exception as e:
-            _LOGGER.error(f"Error parsing TC4400 upstream channels: {e}")
+            _LOGGER.error("Error parsing TC4400 upstream channels: %s", e)
 
         return channels
 
@@ -170,7 +170,7 @@ class TechnicolorTC4400Parser(ModemParser):
                         if value_cell:
                             info["serial_number"] = value_cell.text.strip()
         except Exception as e:
-            _LOGGER.error(f"Error parsing TC4400 system info: {e}")
+            _LOGGER.error("Error parsing TC4400 system info: %s", e)
 
         return info
 

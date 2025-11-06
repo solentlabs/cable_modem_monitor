@@ -64,11 +64,11 @@ class MotorolaGenericParser(ModemParser):
             }
             pwd_type = "plain" if attempt == 1 else "Base64-encoded"
             # Security: Do not log usernames or any credential information
-            _LOGGER.info(f"Attempting login to {login_url} (password encoding: {pwd_type})")
+            _LOGGER.info("Attempting login to %s (password encoding: {pwd_type})", login_url)
 
             # Security: Disable auto-redirects and validate manually
             response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
-            _LOGGER.debug(f"Login response: status={response.status_code}, url={response.url}")
+            _LOGGER.debug("Login response: status=%s, url={response.url}", response.status_code)
 
             # Security check: Validate redirect stayed on same host
             from urllib.parse import urlparse
@@ -76,15 +76,15 @@ class MotorolaGenericParser(ModemParser):
                 response_parsed = urlparse(response.url)
                 login_parsed = urlparse(login_url)
                 if response_parsed.hostname != login_parsed.hostname:
-                    _LOGGER.error(f"Motorola: Security violation - redirect to different host: {response.url}")
+                    _LOGGER.error("Motorola: Security violation - redirect to different host: %s", response.url)
                     return False, None
 
             test_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
-            _LOGGER.debug(f"Login verification: test page status={test_response.status_code}, length={len(test_response.text)}")
+            _LOGGER.debug("Login verification: test page status=%s, length={len(test_response.text)}", test_response.status_code)
 
             # Check for successful authentication - look for actual content, not login page
             if test_response.status_code == 200 and len(test_response.text) > 10000:
-                _LOGGER.info(f"Login successful using {pwd_type} password (got {len(test_response.text)} bytes)")
+                _LOGGER.info("Login successful using %s password (got {len(test_response.text)} bytes)", pwd_type)
                 return True, test_response.text
 
         _LOGGER.error("Login failed with both plain and Base64-encoded passwords")
@@ -104,14 +104,14 @@ class MotorolaGenericParser(ModemParser):
                     home_soup = BeautifulSoup(home_response.text, "html.parser")
                     home_info = self._parse_system_info(home_soup)
                     system_info.update(home_info)
-                    _LOGGER.debug(f"Fetched system info from MotoHome.asp: {home_info}")
+                    _LOGGER.debug("Fetched system info from MotoHome.asp: %s", home_info)
             except Exception as e:
-                _LOGGER.error(f"Failed to fetch system info from MotoHome.asp: {e}")
+                _LOGGER.error("Failed to fetch system info from MotoHome.asp: %s", e)
 
         downstream_channels = self._parse_downstream(soup, system_info)
         upstream_channels = self._parse_upstream(soup, system_info)
 
-        _LOGGER.debug(f"Final system_info being returned: {system_info}")
+        _LOGGER.debug("Final system_info being returned: %s", system_info)
         return {
             "downstream": downstream_channels,
             "upstream": upstream_channels,
@@ -124,20 +124,20 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug(f"Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+        _LOGGER.debug("Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
 
         channels = []
         try:
             tables_found = soup.find_all("table", class_="moto-table-content")
-            _LOGGER.debug(f"Found {len(tables_found)} tables with class 'moto-table-content'")
+            _LOGGER.debug("Found %s tables with class 'moto-table-content'", len(tables_found))
 
             for table in tables_found:
                 headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
-                _LOGGER.debug(f"Table headers found: {headers}")
+                _LOGGER.debug("Table headers found: %s", headers)
 
                 if any("Pwr" in h for h in headers) and any("SNR" in h for h in headers):
                     rows = table.find_all("tr")[1:]
-                    _LOGGER.debug(f"Found downstream table with {len(rows)} rows")
+                    _LOGGER.debug("Found downstream table with %s rows", len(rows))
 
                     for row in rows:
                         cols = row.find_all("td")
@@ -145,7 +145,7 @@ class MotorolaGenericParser(ModemParser):
                             try:
                                 channel_id = extract_number(cols[0].text)
                                 if channel_id is None:
-                                    _LOGGER.debug(f"Skipping row - could not extract channel_id from: {cols[0].text}")
+                                    _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[0].text)
                                     continue
 
                                 freq_mhz = extract_float(cols[4].text)
@@ -153,7 +153,7 @@ class MotorolaGenericParser(ModemParser):
                                 
                                 power = extract_float(cols[5].text)
                                 snr = extract_float(cols[6].text)
-                                _LOGGER.debug(f"Ch {channel_id}: Raw Power={power}, Raw SNR={snr}")
+                                _LOGGER.debug("Ch %s: Raw Power={power}, Raw SNR={snr}", channel_id)
 
                                 # During restart window, filter out zero values which are typically invalid
                                 if is_restarting:
@@ -171,16 +171,16 @@ class MotorolaGenericParser(ModemParser):
                                     "uncorrected": extract_number(cols[8].text),
                                     "modulation": cols[2].text.strip(),
                                 }
-                                _LOGGER.debug(f"Parsed downstream channel: {channel_data}")
+                                _LOGGER.debug("Parsed downstream channel: %s", channel_data)
                                 channels.append(channel_data)
                             except Exception as e:
-                                _LOGGER.error(f"Error parsing downstream channel row: {e}")
+                                _LOGGER.error("Error parsing downstream channel row: %s", e)
                                 continue
                     break
         except Exception as e:
-            _LOGGER.error(f"Error parsing downstream channels: {e}")
+            _LOGGER.error("Error parsing downstream channels: %s", e)
 
-        _LOGGER.info(f"Parsed {len(channels)} downstream channels")
+        _LOGGER.info("Parsed %s downstream channels", len(channels))
         return channels
 
     def _parse_upstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
@@ -189,33 +189,33 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug(f"Uptime: {system_info.get('system_uptime')}, Seconds: {uptime_seconds}, Restarting: {is_restarting}")
+        _LOGGER.debug("Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
         channels = []
         try:
             for table in soup.find_all("table", class_="moto-table-content"):
                 headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
                 if any("Symb. Rate" in h for h in headers):
                     rows = table.find_all("tr")[1:]
-                    _LOGGER.debug(f"Found upstream table with {len(rows)} rows")
+                    _LOGGER.debug("Found upstream table with %s rows", len(rows))
                     for row in rows:
                         cols = row.find_all("td")
                         if len(cols) >= 7:
                             try:
                                 channel_id = extract_number(cols[0].text)
                                 if channel_id is None:
-                                    _LOGGER.debug(f"Skipping row - could not extract channel_id from: {cols[0].text}")
+                                    _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[0].text)
                                     continue
 
                                 lock_status = cols[1].text.strip()
                                 if "not locked" in lock_status.lower():
-                                    _LOGGER.debug(f"Skipping channel {channel_id} - not locked (status: {lock_status})")
+                                    _LOGGER.debug("Skipping channel %s - not locked (status: {lock_status})", channel_id)
                                     continue
 
                                 freq_mhz = extract_float(cols[5].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
 
                                 power = extract_float(cols[6].text)
-                                _LOGGER.debug(f"Ch {channel_id}: Raw Power={power}")
+                                _LOGGER.debug("Ch %s: Raw Power={power}", channel_id)
 
                                 # During restart window, filter out zero power which is typically invalid
                                 if is_restarting and power == 0:
@@ -227,16 +227,16 @@ class MotorolaGenericParser(ModemParser):
                                     "power": power,
                                     "modulation": cols[2].text.strip(),
                                 }
-                                _LOGGER.debug(f"Parsed upstream channel: {channel_data}")
+                                _LOGGER.debug("Parsed upstream channel: %s", channel_data)
                                 channels.append(channel_data)
                             except Exception as e:
-                                _LOGGER.error(f"Error parsing upstream channel row: {e}")
+                                _LOGGER.error("Error parsing upstream channel row: %s", e)
                                 continue
                     break
         except Exception as e:
-            _LOGGER.error(f"Error parsing upstream channels: {e}")
+            _LOGGER.error("Error parsing upstream channels: %s", e)
 
-        _LOGGER.info(f"Parsed {len(channels)} upstream channels")
+        _LOGGER.info("Parsed %s upstream channels", len(channels))
         return channels
 
     def _parse_system_info(self, soup: BeautifulSoup) -> dict:
@@ -253,11 +253,11 @@ class MotorolaGenericParser(ModemParser):
             uptime_tag = soup.find("td", text=lambda t: t and "System Up Time" in t)
             if uptime_tag:
                 info["system_uptime"] = uptime_tag.find_next_sibling("td").text.strip()
-                _LOGGER.debug(f"Found uptime: {info['system_uptime']}")
+                _LOGGER.debug("Found uptime: %s", info['system_uptime'])
             else:
                 _LOGGER.debug("System Up Time tag not found in HTML")
         except Exception as e:
-            _LOGGER.error(f"Error parsing system info: {e}")
+            _LOGGER.error("Error parsing system info: %s", e)
 
         return info
 
@@ -266,16 +266,16 @@ class MotorolaGenericParser(ModemParser):
         try:
             # First, access the security page to ensure we're authenticated
             security_url = f"{base_url}/MotoSecurity.asp"
-            _LOGGER.debug(f"Accessing security page: {security_url}")
+            _LOGGER.debug("Accessing security page: %s", security_url)
             security_response = session.get(security_url, timeout=10)
 
             if security_response.status_code != 200:
-                _LOGGER.error(f"Failed to access security page: {security_response.status_code}")
+                _LOGGER.error("Failed to access security page: %s", security_response.status_code)
                 return False
 
             # Now send the restart command to the correct endpoint
             restart_url = f"{base_url}/goform/MotoSecurity"
-            _LOGGER.info(f"Sending restart command to {restart_url}")
+            _LOGGER.info("Sending restart command to %s", restart_url)
 
             # Use the exact POST data that the web interface sends
             # MotoSecurityAction=1 triggers the reboot
@@ -288,14 +288,14 @@ class MotorolaGenericParser(ModemParser):
                 "MotoSecurityAction": "1"
             }
             response = session.post(restart_url, data=restart_data, timeout=10)
-            _LOGGER.debug(f"Restart response: status={response.status_code}, content_length={len(response.text)}")
+            _LOGGER.debug("Restart response: status=%s, content_length={len(response.text)}", response.status_code)
 
             # Motorola modems typically return 200 even when restart is initiated
             if response.status_code == 200:
                 _LOGGER.info("Restart command sent successfully")
                 return True
             else:
-                _LOGGER.error(f"Restart failed with status code: {response.status_code}")
+                _LOGGER.error("Restart failed with status code: %s", response.status_code)
                 return False
 
         except ConnectionResetError:
@@ -307,5 +307,5 @@ class MotorolaGenericParser(ModemParser):
             if "Connection aborted" in str(e) or "Connection reset" in str(e):
                 _LOGGER.info("Restart command sent successfully (connection reset by rebooting modem)")
                 return True
-            _LOGGER.error(f"Error sending restart command: {e}")
+            _LOGGER.error("Error sending restart command: %s", e)
             return False

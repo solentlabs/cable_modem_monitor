@@ -61,7 +61,7 @@ class ArrisSB6141Parser(ModemParser):
 
         try:
             tables = soup.find_all("table")
-            _LOGGER.debug(f"Parsing ARRIS SB6141 format from {len(tables)} tables")
+            _LOGGER.debug("Parsing ARRIS SB6141 format from %s tables", len(tables))
 
             # Find tables by looking for "Channel ID" row
             for table in tables:
@@ -94,10 +94,10 @@ class ArrisSB6141Parser(ModemParser):
                     _LOGGER.debug("Found ARRIS signal stats table")
                     self._merge_error_stats(downstream_channels, rows)
 
-            _LOGGER.debug(f"ARRIS parsing found {len(downstream_channels)} downstream channels")
+            _LOGGER.debug("ARRIS parsing found %s downstream channels", len(downstream_channels))
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing ARRIS SB6141 downstream: {e}")
+            _LOGGER.error("Error parsing ARRIS SB6141 downstream: %s", e)
 
         return downstream_channels
 
@@ -134,10 +134,10 @@ class ArrisSB6141Parser(ModemParser):
                         rows, ["Channel ID", "Frequency", "Power Level"], is_upstream=True
                     )
 
-            _LOGGER.debug(f"ARRIS parsing found {len(upstream_channels)} upstream channels")
+            _LOGGER.debug("ARRIS parsing found %s upstream channels", len(upstream_channels))
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing ARRIS SB6141 upstream: {e}")
+            _LOGGER.error("Error parsing ARRIS SB6141 upstream: %s", e)
 
         return upstream_channels
 
@@ -216,11 +216,12 @@ class ArrisSB6141Parser(ModemParser):
                 if channel_data.get("channel_id") is not None:
                     channels.append(channel_data)
                     _LOGGER.debug(
-                        f"Parsed ARRIS channel {channel_data.get('channel_id')}: {channel_data}"
+                        "Parsed ARRIS channel %s: %s",
+                        channel_data.get('channel_id'), channel_data
                     )
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing ARRIS transposed table: {e}")
+            _LOGGER.error("Error parsing ARRIS transposed table: %s", e)
 
         return channels
 
@@ -255,4 +256,4 @@ class ArrisSB6141Parser(ModemParser):
                     )
 
         except Exception as e:
-            _LOGGER.error(f"Error merging ARRIS error stats: {e}")
+            _LOGGER.error("Error merging ARRIS error stats: %s", e)

@@ -49,11 +49,11 @@ class TechnicolorXB7Parser(ModemParser):
                 "password": password,
             }
 
-            _LOGGER.debug(f"XB7: Posting credentials to {login_url}")
+            _LOGGER.debug("XB7: Posting credentials to %s", login_url)
             response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
 
             if response.status_code != 200:
-                _LOGGER.error(f"XB7 login failed with status {response.status_code}")
+                _LOGGER.error("XB7 login failed with status %s", response.status_code)
                 return False, None
 
             # Step 2: Check if we got redirected to at_a_glance.jst (successful login)
@@ -64,24 +64,24 @@ class TechnicolorXB7Parser(ModemParser):
 
             # Security check: Ensure redirect is to same host
             if redirect_parsed.hostname != base_parsed.hostname:
-                _LOGGER.error(f"XB7: Security violation - redirect to different host: {response.url}")
+                _LOGGER.error("XB7: Security violation - redirect to different host: %s", response.url)
                 return False, None
 
             if "at_a_glance.jst" in response.url:
                 _LOGGER.debug("XB7: Login successful, redirected to at_a_glance.jst")
             else:
-                _LOGGER.warning(f"XB7: Unexpected redirect to {response.url}")
+                _LOGGER.warning("XB7: Unexpected redirect to %s", response.url)
 
             # Step 3: Now fetch the network_setup.jst page with authenticated session
             status_url = f"{base_url}/network_setup.jst"
-            _LOGGER.debug(f"XB7: Fetching {status_url} with authenticated session")
+            _LOGGER.debug("XB7: Fetching %s with authenticated session", status_url)
             status_response = session.get(status_url, timeout=10)
 
             if status_response.status_code != 200:
-                _LOGGER.error(f"XB7: Failed to fetch status page, status {status_response.status_code}")
+                _LOGGER.error("XB7: Failed to fetch status page, status %s", status_response.status_code)
                 return False, None
 
-            _LOGGER.info(f"XB7: Successfully authenticated and fetched status page ({len(status_response.text)} bytes)")
+            _LOGGER.info("XB7: Successfully authenticated and fetched status page (%s bytes)", len(status_response.text))
             return True, status_response.text
 
         except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
@@ -158,7 +158,7 @@ class TechnicolorXB7Parser(ModemParser):
 
         try:
             tables = soup.find_all("table", class_="data")
-            _LOGGER.debug(f"Found {len(tables)} tables in XB7 HTML")
+            _LOGGER.debug("Found %s tables in XB7 HTML", len(tables))
 
             for table in tables:
                 # Find thead with "Downstream" text
@@ -185,7 +185,7 @@ class TechnicolorXB7Parser(ModemParser):
 
                 break
 
-            _LOGGER.debug(f"XB7 parsing found {len(downstream_channels)} downstream channels")
+            _LOGGER.debug("XB7 parsing found %s downstream channels", len(downstream_channels))
 
         except Exception as e:
             _LOGGER.error(f"Error parsing XB7 downstream: {e}", exc_info=True)
@@ -228,7 +228,7 @@ class TechnicolorXB7Parser(ModemParser):
                 upstream_channels = self._parse_xb7_transposed_table(rows, is_upstream=True)
                 break
 
-            _LOGGER.debug(f"XB7 parsing found {len(upstream_channels)} upstream channels")
+            _LOGGER.debug("XB7 parsing found %s upstream channels", len(upstream_channels))
 
         except Exception as e:
             _LOGGER.error(f"Error parsing XB7 upstream: {e}", exc_info=True)
@@ -277,7 +277,7 @@ class TechnicolorXB7Parser(ModemParser):
                     channel_count = len(values)
 
                 data_map[label] = values
-                _LOGGER.debug(f"XB7 row '{label}': {len(values)} values")
+                _LOGGER.debug("XB7 row '%s': {len(values)} values", label)
 
             _LOGGER.debug(
                 f"XB7 transposed table has {channel_count} channels with labels: {list(data_map.keys())}"
@@ -550,7 +550,7 @@ class TechnicolorXB7Parser(ModemParser):
             return boot_time.isoformat()
 
         except Exception as e:
-            _LOGGER.error(f"Error calculating boot time from '{uptime_str}': {e}")
+            _LOGGER.error("Error calculating boot time from '%s': {e}", uptime_str)
             return None
 
     def _parse_primary_channel(self, soup: BeautifulSoup) -> str | None:
@@ -570,6 +570,6 @@ class TechnicolorXB7Parser(ModemParser):
                     if match:
                         return match.group(1)
         except Exception as e:
-            _LOGGER.error(f"Error parsing primary channel: {e}")
+            _LOGGER.error("Error parsing primary channel: %s", e)
 
         return None

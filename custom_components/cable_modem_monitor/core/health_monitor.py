@@ -90,10 +90,10 @@ class ModemHealthMonitor:
 
             # Validate host format (basic IP or hostname validation)
             if not host or not self._is_valid_host(host):
-                _LOGGER.error(f"Invalid host extracted from URL: {base_url}")
+                _LOGGER.error("Invalid host extracted from URL: %s", base_url)
                 host = None
         except Exception as e:
-            _LOGGER.error(f"Failed to parse URL {base_url}: {e}")
+            _LOGGER.error("Failed to parse URL %s: {e}", base_url)
             host = None
 
         # Run ping and HTTP check in parallel (skip ping if host is invalid)
@@ -160,7 +160,7 @@ class ModemHealthMonitor:
         try:
             # Additional validation to prevent command injection
             if not host or not self._is_valid_host(host):
-                _LOGGER.error(f"Invalid host for ping: {host}")
+                _LOGGER.error("Invalid host for ping: %s", host)
                 return False, None
 
             # Use system ping command (works on Linux and Windows)
@@ -200,7 +200,7 @@ class ModemHealthMonitor:
 
             # Validate base URL before making request
             if not self._is_valid_url(base_url):
-                _LOGGER.error(f"Invalid URL for HTTP check: {base_url}")
+                _LOGGER.error("Invalid URL for HTTP check: %s", base_url)
                 return False, None
 
             # Configure SSL based on settings
@@ -224,7 +224,7 @@ class ModemHealthMonitor:
                         if response.status in (301, 302, 303, 307, 308):
                             redirect_url = response.headers.get('Location', '')
                             if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning(f"Unsafe redirect detected: {base_url} -> {redirect_url}")
+                                _LOGGER.warning("Unsafe redirect detected: %s -> {redirect_url}", base_url)
                                 return False, None
 
                         latency_ms = (time.time() - start_time) * 1000
@@ -239,7 +239,7 @@ class ModemHealthMonitor:
                         if response.status in (301, 302, 303, 307, 308):
                             redirect_url = response.headers.get('Location', '')
                             if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning(f"Unsafe redirect detected: {base_url} -> {redirect_url}")
+                                _LOGGER.warning("Unsafe redirect detected: %s -> {redirect_url}", base_url)
                                 return False, None
 
                         latency_ms = (time.time() - start_time) * 1000
@@ -388,7 +388,7 @@ class ModemHealthMonitor:
 
             # Only allow http/https redirects
             if redirect_parsed.scheme not in ['http', 'https']:
-                _LOGGER.warning(f"Redirect to non-HTTP scheme blocked: {redirect_parsed.scheme}")
+                _LOGGER.warning("Redirect to non-HTTP scheme blocked: %s", redirect_parsed.scheme)
                 return False
 
             # Check if redirect is to the same host
@@ -400,9 +400,9 @@ class ModemHealthMonitor:
 
             # For modem health checks, we typically expect same-host redirects
             # External redirects are suspicious and blocked by default
-            _LOGGER.warning(f"Cross-host redirect blocked: {original_host} -> {redirect_host}")
+            _LOGGER.warning("Cross-host redirect blocked: %s -> {redirect_host}", original_host)
             return False
 
         except Exception as e:
-            _LOGGER.error(f"Error validating redirect: {e}")
+            _LOGGER.error("Error validating redirect: %s", e)
             return False

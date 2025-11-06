@@ -109,7 +109,7 @@ class ModemScraper:
 
         # Tier 1: User explicitly selected a parser
         if self.parser:
-            _LOGGER.info(f"Tier 1: Using explicitly selected parser: {self.parser.name}")
+            _LOGGER.info("Tier 1: Using explicitly selected parser: %s", self.parser.name)
             for pattern in self.parser.url_patterns:
                 url = f"{self.base_url}{pattern['path']}"
                 urls_to_try.append((url, pattern['auth_method'], type(self.parser)))
@@ -117,10 +117,10 @@ class ModemScraper:
 
         # Tier 2: Cached parser from previous successful detection
         if self.parser_name and self.parsers:
-            _LOGGER.info(f"Tier 2: Looking for cached parser: {self.parser_name}")
+            _LOGGER.info("Tier 2: Looking for cached parser: %s", self.parser_name)
             cached_parser = next((p for p in self.parsers if p.name == self.parser_name), None)
             if cached_parser:
-                _LOGGER.info(f"Found cached parser: {cached_parser.name}")
+                _LOGGER.info("Found cached parser: %s", cached_parser.name)
                 # Try cached URL first if available
                 if self.cached_url:
                     # Find the auth method for cached URL
@@ -190,7 +190,7 @@ class ModemScraper:
                 url = url.replace(self.base_url, current_base_url)
 
                 try:
-                    _LOGGER.debug(f"Attempting to fetch {url} (auth: {auth_method}, parser: {parser_class.name if parser_class else 'unknown'})")
+                    _LOGGER.debug("Attempting to fetch %s (auth: {auth_method}, parser: {parser_class.name if parser_class else 'unknown'})", url)
                     auth = None
                     if auth_method == 'basic' and self.username and self.password:
                         auth = (self.username, self.password)
@@ -208,9 +208,9 @@ class ModemScraper:
                         self.base_url = current_base_url
                         return response.text, url, parser_class
                     else:
-                        _LOGGER.debug(f"Got status {response.status_code} from {url}")
+                        _LOGGER.debug("Got status %s from {url}", response.status_code)
                 except requests.RequestException as e:
-                    _LOGGER.debug(f"Failed to fetch from {url}: {type(e).__name__}: {e}")
+                    _LOGGER.debug("Failed to fetch from %s: {type(e).__name__}: {e}", url)
                     continue
 
         return None
@@ -235,32 +235,32 @@ class ModemScraper:
         # If we have a suggested parser from URL matching, try it first
         if suggested_parser:
             try:
-                _LOGGER.debug(f"Testing suggested parser: {suggested_parser.name}")
+                _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
                 if suggested_parser.can_parse(soup, url, html):
-                    _LOGGER.info(f"Detected modem using suggested parser: {suggested_parser.name} ({suggested_parser.manufacturer})")
+                    _LOGGER.info("Detected modem using suggested parser: %s ({suggested_parser.manufacturer})", suggested_parser.name)
                     return suggested_parser()
                 else:
-                    _LOGGER.debug(f"Suggested parser {suggested_parser.name} returned False for can_parse")
+                    _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
             except Exception as e:
                 _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
 
         # Fall back to trying all parsers
-        _LOGGER.debug(f"Attempting to detect parser from {len(self.parsers)} available parsers")
+        _LOGGER.debug("Attempting to detect parser from %s available parsers", len(self.parsers))
         for parser_class in self.parsers:
             if suggested_parser and parser_class == suggested_parser:
                 continue  # Already tried this one
 
             try:
-                _LOGGER.debug(f"Testing parser: {parser_class.name}")
+                _LOGGER.debug("Testing parser: %s", parser_class.name)
                 if parser_class.can_parse(soup, url, html):
-                    _LOGGER.info(f"Detected modem: {parser_class.name} ({parser_class.manufacturer})")
+                    _LOGGER.info("Detected modem: %s ({parser_class.manufacturer})", parser_class.name)
                     return parser_class()
                 else:
-                    _LOGGER.debug(f"Parser {parser_class.name} returned False for can_parse")
+                    _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
             except Exception as e:
                 _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
 
-        _LOGGER.error(f"No parser matched. Title: {soup.title.string if soup.title else 'NO TITLE'}")
+        _LOGGER.error("No parser matched. Title: %s", soup.title.string if soup.title else 'NO TITLE')
         return None
 
     def _parse_data(self, html: str) -> dict:
@@ -288,7 +288,7 @@ class ModemScraper:
                 self.parser = self._detect_parser(html, successful_url, suggested_parser)
 
             if not self.parser:
-                _LOGGER.error(f"No compatible parser found for modem at {successful_url}.")
+                _LOGGER.error("No compatible parser found for modem at %s.", successful_url)
                 return {
                     "cable_modem_connection_status": "offline",
                     "cable_modem_downstream": [],
@@ -309,7 +309,7 @@ class ModemScraper:
                 # Use the authenticated HTML from login if available
                 if authenticated_html:
                     html = authenticated_html
-                    _LOGGER.debug(f"Using authenticated HTML from login ({len(html)} bytes)")
+                    _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(html))
             else:
                 # Old-style boolean return for parsers that don't return HTML
                 if not login_result:
@@ -343,7 +343,7 @@ class ModemScraper:
             }
 
         except Exception as e:
-            _LOGGER.error(f"Error fetching modem data: {e}")
+            _LOGGER.error("Error fetching modem data: %s", e)
             return {
                 "cable_modem_connection_status": "unreachable", 
                 "cable_modem_downstream": [], 
@@ -378,11 +378,11 @@ class ModemScraper:
 
             # Check if parser supports restart
             if not hasattr(self.parser, 'restart'):
-                _LOGGER.error(f"Parser {self.parser.name} does not support restart functionality")
+                _LOGGER.error("Parser %s does not support restart functionality", self.parser.name)
                 return False
 
             # Perform restart
-            _LOGGER.info(f"Attempting to restart modem using {self.parser.name} parser")
+            _LOGGER.info("Attempting to restart modem using %s parser", self.parser.name)
             success = self.parser.restart(self.session, self.base_url)
 
             if success:
@@ -393,5 +393,5 @@ class ModemScraper:
             return success
 
         except Exception as e:
-            _LOGGER.error(f"Error restarting modem: {e}")
+            _LOGGER.error("Error restarting modem: %s", e)
             return False
