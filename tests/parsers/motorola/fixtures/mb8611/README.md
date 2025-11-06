@@ -44,14 +44,25 @@
   - `GetMotoStatusConnectionInfo`
   - `GetMotoStatusStartupSequence`
 
-**What's Missing:**
+### HNAP API Data (JSON format)
 
-We still need the actual HNAP SOAP request/response XML samples. These HTML files show the web interface structure, but the actual channel data comes from HNAP API calls.
+6. **hnap_full_status.json** ✅ ADDED November 6, 2025
+   - Complete HNAP `GetMultipleHNAPs` response
+   - Contains: Startup sequence, connection info, downstream/upstream channels
+   - Format: JSON (HNAP uses JSON over HTTPS, not XML)
+   - Source: HAR export from user @dlindnegm
+   - Data structure:
+     - 33 downstream channels (including OFDM PLC)
+     - 4 upstream channels
+     - System uptime: "47 days 21h:15m:38s"
+     - Caret-delimited channel data: `ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^`
 
-To implement MB8611 parser (Phase 2), we need:
-- [ ] HNAP SOAP request examples (XML)
-- [ ] HNAP SOAP response examples (XML)
-- [ ] Login HNAP action (if SOAP-based)
+**Status:** ✅ **We now have complete HNAP data for Phase 2 implementation!**
+
+To implement MB8611 parser (Phase 2), we have:
+- [x] HNAP response examples (JSON) - `hnap_full_status.json`
+- [x] Channel data format documented (caret-delimited)
+- [ ] Login HNAP action (TBD during Phase 2)
 
 ## Usage
 
