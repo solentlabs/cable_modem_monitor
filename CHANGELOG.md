@@ -24,13 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.github/pull_request_template.md` - Comprehensive PR template with checklist
   - `docs/BRANCH_PROTECTION.md` - Step-by-step guide for configuring branch protection
   - `mypy.ini` - Type checking configuration with mypy
-  - Coverage enforcement: 60% minimum threshold in pytest and CI
+  - Coverage enforcement: 50% minimum threshold in pytest and CI
   - Type checking with mypy in pre-commit hooks and CI
 
 ### Changed
 - Enhanced CI/CD workflows with additional quality checks
   - Added mypy type checking to lint job
-  - Added coverage enforcement to test job (--cov-fail-under=60)
+  - Added coverage enforcement to test job (--cov-fail-under=50)
 - Updated test requirements to include mypy and types-requests
 - Updated pre-commit hooks to include mypy type checking
 
