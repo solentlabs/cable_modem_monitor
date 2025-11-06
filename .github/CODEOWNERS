@@ -1,0 +1,48 @@
+# CODEOWNERS
+#
+# This file defines individuals or teams responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull
+# request that modifies code they own.
+#
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @kwschulz
+
+# Security and community files require explicit review
+/SECURITY.md @kwschulz
+/CODE_OF_CONDUCT.md @kwschulz
+/.github/CODEOWNERS @kwschulz
+
+# Core integration files
+/custom_components/cable_modem_monitor/__init__.py @kwschulz
+/custom_components/cable_modem_monitor/manifest.json @kwschulz
+/custom_components/cable_modem_monitor/config_flow.py @kwschulz
+/custom_components/cable_modem_monitor/const.py @kwschulz
+
+# Core functionality - requires maintainer review
+/custom_components/cable_modem_monitor/core/ @kwschulz
+
+# CI/CD and workflows - critical for automation
+/.github/workflows/ @kwschulz
+
+# Release and version management
+/CHANGELOG.md @kwschulz
+/scripts/maintenance/update_versions.py @kwschulz
+
+# Testing infrastructure
+/pytest.ini @kwschulz
+/.pre-commit-config.yaml @kwschulz
+/.ruff.toml @kwschulz
+
+# Dependencies
+/custom_components/cable_modem_monitor/manifest.json @kwschulz
+/tests/requirements.txt @kwschulz
+
+# Parser contributions - maintainer should review but can be more lenient
+/custom_components/cable_modem_monitor/parsers/ @kwschulz
+
+# Documentation - can be reviewed more quickly
+/docs/ @kwschulz
+/README.md @kwschulz
+/CONTRIBUTING.md @kwschulz

@@ -1,0 +1,122 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Cable Modem Monitor
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please fill out this form as completely as possible.
+
+        Before submitting, please check:
+        - [ ] You've searched existing issues to avoid duplicates
+        - [ ] This feature aligns with the project's goals (monitoring cable modems via Home Assistant)
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature are you requesting?
+      options:
+        - New modem support
+        - New sensor/entity
+        - Enhancement to existing feature
+        - Performance improvement
+        - Developer experience improvement
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented
+      placeholder: A clear and concise description of what you want to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered
+      placeholder: What other approaches could solve this problem?
+    validations:
+      required: false
+
+  - type: textarea
+    id: modem-info
+    attributes:
+      label: Modem Information (if applicable)
+      description: |
+        If requesting support for a new modem, please provide:
+        - Modem make and model
+        - Firmware version
+        - ISP (if relevant)
+        - Whether you can provide HTML samples from the modem's status page
+      placeholder: |
+        Model: Motorola MB8600
+        Firmware: 8.1.2.15
+        ISP: Comcast
+        Can provide samples: Yes
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: |
+        Describe your use case. How would this feature benefit you and other users?
+      placeholder: This would help me...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context, screenshots, mockups, or examples about the feature request here
+    validations:
+      required: false
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute to implementing this feature?
+      options:
+        - "Yes, I can submit a PR"
+        - "Yes, I can help test"
+        - "Yes, I can provide modem HTML samples"
+        - "No, but I'd be happy to provide feedback"
+        - "Not sure"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched for similar feature requests and found none
+          required: true
+        - label: This feature aligns with the integration's purpose (cable modem monitoring)
+          required: true
+        - label: I have provided a clear description of the feature and its benefits
+          required: true

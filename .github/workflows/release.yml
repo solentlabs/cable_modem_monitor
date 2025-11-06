@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Extract version from tag (e.g., v2.5.0 -> 2.5.0)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Verify version consistency
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          MANIFEST_VERSION=$(grep -oP '(?<="version": ")[^"]*' custom_components/cable_modem_monitor/manifest.json)
+
+          echo "Tag version: $VERSION"
+          echo "Manifest version: $MANIFEST_VERSION"
+
+          if [ "$VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "❌ Error: Version mismatch!"
+            echo "Tag version ($VERSION) does not match manifest.json version ($MANIFEST_VERSION)"
+            exit 1
+          fi
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Extract the section for this version from CHANGELOG.md
+          # This uses awk to extract text between version headers
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit;
+              if ($0 ~ "\\[" ver "\\]") {
+                found=1;
+                next;
+              }
+            }
+            found {print}
+          ' CHANGELOG.md)
+
+          if [ -z "$CHANGELOG" ]; then
+            echo "⚠️ Warning: No changelog entry found for version $VERSION"
+            CHANGELOG="See [CHANGELOG.md](https://github.com/kwschulz/cable_modem_monitor/blob/main/CHANGELOG.md) for details."
+          fi
+
+          # Save to file to preserve formatting
+          echo "$CHANGELOG" > /tmp/changelog.txt
+
+      - name: Run tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+          pytest tests/ -v
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.version.outputs.tag }}
+          body_path: /tmp/changelog.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Release ${{ steps.version.outputs.tag }} created successfully!"
+          echo "📦 Users can now install via HACS or download from GitHub releases"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Release creation failed. Please check the logs above."
+          echo "Common issues:"
+          echo "  - Version mismatch between tag and manifest.json"
+          echo "  - Tests failed"
+          echo "  - Missing or malformed CHANGELOG.md entry"
