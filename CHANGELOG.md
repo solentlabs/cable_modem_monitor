@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated test requirements to include mypy and types-requests
 - Updated pre-commit hooks to include mypy type checking
 
+### Security
+- **SSL Certificate Verification** - Resolved CodeQL security vulnerabilities
+  - Made SSL certificate verification configurable via integration settings
+  - Removed global `urllib3.disable_warnings()` call that suppressed all SSL warnings
+  - Removed hardcoded `verify=False` in HTTP requests
+  - Added conditional SSL warning suppression only when verification is explicitly disabled
+  - Added user-facing warnings when SSL verification is disabled
+  - Defaults to disabled (verify_ssl=False) for backward compatibility with self-signed certificates
+
 ## [2.6.0] - 2025-11-06
 
 ### Added
