@@ -20,6 +20,7 @@ from .const import (
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
     CONF_WORKING_URL,
+    CONF_VERIFY_SSL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -179,6 +180,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     cached_url = entry.data.get(CONF_WORKING_URL)  # Get cached URL if available
     parser_name = entry.data.get(CONF_PARSER_NAME)  # Get cached parser name if available
     modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")  # Get user's modem selection
+    verify_ssl = entry.data.get(CONF_VERIFY_SSL, False)  # Get SSL verification setting
 
     from .parsers import get_parsers
 
@@ -209,6 +211,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         parser=selected_parser if selected_parser else parsers,
         cached_url=cached_url,
         parser_name=parser_name_for_tier2,
+        verify_ssl=verify_ssl,
     )
 
     # Initialize health monitor for dual-layer diagnostics
