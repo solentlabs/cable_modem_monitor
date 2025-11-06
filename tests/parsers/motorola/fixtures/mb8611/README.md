@@ -13,33 +13,33 @@
 
 ***REMOVED******REMOVED******REMOVED*** HTML Pages (from web interface)
 
-1. **mb8611_login_page.txt**
+1. **Login.html**
    - URL: `https://192.168.100.1/Login.html`
    - Login/authentication page
    - Shows HNAP JavaScript initialization
 
-2. **mb8611_landing_page.txt**
+2. **MotoHome.html**
    - URL: `https://192.168.100.1/MotoHome.html`
    - Main dashboard after login
    - Size: 8.5K
 
-3. **mb8611_connection_page.txt**
+3. **MotoStatusConnection.html**
    - URL: `https://192.168.100.1/MotoStatusConnection.html`
    - Connection status page (channel data)
    - Size: 26K (largest - full channel tables)
    - Contains HNAP JavaScript references
 
-4. **mb8611_advanced_page.txt**
+4. **MotoStatusSoftware.html**
    - URL: `https://192.168.100.1/MotoStatusSoftware.html`
    - Advanced settings/software page
    - Size: 6.7K
 
-5. **mb8611_event_log_page.txt**
+5. **MotoStatusLog.html**
    - URL: `https://192.168.100.1/MotoStatusLog.html`
    - System event log
    - Size: 6.0K
 
-**Note:** User also mentioned `https://192.168.100.1/MotoStatusSecurity.html` for password reset/reboot/restart (not captured yet)
+**Note:** User also mentioned `MotoStatusSecurity.html` for password reset/reboot/restart (not captured yet)
 
 ***REMOVED******REMOVED*** Notes
 
