@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "GitHub.vscode-codeql",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.flake8",
+    "charliermarsh.ruff"
+  ]
+}

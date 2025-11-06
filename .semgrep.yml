@@ -1,0 +1,89 @@
+rules:
+  # Detect SSL verification disabled
+  - id: ssl-verification-disabled
+    pattern-either:
+      - pattern: requests.$METHOD(..., verify=False, ...)
+      - pattern: ssl.SSLContext().check_hostname = False
+      - pattern: ssl.SSLContext().verify_mode = ssl.CERT_NONE
+    message: SSL certificate verification is disabled, making connections vulnerable to MITM attacks
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-295: Improper Certificate Validation"
+
+  # Detect command injection via subprocess
+  - id: subprocess-shell-injection
+    pattern-either:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
+      - pattern: os.system($ARG)
+    message: Potential command injection vulnerability using shell=True or os.system
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+
+  # Detect unvalidated redirects
+  - id: unvalidated-redirect
+    pattern: $SESSION.$METHOD(..., allow_redirects=True, ...)
+    message: Unvalidated redirects can lead to open redirect vulnerabilities
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-601: URL Redirection to Untrusted Site"
+
+  # Detect logging of sensitive data
+  - id: logging-sensitive-data
+    pattern-either:
+      - pattern: $LOGGER.$LEVEL(... password ...)
+      - pattern: $LOGGER.$LEVEL(... token ...)
+      - pattern: $LOGGER.$LEVEL(... secret ...)
+      - pattern: $LOGGER.$LEVEL(... api_key ...)
+    message: Potential logging of sensitive information
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-532: Information Exposure Through Log Files"
+
+  # Detect broad exception catching
+  - id: broad-exception-catch
+    pattern: |
+      try:
+        ...
+      except Exception:
+        ...
+    message: Catching broad Exception can hide errors and security issues
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+
+  # Detect f-string in logging (performance and security)
+  - id: f-string-in-logging
+    pattern-either:
+      - pattern: $LOGGER.$LEVEL(f"...")
+      - pattern: $LOGGER.$LEVEL(f'...')
+    message: Use lazy % formatting in logging instead of f-strings to avoid premature evaluation
+    languages: [python]
+    severity: INFO
+    metadata:
+      category: best-practice
+
+  # Detect hardcoded credentials
+  - id: hardcoded-password
+    pattern-either:
+      - pattern: password = "..."
+      - pattern: PASSWORD = "..."
+      - pattern: secret = "..."
+      - pattern: SECRET = "..."
+      - pattern: api_key = "..."
+      - pattern: API_KEY = "..."
+    message: Potential hardcoded credential detected
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"

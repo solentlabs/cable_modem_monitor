@@ -1,0 +1,49 @@
+{
+  // Python settings
+  "python.linting.enabled": true,
+
+  // Bandit security linter
+  "python.linting.banditEnabled": true,
+  "python.linting.banditArgs": [
+    "-c",
+    ".bandit"
+  ],
+
+  // Flake8 with security plugins
+  "python.linting.flake8Enabled": true,
+  "python.linting.flake8Args": [
+    "--max-line-length=120",
+    "--extend-ignore=E203,W503"
+  ],
+
+  // Pylint
+  "python.linting.pylintEnabled": false,
+
+  // MyPy type checking
+  "python.linting.mypyEnabled": true,
+  "python.linting.mypyArgs": [
+    "--config-file=mypy.ini"
+  ],
+
+  // Auto-run linting
+  "python.linting.lintOnSave": true,
+
+  // Format on save
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+
+  // Python formatter (Black)
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  // Security-focused extensions
+  "semgrep.scan.onSave": true,
+  "semgrep.scan.configuration": ".semgrep.yml"
+}
