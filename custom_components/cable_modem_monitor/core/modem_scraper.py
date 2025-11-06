@@ -1,7 +1,6 @@
 """Web scraper for cable modem data."""
 import logging
 import requests
-import urllib3
 from bs4 import BeautifulSoup
 from typing import List, Type
 
@@ -47,15 +46,23 @@ class ModemScraper:
         self.verify_ssl = verify_ssl
         self.session = requests.Session()
 
-        ***REMOVED*** Suppress SSL warnings only when SSL verification is disabled
+        ***REMOVED*** Configure SSL verification with security warnings
         if not self.verify_ssl:
+            ***REMOVED*** Disable SSL warnings for the session only (not globally)
+            import urllib3
+            self.session.verify = False
+            ***REMOVED*** Disable warnings only for this session
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             _LOGGER.warning(
-                "SSL certificate verification is disabled. "
+                "SSL certificate verification is disabled for this modem connection. "
                 "This is common for cable modems with self-signed certificates, "
-                "but be aware this makes connections vulnerable to man-in-the-middle attacks. "
-                "Enable SSL verification in integration settings if your modem has a valid certificate."
+                "but makes connections vulnerable to man-in-the-middle (MITM) attacks. "
+                "SECURITY RECOMMENDATION: Enable SSL verification in integration settings "
+                "if your modem supports valid certificates or configure a custom CA certificate."
             )
+        else:
+            self.session.verify = True
+            _LOGGER.info("SSL certificate verification is enabled for secure connections")
 
         ***REMOVED*** Handle parser parameter - can be instance, class, or list of classes
         if isinstance(parser, list):

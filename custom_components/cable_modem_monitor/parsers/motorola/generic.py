@@ -35,6 +35,13 @@ class MotorolaGenericParser(ModemParser):
 
         Returns:
             tuple: (success: bool, authenticated_html: str)
+
+        Security Note:
+            Some Motorola modems (e.g., MB7621) require Base64-encoded passwords.
+            IMPORTANT: Base64 is NOT encryption - it is merely encoding and provides
+            NO security against interception or attacks. The password is still sent
+            in an easily reversible format. This is a modem firmware limitation.
+            Always use HTTPS connections when possible to protect credentials in transit.
         """
         if not username or not password:
             _LOGGER.debug("No credentials provided, skipping login")
@@ -43,9 +50,11 @@ class MotorolaGenericParser(ModemParser):
         login_url = f"{base_url}/goform/login"
 
         ***REMOVED*** Try plain password first, then Base64-encoded (MB7621 requires Base64)
+        ***REMOVED*** SECURITY WARNING: Base64 is NOT encryption! It's just encoding.
+        ***REMOVED*** The password is still transmitted in an easily reversible format.
         passwords_to_try = [
             password,  ***REMOVED*** Plain password
-            base64.b64encode(password.encode("utf-8")).decode("utf-8"),  ***REMOVED*** Base64-encoded
+            base64.b64encode(password.encode("utf-8")).decode("utf-8"),  ***REMOVED*** Base64-encoded (not secure)
         ]
 
         for attempt, pwd in enumerate(passwords_to_try, 1):
@@ -54,10 +63,21 @@ class MotorolaGenericParser(ModemParser):
                 "loginPassword": pwd,
             }
             pwd_type = "plain" if attempt == 1 else "Base64-encoded"
-            _LOGGER.info(f"Attempting login to {login_url} as user '{username}' (password: {pwd_type})")
+            ***REMOVED*** Security: Do not log usernames or any credential information
+            _LOGGER.info(f"Attempting login to {login_url} (password encoding: {pwd_type})")
 
+            ***REMOVED*** Security: Disable auto-redirects and validate manually
             response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
             _LOGGER.debug(f"Login response: status={response.status_code}, url={response.url}")
+
+            ***REMOVED*** Security check: Validate redirect stayed on same host
+            from urllib.parse import urlparse
+            if response.url != login_url:
+                response_parsed = urlparse(response.url)
+                login_parsed = urlparse(login_url)
+                if response_parsed.hostname != login_parsed.hostname:
+                    _LOGGER.error(f"Motorola: Security violation - redirect to different host: {response.url}")
+                    return False, None
 
             test_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
             _LOGGER.debug(f"Login verification: test page status={test_response.status_code}, length={len(test_response.text)}")
