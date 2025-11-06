@@ -28,6 +28,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `mypy.ini` - Type checking configuration with mypy
   - Coverage enforcement: 50% minimum threshold in pytest and CI
   - Type checking with mypy in pre-commit hooks and CI
+
+### Changed
+- Enhanced CI/CD workflows with additional quality checks
+  - Added mypy type checking to lint job
+  - Added coverage enforcement to test job (--cov-fail-under=50)
+- Updated test requirements to include mypy and types-requests
+- Updated pre-commit hooks to include mypy type checking
+
+### Security
+- **Comprehensive Security Remediation** - Resolved all 26 CodeQL security vulnerabilities
+  - **SSL/TLS Security (Critical/High - 4 issues)**
+    - Made SSL certificate verification configurable via integration settings
+    - Removed global `urllib3.disable_warnings()` call that suppressed all SSL warnings
+    - Fixed hardcoded `ssl=False` in health monitor with proper SSL context
+    - Added conditional SSL warning suppression only when verification is explicitly disabled
+    - Added enhanced user-facing warnings about MITM attack risks
+    - Defaults to disabled (verify_ssl=False) for backward compatibility with self-signed certificates
+  - **Open Redirect Prevention (Critical/High - 2 issues)**
+    - Added redirect URL validation in health monitor HTTP checks
+    - Implemented same-host redirect checking in Motorola parser login
+    - Added cross-host redirect blocking in Technicolor XB7 parser
+    - Validates all redirect targets to prevent phishing attacks
+  - **Command Injection Prevention (Medium - 1 issue)**
+    - Fixed unsafe subprocess execution in health monitor ping function
+    - Added comprehensive host validation with IPv4/IPv6/hostname regex patterns
+    - Implemented shell metacharacter blocking and input sanitization
+    - Protected ping subprocess from command injection attacks
+  - **Input Validation & Sanitization (Medium - 4 issues)**
+    - Added strict URL validation in config flow with protocol checking (HTTP/HTTPS only)
+    - Implemented hostname/IP format validation using proper patterns
+    - Added character whitelist validation blocking dangerous shell metacharacters
+    - Replaced regex-based URL extraction with proper `urllib.parse` throughout codebase
+    - Added validation helpers: `_is_valid_host()`, `_is_valid_url()`, `_is_safe_redirect()`
+  - **Credential Security (Medium - 3 issues)**
+    - Removed username logging from Motorola parser to prevent credential leakage
+    - Added comprehensive security documentation for Base64 password encoding
+    - Documented that Base64 is NOT encryption - it's merely encoding (modem firmware limitation)
+    - Sanitized all credential-related log messages
+  - **Exception Handling (Low - 4 issues)**
+    - Replaced broad `Exception` catches with specific exception types (`ValueError`, `TypeError`)
+    - Improved error messages for better debugging while preventing information leakage
+    - Maintained proper exception logging with context
+  - **Information Disclosure (Low - 4 issues)**
+    - Sanitized exception messages in diagnostics to prevent sensitive data exposure
+    - Added regex-based redaction of passwords, tokens, keys, and credentials from error messages
+    - Masked IP addresses and file paths in exception output
+    - Truncated long exception messages to 200 character limit
+  - **Files Modified**: `config_flow.py`, `core/health_monitor.py`, `core/modem_scraper.py`, `diagnostics.py`, `parsers/motorola/generic.py`, `parsers/technicolor/xb7.py`
+  - **Impact**: Eliminates all critical security vulnerabilities while maintaining backward compatibility
 - **Health Monitoring System** - Dual-layer network diagnostics with 3 new sensors
   - `sensor.cable_modem_health_status` - Overall health (healthy/degraded/icmp_blocked/unresponsive)
   - `sensor.cable_modem_ping_latency` - ICMP ping response time in milliseconds
