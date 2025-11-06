@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Support
+    url: https://github.com/kwschulz/cable_modem_monitor/discussions
+    about: Ask questions or get help from the community
+  - name: Troubleshooting Guide
+    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md
+    about: Check common issues and solutions
+  - name: Contributing Guide
+    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/CONTRIBUTING.md
+    about: Learn how to contribute to the project
+  - name: Security Vulnerability
+    url: https://github.com/kwschulz/cable_modem_monitor/security/advisories/new
+    about: Report a security vulnerability (private disclosure)

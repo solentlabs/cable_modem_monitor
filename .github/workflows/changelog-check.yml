@@ -1,0 +1,151 @@
+name: Changelog Verification
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.github/**'
+      - 'scripts/**'
+      - 'tests/**'
+
+jobs:
+  check-changelog:
+    name: Verify CHANGELOG.md Updated
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if CHANGELOG.md was modified
+        id: changelog_check
+        run: |
+          ***REMOVED*** Fetch the base branch
+          git fetch origin ${{ github.base_ref }}
+
+          ***REMOVED*** Check if CHANGELOG.md has been modified in this PR
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^CHANGELOG.md$"; then
+            echo "changelog_updated=true" >> $GITHUB_OUTPUT
+            echo "✅ CHANGELOG.md has been updated"
+          else
+            echo "changelog_updated=false" >> $GITHUB_OUTPUT
+            echo "⚠️ CHANGELOG.md has not been updated"
+          fi
+
+      - name: Check if code changes were made
+        id: code_check
+        run: |
+          ***REMOVED*** Check if any Python files in custom_components were changed
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^custom_components/.*\.py$"; then
+            echo "code_changed=true" >> $GITHUB_OUTPUT
+            echo "Code changes detected"
+          else
+            echo "code_changed=false" >> $GITHUB_OUTPUT
+            echo "No code changes detected"
+          fi
+
+      - name: Verify changelog update
+        if: steps.code_check.outputs.code_changed == 'true' && steps.changelog_check.outputs.changelog_updated == 'false'
+        run: |
+          echo "❌ CHANGELOG.md needs to be updated!"
+          echo "This PR contains code changes but CHANGELOG.md was not updated."
+          echo ""
+          echo "Please add an entry to CHANGELOG.md following the Keep a Changelog format."
+          exit 1
+
+      - name: Validate CHANGELOG.md format
+        if: steps.changelog_check.outputs.changelog_updated == 'true'
+        run: |
+          ***REMOVED*** Check if CHANGELOG.md follows Keep a Changelog format
+          if ! grep -q "^***REMOVED******REMOVED*** \[Unreleased\]" CHANGELOG.md; then
+            echo "⚠️ Warning: CHANGELOG.md should have an [Unreleased] section"
+          fi
+
+          if ! grep -q "^***REMOVED******REMOVED******REMOVED*** Added\|^***REMOVED******REMOVED******REMOVED*** Changed\|^***REMOVED******REMOVED******REMOVED*** Deprecated\|^***REMOVED******REMOVED******REMOVED*** Removed\|^***REMOVED******REMOVED******REMOVED*** Fixed\|^***REMOVED******REMOVED******REMOVED*** Security" CHANGELOG.md; then
+            echo "⚠️ Warning: CHANGELOG.md should use standard section headers (Added, Changed, Fixed, etc.)"
+          fi
+
+          echo "✅ CHANGELOG.md format looks good"
+
+      - name: Comment on PR (if changelog missing)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `***REMOVED******REMOVED*** ⚠️ CHANGELOG.md Update Required
+
+            This pull request contains code changes but \`CHANGELOG.md\` has not been updated.
+
+            ***REMOVED******REMOVED******REMOVED*** Required Action
+
+            Please add an entry to \`CHANGELOG.md\` under the \`[Unreleased]\` section following the [Keep a Changelog](https://keepachangelog.com/) format.
+
+            ***REMOVED******REMOVED******REMOVED*** Format
+
+            \`\`\`markdown
+            ***REMOVED******REMOVED*** [Unreleased]
+
+            ***REMOVED******REMOVED******REMOVED*** Added
+            - New features go here
+
+            ***REMOVED******REMOVED******REMOVED*** Changed
+            - Changes to existing functionality go here
+
+            ***REMOVED******REMOVED******REMOVED*** Deprecated
+            - Soon-to-be removed features go here
+
+            ***REMOVED******REMOVED******REMOVED*** Removed
+            - Removed features go here
+
+            ***REMOVED******REMOVED******REMOVED*** Fixed
+            - Bug fixes go here
+
+            ***REMOVED******REMOVED******REMOVED*** Security
+            - Security fixes go here
+            \`\`\`
+
+            ***REMOVED******REMOVED******REMOVED*** Examples
+
+            \`\`\`markdown
+            ***REMOVED******REMOVED******REMOVED*** Added
+            - Support for ARRIS SB8200 modem (***REMOVED***123)
+            - New sensor for modem temperature
+
+            ***REMOVED******REMOVED******REMOVED*** Fixed
+            - Authentication timeout on Motorola MB7621 (***REMOVED***456)
+            - Channel parsing error on Technicolor TC4400
+            \`\`\`
+
+            ***REMOVED******REMOVED******REMOVED*** Exemptions
+
+            If this PR only contains:
+            - Documentation updates
+            - Test improvements
+            - CI/CD configuration changes
+            - Non-functional changes
+
+            Then a CHANGELOG update may not be required. Please add a comment explaining why.
+
+            ---
+
+            For more information, see [CONTRIBUTING.md](https://github.com/kwschulz/cable_modem_monitor/blob/main/CONTRIBUTING.md).`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+      - name: Success message
+        if: success()
+        run: |
+          if [ "${{ steps.code_check.outputs.code_changed }}" == "true" ]; then
+            echo "✅ CHANGELOG.md has been properly updated"
+          else
+            echo "✅ No code changes, CHANGELOG update not required"
+          fi

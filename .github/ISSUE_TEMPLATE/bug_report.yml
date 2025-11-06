@@ -1,0 +1,140 @@
+name: Bug Report
+description: Report a bug or issue with Cable Modem Monitor
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form as completely as possible.
+
+        Before submitting, please check:
+        - [ ] You've searched existing issues to avoid duplicates
+        - [ ] You're using the latest version of the integration
+        - [ ] You've reviewed the [Troubleshooting Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)
+
+  - type: input
+    id: version
+    attributes:
+      label: Integration Version
+      description: What version of Cable Modem Monitor are you running?
+      placeholder: "e.g., 2.5.0"
+    validations:
+      required: true
+
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant Version
+      description: What version of Home Assistant are you running?
+      placeholder: "e.g., 2024.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: modem-model
+    attributes:
+      label: Modem Model
+      description: What cable modem model are you using?
+      placeholder: "e.g., Motorola MB7621, ARRIS SB6141"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Tell us what you're experiencing
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Tell us what should have happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Please copy and paste any relevant log output from Home Assistant.
+        This will be automatically formatted into code, so no need for backticks.
+
+        To find logs: Settings → System → Logs (filter by "cable_modem_monitor")
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        Please share your configuration (remove any sensitive information like passwords)
+      placeholder: |
+        Example:
+        - URL: http://192.168.100.1
+        - Authentication: Basic Auth
+        - Update interval: 300 seconds
+      render: yaml
+    validations:
+      required: false
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation Method
+      description: How did you install the integration?
+      options:
+        - HACS
+        - Manual
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context about the problem here.
+        - Screenshots
+        - Modem firmware version
+        - ISP information
+        - Network setup details
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched for similar issues and found none
+          required: true
+        - label: I have reviewed the troubleshooting guide
+          required: true
+        - label: I have provided all requested information
+          required: true
+        - label: I have removed any sensitive information (passwords, IP addresses if private)
+          required: true
