@@ -78,7 +78,7 @@ class ModemRestartButton(ModemButtonBase):
         ***REMOVED*** Get the scraper from the coordinator
         ***REMOVED*** We need to access it from the coordinator's update method
         ***REMOVED*** For now, we'll create a new scraper instance
-        from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_WORKING_URL
+        from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_WORKING_URL, CONF_VERIFY_SSL
         from .core.modem_scraper import ModemScraper
         from .parsers import get_parsers
 
@@ -86,10 +86,11 @@ class ModemRestartButton(ModemButtonBase):
         username = self._entry.data.get(CONF_USERNAME)
         password = self._entry.data.get(CONF_PASSWORD)
         cached_url = self._entry.data.get(CONF_WORKING_URL)
+        verify_ssl = self._entry.data.get(CONF_VERIFY_SSL, False)
 
         ***REMOVED*** Get parsers in executor to avoid blocking I/O in async context
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        scraper = ModemScraper(host, username, password, parsers, cached_url)
+        scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
 
         ***REMOVED*** Run the restart in an executor since it uses requests (blocking I/O)
         success = await self.hass.async_add_executor_job(scraper.restart_modem)

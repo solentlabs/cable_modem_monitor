@@ -8,6 +8,7 @@ CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_MODEM_CHOICE = "modem_choice"
+CONF_VERIFY_SSL = "verify_ssl"
 
 ***REMOVED*** Modem detection cache fields
 CONF_PARSER_NAME = "parser_name"  ***REMOVED*** Cached parser class name for quick lookup

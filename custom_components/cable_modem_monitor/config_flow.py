@@ -22,6 +22,7 @@ from .const import (
     CONF_DETECTED_MANUFACTURER,
     CONF_WORKING_URL,
     CONF_LAST_DETECTION,
+    CONF_VERIFY_SSL,
     DEFAULT_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
@@ -40,6 +41,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     modem_choice = data.get(CONF_MODEM_CHOICE)
     cached_url = data.get(CONF_WORKING_URL)
     cached_parser_name = data.get(CONF_PARSER_NAME)
+    verify_ssl = data.get(CONF_VERIFY_SSL, False)
 
     all_parsers = await hass.async_add_executor_job(get_parsers)
 
@@ -65,6 +67,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         parser=selected_parser if selected_parser else all_parsers,
         cached_url=cached_url,
         parser_name=parser_name_for_tier2,
+        verify_ssl=verify_ssl,
     )
 
     try:
@@ -124,6 +127,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 ***REMOVED*** Add default values for fields not in initial setup
                 user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+                user_input.setdefault(CONF_VERIFY_SSL, False)
 
                 ***REMOVED*** Store detection info from validation
                 detection_info = info.get("detection_info", {})
@@ -155,6 +159,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
+                vol.Optional(CONF_VERIFY_SSL, default=False): selector.BooleanSelector(),
             }
         )
 
@@ -232,6 +237,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         current_scan_interval = self.config_entry.data.get(
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
         )
+        current_verify_ssl = self.config_entry.data.get(CONF_VERIFY_SSL, False)
 
         ***REMOVED*** Get detection info for display
         detected_modem = self.config_entry.data.get(CONF_DETECTED_MODEM, "Not detected")
@@ -266,6 +272,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Coerce(int),
                     vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
                 ),
+                vol.Optional(CONF_VERIFY_SSL, default=current_verify_ssl): selector.BooleanSelector(),
             }
         )
 

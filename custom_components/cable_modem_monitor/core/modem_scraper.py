@@ -7,9 +7,6 @@ from typing import List, Type
 
 from ..parsers.base_parser import ModemParser
 
-***REMOVED*** Disable SSL warnings for self-signed certificates (common on cable modems)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -24,6 +21,7 @@ class ModemScraper:
         parser: ModemParser | List[Type[ModemParser]] = None,
         cached_url: str = None,
         parser_name: str = None,
+        verify_ssl: bool = False,
     ):
         """
         Initialize the modem scraper.
@@ -35,6 +33,7 @@ class ModemScraper:
             parser: Either a single parser instance, a parser class, or list of parser classes
             cached_url: Previously successful URL (optimization)
             parser_name: Name of cached parser to use (skips auto-detection)
+            verify_ssl: Enable SSL certificate verification (default: False for compatibility with self-signed certs)
         """
         self.host = host
         ***REMOVED*** Support both plain IP addresses and full URLs (http:// or https://)
@@ -45,7 +44,18 @@ class ModemScraper:
             self.base_url = f"https://{host}"
         self.username = username
         self.password = password
+        self.verify_ssl = verify_ssl
         self.session = requests.Session()
+
+        ***REMOVED*** Suppress SSL warnings only when SSL verification is disabled
+        if not self.verify_ssl:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            _LOGGER.warning(
+                "SSL certificate verification is disabled. "
+                "This is common for cable modems with self-signed certificates, "
+                "but be aware this makes connections vulnerable to man-in-the-middle attacks. "
+                "Enable SSL verification in integration settings if your modem has a valid certificate."
+            )
 
         ***REMOVED*** Handle parser parameter - can be instance, class, or list of classes
         if isinstance(parser, list):
@@ -178,8 +188,8 @@ class ModemScraper:
                     if auth_method == 'basic' and self.username and self.password:
                         auth = (self.username, self.password)
 
-                    ***REMOVED*** Use verify=False to accept self-signed SSL certificates (common on cable modems)
-                    response = self.session.get(url, timeout=10, auth=auth, verify=False)
+                    ***REMOVED*** Use configured SSL verification setting
+                    response = self.session.get(url, timeout=10, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.info(
