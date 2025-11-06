@@ -1,11 +1,12 @@
 """Modem Health Monitor - Dual-layer network diagnostics."""
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import urlparse
 import aiohttp
-import subprocess
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,9 +59,15 @@ class ModemHealthMonitor:
     to distinguish between network issues, web server issues, and firewall blocks.
     """
 
-    def __init__(self, max_history: int = 100):
-        """Initialize health monitor."""
+    def __init__(self, max_history: int = 100, verify_ssl: bool = False):
+        """Initialize health monitor.
+
+        Args:
+            max_history: Maximum number of health check results to retain
+            verify_ssl: Enable SSL certificate verification (default: False for self-signed certs)
+        """
         self.max_history = max_history
+        self.verify_ssl = verify_ssl
         self.history: list[HealthCheckResult] = []
         self.consecutive_failures = 0
         self.total_checks = 0
@@ -76,30 +83,43 @@ class ModemHealthMonitor:
         Returns:
             HealthCheckResult with ping and HTTP status
         """
-        # Extract host from URL
-        import re
-        match = re.search(r'https?://([^:/]+)', base_url)
-        host = match.group(1) if match else base_url
+        # Extract host from URL using proper URL parsing
+        try:
+            parsed = urlparse(base_url)
+            host = parsed.hostname or parsed.netloc.split(':')[0] if parsed.netloc else base_url
 
-        # Run ping and HTTP check in parallel
-        ping_result, http_result = await asyncio.gather(
-            self._check_ping(host),
-            self._check_http(base_url),
-            return_exceptions=True
-        )
+            # Validate host format (basic IP or hostname validation)
+            if not host or not self._is_valid_host(host):
+                _LOGGER.error(f"Invalid host extracted from URL: {base_url}")
+                host = None
+        except Exception as e:
+            _LOGGER.error(f"Failed to parse URL {base_url}: {e}")
+            host = None
 
-        # Handle exceptions
-        if isinstance(ping_result, Exception):
-            _LOGGER.debug("Ping check exception: %s", ping_result)
+        # Run ping and HTTP check in parallel (skip ping if host is invalid)
+        if host:
+            ping_result, http_result = await asyncio.gather(
+                self._check_ping(host),
+                self._check_http(base_url),
+                return_exceptions=True
+            )
+
+            # Handle exceptions
+            if isinstance(ping_result, Exception):
+                _LOGGER.debug("Ping check exception: %s", ping_result)
+                ping_success, ping_latency = False, None
+            else:
+                ping_success, ping_latency = ping_result
+
+            if isinstance(http_result, Exception):
+                _LOGGER.debug("HTTP check exception: %s", http_result)
+                http_success, http_latency = False, None
+            else:
+                http_success, http_latency = http_result
+        else:
+            # Invalid host - both checks fail
             ping_success, ping_latency = False, None
-        else:
-            ping_success, ping_latency = ping_result
-
-        if isinstance(http_result, Exception):
-            _LOGGER.debug("HTTP check exception: %s", http_result)
             http_success, http_latency = False, None
-        else:
-            http_success, http_latency = http_result
 
         # Create result
         result = HealthCheckResult(
@@ -129,18 +149,27 @@ class ModemHealthMonitor:
 
     async def _check_ping(self, host: str) -> tuple[bool, Optional[float]]:
         """
-        Perform ICMP ping check.
+        Perform ICMP ping check with input validation.
+
+        Args:
+            host: Validated hostname or IP address
 
         Returns:
             tuple: (success: bool, latency_ms: float | None)
         """
         try:
+            # Additional validation to prevent command injection
+            if not host or not self._is_valid_host(host):
+                _LOGGER.error(f"Invalid host for ping: {host}")
+                return False, None
+
             # Use system ping command (works on Linux and Windows)
             # -c 1 = send 1 packet (Linux)
             # -W 2 = timeout 2 seconds (Linux)
             start_time = time.time()
 
-            # Run ping command
+            # Run ping command with validated host
+            # Using asyncio.create_subprocess_exec with separate arguments prevents shell injection
             proc = await asyncio.create_subprocess_exec(
                 'ping', '-c', '1', '-W', '2', host,
                 stdout=asyncio.subprocess.PIPE,
@@ -161,7 +190,7 @@ class ModemHealthMonitor:
 
     async def _check_http(self, base_url: str) -> tuple[bool, Optional[float]]:
         """
-        Perform HTTP check (tries HEAD, falls back to GET).
+        Perform HTTP check with SSL verification and redirect validation.
 
         Returns:
             tuple: (success: bool, latency_ms: float | None)
@@ -169,15 +198,35 @@ class ModemHealthMonitor:
         try:
             start_time = time.time()
 
-            # Use aiohttp for async HTTP request
-            # Disable SSL verification for modems with self-signed certs
+            # Validate base URL before making request
+            if not self._is_valid_url(base_url):
+                _LOGGER.error(f"Invalid URL for HTTP check: {base_url}")
+                return False, None
+
+            # Configure SSL based on settings
+            # For cable modems, SSL verification is often disabled due to self-signed certs
+            import ssl
+            if self.verify_ssl:
+                ssl_context = ssl.create_default_context()
+            else:
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
             timeout = aiohttp.ClientTimeout(total=5)
-            connector = aiohttp.TCPConnector(ssl=False)
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
 
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 # Try HEAD first (lightweight)
                 try:
-                    async with session.head(base_url, allow_redirects=True) as response:
+                    async with session.head(base_url, allow_redirects=False) as response:
+                        # Validate redirect if present
+                        if response.status in (301, 302, 303, 307, 308):
+                            redirect_url = response.headers.get('Location', '')
+                            if not self._is_safe_redirect(base_url, redirect_url):
+                                _LOGGER.warning(f"Unsafe redirect detected: {base_url} -> {redirect_url}")
+                                return False, None
+
                         latency_ms = (time.time() - start_time) * 1000
                         # Accept any response (2xx, 3xx, 4xx) as "alive"
                         success = response.status < 500
@@ -185,7 +234,14 @@ class ModemHealthMonitor:
                 except (aiohttp.ClientError, asyncio.TimeoutError):
                     # HEAD failed, try GET (some modems don't support HEAD)
                     start_time = time.time()  # Reset timer
-                    async with session.get(base_url, allow_redirects=True) as response:
+                    async with session.get(base_url, allow_redirects=False) as response:
+                        # Validate redirect if present
+                        if response.status in (301, 302, 303, 307, 308):
+                            redirect_url = response.headers.get('Location', '')
+                            if not self._is_safe_redirect(base_url, redirect_url):
+                                _LOGGER.warning(f"Unsafe redirect detected: {base_url} -> {redirect_url}")
+                                return False, None
+
                         latency_ms = (time.time() - start_time) * 1000
                         success = response.status < 500
                         return success, latency_ms if success else None
@@ -254,3 +310,99 @@ class ModemHealthMonitor:
             "avg_ping_latency_ms": self.average_ping_latency,
             "avg_http_latency_ms": self.average_http_latency,
         }
+
+    def _is_valid_host(self, host: str) -> bool:
+        """
+        Validate hostname or IP address to prevent command injection.
+
+        Args:
+            host: Hostname or IP address to validate
+
+        Returns:
+            bool: True if host is valid
+        """
+        if not host or len(host) > 253:  # Max domain name length
+            return False
+
+        # Allow IPv4, IPv6, and hostnames
+        # Block shell metacharacters and whitespace
+        invalid_chars = [';', '&', '|', '$', '`', '\n', '\r', '\t', ' ', '<', '>', '(', ')', '{', '}']
+        if any(char in host for char in invalid_chars):
+            return False
+
+        # Basic pattern validation for IP or hostname
+        # IPv4: x.x.x.x where x is 0-255
+        # IPv6: valid hex groups with colons
+        # Hostname: alphanumeric with dots and hyphens
+        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
+        hostname_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+
+        return (re.match(ipv4_pattern, host) is not None or
+                re.match(ipv6_pattern, host) is not None or
+                re.match(hostname_pattern, host) is not None)
+
+    def _is_valid_url(self, url: str) -> bool:
+        """
+        Validate URL format and scheme.
+
+        Args:
+            url: URL to validate
+
+        Returns:
+            bool: True if URL is valid
+        """
+        try:
+            parsed = urlparse(url)
+            # Only allow http and https schemes
+            if parsed.scheme not in ['http', 'https']:
+                return False
+            # Must have a valid netloc
+            if not parsed.netloc:
+                return False
+            # Validate the host part
+            host = parsed.hostname or parsed.netloc.split(':')[0]
+            return self._is_valid_host(host)
+        except Exception:
+            return False
+
+    def _is_safe_redirect(self, original_url: str, redirect_url: str) -> bool:
+        """
+        Validate that a redirect URL is safe (same host or whitelisted).
+
+        Args:
+            original_url: Original request URL
+            redirect_url: Redirect target URL
+
+        Returns:
+            bool: True if redirect is safe
+        """
+        try:
+            # Parse both URLs
+            original_parsed = urlparse(original_url)
+            redirect_parsed = urlparse(redirect_url)
+
+            # If redirect is relative, it's safe
+            if not redirect_parsed.scheme:
+                return True
+
+            # Only allow http/https redirects
+            if redirect_parsed.scheme not in ['http', 'https']:
+                _LOGGER.warning(f"Redirect to non-HTTP scheme blocked: {redirect_parsed.scheme}")
+                return False
+
+            # Check if redirect is to the same host
+            original_host = original_parsed.hostname or original_parsed.netloc
+            redirect_host = redirect_parsed.hostname or redirect_parsed.netloc
+
+            if original_host == redirect_host:
+                return True
+
+            # For modem health checks, we typically expect same-host redirects
+            # External redirects are suspicious and blocked by default
+            _LOGGER.warning(f"Cross-host redirect blocked: {original_host} -> {redirect_host}")
+            return False
+
+        except Exception as e:
+            _LOGGER.error(f"Error validating redirect: {e}")
+            return False

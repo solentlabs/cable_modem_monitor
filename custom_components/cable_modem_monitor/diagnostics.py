@@ -62,10 +62,28 @@ async def async_get_config_entry_diagnostics(
     }
 
     # Add error information if last update failed
+    # Security: Sanitize exception messages to avoid leaking sensitive information
     if coordinator.last_exception:
+        exception_type = type(coordinator.last_exception).__name__
+        exception_msg = str(coordinator.last_exception)
+
+        # Sanitize exception message - remove potential credentials, paths, IPs
+        import re
+        # Remove anything that looks like credentials (password=, user=, etc.)
+        exception_msg = re.sub(r'(password|passwd|pwd|token|key|secret|auth)[\s]*[=:]\s*[^\s,}]+',
+                               r'\1=***REDACTED***', exception_msg, flags=re.IGNORECASE)
+        # Remove file paths
+        exception_msg = re.sub(r'/[^\s,}]+', '/***PATH***', exception_msg)
+        # Remove IP addresses (basic pattern)
+        exception_msg = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', '***IP***', exception_msg)
+        # Truncate long messages
+        if len(exception_msg) > 200:
+            exception_msg = exception_msg[:200] + "... (truncated)"
+
         diagnostics["last_error"] = {
-            "type": type(coordinator.last_exception).__name__,
-            "message": str(coordinator.last_exception),
+            "type": exception_type,
+            "message": exception_msg,
+            "note": "Exception details have been sanitized for security"
         }
 
     return diagnostics

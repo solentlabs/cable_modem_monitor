@@ -57,6 +57,16 @@ class TechnicolorXB7Parser(ModemParser):
                 return False, None
 
             # Step 2: Check if we got redirected to at_a_glance.jst (successful login)
+            # Validate redirect URL is on the same host for security
+            from urllib.parse import urlparse
+            redirect_parsed = urlparse(response.url)
+            base_parsed = urlparse(base_url)
+
+            # Security check: Ensure redirect is to same host
+            if redirect_parsed.hostname != base_parsed.hostname:
+                _LOGGER.error(f"XB7: Security violation - redirect to different host: {response.url}")
+                return False, None
+
             if "at_a_glance.jst" in response.url:
                 _LOGGER.debug("XB7: Login successful, redirected to at_a_glance.jst")
             else:
