@@ -133,9 +133,17 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Get detection info to store for future use
     detection_info = scraper.get_detection_info()
 
+    # Create title with detected modem info
+    detected_modem = detection_info.get("modem_name", "Cable Modem")
+    detected_manufacturer = detection_info.get("manufacturer", "")
+    if detected_manufacturer and detected_manufacturer != "Unknown":
+        title = f"{detected_manufacturer} {detected_modem} ({host})"
+    else:
+        title = f"{detected_modem} ({host})"
+
     # Return info that you want to store in the config entry.
     return {
-        "title": f"Cable Modem ({host})",
+        "title": title,
         "detection_info": detection_info,
     }
 
@@ -290,7 +298,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=user_input
                 )
-                return self.async_create_entry(title="", data={})
+
+                # Create success message with detected modem info
+                detected_modem = user_input.get(CONF_DETECTED_MODEM, "Cable Modem")
+                detected_manufacturer = user_input.get(CONF_DETECTED_MANUFACTURER, "")
+                if detected_manufacturer and detected_manufacturer != "Unknown":
+                    success_message = f"Configured for {detected_manufacturer} {detected_modem}"
+                else:
+                    success_message = f"Configured for {detected_modem}"
+
+                return self.async_create_entry(title=success_message, data={})
 
         # Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
