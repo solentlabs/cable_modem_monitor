@@ -4,8 +4,10 @@ import base64
 import requests
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Tuple
-from dataclasses import dataclass
+from typing import Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .auth_config import AuthConfig
 
 _LOGGER = logging.getLogger(__name__)
 
