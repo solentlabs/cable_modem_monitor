@@ -93,11 +93,8 @@ async def async_setup_entry(
             # v2.0+ parsers return 'channel_id', older versions used 'channel'
             # Fallback to index+1 if neither exists (shouldn't happen in practice)
             channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
-            _LOGGER.debug("Creating upstream entities for channel %s: {channel}", channel_num)
             power_sensor = ModemUpstreamPowerSensor(coordinator, entry, channel_num)
             freq_sensor = ModemUpstreamFrequencySensor(coordinator, entry, channel_num)
-            _LOGGER.debug("  Power sensor unique_id: %s", power_sensor.unique_id)
-            _LOGGER.debug("  Freq sensor unique_id: %s", freq_sensor.unique_id)
             entities.extend([power_sensor, freq_sensor])
 
     # Add LAN stats sensors
@@ -117,10 +114,6 @@ async def async_setup_entry(
             )
 
     _LOGGER.info("Created %s total sensor entities", len(entities))
-    upstream_entities = [e for e in entities if 'upstream' in e.unique_id and 'US Ch' in e.name]
-    _LOGGER.info("About to add %s upstream channel entities:", len(upstream_entities))
-    for e in upstream_entities:
-        _LOGGER.debug("  - %s (unique_id: {e.unique_id})", e.name)
     async_add_entities(entities)
 
 
@@ -137,8 +130,6 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         # Get detected modem info from config entry, with fallback to generic values
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
         model = entry.data.get("detected_modem", "Cable Modem Monitor")
-
-        _LOGGER.info("Setting device info - Manufacturer: %s, Model: {model}, Entry data keys: {list(entry.data.keys())}", manufacturer)
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
