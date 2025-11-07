@@ -104,6 +104,72 @@ class ModemScraper:
 
         return self.parser.login(self.session, self.base_url, self.username, self.password)
 
+    def _get_tier1_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+        """Get URLs for Tier 1: User explicitly selected a parser."""
+        _LOGGER.info("Tier 1: Using explicitly selected parser: %s", self.parser.name)
+        urls = []
+        for pattern in self.parser.url_patterns:
+            url = f"{self.base_url}{pattern['path']}"
+            urls.append((url, pattern['auth_method'], type(self.parser)))
+        return urls
+
+    def _get_tier2_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+        """Get URLs for Tier 2: Cached parser from previous detection."""
+        _LOGGER.info("Tier 2: Looking for cached parser: %s", self.parser_name)
+        cached_parser = next((p for p in self.parsers if p.name == self.parser_name), None)
+        if not cached_parser:
+            return []
+
+        _LOGGER.info("Found cached parser: %s", cached_parser.name)
+        urls = []
+
+        # Try cached URL first if available
+        if self.cached_url:
+            cached_pattern = next(
+                (p for p in cached_parser.url_patterns
+                 if isinstance(p.get('path'), str) and p.get('path') in self.cached_url),
+                cached_parser.url_patterns[0] if cached_parser.url_patterns else None
+            )
+            if cached_pattern:
+                urls.append((self.cached_url, cached_pattern['auth_method'], cached_parser))
+
+        # Add other URLs from cached parser
+        for pattern in cached_parser.url_patterns:
+            url = f"{self.base_url}{pattern['path']}"
+            if url != self.cached_url:
+                urls.append((url, pattern['auth_method'], cached_parser))
+
+        # Add other parsers as fallback
+        for parser_class in self.parsers:
+            if parser_class.name != self.parser_name:
+                for pattern in parser_class.url_patterns:
+                    url = f"{self.base_url}{pattern['path']}"
+                    urls.append((url, pattern['auth_method'], parser_class))
+
+        return urls
+
+    def _get_tier3_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+        """Get URLs for Tier 3: Auto-detection mode - try all parsers."""
+        _LOGGER.info("Tier 3: Auto-detection mode - trying all parsers")
+        urls = []
+
+        # Try cached URL first with any compatible parser
+        if self.cached_url:
+            for parser_class in self.parsers:
+                for pattern in parser_class.url_patterns:
+                    if pattern['path'] in self.cached_url:
+                        urls.append((self.cached_url, pattern['auth_method'], parser_class))
+                        break
+
+        # Add all parser URLs
+        for parser_class in self.parsers:
+            for pattern in parser_class.url_patterns:
+                url = f"{self.base_url}{pattern['path']}"
+                if url != self.cached_url:
+                    urls.append((url, pattern['auth_method'], parser_class))
+
+        return urls
+
     def _get_url_patterns_to_try(self) -> list[tuple[str, str, Type[ModemParser]]]:
         """
         Get list of (url, auth_method, parser_class) tuples to try.
@@ -113,66 +179,18 @@ class ModemScraper:
         2. If parser_name cached: load that parser and use its URLs first
         3. Auto-detect mode: try all parsers' URLs
         """
-        urls_to_try = []
-
         # Tier 1: User explicitly selected a parser
         if self.parser:
-            _LOGGER.info("Tier 1: Using explicitly selected parser: %s", self.parser.name)
-            for pattern in self.parser.url_patterns:
-                url = f"{self.base_url}{pattern['path']}"
-                urls_to_try.append((url, pattern['auth_method'], type(self.parser)))
-            return urls_to_try
+            return self._get_tier1_urls()
 
         # Tier 2: Cached parser from previous successful detection
         if self.parser_name and self.parsers:
-            _LOGGER.info("Tier 2: Looking for cached parser: %s", self.parser_name)
-            cached_parser = next((p for p in self.parsers if p.name == self.parser_name), None)
-            if cached_parser:
-                _LOGGER.info("Found cached parser: %s", cached_parser.name)
-                # Try cached URL first if available
-                if self.cached_url:
-                    # Find the auth method for cached URL
-                    cached_pattern = next(
-                        (p for p in cached_parser.url_patterns
-                         if isinstance(p.get('path'), str) and p.get('path') in self.cached_url),
-                        cached_parser.url_patterns[0] if cached_parser.url_patterns else None
-                    )
-                    if cached_pattern:
-                        urls_to_try.append((self.cached_url, cached_pattern['auth_method'], cached_parser))
+            urls = self._get_tier2_urls()
+            if urls:
+                return urls
 
-                # Add other URLs from this parser
-                for pattern in cached_parser.url_patterns:
-                    url = f"{self.base_url}{pattern['path']}"
-                    if url != self.cached_url:  # Don't duplicate cached URL
-                        urls_to_try.append((url, pattern['auth_method'], cached_parser))
-
-                # Add other parsers as fallback
-                for parser_class in self.parsers:
-                    if parser_class.name != self.parser_name:
-                        for pattern in parser_class.url_patterns:
-                            url = f"{self.base_url}{pattern['path']}"
-                            urls_to_try.append((url, pattern['auth_method'], parser_class))
-                return urls_to_try
-
-        # Tier 3: Auto-detection mode - try all parsers
-        _LOGGER.info("Tier 3: Auto-detection mode - trying all parsers")
-
-        # If we have a cached URL, try it first with any compatible parser
-        if self.cached_url:
-            for parser_class in self.parsers:
-                for pattern in parser_class.url_patterns:
-                    if pattern['path'] in self.cached_url:
-                        urls_to_try.append((self.cached_url, pattern['auth_method'], parser_class))
-                        break
-
-        # Add all parser URLs
-        for parser_class in self.parsers:
-            for pattern in parser_class.url_patterns:
-                url = f"{self.base_url}{pattern['path']}"
-                if url != self.cached_url:  # Don't duplicate
-                    urls_to_try.append((url, pattern['auth_method'], parser_class))
-
-        return urls_to_try
+        # Tier 3: Auto-detection mode
+        return self._get_tier3_urls()
 
     def _fetch_data(self) -> tuple[str, str, Type[ModemParser]] | None:
         """
@@ -232,6 +250,108 @@ class ModemScraper:
 
         return None
 
+    def _try_anonymous_probing(self, circuit_breaker, attempted_parsers: list) -> ModemParser | None:
+        """Try anonymous probing for modems with public pages."""
+        _LOGGER.info("Phase 3: Attempting anonymous probing before authentication")
+
+        for parser_class in self.parsers:
+            if not circuit_breaker.should_continue():
+                break
+
+            try:
+                anon_result = ParserHeuristics.check_anonymous_access(
+                    self.base_url, parser_class, self.session, self.verify_ssl
+                )
+                if anon_result:
+                    anon_html, anon_url = anon_result
+                    anon_soup = BeautifulSoup(anon_html, "html.parser")
+                    circuit_breaker.record_attempt(parser_class.name)
+
+                    if parser_class.can_parse(anon_soup, anon_url, anon_html):
+                        _LOGGER.info(
+                            "✓ Detected modem via anonymous probing: %s (%s)",
+                            parser_class.name,
+                            parser_class.manufacturer
+                        )
+                        return parser_class()
+                    else:
+                        attempted_parsers.append(parser_class.name)
+            except Exception as e:
+                _LOGGER.debug("Anonymous probing failed for %s: %s", parser_class.name, e)
+
+        return None
+
+    def _try_suggested_parser(
+        self, soup, url: str, html: str, suggested_parser, circuit_breaker, attempted_parsers: list
+    ) -> ModemParser | None:
+        """Try the suggested parser from URL pattern matching."""
+        if not suggested_parser:
+            return None
+
+        if not circuit_breaker.should_continue():
+            raise ParserNotFoundError(
+                modem_info={"title": soup.title.string if soup.title else "NO TITLE"},
+                attempted_parsers=attempted_parsers
+            )
+
+        try:
+            circuit_breaker.record_attempt(suggested_parser.name)
+            _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
+            if suggested_parser.can_parse(soup, url, html):
+                _LOGGER.info(
+                    "Detected modem using suggested parser: %s (%s)",
+                    suggested_parser.name,
+                    suggested_parser.manufacturer
+                )
+                return suggested_parser()
+            else:
+                attempted_parsers.append(suggested_parser.name)
+                _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
+        except Exception as e:
+            _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
+            attempted_parsers.append(suggested_parser.name)
+
+        return None
+
+    def _try_prioritized_parsers(
+        self, soup, url: str, html: str, suggested_parser, circuit_breaker, attempted_parsers: list
+    ) -> ModemParser | None:
+        """Try parsers in prioritized order using heuristics."""
+        _LOGGER.info("Phase 3: Using parser heuristics to prioritize likely parsers")
+        prioritized_parsers = ParserHeuristics.get_likely_parsers(
+            self.base_url, self.parsers, self.session, self.verify_ssl
+        )
+
+        _LOGGER.debug(
+            "Attempting to detect parser from %s available parsers (prioritized)",
+            len(prioritized_parsers)
+        )
+
+        for parser_class in prioritized_parsers:
+            if not circuit_breaker.should_continue():
+                break
+
+            if suggested_parser and parser_class == suggested_parser:
+                continue  # Already tried this one
+
+            try:
+                circuit_breaker.record_attempt(parser_class.name)
+                _LOGGER.debug("Testing parser: %s", parser_class.name)
+                if parser_class.can_parse(soup, url, html):
+                    _LOGGER.info("✓ Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
+                    return parser_class()
+                else:
+                    attempted_parsers.append(parser_class.name)
+                    _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
+            except Exception as e:
+                _LOGGER.error(
+                    f"Parser {parser_class.name} detection failed with exception: {e}",
+                    exc_info=True
+                )
+                attempted_parsers.append(parser_class.name)
+
+        return None
+
     def _detect_parser(
         self, html: str, url: str, suggested_parser: Type[ModemParser] | None = None
     ) -> ModemParser | None:
@@ -256,80 +376,20 @@ class ModemScraper:
         circuit_breaker = DiscoveryCircuitBreaker(max_attempts=15, timeout_seconds=90)
         attempted_parsers = []
 
-        # Phase 3: Try anonymous probing first (for modems with public pages)
-        _LOGGER.info("Phase 3: Attempting anonymous probing before authentication")
-        for parser_class in self.parsers:
-            if not circuit_breaker.should_continue():
-                break
+        # Try anonymous probing first
+        parser = self._try_anonymous_probing(circuit_breaker, attempted_parsers)
+        if parser:
+            return parser
 
-            try:
-                anon_result = ParserHeuristics.check_anonymous_access(
-                    self.base_url, parser_class, self.session, self.verify_ssl
-                )
-                if anon_result:
-                    anon_html, anon_url = anon_result
-                    anon_soup = BeautifulSoup(anon_html, "html.parser")
-                    circuit_breaker.record_attempt(parser_class.name)
+        # Try suggested parser from URL matching
+        parser = self._try_suggested_parser(soup, url, html, suggested_parser, circuit_breaker, attempted_parsers)
+        if parser:
+            return parser
 
-                    if parser_class.can_parse(anon_soup, anon_url, anon_html):
-                        _LOGGER.info("✓ Detected modem via anonymous probing: %s (%s)",
-                                     parser_class.name, parser_class.manufacturer)
-                        return parser_class()
-                    else:
-                        attempted_parsers.append(parser_class.name)
-            except Exception as e:
-                _LOGGER.debug("Anonymous probing failed for %s: %s", parser_class.name, e)
-
-        # If we have a suggested parser from URL matching, try it first
-        if suggested_parser:
-            if not circuit_breaker.should_continue():
-                raise ParserNotFoundError(
-                    modem_info={"title": soup.title.string if soup.title else "NO TITLE"},
-                    attempted_parsers=attempted_parsers
-                )
-
-            try:
-                circuit_breaker.record_attempt(suggested_parser.name)
-                _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
-                if suggested_parser.can_parse(soup, url, html):
-                    _LOGGER.info("Detected modem using suggested parser: %s (%s)",
-                                 suggested_parser.name, suggested_parser.manufacturer)
-                    return suggested_parser()
-                else:
-                    attempted_parsers.append(suggested_parser.name)
-                    _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
-            except Exception as e:
-                _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
-                attempted_parsers.append(suggested_parser.name)
-
-        # Phase 3: Use parser heuristics to narrow search space
-        _LOGGER.info("Phase 3: Using parser heuristics to prioritize likely parsers")
-        prioritized_parsers = ParserHeuristics.get_likely_parsers(
-            self.base_url, self.parsers, self.session, self.verify_ssl
-        )
-
-        # Try parsers in prioritized order
-        _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)",
-                      len(prioritized_parsers))
-        for parser_class in prioritized_parsers:
-            if not circuit_breaker.should_continue():
-                break
-
-            if suggested_parser and parser_class == suggested_parser:
-                continue  # Already tried this one
-
-            try:
-                circuit_breaker.record_attempt(parser_class.name)
-                _LOGGER.debug("Testing parser: %s", parser_class.name)
-                if parser_class.can_parse(soup, url, html):
-                    _LOGGER.info("✓ Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
-                    return parser_class()
-                else:
-                    attempted_parsers.append(parser_class.name)
-                    _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
-            except Exception as e:
-                _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
-                attempted_parsers.append(parser_class.name)
+        # Try prioritized parsers using heuristics
+        parser = self._try_prioritized_parsers(soup, url, html, suggested_parser, circuit_breaker, attempted_parsers)
+        if parser:
+            return parser
 
         # No parser matched - raise detailed error
         modem_info = {
