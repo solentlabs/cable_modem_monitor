@@ -137,7 +137,12 @@ class FormPlainAuthStrategy(AuthStrategy):
 
         # Check success indicator
         if config.success_indicator:
-            if config.success_indicator in response.url or len(response.text) > int(config.success_indicator) if config.success_indicator.isdigit() else False:
+            is_in_url = config.success_indicator in response.url
+            is_large_response = (
+                config.success_indicator.isdigit()
+                and len(response.text) > int(config.success_indicator)
+            )
+            if is_in_url or is_large_response:
                 _LOGGER.debug("Form login successful")
                 return (True, response.text)
             else:
@@ -186,12 +191,20 @@ class FormBase64AuthStrategy(AuthStrategy):
             config.password_field: encoded_password,
         }
 
-        _LOGGER.debug("Submitting form login with Base64-encoded password to %s", login_url)
+        _LOGGER.debug(
+            "Submitting form login with Base64-encoded password to %s",
+            login_url
+        )
         response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
 
         # Check success indicator
         if config.success_indicator:
-            if config.success_indicator in response.url or (config.success_indicator.isdigit() and len(response.text) > int(config.success_indicator)):
+            is_in_url = config.success_indicator in response.url
+            is_large_response = (
+                config.success_indicator.isdigit()
+                and len(response.text) > int(config.success_indicator)
+            )
+            if is_in_url or is_large_response:
                 _LOGGER.debug("Form login successful")
                 return (True, response.text)
             else:
@@ -247,7 +260,12 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
             # Check success
             success = False
             if config.success_indicator:
-                success = config.success_indicator in response.url or (config.success_indicator.isdigit() and len(response.text) > int(config.success_indicator))
+                is_in_url = config.success_indicator in response.url
+                is_large_response = (
+                    config.success_indicator.isdigit()
+                    and len(response.text) > int(config.success_indicator)
+                )
+                success = is_in_url or is_large_response
             else:
                 success = response.status_code == 200
 
@@ -391,10 +409,15 @@ class HNAPSessionAuthStrategy(AuthStrategy):
             _LOGGER.error("HNAP login exception: %s", str(e), exc_info=True)
             return (False, None)
 
-    def _build_login_envelope(self, username: str, password: str, config: "HNAPAuthConfig") -> str:
+    def _build_login_envelope(
+        self, username: str, password: str, config: "HNAPAuthConfig"
+    ) -> str:
         """Build SOAP login envelope for HNAP."""
         return f'''<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Envelope
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
     <Login xmlns="{config.soap_action_namespace}">
       <Username>{username}</Username>
