@@ -3,6 +3,8 @@ import logging
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
+from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
+from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,8 +20,11 @@ class TechnicolorTC4400Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["TC4400"]
 
+    # New authentication configuration (declarative)
+    auth_config = BasicAuthConfig(strategy=AuthStrategyType.BASIC_HTTP)
+
     url_patterns = [
-        {"path": "/cmconnectionstatus.html", "auth_method": "basic"},
+        {"path": "/cmconnectionstatus.html", "auth_method": "basic", "auth_required": True},
     ]
 
     @classmethod
@@ -28,13 +33,17 @@ class TechnicolorTC4400Parser(ModemParser):
         return "cmconnectionstatus.html" in url.lower() or "cmswinfo.html" in url.lower() or ("Board ID:" in html and "Build Timestamp:" in html)
 
     def login(self, session, base_url, username, password) -> bool:
-        """Log in to the modem using Basic HTTP Authentication."""
-        if not username or not password:
-            _LOGGER.debug("No credentials provided, skipping login")
-            return True
+        """
+        Log in to the modem using Basic HTTP Authentication.
 
-        session.auth = (username, password)
-        return True
+        Note: This method now delegates to the new authentication system.
+        It is maintained for backward compatibility.
+        """
+        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
+
+        auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
+        success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
+        return success
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""

@@ -4,6 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
+from custom_components.cable_modem_monitor.core.auth_config import RedirectFormAuthConfig
+from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,8 +17,18 @@ class TechnicolorXB7Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["XB7", "CGM4331COM"]
 
+    # New authentication configuration (declarative)
+    auth_config = RedirectFormAuthConfig(
+        strategy=AuthStrategyType.REDIRECT_FORM,
+        login_url="/check.jst",
+        username_field="username",
+        password_field="password",
+        success_redirect_pattern="/at_a_glance.jst",
+        authenticated_page_url="/network_setup.jst"
+    )
+
     url_patterns = [
-        {"path": "/network_setup.jst", "auth_method": "form"},
+        {"path": "/network_setup.jst", "auth_method": "form", "auth_required": True},
     ]
 
     def login(self, session, base_url, username, password) -> tuple[bool, str]:
