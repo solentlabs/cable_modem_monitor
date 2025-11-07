@@ -64,27 +64,49 @@ class MotorolaGenericParser(ModemParser):
             }
             pwd_type = "plain" if attempt == 1 else "Base64-encoded"
             # Security: Do not log usernames or any credential information
-            _LOGGER.info("Attempting login to %s (password encoding: {pwd_type})", login_url)
+            _LOGGER.info("Attempting login to %s (password encoding: %s)", login_url, pwd_type)
 
             # Security: Disable auto-redirects and validate manually
             response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
-            _LOGGER.debug("Login response: status=%s, url={response.url}", response.status_code)
+            _LOGGER.debug("Login response: status=%s, url=%s", response.status_code, response.url)
 
-            # Security check: Validate redirect stayed on same host
+            # Security check: Validate redirect stayed on same host or local network
             from urllib.parse import urlparse
+            import ipaddress
+
             if response.url != login_url:
                 response_parsed = urlparse(response.url)
                 login_parsed = urlparse(login_url)
+
+                # Allow redirects if hostnames match
                 if response_parsed.hostname != login_parsed.hostname:
-                    _LOGGER.error("Motorola: Security violation - redirect to different host: %s", response.url)
-                    return False, None
+                    # For local network devices, allow redirects within private IP ranges
+                    # This handles cases where modems redirect from IP to hostname or between IPs
+                    try:
+                        # Try to parse as IP addresses
+                        login_ip = ipaddress.ip_address(login_parsed.hostname)
+                        response_ip = ipaddress.ip_address(response_parsed.hostname)
+
+                        # If both are private/local IPs, allow the redirect (trusted local network)
+                        if login_ip.is_private and response_ip.is_private:
+                            _LOGGER.debug("Allowing redirect within private network: %s -> %s",
+                                        login_parsed.hostname, response_parsed.hostname)
+                        else:
+                            # One or both are public IPs - enforce strict matching
+                            _LOGGER.error("Motorola: Security violation - redirect to different public host: %s", response.url)
+                            return False, None
+                    except ValueError:
+                        # Not IP addresses (hostnames) - enforce strict matching for security
+                        _LOGGER.error("Motorola: Security violation - redirect to different host: %s (from %s)",
+                                    response_parsed.hostname, login_parsed.hostname)
+                        return False, None
 
             test_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
-            _LOGGER.debug("Login verification: test page status=%s, length={len(test_response.text)}", test_response.status_code)
+            _LOGGER.debug("Login verification: test page status=%s, length=%s", test_response.status_code, len(test_response.text))
 
             # Check for successful authentication - look for actual content, not login page
             if test_response.status_code == 200 and len(test_response.text) > 10000:
-                _LOGGER.info("Login successful using %s password (got {len(test_response.text)} bytes)", pwd_type)
+                _LOGGER.info("Login successful using %s password (got %s bytes)", pwd_type, len(test_response.text))
                 return True, test_response.text
 
         _LOGGER.error("Login failed with both plain and Base64-encoded passwords")
@@ -124,7 +146,7 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
+        _LOGGER.debug("Uptime: %s, Seconds: %s, Restarting: %s", system_info.get('system_uptime'), uptime_seconds, is_restarting)
 
         channels = []
         try:
@@ -153,7 +175,7 @@ class MotorolaGenericParser(ModemParser):
                                 
                                 power = extract_float(cols[5].text)
                                 snr = extract_float(cols[6].text)
-                                _LOGGER.debug("Ch %s: Raw Power={power}, Raw SNR={snr}", channel_id)
+                                _LOGGER.debug("Ch %s: Raw Power=%s, Raw SNR=%s", channel_id, power, snr)
 
                                 # During restart window, filter out zero values which are typically invalid
                                 if is_restarting:
@@ -189,7 +211,7 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
+        _LOGGER.debug("Uptime: %s, Seconds: %s, Restarting: %s", system_info.get('system_uptime'), uptime_seconds, is_restarting)
         channels = []
         try:
             for table in soup.find_all("table", class_="moto-table-content"):
@@ -208,14 +230,14 @@ class MotorolaGenericParser(ModemParser):
 
                                 lock_status = cols[1].text.strip()
                                 if "not locked" in lock_status.lower():
-                                    _LOGGER.debug("Skipping channel %s - not locked (status: {lock_status})", channel_id)
+                                    _LOGGER.debug("Skipping channel %s - not locked (status: %s)", channel_id, lock_status)
                                     continue
 
                                 freq_mhz = extract_float(cols[5].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
 
                                 power = extract_float(cols[6].text)
-                                _LOGGER.debug("Ch %s: Raw Power={power}", channel_id)
+                                _LOGGER.debug("Ch %s: Raw Power=%s", channel_id, power)
 
                                 # During restart window, filter out zero power which is typically invalid
                                 if is_restarting and power == 0:
@@ -288,7 +310,7 @@ class MotorolaGenericParser(ModemParser):
                 "MotoSecurityAction": "1"
             }
             response = session.post(restart_url, data=restart_data, timeout=10)
-            _LOGGER.debug("Restart response: status=%s, content_length={len(response.text)}", response.status_code)
+            _LOGGER.debug("Restart response: status=%s, content_length=%s", response.status_code, len(response.text))
 
             # Motorola modems typically return 200 even when restart is initiated
             if response.status_code == 200:
