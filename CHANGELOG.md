@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-***REMOVED******REMOVED*** [Unreleased]
+***REMOVED******REMOVED*** [2.6.1] - 2025-11-06
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Excessive Logging** - Reduced excessive error logging during modem restart and connection attempts. Debug messages that were temporarily promoted to `ERROR` for testing have been moved to the appropriate `DEBUG` level, cleaning up the logs during normal operation.
+- **Standardized Logging** - Updated all logging statements to use standard string formatting instead of f-strings for consistency and performance.
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Modem Restart Reliability** - The `restart_modem` function is now more robust.
+  - It always re-fetches connection data before a restart to detect if the modem has fallen back from HTTPS to HTTP, ensuring the correct protocol is used.
+  - It now attempts to log in before sending the restart command if credentials are provided, improving compatibility with modems that require authentication for restart functionality.
+- **Motorola Parser Security** - Improved the security of the Motorola parser's login mechanism by allowing redirects only within private IP address ranges, preventing open redirect vulnerabilities while still accommodating local network device behavior.
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Restart Tests** - Added a comprehensive suite of tests for the `restart_modem` functionality to verify HTTP/HTTPS fallback, login handling, and various failure scenarios.
 
 ***REMOVED******REMOVED*** [2.6.0] - 2025-11-06
 

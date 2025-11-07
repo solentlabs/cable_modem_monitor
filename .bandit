@@ -1,33 +1,24 @@
-[bandit]
 ***REMOVED*** Bandit configuration for Python security linting
 ***REMOVED*** https://bandit.readthedocs.io/
 
-***REMOVED*** Target directories
-targets = custom_components
-
-***REMOVED*** Recursively scan directories
-recursive = true
-
 ***REMOVED*** Exclude test files and virtual environments
-exclude_dirs = /tests/,/venv/,/.venv/,/__pycache__/,.git/
+exclude_dirs:
+  - /tests/
+  - /venv/
+  - /.venv/
+  - /__pycache__/
+  - /.git/
 
-***REMOVED*** Report format
-format = screen
+***REMOVED*** Skips (use sparingly)
+***REMOVED*** B101 - assert_used (ok in tests)
+skips:
+  - B101
 
-***REMOVED*** Security checks to enable (leave empty to enable all)
+***REMOVED*** Tests to run (leave empty to run all)
 ***REMOVED*** Common issues that CodeQL also catches:
 ***REMOVED*** B201 - Flask debug mode
 ***REMOVED*** B301-B324 - Pickle/marshal/shelve usage
 ***REMOVED*** B501-B509 - Weak cryptography
 ***REMOVED*** B601-B612 - Shell injection, SQL injection
 ***REMOVED*** B701-B703 - Jinja2 autoescape issues
-
-***REMOVED*** Skips (use sparingly)
-***REMOVED*** B101 - assert_used (ok in tests)
-skips = B101
-
-***REMOVED*** Confidence levels to report: LOW, MEDIUM, HIGH
-level = MEDIUM
-
-***REMOVED*** Severity levels to report: LOW, MEDIUM, HIGH
-severity = LOW
+tests: []

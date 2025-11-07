@@ -1,5 +1,11 @@
 {
   // Python settings
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests",
+    "-v"
+  ],
   "python.linting.enabled": true,
 
   // Bandit security linter
@@ -42,6 +48,16 @@
       "source.organizeImports": "explicit"
     }
   },
+
+  // Pytest configuration
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests",
+    "-v",
+    "--tb=short"
+  ],
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
 
   // Security-focused extensions
   "semgrep.scan.onSave": true,
