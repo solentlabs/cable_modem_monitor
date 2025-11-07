@@ -9,7 +9,8 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/kwschulz/cable_modem_monitor/issues",
   "requirements": [
-    "beautifulsoup4==4.12.2"
+    "beautifulsoup4==4.12.2",
+    "defusedxml==0.7.1"
   ],
   "version": "3.0.0",
   "integration_type": "device"
