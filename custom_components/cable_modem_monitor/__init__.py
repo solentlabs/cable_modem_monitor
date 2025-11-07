@@ -217,8 +217,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Initialize health monitor for dual-layer diagnostics
+    # Create SSL context in executor to avoid blocking I/O in event loop
     from .core.health_monitor import ModemHealthMonitor
-    health_monitor = ModemHealthMonitor(max_history=100)
+    import ssl
+
+    def create_ssl_context():
+        """Create SSL context with proper configuration (runs in executor to avoid blocking)."""
+        context = ssl.create_default_context()
+        # Always disable verification for cable modems (see VERIFY_SSL constant in const.py)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
+
+    ssl_context = await hass.async_add_executor_job(create_ssl_context)
+    health_monitor = ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
 
     async def async_update_data():
         """Fetch data from the modem."""
