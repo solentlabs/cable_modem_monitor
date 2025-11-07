@@ -17,6 +17,8 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to the modem. Please verify: 1) IP address is correct (typically 192.168.100.1), 2) If modem requires authentication, username/password are correct (leave blank if no auth needed), 3) Modem's web interface is accessible from Home Assistant's network. If connection works but setup still fails, your modem model may not be supported yet - please enable debug logging to help us add support.",
+      "unsupported_modem": "Your modem model is not currently supported. The integration attempted to detect your modem but none of the available parsers matched. Check the Home Assistant logs for details about your modem (manufacturer, model, web interface URL). You can open a GitHub issue at https://github.com/kwschulz/cable_modem_monitor/issues with this information to request support for your modem.",
+      "invalid_input": "Invalid input provided. Please check the values and try again.",
       "unknown": "Unexpected error occurred. Check Home Assistant logs for details."
     },
     "abort": {
