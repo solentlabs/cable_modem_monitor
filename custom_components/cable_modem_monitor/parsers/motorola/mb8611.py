@@ -47,7 +47,7 @@ class MotorolaMB8611Parser(ModemParser):
 
         return False
 
-    def login(self, session, base_url, username, password) -> tuple[bool, str]:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """
         Log in using HNAP authentication (backward compatibility).
 

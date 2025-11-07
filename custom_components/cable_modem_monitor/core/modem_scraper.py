@@ -134,7 +134,7 @@ class ModemScraper:
                     # Find the auth method for cached URL
                     cached_pattern = next(
                         (p for p in cached_parser.url_patterns
-                         if isinstance(p.get('path'), str) and isinstance(p['path'], str) and p['path'] in self.cached_url),
+                         if isinstance(p.get('path'), str) and p.get('path') in self.cached_url),
                         cached_parser.url_patterns[0] if cached_parser.url_patterns else None
                     )
                     if cached_pattern:
@@ -410,23 +410,28 @@ class ModemScraper:
 
             data = self._parse_data(html)
 
-            total_corrected = sum(ch.get("corrected") or 0 for ch in data["downstream"])
-            total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in data["downstream"])
+            # Use .get() with defaults to prevent KeyError
+            downstream = data.get("downstream", [])
+            upstream = data.get("upstream", [])
+            system_info = data.get("system_info", {})
+
+            total_corrected = sum(ch.get("corrected") or 0 for ch in downstream)
+            total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in downstream)
 
             # Prefix system_info keys with cable_modem_
             prefixed_system_info = {}
-            for key, value in data["system_info"].items():
+            for key, value in system_info.items():
                 prefixed_key = f"cable_modem_{key}"
                 prefixed_system_info[prefixed_key] = value
 
             return {
-                "cable_modem_connection_status": "online" if (data["downstream"] or data["upstream"]) else "offline",
-                "cable_modem_downstream": data["downstream"],
-                "cable_modem_upstream": data["upstream"],
+                "cable_modem_connection_status": "online" if (downstream or upstream) else "offline",
+                "cable_modem_downstream": downstream,
+                "cable_modem_upstream": upstream,
                 "cable_modem_total_corrected": total_corrected,
                 "cable_modem_total_uncorrected": total_uncorrected,
-                "cable_modem_downstream_channel_count": len(data["downstream"]),
-                "cable_modem_upstream_channel_count": len(data["upstream"]),
+                "cable_modem_downstream_channel_count": len(downstream),
+                "cable_modem_upstream_channel_count": len(upstream),
                 **prefixed_system_info,
             }
 

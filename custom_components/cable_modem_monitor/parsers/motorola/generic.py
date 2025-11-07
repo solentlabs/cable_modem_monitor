@@ -42,7 +42,7 @@ class MotorolaGenericParser(ModemParser):
         """Detect if this is a Motorola MB series modem."""
         return bool(soup.title and soup.title.string and "Motorola Cable Modem" in soup.title.string)
 
-    def login(self, session, base_url, username, password) -> tuple[bool, str]:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """Log in to the modem using form-based authentication.
 
         Returns:

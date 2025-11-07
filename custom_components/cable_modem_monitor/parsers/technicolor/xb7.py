@@ -31,7 +31,7 @@ class TechnicolorXB7Parser(ModemParser):
         {"path": "/network_setup.jst", "auth_method": "form", "auth_required": True},
     ]
 
-    def login(self, session, base_url, username, password) -> tuple[bool, str]:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """
         XB7 uses form-based authentication.
 

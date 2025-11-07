@@ -232,7 +232,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ssl_context = await hass.async_add_executor_job(create_ssl_context)
     health_monitor = ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
 
-    async def async_update_data():
+    async def async_update_data() -> dict:
         """Fetch data from the modem."""
         # Run health check first (async, non-blocking)
         base_url = f"http://{host}"

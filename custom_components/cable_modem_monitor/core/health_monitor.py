@@ -163,7 +163,7 @@ class ModemHealthMonitor:
 
         return result
 
-    async def _check_ping(self, host: str) -> tuple[bool, Optional[float]]:
+    async def _check_ping(self, host: str) -> tuple[bool, float | None]:
         """
         Perform ICMP ping check with input validation.
 
@@ -204,7 +204,7 @@ class ModemHealthMonitor:
             _LOGGER.debug("Ping exception for %s: %s", host, e)
             return False, None
 
-    async def _check_http(self, base_url: str) -> tuple[bool, Optional[float]]:
+    async def _check_http(self, base_url: str) -> tuple[bool, float | None]:
         """
         Perform HTTP check with SSL verification and redirect validation.
 
