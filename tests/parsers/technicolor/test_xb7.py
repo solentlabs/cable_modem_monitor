@@ -2,50 +2,51 @@
 import pytest
 from bs4 import BeautifulSoup
 from pathlib import Path
+from datetime import datetime, timedelta
 
 from custom_components.cable_modem_monitor.parsers.technicolor.xb7 import TechnicolorXB7Parser
 
 
 @pytest.fixture
-def xb7_html():
-    """Load XB7 HTML fixture."""
+def network_setup_html():
+    """Load network_setup.jst HTML fixture."""
     fixture_path = Path(__file__).parent / "fixtures" / "xb7" / "network_setup.jst"
     with open(fixture_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
 @pytest.fixture
-def xb7_soup(xb7_html):
-    """Parse XB7 HTML into BeautifulSoup."""
-    return BeautifulSoup(xb7_html, "html.parser")
+def soup(network_setup_html):
+    """Parse HTML into BeautifulSoup."""
+    return BeautifulSoup(network_setup_html, "html.parser")
 
 
-class TestXB7Detection:
-    """Test XB7 modem detection."""
+class TestDetection:
+    """Test modem detection."""
 
-    def test_xb7_detection_by_url(self, xb7_soup, xb7_html):
+    def test_detection_by_url(self, soup, network_setup_html):
         """Test detection by URL pattern."""
         url = "http://10.0.0.1/network_setup.jst"
-        assert TechnicolorXB7Parser.can_parse(xb7_soup, url, xb7_html)
+        assert TechnicolorXB7Parser.can_parse(soup, url, network_setup_html)
 
-    def test_xb7_detection_by_content(self, xb7_soup, xb7_html):
+    def test_detection_by_content(self, soup, network_setup_html):
         """Test detection by HTML content patterns."""
         url = "http://10.0.0.1/some_page.html"
-        assert TechnicolorXB7Parser.can_parse(xb7_soup, url, xb7_html)
+        assert TechnicolorXB7Parser.can_parse(soup, url, network_setup_html)
 
-    def test_xb7_not_detected_wrong_content(self):
-        """Test that wrong content is not detected as XB7."""
+    def test_not_detected_wrong_content(self):
+        """Test that wrong content is not detected."""
         wrong_html = "<html><body>Some random page</body></html>"
         soup = BeautifulSoup(wrong_html, "html.parser")
         url = "http://10.0.0.1/test.html"
         assert not TechnicolorXB7Parser.can_parse(soup, url, wrong_html)
 
 
-class TestXB7Authentication:
-    """Test XB7 authentication."""
+class TestAuthentication:
+    """Test authentication."""
 
-    def test_xb7_login_with_credentials(self):
-        """Test that XB7 form-based authentication works."""
+    def test_login_with_credentials(self):
+        """Test that form-based authentication works."""
         from unittest.mock import Mock
 
         parser = TechnicolorXB7Parser()
@@ -75,7 +76,7 @@ class TestXB7Authentication:
         )
         session.get.assert_called_once_with("http://10.0.0.1/network_setup.jst", timeout=10)
 
-    def test_xb7_login_without_credentials(self):
+    def test_login_without_credentials(self):
         """Test that login fails gracefully without credentials."""
         from unittest.mock import Mock
 
@@ -87,19 +88,19 @@ class TestXB7Authentication:
         assert html is None
 
 
-class TestXB7Downstream:
-    """Test XB7 downstream channel parsing."""
+class TestDownstream:
+    """Test downstream channel parsing."""
 
-    def test_xb7_downstream_channel_count(self, xb7_soup):
+    def test_channel_count(self, soup):
         """Test that 34 downstream channels are parsed."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
         assert len(downstream) == 34
 
-    def test_xb7_downstream_channel_ids(self, xb7_soup):
+    def test_channel_ids(self, soup):
         """Test non-sequential channel IDs (10, 1-9, 11-34)."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         channel_ids = [ch["channel_id"] for ch in downstream]
 
@@ -114,37 +115,37 @@ class TestXB7Downstream:
         for i in range(11, 35):
             assert str(i) in channel_ids
 
-    def test_xb7_downstream_frequency_mhz_format(self, xb7_soup):
+    def test_frequency_mhz_format(self, soup):
         """Test parsing "609 MHz" format."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 10 has "609 MHz"
         ch10 = [ch for ch in downstream if ch["channel_id"] == "10"][0]
         assert ch10["frequency"] == 609_000_000  # 609 MHz in Hz
 
-    def test_xb7_downstream_frequency_raw_hz_format(self, xb7_soup):
+    def test_frequency_raw_hz_format(self, soup):
         """Test parsing "350000000" raw Hz format."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 33 has "350000000" (raw Hz)
         ch33 = [ch for ch in downstream if ch["channel_id"] == "33"][0]
         assert ch33["frequency"] == 350_000_000
 
-    def test_xb7_downstream_snr(self, xb7_soup):
+    def test_snr(self, soup):
         """Test SNR parsing in dB."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 10 has SNR "38.4 dB"
         ch10 = [ch for ch in downstream if ch["channel_id"] == "10"][0]
         assert ch10["snr"] == 38.4
 
-    def test_xb7_downstream_power_positive_and_negative(self, xb7_soup):
+    def test_power_positive_and_negative(self, soup):
         """Test parsing positive and negative power levels."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 10 has positive power "4.3 dBmV"
         ch10 = [ch for ch in downstream if ch["channel_id"] == "10"][0]
@@ -154,10 +155,10 @@ class TestXB7Downstream:
         ch4 = [ch for ch in downstream if ch["channel_id"] == "4"][0]
         assert ch4["power"] == -2.0
 
-    def test_xb7_downstream_modulation(self, xb7_soup):
+    def test_modulation(self, soup):
         """Test modulation parsing (256 QAM and OFDM)."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 10 has "256 QAM"
         ch10 = [ch for ch in downstream if ch["channel_id"] == "10"][0]
@@ -167,19 +168,19 @@ class TestXB7Downstream:
         ch33 = [ch for ch in downstream if ch["channel_id"] == "33"][0]
         assert ch33["modulation"] == "OFDM"
 
-    def test_xb7_downstream_lock_status(self, xb7_soup):
+    def test_lock_status(self, soup):
         """Test lock status parsing."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # All channels should be "Locked"
         for ch in downstream:
             assert ch["lock_status"] == "Locked"
 
-    def test_xb7_downstream_error_codewords(self, xb7_soup):
+    def test_error_codewords(self, soup):
         """Test error codeword parsing."""
         parser = TechnicolorXB7Parser()
-        downstream = parser._parse_downstream(xb7_soup)
+        downstream = parser._parse_downstream(soup)
 
         # Channel 10 should have error statistics
         ch10 = [ch for ch in downstream if ch["channel_id"] == "10"][0]
@@ -187,45 +188,45 @@ class TestXB7Downstream:
         assert ch10["uncorrected"] == 257
 
 
-class TestXB7Upstream:
-    """Test XB7 upstream channel parsing."""
+class TestUpstream:
+    """Test upstream channel parsing."""
 
-    def test_xb7_upstream_channel_count(self, xb7_soup):
+    def test_channel_count(self, soup):
         """Test that 5 upstream channels are parsed."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
         assert len(upstream) == 5
 
-    def test_xb7_upstream_channel_ids(self, xb7_soup):
+    def test_channel_ids(self, soup):
         """Test channel IDs (1, 2, 3, 4, 10)."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         channel_ids = [ch["channel_id"] for ch in upstream]
         assert channel_ids == ["1", "2", "3", "4", "10"]
 
-    def test_xb7_upstream_frequency(self, xb7_soup):
+    def test_frequency(self, soup):
         """Test frequency parsing (MHz format with extra spaces)."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # Channel 1 has "21  MHz" (note extra spaces)
         ch1 = [ch for ch in upstream if ch["channel_id"] == "1"][0]
         assert ch1["frequency"] == 21_000_000
 
-    def test_xb7_upstream_power(self, xb7_soup):
+    def test_power(self, soup):
         """Test power level parsing."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # Channel 1 has "32.0 dBmV"
         ch1 = [ch for ch in upstream if ch["channel_id"] == "1"][0]
         assert ch1["power"] == 32.0
 
-    def test_xb7_upstream_symbol_rate(self, xb7_soup):
-        """Test XB7-specific symbol rate parsing."""
+    def test_symbol_rate(self, soup):
+        """Test symbol rate parsing."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # Channel 1 has symbol rate 2560
         ch1 = [ch for ch in upstream if ch["channel_id"] == "1"][0]
@@ -239,10 +240,10 @@ class TestXB7Upstream:
         ch10 = [ch for ch in upstream if ch["channel_id"] == "10"][0]
         assert ch10["symbol_rate"] == 0
 
-    def test_xb7_upstream_modulation(self, xb7_soup):
+    def test_modulation(self, soup):
         """Test modulation parsing (QAM and OFDMA)."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # Channels 1-4 have "QAM"
         for i in range(1, 5):
@@ -253,10 +254,10 @@ class TestXB7Upstream:
         ch10 = [ch for ch in upstream if ch["channel_id"] == "10"][0]
         assert ch10["modulation"] == "OFDMA"
 
-    def test_xb7_upstream_channel_type(self, xb7_soup):
-        """Test XB7-specific channel type parsing."""
+    def test_channel_type(self, soup):
+        """Test channel type parsing."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # Channel 1 has "TDMA_AND_ATDMA"
         ch1 = [ch for ch in upstream if ch["channel_id"] == "1"][0]
@@ -270,58 +271,56 @@ class TestXB7Upstream:
         ch10 = [ch for ch in upstream if ch["channel_id"] == "10"][0]
         assert ch10["channel_type"] == "TDMA"
 
-    def test_xb7_upstream_lock_status(self, xb7_soup):
+    def test_lock_status(self, soup):
         """Test lock status parsing."""
         parser = TechnicolorXB7Parser()
-        upstream = parser._parse_upstream(xb7_soup)
+        upstream = parser._parse_upstream(soup)
 
         # All channels should be "Locked"
         for ch in upstream:
             assert ch["lock_status"] == "Locked"
 
 
-class TestXB7SystemInfo:
-    """Test XB7 system information parsing."""
+class TestSystemInfo:
+    """Test system information parsing."""
 
-    def test_xb7_system_info_exists(self, xb7_soup):
+    def test_exists(self, soup):
         """Test that system info is parsed."""
         parser = TechnicolorXB7Parser()
-        system_info = parser._parse_system_info(xb7_soup)
+        system_info = parser._parse_system_info(soup)
 
         # Should have at least some fields
         assert isinstance(system_info, dict)
 
-    def test_xb7_system_info_initialization_status(self, xb7_soup):
+    def test_initialization_status(self, soup):
         """Test initialization status fields."""
         parser = TechnicolorXB7Parser()
-        system_info = parser._parse_system_info(xb7_soup)
+        system_info = parser._parse_system_info(soup)
 
         # May have downstream/upstream status fields
         # These are optional depending on HTML structure
         assert isinstance(system_info, dict)
 
-    def test_xb7_system_uptime(self, xb7_soup):
+    def test_uptime(self, soup):
         """Test parsing system uptime."""
         parser = TechnicolorXB7Parser()
-        system_info = parser._parse_system_info(xb7_soup)
+        system_info = parser._parse_system_info(soup)
 
         assert "system_uptime" in system_info
         assert system_info["system_uptime"] == "21 days 15h: 20m: 33s"
 
-    def test_xb7_software_version(self, xb7_soup):
+    def test_software_version(self, soup):
         """Test parsing Download Version as software_version."""
         parser = TechnicolorXB7Parser()
-        system_info = parser._parse_system_info(xb7_soup)
+        system_info = parser._parse_system_info(soup)
 
         assert "software_version" in system_info
         assert system_info["software_version"] == "Prod_23.2_231009 & Prod_23.2_231009"
 
-    def test_xb7_last_boot_time(self, xb7_soup):
+    def test_last_boot_time(self, soup):
         """Test that last_boot_time is calculated from uptime."""
-        from datetime import datetime, timedelta
-
         parser = TechnicolorXB7Parser()
-        system_info = parser._parse_system_info(xb7_soup)
+        system_info = parser._parse_system_info(soup)
 
         assert "last_boot_time" in system_info
         assert system_info["last_boot_time"] is not None
@@ -334,21 +333,21 @@ class TestXB7SystemInfo:
         # Allow 1 minute tolerance for test execution time
         assert abs((actual_uptime - expected_uptime).total_seconds()) < 60
 
-    def test_xb7_primary_channel(self, xb7_soup):
+    def test_primary_channel(self, soup):
         """Test parsing primary downstream channel."""
         parser = TechnicolorXB7Parser()
-        primary_channel = parser._parse_primary_channel(xb7_soup)
+        primary_channel = parser._parse_primary_channel(soup)
 
         assert primary_channel == "10"
 
 
-class TestXB7Integration:
-    """Test complete XB7 parsing integration."""
+class TestIntegration:
+    """Test complete parsing integration."""
 
-    def test_xb7_full_parse(self, xb7_soup):
+    def test_full_parse(self, soup):
         """Test full parse returns all expected data."""
         parser = TechnicolorXB7Parser()
-        data = parser.parse(xb7_soup)
+        data = parser.parse(soup)
 
         assert "downstream" in data
         assert "upstream" in data
@@ -358,10 +357,10 @@ class TestXB7Integration:
         assert len(data["upstream"]) == 5
         assert isinstance(data["system_info"], dict)
 
-    def test_xb7_all_downstream_have_required_fields(self, xb7_soup):
+    def test_all_downstream_have_required_fields(self, soup):
         """Test that all downstream channels have required fields."""
         parser = TechnicolorXB7Parser()
-        data = parser.parse(xb7_soup)
+        data = parser.parse(soup)
 
         for ch in data["downstream"]:
             assert "channel_id" in ch
@@ -371,10 +370,10 @@ class TestXB7Integration:
             assert "modulation" in ch
             assert "lock_status" in ch
 
-    def test_xb7_all_upstream_have_required_fields(self, xb7_soup):
+    def test_all_upstream_have_required_fields(self, soup):
         """Test that all upstream channels have required fields."""
         parser = TechnicolorXB7Parser()
-        data = parser.parse(xb7_soup)
+        data = parser.parse(soup)
 
         for ch in data["upstream"]:
             assert "channel_id" in ch
@@ -386,10 +385,10 @@ class TestXB7Integration:
             assert "symbol_rate" in ch
             assert "channel_type" in ch
 
-    def test_xb7_system_info_includes_new_fields(self, xb7_soup):
+    def test_system_info_includes_new_fields(self, soup):
         """Test that full parse includes system uptime, software version, and primary channel."""
         parser = TechnicolorXB7Parser()
-        data = parser.parse(xb7_soup)
+        data = parser.parse(soup)
 
         system_info = data["system_info"]
         assert "system_uptime" in system_info
