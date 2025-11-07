@@ -60,12 +60,13 @@ class ModemHealthMonitor:
     to distinguish between network issues, web server issues, and firewall blocks.
     """
 
-    def __init__(self, max_history: int = 100, verify_ssl: bool = False):
+    def __init__(self, max_history: int = 100, verify_ssl: bool = False, ssl_context=None):
         """Initialize health monitor.
 
         Args:
             max_history: Maximum number of health check results to retain
             verify_ssl: Enable SSL certificate verification (default: False for self-signed certs)
+            ssl_context: Pre-created SSL context (optional, to avoid blocking I/O in event loop)
         """
         self.max_history = max_history
         self.verify_ssl = verify_ssl
@@ -74,18 +75,18 @@ class ModemHealthMonitor:
         self.total_checks = 0
         self.successful_checks = 0
 
-        ***REMOVED*** Create SSL context once during initialization (not in event loop)
-        ***REMOVED*** This avoids blocking I/O operations in async methods
-        self._ssl_context = ssl.create_default_context()
-        if not verify_ssl:
-            self._ssl_context.check_hostname = False
-            self._ssl_context.verify_mode = ssl.CERT_NONE
+        ***REMOVED*** Use provided SSL context or create a new one
+        ***REMOVED*** NOTE: If creating here, ensure this __init__ is NOT called from async context
+        if ssl_context is not None:
+            self._ssl_context = ssl_context
+        else:
+            self._ssl_context = ssl.create_default_context()
+            if not verify_ssl:
+                self._ssl_context.check_hostname = False
+                self._ssl_context.verify_mode = ssl.CERT_NONE
             _LOGGER.debug(
                 "SSL certificate verification is disabled for this modem connection. "
-                "This is common for cable modems with self-signed certificates, but makes connections "
-                "vulnerable to man-in-the-middle (MITM) attacks. "
-                "SECURITY RECOMMENDATION: Enable SSL verification in integration settings if your modem "
-                "supports valid certificates or configure a custom CA certificate."
+                "This is common for cable modems with self-signed certificates."
             )
 
     async def check_health(self, base_url: str) -> HealthCheckResult:
