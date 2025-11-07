@@ -20,11 +20,11 @@ class ModemScraper:
     def __init__(
         self,
         host: str,
-        username: str = None,
-        password: str = None,
-        parser: ModemParser | List[Type[ModemParser]] = None,
-        cached_url: str = None,
-        parser_name: str = None,
+        username: str | None = None,
+        password: str | None = None,
+        parser: ModemParser | List[Type[ModemParser]] | None = None,
+        cached_url: str | None = None,
+        parser_name: str | None = None,
         verify_ssl: bool = False,
     ):
         """
@@ -98,7 +98,7 @@ class ModemScraper:
 
         return self.parser.login(self.session, self.base_url, self.username, self.password)
 
-    def _get_url_patterns_to_try(self) -> list[tuple[str, str, Type[ModemParser] | None]]:
+    def _get_url_patterns_to_try(self) -> list[tuple[str, str, Type[ModemParser]]]:
         """
         Get list of (url, auth_method, parser_class) tuples to try.
 

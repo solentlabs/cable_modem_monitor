@@ -121,13 +121,13 @@ class ModemHealthMonitor:
             )
 
             # Handle exceptions
-            if isinstance(ping_result, Exception):
+            if isinstance(ping_result, BaseException):
                 _LOGGER.debug("Ping check exception: %s", ping_result)
                 ping_success, ping_latency = False, None
             else:
                 ping_success, ping_latency = ping_result
 
-            if isinstance(http_result, Exception):
+            if isinstance(http_result, BaseException):
                 _LOGGER.debug("HTTP check exception: %s", http_result)
                 http_success, http_latency = False, None
             else:
