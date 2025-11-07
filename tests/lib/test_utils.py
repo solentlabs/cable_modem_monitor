@@ -1,10 +1,10 @@
 """Tests for utility functions in lib/utils.py."""
-import pytest
 from custom_components.cable_modem_monitor.lib.utils import (
     extract_number,
     extract_float,
     parse_uptime_to_seconds,
 )
+
 
 class TestExtractNumber:
     """Test the extract_number function."""
@@ -29,6 +29,7 @@ class TestExtractNumber:
         """Test an empty string."""
         assert extract_number("") is None
 
+
 class TestExtractFloat:
     """Test the extract_float function."""
 
@@ -51,6 +52,7 @@ class TestExtractFloat:
     def test_empty_string(self):
         """Test an empty string."""
         assert extract_float("") is None
+
 
 class TestParseUptime:
     """Test the parse_uptime_to_seconds function."""
@@ -89,7 +91,7 @@ class TestParseUptime:
         result = parse_uptime_to_seconds("")
         assert result is None
 
-    def test_parse_uptime_none(self): 
+    def test_parse_uptime_none(self):
         """Test parsing None uptime."""
         result = parse_uptime_to_seconds(None)
         assert result is None

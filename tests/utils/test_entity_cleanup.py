@@ -1,5 +1,4 @@
 """Tests for the entity cleanup utility."""
-import json
 from unittest.mock import mock_open, patch
 import pytest
 
@@ -8,6 +7,7 @@ from custom_components.cable_modem_monitor.utils.entity_cleanup import (
     cleanup_orphaned_entities,
     remove_all_entities,
 )
+
 
 @pytest.fixture
 def mock_entity_registry_data():
@@ -37,6 +37,7 @@ def mock_entity_registry_data():
         }
     }
 
+
 def test_analyze_entities(mock_entity_registry_data):
     """Test the analyze_entities function."""
     stats = analyze_entities(mock_entity_registry_data)
@@ -47,6 +48,7 @@ def test_analyze_entities(mock_entity_registry_data):
     assert len(stats['orphaned']) == 1
     assert stats['active'][0]['entity_id'] == "sensor.cable_modem_active_sensor"
     assert stats['orphaned'][0]['entity_id'] == "sensor.cable_modem_orphaned_sensor"
+
 
 @patch("builtins.open", new_callable=mock_open)
 @patch("json.dump")
@@ -67,6 +69,7 @@ def test_cleanup_orphaned_entities(mock_json_load, mock_json_dump, mock_file, mo
         written_data = args[0]
         assert len(written_data['data']['entities']) == 2
         assert "sensor.cable_modem_orphaned_sensor" not in [e['entity_id'] for e in written_data['data']['entities']]
+
 
 @patch("builtins.open", new_callable=mock_open)
 @patch("json.dump")

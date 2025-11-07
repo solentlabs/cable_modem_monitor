@@ -6,7 +6,7 @@ This ensures that the version number is consistent across the project.
 """
 import json
 import os
-from pathlib import Path
+
 
 def get_version_from_const() -> str:
     """Reads the VERSION constant from const.py without importing the file."""
@@ -19,8 +19,9 @@ def get_version_from_const() -> str:
             if line.startswith("VERSION"):
                 # Extracts the version number from a line like: VERSION = "2.4.1"
                 return line.split('=')[1].strip().strip('"')
-    
+
     raise ValueError("VERSION constant not found in const.py")
+
 
 def update_json_file(file_path: str, version: str) -> None:
     """Reads a JSON file, updates the version, and writes it back."""
@@ -39,6 +40,7 @@ def update_json_file(file_path: str, version: str) -> None:
 
     print(f"Updated version in {file_path} to {version}")
 
+
 def main() -> None:
     """Main function to update version numbers."""
     version = get_version_from_const()
@@ -55,6 +57,7 @@ def main() -> None:
     update_json_file(hacs_path, version)
 
     print("\nVersion sync complete.")
+
 
 if __name__ == "__main__":
     main()

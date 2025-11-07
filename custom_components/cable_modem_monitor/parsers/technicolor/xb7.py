@@ -93,7 +93,10 @@ class TechnicolorXB7Parser(ModemParser):
                 _LOGGER.error("XB7: Failed to fetch status page, status %s", status_response.status_code)
                 return False, None
 
-            _LOGGER.info("XB7: Successfully authenticated and fetched status page (%s bytes)", len(status_response.text))
+            _LOGGER.info(
+                "XB7: Successfully authenticated and fetched status page (%s bytes)",
+                len(status_response.text)
+            )
             return True, status_response.text
 
         except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
@@ -562,7 +565,7 @@ class TechnicolorXB7Parser(ModemParser):
             return boot_time.isoformat()
 
         except Exception as e:
-            _LOGGER.error("Error calculating boot time from '%s': {e}", uptime_str)
+            _LOGGER.error("Error calculating boot time from '%s': %s", uptime_str, e)
             return None
 
     def _parse_primary_channel(self, soup: BeautifulSoup) -> str | None:

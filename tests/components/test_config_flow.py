@@ -2,6 +2,12 @@
 import pytest
 from unittest.mock import Mock, patch
 
+from custom_components.cable_modem_monitor.config_flow import (
+    OptionsFlowHandler,
+    CannotConnect,
+    validate_input,
+)
+
 # Mock constants to avoid ImportError in tests
 CONF_HOST = "host"
 CONF_USERNAME = "username"
@@ -10,12 +16,6 @@ CONF_SCAN_INTERVAL = "scan_interval"
 DEFAULT_SCAN_INTERVAL = 600
 MIN_SCAN_INTERVAL = 60
 MAX_SCAN_INTERVAL = 1800
-
-from custom_components.cable_modem_monitor.config_flow import (
-    OptionsFlowHandler,
-    CannotConnect,
-    validate_input,
-)
 
 
 class TestConfigFlow:
@@ -39,6 +39,7 @@ class TestConfigFlow:
         """Test that scan interval range makes sense."""
         # Min should be less than default, default less than max
         assert MIN_SCAN_INTERVAL < DEFAULT_SCAN_INTERVAL < MAX_SCAN_INTERVAL
+
 
 class TestValidateInput:
     """Test input validation."""
@@ -89,7 +90,9 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch('custom_components.cable_modem_monitor.config_flow.get_parsers')
     @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
-    async def test_validate_input_connection_failure(self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input):
+    async def test_validate_input_connection_failure(
+        self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input
+    ):
         """Test validation fails when cannot connect to modem."""
         # Mock get_parsers to return a mock parser
         mock_parser = Mock()

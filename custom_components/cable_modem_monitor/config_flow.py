@@ -73,7 +73,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Validate format: IPv4, IPv6, or valid hostname
     ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
     ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
-    hostname_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+    hostname_pattern = (
+        r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
+        r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+    )
 
     if not (re.match(ipv4_pattern, hostname) or
             re.match(ipv6_pattern, hostname) or
@@ -121,8 +124,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         # Phase 3: Better error message for unsupported modems
         _LOGGER.error("Unsupported modem detected: %s", err.get_user_message())
         _LOGGER.info("Attempted parsers: %s", ", ".join(err.attempted_parsers))
-        _LOGGER.info("Troubleshooting steps:\n%s",
-                   "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps())))
+        _LOGGER.info(
+            "Troubleshooting steps:\n%s",
+            "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps()))
+        )
         raise UnsupportedModem(str(err)) from err
     except Exception as err:
         _LOGGER.error("Error connecting to modem: %s", err)
@@ -188,7 +193,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except (ValueError, TypeError) as err:
                 _LOGGER.error("Invalid input data: %s", err)
                 errors["base"] = "invalid_input"
-            except Exception as err:
+            except Exception:
                 # Log exception details for debugging, but sanitize error shown to user
                 _LOGGER.exception("Unexpected exception during validation")
                 errors["base"] = "unknown"
@@ -271,7 +276,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             except (ValueError, TypeError) as err:
                 _LOGGER.error("Invalid input data in options flow: %s", err)
                 errors["base"] = "invalid_input"
-            except Exception as err:
+            except Exception:
                 # Log exception details for debugging, but sanitize error shown to user
                 _LOGGER.exception("Unexpected exception during options validation")
                 errors["base"] = "unknown"

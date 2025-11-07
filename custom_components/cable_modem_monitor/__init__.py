@@ -357,7 +357,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 # Security: Using parameterized query with ? placeholders (not user input)
                 # The placeholders string only contains "?" characters, values are passed separately
                 placeholders = ",".join("?" * len(cable_modem_entities))
-                query = "SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN (" + placeholders + ")"  # nosec B608
+                query = (
+                    "SELECT metadata_id, entity_id FROM states_meta "
+                    f"WHERE entity_id IN ({placeholders})"  # nosec B608
+                )
                 cursor.execute(query, cable_modem_entities)
 
                 metadata_ids = [row[0] for row in cursor.fetchall()]
@@ -382,7 +385,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 # Security: Using parameterized query with ? placeholders (not user input)
                 # The placeholders string only contains "?" characters, values are passed separately
                 placeholders = ",".join("?" * len(cable_modem_entities))
-                stats_query = "SELECT id FROM statistics_meta WHERE statistic_id IN (" + placeholders + ")"  # nosec B608
+                stats_query = (
+                    f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"  # nosec B608
+                )
                 cursor.execute(stats_query, cable_modem_entities)
 
                 stats_metadata_ids = [row[0] for row in cursor.fetchall()]

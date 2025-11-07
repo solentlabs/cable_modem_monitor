@@ -1,10 +1,9 @@
 """Tests for Cable Modem Monitor scraper."""
 import pytest
-from bs4 import BeautifulSoup
-from unittest.mock import Mock
 
 from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 from custom_components.cable_modem_monitor.parsers.base_parser import ModemParser
+
 
 class TestModemScraper:
     """Test the ModemScraper class."""
@@ -39,10 +38,20 @@ class TestModemScraper:
 
         scraper = ModemScraper("192.168.100.1", parser=[mock_parser_class])
         # _fetch_data now returns (html, url, parser_class)
-        mocker.patch.object(scraper, '_fetch_data', return_value=("<html></html>", "http://192.168.100.1", mock_parser_class))
+        mocker.patch.object(
+            scraper,
+            '_fetch_data',
+            return_value=("<html></html>", "http://192.168.100.1", mock_parser_class)
+        )
 
         # _login is called internally after parser is detected, so it should use the mock_parser_instance's login
-        mocker.patch.object(scraper, '_login', side_effect=lambda: mock_parser_instance.login(scraper.session, scraper.base_url, scraper.username, scraper.password))
+        mocker.patch.object(
+            scraper,
+            '_login',
+            side_effect=lambda: mock_parser_instance.login(
+                scraper.session, scraper.base_url, scraper.username, scraper.password
+            )
+        )
 
         data = scraper.get_modem_data()
 
@@ -50,7 +59,9 @@ class TestModemScraper:
         mock_parser_class.can_parse.assert_called_once()
 
         # Assert that the parser instance's login method was called
-        mock_parser_instance.login.assert_called_once_with(scraper.session, scraper.base_url, scraper.username, scraper.password)
+        mock_parser_instance.login.assert_called_once_with(
+            scraper.session, scraper.base_url, scraper.username, scraper.password
+        )
         mock_parser_instance.parse.assert_called_once()
 
     def test_fetch_data_url_ordering(self, mocker):
@@ -77,7 +88,10 @@ class TestModemScraper:
         # Just verify some URLs were tried (exact order may vary based on parsers)
         assert len(calls) > 0
         # Check that at least one known URL was tried
-        assert any("/MotoConnection.asp" in call or "/network_setup.jst" in call or "/cmSignalData.htm" in call for call in calls)
+        assert any(
+            "/MotoConnection.asp" in call or "/network_setup.jst" in call or "/cmSignalData.htm" in call
+            for call in calls
+        )
 
     def test_fetch_data_stops_on_first_success(self, mocker):
         """Test that the scraper stops trying URLs after first successful response."""
@@ -114,6 +128,7 @@ class TestModemScraper:
 
         # Mock session.get to simulate HTTPS failure, HTTP success
         call_count = [0]
+
         def mock_get(url, **kwargs):
             call_count[0] += 1
             response = mocker.Mock()
