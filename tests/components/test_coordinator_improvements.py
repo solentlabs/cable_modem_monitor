@@ -1,10 +1,6 @@
 """Tests for Cable Modem Monitor coordinator improvements."""
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from datetime import timedelta
-
-from homeassistant.helpers.update_coordinator import UpdateFailed
-from homeassistant.config_entries import ConfigEntryState
+from unittest.mock import Mock, AsyncMock
 
 
 class TestCoordinatorSSLContext:

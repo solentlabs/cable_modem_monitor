@@ -3,38 +3,14 @@ import logging
 import base64
 import requests
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .auth_config import AuthConfig, HNAPAuthConfig
 
+from .auth_config import AuthStrategyType
+
 _LOGGER = logging.getLogger(__name__)
-
-
-class AuthStrategyType(Enum):
-    """Enumeration of supported authentication strategies."""
-
-    NO_AUTH = "no_auth"
-    """No authentication required."""
-
-    BASIC_HTTP = "basic_http"
-    """HTTP Basic Authentication (RFC 7617)."""
-
-    FORM_PLAIN = "form_plain"
-    """Form-based auth with plain password."""
-
-    FORM_BASE64 = "form_base64"
-    """Form-based auth with base64-encoded password."""
-
-    FORM_PLAIN_AND_BASE64 = "form_plain_and_base64"
-    """Form-based auth with fallback."""
-
-    REDIRECT_FORM = "redirect_form"
-    """Form-based auth with redirect validation."""
-
-    HNAP_SESSION = "hnap_session"
-    """HNAP/SOAP session-based authentication."""
 
 
 class AuthStrategy(ABC):

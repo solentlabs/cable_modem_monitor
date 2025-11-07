@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [3.0.0] - 2025-11-07
+
+### Added
+- **Enhanced Discovery System** - Automatic modem detection with HNAP and HTTP-based discovery
+  - HNAP protocol builder for Arris/Motorola modems
+  - Discovery helpers for automatic modem identification
+  - Detection notifications in config flow
+- **Flexible Authentication Framework** - Support for multiple authentication strategies
+  - Basic HTTP Authentication
+  - Digest Authentication
+  - HNAP Authentication (Arris/Motorola)
+  - Strategy pattern for extensible auth types
+- **MB8611 Parser** - Complete support for Motorola MB8611 cable modem
+  - HNAP-based data extraction
+  - 33 comprehensive tests for MB8611 functionality
+- **Comprehensive Test Coverage** - Added extensive test suites
+  - 33 new tests for MB8611 parser
+  - Coordinator improvements tests
+  - Config flow tests
+  - Total test improvements across authentication and discovery modules
+
+### Changed
+- **Session Management Improvements** - Better connection handling and modem restart monitoring
+  - Improved modem restart detection and availability handling
+  - Enhanced button component with better reload handling
+  - Improved platform unload error handling during reload
+  - Better channel synchronization detection
+- **Code Quality Improvements** - Type checking and linting enhancements
+  - Fixed all Pylance type checking errors
+  - Fixed all Flake8 linting errors
+  - Added .flake8 configuration (120-character line length)
+  - Added pyproject.toml configuration
+  - Removed unused imports and fixed PEP 8 formatting
+
+### Fixed
+- **Type Safety** - Resolved all type annotation errors
+  - Fixed dictionary access type checking errors
+  - Corrected type variance issues
+  - Fixed parameter type annotations with None defaults
+  - Resolved authentication module type errors
+- **Parser Improvements** - Enhanced parser reliability
+  - Fixed MB8611 test failures (AuthFactory patch path and frequency precision)
+  - Improved None handling in Motorola generic parser detection
+  - Removed duplicate manufacturer names from detection
+- **SSL Context Creation** - Fixed blocking I/O in event loop for SSL context creation
+
+### Documentation
+- **Phase 1, 2, 3 Implementation Summary** - Comprehensive documentation of architecture phases
+- **Session Improvements Summary** - Detailed session management enhancements
+- **Test Coverage Summary** - Overview of test additions and coverage
+- **Feature Request Organization** - Organized feature requests into dedicated directory
+  - Smart polling sensor template
+  - Netgear CM600 parser request
+  - Phase 4 JSON configs proposal
+  - Phase 5 community platform proposal
+
 ## [2.6.1] - 2025-11-06
 
 ### Fixed
