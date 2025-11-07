@@ -53,8 +53,14 @@ class ModemParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def login(self, session, base_url, username, password) -> bool:
-        """Log in to the modem."""
+    def login(self, session, base_url, username, password) -> bool | tuple[bool, str]:
+        """
+        Log in to the modem.
+
+        Returns:
+            bool: True if login successful (old style)
+            tuple[bool, str]: (success, html) where html is authenticated page content (new style)
+        """
         raise NotImplementedError
 
     @abstractmethod
