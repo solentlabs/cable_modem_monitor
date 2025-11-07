@@ -265,7 +265,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
+    # Use async_config_entry_first_refresh only during initial setup (SETUP_IN_PROGRESS)
+    # During reload, the entry may be in LOADED state, so use regular refresh
+    from homeassistant.config_entries import ConfigEntryState
+
+    if entry.state == ConfigEntryState.SETUP_IN_PROGRESS:
+        await coordinator.async_config_entry_first_refresh()
+    else:
+        # During reload, just do a regular refresh
+        await coordinator.async_refresh()
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
