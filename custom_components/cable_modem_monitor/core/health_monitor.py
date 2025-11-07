@@ -109,7 +109,7 @@ class ModemHealthMonitor:
                 _LOGGER.error("Invalid host extracted from URL: %s", base_url)
                 host = None
         except Exception as e:
-            _LOGGER.error("Failed to parse URL %s: {e}", base_url)
+            _LOGGER.error("Failed to parse URL %s: %s", base_url, e)
             host = None
 
         # Run ping and HTTP check in parallel (skip ping if host is invalid)
@@ -343,7 +343,10 @@ class ModemHealthMonitor:
         # Hostname: alphanumeric with dots and hyphens
         ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
         ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
-        hostname_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+        hostname_pattern = (
+            r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
+            r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+        )
 
         return (re.match(ipv4_pattern, host) is not None or
                 re.match(ipv6_pattern, host) is not None or
