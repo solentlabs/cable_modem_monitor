@@ -164,7 +164,7 @@ class ModemRestartButton(ModemButtonBase):
                     ***REMOVED*** If we have valid data and last_update_success is True, modem is responding
                     if self.coordinator.last_update_success and self.coordinator.data:
                         status = self.coordinator.data.get("cable_modem_connection_status")
-                        _LOGGER.info("Modem responding after %ss (status: {status})", elapsed_time)
+                        _LOGGER.info("Modem responding after %ss (status: %s)", elapsed_time, status)
                         modem_responding = True
                         break
                     else:
