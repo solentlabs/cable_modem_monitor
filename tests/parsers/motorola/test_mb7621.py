@@ -42,7 +42,7 @@ def security_html():
 class TestRestart:
     """Test modem restart functionality."""
 
-    def test_restart_success(self, security_html):
+    def test_success(self, security_html):
         """Test the restart functionality."""
         parser = MotorolaMB7621Parser()
         session = Mock()
@@ -78,7 +78,7 @@ class TestRestart:
             timeout=10
         )
 
-    def test_restart_with_connection_reset(self, security_html):
+    def test_with_connection_reset(self, security_html):
         """Test restart with ConnectionResetError (expected behavior during reboot)."""
         parser = MotorolaMB7621Parser()
         session = Mock()

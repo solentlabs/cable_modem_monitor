@@ -157,7 +157,7 @@ class TestAuthentication:
 class TestRestartDetection:
     """Test restart detection and zero-value filtering."""
 
-    def test_filters_zero_power_during_restart(self):
+    def test_filters_zero_power(self):
         """Test that zero power values are filtered during restart window."""
         html = """
         <html><body>
@@ -185,7 +185,7 @@ class TestRestartDetection:
         assert data["downstream"][0]["snr"] is None    # Filtered out
         assert data["system_info"]["system_uptime"] == "0 days 00h:03m:45s"
 
-    def test_preserves_nonzero_power_during_restart(self):
+    def test_preserves_nonzero_power(self):
         """Test that non-zero power values are preserved during restart window."""
         html = """
         <html><body>
@@ -212,7 +212,7 @@ class TestRestartDetection:
         assert data["downstream"][0]["power"] == 3.0   # Preserved
         assert data["downstream"][0]["snr"] == 40.1    # Preserved
 
-    def test_no_filtering_after_restart_window(self):
+    def test_no_filtering_after_window(self):
         """Test that zero power values are NOT filtered after restart window."""
         html = """
         <html><body>
@@ -239,7 +239,7 @@ class TestRestartDetection:
         assert data["downstream"][0]["power"] == 0  # NOT filtered
         assert data["downstream"][0]["snr"] == 0    # NOT filtered
 
-    def test_filters_upstream_zero_power_during_restart(self):
+    def test_filters_upstream_zero_power(self):
         """Test that zero power values are filtered for upstream during restart."""
         html = """
         <html><body>
@@ -266,7 +266,7 @@ class TestRestartDetection:
 class TestConstants:
     """Test parser constants."""
 
-    def test_restart_window_constant(self):
+    def test_window_constant(self):
         """Test that the restart window constant is correctly defined."""
         assert RESTART_WINDOW_SECONDS == 300
         assert RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes

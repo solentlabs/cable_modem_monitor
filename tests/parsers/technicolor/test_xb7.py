@@ -24,17 +24,17 @@ def soup(network_setup_html):
 class TestDetection:
     """Test modem detection."""
 
-    def test_detection_by_url(self, soup, network_setup_html):
+    def test_by_url(self, soup, network_setup_html):
         """Test detection by URL pattern."""
         url = "http://10.0.0.1/network_setup.jst"
         assert TechnicolorXB7Parser.can_parse(soup, url, network_setup_html)
 
-    def test_detection_by_content(self, soup, network_setup_html):
+    def test_by_content(self, soup, network_setup_html):
         """Test detection by HTML content patterns."""
         url = "http://10.0.0.1/some_page.html"
         assert TechnicolorXB7Parser.can_parse(soup, url, network_setup_html)
 
-    def test_not_detected_wrong_content(self):
+    def test_rejects_wrong_content(self):
         """Test that wrong content is not detected."""
         wrong_html = "<html><body>Some random page</body></html>"
         soup = BeautifulSoup(wrong_html, "html.parser")
