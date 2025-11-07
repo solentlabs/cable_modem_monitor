@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import re
+import ssl
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -72,6 +73,20 @@ class ModemHealthMonitor:
         self.consecutive_failures = 0
         self.total_checks = 0
         self.successful_checks = 0
+
+        # Create SSL context once during initialization (not in event loop)
+        # This avoids blocking I/O operations in async methods
+        self._ssl_context = ssl.create_default_context()
+        if not verify_ssl:
+            self._ssl_context.check_hostname = False
+            self._ssl_context.verify_mode = ssl.CERT_NONE
+            _LOGGER.debug(
+                "SSL certificate verification is disabled for this modem connection. "
+                "This is common for cable modems with self-signed certificates, but makes connections "
+                "vulnerable to man-in-the-middle (MITM) attacks. "
+                "SECURITY RECOMMENDATION: Enable SSL verification in integration settings if your modem "
+                "supports valid certificates or configure a custom CA certificate."
+            )
 
     async def check_health(self, base_url: str) -> HealthCheckResult:
         """
@@ -203,18 +218,9 @@ class ModemHealthMonitor:
                 _LOGGER.error("Invalid URL for HTTP check: %s", base_url)
                 return False, None
 
-            # Configure SSL based on settings
-            # For cable modems, SSL verification is often disabled due to self-signed certs
-            import ssl
-            if self.verify_ssl:
-                ssl_context = ssl.create_default_context()
-            else:
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-
+            # Use pre-configured SSL context (created during __init__ to avoid blocking I/O in event loop)
             timeout = aiohttp.ClientTimeout(total=5)
-            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            connector = aiohttp.TCPConnector(ssl=self._ssl_context)
 
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 # Try HEAD first (lightweight)

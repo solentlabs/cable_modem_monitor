@@ -58,12 +58,9 @@ class ModemScraper:
             self.session.verify = False
             # Disable warnings only for this session
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            _LOGGER.warning(
+            _LOGGER.info(
                 "SSL certificate verification is disabled for this modem connection. "
-                "This is common for cable modems with self-signed certificates, "
-                "but makes connections vulnerable to man-in-the-middle (MITM) attacks. "
-                "SECURITY RECOMMENDATION: Enable SSL verification in integration settings "
-                "if your modem supports valid certificates or configure a custom CA certificate."
+                "This is common for cable modems with self-signed certificates."
             )
         else:
             self.session.verify = True
