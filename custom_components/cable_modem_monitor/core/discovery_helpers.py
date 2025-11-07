@@ -175,7 +175,7 @@ class DiscoveryCircuitBreaker:
 
         return True
 
-    def record_attempt(self, parser_name: str = None):
+    def record_attempt(self, parser_name: Optional[str] = None):
         """
         Record an authentication/detection attempt.
 
@@ -215,7 +215,7 @@ class DiscoveryCircuitBreaker:
 class DetectionError(Exception):
     """Base exception for detection errors with diagnostic information."""
 
-    def __init__(self, message: str, diagnostics: dict = None):
+    def __init__(self, message: str, diagnostics: Optional[dict] = None):
         """
         Initialize detection error.
 
@@ -238,7 +238,7 @@ class DetectionError(Exception):
 class ParserNotFoundError(DetectionError):
     """Raised when no parser can be detected for the modem."""
 
-    def __init__(self, modem_info: dict = None, attempted_parsers: List[str] = None):
+    def __init__(self, modem_info: Optional[dict] = None, attempted_parsers: Optional[List[str]] = None):
         """
         Initialize parser not found error.
 
