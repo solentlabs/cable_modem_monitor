@@ -40,7 +40,7 @@ class MotorolaGenericParser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Motorola MB series modem."""
-        return "Motorola Cable Modem" in soup.title.string
+        return bool(soup.title and soup.title.string and "Motorola Cable Modem" in soup.title.string)
 
     def login(self, session, base_url, username, password) -> tuple[bool, str]:
         """Log in to the modem using form-based authentication.
