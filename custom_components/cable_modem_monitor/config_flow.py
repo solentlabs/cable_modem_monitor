@@ -69,7 +69,6 @@ def _validate_host_format(host: str) -> str:
         raise ValueError("Invalid characters in host address")
 
     # Validate format: IPv4, IPv6, or valid hostname
-    import re
     patterns = {
         'ipv4': r'^(\d{1,3}\.){3}\d{1,3}$',
         'ipv6': r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$',
@@ -170,7 +169,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     )
 
     # Connect and validate
-    modem_data = await _connect_to_modem(hass, scraper)
+    await _connect_to_modem(hass, scraper)
 
     # Get detection info and create title
     detection_info = scraper.get_detection_info()
