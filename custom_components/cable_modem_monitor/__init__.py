@@ -497,8 +497,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    # Try to unload platforms, but handle case where they were never loaded
+    try:
+        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    except ValueError as err:
+        # Platforms were never loaded (setup failed before platforms were added)
+        _LOGGER.debug("Platforms were never loaded for entry %s: %s", entry.entry_id, err)
+        unload_ok = True  # Consider it successful since there's nothing to unload
+
+    if unload_ok:
+        # Clean up coordinator data
+        hass.data[DOMAIN].pop(entry.entry_id, None)
 
         # Unregister services if this is the last entry
         if not hass.data[DOMAIN]:
