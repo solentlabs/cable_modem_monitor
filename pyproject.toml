@@ -1,0 +1,41 @@
+# Python project configuration for Cable Modem Monitor
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Exclude test HTML files
+  tests/.*\.html
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# Select rules: E (pycodestyle errors), F (pyflakes), W (warnings), C90 (complexity)
+select = ["E", "F", "W", "C90"]
+
+# Ignore E501 (line too long) since Black handles line length
+ignore = ["E501"]
+
+# Exclude test HTML files and other non-Python files
+extend-exclude = [
+    "tests/*.html",
+]
+
+[tool.ruff.mccabe]
+# McCabe complexity threshold
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+# Limit mypy to the integration code
+files = ["custom_components/cable_modem_monitor/**/*.py"]
