@@ -36,11 +36,7 @@ rules:
 
   # Detect logging of sensitive data
   - id: logging-sensitive-data
-    pattern-either:
-      - pattern: $LOGGER.$LEVEL(... password ...)
-      - pattern: $LOGGER.$LEVEL(... token ...)
-      - pattern: $LOGGER.$LEVEL(... secret ...)
-      - pattern: $LOGGER.$LEVEL(... api_key ...)
+    pattern-regex: '(logger|_LOGGER)\.(debug|info|warning|error|critical)\(.*?(password|token|secret|api_key).*?\)'
     message: Potential logging of sensitive information
     languages: [python]
     severity: WARNING
