@@ -29,6 +29,7 @@ from .const import (
     DOMAIN,
 )
 from .core.modem_scraper import ModemScraper
+from .core.discovery_helpers import ParserNotFoundError
 from .parsers import get_parsers
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +115,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     try:
         modem_data = await hass.async_add_executor_job(scraper.get_modem_data)
+    except ParserNotFoundError as err:
+        # Phase 3: Better error message for unsupported modems
+        _LOGGER.error("Unsupported modem detected: %s", err.get_user_message())
+        _LOGGER.info("Attempted parsers: %s", ", ".join(err.attempted_parsers))
+        _LOGGER.info("Troubleshooting steps:\n%s",
+                   "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps())))
+        raise UnsupportedModem(str(err)) from err
     except Exception as err:
         _LOGGER.error("Error connecting to modem: %s", err)
         raise CannotConnect from err
@@ -157,6 +165,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 info = await validate_input(self.hass, user_input)
+            except UnsupportedModem:
+                errors["base"] = "unsupported_modem"
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except (ValueError, TypeError) as err:
@@ -239,6 +249,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Validate the connection with new settings
             try:
                 info = await validate_input(self.hass, user_input)
+            except UnsupportedModem:
+                errors["base"] = "unsupported_modem"
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except (ValueError, TypeError) as err:
@@ -343,3 +355,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
+
+class UnsupportedModem(HomeAssistantError):
+    """Error to indicate modem is not supported (no parser matches)."""

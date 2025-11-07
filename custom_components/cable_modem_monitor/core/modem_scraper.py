@@ -5,6 +5,11 @@ from bs4 import BeautifulSoup
 from typing import List, Type
 
 from ..parsers.base_parser import ModemParser
+from .discovery_helpers import (
+    ParserHeuristics,
+    DiscoveryCircuitBreaker,
+    ParserNotFoundError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -221,7 +226,7 @@ class ModemScraper:
 
     def _detect_parser(self, html: str, url: str, suggested_parser: Type[ModemParser] = None) -> ModemParser | None:
         """
-        Detect the parser for the modem.
+        Detect the parser for the modem with Phase 3 enhancements.
 
         Args:
             html: HTML content from modem
@@ -230,42 +235,105 @@ class ModemScraper:
 
         Returns:
             Parser instance or None
+
+        Raises:
+            ParserNotFoundError: If no parser matches after exhaustive search
         """
         if self.parser:
             return self.parser
 
         soup = BeautifulSoup(html, "html.parser")
+        circuit_breaker = DiscoveryCircuitBreaker(max_attempts=15, timeout_seconds=90)
+        attempted_parsers = []
+
+        # Phase 3: Try anonymous probing first (for modems with public pages)
+        _LOGGER.info("Phase 3: Attempting anonymous probing before authentication")
+        for parser_class in self.parsers:
+            if not circuit_breaker.should_continue():
+                break
+
+            try:
+                anon_result = ParserHeuristics.check_anonymous_access(
+                    self.base_url, parser_class, self.session, self.verify_ssl
+                )
+                if anon_result:
+                    anon_html, anon_url = anon_result
+                    anon_soup = BeautifulSoup(anon_html, "html.parser")
+                    circuit_breaker.record_attempt(parser_class.name)
+
+                    if parser_class.can_parse(anon_soup, anon_url, anon_html):
+                        _LOGGER.info("✓ Detected modem via anonymous probing: %s (%s)",
+                                   parser_class.name, parser_class.manufacturer)
+                        return parser_class()
+                    else:
+                        attempted_parsers.append(parser_class.name)
+            except Exception as e:
+                _LOGGER.debug("Anonymous probing failed for %s: %s", parser_class.name, e)
 
         # If we have a suggested parser from URL matching, try it first
         if suggested_parser:
+            if not circuit_breaker.should_continue():
+                stats = circuit_breaker.get_stats()
+                raise ParserNotFoundError(
+                    modem_info={"title": soup.title.string if soup.title else "NO TITLE"},
+                    attempted_parsers=attempted_parsers
+                )
+
             try:
+                circuit_breaker.record_attempt(suggested_parser.name)
                 _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
                 if suggested_parser.can_parse(soup, url, html):
-                    _LOGGER.info("Detected modem using suggested parser: %s (%s)", suggested_parser.name, suggested_parser.manufacturer)
+                    _LOGGER.info("Detected modem using suggested parser: %s (%s)",
+                               suggested_parser.name, suggested_parser.manufacturer)
                     return suggested_parser()
                 else:
+                    attempted_parsers.append(suggested_parser.name)
                     _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
             except Exception as e:
                 _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
+                attempted_parsers.append(suggested_parser.name)
 
-        # Fall back to trying all parsers
-        _LOGGER.debug("Attempting to detect parser from %s available parsers", len(self.parsers))
-        for parser_class in self.parsers:
+        # Phase 3: Use parser heuristics to narrow search space
+        _LOGGER.info("Phase 3: Using parser heuristics to prioritize likely parsers")
+        prioritized_parsers = ParserHeuristics.get_likely_parsers(
+            self.base_url, self.parsers, self.session, self.verify_ssl
+        )
+
+        # Try parsers in prioritized order
+        _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)",
+                    len(prioritized_parsers))
+        for parser_class in prioritized_parsers:
+            if not circuit_breaker.should_continue():
+                break
+
             if suggested_parser and parser_class == suggested_parser:
                 continue  # Already tried this one
 
             try:
+                circuit_breaker.record_attempt(parser_class.name)
                 _LOGGER.debug("Testing parser: %s", parser_class.name)
                 if parser_class.can_parse(soup, url, html):
-                    _LOGGER.info("Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
+                    _LOGGER.info("✓ Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
                     return parser_class()
                 else:
+                    attempted_parsers.append(parser_class.name)
                     _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
             except Exception as e:
                 _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
+                attempted_parsers.append(parser_class.name)
 
-        _LOGGER.error("No parser matched. Title: %s", soup.title.string if soup.title else 'NO TITLE')
-        return None
+        # No parser matched - raise detailed error
+        modem_info = {
+            "title": soup.title.string if soup.title else "NO TITLE",
+            "url": url,
+        }
+        _LOGGER.error("No parser matched after trying %s parsers. Title: %s",
+                    len(attempted_parsers), modem_info["title"])
+
+        raise ParserNotFoundError(
+            modem_info=modem_info,
+            attempted_parsers=attempted_parsers
+        )
 
     def _parse_data(self, html: str) -> dict:
         """Parse data from the modem."""
@@ -289,7 +357,14 @@ class ModemScraper:
 
             # Detect or instantiate parser
             if not self.parser:
-                self.parser = self._detect_parser(html, successful_url, suggested_parser)
+                try:
+                    self.parser = self._detect_parser(html, successful_url, suggested_parser)
+                except ParserNotFoundError as e:
+                    _LOGGER.error("No compatible parser found: %s", e.get_user_message())
+                    _LOGGER.info("Troubleshooting steps:\n%s",
+                               "\n".join(f"  - {step}" for step in e.get_troubleshooting_steps()))
+                    # Re-raise so config_flow can show detailed error
+                    raise
 
             if not self.parser:
                 _LOGGER.error("No compatible parser found for modem at %s.", successful_url)
