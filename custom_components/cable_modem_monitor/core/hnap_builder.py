@@ -2,9 +2,20 @@
 import logging
 import requests
 from typing import Dict, List, Optional
-from xml.etree import ElementTree as ET
 
 _LOGGER = logging.getLogger(__name__)
+
+# Use defusedxml to prevent XXE (XML External Entity) attacks
+# See: https://docs.python.org/3/library/xml.html#xml-vulnerabilities
+try:
+    from defusedxml import ElementTree as ET
+except ImportError:
+    # Fallback to standard library with warning
+    from xml.etree import ElementTree as ET
+    _LOGGER.warning(
+        "defusedxml not available, using standard xml.etree.ElementTree. "
+        "This may be vulnerable to XXE attacks. Install defusedxml for security."
+    )
 
 
 class HNAPRequestBuilder:
