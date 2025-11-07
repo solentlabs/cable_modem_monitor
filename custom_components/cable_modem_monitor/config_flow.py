@@ -34,6 +34,7 @@ from .parsers import get_parsers
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     from urllib.parse import urlparse

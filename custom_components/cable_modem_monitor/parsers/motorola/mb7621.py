@@ -1,7 +1,5 @@
 import logging
 from bs4 import BeautifulSoup
-from ..base_parser import ModemParser
-from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
 from .generic import MotorolaGenericParser
 
 _LOGGER = logging.getLogger(__name__)

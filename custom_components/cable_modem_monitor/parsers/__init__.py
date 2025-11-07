@@ -9,6 +9,7 @@ from .base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
+
 def get_parsers() -> List[Type[ModemParser]]:
     """Auto-discover and return all parser modules in this package."""
     parsers = []

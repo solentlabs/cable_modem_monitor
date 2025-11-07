@@ -1,6 +1,7 @@
 """Utility functions for the Cable Modem Monitor integration."""
 import re
 
+
 def extract_number(text: str) -> int | None:
     """Extract integer from text."""
     try:
@@ -9,6 +10,7 @@ def extract_number(text: str) -> int | None:
     except ValueError:
         return None
 
+
 def extract_float(text: str) -> float | None:
     """Extract float from text."""
     try:
@@ -16,6 +18,7 @@ def extract_float(text: str) -> float | None:
         return float(cleaned) if cleaned else None
     except ValueError:
         return None
+
 
 def parse_uptime_to_seconds(uptime_str: str) -> int | None:
     """Parse uptime string to total seconds.

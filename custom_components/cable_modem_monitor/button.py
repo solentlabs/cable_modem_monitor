@@ -71,7 +71,6 @@ class ModemRestartButton(ModemButtonBase):
     async def async_press(self) -> None:
         """Handle the button press."""
         import asyncio
-        from datetime import timedelta
 
         _LOGGER.info("Modem restart button pressed")
 
