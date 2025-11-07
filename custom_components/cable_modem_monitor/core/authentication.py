@@ -94,8 +94,8 @@ class BasicHttpAuthStrategy(AuthStrategy):
     ) -> Tuple[bool, Optional[str]]:
         """Set up HTTP Basic Auth on the session."""
         if not username or not password:
-            _LOGGER.warning("BasicAuth requires username and password")
-            return (False, None)
+            _LOGGER.debug("No credentials provided for Basic Auth, skipping")
+            return (True, None)
 
         # Attach auth to session (sent with every request)
         session.auth = (username, password)
