@@ -299,15 +299,26 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     self.config_entry, data=user_input
                 )
 
-                # Create success message with detected modem info
+                # Show notification with detected modem info
                 detected_modem = user_input.get(CONF_DETECTED_MODEM, "Cable Modem")
                 detected_manufacturer = user_input.get(CONF_DETECTED_MANUFACTURER, "")
                 if detected_manufacturer and detected_manufacturer != "Unknown":
-                    success_message = f"Configured for {detected_manufacturer} {detected_modem}"
+                    message = f"Configured for {detected_manufacturer} {detected_modem}"
                 else:
-                    success_message = f"Configured for {detected_modem}"
+                    message = f"Configured for {detected_modem}"
 
-                return self.async_create_entry(title=success_message, data={})
+                # Create a notification to show the detected modem
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": "Cable Modem Monitor",
+                        "message": message,
+                        "notification_id": f"cable_modem_config_{self.config_entry.entry_id}",
+                    },
+                )
+
+                return self.async_create_entry(title="", data={})
 
         # Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
