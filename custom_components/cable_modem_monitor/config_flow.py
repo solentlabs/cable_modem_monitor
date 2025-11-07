@@ -136,7 +136,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Create title with detected modem info
     detected_modem = detection_info.get("modem_name", "Cable Modem")
     detected_manufacturer = detection_info.get("manufacturer", "")
-    if detected_manufacturer and detected_manufacturer != "Unknown":
+
+    # Avoid duplicate manufacturer name if modem name already includes it
+    if (
+        detected_manufacturer
+        and detected_manufacturer != "Unknown"
+        and not detected_modem.startswith(detected_manufacturer)
+    ):
         title = f"{detected_manufacturer} {detected_modem} ({host})"
     else:
         title = f"{detected_modem} ({host})"
@@ -302,7 +308,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 # Show notification with detected modem info
                 detected_modem = user_input.get(CONF_DETECTED_MODEM, "Cable Modem")
                 detected_manufacturer = user_input.get(CONF_DETECTED_MANUFACTURER, "")
-                if detected_manufacturer and detected_manufacturer != "Unknown":
+
+                # Avoid duplicate manufacturer name if modem name already includes it
+                if (
+                    detected_manufacturer
+                    and detected_manufacturer != "Unknown"
+                    and not detected_modem.startswith(detected_manufacturer)
+                ):
                     message = f"Configured for {detected_manufacturer} {detected_modem}"
                 else:
                     message = f"Configured for {detected_modem}"

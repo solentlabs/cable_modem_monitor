@@ -204,6 +204,8 @@ class ModemRestartButton(ModemButtonBase):
             prev_downstream = 0
             prev_upstream = 0
             stable_count = 0  # Track how many times channels have been stable
+            grace_period_active = False  # Track if we're in grace period
+            grace_period_start = 0  # When grace period started
 
             while phase2_elapsed < phase2_max_wait:
                 try:
@@ -221,6 +223,7 @@ class ModemRestartButton(ModemButtonBase):
                         stable_count += 1
                     else:
                         stable_count = 0  # Reset if channels changed
+                        grace_period_active = False  # Exit grace period if channels still changing
                         _LOGGER.info(
                             "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
                             phase2_elapsed,
@@ -233,16 +236,25 @@ class ModemRestartButton(ModemButtonBase):
                     prev_downstream = downstream_count
                     prev_upstream = upstream_count
 
-                    # Consider fully online when:
-                    # 1. Connection status is "online"
-                    # 2. We have channels (not 0/0)
-                    # 3. Channel counts have been stable for 2+ polls (20+ seconds)
+                    # Enter grace period after initial stability (3 polls = 30s)
                     if (
                         connection_status == "online"
                         and downstream_count > 0
                         and upstream_count > 0
-                        and stable_count >= 2
+                        and stable_count >= 3
+                        and not grace_period_active
                     ):
+                        grace_period_active = True
+                        grace_period_start = phase2_elapsed
+                        _LOGGER.info(
+                            "Phase 2: %ss - Channels stable (%s down, %s up), entering 30s grace period to catch stragglers",
+                            total_elapsed,
+                            downstream_count,
+                            upstream_count,
+                        )
+
+                    # Check if grace period is complete (30 more seconds = 3 polls)
+                    if grace_period_active and (phase2_elapsed - grace_period_start) >= 30:
                         modem_fully_online = True
                         _LOGGER.info(
                             "Modem fully online with stable channels after %ss total (%s down, %s up)",
@@ -252,14 +264,25 @@ class ModemRestartButton(ModemButtonBase):
                         )
                         break
                     else:
-                        _LOGGER.debug(
-                            "Phase 2: %ss - Status: %s, Channels: %s down, %s up (stable: %s polls)",
-                            phase2_elapsed,
-                            connection_status,
-                            downstream_count,
-                            upstream_count,
-                            stable_count,
-                        )
+                        if grace_period_active:
+                            grace_elapsed = phase2_elapsed - grace_period_start
+                            _LOGGER.debug(
+                                "Phase 2: %ss - Grace period: %ss/%ss, Channels: %s down, %s up",
+                                phase2_elapsed,
+                                grace_elapsed,
+                                30,
+                                downstream_count,
+                                upstream_count,
+                            )
+                        else:
+                            _LOGGER.debug(
+                                "Phase 2: %ss - Status: %s, Channels: %s down, %s up (stable: %s polls)",
+                                phase2_elapsed,
+                                connection_status,
+                                downstream_count,
+                                upstream_count,
+                                stable_count,
+                            )
                 except Exception as e:
                     _LOGGER.debug("Error during phase 2 monitoring: %s", e)
                     await asyncio.sleep(10)
