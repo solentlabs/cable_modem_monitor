@@ -225,7 +225,9 @@ class ModemScraper:
 
         return None
 
-    def _detect_parser(self, html: str, url: str, suggested_parser: Type[ModemParser] = None) -> ModemParser | None:
+    def _detect_parser(
+        self, html: str, url: str, suggested_parser: Type[ModemParser] | None = None
+    ) -> ModemParser | None:
         """
         Detect the parser for the modem with Phase 3 enhancements.
 
