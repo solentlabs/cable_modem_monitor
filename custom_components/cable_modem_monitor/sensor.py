@@ -493,7 +493,9 @@ class ModemLastBootTimeSensor(ModemSensorBase):
 class ModemLanStatsSensor(ModemSensorBase):
     """Base class for LAN statistics sensors."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str, sensor_type: str) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str, sensor_type: str
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._interface = interface

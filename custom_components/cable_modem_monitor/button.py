@@ -120,7 +120,10 @@ class ModemRestartButton(ModemButtonBase):
                 "create",
                 {
                     "title": "Modem Restart Failed",
-                    "message": f"Failed to restart modem. Your modem ({detected_modem}) may not support remote restart. Check logs for details.",
+                    "message": (
+                        f"Failed to restart modem. Your modem ({detected_modem}) may not support "
+                        "remote restart. Check logs for details."
+                    ),
                     "notification_id": "cable_modem_restart_error",
                 },
             )
@@ -246,7 +249,8 @@ class ModemRestartButton(ModemButtonBase):
                         grace_period_active = True
                         grace_period_start = phase2_elapsed
                         _LOGGER.info(
-                            "Phase 2: %ss - Channels stable (%s down, %s up), entering 30s grace period to catch stragglers",
+                            "Phase 2: %ss - Channels stable (%s down, %s up), "
+                            "entering 30s grace period to catch stragglers",
                             total_elapsed,
                             downstream_count,
                             upstream_count,
@@ -297,7 +301,10 @@ class ModemRestartButton(ModemButtonBase):
                     "create",
                     {
                         "title": "Modem Restart Complete",
-                        "message": f"Modem fully online after {total_time}s with {downstream_count} downstream and {upstream_count} upstream channels.",
+                        "message": (
+                            f"Modem fully online after {total_time}s with {downstream_count} downstream "
+                            f"and {upstream_count} upstream channels."
+                        ),
                         "notification_id": "cable_modem_restart",
                     },
                 )
@@ -307,7 +314,10 @@ class ModemRestartButton(ModemButtonBase):
                     "create",
                     {
                         "title": "Modem Restart Warning",
-                        "message": f"Modem responding but channels not fully synced after {total_time}s. This may be normal - check modem status.",
+                        "message": (
+                            f"Modem responding but channels not fully synced after {total_time}s. "
+                            "This may be normal - check modem status."
+                        ),
                         "notification_id": "cable_modem_restart",
                     },
                 )
@@ -427,8 +437,14 @@ class ResetEntitiesButton(ModemButtonBase):
         self._attr_entity_registry_enabled_default = True
         # Add description to explain what this button does
         self._attr_extra_state_attributes = {
-            "description": "Removes all cable modem entities from the registry and reloads the integration. Use this after replacing your modem or to fix entity issues.",
-            "entities": "Entities will be recreated with the same IDs. Automations and dashboards will continue to work.",
+            "description": (
+                "Removes all cable modem entities from the registry and reloads the integration. "
+                "Use this after replacing your modem or to fix entity issues."
+            ),
+            "entities": (
+                "Entities will be recreated with the same IDs. "
+                "Automations and dashboards will continue to work."
+            ),
             "history": "Historical data should be preserved (stored by entity ID in recorder database).",
             "recommendation": "Create a backup before using if you want to be safe."
         }
@@ -473,7 +489,10 @@ class ResetEntitiesButton(ModemButtonBase):
             "create",
             {
                 "title": "Entity Reset Complete",
-                "message": f"Successfully removed {len(entities_to_remove)} entities and reloaded the integration. New entities have been created.",
+                "message": (
+                    f"Successfully removed {len(entities_to_remove)} entities and reloaded the integration. "
+                    "New entities have been created."
+                ),
                 "notification_id": "cable_modem_reset",
             },
         )

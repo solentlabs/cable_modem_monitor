@@ -2,9 +2,9 @@
 import os
 from bs4 import BeautifulSoup
 import pytest
-from unittest.mock import patch
 
 from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser, RESTART_WINDOW_SECONDS
+
 
 @pytest.fixture
 def moto_home_html():
@@ -13,6 +13,7 @@ def moto_home_html():
     with open(fixture_path, 'r') as f:
         return f.read()
 
+
 @pytest.fixture
 def moto_connection_html():
     """Load moto_connection.html fixture."""
@@ -20,10 +21,12 @@ def moto_connection_html():
     with open(fixture_path, 'r') as f:
         return f.read()
 
+
 def test_parser_detection(moto_connection_html):
     """Test that the Motorola MB parser detects a generic MB modem."""
     soup = BeautifulSoup(moto_connection_html, "html.parser")
     assert MotorolaGenericParser.can_parse(soup, "http://192.168.100.1/moto_connection.html", moto_connection_html)
+
 
 def test_parsing(moto_connection_html, moto_home_html):
     """Test parsing of generic MB data."""
@@ -54,7 +57,7 @@ def test_parsing(moto_connection_html, moto_home_html):
     assert data["upstream"][0]["frequency"] > 0
     assert data["upstream"][0]["power"] is not None
     assert data["system_info"]["software_version"] == "7621-5.7.1.5"
-    assert data["system_info"]["system_uptime"] == "26 days 19h:20m:55s" # This might vary, check fixture
+    assert data["system_info"]["system_uptime"] == "26 days 19h:20m:55s"  # This might vary, check fixture
 
 
 def test_restart_detection_filters_zero_power():
@@ -197,6 +200,7 @@ def test_restart_window_constant():
     assert RESTART_WINDOW_SECONDS == 300
     assert RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes
 
+
 def test_downstream_channels(moto_connection_html):
     """Test parsing downstream channels."""
     parser = MotorolaGenericParser()
@@ -214,6 +218,7 @@ def test_downstream_channels(moto_connection_html):
     assert 'corrected' in first_ch, "Missing 'corrected' field"
     assert 'uncorrected' in first_ch, "Missing 'uncorrected' field"
 
+
 def test_upstream_channels(moto_connection_html):
     """Test parsing upstream channels."""
     parser = MotorolaGenericParser()
@@ -228,6 +233,7 @@ def test_upstream_channels(moto_connection_html):
     assert 'power' in first_ch, "Missing 'power' field"
     assert 'frequency' in first_ch, "Missing 'frequency' field"
 
+
 def test_software_version(moto_home_html):
     """Test parsing software version."""
     parser = MotorolaGenericParser()
@@ -237,6 +243,7 @@ def test_software_version(moto_home_html):
 
     assert info['software_version'] != "Unknown", f"Should find software version, got '{info['software_version']}'"
     assert info['software_version'] == "7621-5.7.1.5", f"Expected '7621-5.7.1.5', got '{info['software_version']}'"
+
 
 def test_system_uptime(moto_connection_html):
     """Test parsing system uptime."""
@@ -248,6 +255,7 @@ def test_system_uptime(moto_connection_html):
     assert info['system_uptime'] != "Unknown", f"Should find system uptime, got '{info['system_uptime']}'"
     assert "days" in info['system_uptime'].lower() or "h:" in info['system_uptime'], \
         f"Uptime should contain time info, got '{info['system_uptime']}'"
+
 
 def test_channel_counts(moto_connection_html, moto_home_html):
     """Test parsing channel counts."""
@@ -266,6 +274,7 @@ def test_channel_counts(moto_connection_html, moto_home_html):
         f"Expected 24 downstream channels, got {len(downstream_channels)}"
     assert len(upstream_channels) == 5, \
         f"Expected 5 upstream channels, got {len(upstream_channels)}"
+
 
 def test_error_totals(moto_connection_html):
     """Test error total calculations."""

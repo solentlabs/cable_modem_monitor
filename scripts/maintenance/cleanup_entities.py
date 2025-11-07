@@ -189,7 +189,10 @@ def main():
             print_warning('⚠️  This will remove ALL cable modem entities!')
             print_warning('⚠️  You will lose ALL historical data!')
             print_warning('⚠️  The integration will create fresh entities on next restart.')
-            response = input(f"\n{Colors.BOLD}Are you ABSOLUTELY sure? Type 'DELETE EVERYTHING' to confirm: {Colors.ENDC}")
+            response = input(
+                f"\n{Colors.BOLD}Are you ABSOLUTELY sure? "
+                f"Type 'DELETE EVERYTHING' to confirm: {Colors.ENDC}"
+            )
             if response != 'DELETE EVERYTHING':
                 print_error('Cancelled. No changes made.')
                 sys.exit(0)

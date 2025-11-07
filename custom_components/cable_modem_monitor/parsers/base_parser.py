@@ -82,5 +82,3 @@ class ModemParser(ABC):
             }
         """
         raise NotImplementedError
-
-    

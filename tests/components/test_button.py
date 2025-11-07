@@ -1,6 +1,6 @@
 """Tests for Cable Modem Monitor button platform."""
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
@@ -345,7 +345,7 @@ async def test_cleanup_button_with_orphaned_entities(mock_coordinator, mock_conf
 
         # Verify success notification mentions orphaned entities
         notification_calls = [c for c in hass.services.async_call.call_args_list
-                             if c[0][0] == "persistent_notification"]
+                              if c[0][0] == "persistent_notification"]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "orphaned" in notification_data["message"].lower()
@@ -376,7 +376,7 @@ async def test_cleanup_button_no_orphaned_entities(mock_coordinator, mock_config
 
         # Verify notification says no orphaned entities found
         notification_calls = [c for c in hass.services.async_call.call_args_list
-                             if c[0][0] == "persistent_notification"]
+                              if c[0][0] == "persistent_notification"]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "No orphaned entities" in notification_data["message"]
@@ -451,7 +451,7 @@ async def test_reset_button_removes_all_entities_and_reloads(mock_coordinator, m
 
         # Verify success notification
         notification_calls = [c for c in hass.services.async_call.call_args_list
-                             if c[0][0] == "persistent_notification"]
+                              if c[0][0] == "persistent_notification"]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "Successfully removed 2 entities" in notification_data["message"]

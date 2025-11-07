@@ -30,7 +30,11 @@ class TechnicolorTC4400Parser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Technicolor TC4400 modem."""
-        return "cmconnectionstatus.html" in url.lower() or "cmswinfo.html" in url.lower() or ("Board ID:" in html and "Build Timestamp:" in html)
+        return (
+            "cmconnectionstatus.html" in url.lower()
+            or "cmswinfo.html" in url.lower()
+            or ("Board ID:" in html and "Build Timestamp:" in html)
+        )
 
     def login(self, session, base_url, username, password) -> bool:
         """
@@ -66,7 +70,10 @@ class TechnicolorTC4400Parser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
+        _LOGGER.debug(
+            "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
+            system_info.get('system_uptime')
+        )
 
         channels = []
         try:
@@ -112,7 +119,10 @@ class TechnicolorTC4400Parser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}", system_info.get('system_uptime'))
+        _LOGGER.debug(
+            "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
+            system_info.get('system_uptime')
+        )
 
         channels = []
         try:

@@ -101,24 +101,41 @@ class MotorolaGenericParser(ModemParser):
 
                         # If both are private/local IPs, allow the redirect (trusted local network)
                         if login_ip.is_private and response_ip.is_private:
-                            _LOGGER.debug("Allowing redirect within private network: %s -> %s",
-                                        login_parsed.hostname, response_parsed.hostname)
+                            _LOGGER.debug(
+                                "Allowing redirect within private network: %s -> %s",
+                                login_parsed.hostname,
+                                response_parsed.hostname
+                            )
                         else:
                             # One or both are public IPs - enforce strict matching
-                            _LOGGER.error("Motorola: Security violation - redirect to different public host: %s", response.url)
+                            _LOGGER.error(
+                                "Motorola: Security violation - redirect to different public host: %s",
+                                response.url
+                            )
                             return False, None
                     except ValueError:
                         # Not IP addresses (hostnames) - enforce strict matching for security
-                        _LOGGER.error("Motorola: Security violation - redirect to different host: %s (from %s)",
-                                    response_parsed.hostname, login_parsed.hostname)
+                        _LOGGER.error(
+                            "Motorola: Security violation - redirect to different host: %s (from %s)",
+                            response_parsed.hostname,
+                            login_parsed.hostname
+                        )
                         return False, None
 
             test_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
-            _LOGGER.debug("Login verification: test page status=%s, length=%s", test_response.status_code, len(test_response.text))
+            _LOGGER.debug(
+                "Login verification: test page status=%s, length=%s",
+                test_response.status_code,
+                len(test_response.text)
+            )
 
             # Check for successful authentication - look for actual content, not login page
             if test_response.status_code == 200 and len(test_response.text) > 10000:
-                _LOGGER.info("Login successful using %s password (got %s bytes)", pwd_type, len(test_response.text))
+                _LOGGER.info(
+                    "Login successful using %s password (got %s bytes)",
+                    pwd_type,
+                    len(test_response.text)
+                )
                 return True, test_response.text
 
         _LOGGER.error("Login failed with both plain and Base64-encoded passwords")
@@ -158,7 +175,12 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("Uptime: %s, Seconds: %s, Restarting: %s", system_info.get('system_uptime'), uptime_seconds, is_restarting)
+        _LOGGER.debug(
+            "Uptime: %s, Seconds: %s, Restarting: %s",
+            system_info.get('system_uptime'),
+            uptime_seconds,
+            is_restarting
+        )
 
         channels = []
         try:
@@ -166,7 +188,10 @@ class MotorolaGenericParser(ModemParser):
             _LOGGER.debug("Found %s tables with class 'moto-table-content'", len(tables_found))
 
             for table in tables_found:
-                headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
+                headers = [
+                    th.text.strip() for th in
+                    table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])
+                ]
                 _LOGGER.debug("Table headers found: %s", headers)
 
                 if any("Pwr" in h for h in headers) and any("SNR" in h for h in headers):
@@ -184,7 +209,7 @@ class MotorolaGenericParser(ModemParser):
 
                                 freq_mhz = extract_float(cols[4].text)
                                 freq_hz = freq_mhz * 1_000_000 if freq_mhz is not None else None
-                                
+
                                 power = extract_float(cols[5].text)
                                 snr = extract_float(cols[6].text)
                                 _LOGGER.debug("Ch %s: Raw Power=%s, Raw SNR=%s", channel_id, power, snr)
@@ -223,11 +248,19 @@ class MotorolaGenericParser(ModemParser):
 
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
-        _LOGGER.debug("Uptime: %s, Seconds: %s, Restarting: %s", system_info.get('system_uptime'), uptime_seconds, is_restarting)
+        _LOGGER.debug(
+            "Uptime: %s, Seconds: %s, Restarting: %s",
+            system_info.get('system_uptime'),
+            uptime_seconds,
+            is_restarting
+        )
         channels = []
         try:
             for table in soup.find_all("table", class_="moto-table-content"):
-                headers = [th.text.strip() for th in table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])]
+                headers = [
+                    th.text.strip() for th in
+                    table.find_all(["th", "td"], class_=["moto-param-header-s", "moto-param-header"])
+                ]
                 if any("Symb. Rate" in h for h in headers):
                     rows = table.find_all("tr")[1:]
                     _LOGGER.debug("Found upstream table with %s rows", len(rows))
@@ -242,7 +275,11 @@ class MotorolaGenericParser(ModemParser):
 
                                 lock_status = cols[1].text.strip()
                                 if "not locked" in lock_status.lower():
-                                    _LOGGER.debug("Skipping channel %s - not locked (status: %s)", channel_id, lock_status)
+                                    _LOGGER.debug(
+                                        "Skipping channel %s - not locked (status: %s)",
+                                        channel_id,
+                                        lock_status
+                                    )
                                     continue
 
                                 freq_mhz = extract_float(cols[5].text)
