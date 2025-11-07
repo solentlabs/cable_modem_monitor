@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .auth_config import AuthConfig
+    from .auth_config import AuthConfig, HNAPAuthConfig
 
 _LOGGER = logging.getLogger(__name__)
 
