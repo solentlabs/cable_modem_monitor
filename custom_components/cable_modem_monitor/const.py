@@ -1,6 +1,6 @@
 """Constants for the Cable Modem Monitor integration."""
 
-VERSION = "2.6.1"
+VERSION = "3.0.0"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"
