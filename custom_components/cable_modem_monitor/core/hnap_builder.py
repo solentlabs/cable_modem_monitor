@@ -1,7 +1,11 @@
 """HNAP/SOAP request builder utility."""
 import logging
 import requests
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+# Import Element for type checking from standard library
+if TYPE_CHECKING:
+    from xml.etree.ElementTree import Element
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -163,7 +167,7 @@ class HNAPRequestBuilder:
         return envelope
 
     @staticmethod
-    def parse_response(xml_text: str, action: str, namespace: str) -> Optional[ET.Element]:
+    def parse_response(xml_text: str, action: str, namespace: str) -> Optional["Element"]:
         """
         Parse HNAP XML response and extract action result.
 
@@ -198,7 +202,7 @@ class HNAPRequestBuilder:
             return None
 
     @staticmethod
-    def get_text_value(element: Optional[ET.Element], tag: str, default: str = "") -> str:
+    def get_text_value(element: Optional["Element"], tag: str, default: str = "") -> str:
         """
         Get text value from XML element.
 

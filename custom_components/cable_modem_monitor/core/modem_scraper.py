@@ -86,8 +86,14 @@ class ModemScraper:
         self.parser_name = parser_name  # For Tier 2: load cached parser by name
         self.last_successful_url = None
 
-    def _login(self) -> bool:
-        """Log in to the modem web interface."""
+    def _login(self) -> bool | tuple[bool, str]:
+        """
+        Log in to the modem web interface.
+
+        Returns:
+            bool: True if login successful (old style)
+            tuple[bool, str]: (success, html) where html is authenticated page content (new style)
+        """
         if not self.username or not self.password:
             _LOGGER.debug("No credentials provided, skipping login")
             return True
@@ -128,7 +134,7 @@ class ModemScraper:
                     # Find the auth method for cached URL
                     cached_pattern = next(
                         (p for p in cached_parser.url_patterns
-                         if isinstance(p.get('path'), str) and p['path'] in self.cached_url),
+                         if isinstance(p.get('path'), str) and isinstance(p['path'], str) and p['path'] in self.cached_url),
                         cached_parser.url_patterns[0] if cached_parser.url_patterns else None
                     )
                     if cached_pattern:
