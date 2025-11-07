@@ -61,11 +61,11 @@ class ParserHeuristics:
             else:
                 _LOGGER.debug("Heuristics: Root page returned status %s, skipping heuristics",
                               response.status_code)
-                return parsers  # Return all parsers if heuristics fail
+                return list(parsers)  # Return all parsers if heuristics fail
 
         except (requests.RequestException, Exception) as e:
             _LOGGER.debug("Heuristics: Failed to fetch root page (%s), trying all parsers", type(e).__name__)
-            return parsers  # Return all parsers if heuristics fail
+            return list(parsers)  # Return all parsers if heuristics fail
 
         # If we found likely parsers, return those first, then the rest
         if likely_parsers:
@@ -76,7 +76,7 @@ class ParserHeuristics:
 
         # No heuristics matched, return all parsers
         _LOGGER.debug("Heuristics: No strong indicators found, trying all parsers")
-        return parsers
+        return list(parsers)
 
     @staticmethod
     def check_anonymous_access(
