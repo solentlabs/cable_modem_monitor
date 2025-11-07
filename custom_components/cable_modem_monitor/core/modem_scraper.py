@@ -194,7 +194,10 @@ class ModemScraper:
                 url = url.replace(self.base_url, current_base_url)
 
                 try:
-                    _LOGGER.debug("Attempting to fetch %s (auth: %s, parser: %s)", url, auth_method, parser_class.name if parser_class else 'unknown')
+                    _LOGGER.debug(
+                        "Attempting to fetch %s (auth: %s, parser: %s)",
+                        url, auth_method, parser_class.name if parser_class else 'unknown'
+                    )
                     auth = None
                     if auth_method == 'basic' and self.username and self.password:
                         auth = (self.username, self.password)
@@ -203,9 +206,10 @@ class ModemScraper:
                     response = self.session.get(url, timeout=10, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
+                        parser_name = parser_class.name if parser_class else 'unknown'
                         _LOGGER.info(
-                            f"Successfully connected to {url} "
-                            f"(HTML: {len(response.text)} bytes, parser: {parser_class.name if parser_class else 'unknown'})"
+                            "Successfully connected to %s (HTML: %s bytes, parser: %s)",
+                            url, len(response.text), parser_name
                         )
                         self.last_successful_url = url
                         ***REMOVED*** Update base_url to the working protocol
@@ -260,7 +264,7 @@ class ModemScraper:
 
                     if parser_class.can_parse(anon_soup, anon_url, anon_html):
                         _LOGGER.info("✓ Detected modem via anonymous probing: %s (%s)",
-                                   parser_class.name, parser_class.manufacturer)
+                                     parser_class.name, parser_class.manufacturer)
                         return parser_class()
                     else:
                         attempted_parsers.append(parser_class.name)
@@ -270,7 +274,6 @@ class ModemScraper:
         ***REMOVED*** If we have a suggested parser from URL matching, try it first
         if suggested_parser:
             if not circuit_breaker.should_continue():
-                stats = circuit_breaker.get_stats()
                 raise ParserNotFoundError(
                     modem_info={"title": soup.title.string if soup.title else "NO TITLE"},
                     attempted_parsers=attempted_parsers
@@ -281,7 +284,7 @@ class ModemScraper:
                 _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
                 if suggested_parser.can_parse(soup, url, html):
                     _LOGGER.info("Detected modem using suggested parser: %s (%s)",
-                               suggested_parser.name, suggested_parser.manufacturer)
+                                 suggested_parser.name, suggested_parser.manufacturer)
                     return suggested_parser()
                 else:
                     attempted_parsers.append(suggested_parser.name)
@@ -298,7 +301,7 @@ class ModemScraper:
 
         ***REMOVED*** Try parsers in prioritized order
         _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)",
-                    len(prioritized_parsers))
+                      len(prioritized_parsers))
         for parser_class in prioritized_parsers:
             if not circuit_breaker.should_continue():
                 break
@@ -325,7 +328,7 @@ class ModemScraper:
             "url": url,
         }
         _LOGGER.error("No parser matched after trying %s parsers. Title: %s",
-                    len(attempted_parsers), modem_info["title"])
+                      len(attempted_parsers), modem_info["title"])
 
         raise ParserNotFoundError(
             modem_info=modem_info,
@@ -359,7 +362,7 @@ class ModemScraper:
                 except ParserNotFoundError as e:
                     _LOGGER.error("No compatible parser found: %s", e.get_user_message())
                     _LOGGER.info("Troubleshooting steps:\n%s",
-                               "\n".join(f"  - {step}" for step in e.get_troubleshooting_steps()))
+                                 "\n".join(f"  - {step}" for step in e.get_troubleshooting_steps()))
                     ***REMOVED*** Re-raise so config_flow can show detailed error
                     raise
 
@@ -378,8 +381,8 @@ class ModemScraper:
                 if not success:
                     _LOGGER.error("Failed to log in to modem")
                     return {
-                        "cable_modem_connection_status": "unreachable", 
-                        "downstream": [], 
+                        "cable_modem_connection_status": "unreachable",
+                        "downstream": [],
                         "upstream": []
                     }
                 ***REMOVED*** Use the authenticated HTML from login if available
@@ -391,8 +394,8 @@ class ModemScraper:
                 if not login_result:
                     _LOGGER.error("Failed to log in to modem")
                     return {
-                        "cable_modem_connection_status": "unreachable", 
-                        "downstream": [], 
+                        "cable_modem_connection_status": "unreachable",
+                        "downstream": [],
                         "upstream": []
                     }
 
@@ -421,8 +424,8 @@ class ModemScraper:
         except Exception as e:
             _LOGGER.error("Error fetching modem data: %s", e)
             return {
-                "cable_modem_connection_status": "unreachable", 
-                "cable_modem_downstream": [], 
+                "cable_modem_connection_status": "unreachable",
+                "cable_modem_downstream": [],
                 "cable_modem_upstream": []
             }
 
