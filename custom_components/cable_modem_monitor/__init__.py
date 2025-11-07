@@ -261,6 +261,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name=f"Cable Modem {host}",
         update_method=async_update_data,
         update_interval=timedelta(seconds=scan_interval),
+        config_entry=entry,
     )
 
     # Fetch initial data
