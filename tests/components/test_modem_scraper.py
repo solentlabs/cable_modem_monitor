@@ -108,7 +108,9 @@ class TestModemScraper:
         mock_response.text = "<html><body>Modem Data</body></html>"
         mock_get.return_value = mock_response
 
-        html, url, parser_class = scraper._fetch_data()
+        result = scraper._fetch_data()
+        assert result is not None, "Expected _fetch_data to return a tuple, got None"
+        html, url, parser_class = result
 
         # Should succeed on first try
         assert html == "<html><body>Modem Data</body></html>"
