@@ -154,95 +154,66 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
                 _LOGGER.error("Failed to migrate %s: %s", old_entity_id, e)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Cable Modem Monitor from a config entry."""
-    # Migrate config entry data to remove old entity prefix settings
+def _migrate_config_data(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove deprecated config keys from entry data."""
     new_data = dict(entry.data)
-    removed_keys = []
-
-    # Remove v1.x entity prefix configuration keys
     old_config_keys = ["entity_prefix", "custom_prefix"]
-    for key in old_config_keys:
-        if key in new_data:
-            removed_keys.append(key)
-            new_data.pop(key)
+    removed_keys = [key for key in old_config_keys if key in new_data]
+
+    for key in removed_keys:
+        new_data.pop(key)
 
     if removed_keys:
         hass.config_entries.async_update_entry(entry, data=new_data)
         _LOGGER.info("Removed deprecated config keys: %s", removed_keys)
 
-    # Migrate entity IDs to v2.0 naming scheme
-    await async_migrate_entity_ids(hass, entry)
 
-    host = entry.data[CONF_HOST]
-    username = entry.data.get(CONF_USERNAME)
-    password = entry.data.get(CONF_PASSWORD)
-    scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    cached_url = entry.data.get(CONF_WORKING_URL)  # Get cached URL if available
-    parser_name = entry.data.get(CONF_PARSER_NAME)  # Get cached parser name if available
-    modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")  # Get user's modem selection
-    # Use hardcoded VERIFY_SSL constant (see const.py for security rationale)
-    verify_ssl = VERIFY_SSL
+def _select_parser(parsers: list, modem_choice: str):
+    """Select appropriate parser based on user choice.
 
-    from .parsers import get_parsers
+    Returns either a single parser instance or list of all parsers.
+    """
+    if not modem_choice or modem_choice == "auto":
+        # Auto mode - return all parsers
+        return parsers
 
-    # Get parsers in executor to avoid blocking I/O in async context
-    parsers = await hass.async_add_executor_job(get_parsers)
+    # User selected specific parser - find and instantiate it
+    for parser_class in parsers:
+        if parser_class.name == modem_choice:
+            _LOGGER.info("Using user-selected parser: %s", parser_class.name)
+            return parser_class()
 
-    # Respect user's explicit parser selection (Tier 1)
-    selected_parser = None
-    parser_name_for_tier2 = None
+    _LOGGER.warning("Parser '%s' not found, falling back to auto", modem_choice)
+    return parsers
 
-    if modem_choice and modem_choice != "auto":
-        # Tier 1: User explicitly selected a parser - use only that one
-        for parser_class in parsers:
-            if parser_class.name == modem_choice:
-                selected_parser = parser_class()  # Instantiate the selected parser
-                _LOGGER.info("Using user-selected parser: %s", selected_parser.name)
-                break
-        if not selected_parser:
-            _LOGGER.warning("User selected parser '%s' not found, falling back to auto", modem_choice)
-    else:
-        # Tier 2/3: Auto mode - use cached parser name if available
-        parser_name_for_tier2 = parser_name
 
-    scraper = ModemScraper(
-        host,
-        username,
-        password,
-        parser=selected_parser if selected_parser else parsers,
-        cached_url=cached_url,
-        parser_name=parser_name_for_tier2,
-        verify_ssl=verify_ssl,
-    )
-
-    # Initialize health monitor for dual-layer diagnostics
-    # Create SSL context in executor to avoid blocking I/O in event loop
+async def _create_health_monitor(hass: HomeAssistant):
+    """Create health monitor with SSL context."""
     from .core.health_monitor import ModemHealthMonitor
     import ssl
 
     def create_ssl_context():
-        """Create SSL context with proper configuration (runs in executor to avoid blocking)."""
+        """Create SSL context (runs in executor to avoid blocking)."""
         context = ssl.create_default_context()
-        # Always disable verification for cable modems (see VERIFY_SSL constant in const.py)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         return context
 
     ssl_context = await hass.async_add_executor_job(create_ssl_context)
-    health_monitor = ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
+    return ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
 
+
+def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str):
+    """Create the async update function for the coordinator."""
     async def async_update_data() -> dict:
         """Fetch data from the modem."""
-        # Run health check first (async, non-blocking)
         base_url = f"http://{host}"
         health_result = await health_monitor.check_health(base_url)
 
         try:
-            # Run the scraper in an executor since it uses requests (blocking I/O)
             data = await hass.async_add_executor_job(scraper.get_modem_data)
 
-            # Add health monitoring data to coordinator data
+            # Add health monitoring data
             data["health_status"] = health_result.status
             data["health_diagnosis"] = health_result.diagnosis
             data["ping_success"] = health_result.ping_success
@@ -254,7 +225,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return data
         except Exception as err:
             # If scraper fails but health check succeeded, return partial data
-            # This prevents all entities showing "unavailable" when modem is just rebooting
             if health_result.ping_success or health_result.http_success:
                 _LOGGER.warning("Scraper failed but modem is responding to health checks: %s", err)
                 return {
@@ -269,18 +239,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 }
             raise UpdateFailed(f"Error communicating with modem: {err}") from err
 
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name=f"Cable Modem {host}",
-        update_method=async_update_data,
-        update_interval=timedelta(seconds=scan_interval),
-        config_entry=entry,
-    )
+    return async_update_data
 
-    # Fetch initial data
-    # Use async_config_entry_first_refresh only during initial setup (SETUP_IN_PROGRESS)
-    # During reload, the entry may be in LOADED state, so use regular refresh
+
+async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
+    """Perform initial data refresh based on entry state."""
     from homeassistant.config_entries import ConfigEntryState
 
     if entry.state == ConfigEntryState.SETUP_IN_PROGRESS:
@@ -289,35 +252,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # During reload, just do a regular refresh
         await coordinator.async_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Update device registry with detected modem info
+def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
+    """Update device registry with detected modem info."""
     from homeassistant.helpers import device_registry as dr
+
     device_registry = dr.async_get(hass)
 
-    # Get or create the device
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
         name=f"Cable Modem {host}",
     )
 
-    # Update manufacturer and model (these fields require async_update_device)
     device_registry.async_update_device(
         device.id,
         manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
         model=entry.data.get("detected_modem", "Cable Modem Monitor"),
     )
-    _LOGGER.debug("Updated device registry: manufacturer=%s, model=%s",
-                  entry.data.get('detected_manufacturer'), entry.data.get('detected_modem'))
+    _LOGGER.debug(
+        "Updated device registry: manufacturer=%s, model=%s",
+        entry.data.get('detected_manufacturer'),
+        entry.data.get('detected_modem')
+    )
 
-    # Register update listener to handle options changes
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
-    # Register services
+def _create_clear_history_handler(hass: HomeAssistant):
+    """Create the clear history service handler."""
     async def handle_clear_history(call: ServiceCall) -> None:
         """Handle the clear_history service call."""
         from homeassistant.helpers import entity_registry as er
@@ -325,14 +286,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         days_to_keep = call.data.get("days_to_keep", 30)
         _LOGGER.info("Clearing cable modem history older than %s days", days_to_keep)
 
-        # Get entity registry
+        # Get all cable modem entities
         entity_reg = er.async_get(hass)
-
-        # Find all entities belonging to this integration
-        cable_modem_entities = []
-        for entity_entry in entity_reg.entities.values():
-            if entity_entry.platform == DOMAIN:
-                cable_modem_entities.append(entity_entry.entity_id)
+        cable_modem_entities = [
+            entity_entry.entity_id
+            for entity_entry in entity_reg.entities.values()
+            if entity_entry.platform == DOMAIN
+        ]
 
         if not cable_modem_entities:
             _LOGGER.warning("No cable modem entities found in registry")
@@ -340,105 +300,94 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER.info("Found %s cable modem entities to purge", len(cable_modem_entities))
 
-        # Use Home Assistant's official recorder purge service
-        def clear_db_history():
-            """Clear history from database (runs in executor)."""
-            try:
-                # Calculate cutoff timestamp
-                cutoff_date = datetime.now() - timedelta(days=days_to_keep)
-                cutoff_ts = cutoff_date.timestamp()
-
-                # Connect to Home Assistant database
-                db_path = hass.config.path("home-assistant_v2.db")
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-
-                # Find metadata IDs for our entities
-                # Security: Using parameterized query with ? placeholders (not user input)
-                # The placeholders string only contains "?" characters, values are passed separately
-                placeholders = ",".join("?" * len(cable_modem_entities))
-                query = (
-                    "SELECT metadata_id, entity_id FROM states_meta "
-                    f"WHERE entity_id IN ({placeholders})"  # nosec B608
-                )
-                cursor.execute(query, cable_modem_entities)
-
-                metadata_ids = [row[0] for row in cursor.fetchall()]
-
-                if not metadata_ids:
-                    _LOGGER.warning("No cable modem sensors found in database states")
-                    conn.close()
-                    return 0
-
-                # Delete old states
-                # Security: Using parameterized query with ? placeholders (not user input)
-                # The placeholders string only contains "?" characters, values are passed separately
-                placeholders = ",".join("?" * len(metadata_ids))
-                query = (
-                    "DELETE FROM states WHERE metadata_id IN (" + placeholders + ") "  # nosec B608
-                    "AND last_updated_ts < ?"
-                )
-                cursor.execute(query, (*metadata_ids, cutoff_ts))
-                states_deleted = cursor.rowcount
-
-                # Find statistics metadata IDs using entity_id list from registry
-                # Security: Using parameterized query with ? placeholders (not user input)
-                # The placeholders string only contains "?" characters, values are passed separately
-                placeholders = ",".join("?" * len(cable_modem_entities))
-                stats_query = (
-                    f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"  # nosec B608
-                )
-                cursor.execute(stats_query, cable_modem_entities)
-
-                stats_metadata_ids = [row[0] for row in cursor.fetchall()]
-
-                # Delete old statistics
-                # Security: Using parameterized queries with ? placeholders (not user input)
-                # The placeholders string only contains "?" characters, values are passed separately
-                stats_deleted = 0
-                if stats_metadata_ids:
-                    placeholders = ",".join("?" * len(stats_metadata_ids))
-
-                    query = (
-                        "DELETE FROM statistics WHERE metadata_id IN (" + placeholders + ") "  # nosec B608
-                        "AND start_ts < ?"
-                    )
-                    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
-                    stats_deleted = cursor.rowcount
-
-                    query_short = (
-                        "DELETE FROM statistics_short_term "  # nosec B608
-                        "WHERE metadata_id IN (" + placeholders + ") AND start_ts < ?"
-                    )
-                    cursor.execute(query_short, (*stats_metadata_ids, cutoff_ts))
-                    stats_deleted += cursor.rowcount
-
-                conn.commit()
-
-                # Vacuum to reclaim space
-                cursor.execute("VACUUM")
-
-                conn.close()
-
-                _LOGGER.info(
-                    "Cleared %d state records and %d statistics records older than %d days",
-                    states_deleted, stats_deleted, days_to_keep
-                )
-
-                return states_deleted + stats_deleted
-
-            except Exception as e:
-                _LOGGER.error("Error clearing history: %s", e)
-                return 0
-
-        # Run in executor since it's blocking I/O
-        deleted = await hass.async_add_executor_job(clear_db_history)
+        # Clear history in database
+        deleted = await hass.async_add_executor_job(
+            _clear_db_history, hass, cable_modem_entities, days_to_keep
+        )
 
         if deleted > 0:
             _LOGGER.info("Successfully cleared %s historical records", deleted)
         else:
             _LOGGER.warning("No records were deleted")
 
+    return handle_clear_history
+
+
+def _clear_db_history(hass: HomeAssistant, cable_modem_entities: list, days_to_keep: int) -> int:
+    """Clear history from database (runs in executor)."""
+    try:
+        cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+        cutoff_ts = cutoff_date.timestamp()
+
+        db_path = hass.config.path("home-assistant_v2.db")
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Find metadata IDs for entities
+        placeholders = ",".join("?" * len(cable_modem_entities))
+        query = f"SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN ({placeholders})"  # nosec B608
+        cursor.execute(query, cable_modem_entities)
+        metadata_ids = [row[0] for row in cursor.fetchall()]
+
+        if not metadata_ids:
+            _LOGGER.warning("No cable modem sensors found in database states")
+            conn.close()
+            return 0
+
+        # Delete old states
+        placeholders = ",".join("?" * len(metadata_ids))
+        query = f"DELETE FROM states WHERE metadata_id IN ({placeholders}) AND last_updated_ts < ?"  # nosec B608
+        cursor.execute(query, (*metadata_ids, cutoff_ts))
+        states_deleted = cursor.rowcount
+
+        # Delete old statistics
+        stats_deleted = _delete_statistics(cursor, cable_modem_entities, cutoff_ts)
+
+        conn.commit()
+        cursor.execute("VACUUM")
+        conn.close()
+
+        _LOGGER.info(
+            "Cleared %d state records and %d statistics records older than %d days",
+            states_deleted,
+            stats_deleted,
+            days_to_keep
+        )
+
+        return states_deleted + stats_deleted
+
+    except Exception as e:
+        _LOGGER.error("Error clearing history: %s", e)
+        return 0
+
+
+def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> int:
+    """Delete statistics records (helper for _clear_db_history)."""
+    placeholders = ",".join("?" * len(cable_modem_entities))
+    query = f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"  # nosec B608
+    cursor.execute(query, cable_modem_entities)
+    stats_metadata_ids = [row[0] for row in cursor.fetchall()]
+
+    if not stats_metadata_ids:
+        return 0
+
+    placeholders = ",".join("?" * len(stats_metadata_ids))
+
+    # Delete from statistics table
+    query = f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608
+    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
+    stats_deleted = cursor.rowcount
+
+    # Delete from statistics_short_term table
+    query = f"DELETE FROM statistics_short_term WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608
+    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
+    stats_deleted += cursor.rowcount
+
+    return stats_deleted
+
+
+def _create_cleanup_entities_handler(hass: HomeAssistant):
+    """Create the cleanup entities service handler."""
     async def handle_cleanup_entities(call: ServiceCall) -> None:
         """Handle cleanup_entities service call."""
         from homeassistant.helpers import entity_registry as er
@@ -455,7 +404,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ]
 
         # Separate active from orphaned
-        # An entity is orphaned if it has no config_entry_id
         active = [e for e in all_cable_modem if e.config_entry_id]
         orphaned = [e for e in all_cable_modem if not e.config_entry_id]
 
@@ -480,12 +428,77 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER.info("Successfully removed %s orphaned entities", removed_count)
 
-    # Register the services only once (check if they're already registered)
+    return handle_cleanup_entities
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Cable Modem Monitor from a config entry."""
+    # Migrate config data and entity IDs
+    _migrate_config_data(hass, entry)
+    await async_migrate_entity_ids(hass, entry)
+
+    # Extract configuration
+    host = entry.data[CONF_HOST]
+    username = entry.data.get(CONF_USERNAME)
+    password = entry.data.get(CONF_PASSWORD)
+    scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")
+
+    # Get parsers and select appropriate one
+    from .parsers import get_parsers
+    parsers = await hass.async_add_executor_job(get_parsers)
+    selected_parser = _select_parser(parsers, modem_choice)
+
+    # Determine parser_name hint for auto mode
+    parser_name_hint = None if selected_parser != parsers else entry.data.get(CONF_PARSER_NAME)
+
+    # Create scraper
+    scraper = ModemScraper(
+        host,
+        username,
+        password,
+        parser=selected_parser,
+        cached_url=entry.data.get(CONF_WORKING_URL),
+        parser_name=parser_name_hint,
+        verify_ssl=VERIFY_SSL,
+    )
+
+    # Create health monitor
+    health_monitor = await _create_health_monitor(hass)
+
+    # Create coordinator
+    async_update_data = _create_update_function(hass, scraper, health_monitor, host)
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"Cable Modem {host}",
+        update_method=async_update_data,
+        update_interval=timedelta(seconds=scan_interval),
+        config_entry=entry,
+    )
+
+    # Perform initial data fetch
+    await _perform_initial_refresh(coordinator, entry)
+
+    # Store coordinator
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    # Setup platforms
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Update device registry
+    _update_device_registry(hass, entry, host)
+
+    # Register update listener
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
+    # Register services (only once)
     if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_HISTORY):
         hass.services.async_register(
             DOMAIN,
             SERVICE_CLEAR_HISTORY,
-            handle_clear_history,
+            _create_clear_history_handler(hass),
             schema=SERVICE_CLEAR_HISTORY_SCHEMA,
         )
 
@@ -493,7 +506,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_register(
             DOMAIN,
             SERVICE_CLEANUP_ENTITIES,
-            handle_cleanup_entities,
+            _create_cleanup_entities_handler(hass),
             schema=SERVICE_CLEANUP_ENTITIES_SCHEMA,
         )
 

@@ -35,21 +35,21 @@ from .parsers import get_parsers
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect."""
+def _validate_host_format(host: str) -> str:
+    """Validate and extract hostname from host string.
+
+    Returns the cleaned hostname.
+    Raises ValueError if validation fails.
+    """
     from urllib.parse import urlparse
     import re
 
-    host = data[CONF_HOST]
-
-    # Security: Validate host format to prevent injection attacks
     if not host:
         raise ValueError("Host cannot be empty")
 
-    # Validate host format (IP address, hostname, or URL)
     host_clean = host.strip()
 
-    # Check for URL format
+    # Extract hostname from URL if provided
     if host_clean.startswith(('http://', 'https://')):
         try:
             parsed = urlparse(host_clean)
@@ -57,71 +57,76 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
                 raise ValueError("Only HTTP and HTTPS protocols are allowed")
             if not parsed.netloc:
                 raise ValueError("Invalid URL format")
-            # Extract hostname for additional validation
             hostname = parsed.hostname or parsed.netloc.split(':')[0]
         except Exception as err:
-            raise ValueError(f"Invalid URL format: {err}")
+            raise ValueError(f"Invalid URL format: {err}") from err
     else:
         hostname = host_clean
 
-    # Validate hostname/IP format to prevent command injection
-    # Block shell metacharacters
+    # Security: Block shell metacharacters
     invalid_chars = [';', '&', '|', '$', '`', '\n', '\r', '\t', '<', '>', '(', ')', '{', '}', '\\']
     if any(char in hostname for char in invalid_chars):
         raise ValueError("Invalid characters in host address")
 
     # Validate format: IPv4, IPv6, or valid hostname
-    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
-    ipv6_pattern = r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$'
-    hostname_pattern = (
-        r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
-        r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
-    )
+    import re
+    patterns = {
+        'ipv4': r'^(\d{1,3}\.){3}\d{1,3}$',
+        'ipv6': r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$',
+        'hostname': (
+            r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
+            r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+        )
+    }
 
-    if not (re.match(ipv4_pattern, hostname) or
-            re.match(ipv6_pattern, hostname) or
-            re.match(hostname_pattern, hostname)):
+    if not any(re.match(pattern, hostname) for pattern in patterns.values()):
         raise ValueError("Invalid host format. Must be a valid IP address or hostname")
 
-    username = data.get(CONF_USERNAME)
-    password = data.get(CONF_PASSWORD)
-    modem_choice = data.get(CONF_MODEM_CHOICE)
-    cached_url = data.get(CONF_WORKING_URL)
-    cached_parser_name = data.get(CONF_PARSER_NAME)
-    # Use hardcoded VERIFY_SSL constant (see const.py for rationale)
-    verify_ssl = VERIFY_SSL
+    return hostname
 
-    all_parsers = await hass.async_add_executor_job(get_parsers)
 
-    # Determine which parser(s) to use based on user choice
-    selected_parser = None
-    parser_name_for_tier2 = None
+def _select_parser_for_validation(all_parsers: list, modem_choice: str, cached_parser_name: str):
+    """Select parser(s) for validation.
 
+    Returns tuple of (selected_parser, parser_name_hint).
+    """
     if modem_choice and modem_choice != "auto":
-        # Tier 1: User explicitly selected a parser
+        # User explicitly selected a parser
         for parser_class in all_parsers:
             if parser_class.name == modem_choice:
-                selected_parser = parser_class()  # Instantiate the parser
-                _LOGGER.info("User selected parser: %s", selected_parser.name)
-                break
+                _LOGGER.info("User selected parser: %s", parser_class.name)
+                return parser_class(), None
+        return None, None
     else:
-        # Tier 2/3: Auto mode - use cached parser name if available
-        parser_name_for_tier2 = cached_parser_name
+        # Auto mode - use all parsers with cached name hint
+        return None, cached_parser_name
 
-    scraper = ModemScraper(
-        host,
-        username,
-        password,
-        parser=selected_parser if selected_parser else all_parsers,
-        cached_url=cached_url,
-        parser_name=parser_name_for_tier2,
-        verify_ssl=verify_ssl,
-    )
 
+def _create_title(detection_info: dict, host: str) -> str:
+    """Create user-friendly title from detection info."""
+    detected_modem = detection_info.get("modem_name", "Cable Modem")
+    detected_manufacturer = detection_info.get("manufacturer", "")
+
+    # Avoid duplicate manufacturer name if already in modem name
+    if (
+        detected_manufacturer
+        and detected_manufacturer != "Unknown"
+        and not detected_modem.startswith(detected_manufacturer)
+    ):
+        return f"{detected_manufacturer} {detected_modem} ({host})"
+    else:
+        return f"{detected_modem} ({host})"
+
+
+async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict:
+    """Attempt to connect to modem and get data.
+
+    Returns modem_data dict.
+    Raises CannotConnect or UnsupportedModem on failure.
+    """
     try:
         modem_data = await hass.async_add_executor_job(scraper.get_modem_data)
     except ParserNotFoundError as err:
-        # Phase 3: Better error message for unsupported modems
         _LOGGER.error("Unsupported modem detected: %s", err.get_user_message())
         _LOGGER.info("Attempted parsers: %s", ", ".join(err.attempted_parsers))
         _LOGGER.info(
@@ -136,24 +141,41 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     if modem_data.get("cable_modem_connection_status") in ["offline", "unreachable"]:
         raise CannotConnect
 
-    # Get detection info to store for future use
+    return modem_data
+
+
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+    """Validate the user input allows us to connect."""
+    # Validate host format
+    host = data[CONF_HOST]
+    _validate_host_format(host)
+
+    # Get parsers and select appropriate one(s)
+    all_parsers = await hass.async_add_executor_job(get_parsers)
+    selected_parser, parser_name_hint = _select_parser_for_validation(
+        all_parsers,
+        data.get(CONF_MODEM_CHOICE),
+        data.get(CONF_PARSER_NAME)
+    )
+
+    # Create scraper
+    scraper = ModemScraper(
+        host,
+        data.get(CONF_USERNAME),
+        data.get(CONF_PASSWORD),
+        parser=selected_parser if selected_parser else all_parsers,
+        cached_url=data.get(CONF_WORKING_URL),
+        parser_name=parser_name_hint,
+        verify_ssl=VERIFY_SSL,
+    )
+
+    # Connect and validate
+    modem_data = await _connect_to_modem(hass, scraper)
+
+    # Get detection info and create title
     detection_info = scraper.get_detection_info()
+    title = _create_title(detection_info, host)
 
-    # Create title with detected modem info
-    detected_modem = detection_info.get("modem_name", "Cable Modem")
-    detected_manufacturer = detection_info.get("manufacturer", "")
-
-    # Avoid duplicate manufacturer name if modem name already includes it
-    if (
-        detected_manufacturer
-        and detected_manufacturer != "Unknown"
-        and not detected_modem.startswith(detected_manufacturer)
-    ):
-        title = f"{detected_manufacturer} {detected_modem} ({host})"
-    else:
-        title = f"{detected_modem} ({host})"
-
-    # Return info that you want to store in the config entry.
     return {
         "title": title,
         "detection_info": detection_info,
