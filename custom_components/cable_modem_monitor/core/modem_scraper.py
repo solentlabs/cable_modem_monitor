@@ -372,6 +372,13 @@ class ModemScraper:
                 html, successful_url, suggested_parser = fetched_data
                 self.parser = self._detect_parser(html, successful_url, suggested_parser)
 
+                # Extract and update base_url from the successful_url to ensure protocol matches
+                # This ensures restart operations use the same protocol that worked during detection
+                from urllib.parse import urlparse
+                parsed_url = urlparse(successful_url)
+                self.base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                _LOGGER.debug("Updated base_url to %s from successful connection", self.base_url)
+
             if not self.parser:
                 _LOGGER.error("Cannot restart modem: no parser detected")
                 return False
