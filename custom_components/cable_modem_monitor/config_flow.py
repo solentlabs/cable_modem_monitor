@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import voluptuous as vol
 
@@ -84,10 +84,20 @@ def _validate_host_format(host: str) -> str:
     return hostname
 
 
-def _select_parser_for_validation(all_parsers: list, modem_choice: str, cached_parser_name: str):
+def _select_parser_for_validation(
+    all_parsers: list,
+    modem_choice: Optional[str],
+    cached_parser_name: Optional[str]
+):
     """Select parser(s) for validation.
 
-    Returns tuple of (selected_parser, parser_name_hint).
+    Args:
+        all_parsers: List of available parser classes
+        modem_choice: User-selected parser name or None/auto for auto-detection
+        cached_parser_name: Previously detected parser name or None
+
+    Returns:
+        tuple of (selected_parser, parser_name_hint).
     """
     if modem_choice and modem_choice != "auto":
         # User explicitly selected a parser
