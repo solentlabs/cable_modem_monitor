@@ -3,7 +3,6 @@ import logging
 import json
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
-from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder

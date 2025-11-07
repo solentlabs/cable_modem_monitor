@@ -4,20 +4,19 @@ This module helps clean up orphaned entities that may accumulate during
 upgrades from v1.x to v2.0 or after multiple integration reinstalls.
 """
 import json
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 
 ENTITY_REGISTRY_PATH = Path("/config/.storage/core.entity_registry")
 BACKUP_DIR = Path("/config/.storage")
 
+
 def analyze_entities(data: Dict[str, Any]) -> Dict[str, Any]:
     """Analyze cable modem entities in Home Assistant.
-    
+
     Args:
         data: The loaded entity registry data
 
@@ -64,9 +63,10 @@ def analyze_entities(data: Dict[str, Any]) -> Dict[str, Any]:
         'creation_dates': creation_dates
     }
 
+
 def backup_entity_registry() -> Path:
     """Create a backup of the entity registry.
-    
+
     Returns:
         Path to the backup file
     """
@@ -79,9 +79,10 @@ def backup_entity_registry() -> Path:
 
     return backup_path
 
+
 def cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
     """Remove orphaned cable modem entities.
-    
+
     Args:
         hass: HomeAssistant instance
 
@@ -93,7 +94,7 @@ def cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
             data = json.load(f)
 
         # Create backup
-        backup_path = backup_entity_registry()
+        _ = backup_entity_registry()  # Create backup
 
         # Analyze and remove orphans
         stats = analyze_entities(data)
@@ -110,16 +111,18 @@ def cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
 
         return True
 
-    except Exception as ex:
+    except Exception:
         return False
+
 
 async def async_cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
     """Async wrapper for cleanup_orphaned_entities."""
     return await hass.async_add_executor_job(cleanup_orphaned_entities, hass)
 
+
 def remove_all_entities(hass: HomeAssistant) -> bool:
     """Remove ALL cable modem entities (nuclear option).
-    
+
     Args:
         hass: HomeAssistant instance
 
@@ -131,7 +134,7 @@ def remove_all_entities(hass: HomeAssistant) -> bool:
             data = json.load(f)
 
         # Create backup
-        backup_path = backup_entity_registry()
+        _ = backup_entity_registry()  # Create backup
 
         # Remove all cable modem entities
         stats = analyze_entities(data)
@@ -146,8 +149,9 @@ def remove_all_entities(hass: HomeAssistant) -> bool:
 
         return True
 
-    except Exception as ex:
+    except Exception:
         return False
+
 
 async def async_remove_all_entities(hass: HomeAssistant) -> bool:
     """Async wrapper for remove_all_entities."""
