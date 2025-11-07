@@ -201,6 +201,10 @@ class ModemRestartButton(ModemButtonBase):
             )
 
             phase2_elapsed = 0
+            prev_downstream = 0
+            prev_upstream = 0
+            stable_count = 0  # Track how many times channels have been stable
+
             while phase2_elapsed < phase2_max_wait:
                 try:
                     await self.coordinator.async_request_refresh()
@@ -208,15 +212,54 @@ class ModemRestartButton(ModemButtonBase):
                     phase2_elapsed += 10
                     total_elapsed = elapsed_time + phase2_elapsed
 
-                    # Check if modem has channels (fully online)
-                    if self.coordinator.data.get("cable_modem_connection_status") == "online":
+                    downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
+                    upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
+                    connection_status = self.coordinator.data.get("cable_modem_connection_status")
+
+                    # Check if channels are stable (same count as previous poll)
+                    if downstream_count == prev_downstream and upstream_count == prev_upstream:
+                        stable_count += 1
+                    else:
+                        stable_count = 0  # Reset if channels changed
+                        _LOGGER.info(
+                            "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
+                            phase2_elapsed,
+                            prev_downstream,
+                            downstream_count,
+                            prev_upstream,
+                            upstream_count,
+                        )
+
+                    prev_downstream = downstream_count
+                    prev_upstream = upstream_count
+
+                    # Consider fully online when:
+                    # 1. Connection status is "online"
+                    # 2. We have channels (not 0/0)
+                    # 3. Channel counts have been stable for 2+ polls (20+ seconds)
+                    if (
+                        connection_status == "online"
+                        and downstream_count > 0
+                        and upstream_count > 0
+                        and stable_count >= 2
+                    ):
                         modem_fully_online = True
-                        _LOGGER.info("Modem fully online with channels after %ss total", total_elapsed)
+                        _LOGGER.info(
+                            "Modem fully online with stable channels after %ss total (%s down, %s up)",
+                            total_elapsed,
+                            downstream_count,
+                            upstream_count,
+                        )
                         break
                     else:
-                        downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
-                        upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-                        _LOGGER.debug("Phase 2: %ss - Channels: {downstream_count} down, {upstream_count} up", phase2_elapsed)
+                        _LOGGER.debug(
+                            "Phase 2: %ss - Status: %s, Channels: %s down, %s up (stable: %s polls)",
+                            phase2_elapsed,
+                            connection_status,
+                            downstream_count,
+                            upstream_count,
+                            stable_count,
+                        )
                 except Exception as e:
                     _LOGGER.debug("Error during phase 2 monitoring: %s", e)
                     await asyncio.sleep(10)

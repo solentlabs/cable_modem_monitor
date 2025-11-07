@@ -234,11 +234,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def async_update_data():
         """Fetch data from the modem."""
-        try:
-            # Run health check first (async, non-blocking)
-            base_url = f"http://{host}"
-            health_result = await health_monitor.check_health(base_url)
+        # Run health check first (async, non-blocking)
+        base_url = f"http://{host}"
+        health_result = await health_monitor.check_health(base_url)
 
+        try:
             # Run the scraper in an executor since it uses requests (blocking I/O)
             data = await hass.async_add_executor_job(scraper.get_modem_data)
 
@@ -253,6 +253,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             return data
         except Exception as err:
+            # If scraper fails but health check succeeded, return partial data
+            # This prevents all entities showing "unavailable" when modem is just rebooting
+            if health_result.ping_success or health_result.http_success:
+                _LOGGER.warning("Scraper failed but modem is responding to health checks: %s", err)
+                return {
+                    "cable_modem_connection_status": "offline",
+                    "health_status": health_result.status,
+                    "health_diagnosis": health_result.diagnosis,
+                    "ping_success": health_result.ping_success,
+                    "ping_latency_ms": health_result.ping_latency_ms,
+                    "http_success": health_result.http_success,
+                    "http_latency_ms": health_result.http_latency_ms,
+                    "consecutive_failures": health_monitor.consecutive_failures,
+                }
             raise UpdateFailed(f"Error communicating with modem: {err}") from err
 
     coordinator = DataUpdateCoordinator(
