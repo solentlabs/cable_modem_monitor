@@ -4,6 +4,8 @@ import base64
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
+from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfig
+from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,9 +22,19 @@ class MotorolaGenericParser(ModemParser):
     models = ["MB7420", "MB8600", "MB8611"]
     priority = 50  # Generic fallback parser, try after model-specific parsers
 
+    # New authentication configuration (declarative)
+    # Motorola modems try both plain and Base64-encoded passwords
+    auth_config = FormAuthConfig(
+        strategy=AuthStrategyType.FORM_PLAIN_AND_BASE64,
+        login_url="/goform/login",
+        username_field="loginUsername",
+        password_field="loginPassword",
+        success_indicator="10000"  # Min response size indicates success
+    )
+
     url_patterns = [
-        {"path": "/MotoConnection.asp", "auth_method": "form"},
-        {"path": "/MotoHome.asp", "auth_method": "form"},
+        {"path": "/MotoConnection.asp", "auth_method": "form", "auth_required": True},
+        {"path": "/MotoHome.asp", "auth_method": "form", "auth_required": True},
     ]
 
     @classmethod
