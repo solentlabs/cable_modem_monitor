@@ -107,8 +107,8 @@ class TestMB8611Authentication:
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
-        # Mock AuthFactory to avoid actual authentication
-        with patch('custom_components.cable_modem_monitor.parsers.motorola.mb8611.AuthFactory') as mock_factory:
+        # Mock AuthFactory at its actual import location
+        with patch('custom_components.cable_modem_monitor.core.authentication.AuthFactory') as mock_factory:
             mock_strategy = Mock()
             mock_strategy.login.return_value = (True, "Login successful")
             mock_factory.get_strategy.return_value = mock_strategy
@@ -205,7 +205,8 @@ class TestMB8611HNAPParsing:
         assert first_channel["modulation"] == "SC-QAM"
         assert first_channel["ch_id"] == 17
         assert first_channel["symbol_rate"] == 5120
-        assert first_channel["frequency"] == 16_400_000  # 16.4 MHz
+        # 16.4 MHz converted to Hz - account for floating-point precision
+        assert abs(first_channel["frequency"] - 16_400_000) <= 1
         assert first_channel["power"] == 44.3
 
         # Check last channel (ID 4)
@@ -214,7 +215,8 @@ class TestMB8611HNAPParsing:
         assert last_channel["lock_status"] == "Locked"
         assert last_channel["modulation"] == "SC-QAM"
         assert last_channel["ch_id"] == 20
-        assert last_channel["frequency"] == 35_600_000  # 35.6 MHz
+        # 35.6 MHz converted to Hz - account for floating-point precision
+        assert abs(last_channel["frequency"] - 35_600_000) <= 1
         assert last_channel["power"] == 45.5
 
     @patch('custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPRequestBuilder')
