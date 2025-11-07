@@ -20,9 +20,9 @@ from .const import (
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
     CONF_WORKING_URL,
-    CONF_VERIFY_SSL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    VERIFY_SSL,
 )
 from .core.modem_scraper import ModemScraper
 
@@ -181,7 +181,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     cached_url = entry.data.get(CONF_WORKING_URL)  # Get cached URL if available
     parser_name = entry.data.get(CONF_PARSER_NAME)  # Get cached parser name if available
     modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")  # Get user's modem selection
-    verify_ssl = entry.data.get(CONF_VERIFY_SSL, False)  # Get SSL verification setting
+    # Use hardcoded VERIFY_SSL constant (see const.py for security rationale)
+    verify_ssl = VERIFY_SSL
 
     from .parsers import get_parsers
 
