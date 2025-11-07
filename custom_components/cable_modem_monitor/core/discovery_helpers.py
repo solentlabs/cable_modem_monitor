@@ -2,7 +2,7 @@
 import logging
 import time
 import requests
-from typing import List, Type, Optional, Tuple
+from typing import List, Type, Optional, Tuple, Sequence
 from bs4 import BeautifulSoup
 
 _LOGGER = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ class ParserHeuristics:
 
     @staticmethod
     def get_likely_parsers(
-        base_url: str, parsers: List[Type], session: requests.Session, verify_ssl: bool = False
+        base_url: str, parsers: Sequence[Type], session: requests.Session, verify_ssl: bool = False
     ) -> List[Type]:
         """
         Return parsers likely to match based on quick heuristic checks.

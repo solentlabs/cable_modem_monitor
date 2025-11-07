@@ -127,7 +127,8 @@ class ModemScraper:
                 if self.cached_url:
                     # Find the auth method for cached URL
                     cached_pattern = next(
-                        (p for p in cached_parser.url_patterns if p['path'] in self.cached_url),
+                        (p for p in cached_parser.url_patterns
+                         if isinstance(p.get('path'), str) and p['path'] in self.cached_url),
                         cached_parser.url_patterns[0] if cached_parser.url_patterns else None
                     )
                     if cached_pattern:
