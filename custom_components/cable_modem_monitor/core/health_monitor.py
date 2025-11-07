@@ -231,7 +231,7 @@ class ModemHealthMonitor:
                         if response.status in (301, 302, 303, 307, 308):
                             redirect_url = response.headers.get('Location', '')
                             if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning("Unsafe redirect detected: %s -> {redirect_url}", base_url)
+                                _LOGGER.warning("Unsafe redirect detected: %s -> %s", base_url, redirect_url)
                                 return False, None
 
                         latency_ms = (time.time() - start_time) * 1000
@@ -246,7 +246,7 @@ class ModemHealthMonitor:
                         if response.status in (301, 302, 303, 307, 308):
                             redirect_url = response.headers.get('Location', '')
                             if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning("Unsafe redirect detected: %s -> {redirect_url}", base_url)
+                                _LOGGER.warning("Unsafe redirect detected: %s -> %s", base_url, redirect_url)
                                 return False, None
 
                         latency_ms = (time.time() - start_time) * 1000
@@ -410,7 +410,7 @@ class ModemHealthMonitor:
 
             ***REMOVED*** For modem health checks, we typically expect same-host redirects
             ***REMOVED*** External redirects are suspicious and blocked by default
-            _LOGGER.warning("Cross-host redirect blocked: %s -> {redirect_host}", original_host)
+            _LOGGER.warning("Cross-host redirect blocked: %s -> %s", original_host, redirect_host)
             return False
 
         except Exception as e:
