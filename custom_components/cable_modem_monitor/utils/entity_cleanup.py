@@ -6,7 +6,7 @@ upgrades from v1.x to v2.0 or after multiple integration reinstalls.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from homeassistant.core import HomeAssistant
 
@@ -80,11 +80,11 @@ def backup_entity_registry() -> Path:
     return backup_path
 
 
-def cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
+def cleanup_orphaned_entities(hass: Optional[HomeAssistant] = None) -> bool:
     """Remove orphaned cable modem entities.
 
     Args:
-        hass: HomeAssistant instance
+        hass: HomeAssistant instance (unused, kept for API compatibility)
 
     Returns:
         bool: True if cleanup was successful, False otherwise
@@ -120,11 +120,11 @@ async def async_cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
     return await hass.async_add_executor_job(cleanup_orphaned_entities, hass)
 
 
-def remove_all_entities(hass: HomeAssistant) -> bool:
+def remove_all_entities(hass: Optional[HomeAssistant] = None) -> bool:
     """Remove ALL cable modem entities (nuclear option).
 
     Args:
-        hass: HomeAssistant instance
+        hass: HomeAssistant instance (unused, kept for API compatibility)
 
     Returns:
         bool: True if removal was successful, False otherwise
