@@ -12,7 +12,9 @@ class ParserHeuristics:
     """Quick checks to narrow parser search space and speed up detection."""
 
     @staticmethod
-    def get_likely_parsers(base_url: str, parsers: List[Type], session: requests.Session, verify_ssl: bool = False) -> List[Type]:
+    def get_likely_parsers(
+        base_url: str, parsers: List[Type], session: requests.Session, verify_ssl: bool = False
+    ) -> List[Type]:
         """
         Return parsers likely to match based on quick heuristic checks.
 
@@ -47,7 +49,7 @@ class ParserHeuristics:
                     # Strong indicators (in title or prominent text)
                     if manufacturer in title or manufacturer in html[:1000]:
                         _LOGGER.debug("Heuristics: %s is LIKELY (found '%s' in title/header)",
-                                    parser_class.name, manufacturer)
+                                      parser_class.name, manufacturer)
                         likely_parsers.append(parser_class)
                     # Weak indicators (anywhere in page) or model numbers
                     elif any(model.lower() in html for model in parser_class.models):
@@ -58,7 +60,7 @@ class ParserHeuristics:
 
             else:
                 _LOGGER.debug("Heuristics: Root page returned status %s, skipping heuristics",
-                            response.status_code)
+                              response.status_code)
                 return parsers  # Return all parsers if heuristics fail
 
         except (requests.RequestException, Exception) as e:
@@ -69,7 +71,7 @@ class ParserHeuristics:
         if likely_parsers:
             result = likely_parsers + unlikely_parsers
             _LOGGER.info("Heuristics: Narrowed search to %s likely parsers (out of %s total)",
-                        len(likely_parsers), len(parsers))
+                         len(likely_parsers), len(parsers))
             return result
 
         # No heuristics matched, return all parsers
@@ -77,7 +79,9 @@ class ParserHeuristics:
         return parsers
 
     @staticmethod
-    def check_anonymous_access(base_url: str, parser_class: Type, session: requests.Session, verify_ssl: bool = False) -> Optional[Tuple[str, str]]:
+    def check_anonymous_access(
+        base_url: str, parser_class: Type, session: requests.Session, verify_ssl: bool = False
+    ) -> Optional[Tuple[str, str]]:
         """
         Check if parser has public (non-authenticated) URLs that can be accessed.
 
@@ -100,16 +104,16 @@ class ParserHeuristics:
                 url = f"{base_url}{pattern['path']}"
                 try:
                     _LOGGER.debug("Trying anonymous access to %s for parser %s",
-                                url, parser_class.name)
+                                  url, parser_class.name)
                     response = session.get(url, timeout=5, verify=verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.info("Anonymous access successful to %s (%s bytes)",
-                                   url, len(response.text))
+                                     url, len(response.text))
                         return (response.text, url)
                     else:
                         _LOGGER.debug("Anonymous access to %s returned status %s",
-                                    url, response.status_code)
+                                      url, response.status_code)
                 except requests.RequestException as e:
                     _LOGGER.debug("Anonymous access to %s failed: %s", url, type(e).__name__)
                     continue
