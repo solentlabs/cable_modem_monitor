@@ -69,6 +69,11 @@ class TestValidateInput:
             "cable_modem_software_version": "1.0.0",
             "cable_modem_connection_status": "online",
         }
+        # Mock detection info with proper dictionary
+        mock_scraper.get_detection_info.return_value = {
+            "modem_name": "Cable Modem",
+            "manufacturer": "Unknown",
+        }
         mock_scraper_class.return_value = mock_scraper
 
         # Mock async_add_executor_job to return the data
@@ -142,6 +147,126 @@ class TestScanIntervalValidation:
 
         for interval in common_intervals:
             assert MIN_SCAN_INTERVAL <= interval <= MAX_SCAN_INTERVAL
+
+
+class TestModemNameFormatting:
+    """Test modem name and manufacturer formatting in titles."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create a mock Home Assistant instance."""
+        hass = Mock()
+        return hass
+
+    @pytest.fixture
+    def valid_input(self):
+        """Provide valid input data."""
+        return {
+            CONF_HOST: "192.168.100.1",
+            CONF_USERNAME: "admin",
+            CONF_PASSWORD: "password",
+        }
+
+    @pytest.mark.asyncio
+    @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
+    async def test_title_without_duplicate_manufacturer(self, mock_scraper_class, mock_hass, valid_input):
+        """Test that manufacturer name is not duplicated when modem name includes it."""
+        mock_scraper = Mock()
+        mock_scraper.get_modem_data.return_value = {
+            "cable_modem_connection_status": "online",
+        }
+        # Modem name already starts with manufacturer
+        mock_scraper.get_detection_info.return_value = {
+            "modem_name": "Motorola MB7621",
+            "manufacturer": "Motorola",
+        }
+        mock_scraper_class.return_value = mock_scraper
+
+        async def mock_executor_job(func, *args):
+            return func(*args)
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        result = await validate_input(mock_hass, valid_input)
+
+        # Should NOT be "Motorola Motorola MB7621 (192.168.100.1)"
+        assert result["title"] == "Motorola MB7621 (192.168.100.1)"
+
+    @pytest.mark.asyncio
+    @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
+    async def test_title_with_manufacturer_prepended(self, mock_scraper_class, mock_hass, valid_input):
+        """Test that manufacturer is prepended when not in modem name."""
+        mock_scraper = Mock()
+        mock_scraper.get_modem_data.return_value = {
+            "cable_modem_connection_status": "online",
+        }
+        # Modem name does NOT include manufacturer
+        mock_scraper.get_detection_info.return_value = {
+            "modem_name": "XB7",
+            "manufacturer": "Technicolor",
+        }
+        mock_scraper_class.return_value = mock_scraper
+
+        async def mock_executor_job(func, *args):
+            return func(*args)
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        result = await validate_input(mock_hass, valid_input)
+
+        # Should prepend manufacturer
+        assert result["title"] == "Technicolor XB7 (192.168.100.1)"
+
+    @pytest.mark.asyncio
+    @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
+    async def test_title_without_manufacturer(self, mock_scraper_class, mock_hass, valid_input):
+        """Test title when manufacturer is Unknown."""
+        mock_scraper = Mock()
+        mock_scraper.get_modem_data.return_value = {
+            "cable_modem_connection_status": "online",
+        }
+        mock_scraper.get_detection_info.return_value = {
+            "modem_name": "Generic Modem",
+            "manufacturer": "Unknown",
+        }
+        mock_scraper_class.return_value = mock_scraper
+
+        async def mock_executor_job(func, *args):
+            return func(*args)
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        result = await validate_input(mock_hass, valid_input)
+
+        # Should NOT include "Unknown"
+        assert result["title"] == "Generic Modem (192.168.100.1)"
+
+    @pytest.mark.asyncio
+    @patch('custom_components.cable_modem_monitor.config_flow.ModemScraper')
+    async def test_title_detection_info_included(self, mock_scraper_class, mock_hass, valid_input):
+        """Test that detection_info is included in result."""
+        mock_scraper = Mock()
+        mock_scraper.get_modem_data.return_value = {
+            "cable_modem_connection_status": "online",
+        }
+        detection_info = {
+            "modem_name": "MB8611",
+            "manufacturer": "Motorola",
+            "successful_url": "http://192.168.100.1/someurl",
+        }
+        mock_scraper.get_detection_info.return_value = detection_info
+        mock_scraper_class.return_value = mock_scraper
+
+        async def mock_executor_job(func, *args):
+            return func(*args)
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        result = await validate_input(mock_hass, valid_input)
+
+        # Detection info should be in result
+        assert "detection_info" in result
+        assert result["detection_info"] == detection_info
 
 
 class TestConfigConstants:
