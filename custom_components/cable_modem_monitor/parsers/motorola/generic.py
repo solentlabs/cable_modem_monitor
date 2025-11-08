@@ -317,14 +317,18 @@ class MotorolaGenericParser(ModemParser):
             # Use text= instead of string= for BS4 compatibility with lambda functions
             sw_version_tag = soup.find("td", text=lambda t: t and "Software Version" in t)
             if sw_version_tag:
-                info["software_version"] = sw_version_tag.find_next_sibling("td").text.strip()
+                sw_version_value = sw_version_tag.find_next_sibling("td")
+                if sw_version_value:
+                    info["software_version"] = sw_version_value.text.strip()
             else:
                 _LOGGER.debug("Software Version tag not found in HTML")
 
             uptime_tag = soup.find("td", text=lambda t: t and "System Up Time" in t)
             if uptime_tag:
-                info["system_uptime"] = uptime_tag.find_next_sibling("td").text.strip()
-                _LOGGER.debug("Found uptime: %s", info['system_uptime'])
+                uptime_value = uptime_tag.find_next_sibling("td")
+                if uptime_value:
+                    info["system_uptime"] = uptime_value.text.strip()
+                    _LOGGER.debug("Found uptime: %s", info['system_uptime'])
             else:
                 _LOGGER.debug("System Up Time tag not found in HTML")
         except Exception as e:
