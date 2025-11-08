@@ -88,7 +88,7 @@ def _select_parser_for_validation(
     all_parsers: list,
     modem_choice: Optional[str],
     cached_parser_name: Optional[str]
-):
+) -> tuple[Any | None, Optional[str]]:
     """Select parser(s) for validation.
 
     Args:
@@ -97,7 +97,9 @@ def _select_parser_for_validation(
         cached_parser_name: Previously detected parser name or None
 
     Returns:
-        tuple of (selected_parser, parser_name_hint).
+        tuple of (selected_parser, parser_name_hint) where:
+        - selected_parser: ModemParser instance or None if using auto-detection
+        - parser_name_hint: Cached parser name or None
     """
     if modem_choice and modem_choice != "auto":
         # User explicitly selected a parser

@@ -81,7 +81,16 @@ class TechnicolorTC4400Parser(ModemParser):
 
         channels = []
         try:
-            downstream_table = soup.find("th", string="Downstream Channel Status").find_parent("table")
+            downstream_header = soup.find("th", string="Downstream Channel Status")
+            if not downstream_header:
+                _LOGGER.warning("TC4400: Downstream Channel Status table not found")
+                return channels
+
+            downstream_table = downstream_header.find_parent("table")
+            if not downstream_table:
+                _LOGGER.warning("TC4400: Downstream table parent not found")
+                return channels
+
             for row in downstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 13:
@@ -130,7 +139,16 @@ class TechnicolorTC4400Parser(ModemParser):
 
         channels = []
         try:
-            upstream_table = soup.find("th", string="Upstream Channel Status").find_parent("table")
+            upstream_header = soup.find("th", string="Upstream Channel Status")
+            if not upstream_header:
+                _LOGGER.warning("TC4400: Upstream Channel Status table not found")
+                return channels
+
+            upstream_table = upstream_header.find_parent("table")
+            if not upstream_table:
+                _LOGGER.warning("TC4400: Upstream table parent not found")
+                return channels
+
             for row in upstream_table.find_all("tr")[2:]:
                 cols = row.find_all("td")
                 if len(cols) == 9:
