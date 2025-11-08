@@ -56,6 +56,10 @@ class MotorolaMB8611Parser(ModemParser):
         """
         from custom_components.cable_modem_monitor.core.authentication import AuthFactory
 
+        if self.auth_config is None:
+            _LOGGER.warning("auth_config is not configured for MB8611")
+            return False, None
+
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         return auth_strategy.login(session, base_url, username, password, self.auth_config)
 
@@ -73,6 +77,10 @@ class MotorolaMB8611Parser(ModemParser):
         """
         if not session or not base_url:
             raise ValueError("MB8611 requires session and base_url for HNAP calls")
+
+        if self.auth_config is None:
+            _LOGGER.error("auth_config is not configured for MB8611")
+            return {"downstream": [], "upstream": [], "system_info": {}}
 
         # Build HNAP request builder
         builder = HNAPRequestBuilder(
