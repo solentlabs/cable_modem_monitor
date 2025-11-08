@@ -176,6 +176,19 @@ class TechnicolorTC4400Parser(ModemParser):
 
     def _parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from Technicolor TC4400."""
+        # Mapping of HTML header text to info dict keys
+        header_mapping = {
+            "Standard Specification Compliant": "standard_specification_compliant",
+            "Hardware Version": "hardware_version",
+            "Software Version": "software_version",
+            "Cable Modem MAC Address": "mac_address",
+            "System Up Time": "system_uptime",
+            "Network Access": "network_access",
+            "Cable Modem IPv4 Address": "ipv4_address",
+            "Cable Modem IPv6 Address": "ipv6_address",
+            "Board Temperature": "board_temperature",
+        }
+
         info = {}
         try:
             rows = soup.find_all("tr")
@@ -184,27 +197,10 @@ class TechnicolorTC4400Parser(ModemParser):
                 if header_cell:
                     header = header_cell.text.strip()
                     value_cell = header_cell.find_next_sibling("td")
-                    if value_cell:
-                        value = value_cell.text.strip()
-                        if header == "Standard Specification Compliant":
-                            info["standard_specification_compliant"] = value
-                        elif header == "Hardware Version":
-                            info["hardware_version"] = value
-                        elif header == "Software Version":
-                            info["software_version"] = value
-                        elif header == "Cable Modem MAC Address":
-                            info["mac_address"] = value
-                        elif header == "System Up Time":
-                            info["system_uptime"] = value
-                        elif header == "Network Access":
-                            info["network_access"] = value
-                        elif header == "Cable Modem IPv4 Address":
-                            info["ipv4_address"] = value
-                        elif header == "Cable Modem IPv6 Address":
-                            info["ipv6_address"] = value
-                        elif header == "Board Temperature":
-                            info["board_temperature"] = value
+                    if value_cell and header in header_mapping:
+                        info[header_mapping[header]] = value_cell.text.strip()
                 else:
+                    # Special case: Serial number uses different format
                     header_cell = row.find("td", string="Cable Modem Serial Number")
                     if header_cell:
                         value_cell = header_cell.find_next_sibling("td")

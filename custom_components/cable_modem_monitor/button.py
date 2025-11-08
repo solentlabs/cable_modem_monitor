@@ -128,6 +128,149 @@ class ModemRestartButton(ModemButtonBase):
                 },
             )
 
+    async def _wait_for_modem_response(self, max_wait: int) -> tuple[bool, int]:
+        """Phase 1: Wait for modem to respond to HTTP requests.
+
+        Returns:
+            Tuple of (modem_responding, elapsed_time)
+        """
+        import asyncio
+
+        _LOGGER.info("Phase 1: Waiting for modem to respond to HTTP requests...")
+        elapsed_time = 0
+
+        while elapsed_time < max_wait:
+            try:
+                await self.coordinator.async_request_refresh()
+                await asyncio.sleep(10)
+                elapsed_time += 10
+
+                if self.coordinator.last_update_success and self.coordinator.data:
+                    status = self.coordinator.data.get("cable_modem_connection_status")
+                    _LOGGER.info("Modem responding after %ss (status: %s)", elapsed_time, status)
+                    return True, elapsed_time
+                else:
+                    _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
+            except Exception as e:
+                _LOGGER.debug("Error during phase 1 monitoring: %s", e)
+                await asyncio.sleep(10)
+                elapsed_time += 10
+
+        return False, elapsed_time
+
+    async def _wait_for_channel_sync(self, max_wait: int) -> tuple[bool, int]:
+        """Phase 2: Wait for channels to synchronize.
+
+        Returns:
+            Tuple of (modem_fully_online, phase2_elapsed)
+        """
+        import asyncio
+
+        _LOGGER.info("Phase 2: Modem responding, waiting for channel sync...")
+        phase2_elapsed = 0
+        prev_downstream = 0
+        prev_upstream = 0
+        stable_count = 0
+        grace_period_active = False
+        grace_period_start = 0
+
+        while phase2_elapsed < max_wait:
+            try:
+                await self.coordinator.async_request_refresh()
+                await asyncio.sleep(10)
+                phase2_elapsed += 10
+
+                downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
+                upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
+                connection_status = self.coordinator.data.get("cable_modem_connection_status")
+
+                # Check if channels are stable
+                if downstream_count == prev_downstream and upstream_count == prev_upstream:
+                    stable_count += 1
+                else:
+                    stable_count = 0
+                    grace_period_active = False
+                    _LOGGER.info(
+                        "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
+                        phase2_elapsed, prev_downstream, downstream_count, prev_upstream, upstream_count
+                    )
+
+                prev_downstream = downstream_count
+                prev_upstream = upstream_count
+
+                # Enter grace period after initial stability
+                if (
+                    connection_status == "online"
+                    and downstream_count > 0
+                    and upstream_count > 0
+                    and stable_count >= 3
+                    and not grace_period_active
+                ):
+                    grace_period_active = True
+                    grace_period_start = phase2_elapsed
+                    _LOGGER.info(
+                        "Phase 2: Channels stable (%s down, %s up), entering 30s grace period",
+                        downstream_count, upstream_count
+                    )
+
+                # Check if grace period is complete
+                if grace_period_active and (phase2_elapsed - grace_period_start) >= 30:
+                    _LOGGER.info(
+                        "Modem fully online with stable channels (%s down, %s up)",
+                        downstream_count, upstream_count
+                    )
+                    return True, phase2_elapsed
+
+            except Exception as e:
+                _LOGGER.debug("Error during phase 2 monitoring: %s", e)
+                await asyncio.sleep(10)
+                phase2_elapsed += 10
+
+        return False, phase2_elapsed
+
+    async def _send_restart_notification(
+        self, modem_responding: bool, modem_fully_online: bool, total_time: int
+    ) -> None:
+        """Send final notification about restart status."""
+        if not modem_responding:
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Modem Restart Timeout",
+                    "message": f"Modem did not respond after {total_time} seconds. Check your modem.",
+                    "notification_id": "cable_modem_restart",
+                },
+            )
+        elif modem_fully_online:
+            downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
+            upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Modem Restart Complete",
+                    "message": (
+                        f"Modem fully online after {total_time}s with {downstream_count} downstream "
+                        f"and {upstream_count} upstream channels."
+                    ),
+                    "notification_id": "cable_modem_restart",
+                },
+            )
+        else:
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "Modem Restart Warning",
+                    "message": (
+                        f"Modem responding but channels not fully synced after {total_time}s. "
+                        "This may be normal - check modem status."
+                    ),
+                    "notification_id": "cable_modem_restart",
+                },
+            )
+
     async def _monitor_restart(self) -> None:
         """Monitor modem restart and provide status updates."""
         import asyncio
@@ -146,52 +289,16 @@ class ModemRestartButton(ModemButtonBase):
             # Wait 5 seconds for modem to go offline
             await asyncio.sleep(5)
 
-            # Phase 1: Wait for modem to respond (even with 0 channels) - max 2 minutes
-            # Phase 2: Wait for channels to sync - max 5 additional minutes
-            # (cable modems can take 4-5 minutes to acquire all channels)
-            phase1_max_wait = 120  # 2 minutes
-            phase2_max_wait = 300  # 5 minutes
-            elapsed_time = 0
-            modem_responding = False
-            modem_fully_online = False
-
-            # Phase 1: Wait for HTTP response
-            _LOGGER.info("Phase 1: Waiting for modem to respond to HTTP requests...")
-            while elapsed_time < phase1_max_wait:
-                try:
-                    await self.coordinator.async_request_refresh()
-                    await asyncio.sleep(10)
-                    elapsed_time += 10
-
-                    # Check if modem is responding (even if status is "offline" due to 0 channels)
-                    # If we have valid data and last_update_success is True, modem is responding
-                    if self.coordinator.last_update_success and self.coordinator.data:
-                        status = self.coordinator.data.get("cable_modem_connection_status")
-                        _LOGGER.info("Modem responding after %ss (status: %s)", elapsed_time, status)
-                        modem_responding = True
-                        break
-                    else:
-                        _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
-                except Exception as e:
-                    _LOGGER.debug("Error during phase 1 monitoring: %s", e)
-                    await asyncio.sleep(10)
-                    elapsed_time += 10
+            # Phase 1: Wait for modem to respond (max 2 minutes)
+            phase1_max_wait = 120
+            modem_responding, elapsed_time = await self._wait_for_modem_response(phase1_max_wait)
 
             if not modem_responding:
                 _LOGGER.error("Phase 1 failed: Modem did not respond after %ss", phase1_max_wait)
-                await self.hass.services.async_call(
-                    "persistent_notification",
-                    "create",
-                    {
-                        "title": "Modem Restart Timeout",
-                        "message": f"Modem did not respond after {phase1_max_wait} seconds. Check your modem.",
-                        "notification_id": "cable_modem_restart",
-                    },
-                )
+                await self._send_restart_notification(False, False, elapsed_time)
                 return
 
-            # Phase 2: Wait for channels to sync
-            _LOGGER.info("Phase 2: Modem responding, waiting for channel sync...")
+            # Send intermediate notification
             await self.hass.services.async_call(
                 "persistent_notification",
                 "create",
@@ -202,125 +309,13 @@ class ModemRestartButton(ModemButtonBase):
                 },
             )
 
-            phase2_elapsed = 0
-            prev_downstream = 0
-            prev_upstream = 0
-            stable_count = 0  # Track how many times channels have been stable
-            grace_period_active = False  # Track if we're in grace period
-            grace_period_start = 0  # When grace period started
-
-            while phase2_elapsed < phase2_max_wait:
-                try:
-                    await self.coordinator.async_request_refresh()
-                    await asyncio.sleep(10)
-                    phase2_elapsed += 10
-                    total_elapsed = elapsed_time + phase2_elapsed
-
-                    downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
-                    upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-                    connection_status = self.coordinator.data.get("cable_modem_connection_status")
-
-                    # Check if channels are stable (same count as previous poll)
-                    if downstream_count == prev_downstream and upstream_count == prev_upstream:
-                        stable_count += 1
-                    else:
-                        stable_count = 0  # Reset if channels changed
-                        grace_period_active = False  # Exit grace period if channels still changing
-                        _LOGGER.info(
-                            "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
-                            phase2_elapsed,
-                            prev_downstream,
-                            downstream_count,
-                            prev_upstream,
-                            upstream_count,
-                        )
-
-                    prev_downstream = downstream_count
-                    prev_upstream = upstream_count
-
-                    # Enter grace period after initial stability (3 polls = 30s)
-                    if (
-                        connection_status == "online"
-                        and downstream_count > 0
-                        and upstream_count > 0
-                        and stable_count >= 3
-                        and not grace_period_active
-                    ):
-                        grace_period_active = True
-                        grace_period_start = phase2_elapsed
-                        _LOGGER.info(
-                            "Phase 2: %ss - Channels stable (%s down, %s up), "
-                            "entering 30s grace period to catch stragglers",
-                            total_elapsed,
-                            downstream_count,
-                            upstream_count,
-                        )
-
-                    # Check if grace period is complete (30 more seconds = 3 polls)
-                    if grace_period_active and (phase2_elapsed - grace_period_start) >= 30:
-                        modem_fully_online = True
-                        _LOGGER.info(
-                            "Modem fully online with stable channels after %ss total (%s down, %s up)",
-                            total_elapsed,
-                            downstream_count,
-                            upstream_count,
-                        )
-                        break
-                    else:
-                        if grace_period_active:
-                            grace_elapsed = phase2_elapsed - grace_period_start
-                            _LOGGER.debug(
-                                "Phase 2: %ss - Grace period: %ss/%ss, Channels: %s down, %s up",
-                                phase2_elapsed,
-                                grace_elapsed,
-                                30,
-                                downstream_count,
-                                upstream_count,
-                            )
-                        else:
-                            _LOGGER.debug(
-                                "Phase 2: %ss - Status: %s, Channels: %s down, %s up (stable: %s polls)",
-                                phase2_elapsed,
-                                connection_status,
-                                downstream_count,
-                                upstream_count,
-                                stable_count,
-                            )
-                except Exception as e:
-                    _LOGGER.debug("Error during phase 2 monitoring: %s", e)
-                    await asyncio.sleep(10)
-                    phase2_elapsed += 10
+            # Phase 2: Wait for channels to sync (max 5 minutes)
+            phase2_max_wait = 300
+            modem_fully_online, phase2_elapsed = await self._wait_for_channel_sync(phase2_max_wait)
 
             # Send final notification
             total_time = elapsed_time + phase2_elapsed
-            if modem_fully_online:
-                downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
-                upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-                await self.hass.services.async_call(
-                    "persistent_notification",
-                    "create",
-                    {
-                        "title": "Modem Restart Complete",
-                        "message": (
-                            f"Modem fully online after {total_time}s with {downstream_count} downstream "
-                            f"and {upstream_count} upstream channels."
-                        ),
-                        "notification_id": "cable_modem_restart",
-                    },
-                )
-            else:
-                await self.hass.services.async_call(
-                    "persistent_notification",
-                    "create",
-                    {
-                        "title": "Modem Restart Warning",
-                        "message": (
-                            f"Modem responding but channels not fully synced after {total_time}s. "
-                            "This may be normal - check modem status."
-                        ),
-                        "notification_id": "cable_modem_restart",
-                    },
-                )
+            await self._send_restart_notification(modem_responding, modem_fully_online, total_time)
 
         except Exception as e:
             _LOGGER.error("Critical error in restart monitoring: %s", e)

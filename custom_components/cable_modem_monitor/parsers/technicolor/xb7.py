@@ -250,6 +250,106 @@ class TechnicolorXB7Parser(ModemParser):
 
         return upstream_channels
 
+    def _build_xb7_data_map(self, rows: list) -> tuple[dict, int]:
+        """Build data map from XB7 transposed table rows.
+
+        Returns:
+            Tuple of (data_map, channel_count)
+        """
+        data_map = {}
+        channel_count = 0
+
+        for row in rows:
+            # First cell is the row label (th)
+            label_cell = row.find("th", class_="row-label")
+            if not label_cell:
+                continue
+
+            # Get only direct text, not from nested divs
+            label = "".join(label_cell.find_all(string=True, recursive=False)).strip()
+            if not label:
+                # Fallback if no direct text
+                label = label_cell.get_text(strip=True)
+
+            # Extract all netWidth div values from this row
+            value_cells = row.find_all("td")
+            values = []
+            for cell in value_cells:
+                div = cell.find("div", class_="netWidth")
+                if div:
+                    values.append(div.get_text(strip=True))
+                else:
+                    values.append(cell.get_text(strip=True))
+
+            # Update channel count from longest row
+            if len(values) > channel_count:
+                channel_count = len(values)
+
+            data_map[label] = values
+            _LOGGER.debug("XB7 row '%s': {len(values)} values", label)
+
+        return data_map, channel_count
+
+    def _extract_xb7_channel_data_at_index(
+        self, data_map: dict, index: int, is_upstream: bool
+    ) -> dict | None:
+        """Extract channel data from data_map at given column index.
+
+        Returns:
+            Channel data dict or None if channel_id is missing
+        """
+        channel_data = {}
+
+        # Extract channel ID
+        if "Channel ID" in data_map and index < len(data_map["Channel ID"]):
+            channel_id = extract_number(data_map["Channel ID"][index])
+            if channel_id is None:
+                return None
+            channel_data["channel_id"] = str(channel_id)
+        else:
+            return None
+
+        # Extract lock status
+        if "Lock Status" in data_map and index < len(data_map["Lock Status"]):
+            channel_data["lock_status"] = data_map["Lock Status"][index]
+
+        # Extract frequency (handles both "609 MHz" and "350000000" formats)
+        if "Frequency" in data_map and index < len(data_map["Frequency"]):
+            freq_text = data_map["Frequency"][index]
+            freq_hz = self._parse_xb7_frequency(freq_text)
+            channel_data["frequency"] = freq_hz
+
+        # Extract power level
+        if "Power Level" in data_map and index < len(data_map["Power Level"]):
+            power_text = data_map["Power Level"][index]
+            channel_data["power"] = extract_float(power_text)
+
+        # Extract modulation
+        if "Modulation" in data_map and index < len(data_map["Modulation"]):
+            channel_data["modulation"] = data_map["Modulation"][index]
+
+        if is_upstream:
+            # Upstream-specific fields
+            if "Symbol Rate" in data_map and index < len(data_map["Symbol Rate"]):
+                symbol_rate_text = data_map["Symbol Rate"][index]
+                symbol_rate = extract_number(symbol_rate_text)
+                if symbol_rate is not None:
+                    channel_data["symbol_rate"] = symbol_rate
+
+            if "Channel Type" in data_map and index < len(data_map["Channel Type"]):
+                channel_data["channel_type"] = data_map["Channel Type"][index]
+        else:
+            # Downstream-specific fields
+            if "SNR" in data_map and index < len(data_map["SNR"]):
+                snr_text = data_map["SNR"][index]
+                channel_data["snr"] = extract_float(snr_text)
+
+            # Initialize error counters (will be filled from error table)
+            channel_data["corrected"] = None
+            channel_data["uncorrected"] = None
+
+        return channel_data
+
     def _parse_xb7_transposed_table(
         self, rows: list, is_upstream: bool = False
     ) -> list[dict]:
@@ -262,37 +362,7 @@ class TechnicolorXB7Parser(ModemParser):
 
         try:
             # Build a map of row_label -> [values for each channel]
-            data_map = {}
-            channel_count = 0
-
-            for row in rows:
-                # First cell is the row label (th)
-                label_cell = row.find("th", class_="row-label")
-                if not label_cell:
-                    continue
-
-                # Get only direct text, not from nested divs
-                label = "".join(label_cell.find_all(string=True, recursive=False)).strip()
-                if not label:
-                    # Fallback if no direct text
-                    label = label_cell.get_text(strip=True)
-
-                # Extract all netWidth div values from this row
-                value_cells = row.find_all("td")
-                values = []
-                for cell in value_cells:
-                    div = cell.find("div", class_="netWidth")
-                    if div:
-                        values.append(div.get_text(strip=True))
-                    else:
-                        values.append(cell.get_text(strip=True))
-
-                # Update channel count from longest row
-                if len(values) > channel_count:
-                    channel_count = len(values)
-
-                data_map[label] = values
-                _LOGGER.debug("XB7 row '%s': {len(values)} values", label)
+            data_map, channel_count = self._build_xb7_data_map(rows)
 
             _LOGGER.debug(
                 f"XB7 transposed table has {channel_count} channels with labels: {list(data_map.keys())}"
@@ -300,60 +370,9 @@ class TechnicolorXB7Parser(ModemParser):
 
             # Now transpose: create one channel dict per column
             for i in range(channel_count):
-                channel_data = {}
+                channel_data = self._extract_xb7_channel_data_at_index(data_map, i, is_upstream)
 
-                # Extract channel ID
-                if "Channel ID" in data_map and i < len(data_map["Channel ID"]):
-                    channel_id = extract_number(data_map["Channel ID"][i])
-                    if channel_id is None:
-                        continue
-                    channel_data["channel_id"] = str(channel_id)
-
-                # Extract lock status
-                if "Lock Status" in data_map and i < len(data_map["Lock Status"]):
-                    channel_data["lock_status"] = data_map["Lock Status"][i]
-
-                # Extract frequency (handles both "609 MHz" and "350000000" formats)
-                if "Frequency" in data_map and i < len(data_map["Frequency"]):
-                    freq_text = data_map["Frequency"][i]
-                    freq_hz = self._parse_xb7_frequency(freq_text)
-                    channel_data["frequency"] = freq_hz
-
-                # Extract power level
-                if "Power Level" in data_map and i < len(data_map["Power Level"]):
-                    power_text = data_map["Power Level"][i]
-                    channel_data["power"] = extract_float(power_text)
-
-                # Extract modulation
-                if "Modulation" in data_map and i < len(data_map["Modulation"]):
-                    channel_data["modulation"] = data_map["Modulation"][i]
-
-                if is_upstream:
-                    # Upstream-specific fields
-
-                    # Symbol Rate (XB7-specific)
-                    if "Symbol Rate" in data_map and i < len(data_map["Symbol Rate"]):
-                        symbol_rate_text = data_map["Symbol Rate"][i]
-                        symbol_rate = extract_number(symbol_rate_text)
-                        if symbol_rate is not None:
-                            channel_data["symbol_rate"] = symbol_rate
-
-                    # Channel Type (XB7-specific)
-                    if "Channel Type" in data_map and i < len(data_map["Channel Type"]):
-                        channel_data["channel_type"] = data_map["Channel Type"][i]
-
-                else:
-                    # Downstream-specific fields
-                    if "SNR" in data_map and i < len(data_map["SNR"]):
-                        snr_text = data_map["SNR"][i]
-                        channel_data["snr"] = extract_float(snr_text)
-
-                    # Initialize error counters (will be filled from error table)
-                    channel_data["corrected"] = None
-                    channel_data["uncorrected"] = None
-
-                # Skip if missing required data
-                if channel_data.get("channel_id") is not None:
+                if channel_data is not None:
                     channels.append(channel_data)
                     _LOGGER.debug(
                         f"Parsed XB7 channel {channel_data.get('channel_id')}: {channel_data}"
@@ -364,83 +383,101 @@ class TechnicolorXB7Parser(ModemParser):
 
         return channels
 
+    def _find_error_codewords_table(self, soup: BeautifulSoup):
+        """Find the CM Error Codewords table.
+
+        Returns:
+            Table element or None if not found
+        """
+        tables = soup.find_all("table", class_="data")
+
+        for table in tables:
+            thead = table.find("thead")
+            if not thead:
+                continue
+
+            header_text = thead.get_text()
+            if "CM Error Codewords" in header_text:
+                _LOGGER.debug("Found XB7 error codewords table")
+                return table
+
+        return None
+
+    def _build_error_data_map(self, rows: list) -> dict:
+        """Build data map from error codewords table rows."""
+        data_map = {}
+        for row in rows:
+            label_cell = row.find("th", class_="row-label")
+            if not label_cell:
+                continue
+
+            # Get only direct text, not from nested divs
+            label = "".join(label_cell.find_all(string=True, recursive=False)).strip()
+            if not label:
+                label = label_cell.get_text(strip=True)
+
+            value_cells = row.find_all("td")
+            values = []
+            for cell in value_cells:
+                div = cell.find("div", class_="netWidth")
+                if div:
+                    values.append(div.get_text(strip=True))
+                else:
+                    values.append(cell.get_text(strip=True))
+
+            data_map[label] = values
+
+        return data_map
+
+    def _transpose_error_data(self, data_map: dict) -> list[dict]:
+        """Transpose error data map into list of channel dicts."""
+        error_channels = []
+
+        if "Channel ID" not in data_map:
+            return error_channels
+
+        channel_count = len(data_map["Channel ID"])
+        for i in range(channel_count):
+            channel = {}
+
+            if i < len(data_map["Channel ID"]):
+                channel_id = extract_number(data_map["Channel ID"][i])
+                if channel_id is None:
+                    continue
+                channel["channel_id"] = str(channel_id)
+
+            if "Correctable Codewords" in data_map and i < len(data_map["Correctable Codewords"]):
+                channel["corrected"] = extract_number(data_map["Correctable Codewords"][i])
+
+            if "Uncorrectable Codewords" in data_map and i < len(data_map["Uncorrectable Codewords"]):
+                channel["uncorrected"] = extract_number(data_map["Uncorrectable Codewords"][i])
+
+            error_channels.append(channel)
+
+        return error_channels
+
     def _parse_error_codewords(self, soup: BeautifulSoup) -> list[dict]:
         """
         Parse CM Error Codewords table.
 
         Returns list of dicts with channel_id, corrected, uncorrected.
         """
-        error_channels = []
-
         try:
-            tables = soup.find_all("table", class_="data")
+            table = self._find_error_codewords_table(soup)
+            if not table:
+                return []
 
-            for table in tables:
-                # Look for "CM Error Codewords" header
-                thead = table.find("thead")
-                if not thead:
-                    continue
+            tbody = table.find("tbody")
+            if not tbody:
+                return []
 
-                header_text = thead.get_text()
-                if "CM Error Codewords" not in header_text:
-                    continue
-
-                _LOGGER.debug("Found XB7 error codewords table")
-                tbody = table.find("tbody")
-                if not tbody:
-                    continue
-
-                rows = tbody.find_all("tr", recursive=False)
-
-                # Build data map
-                data_map = {}
-                for row in rows:
-                    label_cell = row.find("th", class_="row-label")
-                    if not label_cell:
-                        continue
-
-                    # Get only direct text, not from nested divs
-                    label = "".join(label_cell.find_all(string=True, recursive=False)).strip()
-                    if not label:
-                        label = label_cell.get_text(strip=True)
-
-                    value_cells = row.find_all("td")
-                    values = []
-                    for cell in value_cells:
-                        div = cell.find("div", class_="netWidth")
-                        if div:
-                            values.append(div.get_text(strip=True))
-                        else:
-                            values.append(cell.get_text(strip=True))
-
-                    data_map[label] = values
-
-                # Transpose to channel dicts
-                if "Channel ID" in data_map:
-                    channel_count = len(data_map["Channel ID"])
-                    for i in range(channel_count):
-                        channel = {}
-
-                        if i < len(data_map["Channel ID"]):
-                            channel_id = extract_number(data_map["Channel ID"][i])
-                            if channel_id is None:
-                                continue
-                            channel["channel_id"] = str(channel_id)
-
-                        if "Correctable Codewords" in data_map and i < len(data_map["Correctable Codewords"]):
-                            channel["corrected"] = extract_number(data_map["Correctable Codewords"][i])
-
-                        if "Uncorrectable Codewords" in data_map and i < len(data_map["Uncorrectable Codewords"]):
-                            channel["uncorrected"] = extract_number(data_map["Uncorrectable Codewords"][i])
-
-                        error_channels.append(channel)
-
-                break
+            rows = tbody.find_all("tr", recursive=False)
+            data_map = self._build_error_data_map(rows)
+            return self._transpose_error_data(data_map)
 
         except Exception as e:
             _LOGGER.error(f"Error parsing XB7 error codewords: {e}", exc_info=True)
-
-        return error_channels
+            return []
 
     def _merge_error_stats(self, downstream_channels: list[dict], error_channels: list[dict]) -> None:
         """Merge error statistics into downstream channels by matching channel_id."""

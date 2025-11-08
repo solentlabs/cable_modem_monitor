@@ -279,6 +279,53 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Cable Modem Monitor."""
 
+    def _preserve_credentials(self, user_input: dict[str, Any]) -> None:
+        """Preserve existing credentials if not provided in user input."""
+        if not user_input.get(CONF_PASSWORD):
+            user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+        if not user_input.get(CONF_USERNAME):
+            user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
+
+    def _update_detection_info(self, user_input: dict[str, Any], info: dict) -> None:
+        """Update user input with detection info from validation."""
+        detection_info = info.get("detection_info", {})
+        if detection_info:
+            detected_modem_name = detection_info.get("modem_name")
+            user_input[CONF_PARSER_NAME] = detected_modem_name
+            user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
+            user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+            user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
+            from datetime import datetime
+            user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+
+            # If user selected "auto", update choice to show what was detected
+            if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
+                user_input[CONF_MODEM_CHOICE] = detected_modem_name
+        else:
+            # Preserve existing detection info if validation didn't return new info
+            user_input[CONF_PARSER_NAME] = self.config_entry.data.get(CONF_PARSER_NAME)
+            user_input[CONF_DETECTED_MODEM] = self.config_entry.data.get(CONF_DETECTED_MODEM, "Unknown")
+            user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(
+                CONF_DETECTED_MANUFACTURER, "Unknown"
+            )
+            user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
+            user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
+
+    def _create_config_message(self, user_input: dict[str, Any]) -> str:
+        """Create configuration message from detected modem info."""
+        detected_modem = user_input.get(CONF_DETECTED_MODEM, "Cable Modem")
+        detected_manufacturer = user_input.get(CONF_DETECTED_MANUFACTURER, "")
+
+        # Avoid duplicate manufacturer name if modem name already includes it
+        if (
+            detected_manufacturer
+            and detected_manufacturer != "Unknown"
+            and not detected_modem.startswith(detected_manufacturer)
+        ):
+            return f"Configured for {detected_manufacturer} {detected_modem}"
+        else:
+            return f"Configured for {detected_modem}"
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         """Manage the options."""
         errors = {}
@@ -290,13 +337,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
-            # Preserve existing password if user left it blank (BEFORE validation)
-            if not user_input.get(CONF_PASSWORD):
-                user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
-
-            # Preserve existing username if user left it blank (BEFORE validation)
-            if not user_input.get(CONF_USERNAME):
-                user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
+            # Preserve existing credentials if not provided
+            self._preserve_credentials(user_input)
 
             # Validate the connection with new settings
             try:
@@ -309,55 +351,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.error("Invalid input data in options flow: %s", err)
                 errors["base"] = "invalid_input"
             except Exception:
-                # Log exception details for debugging, but sanitize error shown to user
                 _LOGGER.exception("Unexpected exception during options validation")
                 errors["base"] = "unknown"
             else:
-
                 # Update detection info from validation
-                detection_info = info.get("detection_info", {})
-                if detection_info:
-                    detected_modem_name = detection_info.get("modem_name")
-                    user_input[CONF_PARSER_NAME] = detected_modem_name  # Cache parser name
-                    user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
-                    user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
-                    user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
-                    from datetime import datetime
-                    user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
-
-                    # If user selected "auto", update the choice to show what was detected
-                    if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
-                        user_input[CONF_MODEM_CHOICE] = detected_modem_name
-                else:
-                    # Preserve existing detection info if validation didn't return new info
-                    user_input[CONF_PARSER_NAME] = self.config_entry.data.get(CONF_PARSER_NAME)
-                    user_input[CONF_DETECTED_MODEM] = self.config_entry.data.get(CONF_DETECTED_MODEM, "Unknown")
-                    user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(
-                        CONF_DETECTED_MANUFACTURER, "Unknown"
-                    )
-                    user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
-                    user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
+                self._update_detection_info(user_input, info)
 
                 # Update the config entry with all settings
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data=user_input
                 )
 
-                # Show notification with detected modem info
-                detected_modem = user_input.get(CONF_DETECTED_MODEM, "Cable Modem")
-                detected_manufacturer = user_input.get(CONF_DETECTED_MANUFACTURER, "")
-
-                # Avoid duplicate manufacturer name if modem name already includes it
-                if (
-                    detected_manufacturer
-                    and detected_manufacturer != "Unknown"
-                    and not detected_modem.startswith(detected_manufacturer)
-                ):
-                    message = f"Configured for {detected_manufacturer} {detected_modem}"
-                else:
-                    message = f"Configured for {detected_modem}"
-
-                # Create a notification to show the detected modem
+                # Create notification with detected modem info
+                message = self._create_config_message(user_input)
                 await self.hass.services.async_call(
                     "persistent_notification",
                     "create",
