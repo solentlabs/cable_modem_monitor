@@ -30,6 +30,39 @@ extend-exclude = [
 # McCabe complexity threshold
 max-complexity = 10
 
+[tool.pylint.main]
+max-line-length = 120
+disable = [
+    # Acceptable for Home Assistant integrations
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "E0401",  # import-error (Home Assistant not installed in dev env)
+    "C0415",  # import-outside-toplevel (required for HA performance)
+    "W0718",  # broad-exception-caught (necessary for integration stability)
+    "W0613",  # unused-argument (HA API requires specific signatures)
+    
+    # Design complexity - acceptable for this integration
+    "R0914",  # too-many-locals
+    "R0903",  # too-few-public-methods (entities/sensors)
+    "R0913",  # too-many-arguments (HA patterns)
+    "R0917",  # too-many-positional-arguments
+    "R0902",  # too-many-instance-attributes
+    "R0911",  # too-many-return-statements
+    
+    # Style choices
+    "C0301",  # line-too-long (handled by black/ruff)
+    "C0411",  # wrong-import-order (auto-formatted)
+    "C0413",  # wrong-import-position (HA patterns)
+    "W1203",  # logging-fstring-interpolation (acceptable in modern Python)
+    "W0107",  # unnecessary-pass
+    "W0612",  # unused-variable (sometimes needed for unpacking)
+    "W0622",  # redefined-builtin (intentional exception names)
+    "W0707",  # raise-missing-from
+    "W1404",  # implicit-str-concat (readable multi-line strings)
+    "R1705",  # no-else-return (already fixed most, remaining are acceptable)
+]
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
@@ -39,3 +72,7 @@ ignore_missing_imports = true
 
 # Limit mypy to the integration code
 files = ["custom_components/cable_modem_monitor/**/*.py"]
+
+# Note: MyPy warnings about missing stubs for Home Assistant libraries are expected
+# and acceptable for HA custom integrations. Home Assistant's dynamic nature and
+# the development environment setup make full type checking impractical.

@@ -1,4 +1,5 @@
 """Diagnostics support for Cable Modem Monitor."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -9,9 +10,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 
 
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -69,13 +68,18 @@ async def async_get_config_entry_diagnostics(
 
         # Sanitize exception message - remove potential credentials, paths, IPs
         import re
+
         # Remove anything that looks like credentials (password=, user=, etc.)
-        exception_msg = re.sub(r'(password|passwd|pwd|token|key|secret|auth)[\s]*[=:]\s*[^\s,}]+',
-                               r'\1=***REDACTED***', exception_msg, flags=re.IGNORECASE)
+        exception_msg = re.sub(
+            r"(password|passwd|pwd|token|key|secret|auth)[\s]*[=:]\s*[^\s,}]+",
+            r"\1=***REDACTED***",
+            exception_msg,
+            flags=re.IGNORECASE,
+        )
         # Remove file paths
-        exception_msg = re.sub(r'/[^\s,}]+', '/***PATH***', exception_msg)
+        exception_msg = re.sub(r"/[^\s,}]+", "/***PATH***", exception_msg)
         # Remove IP addresses (basic pattern)
-        exception_msg = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', '***IP***', exception_msg)
+        exception_msg = re.sub(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "***IP***", exception_msg)
         # Truncate long messages
         if len(exception_msg) > 200:
             exception_msg = exception_msg[:200] + "... (truncated)"
@@ -83,7 +87,7 @@ async def async_get_config_entry_diagnostics(
         diagnostics["last_error"] = {
             "type": exception_type,
             "message": exception_msg,
-            "note": "Exception details have been sanitized for security"
+            "note": "Exception details have been sanitized for security",
         }
 
     return diagnostics

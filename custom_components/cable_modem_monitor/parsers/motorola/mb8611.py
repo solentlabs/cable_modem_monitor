@@ -1,4 +1,5 @@
 """Parser for Motorola MB8611 cable modem using HNAP protocol."""
+
 import logging
 import json
 from bs4 import BeautifulSoup
@@ -24,7 +25,7 @@ class MotorolaMB8611Parser(ModemParser):
         login_url="/Login.html",
         hnap_endpoint="/HNAP1/",
         session_timeout_indicator="UN-AUTH",
-        soap_action_namespace="http://purenetworks.com/HNAP1/"
+        soap_action_namespace="http://purenetworks.com/HNAP1/",
     )
 
     url_patterns = [
@@ -84,8 +85,7 @@ class MotorolaMB8611Parser(ModemParser):
 
         # Build HNAP request builder
         builder = HNAPRequestBuilder(
-            endpoint=self.auth_config.hnap_endpoint,
-            namespace=self.auth_config.soap_action_namespace
+            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
         )
 
         try:
@@ -95,7 +95,7 @@ class MotorolaMB8611Parser(ModemParser):
                 "GetMotoStatusConnectionInfo",
                 "GetMotoStatusDownstreamChannelInfo",
                 "GetMotoStatusUpstreamChannelInfo",
-                "GetMotoLagStatus"
+                "GetMotoLagStatus",
             ]
 
             _LOGGER.debug("MB8611: Fetching modem data via HNAP GetMultipleHNAPs")

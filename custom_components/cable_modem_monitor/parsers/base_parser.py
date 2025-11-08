@@ -1,4 +1,5 @@
 """Base class for modem parsers."""
+
 from abc import ABC, abstractmethod
 from bs4 import BeautifulSoup
 from typing import Optional, TYPE_CHECKING
@@ -27,7 +28,7 @@ class ModemParser(ABC):
     url_patterns: list[dict[str, str | bool]] = []
 
     # Legacy field for backward compatibility (deprecated - use url_patterns)
-    auth_type: str = 'form'
+    auth_type: str = "form"
 
     # Authentication configuration (new system - optional, for backward compatibility)
     # Parsers should define this as a class attribute

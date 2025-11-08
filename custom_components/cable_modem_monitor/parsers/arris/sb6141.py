@@ -1,4 +1,5 @@
 """Parser for ARRIS SB6141 cable modem."""
+
 import logging
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
@@ -178,9 +179,7 @@ class ArrisSB6141Parser(ModemParser):
 
         return data_map, channel_count
 
-    def _extract_channel_data_at_index(
-        self, data_map: dict, index: int, is_upstream: bool
-    ) -> dict | None:
+    def _extract_channel_data_at_index(self, data_map: dict, index: int, is_upstream: bool) -> dict | None:
         """Extract channel data from data_map at given column index.
 
         Returns:
@@ -210,9 +209,7 @@ class ArrisSB6141Parser(ModemParser):
 
         if not is_upstream:
             # Downstream-specific fields
-            if "Signal to Noise Ratio" in data_map and index < len(
-                data_map["Signal to Noise Ratio"]
-            ):
+            if "Signal to Noise Ratio" in data_map and index < len(data_map["Signal to Noise Ratio"]):
                 snr_text = data_map["Signal to Noise Ratio"][index]
                 channel_data["snr"] = extract_float(snr_text)
 
@@ -222,9 +219,7 @@ class ArrisSB6141Parser(ModemParser):
 
         return channel_data
 
-    def _parse_transposed_table(
-        self, rows: list, required_fields: list, is_upstream: bool = False
-    ) -> list[dict]:
+    def _parse_transposed_table(self, rows: list, required_fields: list, is_upstream: bool = False) -> list[dict]:
         """Parse ARRIS transposed table where columns are channels."""
         channels = []
 
@@ -232,9 +227,7 @@ class ArrisSB6141Parser(ModemParser):
             # Build a map of row_label -> [values for each channel]
             data_map, channel_count = self._build_transposed_data_map(rows)
 
-            _LOGGER.debug(
-                f"Transposed table has {channel_count} channels with labels: {list(data_map.keys())}"
-            )
+            _LOGGER.debug(f"Transposed table has {channel_count} channels with labels: {list(data_map.keys())}")
 
             # Now transpose: create one channel dict per column
             for i in range(channel_count):
@@ -242,10 +235,7 @@ class ArrisSB6141Parser(ModemParser):
 
                 if channel_data is not None:
                     channels.append(channel_data)
-                    _LOGGER.debug(
-                        "Parsed ARRIS channel %s: %s",
-                        channel_data.get('channel_id'), channel_data
-                    )
+                    _LOGGER.debug("Parsed ARRIS channel %s: %s", channel_data.get("channel_id"), channel_data)
 
         except Exception as e:
             _LOGGER.error("Error parsing ARRIS transposed table: %s", e)
@@ -268,19 +258,11 @@ class ArrisSB6141Parser(ModemParser):
 
             # Match channels by index
             for i, channel in enumerate(downstream_channels):
-                if "Total Correctable Codewords" in data_map and i < len(
-                    data_map["Total Correctable Codewords"]
-                ):
-                    channel["corrected"] = extract_number(
-                        data_map["Total Correctable Codewords"][i]
-                    )
+                if "Total Correctable Codewords" in data_map and i < len(data_map["Total Correctable Codewords"]):
+                    channel["corrected"] = extract_number(data_map["Total Correctable Codewords"][i])
 
-                if "Total Uncorrectable Codewords" in data_map and i < len(
-                    data_map["Total Uncorrectable Codewords"]
-                ):
-                    channel["uncorrected"] = extract_number(
-                        data_map["Total Uncorrectable Codewords"][i]
-                    )
+                if "Total Uncorrectable Codewords" in data_map and i < len(data_map["Total Uncorrectable Codewords"]):
+                    channel["uncorrected"] = extract_number(data_map["Total Uncorrectable Codewords"][i])
 
         except Exception as e:
             _LOGGER.error("Error merging ARRIS error stats: %s", e)

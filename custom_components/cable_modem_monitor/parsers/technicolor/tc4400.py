@@ -1,4 +1,5 @@
 """Parser for Technicolor TC4400 cable modem."""
+
 import logging
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser
@@ -76,7 +77,7 @@ class TechnicolorTC4400Parser(ModemParser):
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
             "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
-            system_info.get('system_uptime')
+            system_info.get("system_uptime"),
         )
 
         channels = []
@@ -134,7 +135,7 @@ class TechnicolorTC4400Parser(ModemParser):
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
             "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
-            system_info.get('system_uptime')
+            system_info.get("system_uptime"),
         )
 
         channels = []

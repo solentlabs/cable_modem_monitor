@@ -1,4 +1,5 @@
 """Parser plugin discovery and registration system."""
+
 import logging
 import importlib
 import os

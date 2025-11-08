@@ -1,4 +1,5 @@
 """The Cable Modem Monitor integration."""
+
 from __future__ import annotations
 
 from datetime import timedelta, datetime
@@ -53,45 +54,29 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
     old_patterns_to_new = {
         # Note: Custom/IP prefixes were never released, so we only handle no-prefix entities
         # Downstream channels (full names)
-        r'^sensor\.downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
-            'sensor.cable_modem_downstream_ch_{}_{}',
+        r"^sensor\.downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$": "sensor.cable_modem_downstream_ch_{}_{}",  # noqa: E501
         # Downstream channels (short names - ds_ch)
-        r'^sensor\.ds_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
-            'sensor.cable_modem_ds_ch_{}_{}',
+        r"^sensor\.ds_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$": "sensor.cable_modem_ds_ch_{}_{}",
         # Upstream channels (full names)
-        r'^sensor\.upstream_ch_(\d+)_(power|frequency)$':
-            'sensor.cable_modem_upstream_ch_{}_{}',
+        r"^sensor\.upstream_ch_(\d+)_(power|frequency)$": "sensor.cable_modem_upstream_ch_{}_{}",
         # Upstream channels (short names - us_ch)
-        r'^sensor\.us_ch_(\d+)_(power|frequency)$':
-            'sensor.cable_modem_us_ch_{}_{}',
+        r"^sensor\.us_ch_(\d+)_(power|frequency)$": "sensor.cable_modem_us_ch_{}_{}",
         # Summary sensors (match with or without _errors suffix)
-        r'^sensor\.total_(corrected|uncorrected)(?:_errors)?$':
-            'sensor.cable_modem_total_{}_errors',
+        r"^sensor\.total_(corrected|uncorrected)(?:_errors)?$": "sensor.cable_modem_total_{}_errors",
         # Channel counts
-        r'^sensor\.downstream_channel_count$':
-            'sensor.cable_modem_downstream_channel_count',
-        r'^sensor\.upstream_channel_count$':
-            'sensor.cable_modem_upstream_channel_count',
-        r'^sensor\.ds_channel_count$':
-            'sensor.cable_modem_ds_channel_count',
-        r'^sensor\.us_channel_count$':
-            'sensor.cable_modem_us_channel_count',
+        r"^sensor\.downstream_channel_count$": "sensor.cable_modem_downstream_channel_count",
+        r"^sensor\.upstream_channel_count$": "sensor.cable_modem_upstream_channel_count",
+        r"^sensor\.ds_channel_count$": "sensor.cable_modem_ds_channel_count",
+        r"^sensor\.us_channel_count$": "sensor.cable_modem_us_channel_count",
         # Status and info (with and without modem_ prefix)
-        r'^sensor\.modem_connection_status$':
-            'sensor.cable_modem_connection_status',
-        r'^sensor\.connection_status$':
-            'sensor.cable_modem_connection_status',
-        r'^sensor\.software_version$':
-            'sensor.cable_modem_software_version',
-        r'^sensor\.system_uptime$':
-            'sensor.cable_modem_system_uptime',
-        r'^sensor\.last_boot_time$':
-            'sensor.cable_modem_last_boot_time',
+        r"^sensor\.modem_connection_status$": "sensor.cable_modem_connection_status",
+        r"^sensor\.connection_status$": "sensor.cable_modem_connection_status",
+        r"^sensor\.software_version$": "sensor.cable_modem_software_version",
+        r"^sensor\.system_uptime$": "sensor.cable_modem_system_uptime",
+        r"^sensor\.last_boot_time$": "sensor.cable_modem_last_boot_time",
         # Button
-        r'^button\.restart_modem$':
-            'button.cable_modem_restart_modem',
-        r'^button\.cleanup_entities$':
-            'button.cable_modem_cleanup_entities',
+        r"^button\.restart_modem$": "button.cable_modem_restart_modem",
+        r"^button\.cleanup_entities$": "button.cable_modem_cleanup_entities",
     }
 
     import re
@@ -109,7 +94,7 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
         old_entity_id = entity_entry.entity_id
 
         # Skip if already has cable_modem_ prefix
-        if 'cable_modem_' in old_entity_id:
+        if "cable_modem_" in old_entity_id:
             continue
 
         # Try to match against patterns and generate new entity ID
@@ -120,7 +105,7 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
                 groups = match.groups()
 
                 # Generate new entity ID
-                if '{}' in template:
+                if "{}" in template:
                     new_entity_id = template.format(*groups)
                 else:
                     new_entity_id = template
@@ -141,14 +126,13 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
                         "Cannot migrate %s -> %s: "
                         "Target entity ID already exists (platform: %s). "
                         "Skipping migration for this entity.",
-                        old_entity_id, new_entity_id, existing_entity.platform
+                        old_entity_id,
+                        new_entity_id,
+                        existing_entity.platform,
                     )
                     continue
 
-                entity_reg.async_update_entity(
-                    entity_entry.entity_id,
-                    new_entity_id=new_entity_id
-                )
+                entity_reg.async_update_entity(entity_entry.entity_id, new_entity_id=new_entity_id)
                 _LOGGER.info("Migrated %s -> %s", old_entity_id, new_entity_id)
             except Exception as e:
                 _LOGGER.error("Failed to migrate %s: %s", old_entity_id, e)
@@ -205,6 +189,7 @@ async def _create_health_monitor(hass: HomeAssistant):
 
 def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str):
     """Create the async update function for the coordinator."""
+
     async def async_update_data() -> dict:
         """Fetch data from the modem."""
         base_url = f"http://{host}"
@@ -272,13 +257,14 @@ def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) 
     )
     _LOGGER.debug(
         "Updated device registry: manufacturer=%s, model=%s",
-        entry.data.get('detected_manufacturer'),
-        entry.data.get('detected_modem')
+        entry.data.get("detected_manufacturer"),
+        entry.data.get("detected_modem"),
     )
 
 
 def _create_clear_history_handler(hass: HomeAssistant):
     """Create the clear history service handler."""
+
     async def handle_clear_history(call: ServiceCall) -> None:
         """Handle the clear_history service call."""
         from homeassistant.helpers import entity_registry as er
@@ -289,9 +275,7 @@ def _create_clear_history_handler(hass: HomeAssistant):
         # Get all cable modem entities
         entity_reg = er.async_get(hass)
         cable_modem_entities = [
-            entity_entry.entity_id
-            for entity_entry in entity_reg.entities.values()
-            if entity_entry.platform == DOMAIN
+            entity_entry.entity_id for entity_entry in entity_reg.entities.values() if entity_entry.platform == DOMAIN
         ]
 
         if not cable_modem_entities:
@@ -301,9 +285,7 @@ def _create_clear_history_handler(hass: HomeAssistant):
         _LOGGER.info("Found %s cable modem entities to purge", len(cable_modem_entities))
 
         # Clear history in database
-        deleted = await hass.async_add_executor_job(
-            _clear_db_history, hass, cable_modem_entities, days_to_keep
-        )
+        deleted = await hass.async_add_executor_job(_clear_db_history, hass, cable_modem_entities, days_to_keep)
 
         if deleted > 0:
             _LOGGER.info("Successfully cleared %s historical records", deleted)
@@ -351,7 +333,7 @@ def _clear_db_history(hass: HomeAssistant, cable_modem_entities: list, days_to_k
             "Cleared %d state records and %d statistics records older than %d days",
             states_deleted,
             stats_deleted,
-            days_to_keep
+            days_to_keep,
         )
 
         return states_deleted + stats_deleted
@@ -388,6 +370,7 @@ def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> 
 
 def _create_cleanup_entities_handler(hass: HomeAssistant):
     """Create the cleanup entities service handler."""
+
     async def handle_cleanup_entities(call: ServiceCall) -> None:
         """Handle cleanup_entities service call."""
         from homeassistant.helpers import entity_registry as er
@@ -398,9 +381,7 @@ def _create_cleanup_entities_handler(hass: HomeAssistant):
 
         # Find all cable modem entities
         all_cable_modem = [
-            entity_entry
-            for entity_entry in entity_reg.entities.values()
-            if entity_entry.platform == DOMAIN
+            entity_entry for entity_entry in entity_reg.entities.values() if entity_entry.platform == DOMAIN
         ]
 
         # Separate active from orphaned
@@ -408,8 +389,10 @@ def _create_cleanup_entities_handler(hass: HomeAssistant):
         orphaned = [e for e in all_cable_modem if not e.config_entry_id]
 
         _LOGGER.info(
-            f"Found {len(all_cable_modem)} total cable modem entities: "
-            f"{len(active)} active, {len(orphaned)} orphaned"
+            "Found %d total cable modem entities: %d active, %d orphaned",
+            len(all_cable_modem),
+            len(active),
+            len(orphaned),
         )
 
         if not orphaned:
@@ -426,7 +409,7 @@ def _create_cleanup_entities_handler(hass: HomeAssistant):
             except Exception as e:
                 _LOGGER.error("Failed to remove %s: %s", entity_entry.entity_id, e)
 
-        _LOGGER.info("Successfully removed %s orphaned entities", removed_count)
+        _LOGGER.info("Successfully removed %d orphaned entities", removed_count)
 
     return handle_cleanup_entities
 
@@ -446,6 +429,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Get parsers and select appropriate one
     from .parsers import get_parsers
+
     parsers = await hass.async_add_executor_job(get_parsers)
     selected_parser = _select_parser(parsers, modem_choice)
 
