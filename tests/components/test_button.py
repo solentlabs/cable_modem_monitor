@@ -71,7 +71,8 @@ async def test_restart_button_initialization(mock_coordinator, mock_config_entry
     assert button._attr_name == "Restart Modem"
     assert button._attr_unique_id == "test_entry_id_restart_button"
     assert button._attr_icon == "mdi:restart"
-    assert button._attr_device_info["identifiers"] == {(DOMAIN, "test_entry_id")}
+    assert button._attr_device_info is not None
+    assert button._attr_device_info.get("identifiers") == {(DOMAIN, "test_entry_id")}
 
 
 @pytest.mark.asyncio
@@ -391,7 +392,7 @@ async def test_reset_button_initialization(mock_coordinator, mock_config_entry):
     assert button._attr_name == "Reset Entities"
     assert button._attr_unique_id == "test_entry_id_reset_entities_button"
     assert button._attr_icon == "mdi:refresh"
-    from homeassistant.helpers.entity import EntityCategory
+    from homeassistant.const import EntityCategory
     assert button._attr_entity_category == EntityCategory.CONFIG
 
 

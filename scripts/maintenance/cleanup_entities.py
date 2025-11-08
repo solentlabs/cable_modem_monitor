@@ -101,6 +101,105 @@ def print_status(stats):
     print_info(f"\nEstimated disk space wasted by orphans: ~{orphaned_size_kb:.1f} KB")
 
 
+def analyze_entities_fallback(data: dict) -> dict:
+    """Perform basic entity analysis when integration module is unavailable."""
+    print_warning('Integration module not found; falling back to basic analysis')
+    all_entities = data['data']['entities']
+    cable_modem_entities = [
+        e for e in all_entities
+        if 'cable_modem' in e.get('unique_id', '').lower() or e.get('platform') == 'cable_modem_monitor'
+    ]
+    active = [e for e in cable_modem_entities if e.get('config_entry_id')]
+    orphaned = [e for e in cable_modem_entities if not e.get('config_entry_id') or e.get('orphaned_timestamp')]
+    creation_dates = {}
+    for entity in cable_modem_entities:
+        created = entity.get('created_at', 'unknown')[:10]
+        creation_dates.setdefault(created, {'active': 0, 'orphaned': 0})
+        if entity in active:
+            creation_dates[created]['active'] += 1
+        else:
+            creation_dates[created]['orphaned'] += 1
+    return {
+        'total_entities': len(all_entities),
+        'cable_modem_total': len(cable_modem_entities),
+        'active': active,
+        'orphaned': orphaned,
+        'creation_dates': creation_dates,
+    }
+
+
+def handle_cleanup_operation(data: dict, stats: dict, entity_registry_path: Path):
+    """Handle cleanup operation to remove orphaned entities."""
+    print_header('Cleaning Up Orphaned Entities')
+    if not stats['orphaned']:
+        print_success('No orphaned entities to clean up!')
+        return
+
+    print_info('Creating backup...')
+    if ec is not None:
+        backup_path = ec.backup_entity_registry()
+        print_success(f'Backup created: {backup_path}')
+    else:
+        print_warning('Backup skipped because integration module is unavailable')
+
+    all_entities = data['data']['entities']
+    entities_to_keep = [e for e in all_entities if e not in stats['orphaned']]
+    print(f"  Before: {len(all_entities)} total entities")
+    print(f"  After:  {len(entities_to_keep)} total entities")
+    print(f"  Removed: {len(all_entities) - len(entities_to_keep)} entities")
+
+    print_info('\nSaving changes...')
+    data['data']['entities'] = entities_to_keep
+    with open(entity_registry_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+
+    print_success('\n✓ Cleanup complete!')
+
+
+def handle_nuclear_operation(data: dict, stats: dict, entity_registry_path: Path):
+    """Handle nuclear option to remove all cable modem entities."""
+    print_header('NUCLEAR OPTION - Complete Reset')
+    print_warning('⚠️  This will remove ALL cable modem entities!')
+    print_warning('⚠️  You will lose ALL historical data!')
+    print_warning('⚠️  The integration will create fresh entities on next restart.')
+    response = input(
+        f"\n{Colors.BOLD}Are you ABSOLUTELY sure? "
+        f"Type 'DELETE EVERYTHING' to confirm: {Colors.ENDC}"
+    )
+    if response != 'DELETE EVERYTHING':
+        print_error('Cancelled. No changes made.')
+        sys.exit(0)
+
+    print_info('\nCreating backup...')
+    if ec is not None:
+        backup_path = ec.backup_entity_registry()
+        print_success(f'Backup created: {backup_path}')
+    else:
+        print_warning('Backup skipped because integration module is unavailable')
+
+    # Recompute stats in case something changed
+    if ec is not None:
+        stats = ec.analyze_entities(data)
+    all_entities = data['data']['entities']
+    all_cable_modem = stats['active'] + stats['orphaned']
+    entities_to_keep = [e for e in all_entities if e not in all_cable_modem]
+
+    print(f"  Before: {len(all_entities)} total entities")
+    print(f"  After:  {len(entities_to_keep)} total entities")
+    print(f"  Removed: {len(all_entities) - len(entities_to_keep)} entities")
+
+    print_info('\nSaving changes...')
+    data['data']['entities'] = entities_to_keep
+    with open(entity_registry_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+
+    print_success('\n✓ Nuclear option complete!')
+    print_info('\nNext steps:')
+    print('  1. Restart Home Assistant')
+    print('  2. The integration will recreate all entities fresh')
+    print('  3. Reconfigure any dashboards/automations that reference cable modem entities')
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Cable Modem Monitor Entity Cleanup Utility',
@@ -123,108 +222,18 @@ def main():
         sys.exit(1)
 
     try:
-        # Use module analysis when available
-        if ec is not None:
-            stats = ec.analyze_entities(data)
-        else:
-            print_warning('Integration module not found; falling back to basic analysis')
-            # basic analysis - find cable_modem entries
-            all_entities = data['data']['entities']
-            cable_modem_entities = [
-                e for e in all_entities
-                if 'cable_modem' in e.get('unique_id', '').lower() or e.get('platform') == 'cable_modem_monitor'
-            ]
-            active = [e for e in cable_modem_entities if e.get('config_entry_id')]
-            orphaned = [e for e in cable_modem_entities if not e.get('config_entry_id') or e.get('orphaned_timestamp')]
-            creation_dates = {}
-            for entity in cable_modem_entities:
-                created = entity.get('created_at', 'unknown')[:10]
-                creation_dates.setdefault(created, {'active': 0, 'orphaned': 0})
-                if entity in active:
-                    creation_dates[created]['active'] += 1
-                else:
-                    creation_dates[created]['orphaned'] += 1
-            stats = {
-                'total_entities': len(all_entities),
-                'cable_modem_total': len(cable_modem_entities),
-                'active': active,
-                'orphaned': orphaned,
-                'creation_dates': creation_dates,
-            }
+        # Use module analysis when available, else fallback
+        stats = ec.analyze_entities(data) if ec is not None else analyze_entities_fallback(data)
 
         if args.check:
             print_status(stats)
-
         elif args.dry_run:
             print_header('Dry run - no changes will be written')
             print_status(stats)
-
         elif args.cleanup:
-            print_header('Cleaning Up Orphaned Entities')
-            if not stats['orphaned']:
-                print_success('No orphaned entities to clean up!')
-                return
-            print_info('Creating backup...')
-            if ec is not None:
-                backup_path = ec.backup_entity_registry()
-                print_success(f'Backup created: {backup_path}')
-            else:
-                print_warning('Backup skipped because integration module is unavailable')
-
-            all_entities = data['data']['entities']
-            entities_to_keep = [e for e in all_entities if e not in stats['orphaned']]
-            print(f"  Before: {len(all_entities)} total entities")
-            print(f"  After:  {len(entities_to_keep)} total entities")
-            print(f"  Removed: {len(all_entities) - len(entities_to_keep)} entities")
-
-            print_info('\nSaving changes...')
-            data['data']['entities'] = entities_to_keep
-            with open(entity_registry_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
-
-            print_success('\n✓ Cleanup complete!')
-
+            handle_cleanup_operation(data, stats, entity_registry_path)
         elif args.nuclear:
-            print_header('NUCLEAR OPTION - Complete Reset')
-            print_warning('⚠️  This will remove ALL cable modem entities!')
-            print_warning('⚠️  You will lose ALL historical data!')
-            print_warning('⚠️  The integration will create fresh entities on next restart.')
-            response = input(
-                f"\n{Colors.BOLD}Are you ABSOLUTELY sure? "
-                f"Type 'DELETE EVERYTHING' to confirm: {Colors.ENDC}"
-            )
-            if response != 'DELETE EVERYTHING':
-                print_error('Cancelled. No changes made.')
-                sys.exit(0)
-
-            print_info('\nCreating backup...')
-            if ec is not None:
-                backup_path = ec.backup_entity_registry()
-                print_success(f'Backup created: {backup_path}')
-            else:
-                print_warning('Backup skipped because integration module is unavailable')
-
-            # Recompute stats in case something changed
-            if ec is not None:
-                stats = ec.analyze_entities(data)
-            all_entities = data['data']['entities']
-            all_cable_modem = stats['active'] + stats['orphaned']
-            entities_to_keep = [e for e in all_entities if e not in all_cable_modem]
-
-            print(f"  Before: {len(all_entities)} total entities")
-            print(f"  After:  {len(entities_to_keep)} total entities")
-            print(f"  Removed: {len(all_entities) - len(entities_to_keep)} entities")
-
-            print_info('\nSaving changes...')
-            data['data']['entities'] = entities_to_keep
-            with open(entity_registry_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
-
-            print_success('\n✓ Nuclear option complete!')
-            print_info('\nNext steps:')
-            print('  1. Restart Home Assistant')
-            print('  2. The integration will recreate all entities fresh')
-            print('  3. Reconfigure any dashboards/automations that reference cable modem entities')
+            handle_nuclear_operation(data, stats, entity_registry_path)
 
     except KeyboardInterrupt:
         print_error('\n\nInterrupted by user. No changes made.')
