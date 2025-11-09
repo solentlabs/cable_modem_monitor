@@ -1,4 +1,5 @@
 """Config flow for Cable Modem Monitor integration."""
+
 from __future__ import annotations
 
 import logging
@@ -49,32 +50,31 @@ def _validate_host_format(host: str) -> str:
     host_clean = host.strip()
 
     ***REMOVED*** Extract hostname from URL if provided
-    if host_clean.startswith(('http://', 'https://')):
+    if host_clean.startswith(("http://", "https://")):
         try:
             parsed = urlparse(host_clean)
-            if parsed.scheme not in ['http', 'https']:
+            if parsed.scheme not in ["http", "https"]:
                 raise ValueError("Only HTTP and HTTPS protocols are allowed")
             if not parsed.netloc:
                 raise ValueError("Invalid URL format")
-            hostname = parsed.hostname or parsed.netloc.split(':')[0]
+            hostname = parsed.hostname or parsed.netloc.split(":")[0]
         except Exception as err:
             raise ValueError(f"Invalid URL format: {err}") from err
     else:
         hostname = host_clean
 
     ***REMOVED*** Security: Block shell metacharacters
-    invalid_chars = [';', '&', '|', '$', '`', '\n', '\r', '\t', '<', '>', '(', ')', '{', '}', '\\']
+    invalid_chars = [";", "&", "|", "$", "`", "\n", "\r", "\t", "<", ">", "(", ")", "{", "}", "\\"]
     if any(char in hostname for char in invalid_chars):
         raise ValueError("Invalid characters in host address")
 
     ***REMOVED*** Validate format: IPv4, IPv6, or valid hostname
     patterns = {
-        'ipv4': r'^(\d{1,3}\.){3}\d{1,3}$',
-        'ipv6': r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$',
-        'hostname': (
-            r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
-            r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
-        )
+        "ipv4": r"^(\d{1,3}\.){3}\d{1,3}$",
+        "ipv6": r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$",
+        "hostname": (
+            r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?" r"(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
+        ),
     }
 
     if not any(re.match(pattern, hostname) for pattern in patterns.values()):
@@ -84,9 +84,7 @@ def _validate_host_format(host: str) -> str:
 
 
 def _select_parser_for_validation(
-    all_parsers: list,
-    modem_choice: str | None,
-    cached_parser_name: str | None
+    all_parsers: list, modem_choice: str | None, cached_parser_name: str | None
 ) -> tuple[Any | None, str | None]:
     """Select parser(s) for validation.
 
@@ -109,10 +107,7 @@ def _select_parser_for_validation(
         return None, None
     else:
         ***REMOVED*** Auto mode - use all parsers with cached name hint
-        _LOGGER.info(
-            "Using auto-detection mode (modem_choice=%s, cached_parser=%s)",
-            modem_choice, cached_parser_name
-        )
+        _LOGGER.info("Using auto-detection mode (modem_choice=%s, cached_parser=%s)", modem_choice, cached_parser_name)
         if cached_parser_name:
             _LOGGER.info("Will try cached parser first: %s", cached_parser_name)
         else:
@@ -149,7 +144,7 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict:
         _LOGGER.info("Attempted parsers: %s", ", ".join(err.attempted_parsers))
         _LOGGER.info(
             "Troubleshooting steps:\n%s",
-            "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps()))
+            "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps())),
         )
         raise UnsupportedModemError(str(err)) from err
     except Exception as err:
@@ -171,9 +166,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     ***REMOVED*** Get parsers and select appropriate one(s)
     all_parsers = await hass.async_add_executor_job(get_parsers)
     selected_parser, parser_name_hint = _select_parser_for_validation(
-        all_parsers,
-        data.get(CONF_MODEM_CHOICE),
-        data.get(CONF_PARSER_NAME)
+        all_parsers, data.get(CONF_MODEM_CHOICE), data.get(CONF_PARSER_NAME)
     )
 
     ***REMOVED*** Create scraper
@@ -213,9 +206,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return OptionsFlowHandler()
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -257,13 +248,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
                     user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
                     from datetime import datetime
+
                     user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
 
                     ***REMOVED*** If user selected "auto", update the choice to show what was detected
                     if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
                         _LOGGER.info(
-                            "Auto-detection successful: updating modem_choice from 'auto' to '%s'",
-                            detected_modem_name
+                            "Auto-detection successful: updating modem_choice from 'auto' to '%s'", detected_modem_name
                         )
                         user_input[CONF_MODEM_CHOICE] = detected_modem_name
 
@@ -285,9 +276,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-        return self.async_show_form(
-            step_id="user", data_schema=data_schema, errors=errors
-        )
+        return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
@@ -310,22 +299,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
             user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
             from datetime import datetime
+
             user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
 
             ***REMOVED*** If user selected "auto", update choice to show what was detected
             if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
                 _LOGGER.info(
                     "Auto-detection successful in options flow: updating modem_choice from 'auto' to '%s'",
-                    detected_modem_name
+                    detected_modem_name,
                 )
                 user_input[CONF_MODEM_CHOICE] = detected_modem_name
         else:
             ***REMOVED*** Preserve existing detection info if validation didn't return new info
             user_input[CONF_PARSER_NAME] = self.config_entry.data.get(CONF_PARSER_NAME)
             user_input[CONF_DETECTED_MODEM] = self.config_entry.data.get(CONF_DETECTED_MODEM, "Unknown")
-            user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(
-                CONF_DETECTED_MANUFACTURER, "Unknown"
-            )
+            user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
             user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
             user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
 
@@ -376,9 +364,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 self._update_detection_info(user_input, info)
 
                 ***REMOVED*** Update the config entry with all settings
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry, data=user_input
-                )
+                self.hass.config_entries.async_update_entry(self.config_entry, data=user_input)
 
                 ***REMOVED*** Create notification with detected modem info
                 message = self._create_config_message(user_input)
@@ -398,9 +384,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
         current_username = self.config_entry.data.get(CONF_USERNAME, "")
         current_modem_choice = self.config_entry.data.get(CONF_MODEM_CHOICE, "auto")
-        current_scan_interval = self.config_entry.data.get(
-            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-        )
+        current_scan_interval = self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
         ***REMOVED*** Get detection info for display
         detected_modem = self.config_entry.data.get(CONF_DETECTED_MODEM, "Not detected")
@@ -411,6 +395,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if last_detection and last_detection != "Never":
             try:
                 from datetime import datetime
+
                 dt = datetime.fromisoformat(last_detection)
                 last_detection = dt.strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
@@ -430,9 +415,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
-                vol.Required(
-                    CONF_SCAN_INTERVAL, default=current_scan_interval
-                ): vol.All(
+                vol.Required(CONF_SCAN_INTERVAL, default=current_scan_interval): vol.All(
                     vol.Coerce(int),
                     vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
                 ),

@@ -1,4 +1,5 @@
 """Base class for modem parsers."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -30,7 +31,7 @@ class ModemParser(ABC):
     url_patterns: list[dict[str, str | bool]] = []
 
     ***REMOVED*** Legacy field for backward compatibility (deprecated - use url_patterns)
-    auth_type: str = 'form'
+    auth_type: str = "form"
 
     ***REMOVED*** Authentication configuration (new system - optional, for backward compatibility)
     ***REMOVED*** Parsers should define this as a class attribute

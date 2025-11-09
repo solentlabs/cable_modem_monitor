@@ -1,4 +1,5 @@
 """Signal quality analyzer for adaptive polling recommendations."""
+
 from __future__ import annotations
 
 import logging
@@ -231,8 +232,5 @@ class SignalQualityAnalyzer:
             "sample_count": len(self._history),
             "oldest_sample": self._history[0]["timestamp"].isoformat(),
             "newest_sample": self._history[-1]["timestamp"].isoformat(),
-            "hours_covered": (
-                self._history[-1]["timestamp"] - self._history[0]["timestamp"]
-            ).total_seconds()
-            / 3600,
+            "hours_covered": (self._history[-1]["timestamp"] - self._history[0]["timestamp"]).total_seconds() / 3600,
         }

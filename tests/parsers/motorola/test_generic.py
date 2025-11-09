@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-"Tests for the generic Motorola MB series parser."
 import os
-from bs4 import BeautifulSoup
-import pytest
 
-from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser, RESTART_WINDOW_SECONDS
+import pytest
+from bs4 import BeautifulSoup
+
+from custom_components.cable_modem_monitor.parsers.motorola.generic import RESTART_WINDOW_SECONDS, MotorolaGenericParser
+
+"Tests for the generic Motorola MB series parser."
 
 
 @pytest.fixture
 def moto_home_html():
     """Load moto_home.html fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "generic", "MotoHome.asp")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -20,7 +22,7 @@ def moto_home_html():
 def moto_connection_html():
     """Load moto_connection.html fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "generic", "MotoConnection.asp")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -94,7 +96,7 @@ def test_restart_detection_filters_zero_power():
     ***REMOVED*** During restart (< 5 min), zero power/SNR should be filtered to None
     assert len(data["downstream"]) == 1
     assert data["downstream"][0]["power"] is None  ***REMOVED*** Filtered out
-    assert data["downstream"][0]["snr"] is None    ***REMOVED*** Filtered out
+    assert data["downstream"][0]["snr"] is None  ***REMOVED*** Filtered out
     assert data["system_info"]["system_uptime"] == "0 days 00h:04m:30s"
 
 
@@ -128,8 +130,8 @@ def test_restart_detection_preserves_nonzero_power():
 
     ***REMOVED*** During restart, non-zero values should be preserved
     assert len(data["downstream"]) == 1
-    assert data["downstream"][0]["power"] == 3.5   ***REMOVED*** Preserved
-    assert data["downstream"][0]["snr"] == 38.2    ***REMOVED*** Preserved
+    assert data["downstream"][0]["power"] == 3.5  ***REMOVED*** Preserved
+    assert data["downstream"][0]["snr"] == 38.2  ***REMOVED*** Preserved
 
 
 def test_no_filtering_after_restart_window():
@@ -163,7 +165,7 @@ def test_no_filtering_after_restart_window():
     ***REMOVED*** After restart window (>= 5 min), zero values should be kept
     assert len(data["downstream"]) == 1
     assert data["downstream"][0]["power"] == 0  ***REMOVED*** NOT filtered
-    assert data["downstream"][0]["snr"] == 0    ***REMOVED*** NOT filtered
+    assert data["downstream"][0]["snr"] == 0  ***REMOVED*** NOT filtered
 
 
 def test_restart_detection_upstream_channels():
@@ -206,64 +208,65 @@ def test_restart_window_constant():
 def test_downstream_channels(moto_connection_html):
     """Test parsing downstream channels."""
     parser = MotorolaGenericParser()
-    soup = BeautifulSoup(moto_connection_html, 'html.parser')
+    soup = BeautifulSoup(moto_connection_html, "html.parser")
     system_info = parser._parse_system_info(soup)
     channels = parser._parse_downstream(soup, system_info)
 
     assert len(channels) == 24, f"Expected 24 downstream channels, got {len(channels)}"
 
     first_ch = channels[0]
-    assert 'channel_id' in first_ch, "Missing 'channel_id' field"
-    assert 'power' in first_ch, "Missing 'power' field"
-    assert 'snr' in first_ch, "Missing 'snr' field"
-    assert 'frequency' in first_ch, "Missing 'frequency' field"
-    assert 'corrected' in first_ch, "Missing 'corrected' field"
-    assert 'uncorrected' in first_ch, "Missing 'uncorrected' field"
+    assert "channel_id" in first_ch, "Missing 'channel_id' field"
+    assert "power" in first_ch, "Missing 'power' field"
+    assert "snr" in first_ch, "Missing 'snr' field"
+    assert "frequency" in first_ch, "Missing 'frequency' field"
+    assert "corrected" in first_ch, "Missing 'corrected' field"
+    assert "uncorrected" in first_ch, "Missing 'uncorrected' field"
 
 
 def test_upstream_channels(moto_connection_html):
     """Test parsing upstream channels."""
     parser = MotorolaGenericParser()
-    soup = BeautifulSoup(moto_connection_html, 'html.parser')
+    soup = BeautifulSoup(moto_connection_html, "html.parser")
     system_info = parser._parse_system_info(soup)
     channels = parser._parse_upstream(soup, system_info)
 
     assert len(channels) > 0, "Should have at least one upstream channel"
 
     first_ch = channels[0]
-    assert 'channel_id' in first_ch, "Missing 'channel_id' field"
-    assert 'power' in first_ch, "Missing 'power' field"
-    assert 'frequency' in first_ch, "Missing 'frequency' field"
+    assert "channel_id" in first_ch, "Missing 'channel_id' field"
+    assert "power" in first_ch, "Missing 'power' field"
+    assert "frequency" in first_ch, "Missing 'frequency' field"
 
 
 def test_software_version(moto_home_html):
     """Test parsing software version."""
     parser = MotorolaGenericParser()
-    soup = BeautifulSoup(moto_home_html, 'html.parser')
+    soup = BeautifulSoup(moto_home_html, "html.parser")
 
     info = parser._parse_system_info(soup)
 
-    assert info['software_version'] != "Unknown", f"Should find software version, got '{info['software_version']}'"
-    assert info['software_version'] == "7621-5.7.1.5", f"Expected '7621-5.7.1.5', got '{info['software_version']}'"
+    assert info["software_version"] != "Unknown", f"Should find software version, got '{info['software_version']}'"
+    assert info["software_version"] == "7621-5.7.1.5", f"Expected '7621-5.7.1.5', got '{info['software_version']}'"
 
 
 def test_system_uptime(moto_connection_html):
     """Test parsing system uptime."""
     parser = MotorolaGenericParser()
-    soup = BeautifulSoup(moto_connection_html, 'html.parser')
+    soup = BeautifulSoup(moto_connection_html, "html.parser")
 
     info = parser._parse_system_info(soup)
 
-    assert info['system_uptime'] != "Unknown", f"Should find system uptime, got '{info['system_uptime']}'"
-    assert "days" in info['system_uptime'].lower() or "h:" in info['system_uptime'], \
-        f"Uptime should contain time info, got '{info['system_uptime']}'"
+    assert info["system_uptime"] != "Unknown", f"Should find system uptime, got '{info['system_uptime']}'"
+    assert (
+        "days" in info["system_uptime"].lower() or "h:" in info["system_uptime"]
+    ), f"Uptime should contain time info, got '{info['system_uptime']}'"
 
 
 def test_channel_counts(moto_connection_html, moto_home_html):
     """Test parsing channel counts."""
     parser = MotorolaGenericParser()
-    soup_conn = BeautifulSoup(moto_connection_html, 'html.parser')
-    soup_home = BeautifulSoup(moto_home_html, 'html.parser')
+    soup_conn = BeautifulSoup(moto_connection_html, "html.parser")
+    soup_home = BeautifulSoup(moto_home_html, "html.parser")
     system_info = parser._parse_system_info(soup_conn)
     system_info.update(parser._parse_system_info(soup_home))
 
@@ -272,16 +275,14 @@ def test_channel_counts(moto_connection_html, moto_home_html):
 
     assert len(downstream_channels) is not None, "Should find downstream count"
     assert len(upstream_channels) is not None, "Should find upstream count"
-    assert len(downstream_channels) == 24, \
-        f"Expected 24 downstream channels, got {len(downstream_channels)}"
-    assert len(upstream_channels) == 5, \
-        f"Expected 5 upstream channels, got {len(upstream_channels)}"
+    assert len(downstream_channels) == 24, f"Expected 24 downstream channels, got {len(downstream_channels)}"
+    assert len(upstream_channels) == 5, f"Expected 5 upstream channels, got {len(upstream_channels)}"
 
 
 def test_error_totals(moto_connection_html):
     """Test error total calculations."""
     parser = MotorolaGenericParser()
-    soup = BeautifulSoup(moto_connection_html, 'html.parser')
+    soup = BeautifulSoup(moto_connection_html, "html.parser")
     system_info = parser._parse_system_info(soup)
     channels = parser._parse_downstream(soup, system_info)
     total_corrected = sum(ch.get("corrected", 0) for ch in channels)

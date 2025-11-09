@@ -1,4 +1,5 @@
 """Utility functions for the Cable Modem Monitor integration."""
+
 from __future__ import annotations
 
 import re
@@ -39,22 +40,22 @@ def parse_uptime_to_seconds(uptime_str: str | None) -> int | None:
         total_seconds = 0
 
         ***REMOVED*** Parse days (handles "2 days" or "2d")
-        days_match = re.search(r'(\d+)\s*(?:days?|d)', uptime_str, re.IGNORECASE)
+        days_match = re.search(r"(\d+)\s*(?:days?|d)", uptime_str, re.IGNORECASE)
         if days_match:
             total_seconds += int(days_match.group(1)) * 86400
 
         ***REMOVED*** Parse hours (handles "5 hours", "5h", "05h")
-        hours_match = re.search(r'(\d+)\s*(?:hours?|h)', uptime_str, re.IGNORECASE)
+        hours_match = re.search(r"(\d+)\s*(?:hours?|h)", uptime_str, re.IGNORECASE)
         if hours_match:
             total_seconds += int(hours_match.group(1)) * 3600
 
         ***REMOVED*** Parse minutes (handles "37 minutes", "37 min", "37m")
-        minutes_match = re.search(r'(\d+)\s*(?:minutes?|mins?|m)', uptime_str, re.IGNORECASE)
+        minutes_match = re.search(r"(\d+)\s*(?:minutes?|mins?|m)", uptime_str, re.IGNORECASE)
         if minutes_match:
             total_seconds += int(minutes_match.group(1)) * 60
 
         ***REMOVED*** Parse seconds (handles "20 seconds", "20 sec", "20s")
-        seconds_match = re.search(r'(\d+)\s*(?:seconds?|secs?|s)', uptime_str, re.IGNORECASE)
+        seconds_match = re.search(r"(\d+)\s*(?:seconds?|secs?|s)", uptime_str, re.IGNORECASE)
         if seconds_match:
             total_seconds += int(seconds_match.group(1))
 

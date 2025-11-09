@@ -8,10 +8,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 ***REMOVED*** Common test artifacts to clean
 CLEANUP_PATHS = [
-    ".coverage",      ***REMOVED*** Coverage data file
-    "htmlcov",        ***REMOVED*** HTML coverage report
+    ".coverage",  ***REMOVED*** Coverage data file
+    "htmlcov",  ***REMOVED*** HTML coverage report
     ".pytest_cache",  ***REMOVED*** Pytest cache
-    "__pycache__"     ***REMOVED*** Python bytecode cache
+    "__pycache__",  ***REMOVED*** Python bytecode cache
 ]
 
 

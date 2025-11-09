@@ -1,16 +1,17 @@
 """Tests for Cable Modem Monitor button platform."""
+
 from __future__ import annotations
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
 from datetime import timedelta
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.button import (
-    ModemRestartButton,
     CleanupEntitiesButton,
+    ModemRestartButton,
     ResetEntitiesButton,
     async_setup_entry,
 )
@@ -168,7 +169,7 @@ async def test_monitor_restart_phase1_success_phase2_success(mock_coordinator, m
                 "cable_modem_connection_status": "offline",
                 "cable_modem_downstream_channel_count": 0,
                 "cable_modem_upstream_channel_count": 0,
-            }
+            },
         },
         ***REMOVED*** Phase 2: Modem fully online with channels
         {
@@ -177,7 +178,7 @@ async def test_monitor_restart_phase1_success_phase2_success(mock_coordinator, m
                 "cable_modem_connection_status": "online",
                 "cable_modem_downstream_channel_count": 32,
                 "cable_modem_upstream_channel_count": 4,
-            }
+            },
         },
     ]
 
@@ -347,8 +348,9 @@ async def test_cleanup_button_with_orphaned_entities(mock_coordinator, mock_conf
         assert service_calls[0][0][1] == "cleanup_entities"
 
         ***REMOVED*** Verify success notification mentions orphaned entities
-        notification_calls = [c for c in hass.services.async_call.call_args_list
-                              if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "orphaned" in notification_data["message"].lower()
@@ -378,8 +380,9 @@ async def test_cleanup_button_no_orphaned_entities(mock_coordinator, mock_config
         await button.async_press()
 
         ***REMOVED*** Verify notification says no orphaned entities found
-        notification_calls = [c for c in hass.services.async_call.call_args_list
-                              if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "No orphaned entities" in notification_data["message"]
@@ -395,6 +398,7 @@ async def test_reset_button_initialization(mock_coordinator, mock_config_entry):
     assert button._attr_unique_id == "test_entry_id_reset_entities_button"
     assert button._attr_icon == "mdi:refresh"
     from homeassistant.const import EntityCategory
+
     assert button._attr_entity_category == EntityCategory.CONFIG
 
 
@@ -453,8 +457,9 @@ async def test_reset_button_removes_all_entities_and_reloads(mock_coordinator, m
         hass.config_entries.async_reload.assert_called_once_with("test_entry_id")
 
         ***REMOVED*** Verify success notification
-        notification_calls = [c for c in hass.services.async_call.call_args_list
-                              if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) > 0
         notification_data = notification_calls[0][0][2]
         assert "Successfully removed 2 entities" in notification_data["message"]
@@ -469,36 +474,38 @@ async def test_restart_monitoring_grace_period_detects_all_channels(mock_coordin
     source = inspect.getsource(ModemRestartButton)
 
     ***REMOVED*** Verify grace period logic exists
-    assert 'grace_period' in source.lower()
-    assert 'stable_count' in source
+    assert "grace_period" in source.lower()
+    assert "stable_count" in source
 
 
 @pytest.mark.asyncio
 async def test_restart_monitoring_channel_stability_detection(mock_coordinator, mock_config_entry):
     """Test that restart monitoring detects when channels are stable."""
     import inspect
+
     from custom_components.cable_modem_monitor.button import ModemRestartButton
 
     source = inspect.getsource(ModemRestartButton)
 
     ***REMOVED*** Verify stability checking logic exists
-    assert 'prev_downstream' in source
-    assert 'prev_upstream' in source
-    assert 'stable_count' in source
+    assert "prev_downstream" in source
+    assert "prev_upstream" in source
+    assert "stable_count" in source
 
     ***REMOVED*** Verify reset logic when channels change
-    assert 'stable_count = 0' in source
+    assert "stable_count = 0" in source
 
 
 @pytest.mark.asyncio
 async def test_restart_monitoring_grace_period_resets_on_change(mock_coordinator, mock_config_entry):
     """Test that grace period resets if more channels appear."""
     import inspect
+
     from custom_components.cable_modem_monitor.button import ModemRestartButton
 
     source = inspect.getsource(ModemRestartButton)
 
     ***REMOVED*** Verify grace period reset logic exists
-    assert 'grace_period_active = False' in source
+    assert "grace_period_active = False" in source
     ***REMOVED*** Should reset grace period when channels change
-    assert 'stable_count = 0' in source
+    assert "stable_count = 0" in source

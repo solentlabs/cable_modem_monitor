@@ -1,4 +1,5 @@
 """Helper utilities for modem discovery and detection."""
+
 from __future__ import annotations
 
 import logging
@@ -51,8 +52,9 @@ class ParserHeuristics:
 
                     ***REMOVED*** Strong indicators (in title or prominent text)
                     if manufacturer in title or manufacturer in html[:1000]:
-                        _LOGGER.debug("Heuristics: %s is LIKELY (found '%s' in title/header)",
-                                      parser_class.name, manufacturer)
+                        _LOGGER.debug(
+                            "Heuristics: %s is LIKELY (found '%s' in title/header)", parser_class.name, manufacturer
+                        )
                         likely_parsers.append(parser_class)
                     ***REMOVED*** Weak indicators (anywhere in page) or model numbers
                     elif any(model.lower() in html for model in parser_class.models):
@@ -62,8 +64,7 @@ class ParserHeuristics:
                         unlikely_parsers.append(parser_class)
 
             else:
-                _LOGGER.debug("Heuristics: Root page returned status %s, skipping heuristics",
-                              response.status_code)
+                _LOGGER.debug("Heuristics: Root page returned status %s, skipping heuristics", response.status_code)
                 return list(parsers)  ***REMOVED*** Return all parsers if heuristics fail
 
         except (requests.RequestException, Exception) as e:
@@ -73,8 +74,9 @@ class ParserHeuristics:
         ***REMOVED*** If we found likely parsers, return those first, then the rest
         if likely_parsers:
             result = likely_parsers + unlikely_parsers
-            _LOGGER.info("Heuristics: Narrowed search to %s likely parsers (out of %s total)",
-                         len(likely_parsers), len(parsers))
+            _LOGGER.info(
+                "Heuristics: Narrowed search to %s likely parsers (out of %s total)", len(likely_parsers), len(parsers)
+            )
             return result
 
         ***REMOVED*** No heuristics matched, return all parsers
@@ -98,25 +100,22 @@ class ParserHeuristics:
             Tuple of (html, url) if successful, None otherwise
         """
         ***REMOVED*** Check if parser has URL patterns marked as not requiring auth
-        if not hasattr(parser_class, 'url_patterns'):
+        if not hasattr(parser_class, "url_patterns"):
             return None
 
         for pattern in parser_class.url_patterns:
             ***REMOVED*** Look for patterns explicitly marked as not requiring auth
-            if not pattern.get('auth_required', True):
+            if not pattern.get("auth_required", True):
                 url = f"{base_url}{pattern['path']}"
                 try:
-                    _LOGGER.debug("Trying anonymous access to %s for parser %s",
-                                  url, parser_class.name)
+                    _LOGGER.debug("Trying anonymous access to %s for parser %s", url, parser_class.name)
                     response = session.get(url, timeout=5, verify=verify_ssl)
 
                     if response.status_code == 200:
-                        _LOGGER.info("Anonymous access successful to %s (%s bytes)",
-                                     url, len(response.text))
+                        _LOGGER.info("Anonymous access successful to %s (%s bytes)", url, len(response.text))
                         return (response.text, url)
                     else:
-                        _LOGGER.debug("Anonymous access to %s returned status %s",
-                                      url, response.status_code)
+                        _LOGGER.debug("Anonymous access to %s returned status %s", url, response.status_code)
                 except requests.RequestException as e:
                     _LOGGER.debug("Anonymous access to %s failed: %s", url, type(e).__name__)
                     continue
@@ -158,9 +157,8 @@ class DiscoveryCircuitBreaker:
         ***REMOVED*** Check max attempts
         if self.attempts >= self.max_attempts:
             _LOGGER.warning(
-                "Discovery circuit breaker: Max attempts reached (%s). "
-                "Stopping detection to prevent endless loops.",
-                self.max_attempts
+                "Discovery circuit breaker: Max attempts reached (%s). " "Stopping detection to prevent endless loops.",
+                self.max_attempts,
             )
             self._broken = True
             return False
@@ -169,9 +167,9 @@ class DiscoveryCircuitBreaker:
         elapsed = time.time() - self.start_time
         if elapsed > self.timeout:
             _LOGGER.warning(
-                "Discovery circuit breaker: Timeout reached (%.1fs > %ss). "
-                "Stopping detection.",
-                elapsed, self.timeout
+                "Discovery circuit breaker: Timeout reached (%.1fs > %ss). " "Stopping detection.",
+                elapsed,
+                self.timeout,
             )
             self._broken = True
             return False
@@ -190,14 +188,10 @@ class DiscoveryCircuitBreaker:
 
         if parser_name:
             _LOGGER.debug(
-                "Discovery attempt %s/%s (%.1fs elapsed): %s",
-                self.attempts, self.max_attempts, elapsed, parser_name
+                "Discovery attempt %s/%s (%.1fs elapsed): %s", self.attempts, self.max_attempts, elapsed, parser_name
             )
         else:
-            _LOGGER.debug(
-                "Discovery attempt %s/%s (%.1fs elapsed)",
-                self.attempts, self.max_attempts, elapsed
-            )
+            _LOGGER.debug("Discovery attempt %s/%s (%.1fs elapsed)", self.attempts, self.max_attempts, elapsed)
 
     def is_broken(self) -> bool:
         """Check if circuit is broken."""

@@ -1,8 +1,9 @@
 """Sensor platform for Cable Modem Monitor."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -35,7 +36,7 @@ async def async_setup_entry(
     """Set up Cable Modem Monitor sensors."""
     _LOGGER.info("async_setup_entry called for %s", entry.entry_id)
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.debug("Coordinator data has %s upstream channels", len(coordinator.data.get('cable_modem_upstream', [])))
+    _LOGGER.debug("Coordinator data has %s upstream channels", len(coordinator.data.get("cable_modem_upstream", [])))
 
     entities = []
 
@@ -43,11 +44,13 @@ async def async_setup_entry(
     entities.append(ModemConnectionStatusSensor(coordinator, entry))
 
     ***REMOVED*** Add health monitoring sensors
-    entities.extend([
-        ModemHealthStatusSensor(coordinator, entry),
-        ModemPingLatencySensor(coordinator, entry),
-        ModemHttpLatencySensor(coordinator, entry),
-    ])
+    entities.extend(
+        [
+            ModemHealthStatusSensor(coordinator, entry),
+            ModemPingLatencySensor(coordinator, entry),
+            ModemHttpLatencySensor(coordinator, entry),
+        ]
+    )
 
     ***REMOVED*** Add total error sensors
     entities.append(ModemTotalCorrectedSensor(coordinator, entry))
@@ -77,17 +80,13 @@ async def async_setup_entry(
             )
             ***REMOVED*** Only add error sensors if the data includes them
             if "corrected" in channel:
-                entities.append(
-                    ModemDownstreamCorrectedSensor(coordinator, entry, channel_num)
-                )
+                entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_num))
             if "uncorrected" in channel:
-                entities.append(
-                    ModemDownstreamUncorrectedSensor(coordinator, entry, channel_num)
-                )
+                entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_num))
 
     ***REMOVED*** Add per-channel upstream sensors
     if coordinator.data.get("cable_modem_upstream"):
-        _LOGGER.debug("Creating entities for %s upstream channels", len(coordinator.data['cable_modem_upstream']))
+        _LOGGER.debug("Creating entities for %s upstream channels", len(coordinator.data["cable_modem_upstream"]))
         for idx, channel in enumerate(coordinator.data["cable_modem_upstream"]):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
             ***REMOVED*** Fallback to index+1 if neither exists (shouldn't happen in practice)
@@ -98,7 +97,7 @@ async def async_setup_entry(
 
     ***REMOVED*** Add LAN stats sensors
     if coordinator.data.get("cable_modem_lan_stats"):
-        for interface, stats in coordinator.data["cable_modem_lan_stats"].items():
+        for interface, _stats in coordinator.data["cable_modem_lan_stats"].items():
             entities.extend(
                 [
                     ModemLanReceivedBytesSensor(coordinator, entry, interface),
@@ -145,10 +144,10 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):  ***REMOVED*** type: ign
         ***REMOVED*** This allows sensors to retain last known values during modem reboots
         ***REMOVED*** Only mark unavailable if we truly can't reach the modem
         status = self.coordinator.data.get("cable_modem_connection_status", "unknown")
-        return (
-            self.coordinator.last_update_success
-            and status in ("online", "offline")  ***REMOVED*** Available for both online and offline (just rebooting)
-        )
+        return self.coordinator.last_update_success and status in (
+            "online",
+            "offline",
+        )  ***REMOVED*** Available for both online and offline (just rebooting)
 
 
 class ModemConnectionStatusSensor(ModemSensorBase):
@@ -209,9 +208,7 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
 class ModemDownstreamPowerSensor(ModemSensorBase):
     """Sensor for downstream channel power."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -236,9 +233,7 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
 class ModemDownstreamSNRSensor(ModemSensorBase):
     """Sensor for downstream channel SNR."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -263,9 +258,7 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
 class ModemDownstreamFrequencySensor(ModemSensorBase):
     """Sensor for downstream channel frequency."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -291,9 +284,7 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
 class ModemDownstreamCorrectedSensor(ModemSensorBase):
     """Sensor for downstream channel corrected errors."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -317,9 +308,7 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
 class ModemDownstreamUncorrectedSensor(ModemSensorBase):
     """Sensor for downstream channel uncorrected errors."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -343,9 +332,7 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
 class ModemUpstreamPowerSensor(ModemSensorBase):
     """Sensor for upstream channel power."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel
@@ -370,9 +357,7 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
 class ModemUpstreamFrequencySensor(ModemSensorBase):
     """Sensor for upstream channel frequency."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._channel = channel

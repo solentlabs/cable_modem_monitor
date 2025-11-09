@@ -1,10 +1,12 @@
 """Tests for Technicolor XB7 parser."""
+
 from __future__ import annotations
+
+from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 from bs4 import BeautifulSoup
-from pathlib import Path
-from datetime import datetime, timedelta
 
 from custom_components.cable_modem_monitor.parsers.technicolor.xb7 import TechnicolorXB7Parser
 
@@ -13,7 +15,7 @@ from custom_components.cable_modem_monitor.parsers.technicolor.xb7 import Techni
 def network_setup_html():
     """Load network_setup.jst HTML fixture."""
     fixture_path = Path(__file__).parent / "fixtures" / "xb7" / "network_setup.jst"
-    with open(fixture_path, "r", encoding="utf-8") as f:
+    with open(fixture_path, encoding="utf-8") as f:
         return f.read()
 
 
@@ -74,7 +76,7 @@ class TestAuthentication:
             "http://10.0.0.1/check.jst",
             data={"username": "admin", "password": "password"},
             timeout=10,
-            allow_redirects=True
+            allow_redirects=True,
         )
         session.get.assert_called_once_with("http://10.0.0.1/network_setup.jst", timeout=10)
 

@@ -1,4 +1,5 @@
 """Authentication configuration dataclasses."""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -34,24 +35,28 @@ class AuthStrategyType(Enum):
 @dataclass
 class AuthConfig(ABC):
     """Base class for authentication configurations."""
+
     strategy: AuthStrategyType
 
 
 @dataclass
 class NoAuthConfig(AuthConfig):
     """No authentication required."""
+
     strategy: AuthStrategyType = AuthStrategyType.NO_AUTH
 
 
 @dataclass
 class BasicAuthConfig(AuthConfig):
     """HTTP Basic Authentication configuration."""
+
     strategy: AuthStrategyType = AuthStrategyType.BASIC_HTTP
 
 
 @dataclass
 class FormAuthConfig(AuthConfig):
     """Form-based authentication configuration."""
+
     strategy: AuthStrategyType
     login_url: str
     username_field: str
@@ -62,6 +67,7 @@ class FormAuthConfig(AuthConfig):
 @dataclass
 class RedirectFormAuthConfig(AuthConfig):
     """Form auth with redirect validation configuration (e.g., XB7)."""
+
     strategy: AuthStrategyType = AuthStrategyType.REDIRECT_FORM
     login_url: str = "/check.jst"
     username_field: str = "username"
@@ -73,6 +79,7 @@ class RedirectFormAuthConfig(AuthConfig):
 @dataclass
 class HNAPAuthConfig(AuthConfig):
     """HNAP/SOAP session authentication configuration (e.g., MB8611)."""
+
     strategy: AuthStrategyType = AuthStrategyType.HNAP_SESSION
     login_url: str = "/Login.html"
     hnap_endpoint: str = "/HNAP1/"

@@ -1,4 +1,5 @@
 """Button platform for Cable Modem Monitor."""
+
 from __future__ import annotations
 
 import logging
@@ -358,10 +359,7 @@ class CleanupEntitiesButton(ModemButtonBase):
         entity_reg = er.async_get(self.hass)
 
         ***REMOVED*** Count entities before cleanup
-        all_cable_modem = [
-            e for e in entity_reg.entities.values()
-            if e.platform == DOMAIN
-        ]
+        all_cable_modem = [e for e in entity_reg.entities.values() if e.platform == DOMAIN]
         orphaned_before = [e for e in all_cable_modem if not e.config_entry_id]
 
         ***REMOVED*** Call the cleanup_entities service
@@ -449,11 +447,10 @@ class ResetEntitiesButton(ModemButtonBase):
                 "Use this after replacing your modem or to fix entity issues."
             ),
             "entities": (
-                "Entities will be recreated with the same IDs. "
-                "Automations and dashboards will continue to work."
+                "Entities will be recreated with the same IDs. " "Automations and dashboards will continue to work."
             ),
             "history": "Historical data should be preserved (stored by entity ID in recorder database).",
-            "recommendation": "Create a backup before using if you want to be safe."
+            "recommendation": "Create a backup before using if you want to be safe.",
         }
 
     async def async_press(self) -> None:

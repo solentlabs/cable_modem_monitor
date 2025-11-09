@@ -1,4 +1,5 @@
 """Web scraper for cable modem data."""
+
 from __future__ import annotations
 
 import logging
@@ -46,8 +47,8 @@ class ModemScraper:
         """
         self.host = host
         ***REMOVED*** Support both plain IP addresses and full URLs (http:// or https://)
-        if host.startswith(('http://', 'https://')):
-            self.base_url = host.rstrip('/')
+        if host.startswith(("http://", "https://")):
+            self.base_url = host.rstrip("/")
         else:
             ***REMOVED*** Try HTTPS first (MB8611 and newer modems), fallback to HTTP
             self.base_url = f"https://{host}"
@@ -60,6 +61,7 @@ class ModemScraper:
         if not self.verify_ssl:
             ***REMOVED*** Disable SSL warnings for the session only (not globally)
             import urllib3
+
             self.session.verify = False
             ***REMOVED*** Disable warnings only for this session
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -118,7 +120,7 @@ class ModemScraper:
         urls = []
         for pattern in self.parser.url_patterns:
             url = f"{self.base_url}{pattern['path']}"
-            urls.append((url, pattern['auth_method'], type(self.parser)))
+            urls.append((url, pattern["auth_method"], type(self.parser)))
         return urls
 
     def _find_cached_parser(self) -> type[ModemParser] | None:
@@ -132,27 +134,23 @@ class ModemScraper:
     def _find_matching_pattern(self, url_patterns: list[dict], cached_url: str) -> dict | None:
         """Find pattern that matches cached URL, or return first pattern as fallback."""
         for pattern in url_patterns:
-            path = pattern.get('path')
+            path = pattern.get("path")
             if isinstance(path, str) and path in cached_url:
                 return pattern
         return url_patterns[0] if url_patterns else None
 
-    def _add_cached_url_if_matching(
-        self, urls: list, cached_parser: type[ModemParser], cached_url: str
-    ) -> None:
+    def _add_cached_url_if_matching(self, urls: list, cached_parser: type[ModemParser], cached_url: str) -> None:
         """Add cached URL to list if a matching pattern is found."""
         cached_pattern = self._find_matching_pattern(cached_parser.url_patterns, cached_url)
         if cached_pattern:
-            urls.append((cached_url, cached_pattern['auth_method'], cached_parser))
+            urls.append((cached_url, cached_pattern["auth_method"], cached_parser))
 
-    def _add_parser_urls(
-        self, urls: list, parser_class: type[ModemParser], exclude_url: str | None = None
-    ) -> None:
+    def _add_parser_urls(self, urls: list, parser_class: type[ModemParser], exclude_url: str | None = None) -> None:
         """Add URLs from a parser to the list, optionally excluding a specific URL."""
         for pattern in parser_class.url_patterns:
             url = f"{self.base_url}{pattern['path']}"
             if exclude_url is None or url != exclude_url:
-                urls.append((url, pattern['auth_method'], parser_class))
+                urls.append((url, pattern["auth_method"], parser_class))
 
     def _get_tier2_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 2: Cached parser from previous detection."""
@@ -190,9 +188,9 @@ class ModemScraper:
         if self.cached_url:
             for parser_class in self.parsers:
                 for pattern in parser_class.url_patterns:
-                    path = pattern.get('path')
+                    path = pattern.get("path")
                     if isinstance(path, str) and path in self.cached_url:
-                        urls.append((self.cached_url, pattern['auth_method'], parser_class))
+                        urls.append((self.cached_url, pattern["auth_method"], parser_class))
                         break
 
         ***REMOVED*** Add all parser URLs
@@ -200,7 +198,7 @@ class ModemScraper:
             for pattern in parser_class.url_patterns:
                 url = f"{self.base_url}{pattern['path']}"
                 if url != self.cached_url:
-                    urls.append((url, pattern['auth_method'], parser_class))
+                    urls.append((url, pattern["auth_method"], parser_class))
 
         return urls
 
@@ -241,11 +239,11 @@ class ModemScraper:
             return None
 
         ***REMOVED*** Try HTTPS first, then HTTP fallback for each URL
-        protocols_to_try = ['https', 'http'] if self.base_url.startswith('https://') else ['http']
+        protocols_to_try = ["https", "http"] if self.base_url.startswith("https://") else ["http"]
         _LOGGER.debug("Protocols to try: %s (base_url: %s)", protocols_to_try, self.base_url)
 
         for protocol in protocols_to_try:
-            current_base_url = self.base_url.replace('https://', f'{protocol}://').replace('http://', f'{protocol}://')
+            current_base_url = self.base_url.replace("https://", f"{protocol}://").replace("http://", f"{protocol}://")
             _LOGGER.debug("Trying protocol: %s (current_base_url: %s)", protocol, current_base_url)
 
             for url, auth_method, parser_class in urls_to_try:
@@ -255,20 +253,24 @@ class ModemScraper:
                 try:
                     _LOGGER.debug(
                         "Attempting to fetch %s (auth: %s, parser: %s)",
-                        url, auth_method, parser_class.name if parser_class else 'unknown'
+                        url,
+                        auth_method,
+                        parser_class.name if parser_class else "unknown",
                     )
                     auth = None
-                    if auth_method == 'basic' and self.username and self.password:
+                    if auth_method == "basic" and self.username and self.password:
                         auth = (self.username, self.password)
 
                     ***REMOVED*** Use configured SSL verification setting
                     response = self.session.get(url, timeout=10, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
-                        parser_name = parser_class.name if parser_class else 'unknown'
+                        parser_name = parser_class.name if parser_class else "unknown"
                         _LOGGER.info(
                             "Successfully connected to %s (HTML: %s bytes, parser: %s)",
-                            url, len(response.text), parser_name
+                            url,
+                            len(response.text),
+                            parser_name,
                         )
                         self.last_successful_url = url
                         ***REMOVED*** Update base_url to the working protocol
@@ -305,7 +307,7 @@ class ModemScraper:
                         _LOGGER.info(
                             "✓ Detected modem via anonymous probing: %s (%s)",
                             parser_class.name,
-                            parser_class.manufacturer
+                            parser_class.manufacturer,
                         )
                         return parser_class()
                     else:
@@ -325,7 +327,7 @@ class ModemScraper:
         if not circuit_breaker.should_continue():
             raise ParserNotFoundError(
                 modem_info={"title": soup.title.string if soup.title else "NO TITLE"},
-                attempted_parsers=attempted_parsers
+                attempted_parsers=attempted_parsers,
             )
 
         try:
@@ -335,7 +337,7 @@ class ModemScraper:
                 _LOGGER.info(
                     "Detected modem using suggested parser: %s (%s)",
                     suggested_parser.name,
-                    suggested_parser.manufacturer
+                    suggested_parser.manufacturer,
                 )
                 return suggested_parser()
             else:
@@ -356,10 +358,7 @@ class ModemScraper:
             self.base_url, self.parsers, self.session, self.verify_ssl
         )
 
-        _LOGGER.debug(
-            "Attempting to detect parser from %s available parsers (prioritized)",
-            len(prioritized_parsers)
-        )
+        _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)", len(prioritized_parsers))
 
         for parser_class in prioritized_parsers:
             if not circuit_breaker.should_continue():
@@ -378,10 +377,7 @@ class ModemScraper:
                     attempted_parsers.append(parser_class.name)
                     _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
             except Exception as e:
-                _LOGGER.error(
-                    f"Parser {parser_class.name} detection failed with exception: {e}",
-                    exc_info=True
-                )
+                _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
                 attempted_parsers.append(parser_class.name)
 
         return None
@@ -430,13 +426,11 @@ class ModemScraper:
             "title": soup.title.string if soup.title else "NO TITLE",
             "url": url,
         }
-        _LOGGER.error("No parser matched after trying %s parsers. Title: %s",
-                      len(attempted_parsers), modem_info["title"])
-
-        raise ParserNotFoundError(
-            modem_info=modem_info,
-            attempted_parsers=attempted_parsers
+        _LOGGER.error(
+            "No parser matched after trying %s parsers. Title: %s", len(attempted_parsers), modem_info["title"]
         )
+
+        raise ParserNotFoundError(modem_info=modem_info, attempted_parsers=attempted_parsers)
 
     def _parse_data(self, html: str) -> dict:
         """Parse data from the modem."""
@@ -475,11 +469,7 @@ class ModemScraper:
 
     def _create_error_response(self, status: str) -> dict:
         """Create error response dictionary."""
-        return {
-            "cable_modem_connection_status": status,
-            "cable_modem_downstream": [],
-            "cable_modem_upstream": []
-        }
+        return {"cable_modem_connection_status": status, "cable_modem_downstream": [], "cable_modem_upstream": []}
 
     def _ensure_parser(self, html: str, successful_url: str, suggested_parser: type[ModemParser] | None) -> bool:
         """Ensure parser is detected or instantiated.
@@ -494,8 +484,9 @@ class ModemScraper:
             self.parser = self._detect_parser(html, successful_url, suggested_parser)
         except ParserNotFoundError as e:
             _LOGGER.error("No compatible parser found: %s", e.get_user_message())
-            _LOGGER.info("Troubleshooting steps:\n%s",
-                         "\n".join(f"  - {step}" for step in e.get_troubleshooting_steps()))
+            _LOGGER.info(
+                "Troubleshooting steps:\n%s", "\n".join(f"  - {step}" for step in e.get_troubleshooting_steps())
+            )
             ***REMOVED*** Re-raise so config_flow can show detailed error
             raise
 
@@ -540,10 +531,7 @@ class ModemScraper:
         total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in downstream)
 
         ***REMOVED*** Prefix system_info keys with cable_modem_
-        prefixed_system_info = {
-            f"cable_modem_{key}": value
-            for key, value in system_info.items()
-        }
+        prefixed_system_info = {f"cable_modem_{key}": value for key, value in system_info.items()}
 
         return {
             "cable_modem_connection_status": "online" if (downstream or upstream) else "offline",
@@ -629,7 +617,7 @@ class ModemScraper:
         if self.parser is None:
             _LOGGER.error("Cannot validate restart capability: parser is not set")
             return False
-        if not hasattr(self.parser, 'restart'):
+        if not hasattr(self.parser, "restart"):
             _LOGGER.error("Parser %s does not support restart functionality", self.parser.name)
             return False
         return True
@@ -669,7 +657,7 @@ class ModemScraper:
             return False
         _LOGGER.info("Attempting to restart modem using %s parser", self.parser.name)
         ***REMOVED*** Use getattr to access restart method dynamically (not all parsers support it)
-        restart_method = getattr(self.parser, 'restart', None)
+        restart_method = getattr(self.parser, "restart", None)
         if restart_method is None:
             _LOGGER.error("Parser does not support restart functionality")
             return False

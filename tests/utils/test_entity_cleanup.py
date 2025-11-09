@@ -1,7 +1,9 @@
 """Tests for the entity cleanup utility."""
+
 from __future__ import annotations
 
 from unittest.mock import mock_open, patch
+
 import pytest
 
 from custom_components.cable_modem_monitor.utils.entity_cleanup import (
@@ -44,12 +46,12 @@ def test_analyze_entities(mock_entity_registry_data):
     """Test the analyze_entities function."""
     stats = analyze_entities(mock_entity_registry_data)
 
-    assert stats['total_entities'] == 3
-    assert stats['cable_modem_total'] == 2
-    assert len(stats['active']) == 1
-    assert len(stats['orphaned']) == 1
-    assert stats['active'][0]['entity_id'] == "sensor.cable_modem_active_sensor"
-    assert stats['orphaned'][0]['entity_id'] == "sensor.cable_modem_orphaned_sensor"
+    assert stats["total_entities"] == 3
+    assert stats["cable_modem_total"] == 2
+    assert len(stats["active"]) == 1
+    assert len(stats["orphaned"]) == 1
+    assert stats["active"][0]["entity_id"] == "sensor.cable_modem_active_sensor"
+    assert stats["orphaned"][0]["entity_id"] == "sensor.cable_modem_orphaned_sensor"
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -69,8 +71,8 @@ def test_cleanup_orphaned_entities(mock_json_load, mock_json_dump, mock_file, mo
         ***REMOVED*** Verify that json.dump was called with the correct data (without the orphaned entity)
         args, kwargs = mock_json_dump.call_args
         written_data = args[0]
-        assert len(written_data['data']['entities']) == 2
-        assert "sensor.cable_modem_orphaned_sensor" not in [e['entity_id'] for e in written_data['data']['entities']]
+        assert len(written_data["data"]["entities"]) == 2
+        assert "sensor.cable_modem_orphaned_sensor" not in [e["entity_id"] for e in written_data["data"]["entities"]]
 
 
 @patch("builtins.open", new_callable=mock_open)
@@ -90,5 +92,5 @@ def test_remove_all_entities(mock_json_load, mock_json_dump, mock_file, mock_ent
         ***REMOVED*** Verify that json.dump was called with the correct data (without any cable modem entities)
         args, kwargs = mock_json_dump.call_args
         written_data = args[0]
-        assert len(written_data['data']['entities']) == 1
-        assert written_data['data']['entities'][0]['entity_id'] == "switch.other_switch"
+        assert len(written_data["data"]["entities"]) == 1
+        assert written_data["data"]["entities"][0]["entity_id"] == "switch.other_switch"

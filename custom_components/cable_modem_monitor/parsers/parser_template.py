@@ -46,10 +46,13 @@ EXAMPLE USAGE:
 ==============
 See motorola_mb.py or arris_sb6141.py for real-world examples.
 """
+
 from __future__ import annotations
 
 import logging
+
 from bs4 import BeautifulSoup
+
 from .base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,10 +113,7 @@ class YourModemParser(ModemParser):
             return True
 
         ***REMOVED*** Check URL pattern
-        if "your_modem_page.html" in url.lower():
-            return True
-
-        return False
+        return "your_modem_page.html" in url.lower()
 
     ***REMOVED*** =========================================================================
     ***REMOVED*** STEP 4: IMPLEMENT DOWNSTREAM CHANNEL PARSING
