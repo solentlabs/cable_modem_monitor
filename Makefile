@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint format check deploy sync-version
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version
 
 # Default target - show help
 help:
@@ -12,8 +12,13 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint        - Run ruff linter"
+	@echo "  make lint-fix    - Run ruff linter and auto-fix issues"
+	@echo "  make fix-imports - Fix import sorting with Ruff"
+	@echo "  make lint-all    - Run all linters (ruff, mypy, security)"
+	@echo "  make type-check  - Run mypy type checker"
 	@echo "  make format      - Format code with black"
-	@echo "  make check       - Run both lint and format check"
+	@echo "  make format-check - Check code formatting without modifying"
+	@echo "  make check       - Run all code quality checks (lint, format, type)"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make deploy      - Deploy to Home Assistant server"
@@ -39,15 +44,42 @@ clean:
 
 # Run linter
 lint:
-	@ruff check custom_components/cable_modem_monitor/
+	@echo "Running Ruff linter..."
+	@ruff check .
+
+# Run linter with auto-fix
+lint-fix:
+	@echo "Running Ruff linter with auto-fix..."
+	@ruff check --fix .
+
+# Type checking
+type-check:
+	@echo "Running mypy type checker..."
+	@mypy .
 
 # Format code
 format:
-	@black custom_components/cable_modem_monitor/
+	@echo "Formatting code with Black..."
+	@black .
+
+# Check code formatting without modifying
+format-check:
+	@echo "Checking code formatting..."
+	@black --check .
 
 # Run all code quality checks
-check: lint
-	@black --check custom_components/cable_modem_monitor/
+check: lint format-check type-check
+	@echo "✅ All code quality checks passed!"
+
+# Run all linters (comprehensive)
+lint-all: lint type-check
+	@echo "Running security linting..."
+	@if command -v bandit >/dev/null 2>&1; then \
+		bandit -c .bandit -r . ; \
+	else \
+		echo "⚠️  Bandit not installed. Install with: pip install -r requirements-security.txt"; \
+	fi
+	@echo "✅ All linting checks completed!"
 
 # Deploy to Home Assistant
 deploy:

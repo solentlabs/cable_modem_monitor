@@ -1,24 +1,24 @@
 """The Cable Modem Monitor integration."""
 from __future__ import annotations
 
-from datetime import timedelta, datetime
 import logging
 import sqlite3
+from datetime import datetime, timedelta
 
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
 
 from .const import (
     CONF_HOST,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -41,16 +41,12 @@ SERVICE_CLEANUP_ENTITIES = "cleanup_entities"
 SERVICE_CLEANUP_ENTITIES_SCHEMA = vol.Schema({})
 
 
-async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Migrate entity IDs to include cable_modem_ prefix for v2.0."""
-    from homeassistant.helpers import entity_registry as er
-
-    entity_reg = er.async_get(hass)
-
+def _get_migration_patterns() -> dict[str, str]:
+    """Get mapping of old entity ID patterns to new ones."""
     # Mapping of old entity ID patterns to new ones
     # This handles migration from pre-v2.0 versions to v2.0 entity naming
     # Simplified patterns - we only support migrating from no-prefix to cable_modem_ prefix
-    old_patterns_to_new = {
+    return {
         # Note: Custom/IP prefixes were never released, so we only handle no-prefix entities
         # Downstream channels (full names)
         r'^sensor\.downstream_ch_(\d+)_(power|snr|frequency|corrected|uncorrected)$':
@@ -94,64 +90,86 @@ async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> N
             'button.cable_modem_cleanup_entities',
     }
 
+
+def _should_migrate_entity(entity_entry, entry: ConfigEntry) -> bool:
+    """Check if an entity should be migrated."""
+    if entity_entry.platform != DOMAIN:
+        return False
+
+    if entity_entry.config_entry_id != entry.entry_id:
+        return False
+
+    # Skip if already has cable_modem_ prefix
+    if 'cable_modem_' in entity_entry.entity_id:
+        return False
+
+    return True
+
+
+def _find_new_entity_id(old_entity_id: str, patterns: dict[str, str]) -> str | None:
+    """Find new entity ID for an old entity ID using migration patterns."""
     import re
 
+    for pattern, template in patterns.items():
+        match = re.match(pattern, old_entity_id)
+        if match:
+            groups = match.groups()
+            if '{}' in template:
+                return template.format(*groups)
+            return template
+
+    return None
+
+
+def _migrate_single_entity(entity_reg, entity_entry, old_entity_id: str, new_entity_id: str) -> bool:
+    """Migrate a single entity to a new entity ID."""
+    try:
+        # Check if target entity ID already exists (from another integration)
+        existing_entity = entity_reg.async_get(new_entity_id)
+        if existing_entity and existing_entity.platform != DOMAIN:
+            _LOGGER.warning(
+                "Cannot migrate %s -> %s: "
+                "Target entity ID already exists (platform: %s). "
+                "Skipping migration for this entity.",
+                old_entity_id, new_entity_id, existing_entity.platform
+            )
+            return False
+
+        entity_reg.async_update_entity(
+            entity_entry.entity_id,
+            new_entity_id=new_entity_id
+        )
+        _LOGGER.info("Migrated %s -> %s", old_entity_id, new_entity_id)
+        return True
+    except Exception as e:
+        _LOGGER.error("Failed to migrate %s: %s", old_entity_id, e)
+        return False
+
+
+async def async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Migrate entity IDs to include cable_modem_ prefix for v2.0."""
+    from homeassistant.helpers import entity_registry as er
+
+    entity_reg = er.async_get(hass)
+    patterns = _get_migration_patterns()
     migrations = []
 
     # Find all entities belonging to this integration
     for entity_entry in entity_reg.entities.values():
-        if entity_entry.platform != DOMAIN:
-            continue
-
-        if entity_entry.config_entry_id != entry.entry_id:
+        if not _should_migrate_entity(entity_entry, entry):
             continue
 
         old_entity_id = entity_entry.entity_id
+        new_entity_id = _find_new_entity_id(old_entity_id, patterns)
 
-        # Skip if already has cable_modem_ prefix
-        if 'cable_modem_' in old_entity_id:
-            continue
-
-        # Try to match against patterns and generate new entity ID
-        for pattern, template in old_patterns_to_new.items():
-            match = re.match(pattern, old_entity_id)
-            if match:
-                # Extract all captured groups
-                groups = match.groups()
-
-                # Generate new entity ID
-                if '{}' in template:
-                    new_entity_id = template.format(*groups)
-                else:
-                    new_entity_id = template
-
-                migrations.append((entity_entry, old_entity_id, new_entity_id))
-                break
+        if new_entity_id:
+            migrations.append((entity_entry, old_entity_id, new_entity_id))
 
     # Perform migrations
     if migrations:
         _LOGGER.info("Migrating %d entity IDs to v2.0 naming scheme", len(migrations))
-
         for entity_entry, old_entity_id, new_entity_id in migrations:
-            try:
-                # Check if target entity ID already exists (from another integration)
-                existing_entity = entity_reg.async_get(new_entity_id)
-                if existing_entity and existing_entity.platform != DOMAIN:
-                    _LOGGER.warning(
-                        "Cannot migrate %s -> %s: "
-                        "Target entity ID already exists (platform: %s). "
-                        "Skipping migration for this entity.",
-                        old_entity_id, new_entity_id, existing_entity.platform
-                    )
-                    continue
-
-                entity_reg.async_update_entity(
-                    entity_entry.entity_id,
-                    new_entity_id=new_entity_id
-                )
-                _LOGGER.info("Migrated %s -> %s", old_entity_id, new_entity_id)
-            except Exception as e:
-                _LOGGER.error("Failed to migrate %s: %s", old_entity_id, e)
+            _migrate_single_entity(entity_reg, entity_entry, old_entity_id, new_entity_id)
 
 
 def _migrate_config_data(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -189,8 +207,9 @@ def _select_parser(parsers: list, modem_choice: str):
 
 async def _create_health_monitor(hass: HomeAssistant):
     """Create health monitor with SSL context."""
-    from .core.health_monitor import ModemHealthMonitor
     import ssl
+
+    from .core.health_monitor import ModemHealthMonitor
 
     def create_ssl_context():
         """Create SSL context (runs in executor to avoid blocking)."""

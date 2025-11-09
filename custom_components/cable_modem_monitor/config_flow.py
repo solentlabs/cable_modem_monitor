@@ -5,30 +5,31 @@ import logging
 from typing import Any, Optional
 
 import voluptuous as vol
-
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
+    CONF_DETECTED_MANUFACTURER,
+    CONF_DETECTED_MODEM,
     CONF_HOST,
-    CONF_USERNAME,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
+    CONF_LAST_DETECTION,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
-    CONF_DETECTED_MODEM,
-    CONF_DETECTED_MANUFACTURER,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
     CONF_WORKING_URL,
-    CONF_LAST_DETECTION,
     DEFAULT_SCAN_INTERVAL,
-    MIN_SCAN_INTERVAL,
-    MAX_SCAN_INTERVAL,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     VERIFY_SSL,
 )
-from .core.modem_scraper import ModemScraper
 from .core.discovery_helpers import ParserNotFoundError
+from .core.modem_scraper import ModemScraper
 from .parsers import get_parsers
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,8 +41,8 @@ def _validate_host_format(host: str) -> str:
     Returns the cleaned hostname.
     Raises ValueError if validation fails.
     """
-    from urllib.parse import urlparse
     import re
+    from urllib.parse import urlparse
 
     if not host:
         raise ValueError("Host cannot be empty")
@@ -109,6 +110,14 @@ def _select_parser_for_validation(
         return None, None
     else:
         # Auto mode - use all parsers with cached name hint
+        _LOGGER.info(
+            "Using auto-detection mode (modem_choice=%s, cached_parser=%s)",
+            modem_choice, cached_parser_name
+        )
+        if cached_parser_name:
+            _LOGGER.info("Will try cached parser first: %s", cached_parser_name)
+        else:
+            _LOGGER.info("No cached parser, will try all available parsers")
         return None, cached_parser_name
 
 
@@ -180,10 +189,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     )
 
     # Connect and validate
+    _LOGGER.info("Attempting to connect to modem at %s", host)
     await _connect_to_modem(hass, scraper)
 
     # Get detection info and create title
     detection_info = scraper.get_detection_info()
+    _LOGGER.info("Detection successful: %s", detection_info)
     title = _create_title(detection_info, host)
 
     return {
@@ -205,7 +216,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ):
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -251,6 +262,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                     # If user selected "auto", update the choice to show what was detected
                     if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
+                        _LOGGER.info(
+                            "Auto-detection successful: updating modem_choice from 'auto' to '%s'",
+                            detected_modem_name
+                        )
                         user_input[CONF_MODEM_CHOICE] = detected_modem_name
 
                 return self.async_create_entry(title=info["title"], data=user_input)
@@ -300,6 +315,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
             # If user selected "auto", update choice to show what was detected
             if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
+                _LOGGER.info(
+                    "Auto-detection successful in options flow: updating modem_choice from 'auto' to '%s'",
+                    detected_modem_name
+                )
                 user_input[CONF_MODEM_CHOICE] = detected_modem_name
         else:
             # Preserve existing detection info if validation didn't return new info
@@ -326,7 +345,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         else:
             return f"Configured for {detected_modem}"
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None):
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""
         errors = {}
 

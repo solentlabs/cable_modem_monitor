@@ -15,20 +15,52 @@ extend-exclude = '''
 line-length = 120
 target-version = "py311"
 
-# Select rules: E (pycodestyle errors), F (pyflakes), W (warnings), C90 (complexity)
-select = ["E", "F", "W", "C90"]
-
-# Ignore E501 (line too long) since Black handles line length
-ignore = ["E501"]
-
 # Exclude test HTML files and other non-Python files
-extend-exclude = [
+exclude = [
     "tests/*.html",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".git",
 ]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint]
+# Rule categories enabled:
+# E: pycodestyle errors, F: Pyflakes, W: pycodestyle warnings
+# C90: McCabe complexity, I: isort, UP: pyupgrade
+# B: flake8-bugbear, SIM: flake8-simplify, TID: flake8-tidy-imports, N: pep8-naming
+select = ["E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N"]
+
+# Ignore specific rules
+ignore = [
+    "E501",   # Line too long (handled by Black)
+    "B008",   # Do not perform function calls in argument defaults (common in HA)
+    "B904",   # Allow `raise` without specifying exception (useful for re-raising)
+    "SIM108", # Use ternary operator (can reduce readability)
+    "TID252", # Relative imports are banned (not applicable for package structure)
+    "UP007",  # Use `X | Y` for type annotations (we use Optional for compatibility)
+]
+
+[tool.ruff.lint.mccabe]
 # McCabe complexity threshold
 max-complexity = 10
+
+[tool.ruff.lint.isort]
+# Import sorting configuration
+known-first-party = ["custom_components.cable_modem_monitor"]
+split-on-trailing-comma = true
+force-wrap-aliases = true
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+# Per-file ignores for specific patterns
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"tests/**/*.py" = ["B011", "S101"]  # Allow assert in tests
+"scripts/**/*.py" = ["T201"]  # Allow print statements in scripts
+
+[tool.ruff.lint.flake8-type-checking]
+# Type checking imports configuration
+strict = false
 
 [tool.mypy]
 python_version = "3.11"

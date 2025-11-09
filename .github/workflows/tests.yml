@@ -63,17 +63,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy types-requests
+          pip install -r requirements-dev.txt
 
       - name: Lint with ruff
         run: |
-          ruff check custom_components/cable_modem_monitor/ --select E,F,W,C90
-        continue-on-error: true
+          ruff check .
+
+      - name: Check code formatting with black
+        run: |
+          black --check .
 
       - name: Type check with mypy
         run: |
-          mypy custom_components/cable_modem_monitor/
-        continue-on-error: true
+          mypy . --config-file=mypy.ini
 
   validate:
     name: HACS Validation

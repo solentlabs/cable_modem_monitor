@@ -1,11 +1,14 @@
 """Parser for Technicolor XB7 cable modem."""
 import logging
+
 import requests
 from bs4 import BeautifulSoup
-from ..base_parser import ModemParser
-from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
+
 from custom_components.cable_modem_monitor.core.auth_config import RedirectFormAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+
+from ..base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -286,9 +289,58 @@ class TechnicolorXB7Parser(ModemParser):
                 channel_count = len(values)
 
             data_map[label] = values
-            _LOGGER.debug("XB7 row '%s': {len(values)} values", label)
+            _LOGGER.debug("XB7 row '%s': %d values", label, len(values))
 
         return data_map, channel_count
+
+    def _extract_channel_id(self, data_map: dict, index: int) -> str | None:
+        """Extract channel ID from data_map at given index.
+
+        Returns:
+            Channel ID as string or None if missing/invalid
+        """
+        if "Channel ID" not in data_map or index >= len(data_map["Channel ID"]):
+            return None
+
+        channel_id = extract_number(data_map["Channel ID"][index])
+        return str(channel_id) if channel_id is not None else None
+
+    def _extract_common_fields(self, data_map: dict, index: int, channel_data: dict) -> None:
+        """Extract common fields for both upstream and downstream channels."""
+        if "Lock Status" in data_map and index < len(data_map["Lock Status"]):
+            channel_data["lock_status"] = data_map["Lock Status"][index]
+
+        if "Frequency" in data_map and index < len(data_map["Frequency"]):
+            freq_text = data_map["Frequency"][index]
+            channel_data["frequency"] = self._parse_xb7_frequency(freq_text)
+
+        if "Power Level" in data_map and index < len(data_map["Power Level"]):
+            power_text = data_map["Power Level"][index]
+            channel_data["power"] = extract_float(power_text)
+
+        if "Modulation" in data_map and index < len(data_map["Modulation"]):
+            channel_data["modulation"] = data_map["Modulation"][index]
+
+    def _extract_upstream_fields(self, data_map: dict, index: int, channel_data: dict) -> None:
+        """Extract upstream-specific fields."""
+        if "Symbol Rate" in data_map and index < len(data_map["Symbol Rate"]):
+            symbol_rate_text = data_map["Symbol Rate"][index]
+            symbol_rate = extract_number(symbol_rate_text)
+            if symbol_rate is not None:
+                channel_data["symbol_rate"] = symbol_rate
+
+        if "Channel Type" in data_map and index < len(data_map["Channel Type"]):
+            channel_data["channel_type"] = data_map["Channel Type"][index]
+
+    def _extract_downstream_fields(self, data_map: dict, index: int, channel_data: dict) -> None:
+        """Extract downstream-specific fields."""
+        if "SNR" in data_map and index < len(data_map["SNR"]):
+            snr_text = data_map["SNR"][index]
+            channel_data["snr"] = extract_float(snr_text)
+
+        # Initialize error counters (will be filled from error table)
+        channel_data["corrected"] = None
+        channel_data["uncorrected"] = None
 
     def _extract_xb7_channel_data_at_index(
         self, data_map: dict, index: int, is_upstream: bool
@@ -298,55 +350,17 @@ class TechnicolorXB7Parser(ModemParser):
         Returns:
             Channel data dict or None if channel_id is missing
         """
-        channel_data = {}
-
-        # Extract channel ID
-        if "Channel ID" in data_map and index < len(data_map["Channel ID"]):
-            channel_id = extract_number(data_map["Channel ID"][index])
-            if channel_id is None:
-                return None
-            channel_data["channel_id"] = str(channel_id)
-        else:
+        channel_id = self._extract_channel_id(data_map, index)
+        if channel_id is None:
             return None
 
-        # Extract lock status
-        if "Lock Status" in data_map and index < len(data_map["Lock Status"]):
-            channel_data["lock_status"] = data_map["Lock Status"][index]
-
-        # Extract frequency (handles both "609 MHz" and "350000000" formats)
-        if "Frequency" in data_map and index < len(data_map["Frequency"]):
-            freq_text = data_map["Frequency"][index]
-            freq_hz = self._parse_xb7_frequency(freq_text)
-            channel_data["frequency"] = freq_hz
-
-        # Extract power level
-        if "Power Level" in data_map and index < len(data_map["Power Level"]):
-            power_text = data_map["Power Level"][index]
-            channel_data["power"] = extract_float(power_text)
-
-        # Extract modulation
-        if "Modulation" in data_map and index < len(data_map["Modulation"]):
-            channel_data["modulation"] = data_map["Modulation"][index]
+        channel_data = {"channel_id": channel_id}
+        self._extract_common_fields(data_map, index, channel_data)
 
         if is_upstream:
-            # Upstream-specific fields
-            if "Symbol Rate" in data_map and index < len(data_map["Symbol Rate"]):
-                symbol_rate_text = data_map["Symbol Rate"][index]
-                symbol_rate = extract_number(symbol_rate_text)
-                if symbol_rate is not None:
-                    channel_data["symbol_rate"] = symbol_rate
-
-            if "Channel Type" in data_map and index < len(data_map["Channel Type"]):
-                channel_data["channel_type"] = data_map["Channel Type"][index]
+            self._extract_upstream_fields(data_map, index, channel_data)
         else:
-            # Downstream-specific fields
-            if "SNR" in data_map and index < len(data_map["SNR"]):
-                snr_text = data_map["SNR"][index]
-                channel_data["snr"] = extract_float(snr_text)
-
-            # Initialize error counters (will be filled from error table)
-            channel_data["corrected"] = None
-            channel_data["uncorrected"] = None
+            self._extract_downstream_fields(data_map, index, channel_data)
 
         return channel_data
 
@@ -499,6 +513,39 @@ class TechnicolorXB7Parser(ModemParser):
         except Exception as e:
             _LOGGER.error(f"Error merging XB7 error stats: {e}", exc_info=True)
 
+    def _extract_label_value(self, label) -> str | None:
+        """Extract value from label's next sibling span.
+
+        Returns:
+            Extracted value text or None if not found
+        """
+        value_span = label.find_next_sibling("span")
+        if value_span and "readonlyLabel" not in value_span.get("class", []):
+            return value_span.get_text(strip=True)
+        return None
+
+    def _process_system_uptime(self, value: str, system_info: dict) -> None:
+        """Process system uptime value and calculate boot time."""
+        system_info["system_uptime"] = value
+        boot_time = self._calculate_boot_time(value)
+        if boot_time:
+            system_info["last_boot_time"] = boot_time
+
+    def _map_system_info_field(self, label_text: str, value: str, system_info: dict) -> None:
+        """Map label text to system info field and set value."""
+        if "Serial Number" in label_text:
+            system_info["serial_number"] = value
+        elif "CM MAC" in label_text or "Hardware Address" in label_text:
+            system_info["mac_address"] = value
+        elif "Acquire Downstream" in label_text:
+            system_info["downstream_status"] = value
+        elif "Upstream Ranging" in label_text:
+            system_info["upstream_status"] = value
+        elif "System Uptime" in label_text:
+            self._process_system_uptime(value, system_info)
+        elif "Download Version" in label_text:
+            system_info["software_version"] = value
+
     def _parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from XB7."""
         system_info = {}
@@ -509,32 +556,10 @@ class TechnicolorXB7Parser(ModemParser):
 
             for label in labels:
                 label_text = label.get_text(strip=True).rstrip(":")
+                value = self._extract_label_value(label)
 
-                # Find the value (usually in next sibling or nearby span)
-                value_span = label.find_next_sibling("span")
-                if value_span and "readonlyLabel" not in value_span.get("class", []):
-                    value = value_span.get_text(strip=True)
-
-                    # Map common fields
-                    if "Serial Number" in label_text:
-                        system_info["serial_number"] = value
-                    elif "CM MAC" in label_text or "Hardware Address" in label_text:
-                        system_info["mac_address"] = value
-                    elif "Acquire Downstream" in label_text:
-                        system_info["downstream_status"] = value
-                    elif "Upstream Ranging" in label_text:
-                        system_info["upstream_status"] = value
-                    # NEW: System Uptime
-                    elif "System Uptime" in label_text:
-                        # Parse "21 days 15h: 20m: 33s" format
-                        system_info["system_uptime"] = value
-                        # Calculate last boot time from uptime
-                        boot_time = self._calculate_boot_time(value)
-                        if boot_time:
-                            system_info["last_boot_time"] = boot_time
-                    # NEW: Software Version (use Download Version, not BOOT Version)
-                    elif "Download Version" in label_text:
-                        system_info["software_version"] = value
+                if value:
+                    self._map_system_info_field(label_text, value, system_info)
 
         except Exception as e:
             _LOGGER.error(f"Error parsing XB7 system info: {e}", exc_info=True)
@@ -569,8 +594,8 @@ class TechnicolorXB7Parser(ModemParser):
         Format: "21 days 15h: 20m: 33s"
         Returns ISO format datetime string.
         """
-        from datetime import datetime, timedelta
         import re
+        from datetime import datetime, timedelta
 
         try:
             # Parse uptime string

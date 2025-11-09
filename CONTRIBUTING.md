@@ -30,12 +30,49 @@ Make your code changes or additions on a new branch.
 
 Before committing, ensure your code is well-formatted and passes all quality checks.
 
+**Quick commands (using Make):**
+```bash
+# Run all code quality checks
+make check
+
+# Auto-fix linting issues
+make lint-fix
+
+# Format code
+make format
+
+# Run comprehensive linting (includes security)
+make lint-all
+```
+
+**Manual commands:**
 ```bash
 # Auto-format your code with Black
-black custom_components/cable_modem_monitor/ tests/
+black custom_components/cable_modem_monitor/
 
 # Check for linting issues with Ruff
-ruff check custom_components/cable_modem_monitor/ tests/
+ruff check custom_components/cable_modem_monitor/
+
+# Auto-fix linting issues
+ruff check --fix custom_components/cable_modem_monitor/
+
+# Type checking with mypy
+mypy custom_components/cable_modem_monitor/
+
+# Or use the comprehensive lint script
+bash scripts/dev/lint.sh
+# On Windows PowerShell:
+# .\scripts\dev\lint.ps1
+```
+
+**Pre-commit hooks (recommended):**
+```bash
+# Install pre-commit hooks (runs automatically on commit)
+pip install pre-commit
+pre-commit install
+
+# Run manually on all files
+pre-commit run --all-files
 ```
 
 ### 4. Run Tests
@@ -230,9 +267,43 @@ When you submit a pull request, include:
 - Use async/await for I/O operations
 
 ### Linting
+
+The project uses multiple linting tools for code quality:
+
+**Ruff** (Primary linter - fast and comprehensive):
 ```bash
+# Check for issues
 ruff check custom_components/cable_modem_monitor/
+
+# Auto-fix issues
+ruff check --fix custom_components/cable_modem_monitor/
 ```
+
+**mypy** (Type checking):
+```bash
+mypy custom_components/cable_modem_monitor/ --config-file=mypy.ini
+```
+
+**Black** (Code formatting):
+```bash
+# Format code
+black custom_components/cable_modem_monitor/
+
+# Check formatting (CI mode)
+black --check custom_components/cable_modem_monitor/
+```
+
+**Comprehensive linting:**
+```bash
+# Run all checks at once
+make check
+
+# Or use the lint script
+bash scripts/dev/lint.sh
+```
+
+See `docs/SECURITY_LINTING.md` for security-specific linting tools (Bandit, Semgrep).
+See `docs/LINTING.md` for comprehensive linting documentation.
 
 ## Testing Guide
 

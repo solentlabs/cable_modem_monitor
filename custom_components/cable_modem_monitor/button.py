@@ -18,7 +18,7 @@ from .const import CONF_HOST, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class ModemButtonBase(CoordinatorEntity, ButtonEntity):
+class ModemButtonBase(CoordinatorEntity, ButtonEntity):  # type: ignore[reportIncompatibleVariableOverride]
     """Base class for modem buttons."""
 
     _attr_has_entity_name = True
@@ -51,11 +51,13 @@ async def async_setup_entry(
 
     # Add control buttons
     # Note: Restart button will show error if modem doesn't support restart
-    async_add_entities([
-        ModemRestartButton(coordinator, entry),
-        CleanupEntitiesButton(coordinator, entry),
-        ResetEntitiesButton(coordinator, entry),
-    ])
+    async_add_entities(
+        [
+            ModemRestartButton(coordinator, entry),
+            CleanupEntitiesButton(coordinator, entry),
+            ResetEntitiesButton(coordinator, entry),
+        ]
+    )
 
 
 class ModemRestartButton(ModemButtonBase):
@@ -77,11 +79,19 @@ class ModemRestartButton(ModemButtonBase):
         # Get the scraper from the coordinator
         # We need to access it from the coordinator's update method
         # For now, we'll create a new scraper instance
-        from .const import CONF_HOST, CONF_USERNAME, CONF_PASSWORD, CONF_WORKING_URL, VERIFY_SSL
+        from .const import (
+            CONF_HOST as HOST_KEY,
+        )
+        from .const import (
+            CONF_PASSWORD,
+            CONF_USERNAME,
+            CONF_WORKING_URL,
+            VERIFY_SSL,
+        )
         from .core.modem_scraper import ModemScraper
         from .parsers import get_parsers
 
-        host = self._entry.data[CONF_HOST]
+        host = self._entry.data[HOST_KEY]
         username = self._entry.data.get(CONF_USERNAME)
         password = self._entry.data.get(CONF_PASSWORD)
         cached_url = self._entry.data.get(CONF_WORKING_URL)
@@ -149,8 +159,8 @@ class ModemRestartButton(ModemButtonBase):
                     status = self.coordinator.data.get("cable_modem_connection_status")
                     _LOGGER.info("Modem responding after %ss (status: %s)", elapsed_time, status)
                     return True, elapsed_time
-                else:
-                    _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
+
+                _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
             except Exception as e:
                 _LOGGER.debug("Error during phase 1 monitoring: %s", e)
                 await asyncio.sleep(10)
@@ -192,7 +202,11 @@ class ModemRestartButton(ModemButtonBase):
                     grace_period_active = False
                     _LOGGER.info(
                         "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
-                        phase2_elapsed, prev_downstream, downstream_count, prev_upstream, upstream_count
+                        phase2_elapsed,
+                        prev_downstream,
+                        downstream_count,
+                        prev_upstream,
+                        upstream_count,
                     )
 
                 prev_downstream = downstream_count
@@ -210,14 +224,14 @@ class ModemRestartButton(ModemButtonBase):
                     grace_period_start = phase2_elapsed
                     _LOGGER.info(
                         "Phase 2: Channels stable (%s down, %s up), entering 30s grace period",
-                        downstream_count, upstream_count
+                        downstream_count,
+                        upstream_count,
                     )
 
                 # Check if grace period is complete
                 if grace_period_active and (phase2_elapsed - grace_period_start) >= 30:
                     _LOGGER.info(
-                        "Modem fully online with stable channels (%s down, %s up)",
-                        downstream_count, upstream_count
+                        "Modem fully online with stable channels (%s down, %s up)", downstream_count, upstream_count
                     )
                     return True, phase2_elapsed
 
