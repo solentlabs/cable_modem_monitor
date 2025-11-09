@@ -41,55 +41,90 @@ def _sanitize_log_message(message: str) -> str:
     return message
 
 
-def _get_recent_logs(max_records: int = 150) -> list[dict[str, Any]]:
+def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:
     """Get recent log records for cable_modem_monitor.
 
     Args:
+        hass: Home Assistant instance
         max_records: Maximum number of log records to return
 
     Returns:
         List of log record dicts with timestamp, level, and message
     """
-    ***REMOVED*** Get the logger for our component
-    component_logger = logging.getLogger('custom_components.cable_modem_monitor')
+    import re
+    from pathlib import Path
 
-    ***REMOVED*** Try to get log records from handlers
-    ***REMOVED*** Home Assistant uses a QueueHandler with a MemoryHandler
     recent_logs = []
 
-    ***REMOVED*** Walk up the logger hierarchy to find handlers with records
-    current_logger = component_logger
-    while current_logger:
-        for handler in current_logger.handlers:
-            ***REMOVED*** Check if handler has a buffer (MemoryHandler)
-            if hasattr(handler, 'buffer'):
-                ***REMOVED*** Get records from buffer
-                for record in handler.buffer[-max_records:]:
-                    if record.name.startswith('custom_components.cable_modem_monitor'):
-                        recent_logs.append({
-                            'timestamp': record.created,
-                            'level': record.levelname,
-                            'logger': record.name.replace('custom_components.cable_modem_monitor.', ''),
-                            'message': _sanitize_log_message(record.getMessage())
-                        })
+    ***REMOVED*** Try to read from Home Assistant's log file
+    try:
+        ***REMOVED*** Home Assistant stores logs in config/home-assistant.log
+        log_file = Path(hass.config.path("home-assistant.log"))
 
-        ***REMOVED*** Move up the hierarchy
-        if not current_logger.propagate:
-            break
-        current_logger = current_logger.parent
+        if not log_file.exists():
+            _LOGGER.debug("Log file not found at %s", log_file)
+            return [{
+                'timestamp': 0,
+                'level': 'INFO',
+                'logger': 'diagnostics',
+                'message': 'Log file not available. Check Home Assistant logs for full history.'
+            }]
 
-    ***REMOVED*** If we didn't get logs from handlers, return a note
-    if not recent_logs:
-        recent_logs.append({
-            'timestamp': 0,
-            'level': 'INFO',
-            'logger': 'diagnostics',
-            'message': 'No recent logs available in memory. Check Home Assistant logs for full history.'
-        })
+        ***REMOVED*** Read last N lines from log file (much faster than reading entire file)
+        ***REMOVED*** Read more lines than max_records to account for non-matching lines
+        with open(log_file, 'rb') as f:
+            ***REMOVED*** Seek to end of file
+            f.seek(0, 2)
+            file_size = f.tell()
 
-    ***REMOVED*** Sort by timestamp (most recent last) and limit
-    recent_logs.sort(key=lambda x: x.get('timestamp', 0))
-    return recent_logs[-max_records:]
+            ***REMOVED*** Read last ~100KB (should be plenty for 150 log entries)
+            ***REMOVED*** Average log line is ~200 bytes, so 100KB ~= 500 lines
+            read_size = min(100000, file_size)
+            f.seek(max(0, file_size - read_size))
+
+            ***REMOVED*** Read and decode
+            tail_data = f.read().decode('utf-8', errors='ignore')
+            lines = tail_data.split('\n')
+
+        ***REMOVED*** Parse log lines for cable_modem_monitor entries
+        ***REMOVED*** Format: 2025-11-09 04:39:46.123 INFO (MainThread) [custom_components.cable_modem_monitor.config_flow] Message
+        log_pattern = re.compile(
+            r'^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+'  ***REMOVED*** timestamp
+            r'(\w+)\s+'  ***REMOVED*** level
+            r'\([^)]+\)\s+'  ***REMOVED*** thread
+            r'\[custom_components\.cable_modem_monitor\.?([^\]]*)\]\s+'  ***REMOVED*** logger
+            r'(.+)$'  ***REMOVED*** message
+        )
+
+        for line in lines:
+            match = log_pattern.match(line)
+            if match:
+                timestamp_str, level, logger, message = match.groups()
+
+                ***REMOVED*** Sanitize the message
+                sanitized_message = _sanitize_log_message(message)
+
+                recent_logs.append({
+                    'timestamp': timestamp_str,
+                    'level': level,
+                    'logger': logger if logger else '__init__',
+                    'message': sanitized_message
+                })
+
+        ***REMOVED*** If we found logs, return the most recent ones
+        if recent_logs:
+            return recent_logs[-max_records:]
+
+    except Exception as err:
+        _LOGGER.warning("Failed to read logs from file: %s", err)
+
+    ***REMOVED*** If we couldn't get logs, return a note
+    return [{
+        'timestamp': 0,
+        'level': 'INFO',
+        'logger': 'diagnostics',
+        'message': 'Unable to retrieve recent logs. Check Home Assistant logs for full history.'
+    }]
 
 
 async def async_get_config_entry_diagnostics(
@@ -172,7 +207,7 @@ async def async_get_config_entry_diagnostics(
     ***REMOVED*** Add recent logs (last 150 records)
     ***REMOVED*** This is extremely helpful for debugging connection and detection issues
     try:
-        recent_logs = _get_recent_logs(max_records=150)
+        recent_logs = _get_recent_logs(hass, max_records=150)
         diagnostics["recent_logs"] = {
             "note": "Recent logs from cable_modem_monitor (sanitized for security)",
             "count": len(recent_logs),
