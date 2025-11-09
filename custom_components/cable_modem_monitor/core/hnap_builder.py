@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 import requests
 
@@ -44,7 +44,7 @@ class HNAPRequestBuilder:
         session: requests.Session,
         base_url: str,
         action: str,
-        params: Optional[Dict] = None
+        params: dict | None = None
     ) -> str:
         """
         Make single HNAP action call.
@@ -80,7 +80,7 @@ class HNAPRequestBuilder:
         self,
         session: requests.Session,
         base_url: str,
-        actions: List[str]
+        actions: list[str]
     ) -> str:
         """
         Make batched HNAP request (GetMultipleHNAPs).
@@ -111,7 +111,7 @@ class HNAPRequestBuilder:
         response.raise_for_status()
         return response.text
 
-    def _build_envelope(self, action: str, params: Optional[Dict]) -> str:
+    def _build_envelope(self, action: str, params: dict | None) -> str:
         """
         Build SOAP envelope XML for single action.
 
@@ -142,7 +142,7 @@ class HNAPRequestBuilder:
 
         return envelope
 
-    def _build_multi_envelope(self, actions: List[str]) -> str:
+    def _build_multi_envelope(self, actions: list[str]) -> str:
         """
         Build GetMultipleHNAPs envelope.
 
@@ -170,7 +170,7 @@ class HNAPRequestBuilder:
         return envelope
 
     @staticmethod
-    def parse_response(xml_text: str, action: str, namespace: str) -> Optional["Element"]:
+    def parse_response(xml_text: str, action: str, namespace: str) -> Element | None:
         """
         Parse HNAP XML response and extract action result.
 
@@ -205,7 +205,7 @@ class HNAPRequestBuilder:
             return None
 
     @staticmethod
-    def get_text_value(element: Optional["Element"], tag: str, default: str = "") -> str:
+    def get_text_value(element: Element | None, tag: str, default: str = "") -> str:
         """
         Get text value from XML element.
 

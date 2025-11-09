@@ -83,7 +83,7 @@ class ParserHeuristics:
 
     @staticmethod
     def check_anonymous_access(
-        base_url: str, parser_class: Type, session: requests.Session, verify_ssl: bool = False
+        base_url: str, parser_class: type, session: requests.Session, verify_ssl: bool = False
     ) -> tuple[str, str] | None:
         """
         Check if parser has public (non-authenticated) URLs that can be accessed.

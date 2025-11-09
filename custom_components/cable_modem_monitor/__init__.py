@@ -100,10 +100,7 @@ def _should_migrate_entity(entity_entry, entry: ConfigEntry) -> bool:
         return False
 
     ***REMOVED*** Skip if already has cable_modem_ prefix
-    if 'cable_modem_' in entity_entry.entity_id:
-        return False
-
-    return True
+    return 'cable_modem_' not in entity_entry.entity_id
 
 
 def _find_new_entity_id(old_entity_id: str, patterns: dict[str, str]) -> str | None:

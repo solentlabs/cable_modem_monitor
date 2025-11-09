@@ -26,7 +26,7 @@ class AuthStrategy(ABC):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """
         Authenticate with the modem.
@@ -55,7 +55,7 @@ class NoAuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """No authentication needed."""
         _LOGGER.debug("No authentication required")
@@ -71,7 +71,7 @@ class BasicHttpAuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Set up HTTP Basic Auth on the session."""
         if not username or not password:
@@ -93,7 +93,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form with plain password."""
         if not username or not password:
@@ -144,7 +144,7 @@ class FormBase64AuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form with Base64-encoded password.
 
@@ -206,7 +206,7 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Try plain password first, then Base64-encoded."""
         if not username or not password:
@@ -265,7 +265,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form and validate redirect."""
         if not username or not password:
@@ -307,8 +307,8 @@ class RedirectFormAuthStrategy(AuthStrategy):
         base_url: str,
         username: str,
         password: str,
-        config: "RedirectFormAuthConfig"
-    ) -> Optional[requests.Response]:
+        config: RedirectFormAuthConfig
+    ) -> requests.Response | None:
         """Post login credentials and return response."""
         login_url = f"{base_url}{config.login_url}"
         login_data = {
@@ -343,7 +343,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         session: requests.Session,
         base_url: str,
         response: requests.Response,
-        config: "RedirectFormAuthConfig"
+        config: RedirectFormAuthConfig
     ) -> tuple[bool, str | None]:
         """Handle login response and fetch authenticated page if successful."""
         if config.success_redirect_pattern not in response.url:
@@ -357,7 +357,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        config: "RedirectFormAuthConfig"
+        config: RedirectFormAuthConfig
     ) -> tuple[bool, str | None]:
         """Fetch the authenticated page after successful login."""
         auth_url = f"{base_url}{config.authenticated_page_url}"
@@ -381,7 +381,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
         base_url: str,
         username: str | None,
         password: str | None,
-        config: "AuthConfig"
+        config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Establish HNAP session."""
         if not username or not password:
@@ -427,7 +427,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
             return (False, None)
 
     def _build_login_envelope(
-        self, username: str, password: str, config: "HNAPAuthConfig"
+        self, username: str, password: str, config: HNAPAuthConfig
     ) -> str:
         """Build SOAP login envelope for HNAP."""
         return f'''<?xml version="1.0" encoding="utf-8"?>
