@@ -1,4 +1,6 @@
 """Tests for Technicolor XB7 parser."""
+from __future__ import annotations
+
 import pytest
 from bs4 import BeautifulSoup
 from pathlib import Path

@@ -1,4 +1,6 @@
 """Tests for the Motorola MB8611 parser using HNAP protocol."""
+from __future__ import annotations
+
 import os
 import json
 from bs4 import BeautifulSoup

@@ -1,7 +1,10 @@
 """Base class for modem parsers."""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
 from bs4 import BeautifulSoup
-from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.core.auth_config import AuthConfig
@@ -31,7 +34,7 @@ class ModemParser(ABC):
 
     # Authentication configuration (new system - optional, for backward compatibility)
     # Parsers should define this as a class attribute
-    auth_config: Optional["AuthConfig"] = None
+    auth_config: AuthConfig | None = None
 
     @classmethod
     @abstractmethod

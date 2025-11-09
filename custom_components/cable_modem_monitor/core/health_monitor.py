@@ -1,11 +1,12 @@
 """Modem Health Monitor - Dual-layer network diagnostics."""
+from __future__ import annotations
+
 import asyncio
 import logging
 import re
 import ssl
 import time
 from dataclasses import dataclass
-from typing import Optional
 from urllib.parse import urlparse
 
 import aiohttp
@@ -19,9 +20,9 @@ class HealthCheckResult:
 
     timestamp: float
     ping_success: bool
-    ping_latency_ms: Optional[float]
+    ping_latency_ms: float | None
     http_success: bool
-    http_latency_ms: Optional[float]
+    http_latency_ms: float | None
 
     @property
     def is_healthy(self) -> bool:
@@ -239,7 +240,7 @@ class ModemHealthMonitor:
                         # Accept any response (2xx, 3xx, 4xx) as "alive"
                         success = response.status < 500
                         return success, latency_ms if success else None
-                except (aiohttp.ClientError, asyncio.TimeoutError):
+                except (aiohttp.ClientError, TimeoutError):
                     # HEAD failed, try GET (some modems don't support HEAD)
                     start_time = time.time()  # Reset timer
                     async with session.get(base_url, allow_redirects=False) as response:
@@ -254,7 +255,7 @@ class ModemHealthMonitor:
                         success = response.status < 500
                         return success, latency_ms if success else None
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             _LOGGER.debug("HTTP check timeout for %s", base_url)
             return False, None
         except aiohttp.ClientConnectorError as e:
@@ -275,7 +276,7 @@ class ModemHealthMonitor:
             self.consecutive_failures += 1
 
     @property
-    def average_ping_latency(self) -> Optional[float]:
+    def average_ping_latency(self) -> float | None:
         """Calculate average ping latency from recent history."""
         latencies = [
             h.ping_latency_ms for h in self.history
@@ -286,7 +287,7 @@ class ModemHealthMonitor:
         return sum(latencies) / len(latencies)
 
     @property
-    def average_http_latency(self) -> Optional[float]:
+    def average_http_latency(self) -> float | None:
         """Calculate average HTTP latency from recent history."""
         latencies = [
             h.http_latency_ms for h in self.history

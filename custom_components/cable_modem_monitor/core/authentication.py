@@ -1,15 +1,17 @@
 """Authentication abstraction for cable modems."""
+from __future__ import annotations
+
 import base64
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import requests
 
+from .auth_config import AuthStrategyType
+
 if TYPE_CHECKING:
     from .auth_config import AuthConfig, HNAPAuthConfig, RedirectFormAuthConfig
-
-from .auth_config import AuthStrategyType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +24,10 @@ class AuthStrategy(ABC):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """
         Authenticate with the modem.
 
@@ -37,7 +39,7 @@ class AuthStrategy(ABC):
             config: Authentication configuration object
 
         Returns:
-            Tuple of (success: bool, response_html: Optional[str])
+            Tuple of (success: bool, response_html: str | None)
             - success: True if authentication succeeded
             - response_html: HTML from authenticated page (if applicable)
         """
@@ -51,10 +53,10 @@ class NoAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """No authentication needed."""
         _LOGGER.debug("No authentication required")
         return (True, None)
@@ -67,10 +69,10 @@ class BasicHttpAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Set up HTTP Basic Auth on the session."""
         if not username or not password:
             _LOGGER.debug("No credentials provided for Basic Auth, skipping")
@@ -89,10 +91,10 @@ class FormPlainAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Submit form with plain password."""
         if not username or not password:
             _LOGGER.debug("No credentials provided, skipping login")
@@ -140,10 +142,10 @@ class FormBase64AuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Submit form with Base64-encoded password.
 
         Security Note:
@@ -202,10 +204,10 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Try plain password first, then Base64-encoded."""
         if not username or not password:
             _LOGGER.debug("No credentials provided, skipping login")
@@ -261,10 +263,10 @@ class RedirectFormAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Submit form and validate redirect."""
         if not username or not password:
             _LOGGER.debug("No credentials provided for RedirectFormAuth")
@@ -342,7 +344,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         base_url: str,
         response: requests.Response,
         config: "RedirectFormAuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Handle login response and fetch authenticated page if successful."""
         if config.success_redirect_pattern not in response.url:
             _LOGGER.warning("Unexpected redirect to %s", response.url)
@@ -356,7 +358,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         session: requests.Session,
         base_url: str,
         config: "RedirectFormAuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Fetch the authenticated page after successful login."""
         auth_url = f"{base_url}{config.authenticated_page_url}"
         _LOGGER.debug("Fetching authenticated page: %s", auth_url)
@@ -377,10 +379,10 @@ class HNAPSessionAuthStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        username: Optional[str],
-        password: Optional[str],
+        username: str | None,
+        password: str | None,
         config: "AuthConfig"
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Establish HNAP session."""
         if not username or not password:
             _LOGGER.debug("No credentials provided for HNAP auth")

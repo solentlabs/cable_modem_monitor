@@ -1,16 +1,20 @@
 """Web scraper for cable modem data."""
+from __future__ import annotations
+
 import logging
-from typing import List, Type, cast
+from typing import TYPE_CHECKING, cast
 
 import requests
 from bs4 import BeautifulSoup
 
-from ..parsers.base_parser import ModemParser
 from .discovery_helpers import (
     DiscoveryCircuitBreaker,
     ParserHeuristics,
     ParserNotFoundError,
 )
+
+if TYPE_CHECKING:
+    from ..parsers.base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +27,7 @@ class ModemScraper:
         host: str,
         username: str | None = None,
         password: str | None = None,
-        parser: ModemParser | List[Type[ModemParser]] | None = None,
+        parser: ModemParser | list[type[ModemParser]] | None = None,
         cached_url: str | None = None,
         parser_name: str | None = None,
         verify_ssl: bool = False,
@@ -106,7 +110,7 @@ class ModemScraper:
 
         return self.parser.login(self.session, self.base_url, self.username, self.password)
 
-    def _get_tier1_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+    def _get_tier1_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 1: User explicitly selected a parser."""
         if self.parser is None:
             raise RuntimeError("Tier 1 URLs requested but parser is None")
@@ -117,12 +121,12 @@ class ModemScraper:
             urls.append((url, pattern['auth_method'], type(self.parser)))
         return urls
 
-    def _find_cached_parser(self) -> Type[ModemParser] | None:
+    def _find_cached_parser(self) -> type[ModemParser] | None:
         """Find parser by name from available parsers."""
         for parser_class in self.parsers:
             if parser_class.name == self.parser_name:
-                # Cast to Type[ModemParser] to satisfy type checker
-                return cast(Type[ModemParser], parser_class)
+                # Cast to type[ModemParser] to satisfy type checker
+                return cast(type[ModemParser], parser_class)
         return None
 
     def _find_matching_pattern(self, url_patterns: list[dict], cached_url: str) -> dict | None:
@@ -134,7 +138,7 @@ class ModemScraper:
         return url_patterns[0] if url_patterns else None
 
     def _add_cached_url_if_matching(
-        self, urls: list, cached_parser: Type[ModemParser], cached_url: str
+        self, urls: list, cached_parser: type[ModemParser], cached_url: str
     ) -> None:
         """Add cached URL to list if a matching pattern is found."""
         cached_pattern = self._find_matching_pattern(cached_parser.url_patterns, cached_url)
@@ -142,7 +146,7 @@ class ModemScraper:
             urls.append((cached_url, cached_pattern['auth_method'], cached_parser))
 
     def _add_parser_urls(
-        self, urls: list, parser_class: Type[ModemParser], exclude_url: str | None = None
+        self, urls: list, parser_class: type[ModemParser], exclude_url: str | None = None
     ) -> None:
         """Add URLs from a parser to the list, optionally excluding a specific URL."""
         for pattern in parser_class.url_patterns:
@@ -150,15 +154,15 @@ class ModemScraper:
             if exclude_url is None or url != exclude_url:
                 urls.append((url, pattern['auth_method'], parser_class))
 
-    def _get_tier2_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+    def _get_tier2_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 2: Cached parser from previous detection."""
         _LOGGER.info("Tier 2: Looking for cached parser: %s", self.parser_name)
         cached_parser = self._find_cached_parser()
         if not cached_parser:
             return []
 
-        # Cast to Type[ModemParser] to satisfy type checker after None check
-        parser = cast(Type[ModemParser], cached_parser)
+        # Cast to type[ModemParser] to satisfy type checker after None check
+        parser = cast(type[ModemParser], cached_parser)
         _LOGGER.info("Found cached parser: %s", parser.name)
         urls = []
 
@@ -172,12 +176,12 @@ class ModemScraper:
         # Add other parsers as fallback
         for parser_class in self.parsers:
             if parser_class.name != self.parser_name:
-                # Cast to Type[ModemParser] to satisfy type checker
-                self._add_parser_urls(urls, cast(Type[ModemParser], parser_class))
+                # Cast to type[ModemParser] to satisfy type checker
+                self._add_parser_urls(urls, cast(type[ModemParser], parser_class))
 
         return urls
 
-    def _get_tier3_urls(self) -> list[tuple[str, str, Type[ModemParser]]]:
+    def _get_tier3_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 3: Auto-detection mode - try all parsers."""
         _LOGGER.info("Tier 3: Auto-detection mode - trying all parsers")
         urls = []
@@ -200,7 +204,7 @@ class ModemScraper:
 
         return urls
 
-    def _get_url_patterns_to_try(self) -> list[tuple[str, str, Type[ModemParser]]]:
+    def _get_url_patterns_to_try(self) -> list[tuple[str, str, type[ModemParser]]]:
         """
         Get list of (url, auth_method, parser_class) tuples to try.
 
@@ -222,7 +226,7 @@ class ModemScraper:
         # Tier 3: Auto-detection mode
         return self._get_tier3_urls()
 
-    def _fetch_data(self) -> tuple[str, str, Type[ModemParser]] | None:
+    def _fetch_data(self) -> tuple[str, str, type[ModemParser]] | None:
         """
         Fetch data from the modem using parser-defined URL patterns.
         Automatically tries both HTTPS and HTTP protocols.
@@ -383,7 +387,7 @@ class ModemScraper:
         return None
 
     def _detect_parser(
-        self, html: str, url: str, suggested_parser: Type[ModemParser] | None = None
+        self, html: str, url: str, suggested_parser: type[ModemParser] | None = None
     ) -> ModemParser | None:
         """
         Detect the parser for the modem with Phase 3 enhancements.
@@ -477,7 +481,7 @@ class ModemScraper:
             "cable_modem_upstream": []
         }
 
-    def _ensure_parser(self, html: str, successful_url: str, suggested_parser: Type[ModemParser] | None) -> bool:
+    def _ensure_parser(self, html: str, successful_url: str, suggested_parser: type[ModemParser] | None) -> bool:
         """Ensure parser is detected or instantiated.
 
         Returns:

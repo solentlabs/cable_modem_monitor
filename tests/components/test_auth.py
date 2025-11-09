@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
 from custom_components.cable_modem_monitor.parsers.technicolor.tc4400 import TechnicolorTC4400Parser

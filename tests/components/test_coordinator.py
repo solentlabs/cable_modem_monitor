@@ -1,4 +1,6 @@
 """Tests for Cable Modem Monitor coordinator functionality."""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock
 from datetime import timedelta

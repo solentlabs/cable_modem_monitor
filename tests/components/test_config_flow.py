@@ -1,10 +1,12 @@
 """Tests for Cable Modem Monitor config flow."""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock, patch
 
 from custom_components.cable_modem_monitor.config_flow import (
+    CannotConnectError,
     OptionsFlowHandler,
-    CannotConnect,
     validate_input,
 )
 
@@ -109,7 +111,7 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor_job
 
-        with pytest.raises(CannotConnect):
+        with pytest.raises(CannotConnectError):
             await validate_input(mock_hass, valid_input)
 
     def test_validate_input_requires_host(self, valid_input):

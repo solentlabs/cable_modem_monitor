@@ -3,10 +3,12 @@
 This module helps clean up orphaned entities that may accumulate during
 upgrades from v1.x to v2.0 or after multiple integration reinstalls.
 """
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 
@@ -14,7 +16,7 @@ ENTITY_REGISTRY_PATH = Path("/config/.storage/core.entity_registry")
 BACKUP_DIR = Path("/config/.storage")
 
 
-def analyze_entities(data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_entities(data: dict[str, Any]) -> dict[str, Any]:
     """Analyze cable modem entities in Home Assistant.
 
     Args:
@@ -80,7 +82,7 @@ def backup_entity_registry() -> Path:
     return backup_path
 
 
-def cleanup_orphaned_entities(hass: Optional[HomeAssistant] = None) -> bool:
+def cleanup_orphaned_entities(hass: HomeAssistant | None = None) -> bool:
     """Remove orphaned cable modem entities.
 
     Args:
@@ -120,7 +122,7 @@ async def async_cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
     return await hass.async_add_executor_job(cleanup_orphaned_entities, hass)
 
 
-def remove_all_entities(hass: Optional[HomeAssistant] = None) -> bool:
+def remove_all_entities(hass: HomeAssistant | None = None) -> bool:
     """Remove ALL cable modem entities (nuclear option).
 
     Args:

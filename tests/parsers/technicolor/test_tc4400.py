@@ -1,4 +1,6 @@
 """Tests for the Technicolor TC4400 parser."""
+from __future__ import annotations
+
 import os
 import inspect
 from bs4 import BeautifulSoup

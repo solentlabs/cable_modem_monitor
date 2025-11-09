@@ -1,6 +1,7 @@
 """Utility functions for the Cable Modem Monitor integration."""
+from __future__ import annotations
+
 import re
-from typing import Optional
 
 
 def extract_number(text: str) -> int | None:
@@ -21,7 +22,7 @@ def extract_float(text: str) -> float | None:
         return None
 
 
-def parse_uptime_to_seconds(uptime_str: Optional[str]) -> int | None:
+def parse_uptime_to_seconds(uptime_str: str | None) -> int | None:
     """Parse uptime string to total seconds.
 
     Args:

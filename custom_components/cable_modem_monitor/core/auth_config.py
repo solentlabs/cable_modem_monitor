@@ -1,7 +1,8 @@
 """Authentication configuration dataclasses."""
-from dataclasses import dataclass
-from typing import Optional
+from __future__ import annotations
+
 from abc import ABC
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -55,7 +56,7 @@ class FormAuthConfig(AuthConfig):
     login_url: str
     username_field: str
     password_field: str
-    success_indicator: Optional[str] = None  # URL fragment or min response size
+    success_indicator: str | None = None  # URL fragment or min response size
 
 
 @dataclass

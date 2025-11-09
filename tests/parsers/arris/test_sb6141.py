@@ -1,4 +1,6 @@
 """Tests for the Arris SB6141 parser."""
+from __future__ import annotations
+
 import os
 from bs4 import BeautifulSoup
 import pytest

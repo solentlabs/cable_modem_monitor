@@ -1,5 +1,7 @@
 """Constants for the Cable Modem Monitor integration."""
 
+from __future__ import annotations
+
 VERSION = "3.0.0"
 
 DOMAIN = "cable_modem_monitor"

@@ -46,6 +46,8 @@ EXAMPLE USAGE:
 ==============
 See motorola_mb.py or arris_sb6141.py for real-world examples.
 """
+from __future__ import annotations
+
 import logging
 from bs4 import BeautifulSoup
 from .base_parser import ModemParser

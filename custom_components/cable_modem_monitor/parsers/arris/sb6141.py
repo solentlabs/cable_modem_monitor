@@ -1,4 +1,6 @@
 """Parser for ARRIS SB6141 cable modem."""
+from __future__ import annotations
+
 import logging
 from bs4 import BeautifulSoup
 from ..base_parser import ModemParser

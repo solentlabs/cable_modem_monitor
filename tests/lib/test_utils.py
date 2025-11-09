@@ -1,4 +1,6 @@
 """Tests for utility functions in lib/utils.py."""
+from __future__ import annotations
+
 from custom_components.cable_modem_monitor.lib.utils import (
     extract_number,
     extract_float,

@@ -1,4 +1,6 @@
 """Parser for Technicolor TC4400 cable modem."""
+from __future__ import annotations
+
 import logging
 
 from bs4 import BeautifulSoup, Tag

@@ -1,16 +1,17 @@
 """Parser plugin discovery and registration system."""
-import logging
+from __future__ import annotations
+
 import importlib
+import logging
 import os
 import pkgutil
-from typing import List, Type
 
 from .base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_parsers() -> List[Type[ModemParser]]:
+def get_parsers() -> list[type[ModemParser]]:
     """Auto-discover and return all parser modules in this package."""
     parsers = []
     package_dir = os.path.dirname(__file__)

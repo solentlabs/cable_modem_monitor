@@ -1,4 +1,6 @@
 """Parser for Technicolor XB7 cable modem."""
+from __future__ import annotations
+
 import logging
 
 import requests

@@ -1,4 +1,6 @@
 """Tests for the entity cleanup utility."""
+from __future__ import annotations
+
 from unittest.mock import mock_open, patch
 import pytest
 

@@ -1,8 +1,11 @@
 """Helper utilities for modem discovery and detection."""
+from __future__ import annotations
+
 import logging
 import time
+from collections.abc import Sequence
+
 import requests
-from typing import List, Type, Optional, Tuple, Sequence
 from bs4 import BeautifulSoup
 
 _LOGGER = logging.getLogger(__name__)
@@ -13,8 +16,8 @@ class ParserHeuristics:
 
     @staticmethod
     def get_likely_parsers(
-        base_url: str, parsers: Sequence[Type], session: requests.Session, verify_ssl: bool = False
-    ) -> List[Type]:
+        base_url: str, parsers: Sequence[type], session: requests.Session, verify_ssl: bool = False
+    ) -> list[type]:
         """
         Return parsers likely to match based on quick heuristic checks.
 
@@ -81,7 +84,7 @@ class ParserHeuristics:
     @staticmethod
     def check_anonymous_access(
         base_url: str, parser_class: Type, session: requests.Session, verify_ssl: bool = False
-    ) -> Optional[Tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         """
         Check if parser has public (non-authenticated) URLs that can be accessed.
 
@@ -175,7 +178,7 @@ class DiscoveryCircuitBreaker:
 
         return True
 
-    def record_attempt(self, parser_name: Optional[str] = None):
+    def record_attempt(self, parser_name: str | None = None):
         """
         Record an authentication/detection attempt.
 
@@ -215,7 +218,7 @@ class DiscoveryCircuitBreaker:
 class DetectionError(Exception):
     """Base exception for detection errors with diagnostic information."""
 
-    def __init__(self, message: str, diagnostics: Optional[dict] = None):
+    def __init__(self, message: str, diagnostics: dict | None = None):
         """
         Initialize detection error.
 
@@ -230,7 +233,7 @@ class DetectionError(Exception):
         """Get user-friendly error message."""
         return str(self)
 
-    def get_troubleshooting_steps(self) -> List[str]:
+    def get_troubleshooting_steps(self) -> list[str]:
         """Get list of troubleshooting steps for user."""
         return []
 
@@ -238,7 +241,7 @@ class DetectionError(Exception):
 class ParserNotFoundError(DetectionError):
     """Raised when no parser can be detected for the modem."""
 
-    def __init__(self, modem_info: Optional[dict] = None, attempted_parsers: Optional[List[str]] = None):
+    def __init__(self, modem_info: dict | None = None, attempted_parsers: list[str] | None = None):
         """
         Initialize parser not found error.
 
@@ -266,7 +269,7 @@ class ParserNotFoundError(DetectionError):
         msg += "Your modem may not be supported yet."
         return msg
 
-    def get_troubleshooting_steps(self) -> List[str]:
+    def get_troubleshooting_steps(self) -> list[str]:
         """Get troubleshooting steps."""
         return [
             "Verify the modem IP address is correct",
@@ -280,7 +283,7 @@ class ParserNotFoundError(DetectionError):
 class AuthenticationError(DetectionError):
     """Raised when authentication fails."""
 
-    def get_troubleshooting_steps(self) -> List[str]:
+    def get_troubleshooting_steps(self) -> list[str]:
         """Get troubleshooting steps."""
         return [
             "Verify username and password are correct",
@@ -294,7 +297,7 @@ class AuthenticationError(DetectionError):
 class ConnectionError(DetectionError):
     """Raised when cannot connect to modem."""
 
-    def get_troubleshooting_steps(self) -> List[str]:
+    def get_troubleshooting_steps(self) -> list[str]:
         """Get troubleshooting steps."""
         return [
             "Verify the modem IP address is correct (try 192.168.100.1 or 192.168.0.1)",
@@ -324,7 +327,7 @@ class CircuitBreakerError(DetectionError):
             f"This usually means the modem is responding slowly or authentication is failing repeatedly."
         )
 
-    def get_troubleshooting_steps(self) -> List[str]:
+    def get_troubleshooting_steps(self) -> list[str]:
         """Get troubleshooting steps."""
         return [
             "Check if modem is responsive (try accessing web interface manually)",

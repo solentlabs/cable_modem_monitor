@@ -1,4 +1,6 @@
 """Tests for Cable Modem Monitor coordinator improvements."""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock, AsyncMock
 

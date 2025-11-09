@@ -81,8 +81,6 @@ class ModemRestartButton(ModemButtonBase):
         # For now, we'll create a new scraper instance
         from .const import (
             CONF_HOST as HOST_KEY,
-        )
-        from .const import (
             CONF_PASSWORD,
             CONF_USERNAME,
             CONF_WORKING_URL,

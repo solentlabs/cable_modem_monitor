@@ -1,4 +1,6 @@
 """Tests for Cable Modem Monitor sensors."""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock
 from custom_components.cable_modem_monitor.sensor import (

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 "Tests for the generic Motorola MB series parser."
 import os
 from bs4 import BeautifulSoup

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -85,9 +85,9 @@ def _validate_host_format(host: str) -> str:
 
 def _select_parser_for_validation(
     all_parsers: list,
-    modem_choice: Optional[str],
-    cached_parser_name: Optional[str]
-) -> tuple[Any | None, Optional[str]]:
+    modem_choice: str | None,
+    cached_parser_name: str | None
+) -> tuple[Any | None, str | None]:
     """Select parser(s) for validation.
 
     Args:
@@ -140,7 +140,7 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict:
     """Attempt to connect to modem and get data.
 
     Returns modem_data dict.
-    Raises CannotConnect or UnsupportedModem on failure.
+    Raises CannotConnectError or UnsupportedModemError on failure.
     """
     try:
         modem_data = await hass.async_add_executor_job(scraper.get_modem_data)
@@ -151,13 +151,13 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict:
             "Troubleshooting steps:\n%s",
             "\n".join(f"  {i+1}. {step}" for i, step in enumerate(err.get_troubleshooting_steps()))
         )
-        raise UnsupportedModem(str(err)) from err
+        raise UnsupportedModemError(str(err)) from err
     except Exception as err:
         _LOGGER.error("Error connecting to modem: %s", err)
-        raise CannotConnect from err
+        raise CannotConnectError from err
 
     if modem_data.get("cable_modem_connection_status") in ["offline", "unreachable"]:
-        raise CannotConnect
+        raise CannotConnectError
 
     return modem_data
 
@@ -228,9 +228,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 info = await validate_input(self.hass, user_input)
-            except UnsupportedModem:
+            except UnsupportedModemError:
                 errors["base"] = "unsupported_modem"
-            except CannotConnect:
+            except CannotConnectError:
                 errors["base"] = "cannot_connect"
             except (ValueError, TypeError) as err:
                 _LOGGER.error("Invalid input data: %s", err)
@@ -361,9 +361,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Validate the connection with new settings
             try:
                 info = await validate_input(self.hass, user_input)
-            except UnsupportedModem:
+            except UnsupportedModemError:
                 errors["base"] = "unsupported_modem"
-            except CannotConnect:
+            except CannotConnectError:
                 errors["base"] = "cannot_connect"
             except (ValueError, TypeError) as err:
                 _LOGGER.error("Invalid input data in options flow: %s", err)
@@ -453,9 +453,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
 
-class CannotConnect(HomeAssistantError):
+class CannotConnectError(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
 
-class UnsupportedModem(HomeAssistantError):
+class UnsupportedModemError(HomeAssistantError):
     """Error to indicate modem is not supported (no parser matches)."""

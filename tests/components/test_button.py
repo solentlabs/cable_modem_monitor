@@ -1,4 +1,6 @@
 """Tests for Cable Modem Monitor button platform."""
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import timedelta

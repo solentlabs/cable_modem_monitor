@@ -1,4 +1,6 @@
 """Parser for Motorola MB8611 cable modem using HNAP protocol."""
+from __future__ import annotations
+
 import json
 import logging
 
