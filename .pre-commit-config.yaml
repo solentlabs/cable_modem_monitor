@@ -9,15 +9,15 @@ repos:
     hooks:
       - id: black
         language_version: python3
-        files: ^custom_components/cable_modem_monitor/.*\.py$
+        files: \.py$
 
   ***REMOVED*** Linting with Ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.2
     hooks:
       - id: ruff
-        args: [--fix, --select, "E,F,W,C90"]
-        files: ^custom_components/cable_modem_monitor/.*\.py$
+        args: [--fix]
+        files: \.py$
 
   ***REMOVED*** Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -26,7 +26,7 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
-        files: ^custom_components/cable_modem_monitor/.*\.py$
+        files: \.py$
 
   ***REMOVED*** General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks

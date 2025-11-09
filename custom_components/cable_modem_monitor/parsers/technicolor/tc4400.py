@@ -1,10 +1,13 @@
 """Parser for Technicolor TC4400 cable modem."""
 import logging
-from bs4 import BeautifulSoup
-from ..base_parser import ModemParser
-from custom_components.cable_modem_monitor.lib.utils import extract_number, extract_float
+
+from bs4 import BeautifulSoup, Tag
+
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+
+from ..base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,19 +78,21 @@ class TechnicolorTC4400Parser(ModemParser):
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
-            "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
-            system_info.get('system_uptime')
+            "TC4400 Uptime: %s, Seconds: %s, Restarting: %s",
+            system_info.get('system_uptime'),
+            uptime_seconds,
+            is_restarting
         )
 
         channels = []
         try:
-            downstream_header = soup.find("th", string="Downstream Channel Status")
+            downstream_header = soup.find("th", text="Downstream Channel Status")
             if not downstream_header:
                 _LOGGER.warning("TC4400: Downstream Channel Status table not found")
                 return channels
 
             downstream_table = downstream_header.find_parent("table")
-            if not downstream_table:
+            if not downstream_table or not isinstance(downstream_table, Tag):
                 _LOGGER.warning("TC4400: Downstream table parent not found")
                 return channels
 
@@ -133,19 +138,21 @@ class TechnicolorTC4400Parser(ModemParser):
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
-            "TC4400 Uptime: %s, Seconds: {uptime_seconds}, Restarting: {is_restarting}",
-            system_info.get('system_uptime')
+            "TC4400 Uptime: %s, Seconds: %s, Restarting: %s",
+            system_info.get('system_uptime'),
+            uptime_seconds,
+            is_restarting
         )
 
         channels = []
         try:
-            upstream_header = soup.find("th", string="Upstream Channel Status")
+            upstream_header = soup.find("th", text="Upstream Channel Status")
             if not upstream_header:
                 _LOGGER.warning("TC4400: Upstream Channel Status table not found")
                 return channels
 
             upstream_table = upstream_header.find_parent("table")
-            if not upstream_table:
+            if not upstream_table or not isinstance(upstream_table, Tag):
                 _LOGGER.warning("TC4400: Upstream table parent not found")
                 return channels
 
@@ -201,7 +208,7 @@ class TechnicolorTC4400Parser(ModemParser):
                         info[header_mapping[header]] = value_cell.text.strip()
                 else:
                     ***REMOVED*** Special case: Serial number uses different format
-                    header_cell = row.find("td", string="Cable Modem Serial Number")
+                    header_cell = row.find("td", text="Cable Modem Serial Number")
                     if header_cell:
                         value_cell = header_cell.find_next_sibling("td")
                         if value_cell:

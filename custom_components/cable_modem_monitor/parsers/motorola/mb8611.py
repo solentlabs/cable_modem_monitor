@@ -1,11 +1,14 @@
 """Parser for Motorola MB8611 cable modem using HNAP protocol."""
-import logging
 import json
+import logging
+
 from bs4 import BeautifulSoup
-from ..base_parser import ModemParser
+
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
+
+from ..base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +83,11 @@ class MotorolaMB8611Parser(ModemParser):
 
         if self.auth_config is None:
             _LOGGER.error("auth_config is not configured for MB8611")
+            return {"downstream": [], "upstream": [], "system_info": {}}
+
+        ***REMOVED*** Type narrowing: MB8611 always uses HNAPAuthConfig
+        if not isinstance(self.auth_config, HNAPAuthConfig):
+            _LOGGER.error("MB8611 requires HNAPAuthConfig, got %s", type(self.auth_config).__name__)
             return {"downstream": [], "upstream": [], "system_info": {}}
 
         ***REMOVED*** Build HNAP request builder
@@ -265,41 +273,36 @@ class MotorolaMB8611Parser(ModemParser):
         system_info = {}
 
         try:
-            ***REMOVED*** Get connection info
-            conn_info = hnap_data.get("GetMotoStatusConnectionInfoResponse", {})
-            if conn_info:
-                uptime = conn_info.get("MotoConnSystemUpTime", "")
-                if uptime:
-                    system_info["system_uptime"] = uptime
-
-                network_access = conn_info.get("MotoConnNetworkAccess", "")
-                if network_access:
-                    system_info["network_access"] = network_access
-
-            ***REMOVED*** Get startup sequence info
-            startup_info = hnap_data.get("GetMotoStatusStartupSequenceResponse", {})
-            if startup_info:
-                ds_freq = startup_info.get("MotoConnDSFreq", "")
-                if ds_freq:
-                    system_info["downstream_frequency"] = ds_freq
-
-                connectivity_status = startup_info.get("MotoConnConnectivityStatus", "")
-                if connectivity_status:
-                    system_info["connectivity_status"] = connectivity_status
-
-                boot_status = startup_info.get("MotoConnBootStatus", "")
-                if boot_status:
-                    system_info["boot_status"] = boot_status
-
-                security_status = startup_info.get("MotoConnSecurityStatus", "")
-                if security_status:
-                    system_info["security_status"] = security_status
-
-                security_comment = startup_info.get("MotoConnSecurityComment", "")
-                if security_comment:
-                    system_info["security_comment"] = security_comment
-
+            self._extract_connection_info(hnap_data, system_info)
+            self._extract_startup_info(hnap_data, system_info)
         except Exception as e:
             _LOGGER.error("MB8611: Error parsing system info: %s", e)
 
         return system_info
+
+    def _extract_connection_info(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract connection info fields from HNAP data."""
+        conn_info = hnap_data.get("GetMotoStatusConnectionInfoResponse", {})
+        if not conn_info:
+            return
+
+        self._set_if_present(conn_info, "MotoConnSystemUpTime", system_info, "system_uptime")
+        self._set_if_present(conn_info, "MotoConnNetworkAccess", system_info, "network_access")
+
+    def _extract_startup_info(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract startup sequence info fields from HNAP data."""
+        startup_info = hnap_data.get("GetMotoStatusStartupSequenceResponse", {})
+        if not startup_info:
+            return
+
+        self._set_if_present(startup_info, "MotoConnDSFreq", system_info, "downstream_frequency")
+        self._set_if_present(startup_info, "MotoConnConnectivityStatus", system_info, "connectivity_status")
+        self._set_if_present(startup_info, "MotoConnBootStatus", system_info, "boot_status")
+        self._set_if_present(startup_info, "MotoConnSecurityStatus", system_info, "security_status")
+        self._set_if_present(startup_info, "MotoConnSecurityComment", system_info, "security_comment")
+
+    def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
+        """Set target[key] if source[source_key] exists and is non-empty."""
+        value = source.get(source_key, "")
+        if value:
+            target[target_key] = value

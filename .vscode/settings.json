@@ -4,62 +4,55 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestArgs": [
     "tests",
-    "-v"
+    "-v",
+    "--tb=short"
   ],
-  "python.linting.enabled": true,
-
-  // Bandit security linter
-  "python.linting.banditEnabled": true,
-  "python.linting.banditArgs": [
-    "-c",
-    ".bandit"
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  // Ruff linting (primary linter - fast and comprehensive)
+  "ruff.enable": true,
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "ruff.lint.args": [
+    "--select=E,F,W,C90",
+    "--ignore=E501"
   ],
-
-  // Flake8 with security plugins
-  "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": [
-    "--max-line-length=120",
-    "--extend-ignore=E203,W503"
-  ],
-
-  // Pylint
-  "python.linting.pylintEnabled": false,
-
   // MyPy type checking
   "python.linting.mypyEnabled": true,
   "python.linting.mypyArgs": [
     "--config-file=mypy.ini"
   ],
-
-  // Auto-run linting
+  // Auto-run linting (deprecated but kept for compatibility)
+  "python.linting.enabled": true,
   "python.linting.lintOnSave": true,
-
-  // Format on save
+  "python.linting.pylintEnabled": false,
+  // Format on save with Black
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit"
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
   },
-
   // Python formatter (Black)
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
+      "source.organizeImports": "explicit",
+      "source.fixAll.ruff": "explicit"
     }
   },
-
-  // Pytest configuration
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": [
-    "tests",
-    "-v",
-    "--tb=short"
-  ],
-  "python.testing.autoTestDiscoverOnSaveEnabled": true,
-
   // Security-focused extensions
   "semgrep.scan.onSave": true,
-  "semgrep.scan.configuration": ".semgrep.yml"
+  "semgrep.scan.configuration": ".semgrep.yml",
+  // File exclusions for linting
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true
+  },
+  "python.analysis.exclude": [
+    "**/__pycache__",
+    "**/htmlcov",
+    "**/.venv",
+    "**/venv"
+  ],
+  "makefile.configureOnOpen": true
 }

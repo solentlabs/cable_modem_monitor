@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlparse
+
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)

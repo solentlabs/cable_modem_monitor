@@ -30,12 +30,49 @@ Make your code changes or additions on a new branch.
 
 Before committing, ensure your code is well-formatted and passes all quality checks.
 
+**Quick commands (using Make):**
+```bash
+***REMOVED*** Run all code quality checks
+make check
+
+***REMOVED*** Auto-fix linting issues
+make lint-fix
+
+***REMOVED*** Format code
+make format
+
+***REMOVED*** Run comprehensive linting (includes security)
+make lint-all
+```
+
+**Manual commands:**
 ```bash
 ***REMOVED*** Auto-format your code with Black
-black custom_components/cable_modem_monitor/ tests/
+black custom_components/cable_modem_monitor/
 
 ***REMOVED*** Check for linting issues with Ruff
-ruff check custom_components/cable_modem_monitor/ tests/
+ruff check custom_components/cable_modem_monitor/
+
+***REMOVED*** Auto-fix linting issues
+ruff check --fix custom_components/cable_modem_monitor/
+
+***REMOVED*** Type checking with mypy
+mypy custom_components/cable_modem_monitor/
+
+***REMOVED*** Or use the comprehensive lint script
+bash scripts/dev/lint.sh
+***REMOVED*** On Windows PowerShell:
+***REMOVED*** .\scripts\dev\lint.ps1
+```
+
+**Pre-commit hooks (recommended):**
+```bash
+***REMOVED*** Install pre-commit hooks (runs automatically on commit)
+pip install pre-commit
+pre-commit install
+
+***REMOVED*** Run manually on all files
+pre-commit run --all-files
 ```
 
 ***REMOVED******REMOVED******REMOVED*** 4. Run Tests
@@ -230,9 +267,43 @@ When you submit a pull request, include:
 - Use async/await for I/O operations
 
 ***REMOVED******REMOVED******REMOVED*** Linting
+
+The project uses multiple linting tools for code quality:
+
+**Ruff** (Primary linter - fast and comprehensive):
 ```bash
+***REMOVED*** Check for issues
 ruff check custom_components/cable_modem_monitor/
+
+***REMOVED*** Auto-fix issues
+ruff check --fix custom_components/cable_modem_monitor/
 ```
+
+**mypy** (Type checking):
+```bash
+mypy custom_components/cable_modem_monitor/ --config-file=mypy.ini
+```
+
+**Black** (Code formatting):
+```bash
+***REMOVED*** Format code
+black custom_components/cable_modem_monitor/
+
+***REMOVED*** Check formatting (CI mode)
+black --check custom_components/cable_modem_monitor/
+```
+
+**Comprehensive linting:**
+```bash
+***REMOVED*** Run all checks at once
+make check
+
+***REMOVED*** Or use the lint script
+bash scripts/dev/lint.sh
+```
+
+See `docs/SECURITY_LINTING.md` for security-specific linting tools (Bandit, Semgrep).
+See `docs/LINTING.md` for comprehensive linting documentation.
 
 ***REMOVED******REMOVED*** Testing Guide
 

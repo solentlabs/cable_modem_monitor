@@ -1,12 +1,13 @@
 """Authentication abstraction for cable modems."""
-import logging
 import base64
-import requests
+import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Tuple
+
+import requests
 
 if TYPE_CHECKING:
-    from .auth_config import AuthConfig, HNAPAuthConfig
+    from .auth_config import AuthConfig, HNAPAuthConfig, RedirectFormAuthConfig
 
 from .auth_config import AuthStrategyType
 
@@ -275,46 +276,14 @@ class RedirectFormAuthStrategy(AuthStrategy):
             return (False, None)
 
         try:
-            login_url = f"{base_url}{config.login_url}"
-            login_data = {
-                config.username_field: username,
-                config.password_field: password,
-            }
-
-            _LOGGER.debug("Posting credentials to %s", login_url)
-            response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
-
-            if response.status_code != 200:
-                _LOGGER.error("Login failed with status %s", response.status_code)
+            response = self._post_login_request(session, base_url, username, password, config)
+            if response is None:
                 return (False, None)
 
-            ***REMOVED*** Security check: Validate redirect stayed on same host
-            from urllib.parse import urlparse
-            redirect_parsed = urlparse(response.url)
-            base_parsed = urlparse(base_url)
-
-            if redirect_parsed.hostname != base_parsed.hostname:
-                _LOGGER.error("Security violation - redirect to different host: %s", response.url)
+            if not self._validate_redirect_security(response.url, base_url):
                 return (False, None)
 
-            ***REMOVED*** Check for success redirect pattern
-            if config.success_redirect_pattern in response.url:
-                _LOGGER.debug("Login successful, redirected to %s", response.url)
-
-                ***REMOVED*** Fetch authenticated page
-                auth_url = f"{base_url}{config.authenticated_page_url}"
-                _LOGGER.debug("Fetching authenticated page: %s", auth_url)
-                auth_response = session.get(auth_url, timeout=10)
-
-                if auth_response.status_code != 200:
-                    _LOGGER.error("Failed to fetch authenticated page, status %s", auth_response.status_code)
-                    return (False, None)
-
-                _LOGGER.info("Successfully authenticated and fetched status page (%s bytes)", len(auth_response.text))
-                return (True, auth_response.text)
-            else:
-                _LOGGER.warning("Unexpected redirect to %s", response.url)
-                return (False, None)
+            return self._handle_login_response(session, base_url, response, config)
 
         except (requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as e:
             _LOGGER.debug("Login timeout (modem may be busy): %s", str(e))
@@ -329,6 +298,76 @@ class RedirectFormAuthStrategy(AuthStrategy):
         except Exception as e:
             _LOGGER.error("Unexpected login exception: %s", str(e), exc_info=True)
             return (False, None)
+
+    def _post_login_request(
+        self,
+        session: requests.Session,
+        base_url: str,
+        username: str,
+        password: str,
+        config: "RedirectFormAuthConfig"
+    ) -> Optional[requests.Response]:
+        """Post login credentials and return response."""
+        login_url = f"{base_url}{config.login_url}"
+        login_data = {
+            config.username_field: username,
+            config.password_field: password,
+        }
+
+        _LOGGER.debug("Posting credentials to %s", login_url)
+        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
+
+        if response.status_code != 200:
+            _LOGGER.error("Login failed with status %s", response.status_code)
+            return None
+
+        return response
+
+    def _validate_redirect_security(self, redirect_url: str, base_url: str) -> bool:
+        """Validate that redirect stayed on same host for security."""
+        from urllib.parse import urlparse
+
+        redirect_parsed = urlparse(redirect_url)
+        base_parsed = urlparse(base_url)
+
+        if redirect_parsed.hostname != base_parsed.hostname:
+            _LOGGER.error("Security violation - redirect to different host: %s", redirect_url)
+            return False
+
+        return True
+
+    def _handle_login_response(
+        self,
+        session: requests.Session,
+        base_url: str,
+        response: requests.Response,
+        config: "RedirectFormAuthConfig"
+    ) -> Tuple[bool, Optional[str]]:
+        """Handle login response and fetch authenticated page if successful."""
+        if config.success_redirect_pattern not in response.url:
+            _LOGGER.warning("Unexpected redirect to %s", response.url)
+            return (False, None)
+
+        _LOGGER.debug("Login successful, redirected to %s", response.url)
+        return self._fetch_authenticated_page(session, base_url, config)
+
+    def _fetch_authenticated_page(
+        self,
+        session: requests.Session,
+        base_url: str,
+        config: "RedirectFormAuthConfig"
+    ) -> Tuple[bool, Optional[str]]:
+        """Fetch the authenticated page after successful login."""
+        auth_url = f"{base_url}{config.authenticated_page_url}"
+        _LOGGER.debug("Fetching authenticated page: %s", auth_url)
+        auth_response = session.get(auth_url, timeout=10)
+
+        if auth_response.status_code != 200:
+            _LOGGER.error("Failed to fetch authenticated page, status %s", auth_response.status_code)
+            return (False, None)
+
+        _LOGGER.info("Successfully authenticated and fetched status page (%s bytes)", len(auth_response.text))
+        return (True, auth_response.text)
 
 
 class HNAPSessionAuthStrategy(AuthStrategy):

@@ -1,7 +1,8 @@
 """HNAP/SOAP request builder utility."""
 import logging
+from typing import TYPE_CHECKING, Dict, List, Optional
+
 import requests
-from typing import Dict, List, Optional, TYPE_CHECKING
 
 ***REMOVED*** Import Element for type checking from standard library
 if TYPE_CHECKING:
@@ -12,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 ***REMOVED*** Use defusedxml to prevent XXE (XML External Entity) attacks
 ***REMOVED*** See: https://docs.python.org/3/library/xml.html***REMOVED***xml-vulnerabilities
 try:
-    from defusedxml import ElementTree as ET
+    from defusedxml import ElementTree as ET  ***REMOVED*** type: ignore[import-untyped]
 except ImportError:
     ***REMOVED*** Fallback to standard library with warning
     from xml.etree import ElementTree as ET

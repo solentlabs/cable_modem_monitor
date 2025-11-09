@@ -116,12 +116,12 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class ModemSensorBase(CoordinatorEntity, SensorEntity):
+class ModemSensorBase(CoordinatorEntity, SensorEntity):  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
     """Base class for modem sensors."""
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:  ***REMOVED*** type: ignore[reportGeneralTypeIssues]
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._entry = entry
@@ -139,7 +139,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         }
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return if entity is available."""
         ***REMOVED*** Sensors remain available if coordinator succeeds, even if modem is temporarily offline
         ***REMOVED*** This allows sensors to retain last known values during modem reboots
@@ -154,7 +154,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
 class ModemConnectionStatusSensor(ModemSensorBase):
     """Sensor for modem connection status."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:  ***REMOVED*** type: ignore[reportGeneralTypeIssues]
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Connection Status"
@@ -162,12 +162,12 @@ class ModemConnectionStatusSensor(ModemSensorBase):
         self._attr_icon = "mdi:router-network"
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Connection status sensor is always available to show offline state."""
         return self.coordinator.last_update_success
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_connection_status", "unknown")
 
@@ -184,7 +184,7 @@ class ModemTotalCorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_total_corrected", 0)
 
@@ -201,7 +201,7 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_total_uncorrected", 0)
 
@@ -222,7 +222,7 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -249,7 +249,7 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -277,7 +277,7 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
         self._attr_device_class = SensorDeviceClass.FREQUENCY
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -303,7 +303,7 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -329,7 +329,7 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_downstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -356,7 +356,7 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_upstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -384,7 +384,7 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
         self._attr_device_class = SensorDeviceClass.FREQUENCY
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         for ch in self.coordinator.data.get("cable_modem_upstream", []):
             ***REMOVED*** v2.0+ parsers return 'channel_id', older versions used 'channel'
@@ -407,7 +407,7 @@ class ModemDownstreamChannelCountSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
 
@@ -424,7 +424,7 @@ class ModemUpstreamChannelCountSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
 
@@ -440,7 +440,7 @@ class ModemSoftwareVersionSensor(ModemSensorBase):
         self._attr_icon = "mdi:information-outline"
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_software_version", "Unknown")
 
@@ -456,7 +456,7 @@ class ModemSystemUptimeSensor(ModemSensorBase):
         self._attr_icon = "mdi:clock-outline"
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         return self.coordinator.data.get("cable_modem_system_uptime", "Unknown")
 
@@ -473,7 +473,7 @@ class ModemLastBootTimeSensor(ModemSensorBase):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
     @property
-    def native_value(self) -> datetime | None:
+    def native_value(self) -> datetime | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the last boot time as a datetime object."""
         uptime_str = self.coordinator.data.get("cable_modem_system_uptime")
         if not uptime_str or uptime_str == "Unknown":
@@ -505,7 +505,7 @@ class ModemLanStatsSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the state of the sensor."""
         lan_stats = self.coordinator.data.get("cable_modem_lan_stats", {})
         if self._interface in lan_stats:
@@ -592,12 +592,12 @@ class ModemHealthStatusSensor(ModemSensorBase):
         self._attr_icon = "mdi:heart-pulse"
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the health status."""
         return self.coordinator.data.get("health_status", "unknown")
 
     @property
-    def extra_state_attributes(self) -> dict:
+    def extra_state_attributes(self) -> dict:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return additional state attributes."""
         return {
             "diagnosis": self.coordinator.data.get("health_diagnosis", ""),
@@ -621,7 +621,7 @@ class ModemPingLatencySensor(ModemSensorBase):
         self._attr_device_class = SensorDeviceClass.DURATION
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the ping latency in milliseconds."""
         return self.coordinator.data.get("ping_latency_ms")
 
@@ -640,6 +640,6 @@ class ModemHttpLatencySensor(ModemSensorBase):
         self._attr_device_class = SensorDeviceClass.DURATION
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> float | None:  ***REMOVED*** type: ignore[reportIncompatibleVariableOverride]
         """Return the HTTP latency in milliseconds."""
         return self.coordinator.data.get("http_latency_ms")
