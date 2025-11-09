@@ -123,6 +123,7 @@ After installation, you can configure additional settings:
 3. Available options:
    - **Modem IP Address**: Update if your modem's IP changes
    - **Username/Password**: Update authentication credentials
+   - **Modem Model**: Select your modem model or use "auto" for automatic detection (recommended)
    - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
    - **Entity Naming**: Choose how entities are named:

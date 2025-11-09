@@ -150,6 +150,65 @@ automation:
           message: "Cable modem is not responding. Check power and connections."
 ```
 
+***REMOVED******REMOVED******REMOVED*** Modem Model Selection
+
+**New in v3.0.0: Modem Model Selection**
+
+During setup and in settings, you can now select your specific modem model or use auto-detection:
+
+**Auto Detection (Recommended):**
+- Select "auto" from the Modem Model dropdown
+- Integration will try all available parsers to find the right one
+- Successful detection info is shown in notifications
+- Detection result is cached for faster subsequent connections
+
+**Manual Selection:**
+- Choose your specific modem model if auto-detection doesn't work
+- Useful if you know your exact model
+- Faster connection since it skips auto-detection
+- Required for some modems with unique authentication
+
+**Viewing Auto-Detection Logs:**
+
+When using auto-detection, INFO-level logs show the detection process:
+
+```
+INFO [config_flow] Using auto-detection mode (modem_choice=auto, cached_parser=None)
+INFO [config_flow] No cached parser, will try all available parsers
+INFO [config_flow] Attempting to connect to modem at 192.168.100.1
+INFO [modem_scraper] Tier 3: Auto-detection mode - trying all parsers
+INFO [modem_scraper] Successfully connected to http://192.168.100.1/MotoSwInfo.asp
+INFO [config_flow] Detection successful: {'modem_name': 'Motorola MB7621', 'manufacturer': 'Motorola', ...}
+INFO [config_flow] Auto-detection successful: updating modem_choice from 'auto' to 'Motorola MB7621'
+```
+
+**How to View These Logs:**
+
+INFO-level messages may not appear in the filtered Home Assistant logs UI. To see them:
+
+1. **Method 1 - Download Raw Logs:**
+   - Settings → System → Logs
+   - Click "Download full log"
+   - Open the downloaded file and search for "auto-detection" or "Detection successful"
+
+2. **Method 2 - View Raw Logs (if available):**
+   - Settings → System → Logs
+   - Look for "View Raw Logs" link
+   - Search for "cable_modem_monitor" and "auto-detection"
+
+3. **Method 3 - SSH/Terminal:**
+   ```bash
+   docker logs homeassistant 2>&1 | grep -i "auto-detection\|Detection successful"
+   ```
+
+**If Auto-Detection Fails:**
+
+If you see errors or auto-detection doesn't find your modem:
+1. Check the logs for which parsers were attempted
+2. Note any error messages (SSL errors, connection refused, etc.)
+3. Try manually selecting your modem model if you know it
+4. Open a GitHub issue with the auto-detection logs
+
 ***REMOVED******REMOVED******REMOVED*** Viewing Detailed Logs
 
 **Normal Logs (INFO level):**
@@ -171,6 +230,7 @@ logger:
 - Timeout details (without stack traces)
 - Connection error details
 - Parsing debug information
+- Detailed auto-detection attempts (all parsers tried, all URLs attempted)
 
 **After enabling debug logging:**
 1. Reload integration
@@ -422,13 +482,19 @@ If you encounter issues not covered here:
      logs:
        custom_components.cable_modem_monitor: debug
    ```
-3. **Download Diagnostics**:
+3. **Download Diagnostics** (Highly Recommended):
    - Settings → Devices & Services → Cable Modem Monitor
    - Click ⋮ → Download diagnostics
+   - **Diagnostics now include:**
+     - Configuration and detection info
+     - Modem data and channel information
+     - Recent logs (last 150 entries, sanitized)
+     - Error details
+   - This provides complete debugging information in one file!
 4. **Open an Issue**: [GitHub Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
    - Include your modem model
-   - Include relevant logs
-   - Attach diagnostics file
+   - Attach diagnostics file (includes logs automatically)
+   - If diagnostics aren't available, include manual logs
 
 ---
 

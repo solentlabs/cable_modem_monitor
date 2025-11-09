@@ -38,9 +38,21 @@ body:
     attributes:
       label: Modem Model
       description: What cable modem model are you using?
-      placeholder: "e.g., Motorola MB7621, ARRIS SB6141"
+      placeholder: "e.g., Motorola MB7621, ARRIS SB6141, Technicolor XB7"
     validations:
       required: true
+
+  - type: dropdown
+    id: modem-selection
+    attributes:
+      label: Modem Model Selection in Config
+      description: In the integration settings, which modem model did you select?
+      options:
+        - auto (automatic detection)
+        - Manually selected my specific model
+        - Not sure / Don't remember
+    validations:
+      required: false
 
   - type: textarea
     id: description
@@ -80,7 +92,18 @@ body:
         Please copy and paste any relevant log output from Home Assistant.
         This will be automatically formatted into code, so no need for backticks.
 
-        To find logs: Settings → System → Logs (filter by "cable_modem_monitor")
+        **How to get logs:**
+        1. Settings → System → Logs
+        2. Click "Download full log" (recommended) OR "View Raw Logs"
+        3. Search for "cable_modem_monitor" in the downloaded file
+
+        **For connection/detection issues, include:**
+        - Any lines with "auto-detection" or "Detection successful"
+        - Lines showing "Using auto-detection mode" or "Attempting to connect"
+        - Any error messages (ConnectionError, SSLError, etc.)
+
+        **Tip:** Raw logs contain more detail than the filtered UI view. Auto-detection
+        messages are INFO level and may not appear in the filtered view.
       render: shell
     validations:
       required: false
@@ -110,6 +133,31 @@ body:
         - Manual
     validations:
       required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics Download
+      description: |
+        **Highly Recommended:** Download diagnostics for complete debugging information.
+
+        Diagnostics include:
+        - Configuration details
+        - Modem detection info (parser used, detected model, etc.)
+        - Channel data
+        - Recent logs (last 150 log entries, sanitized for security)
+        - Error information
+
+        **How to download:**
+        1. Go to Settings → Devices & Services
+        2. Find Cable Modem Monitor
+        3. Click the three dots (⋮) → Download diagnostics
+        4. Attach the downloaded JSON file to this issue
+
+        If you attach diagnostics, you may not need to provide logs separately.
+      placeholder: "Attach the diagnostics JSON file or paste its contents here"
+    validations:
+      required: false
 
   - type: textarea
     id: additional
