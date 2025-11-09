@@ -1,4 +1,5 @@
 """Diagnostics support for Cable Modem Monitor."""
+
 from __future__ import annotations
 
 import logging
@@ -24,19 +25,19 @@ def _sanitize_log_message(message: str) -> str:
     """
     # Remove anything that looks like credentials
     message = re.sub(
-        r'(password|passwd|pwd|token|key|secret|auth|username|user)[\s]*[=:]\s*[^\s,}\]]+',
-        r'\1=***REDACTED***',
+        r"(password|passwd|pwd|token|key|secret|auth|username|user)[\s]*[=:]\s*[^\s,}\]]+",
+        r"\1=***REDACTED***",
         message,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
     # Remove file paths (but keep relative component paths)
-    message = re.sub(r'/config/[^\s,}\]]+', '/config/***PATH***', message)
-    message = re.sub(r'/home/[^\s,}\]]+', '/home/***PATH***', message)
+    message = re.sub(r"/config/[^\s,}\]]+", "/config/***PATH***", message)
+    message = re.sub(r"/home/[^\s,}\]]+", "/home/***PATH***", message)
     # Remove private IP addresses (but keep common modem IPs for context)
     message = re.sub(
-        r'\b(?!192\.168\.100\.1\b)(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b',
-        '***PRIVATE_IP***',
-        message
+        r"\b(?!192\.168\.100\.1\b)(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b",
+        "***PRIVATE_IP***",
+        message,
     )
     return message
 
@@ -63,16 +64,18 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
 
         if not log_file.exists():
             _LOGGER.debug("Log file not found at %s", log_file)
-            return [{
-                'timestamp': 0,
-                'level': 'INFO',
-                'logger': 'diagnostics',
-                'message': 'Log file not available. Check Home Assistant logs for full history.'
-            }]
+            return [
+                {
+                    "timestamp": 0,
+                    "level": "INFO",
+                    "logger": "diagnostics",
+                    "message": "Log file not available. Check Home Assistant logs for full history.",
+                }
+            ]
 
         # Read last N lines from log file (much faster than reading entire file)
         # Read more lines than max_records to account for non-matching lines
-        with open(log_file, 'rb') as f:
+        with open(log_file, "rb") as f:
             # Seek to end of file
             f.seek(0, 2)
             file_size = f.tell()
@@ -83,17 +86,17 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             f.seek(max(0, file_size - read_size))
 
             # Read and decode
-            tail_data = f.read().decode('utf-8', errors='ignore')
-            lines = tail_data.split('\n')
+            tail_data = f.read().decode("utf-8", errors="ignore")
+            lines = tail_data.split("\n")
 
         # Parse log lines for cable_modem_monitor entries
         # Format: 2025-11-09 04:39:46.123 INFO (MainThread) [custom_components.cable_modem_monitor.config_flow] Message
         log_pattern = re.compile(
-            r'^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+'  # timestamp
-            r'(\w+)\s+'  # level
-            r'\([^)]+\)\s+'  # thread
-            r'\[custom_components\.cable_modem_monitor\.?([^\]]*)\]\s+'  # logger
-            r'(.+)$'  # message
+            r"^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+"  # timestamp
+            r"(\w+)\s+"  # level
+            r"\([^)]+\)\s+"  # thread
+            r"\[custom_components\.cable_modem_monitor\.?([^\]]*)\]\s+"  # logger
+            r"(.+)$"  # message
         )
 
         for line in lines:
@@ -104,12 +107,14 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                 # Sanitize the message
                 sanitized_message = _sanitize_log_message(message)
 
-                recent_logs.append({
-                    'timestamp': timestamp_str,
-                    'level': level,
-                    'logger': logger if logger else '__init__',
-                    'message': sanitized_message
-                })
+                recent_logs.append(
+                    {
+                        "timestamp": timestamp_str,
+                        "level": level,
+                        "logger": logger if logger else "__init__",
+                        "message": sanitized_message,
+                    }
+                )
 
         # If we found logs, return the most recent ones
         if recent_logs:
@@ -119,17 +124,17 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
         _LOGGER.warning("Failed to read logs from file: %s", err)
 
     # If we couldn't get logs, return a note
-    return [{
-        'timestamp': 0,
-        'level': 'INFO',
-        'logger': 'diagnostics',
-        'message': 'Unable to retrieve recent logs. Check Home Assistant logs for full history.'
-    }]
+    return [
+        {
+            "timestamp": 0,
+            "level": "INFO",
+            "logger": "diagnostics",
+            "message": "Unable to retrieve recent logs. Check Home Assistant logs for full history.",
+        }
+    ]
 
 
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -201,7 +206,7 @@ async def async_get_config_entry_diagnostics(
         diagnostics["last_error"] = {
             "type": exception_type,
             "message": exception_msg,
-            "note": "Exception details have been sanitized for security"
+            "note": "Exception details have been sanitized for security",
         }
 
     # Add recent logs (last 150 records)
@@ -211,14 +216,11 @@ async def async_get_config_entry_diagnostics(
         diagnostics["recent_logs"] = {
             "note": "Recent logs from cable_modem_monitor (sanitized for security)",
             "count": len(recent_logs),
-            "logs": recent_logs
+            "logs": recent_logs,
         }
     except Exception as err:
         # If we can't get logs, add a note but don't fail diagnostics
         _LOGGER.warning("Failed to retrieve recent logs for diagnostics: %s", err)
-        diagnostics["recent_logs"] = {
-            "note": "Unable to retrieve recent logs",
-            "error": str(err)
-        }
+        diagnostics["recent_logs"] = {"note": "Unable to retrieve recent logs", "error": str(err)}
 
     return diagnostics

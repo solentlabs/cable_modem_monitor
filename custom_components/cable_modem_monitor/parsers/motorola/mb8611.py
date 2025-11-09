@@ -1,4 +1,5 @@
 """Parser for Motorola MB8611 cable modem using HNAP protocol."""
+
 from __future__ import annotations
 
 import json
@@ -29,7 +30,7 @@ class MotorolaMB8611Parser(ModemParser):
         login_url="/Login.html",
         hnap_endpoint="/HNAP1/",
         session_timeout_indicator="UN-AUTH",
-        soap_action_namespace="http://purenetworks.com/HNAP1/"
+        soap_action_namespace="http://purenetworks.com/HNAP1/",
     )
 
     url_patterns = [
@@ -40,17 +41,12 @@ class MotorolaMB8611Parser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Motorola MB8611 modem."""
-        # Check for MB8611-specific indicators
-        if "MB8611" in html or "MB 8611" in html or "2251-MB8611" in html:
-            return True
-
-        # Check for HNAP/SOAP indicators
-        if "HNAP" in html or "purenetworks.com/HNAP1" in html:
-            # Additional check for Motorola
-            if "Motorola" in html:
-                return True
-
-        return False
+        return (
+            "MB8611" in html
+            or "MB 8611" in html
+            or "2251-MB8611" in html
+            or (("HNAP" in html or "purenetworks.com/HNAP1" in html) and "Motorola" in html)
+        )
 
     def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """
@@ -94,8 +90,7 @@ class MotorolaMB8611Parser(ModemParser):
 
         # Build HNAP request builder
         builder = HNAPRequestBuilder(
-            endpoint=self.auth_config.hnap_endpoint,
-            namespace=self.auth_config.soap_action_namespace
+            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
         )
 
         try:
@@ -105,7 +100,7 @@ class MotorolaMB8611Parser(ModemParser):
                 "GetMotoStatusConnectionInfo",
                 "GetMotoStatusDownstreamChannelInfo",
                 "GetMotoStatusUpstreamChannelInfo",
-                "GetMotoLagStatus"
+                "GetMotoLagStatus",
             ]
 
             _LOGGER.debug("MB8611: Fetching modem data via HNAP GetMultipleHNAPs")

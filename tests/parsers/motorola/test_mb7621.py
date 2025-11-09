@@ -1,10 +1,12 @@
 """Tests for the Motorola MB7621 parser."""
+
 from __future__ import annotations
 
 import os
-from bs4 import BeautifulSoup
-import pytest
 from unittest.mock import Mock
+
+import pytest
+from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
@@ -13,7 +15,7 @@ from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import Motoro
 def login_html():
     """Load Login.html fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb7621", "Login.html")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -21,7 +23,7 @@ def login_html():
 def connection_html():
     """Load MotoConnection.asp fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb7621", "MotoConnection.asp")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -29,7 +31,7 @@ def connection_html():
 def home_html():
     """Load MotoHome.asp fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb7621", "MotoHome.asp")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -37,7 +39,7 @@ def home_html():
 def security_html():
     """Load MotoSecurity.asp fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb7621", "MotoSecurity.asp")
-    with open(fixture_path, 'r') as f:
+    with open(fixture_path) as f:
         return f.read()
 
 
@@ -75,9 +77,9 @@ class TestRestart:
                 "NewUserId": "",
                 "Password": "",
                 "PasswordReEnter": "",
-                "MotoSecurityAction": "1"
+                "MotoSecurityAction": "1",
             },
-            timeout=10
+            timeout=10,
         )
 
     def test_with_connection_reset(self, security_html):

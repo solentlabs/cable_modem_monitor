@@ -1,8 +1,10 @@
 """Tests for Cable Modem Monitor coordinator improvements."""
+
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
 
 
 class TestCoordinatorSSLContext:
@@ -11,14 +13,15 @@ class TestCoordinatorSSLContext:
     def test_ssl_context_created_in_executor(self):
         """Test that SSL context is created in executor to avoid blocking I/O."""
         import inspect
+
         from custom_components.cable_modem_monitor import _create_health_monitor
 
         source = inspect.getsource(_create_health_monitor)
 
         # Verify SSL context creation pattern exists
-        assert 'create_ssl_context' in source
-        assert 'async_add_executor_job' in source
-        assert 'ssl.create_default_context()' in source
+        assert "create_ssl_context" in source
+        assert "async_add_executor_job" in source
+        assert "ssl.create_default_context()" in source
 
 
 class TestCoordinatorConfigEntry:
@@ -30,12 +33,13 @@ class TestCoordinatorConfigEntry:
         # The actual coordinator creation in __init__.py should have config_entry=entry
         # This is more of a code review check, but we can verify the pattern
         import inspect
+
         from custom_components.cable_modem_monitor import async_setup_entry
 
         source = inspect.getsource(async_setup_entry)
 
         # Check that config_entry parameter is passed to coordinator
-        assert 'config_entry=entry' in source or 'config_entry = entry' in source
+        assert "config_entry=entry" in source or "config_entry = entry" in source
 
 
 class TestCoordinatorPartialData:
@@ -44,14 +48,15 @@ class TestCoordinatorPartialData:
     def test_partial_data_when_scraper_fails_health_succeeds(self):
         """Test that coordinator returns partial data when scraper fails but health check succeeds."""
         import inspect
+
         from custom_components.cable_modem_monitor import _create_update_function
 
         source = inspect.getsource(_create_update_function)
 
         # Check for partial data return pattern when scraper fails but health succeeds
-        assert 'cable_modem_connection_status' in source
-        assert 'offline' in source
-        assert 'ping_success or http_success' in source or 'health_result' in source
+        assert "cable_modem_connection_status" in source
+        assert "offline" in source
+        assert "ping_success or http_success" in source or "health_result" in source
 
 
 class TestCoordinatorUnload:
@@ -118,22 +123,24 @@ class TestCoordinatorStateCheck:
     def test_uses_first_refresh_for_setup_in_progress(self):
         """Test that async_config_entry_first_refresh is used during SETUP_IN_PROGRESS."""
         import inspect
+
         from custom_components.cable_modem_monitor import _perform_initial_refresh
 
         source = inspect.getsource(_perform_initial_refresh)
 
         # Check for state check pattern
-        assert 'ConfigEntryState.SETUP_IN_PROGRESS' in source
-        assert 'async_config_entry_first_refresh' in source
-        assert 'async_refresh' in source
+        assert "ConfigEntryState.SETUP_IN_PROGRESS" in source
+        assert "async_config_entry_first_refresh" in source
+        assert "async_refresh" in source
 
     def test_uses_regular_refresh_for_loaded_state(self):
         """Test that async_refresh is used when entry is already LOADED."""
         import inspect
+
         from custom_components.cable_modem_monitor import _perform_initial_refresh
 
         source = inspect.getsource(_perform_initial_refresh)
 
         # Check that both refresh methods are used conditionally
-        assert 'else:' in source
+        assert "else:" in source
         # The pattern should check state and use appropriate refresh method

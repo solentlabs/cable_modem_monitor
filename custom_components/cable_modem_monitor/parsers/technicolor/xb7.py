@@ -1,4 +1,5 @@
 """Parser for Technicolor XB7 cable modem."""
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,7 @@ class TechnicolorXB7Parser(ModemParser):
         username_field="username",
         password_field="password",
         success_redirect_pattern="/at_a_glance.jst",
-        authenticated_page_url="/network_setup.jst"
+        authenticated_page_url="/network_setup.jst",
     )
 
     url_patterns = [
@@ -76,6 +77,7 @@ class TechnicolorXB7Parser(ModemParser):
             # Step 2: Check if we got redirected to at_a_glance.jst (successful login)
             # Validate redirect URL is on the same host for security
             from urllib.parse import urlparse
+
             redirect_parsed = urlparse(response.url)
             base_parsed = urlparse(base_url)
 
@@ -99,8 +101,7 @@ class TechnicolorXB7Parser(ModemParser):
                 return False, None
 
             _LOGGER.info(
-                "XB7: Successfully authenticated and fetched status page (%s bytes)",
-                len(status_response.text)
+                "XB7: Successfully authenticated and fetched status page (%s bytes)", len(status_response.text)
             )
             return True, status_response.text
 
@@ -140,11 +141,9 @@ class TechnicolorXB7Parser(ModemParser):
             return True
 
         # Secondary detection: Content-based
-        if "Channel Bonding Value" in html:
-            # Look for XB7-specific class pattern
-            if soup.find_all('div', class_='netWidth'):
-                _LOGGER.debug("XB7 detected by content: Channel Bonding Value + netWidth divs")
-                return True
+        if "Channel Bonding Value" in html and soup.find_all("div", class_="netWidth"):
+            _LOGGER.debug("XB7 detected by content: Channel Bonding Value + netWidth divs")
+            return True
 
         return False
 
@@ -344,9 +343,7 @@ class TechnicolorXB7Parser(ModemParser):
         channel_data["corrected"] = None
         channel_data["uncorrected"] = None
 
-    def _extract_xb7_channel_data_at_index(
-        self, data_map: dict, index: int, is_upstream: bool
-    ) -> dict | None:
+    def _extract_xb7_channel_data_at_index(self, data_map: dict, index: int, is_upstream: bool) -> dict | None:
         """Extract channel data from data_map at given column index.
 
         Returns:
@@ -366,9 +363,7 @@ class TechnicolorXB7Parser(ModemParser):
 
         return channel_data
 
-    def _parse_xb7_transposed_table(
-        self, rows: list, is_upstream: bool = False
-    ) -> list[dict]:
+    def _parse_xb7_transposed_table(self, rows: list, is_upstream: bool = False) -> list[dict]:
         """
         Parse XB7 transposed table where columns are channels.
 
@@ -380,9 +375,7 @@ class TechnicolorXB7Parser(ModemParser):
             # Build a map of row_label -> [values for each channel]
             data_map, channel_count = self._build_xb7_data_map(rows)
 
-            _LOGGER.debug(
-                f"XB7 transposed table has {channel_count} channels with labels: {list(data_map.keys())}"
-            )
+            _LOGGER.debug(f"XB7 transposed table has {channel_count} channels with labels: {list(data_map.keys())}")
 
             # Now transpose: create one channel dict per column
             for i in range(channel_count):
@@ -390,9 +383,7 @@ class TechnicolorXB7Parser(ModemParser):
 
                 if channel_data is not None:
                     channels.append(channel_data)
-                    _LOGGER.debug(
-                        f"Parsed XB7 channel {channel_data.get('channel_id')}: {channel_data}"
-                    )
+                    _LOGGER.debug(f"Parsed XB7 channel {channel_data.get('channel_id')}: {channel_data}")
 
         except Exception as e:
             _LOGGER.error(f"Error parsing XB7 transposed table: {e}", exc_info=True)
@@ -606,19 +597,19 @@ class TechnicolorXB7Parser(ModemParser):
             minutes = 0
             seconds = 0
 
-            day_match = re.search(r'(\d+)\s*days?', uptime_str)
+            day_match = re.search(r"(\d+)\s*days?", uptime_str)
             if day_match:
                 days = int(day_match.group(1))
 
-            hour_match = re.search(r'(\d+)h', uptime_str)
+            hour_match = re.search(r"(\d+)h", uptime_str)
             if hour_match:
                 hours = int(hour_match.group(1))
 
-            min_match = re.search(r'(\d+)m', uptime_str)
+            min_match = re.search(r"(\d+)m", uptime_str)
             if min_match:
                 minutes = int(min_match.group(1))
 
-            sec_match = re.search(r'(\d+)s', uptime_str)
+            sec_match = re.search(r"(\d+)s", uptime_str)
             if sec_match:
                 seconds = int(sec_match.group(1))
 
@@ -645,7 +636,7 @@ class TechnicolorXB7Parser(ModemParser):
                 text = span.get_text(strip=True)
                 if "Primary channel" in text or "primary channel" in text:
                     # Extract channel ID: "*Channel ID 10 is the Primary channel"
-                    match = re.search(r'Channel ID (\d+) is the Primary', text, re.IGNORECASE)
+                    match = re.search(r"Channel ID (\d+) is the Primary", text, re.IGNORECASE)
                     if match:
                         return match.group(1)
         except Exception as e:

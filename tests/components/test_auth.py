@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
@@ -14,12 +13,10 @@ class TestAuth:
         scraper = ModemScraper("192.168.100.1", "admin", "password", parser=[MotorolaGenericParser])
         # _fetch_data now returns (html, url, parser_class)
         mocker.patch.object(
-            scraper,
-            '_fetch_data',
-            return_value=("<html></html>", "http://192.168.100.1", MotorolaGenericParser)
+            scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", MotorolaGenericParser)
         )
-        mocker.patch.object(scraper, '_detect_parser', return_value=MotorolaGenericParser())
-        mock_login = mocker.patch.object(MotorolaGenericParser, 'login', return_value=True)
+        mocker.patch.object(scraper, "_detect_parser", return_value=MotorolaGenericParser())
+        mock_login = mocker.patch.object(MotorolaGenericParser, "login", return_value=True)
         scraper.get_modem_data()
 
         mock_login.assert_called_once()
@@ -29,12 +26,10 @@ class TestAuth:
         scraper = ModemScraper("192.168.100.1", "admin", "password", parser=[TechnicolorTC4400Parser])
         # _fetch_data now returns (html, url, parser_class)
         mocker.patch.object(
-            scraper,
-            '_fetch_data',
-            return_value=("<html></html>", "http://192.168.100.1", TechnicolorTC4400Parser)
+            scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", TechnicolorTC4400Parser)
         )
-        mocker.patch.object(scraper, '_detect_parser', return_value=TechnicolorTC4400Parser())
-        mock_login = mocker.patch.object(TechnicolorTC4400Parser, 'login', return_value=True)
+        mocker.patch.object(scraper, "_detect_parser", return_value=TechnicolorTC4400Parser())
+        mock_login = mocker.patch.object(TechnicolorTC4400Parser, "login", return_value=True)
         scraper.get_modem_data()
 
         mock_login.assert_called_once()

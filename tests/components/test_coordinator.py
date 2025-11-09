@@ -1,13 +1,16 @@
 """Tests for Cable Modem Monitor coordinator functionality."""
+
 from __future__ import annotations
 
-import pytest
-from unittest.mock import Mock
 from datetime import timedelta
+from unittest.mock import Mock
+
+import pytest
+
 from custom_components.cable_modem_monitor.const import (
     DEFAULT_SCAN_INTERVAL,
-    MIN_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
 )
 
 
@@ -174,11 +177,11 @@ class TestCoordinatorConfiguration:
     def test_scan_interval_validation_range(self):
         """Test scan interval clamping to valid range."""
         test_cases = [
-            (30, MIN_SCAN_INTERVAL),      # Below min -> clamp to min
-            (60, 60),                     # At min -> keep
-            (300, 300),                   # Normal -> keep
-            (1800, 1800),                 # At max -> keep
-            (3600, MAX_SCAN_INTERVAL),    # Above max -> clamp to max
+            (30, MIN_SCAN_INTERVAL),  # Below min -> clamp to min
+            (60, 60),  # At min -> keep
+            (300, 300),  # Normal -> keep
+            (1800, 1800),  # At max -> keep
+            (3600, MAX_SCAN_INTERVAL),  # Above max -> clamp to max
         ]
 
         for input_val, expected in test_cases:

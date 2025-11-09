@@ -1,9 +1,11 @@
 """Tests for the Arris SB6141 parser."""
+
 from __future__ import annotations
 
 import os
-from bs4 import BeautifulSoup
+
 import pytest
+from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.arris.sb6141 import ArrisSB6141Parser
 
@@ -11,19 +13,15 @@ from custom_components.cable_modem_monitor.parsers.arris.sb6141 import ArrisSB61
 @pytest.fixture
 def arris_signal_html():
     """Load arris_sb6141_signal.html fixture."""
-    fixture_path = os.path.join(
-        os.path.dirname(__file__), "fixtures", "sb6141", "signal.html"
-    )
-    with open(fixture_path, "r") as f:
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "sb6141", "signal.html")
+    with open(fixture_path) as f:
         return f.read()
 
 
 def test_parser_detection(arris_signal_html):
     """Test that the Arris SB6141 parser detects the modem."""
     soup = BeautifulSoup(arris_signal_html, "html.parser")
-    assert ArrisSB6141Parser.can_parse(
-        soup, "http://192.168.100.1/cmSignal.html", arris_signal_html
-    )
+    assert ArrisSB6141Parser.can_parse(soup, "http://192.168.100.1/cmSignal.html", arris_signal_html)
 
 
 def test_parsing_downstream(arris_signal_html):

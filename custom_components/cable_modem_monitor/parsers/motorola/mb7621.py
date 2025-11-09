@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+
 from bs4 import BeautifulSoup
+
 from .generic import MotorolaGenericParser
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,8 +33,4 @@ class MotorolaMB7621Parser(MotorolaGenericParser):
         """Detect if this is a Motorola MB7621 modem."""
         # Check for MB7621-specific indicators in the HTML
         # The model string appears in various pages (like MotoSwInfo.asp)
-        if "MB7621" in html or "MB 7621" in html or "2480-MB7621" in html:
-            return True
-        # MB7621 uses the same structure as generic Motorola, so it will
-        # match the generic parser. Users should manually select MB7621.
-        return False
+        return "MB7621" in html or "MB 7621" in html or "2480-MB7621" in html

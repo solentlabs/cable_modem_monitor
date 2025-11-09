@@ -1,15 +1,17 @@
 """Tests for the Technicolor TC4400 parser."""
+
 from __future__ import annotations
 
-import os
 import inspect
-from bs4 import BeautifulSoup
+import os
 from unittest.mock import Mock
+
 import pytest
+from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.technicolor.tc4400 import (
-    TechnicolorTC4400Parser,
     RESTART_WINDOW_SECONDS,
+    TechnicolorTC4400Parser,
 )
 
 
@@ -184,7 +186,7 @@ class TestRestartDetection:
         # During restart (< 5 min), zero power/SNR should be filtered to None
         assert len(data["downstream"]) == 1
         assert data["downstream"][0]["power"] is None  # Filtered out
-        assert data["downstream"][0]["snr"] is None    # Filtered out
+        assert data["downstream"][0]["snr"] is None  # Filtered out
         assert data["system_info"]["system_uptime"] == "0 days 00h:03m:45s"
 
     def test_preserves_nonzero_power(self):
@@ -211,8 +213,8 @@ class TestRestartDetection:
 
         # During restart, non-zero values should be preserved
         assert len(data["downstream"]) == 1
-        assert data["downstream"][0]["power"] == 3.0   # Preserved
-        assert data["downstream"][0]["snr"] == 40.1    # Preserved
+        assert data["downstream"][0]["power"] == 3.0  # Preserved
+        assert data["downstream"][0]["snr"] == 40.1  # Preserved
 
     def test_no_filtering_after_window(self):
         """Test that zero power values are NOT filtered after restart window."""
@@ -239,7 +241,7 @@ class TestRestartDetection:
         # After restart window (>= 5 min), zero values should be kept
         assert len(data["downstream"]) == 1
         assert data["downstream"][0]["power"] == 0  # NOT filtered
-        assert data["downstream"][0]["snr"] == 0    # NOT filtered
+        assert data["downstream"][0]["snr"] == 0  # NOT filtered
 
     def test_filters_upstream_zero_power(self):
         """Test that zero power values are filtered for upstream during restart."""

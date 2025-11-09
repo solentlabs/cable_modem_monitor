@@ -1,4 +1,5 @@
 """Authentication abstraction for cable modems."""
+
 from __future__ import annotations
 
 import base64
@@ -21,12 +22,7 @@ class AuthStrategy(ABC):
 
     @abstractmethod
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """
         Authenticate with the modem.
@@ -50,12 +46,7 @@ class NoAuthStrategy(AuthStrategy):
     """Strategy for modems that don't require authentication."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """No authentication needed."""
         _LOGGER.debug("No authentication required")
@@ -66,12 +57,7 @@ class BasicHttpAuthStrategy(AuthStrategy):
     """HTTP Basic Authentication strategy (RFC 7617)."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Set up HTTP Basic Auth on the session."""
         if not username or not password:
@@ -88,12 +74,7 @@ class FormPlainAuthStrategy(AuthStrategy):
     """Form-based authentication with plain text password."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form with plain password."""
         if not username or not password:
@@ -101,6 +82,7 @@ class FormPlainAuthStrategy(AuthStrategy):
             return (True, None)
 
         from .auth_config import FormAuthConfig
+
         if not isinstance(config, FormAuthConfig):
             _LOGGER.error("FormPlainAuthStrategy requires FormAuthConfig")
             return (False, None)
@@ -117,9 +99,8 @@ class FormPlainAuthStrategy(AuthStrategy):
         # Check success indicator
         if config.success_indicator:
             is_in_url = config.success_indicator in response.url
-            is_large_response = (
-                config.success_indicator.isdigit()
-                and len(response.text) > int(config.success_indicator)
+            is_large_response = config.success_indicator.isdigit() and len(response.text) > int(
+                config.success_indicator
             )
             if is_in_url or is_large_response:
                 _LOGGER.debug("Form login successful")
@@ -139,12 +120,7 @@ class FormBase64AuthStrategy(AuthStrategy):
     """Form-based authentication with Base64-encoded password."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form with Base64-encoded password.
 
@@ -158,6 +134,7 @@ class FormBase64AuthStrategy(AuthStrategy):
             return (True, None)
 
         from .auth_config import FormAuthConfig
+
         if not isinstance(config, FormAuthConfig):
             _LOGGER.error("FormBase64AuthStrategy requires FormAuthConfig")
             return (False, None)
@@ -170,18 +147,14 @@ class FormBase64AuthStrategy(AuthStrategy):
             config.password_field: encoded_password,
         }
 
-        _LOGGER.debug(
-            "Submitting form login with Base64-encoded password to %s",
-            login_url
-        )
+        _LOGGER.debug("Submitting form login with Base64-encoded password to %s", login_url)
         response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
 
         # Check success indicator
         if config.success_indicator:
             is_in_url = config.success_indicator in response.url
-            is_large_response = (
-                config.success_indicator.isdigit()
-                and len(response.text) > int(config.success_indicator)
+            is_large_response = config.success_indicator.isdigit() and len(response.text) > int(
+                config.success_indicator
             )
             if is_in_url or is_large_response:
                 _LOGGER.debug("Form login successful")
@@ -201,12 +174,7 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
     """Form-based authentication with fallback from plain to Base64."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Try plain password first, then Base64-encoded."""
         if not username or not password:
@@ -214,6 +182,7 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
             return (True, None)
 
         from .auth_config import FormAuthConfig
+
         if not isinstance(config, FormAuthConfig):
             _LOGGER.error("FormPlainAndBase64AuthStrategy requires FormAuthConfig")
             return (False, None)
@@ -240,9 +209,8 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
             success = False
             if config.success_indicator:
                 is_in_url = config.success_indicator in response.url
-                is_large_response = (
-                    config.success_indicator.isdigit()
-                    and len(response.text) > int(config.success_indicator)
+                is_large_response = config.success_indicator.isdigit() and len(response.text) > int(
+                    config.success_indicator
                 )
                 success = is_in_url or is_large_response
             else:
@@ -260,12 +228,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
     """Form-based authentication with redirect validation (e.g., XB7)."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Submit form and validate redirect."""
         if not username or not password:
@@ -273,6 +236,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
             return (False, None)
 
         from .auth_config import RedirectFormAuthConfig
+
         if not isinstance(config, RedirectFormAuthConfig):
             _LOGGER.error("RedirectFormAuthStrategy requires RedirectFormAuthConfig")
             return (False, None)
@@ -302,12 +266,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
             return (False, None)
 
     def _post_login_request(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str,
-        password: str,
-        config: RedirectFormAuthConfig
+        self, session: requests.Session, base_url: str, username: str, password: str, config: RedirectFormAuthConfig
     ) -> requests.Response | None:
         """Post login credentials and return response."""
         login_url = f"{base_url}{config.login_url}"
@@ -339,11 +298,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         return True
 
     def _handle_login_response(
-        self,
-        session: requests.Session,
-        base_url: str,
-        response: requests.Response,
-        config: RedirectFormAuthConfig
+        self, session: requests.Session, base_url: str, response: requests.Response, config: RedirectFormAuthConfig
     ) -> tuple[bool, str | None]:
         """Handle login response and fetch authenticated page if successful."""
         if config.success_redirect_pattern not in response.url:
@@ -354,10 +309,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         return self._fetch_authenticated_page(session, base_url, config)
 
     def _fetch_authenticated_page(
-        self,
-        session: requests.Session,
-        base_url: str,
-        config: RedirectFormAuthConfig
+        self, session: requests.Session, base_url: str, config: RedirectFormAuthConfig
     ) -> tuple[bool, str | None]:
         """Fetch the authenticated page after successful login."""
         auth_url = f"{base_url}{config.authenticated_page_url}"
@@ -376,12 +328,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
     """HNAP/SOAP session-based authentication."""
 
     def login(
-        self,
-        session: requests.Session,
-        base_url: str,
-        username: str | None,
-        password: str | None,
-        config: AuthConfig
+        self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
         """Establish HNAP session."""
         if not username or not password:
@@ -389,6 +336,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
             return (False, None)
 
         from .auth_config import HNAPAuthConfig
+
         if not isinstance(config, HNAPAuthConfig):
             _LOGGER.error("HNAPSessionAuthStrategy requires HNAPAuthConfig")
             return (False, None)
@@ -405,9 +353,9 @@ class HNAPSessionAuthStrategy(AuthStrategy):
                 data=login_envelope,
                 headers={
                     "SOAPAction": f'"{config.soap_action_namespace}Login"',
-                    "Content-Type": "text/xml; charset=utf-8"
+                    "Content-Type": "text/xml; charset=utf-8",
                 },
-                timeout=10
+                timeout=10,
             )
 
             if response.status_code != 200:
@@ -426,11 +374,9 @@ class HNAPSessionAuthStrategy(AuthStrategy):
             _LOGGER.error("HNAP login exception: %s", str(e), exc_info=True)
             return (False, None)
 
-    def _build_login_envelope(
-        self, username: str, password: str, config: HNAPAuthConfig
-    ) -> str:
+    def _build_login_envelope(self, username: str, password: str, config: HNAPAuthConfig) -> str:
         """Build SOAP login envelope for HNAP."""
-        return f'''<?xml version="1.0" encoding="utf-8"?>
+        return f"""<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
@@ -442,7 +388,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
       <Captcha></Captcha>
     </Login>
   </soap:Body>
-</soap:Envelope>'''
+</soap:Envelope>"""
 
 
 class AuthFactory:
