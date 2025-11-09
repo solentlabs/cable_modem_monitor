@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED******REMOVED*** Added
+- **Enhanced Auto-Detection Logging** - INFO-level logs for modem auto-detection process
+  - Logs now visible in Home Assistant's standard logs UI (not just raw logs)
+  - Shows which parser is being used, URLs attempted, and detection results
+  - Helps users understand what's happening during modem setup
+  - Improves troubleshooting for connection and detection issues
+- **Enhanced Diagnostics** - Diagnostics now include recent logs
+  - Last 150 log entries from the integration automatically included
+  - Logs are sanitized to remove sensitive information (passwords, MACs, private IPs)
+  - Added modem detection metadata (detected_modem, parser_name, working_url)
+  - Users no longer need to manually extract logs for bug reports
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **UI Improvements** - Fixed modem model selection dialog labels
+  - "Modem Model" label now displays correctly in settings dialog
+  - Added proper translations for modem_choice field
+- **Documentation Enhancements**
+  - Added "Modem Model Selection" section to TROUBLESHOOTING.md
+  - Documented how to view auto-detection logs (3 different methods)
+  - Enhanced bug report template with better log collection instructions
+  - Added modem selection dropdown to bug reports
+  - Updated README.md with modem model configuration option
+
+***REMOVED******REMOVED******REMOVED*** Documentation
+- **HTML Capture Feature Specification** - Complete design document for Phase 4 implementation
+  - Two-phase approach: button entity + failed setup capture
+  - Heavy sanitization strategy for user privacy
+  - Enables community contributions for new modem support
+  - 507-line specification in docs/feature_requests/html_capture_diagnostics.md
+
 ***REMOVED******REMOVED*** [3.0.0] - 2025-11-07
 
 ***REMOVED******REMOVED******REMOVED*** Added
