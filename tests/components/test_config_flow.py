@@ -5,8 +5,10 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 import pytest
+from homeassistant import config_entries
 
 from custom_components.cable_modem_monitor.config_flow import (
+    CableModemMonitorConfigFlow,
     CannotConnectError,
     OptionsFlowHandler,
     validate_input,
@@ -325,3 +327,14 @@ class TestOptionsFlow:
         ***REMOVED*** This should not raise TypeError
         handler = OptionsFlowHandler()
         assert handler is not None
+
+
+class TestConfigFlowRegistration:
+    """Test the config flow registration."""
+
+    def test_handler_is_registered(self):
+        """Test that the config flow handler is registered."""
+        handler = config_entries.HANDLERS.get("cable_modem_monitor")
+        assert handler is not None
+        assert handler == CableModemMonitorConfigFlow
+

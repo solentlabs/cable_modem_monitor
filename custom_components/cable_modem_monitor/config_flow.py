@@ -194,12 +194,11 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
 
-class ConfigFlow(config_entries.ConfigFlow):
+@config_entries.HANDLERS.register(DOMAIN)
+class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Cable Modem Monitor."""
 
     VERSION = 1
-
-    domain = DOMAIN
 
     @staticmethod
     @callback

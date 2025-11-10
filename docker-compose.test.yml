@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  homeassistant-test:
+    container_name: ha-cable-modem-test
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      ***REMOVED*** Mount a temporary config directory
+      - ./test-ha-config:/config
+      ***REMOVED*** Mount the integration directly into custom_components
+      - ./custom_components/cable_modem_monitor:/config/custom_components/cable_modem_monitor
+      ***REMOVED*** Mount the entire project for development and testing
+      - .:/workspace:cached
+      ***REMOVED*** Mount Docker socket for Docker-from-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/New_York
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    working_dir: /workspace

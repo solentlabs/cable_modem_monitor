@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 ***REMOVED*** Default target - show help
 help:
@@ -19,6 +19,15 @@ help:
 	@echo "  make format      - Format code with black"
 	@echo "  make format-check - Check code formatting without modifying"
 	@echo "  make check       - Run all code quality checks (lint, format, type)"
+	@echo ""
+	@echo "Docker Development:"
+	@echo "  make docker-start   - Start Home Assistant dev environment"
+	@echo "  make docker-stop    - Stop the dev environment"
+	@echo "  make docker-restart - Restart the dev environment"
+	@echo "  make docker-logs    - Show container logs (follow mode)"
+	@echo "  make docker-status  - Show container status"
+	@echo "  make docker-shell   - Open a shell in the container"
+	@echo "  make docker-clean   - Remove container and all test data"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make deploy      - Deploy to Home Assistant server"
@@ -88,3 +97,25 @@ deploy:
 ***REMOVED*** Sync version numbers
 sync-version:
 	@python3 scripts/maintenance/update_versions.py
+
+***REMOVED*** Docker development environment
+docker-start:
+	@bash scripts/dev/docker-dev.sh start
+
+docker-stop:
+	@bash scripts/dev/docker-dev.sh stop
+
+docker-restart:
+	@bash scripts/dev/docker-dev.sh restart
+
+docker-logs:
+	@bash scripts/dev/docker-dev.sh logs
+
+docker-status:
+	@bash scripts/dev/docker-dev.sh status
+
+docker-shell:
+	@bash scripts/dev/docker-dev.sh shell
+
+docker-clean:
+	@bash scripts/dev/docker-dev.sh clean

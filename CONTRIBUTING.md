@@ -12,7 +12,83 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ***REMOVED******REMOVED*** Development Workflow
 
-***REMOVED******REMOVED******REMOVED*** 1. Set Up Your Environment
+You can develop using either Docker (recommended for beginners) or a local Python environment (recommended for advanced users).
+
+***REMOVED******REMOVED******REMOVED*** Docker Development (Recommended)
+
+Docker provides an isolated, consistent development environment with Home Assistant pre-installed.
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
+- [VS Code](https://code.visualstudio.com/) (optional, for Dev Container support)
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Quick Start
+
+```bash
+***REMOVED*** Clone the repository
+git clone https://github.com/kwschulz/cable_modem_monitor.git
+cd cable_modem_monitor
+
+***REMOVED*** Start Home Assistant with the integration
+make docker-start
+***REMOVED*** Or: ./scripts/dev/docker-dev.sh start
+
+***REMOVED*** View logs
+make docker-logs
+
+***REMOVED*** Access Home Assistant at http://localhost:8123
+```
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** VS Code Dev Container (Optional)
+
+For the best development experience, use VS Code with Dev Containers:
+
+**1. Install the Dev Containers extension** (choose any method):
+
+- **From VS Code**: Open Extensions (`Ctrl+Shift+X`), search "Dev Containers", click Install
+- **Quick Install**: Press `Ctrl+P`, paste: `ext install ms-vscode-remote.remote-containers`
+- **Command Line**: `code --install-extension ms-vscode-remote.remote-containers`
+- **From Marketplace**: Visit https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
+
+**2. Verify installation**: You should see a "Remote Explorer" icon in the sidebar and "Dev Containers:" commands when pressing `F1`
+
+**3. Open the project** in VS Code and reopen in container:
+- Open the project: `code /path/to/cable_modem_monitor`
+- Press `F1` → "Dev Containers: Reopen in Container"
+- Wait for the container to build (2-3 minutes first time)
+
+See `.devcontainer/README.md` for detailed instructions and troubleshooting.
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Docker Commands
+
+```bash
+***REMOVED*** Using Make (recommended)
+make docker-start      ***REMOVED*** Start the environment
+make docker-stop       ***REMOVED*** Stop the environment
+make docker-restart    ***REMOVED*** Restart after code changes
+make docker-logs       ***REMOVED*** View logs
+make docker-status     ***REMOVED*** Check status
+make docker-shell      ***REMOVED*** Open a shell in the container
+make docker-clean      ***REMOVED*** Remove all data
+
+***REMOVED*** Or use the script directly
+./scripts/dev/docker-dev.sh [command]
+```
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Docker Development Workflow
+
+1. **Start the environment**: `make docker-start`
+2. **Make code changes** in your editor
+3. **Restart to load changes**: `make docker-restart`
+4. **Test in Home Assistant**: http://localhost:8123
+5. **Run tests**: Open a shell with `make docker-shell`, then run `pytest`
+
+***REMOVED******REMOVED******REMOVED*** Local Development (Advanced)
+
+For developers who prefer working directly with Python without Docker:
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** 1. Set Up Your Environment
 
 First, clone the repository and install the development dependencies. This will give you all the tools you need for testing, linting, and code formatting.
 
