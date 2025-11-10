@@ -57,10 +57,6 @@ class MotorolaMB8611Parser(ModemParser):
         """
         from custom_components.cable_modem_monitor.core.authentication import AuthFactory
 
-        if self.auth_config is None:
-            _LOGGER.warning("auth_config is not configured for MB8611")
-            return False, None
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         return auth_strategy.login(session, base_url, username, password, self.auth_config)
 
@@ -78,15 +74,6 @@ class MotorolaMB8611Parser(ModemParser):
         """
         if not session or not base_url:
             raise ValueError("MB8611 requires session and base_url for HNAP calls")
-
-        if self.auth_config is None:
-            _LOGGER.error("auth_config is not configured for MB8611")
-            return {"downstream": [], "upstream": [], "system_info": {}}
-
-        # Type narrowing: MB8611 always uses HNAPAuthConfig
-        if not isinstance(self.auth_config, HNAPAuthConfig):
-            _LOGGER.error("MB8611 requires HNAPAuthConfig, got %s", type(self.auth_config).__name__)
-            return {"downstream": [], "upstream": [], "system_info": {}}
 
         # Build HNAP request builder
         builder = HNAPRequestBuilder(
@@ -144,7 +131,7 @@ class MotorolaMB8611Parser(ModemParser):
         Format: "ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^|+|..."
         Example: "1^Locked^QAM256^20^543.0^ 1.4^45.1^41^0^"
         """
-        channels = []
+        channels: list[dict] = []
 
         try:
             downstream_response = hnap_data.get("GetMotoStatusDownstreamChannelInfoResponse", {})
@@ -210,7 +197,7 @@ class MotorolaMB8611Parser(ModemParser):
         Format: "ID^Status^Mod^ChID^SymbolRate^Freq^Power^|+|..."
         Example: "1^Locked^SC-QAM^17^5120^16.4^44.3^"
         """
-        channels = []
+        channels: list[dict] = []
 
         try:
             upstream_response = hnap_data.get("GetMotoStatusUpstreamChannelInfoResponse", {})
@@ -267,7 +254,7 @@ class MotorolaMB8611Parser(ModemParser):
 
     def _parse_system_info_from_hnap(self, hnap_data: dict) -> dict:
         """Parse system info from HNAP JSON response."""
-        system_info = {}
+        system_info: dict[str, str] = {}
 
         try:
             self._extract_connection_info(hnap_data, system_info)

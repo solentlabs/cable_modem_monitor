@@ -9,6 +9,8 @@ from collections.abc import Sequence
 import requests
 from bs4 import BeautifulSoup
 
+from ..parsers.base_parser import ModemParser
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -17,8 +19,11 @@ class ParserHeuristics:
 
     @staticmethod
     def get_likely_parsers(
-        base_url: str, parsers: Sequence[type], session: requests.Session, verify_ssl: bool = False
-    ) -> list[type]:
+        base_url: str,
+        parsers: Sequence[type[ModemParser]],
+        session: requests.Session,
+        verify_ssl: bool = False,
+    ) -> list[type[ModemParser]]:
         """
         Return parsers likely to match based on quick heuristic checks.
 
@@ -31,8 +36,8 @@ class ParserHeuristics:
         Returns:
             List of parser classes, sorted by likelihood (most likely first)
         """
-        likely_parsers = []
-        unlikely_parsers = []
+        likely_parsers: list[type[ModemParser]] = []
+        unlikely_parsers: list[type[ModemParser]] = []
 
         _LOGGER.debug("Running parser heuristics to narrow search space")
 
@@ -53,7 +58,9 @@ class ParserHeuristics:
                     # Strong indicators (in title or prominent text)
                     if manufacturer in title or manufacturer in html[:1000]:
                         _LOGGER.debug(
-                            "Heuristics: %s is LIKELY (found '%s' in title/header)", parser_class.name, manufacturer
+                            "Heuristics: %s is LIKELY (found '%s' in title/header)",
+                            parser_class.name,
+                            manufacturer,
                         )
                         likely_parsers.append(parser_class)
                     # Weak indicators (anywhere in page) or model numbers
@@ -75,7 +82,9 @@ class ParserHeuristics:
         if likely_parsers:
             result = likely_parsers + unlikely_parsers
             _LOGGER.info(
-                "Heuristics: Narrowed search to %s likely parsers (out of %s total)", len(likely_parsers), len(parsers)
+                "Heuristics: Narrowed search to %s likely parsers (out of %s total)",
+                len(likely_parsers),
+                len(parsers),
             )
             return result
 
@@ -85,7 +94,7 @@ class ParserHeuristics:
 
     @staticmethod
     def check_anonymous_access(
-        base_url: str, parser_class: type, session: requests.Session, verify_ssl: bool = False
+        base_url: str, parser_class: type[ModemParser], session: requests.Session, verify_ssl: bool = False
     ) -> tuple[str, str] | None:
         """
         Check if parser has public (non-authenticated) URLs that can be accessed.
@@ -136,7 +145,7 @@ class DiscoveryCircuitBreaker:
         """
         self.max_attempts = max_attempts
         self.timeout = timeout_seconds
-        self.start_time = None
+        self.start_time = 0.0
         self.attempts = 0
         self._broken = False
 
@@ -151,8 +160,7 @@ class DiscoveryCircuitBreaker:
             return False
 
         # Start timer on first attempt
-        if self.start_time is None:
-            self.start_time = time.time()
+        self.start_time = time.time()
 
         # Check max attempts
         if self.attempts >= self.max_attempts:

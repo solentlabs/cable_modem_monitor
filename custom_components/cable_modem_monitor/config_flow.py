@@ -8,7 +8,6 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
@@ -131,14 +130,14 @@ def _create_title(detection_info: dict, host: str) -> str:
         return f"{detected_modem} ({host})"
 
 
-async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict:
+async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
     """Attempt to connect to modem and get data.
 
     Returns modem_data dict.
     Raises CannotConnectError or UnsupportedModemError on failure.
     """
     try:
-        modem_data = await hass.async_add_executor_job(scraper.get_modem_data)
+        modem_data: dict[str, Any] = await hass.async_add_executor_job(scraper.get_modem_data)
     except ParserNotFoundError as err:
         _LOGGER.error("Unsupported modem detected: %s", err.get_user_message())
         _LOGGER.info("Attempted parsers: %s", ", ".join(err.attempted_parsers))
@@ -206,7 +205,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return OptionsFlowHandler()
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -332,7 +331,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         else:
             return f"Configured for {detected_modem}"
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Manage the options."""
         errors = {}
 

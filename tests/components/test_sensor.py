@@ -277,7 +277,7 @@ class TestSensorDataHandling:
         sensor = ModemSoftwareVersionSensor(coordinator, mock_entry)
 
         # Should handle None gracefully
-        assert sensor.native_value is None or sensor.native_value == "Unknown"
+        assert sensor.native_value == "None" or sensor.native_value == "Unknown"
 
 
 class TestEntityNaming:

@@ -438,14 +438,14 @@ class TechnicolorXB7Parser(ModemParser):
 
     def _transpose_error_data(self, data_map: dict) -> list[dict]:
         """Transpose error data map into list of channel dicts."""
-        error_channels = []
+        error_channels: list[dict] = []
 
         if "Channel ID" not in data_map:
             return error_channels
 
         channel_count = len(data_map["Channel ID"])
         for i in range(channel_count):
-            channel = {}
+            channel: dict[str, int | str | None] = {}
 
             if i < len(data_map["Channel ID"]):
                 channel_id = extract_number(data_map["Channel ID"][i])
@@ -514,7 +514,7 @@ class TechnicolorXB7Parser(ModemParser):
         """
         value_span = label.find_next_sibling("span")
         if value_span and "readonlyLabel" not in value_span.get("class", []):
-            return value_span.get_text(strip=True)
+            return str(value_span.get_text(strip=True))
         return None
 
     def _process_system_uptime(self, value: str, system_info: dict) -> None:
@@ -541,7 +541,7 @@ class TechnicolorXB7Parser(ModemParser):
 
     def _parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from XB7."""
-        system_info = {}
+        system_info: dict[str, str] = {}
 
         try:
             # Look for readonlyLabel spans

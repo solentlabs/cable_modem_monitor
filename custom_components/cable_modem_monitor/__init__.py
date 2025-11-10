@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from datetime import datetime, timedelta
+from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -206,13 +207,13 @@ async def _create_health_monitor(hass: HomeAssistant):
 def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str):
     """Create the async update function for the coordinator."""
 
-    async def async_update_data() -> dict:
+    async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
         base_url = f"http://{host}"
         health_result = await health_monitor.check_health(base_url)
 
         try:
-            data = await hass.async_add_executor_job(scraper.get_modem_data)
+            data: dict[str, Any] = await hass.async_add_executor_job(scraper.get_modem_data)
 
             # Add health monitoring data
             data["health_status"] = health_result.status
@@ -374,7 +375,7 @@ def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> 
     # Delete from statistics table
     query = f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608
     cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
-    stats_deleted = cursor.rowcount
+    stats_deleted: int = cursor.rowcount
 
     # Delete from statistics_short_term table
     query = f"DELETE FROM statistics_short_term WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608

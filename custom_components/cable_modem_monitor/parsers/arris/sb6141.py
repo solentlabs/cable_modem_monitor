@@ -190,7 +190,7 @@ class ArrisSB6141Parser(ModemParser):
         Returns:
             Channel data dict or None if channel_id is missing
         """
-        channel_data = {}
+        channel_data: dict[str, str | int | float | None] = {}
 
         # Extract channel ID
         if "Channel ID" in data_map and index < len(data_map["Channel ID"]):
