@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.core import HomeAssistant
 
@@ -116,7 +116,7 @@ def cleanup_orphaned_entities(hass: HomeAssistant | None = None) -> bool:
 
 async def async_cleanup_orphaned_entities(hass: HomeAssistant) -> bool:
     """Async wrapper for cleanup_orphaned_entities."""
-    return await hass.async_add_executor_job(cleanup_orphaned_entities, hass)
+    return cast(bool, await hass.async_add_executor_job(cleanup_orphaned_entities, hass))
 
 
 def remove_all_entities(hass: HomeAssistant | None = None) -> bool:
@@ -154,4 +154,4 @@ def remove_all_entities(hass: HomeAssistant | None = None) -> bool:
 
 async def async_remove_all_entities(hass: HomeAssistant) -> bool:
     """Async wrapper for remove_all_entities."""
-    return await hass.async_add_executor_job(remove_all_entities, hass)
+    return cast(bool, await hass.async_add_executor_job(remove_all_entities, hass))

@@ -399,7 +399,7 @@ class TestEdgeCases:
     def test_empty_downstream_data(self):
         """Test downstream parsing with empty HNAP data."""
         parser = MotorolaMB8611Parser()
-        hnap_data = {}
+        hnap_data: dict = {}
 
         channels = parser._parse_downstream_from_hnap(hnap_data)
 
@@ -408,7 +408,7 @@ class TestEdgeCases:
     def test_empty_upstream_data(self):
         """Test upstream parsing with empty HNAP data."""
         parser = MotorolaMB8611Parser()
-        hnap_data = {}
+        hnap_data: dict = {}
 
         channels = parser._parse_upstream_from_hnap(hnap_data)
 
@@ -417,7 +417,7 @@ class TestEdgeCases:
     def test_empty_system_info_data(self):
         """Test system info parsing with empty HNAP data."""
         parser = MotorolaMB8611Parser()
-        hnap_data = {}
+        hnap_data: dict = {}
 
         system_info = parser._parse_system_info_from_hnap(hnap_data)
 

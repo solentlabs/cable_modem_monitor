@@ -163,7 +163,7 @@ class ModemConnectionStatusSensor(ModemSensorBase):
     @property
     def available(self) -> bool:
         """Connection status sensor is always available to show offline state."""
-        return self.coordinator.last_update_success
+        return bool(self.coordinator.last_update_success)
 
     @property
     def native_value(self) -> str:
