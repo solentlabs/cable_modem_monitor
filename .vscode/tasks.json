@@ -1,0 +1,107 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: Install Dependencies",
+      "type": "shell",
+      "command": "pip install -r tests/requirements.txt",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Install all required dependencies for testing and development."
+    },
+    {
+      "label": "Test: Run Full Suite",
+      "type": "shell",
+      "command": "make test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Run full test suite with coverage (creates venv)"
+    },
+    {
+      "label": "Test: Run Quick",
+      "type": "shell",
+      "command": "make test-quick",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Quick test run (assumes venv exists)"
+    },
+    {
+      "label": "Code Quality: Check All",
+      "type": "shell",
+      "command": "make check",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Run both lint and format checks"
+    },
+    {
+      "label": "Code Quality: Lint",
+      "type": "shell",
+      "command": "make lint",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Run ruff linter"
+    },
+    {
+      "label": "Code Quality: Format",
+      "type": "shell",
+      "command": "make format",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Format code with black"
+    },
+    {
+      "label": "Maintenance: Clean Artifacts",
+      "type": "shell",
+      "command": "make clean",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Remove test artifacts and cache files"
+    },
+    {
+      "label": "Maintenance: Deploy",
+      "type": "shell",
+      "command": "make deploy",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Deploy to Home Assistant server (edit script first)"
+    },
+    {
+      "label": "Maintenance: Sync Version",
+      "type": "shell",
+      "command": "make sync-version",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Sync version from const.py to manifest.json"
+    }
+  ]
+}

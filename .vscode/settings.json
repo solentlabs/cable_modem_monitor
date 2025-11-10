@@ -1,58 +1,26 @@
 {
-  // Python settings
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": [
-    "tests",
-    "-v",
-    "--tb=short"
-  ],
-  "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  // Ruff linting (primary linter - fast and comprehensive)
-  "ruff.enable": true,
-  "ruff.organizeImports": true,
-  "ruff.fixAll": true,
-  "ruff.lint.args": [
-    "--select=E,F,W,C90",
-    "--ignore=E501"
-  ],
-  // MyPy type checking
-  "python.linting.mypyEnabled": true,
-  "python.linting.mypyArgs": [
-    "--config-file=mypy.ini"
-  ],
-  // Auto-run linting (deprecated but kept for compatibility)
-  "python.linting.enabled": true,
-  "python.linting.lintOnSave": true,
-  "python.linting.pylintEnabled": false,
-  // Format on save with Black
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "explicit",
-    "source.fixAll": "explicit"
-  },
-  // Python formatter (Black)
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "python.linting.flake8Enabled": false,
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.ruffEnabled": true,
+    "python.linting.ruffArgs": [
+        "--config",
+        "pyproject.toml"
+    ],
     "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit",
-      "source.fixAll.ruff": "explicit"
-    }
-  },
-  // Security-focused extensions
-  "semgrep.scan.onSave": true,
-  "semgrep.scan.configuration": ".semgrep.yml",
-  // File exclusions for linting
-  "files.exclude": {
-    "**/__pycache__": true,
-    "**/*.pyc": true
-  },
-  "python.analysis.exclude": [
-    "**/__pycache__",
-    "**/htmlcov",
-    "**/.venv",
-    "**/venv"
-  ],
-  "makefile.configureOnOpen": true
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests",
+        "-v",
+        "--tb=short"
+    ],
+    "python.testing.autoTestDiscoverOnSaveEnabled": true
 }

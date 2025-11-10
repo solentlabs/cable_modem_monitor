@@ -9,7 +9,11 @@ __pycache__/
 .Python
 
 ***REMOVED*** IDE and editor files
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 .idea/
 .DS_Store
 .claude/
@@ -36,3 +40,18 @@ ENV/
 .coverage
 coverage.xml
 htmlcov/
+
+***REMOVED*** Home Assistant test environment
+test-ha-config/
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log*
+home-assistant_v2.db*
+.storage/
+.cloud/
+deps/
+tts/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
