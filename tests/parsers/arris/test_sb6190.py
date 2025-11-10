@@ -12,7 +12,7 @@ from custom_components.cable_modem_monitor.parsers.arris.sb6190 import ArrisSB61
 def arris_signal_html():
     """Load arris_sb6141_signal.html fixture."""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "sb6190", "arris_sb6190.html")
-    with open(fixture_path, "r") as f:
+    with open(fixture_path) as f:
         return f.read()
 
 

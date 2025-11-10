@@ -47,12 +47,11 @@ class ArrisSB6190Parser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is an ARRIS SB6190 modem."""
-        ***REMOVED*** Look for model number in the HTML
-        if soup.find(string=lambda s: s and "SB6190" in s):
-            ***REMOVED*** Look for Downstream Bonded Channels table
-            if soup.find(string="Downstream Bonded Channels"):
-                return True
-        return False
+        ***REMOVED*** Look for model number and Downstream Bonded Channels table
+        return bool(
+            soup.find(string=lambda s: s and "SB6190" in s)
+            and soup.find(string="Downstream Bonded Channels")
+        )
 
     def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse downstream channel data from ARRIS SB6190."""
