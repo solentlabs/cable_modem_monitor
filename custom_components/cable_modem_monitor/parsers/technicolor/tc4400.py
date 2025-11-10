@@ -51,10 +51,6 @@ class TechnicolorTC4400Parser(ModemParser):
         """
         from custom_components.cable_modem_monitor.core.authentication import AuthFactory
 
-        if self.auth_config is None:
-            _LOGGER.warning("auth_config is not configured for TC4400")
-            return False
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
         return success
@@ -87,7 +83,7 @@ class TechnicolorTC4400Parser(ModemParser):
             is_restarting,
         )
 
-        channels = []
+        channels: list[dict] = []
         try:
             downstream_header = soup.find("th", text="Downstream Channel Status")
             if not downstream_header:
@@ -147,7 +143,7 @@ class TechnicolorTC4400Parser(ModemParser):
             is_restarting,
         )
 
-        channels = []
+        channels: list[dict] = []
         try:
             upstream_header = soup.find("th", text="Upstream Channel Status")
             if not upstream_header:
