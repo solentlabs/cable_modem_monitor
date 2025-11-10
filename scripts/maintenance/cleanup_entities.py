@@ -23,7 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 try:
     from custom_components.cable_modem_monitor.utils import entity_cleanup as ec
 except Exception:
-    ec = None
+    ec = None  ***REMOVED*** type: ignore[assignment]
 
 
 class Colors:
@@ -112,7 +112,7 @@ def analyze_entities_fallback(data: dict) -> dict:
     ]
     active = [e for e in cable_modem_entities if e.get("config_entry_id")]
     orphaned = [e for e in cable_modem_entities if not e.get("config_entry_id") or e.get("orphaned_timestamp")]
-    creation_dates = {}
+    creation_dates: dict[str, dict[str, int]] = {}
     for entity in cable_modem_entities:
         created = entity.get("created_at", "unknown")[:10]
         creation_dates.setdefault(created, {"active": 0, "orphaned": 0})
@@ -140,8 +140,6 @@ def handle_cleanup_operation(data: dict, stats: dict, entity_registry_path: Path
     if ec is not None:
         backup_path = ec.backup_entity_registry()
         print_success(f"Backup created: {backup_path}")
-    else:
-        print_warning("Backup skipped because integration module is unavailable")
 
     all_entities = data["data"]["entities"]
     entities_to_keep = [e for e in all_entities if e not in stats["orphaned"]]
@@ -172,8 +170,6 @@ def handle_nuclear_operation(data: dict, stats: dict, entity_registry_path: Path
     if ec is not None:
         backup_path = ec.backup_entity_registry()
         print_success(f"Backup created: {backup_path}")
-    else:
-        print_warning("Backup skipped because integration module is unavailable")
 
     ***REMOVED*** Recompute stats in case something changed
     if ec is not None:
