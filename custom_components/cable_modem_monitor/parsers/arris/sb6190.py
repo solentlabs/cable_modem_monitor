@@ -1,5 +1,7 @@
 """Parser for ARRIS SB6190 cable modem."""
 
+from __future__ import annotations
+
 import logging
 
 from bs4 import BeautifulSoup
