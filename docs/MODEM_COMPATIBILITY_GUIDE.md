@@ -11,6 +11,7 @@ These models are actively tested or have been confirmed to work reliably by the 
 
 - **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
 - **ARRIS SB6141**
+- **ARRIS SB6190**
 
 ### ⚠️ Community Reported (Mixed Results)
 These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.

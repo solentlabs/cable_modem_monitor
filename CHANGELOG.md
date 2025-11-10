@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Arris SB6190 Support** - Added parser for Arris SB6190 cable modem
+  - Supports both transposed and non-transposed table formats
+  - Parses downstream/upstream channels and error statistics
+  - Comprehensive test suite with real hardware fixtures
+  - Model-specific detection to avoid conflicts with other Arris modems
+
 ## [3.0.0] - 2025-11-07
 
 ### Added
