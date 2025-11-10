@@ -180,7 +180,7 @@ class HNAPRequestBuilder:
                 ***REMOVED*** Try without namespace prefix (some responses don't use it)
                 action_response = root.find(f".//{action}Response")
 
-            return action_response
+            return action_response  ***REMOVED*** type: ignore[no-any-return]
 
         except ElementTree.ParseError as e:
             _LOGGER.error("Failed to parse HNAP XML response: %s", e)

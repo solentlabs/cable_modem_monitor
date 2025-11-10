@@ -103,6 +103,7 @@ class ModemHealthMonitor:
             HealthCheckResult with ping and HTTP status
         """
         ***REMOVED*** Extract host from URL using proper URL parsing
+        host: str | None
         try:
             parsed = urlparse(base_url)
             host = parsed.hostname or parsed.netloc.split(":")[0] if parsed.netloc else base_url

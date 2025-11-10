@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import logging
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import requests
@@ -17,10 +16,9 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class AuthStrategy(ABC):
+class AuthStrategy:
     """Abstract base class for authentication strategies."""
 
-    @abstractmethod
     def login(
         self, session: requests.Session, base_url: str, username: str | None, password: str | None, config: AuthConfig
     ) -> tuple[bool, str | None]:
@@ -39,7 +37,7 @@ class AuthStrategy(ABC):
             - success: True if authentication succeeded
             - response_html: HTML from authenticated page (if applicable)
         """
-        pass
+        return (False, None)
 
 
 class NoAuthStrategy(AuthStrategy):

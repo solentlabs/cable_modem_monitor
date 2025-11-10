@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import requests
 from bs4 import BeautifulSoup
 
+from ..parsers.base_parser import ModemParser
 from .discovery_helpers import (
     DiscoveryCircuitBreaker,
     ParserHeuristics,
@@ -75,15 +76,15 @@ class ModemScraper:
 
         ***REMOVED*** Handle parser parameter - can be instance, class, or list of classes
         if isinstance(parser, list):
-            self.parsers = parser
-            self.parser = None
+            self.parsers: list[Any] = parser
+            self.parser: ModemParser | None = None
         elif parser and isinstance(parser, type):
             ***REMOVED*** Parser class passed in
             self.parsers = [parser]
             self.parser = None
         elif parser:
             ***REMOVED*** Parser instance passed in
-            self.parsers = []
+            self.parsers = [parser]
             self.parser = parser
         else:
             self.parsers = []
@@ -91,7 +92,7 @@ class ModemScraper:
 
         self.cached_url = cached_url
         self.parser_name = parser_name  ***REMOVED*** For Tier 2: load cached parser by name
-        self.last_successful_url = None
+        self.last_successful_url = ""
 
     def _login(self) -> bool | tuple[bool, str | None]:
         """
@@ -120,7 +121,7 @@ class ModemScraper:
         urls = []
         for pattern in self.parser.url_patterns:
             url = f"{self.base_url}{pattern['path']}"
-            urls.append((url, pattern["auth_method"], type(self.parser)))
+            urls.append((url, str(pattern["auth_method"]), type(self.parser)))
         return urls
 
     def _find_cached_parser(self) -> type[ModemParser] | None:
@@ -160,9 +161,9 @@ class ModemScraper:
             return []
 
         ***REMOVED*** Cast to type[ModemParser] to satisfy type checker after None check
-        parser = cast(type[ModemParser], cached_parser)
+        parser = cached_parser
         _LOGGER.info("Found cached parser: %s", parser.name)
-        urls = []
+        urls: list[tuple[str, str, type[ModemParser]]] = []
 
         ***REMOVED*** Try cached URL first if available
         if self.cached_url:
@@ -190,7 +191,7 @@ class ModemScraper:
                 for pattern in parser_class.url_patterns:
                     path = pattern.get("path")
                     if isinstance(path, str) and path in self.cached_url:
-                        urls.append((self.cached_url, pattern["auth_method"], parser_class))
+                        urls.append((self.cached_url, str(pattern["auth_method"]), parser_class))
                         break
 
         ***REMOVED*** Add all parser URLs
@@ -198,7 +199,7 @@ class ModemScraper:
             for pattern in parser_class.url_patterns:
                 url = f"{self.base_url}{pattern['path']}"
                 if url != self.cached_url:
-                    urls.append((url, pattern["auth_method"], parser_class))
+                    urls.append((url, str(pattern["auth_method"]), parser_class))
 
         return urls
 
@@ -309,7 +310,7 @@ class ModemScraper:
                             parser_class.name,
                             parser_class.manufacturer,
                         )
-                        return parser_class()
+                        return cast(type[ModemParser], parser_class)()
                     else:
                         attempted_parsers.append(parser_class.name)
             except Exception as e:
@@ -339,7 +340,7 @@ class ModemScraper:
                     suggested_parser.name,
                     suggested_parser.manufacturer,
                 )
-                return suggested_parser()
+                return cast(type[ModemParser], suggested_parser)()
             else:
                 attempted_parsers.append(suggested_parser.name)
                 _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
@@ -404,7 +405,7 @@ class ModemScraper:
 
         soup = BeautifulSoup(html, "html.parser")
         circuit_breaker = DiscoveryCircuitBreaker(max_attempts=15, timeout_seconds=90)
-        attempted_parsers = []
+        attempted_parsers: list[str] = []
 
         ***REMOVED*** Try anonymous probing first
         parser = self._try_anonymous_probing(circuit_breaker, attempted_parsers)
@@ -455,9 +456,10 @@ class ModemScraper:
                 return self._create_error_response("offline")
 
             ***REMOVED*** Login and get authenticated HTML
-            html = self._handle_login_result(html)
-            if html is None:
+            html_or_none = self._handle_login_result(html)
+            if html_or_none is None:
                 return self._create_error_response("unreachable")
+            html = html_or_none
 
             ***REMOVED*** Parse data and build response
             data = self._parse_data(html)
@@ -661,7 +663,7 @@ class ModemScraper:
         if restart_method is None:
             _LOGGER.error("Parser does not support restart functionality")
             return False
-        success = restart_method(self.session, self.base_url)
+        success: bool = restart_method(self.session, self.base_url)
 
         if success:
             _LOGGER.info("Modem restart command sent successfully")
