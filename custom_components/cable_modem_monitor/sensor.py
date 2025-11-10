@@ -471,7 +471,7 @@ class ModemLastBootTimeSensor(ModemSensorBase):
 
         ***REMOVED*** Calculate last boot time: current time - uptime
         now = dt_util.now()
-        last_boot = now - timedelta(seconds=uptime_seconds)
+        last_boot: datetime | None = now - timedelta(seconds=uptime_seconds)
         return last_boot
 
 
