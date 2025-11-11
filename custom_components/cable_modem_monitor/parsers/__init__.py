@@ -24,6 +24,7 @@ _PARSER_MODULE_MAP = {
     "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),
     "Technicolor TC4400": ("technicolor", "tc4400", "TechnicolorTC4400Parser"),
     "Technicolor XB7": ("technicolor", "xb7", "TechnicolorXB7Parser"),
+    "Unknown Modem (Fallback Mode)": ("universal", "fallback", "UniversalFallbackParser"),
 }
 
 
@@ -148,7 +149,13 @@ def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
 
     # Sort parsers by manufacturer, then by priority (higher priority first)
     # This ensures model-specific parsers are tried before generic ones within the same manufacturer
-    parsers.sort(key=lambda p: (p.manufacturer, p.priority), reverse=True)
+    # Special case: "Unknown" manufacturer (fallback parser) always goes last
+    def sort_key(parser):
+        # Unknown manufacturer goes to the end
+        manufacturer_priority = 0 if parser.manufacturer == "Unknown" else 1
+        return (manufacturer_priority, parser.manufacturer, parser.priority)
+
+    parsers.sort(key=sort_key, reverse=True)
 
     _LOGGER.debug("Finished parser discovery. Found %d parsers.", len(parsers))
     _LOGGER.debug("Parser order by priority: %s", [f"{p.name} (priority={p.priority})" for p in parsers])

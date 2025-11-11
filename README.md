@@ -67,6 +67,17 @@ A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that us
 
 **Have a different modem?** This integration uses a plugin architecture that makes adding new models easy. Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
 
+### 🆘 Unsupported Modem? No Problem!
+
+**NEW in v3.1.0:** The integration now includes a **Universal Fallback Mode** that allows installation even if your modem isn't specifically supported yet. This makes it easy to help us add support for your modem:
+
+1. **Install the integration** - It will work in fallback mode with limited functionality
+2. **Press the "Capture HTML" button** - Takes 10 seconds, one click!
+3. **Download diagnostics** - All personal info automatically removed
+4. **Share on GitHub** - We'll build a parser for your modem
+
+**No technical skills needed!** The fallback mode is designed for non-technical users to easily contribute HTML samples. See [CM600 User Instructions](./docs/CM600_USER_INSTRUCTIONS.md) for a step-by-step guide.
+
 ## Installation
 
 ### Method 1: HACS (Recommended)
