@@ -103,7 +103,7 @@ class TestStaticHtmlParsing:
     def test_parse_system_info_from_html(self, static_conn_html, static_sw_html):
         """Test parsing system info from static HTML pages."""
         parser = MotorolaMB8611StaticParser()
-        
+
         # The parser gets soup from one page at a time.
         # We test them separately and merge the results to check all fields.
         soup_conn = BeautifulSoup(static_conn_html, "html.parser")
