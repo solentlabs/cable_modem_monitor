@@ -25,10 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added primary method: retrieve logs from Home Assistant's system_log integration (in-memory circular buffer)
   - Falls back to reading home-assistant.log file if system_log unavailable
   - Fixes issue where diagnostics showed "Log file not available" on Docker/supervised installations
+  - Fixed 'tuple' object has no attribute 'name' error by supporting both tuple and LogRecord formats
   - Better error messages guide users to alternative log access methods (journalctl, HA logs UI)
+- **Version Logging on Startup** - Integration now logs version number when it starts
+  - Example: "Cable Modem Monitor version 3.0.1 is starting"
+  - Helps identify which version is loaded when troubleshooting issues
+  - Makes it easy to confirm integration loaded properly from diagnostic logs
 
 ### Technical Details
-- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `const.py`, `manifest.json`
+- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `const.py`, `manifest.json`
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
 - **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
 - **Diagnostics**: Now works reliably across all Home Assistant installation types (Docker, supervised, core, OS)
