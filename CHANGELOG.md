@@ -43,9 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `get_parser_by_name()` function for direct parser loading without discovery
   - Added global parser cache to avoid repeated filesystem scans
   - Parser discovery now only runs during config flow and first auto-detection
+- **Protocol Discovery Optimization** - Skips HTTP/HTTPS protocol fallback when working URL is cached
+  - First setup: tries HTTPS→HTTP fallback, saves working URL with protocol
+  - Subsequent startups: extracts protocol from cached URL, uses it directly
+  - Eliminates failed connection attempts on HTTP-only modems (faster, cleaner logs)
+  - Config changes automatically re-detect protocol when user clicks Submit
+  - Particularly beneficial for older HTTP-only modems that previously logged HTTPS errors
 
 ### Technical Details
-- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `const.py`, `manifest.json`
+- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `modem_scraper.py`, `const.py`, `manifest.json`
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
 - **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
 - **Diagnostics**: Now works reliably across all Home Assistant installation types (Docker, supervised, core, OS)
