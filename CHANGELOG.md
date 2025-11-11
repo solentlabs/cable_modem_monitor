@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Config changes automatically re-detect protocol when user clicks Submit
   - Particularly beneficial for older HTTP-only modems that previously logged HTTPS errors
 
+### Removed
+- **v1.x to v2.0 Entity Migration Code** - Removed automatic entity ID migration from legacy versions
+  - Deleted 127 lines of migration code that ran on every startup
+  - Removed: `async_migrate_entity_ids()`, `_migrate_config_data()`, and helper functions
+  - Users still on v1.x can perform clean reinstall (see UPGRADING.md)
+  - Reduces startup overhead and code complexity
+  - Migration was for v2.0.0 (released Oct 24, 2025) - no longer needed at v3.1.0
+
 ### Technical Details
 - **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `modem_scraper.py`, `const.py`, `manifest.json`
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
