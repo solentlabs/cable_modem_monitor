@@ -19,6 +19,10 @@ class MotorolaMB8611StaticParser(ModemParser):
     models = ["MB8611", "MB8612"]
     priority = 100  # Try after HNAP parser, before generic
 
+    url_patterns = [
+        {"path": "/MotoStatusConnection.html", "auth_method": "none", "auth_required": False},
+    ]
+
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Motorola MB8611 modem."""

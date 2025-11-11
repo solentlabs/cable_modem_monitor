@@ -10,16 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.0.1] - 2025-11-11
 
 ### Fixed
-- **SSL Certificate Verification Issue** - Fixed connection failures for modems with self-signed certificates (Fixes #6)
+- **MB8611 Static Parser Missing URL Patterns** - Fixed "No URL patterns available to try" error (Fixes #6)
+  - Added missing `url_patterns` attribute to `MotorolaMB8611StaticParser` class
+  - Parser now properly specifies `/MotoStatusConnection.html` as the data source URL
+  - Without this attribute, the modem scraper had no URLs to fetch, causing immediate failure
+  - Users can now successfully use the "Motorola MB8611 (Static)" parser option
+- **SSL Certificate Verification Issue** - Fixed HTTPS connection failures for modems with self-signed certificates (Fixes #6)
   - Added explicit `verify=session.verify` parameter to all HTTP requests in authentication.py (6 locations)
   - Added explicit `verify=session.verify` parameter to all HTTP requests in hnap_builder.py (2 locations)
   - While `session.verify=False` was already configured, some requests library versions may not reliably inherit this setting
   - Ensures SSL verification setting is explicitly passed to every HTTP request for consistent behavior
-  - Resolves connection failures for Motorola MB8611 and other modems using self-signed HTTPS certificates
+  - Resolves HTTPS connection failures for Motorola MB8611 and other modems using self-signed certificates
 
 ### Technical Details
-- **Files Modified**: `authentication.py`, `hnap_builder.py`, `const.py`, `manifest.json`
-- **Impact**: Fixes authentication and connection issues for HTTPS-enabled modems with self-signed certificates
+- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `const.py`, `manifest.json`
+- **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
+- **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
 - **Compatibility**: No breaking changes, fully backward compatible with existing configurations
 
 ## [3.0.0] - 2025-11-10
