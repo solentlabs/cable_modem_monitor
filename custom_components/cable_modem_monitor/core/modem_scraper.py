@@ -61,7 +61,7 @@ class ModemScraper:
         # Configure SSL verification with security warnings
         if not self.verify_ssl:
             # Disable SSL warnings for the session only (not globally)
-            import urllib3  # type: ignore[import-not-found]
+            import urllib3
 
             self.session.verify = False
             # Disable warnings only for this session
