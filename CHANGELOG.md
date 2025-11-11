@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Type Checking Errors** - Resolved all mypy type checking errors
+  - Added cast() for response.text in HNAP builder (custom_components/cable_modem_monitor/core/hnap_builder.py:70, :97)
+  - Added proper type annotations for channel data dictionaries in SB6190 parser (custom_components/cable_modem_monitor/parsers/arris/sb6190.py:113, :116, :120-122, :153, :184)
+  - Added type ignore for urllib3 optional dependency import (custom_components/cable_modem_monitor/core/modem_scraper.py:64)
+  - All code quality checks (ruff, black, mypy) now pass successfully
+
 ## [3.0.0] - 2025-11-10
 
 ### Added
