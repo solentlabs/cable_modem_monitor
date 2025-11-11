@@ -177,7 +177,7 @@ class ModemScraper:
         Args:
             max_pages: Maximum number of additional pages to crawl (default 20)
         """
-        from urllib.parse import urljoin, urlparse
+        from urllib.parse import urljoin, urlparse, urlunparse
 
         from bs4 import BeautifulSoup
 
@@ -186,9 +186,21 @@ class ModemScraper:
 
         _LOGGER.info("Starting link crawl to discover additional pages (max %d pages)", max_pages)
 
-        # Get already captured URLs to avoid duplicates
-        captured_url_set = {item["url"] for item in self._captured_urls}
+        # Normalize URL for comparison (remove fragments, normalize trailing slashes)
+        def normalize_url(url: str) -> str:
+            """Normalize URL for deduplication."""
+            parsed = urlparse(url)
+            # Remove fragment, normalize path (remove trailing slash unless it's root)
+            path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+            # Reconstruct without fragment
+            normalized = urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, parsed.query, ""))
+            return normalized
+
+        # Get already captured URLs to avoid duplicates (normalized)
+        captured_url_set = {normalize_url(item["url"]) for item in self._captured_urls}
         base_host = urlparse(self.base_url).netloc
+
+        _LOGGER.debug("Already captured %d unique pages (normalized)", len(captured_url_set))
 
         # Extract all links from captured HTML
         links_to_try = set()
@@ -200,6 +212,10 @@ class ModemScraper:
                 for link in soup.find_all("a", href=True):
                     href = link["href"]
 
+                    # Skip anchors, javascript, mailto, etc.
+                    if href.startswith(("#", "javascript:", "mailto:")):
+                        continue
+
                     # Convert relative URLs to absolute
                     absolute_url = urljoin(self.base_url, href)
 
@@ -208,22 +224,23 @@ class ModemScraper:
                     if parsed.netloc != base_host:
                         continue
 
-                    # Skip anchors, javascript, mailto, etc.
-                    if href.startswith(("#", "javascript:", "mailto:")):
-                        continue
-
                     # Skip common binary file extensions
                     if any(absolute_url.lower().endswith(ext) for ext in [".jpg", ".png", ".gif", ".css", ".js", ".ico", ".pdf", ".zip"]):
                         continue
 
-                    # Add if not already captured
-                    if absolute_url not in captured_url_set:
+                    # Normalize and check if not already captured
+                    normalized = normalize_url(absolute_url)
+                    if normalized not in captured_url_set:
                         links_to_try.add(absolute_url)
+                        captured_url_set.add(normalized)  # Mark as "will be captured"
+                        _LOGGER.debug("Will crawl new page: %s", absolute_url)
+                    else:
+                        _LOGGER.debug("Skipping already captured page: %s (normalized: %s)", absolute_url, normalized)
 
             except Exception as e:
                 _LOGGER.debug("Error extracting links from %s: %s", captured.get("url", "unknown"), e)
 
-        _LOGGER.info("Found %d unique links to try (already have %d pages)", len(links_to_try), len(captured_url_set))
+        _LOGGER.info("Found %d new links to crawl (already have %d pages)", len(links_to_try), len(captured_url_set) - len(links_to_try))
 
         # Crawl discovered links (up to max_pages)
         pages_crawled = 0
@@ -233,9 +250,8 @@ class ModemScraper:
                 response = self.session.get(link_url, timeout=5)
 
                 if response.status_code == 200:
-                    # Capture this page
+                    # Capture this page (already marked as captured in captured_url_set above)
                     self._capture_response(response, "Link crawl")
-                    captured_url_set.add(link_url)
                     pages_crawled += 1
                     _LOGGER.debug("Successfully captured: %s (%d bytes)", link_url, len(response.text))
                 else:
