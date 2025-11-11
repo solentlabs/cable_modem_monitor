@@ -52,7 +52,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
     Returns:
         List of log record dicts with timestamp, level, and message
     """
-    import re
     from pathlib import Path
 
     recent_logs = []
