@@ -64,6 +64,7 @@ class HNAPRequestBuilder:
             data=soap_envelope,
             headers={"SOAPAction": f'"{self.namespace}{action}"', "Content-Type": "text/xml; charset=utf-8"},
             timeout=10,
+            verify=session.verify,
         )
 
         response.raise_for_status()
@@ -91,6 +92,7 @@ class HNAPRequestBuilder:
             data=soap_envelope,
             headers={"SOAPAction": f'"{self.namespace}GetMultipleHNAPs"', "Content-Type": "text/xml; charset=utf-8"},
             timeout=10,
+            verify=session.verify,
         )
 
         response.raise_for_status()

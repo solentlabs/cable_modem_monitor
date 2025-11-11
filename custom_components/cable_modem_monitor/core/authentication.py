@@ -92,7 +92,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         }
 
         _LOGGER.debug("Submitting form login to %s", login_url)
-        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
+        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True, verify=session.verify)
 
         # Check success indicator
         if config.success_indicator:
@@ -146,7 +146,7 @@ class FormBase64AuthStrategy(AuthStrategy):
         }
 
         _LOGGER.debug("Submitting form login with Base64-encoded password to %s", login_url)
-        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
+        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True, verify=session.verify)
 
         # Check success indicator
         if config.success_indicator:
@@ -201,7 +201,7 @@ class FormPlainAndBase64AuthStrategy(AuthStrategy):
             pwd_type = "plain" if attempt == 1 else "Base64-encoded"
             _LOGGER.debug("Attempting login with %s password", pwd_type)
 
-            response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
+            response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True, verify=session.verify)
 
             # Check success
             success = False
@@ -274,7 +274,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         }
 
         _LOGGER.debug("Posting credentials to %s", login_url)
-        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True)
+        response = session.post(login_url, data=login_data, timeout=10, allow_redirects=True, verify=session.verify)
 
         if response.status_code != 200:
             _LOGGER.error("Login failed with status %s", response.status_code)
@@ -312,7 +312,7 @@ class RedirectFormAuthStrategy(AuthStrategy):
         """Fetch the authenticated page after successful login."""
         auth_url = f"{base_url}{config.authenticated_page_url}"
         _LOGGER.debug("Fetching authenticated page: %s", auth_url)
-        auth_response = session.get(auth_url, timeout=10)
+        auth_response = session.get(auth_url, timeout=10, verify=session.verify)
 
         if auth_response.status_code != 200:
             _LOGGER.error("Failed to fetch authenticated page, status %s", auth_response.status_code)
@@ -354,6 +354,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
                     "Content-Type": "text/xml; charset=utf-8",
                 },
                 timeout=10,
+                verify=session.verify,
             )
 
             if response.status_code != 200:
