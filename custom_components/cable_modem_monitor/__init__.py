@@ -447,14 +447,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")
 
-    # Get parsers and select appropriate one
-    from .parsers import get_parsers
+    # Optimization: Only do full parser discovery if needed
+    if modem_choice and modem_choice != "auto":
+        # User selected specific parser - load only that one (fast path)
+        from .parsers import get_parser_by_name
 
-    parsers = await hass.async_add_executor_job(get_parsers)
-    selected_parser = _select_parser(parsers, modem_choice)
+        parser_class = await hass.async_add_executor_job(get_parser_by_name, modem_choice)
+        if parser_class:
+            _LOGGER.info("Loaded specific parser: %s (skipped full discovery)", modem_choice)
+            selected_parser = parser_class()
+            parser_name_hint = None
+        else:
+            # Fallback to auto if parser not found
+            _LOGGER.warning("Parser '%s' not found, falling back to auto discovery", modem_choice)
+            from .parsers import get_parsers
 
-    # Determine parser_name hint for auto mode
-    parser_name_hint = None if selected_parser != parsers else entry.data.get(CONF_PARSER_NAME)
+            parsers = await hass.async_add_executor_job(get_parsers)
+            selected_parser = parsers
+            parser_name_hint = entry.data.get(CONF_PARSER_NAME)
+    else:
+        # Auto mode - need all parsers for discovery
+        from .parsers import get_parsers
+
+        parsers = await hass.async_add_executor_job(get_parsers)
+        selected_parser = parsers
+        parser_name_hint = entry.data.get(CONF_PARSER_NAME)
 
     # Create scraper
     scraper = ModemScraper(

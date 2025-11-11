@@ -11,13 +11,82 @@ from .base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
+# Global cache for discovered parsers to avoid repeated filesystem scans
+_PARSER_CACHE: list[type[ModemParser]] | None = None
 
-def get_parsers() -> list[type[ModemParser]]:
-    """Auto-discover and return all parser modules in this package."""
+# Mapping of parser names to their module paths for direct loading
+_PARSER_MODULE_MAP = {
+    "ARRIS SB6141": ("arris", "sb6141", "ARRISSb6141Parser"),
+    "ARRIS SB6190": ("arris", "sb6190", "ARRISSb6190Parser"),
+    "Motorola MB Series": ("motorola", "generic", "MotorolaGenericParser"),
+    "Motorola MB7621": ("motorola", "mb7621", "MotorolaMB7621Parser"),
+    "Motorola MB8611 (HNAP)": ("motorola", "mb8611_hnap", "MotorolaMB8611HnapParser"),
+    "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),
+    "Technicolor TC4400": ("technicolor", "tc4400", "TechnicolorTC4400Parser"),
+    "Technicolor XB7": ("technicolor", "xb7", "TechnicolorXB7Parser"),
+}
+
+
+def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
+    """
+    Load a specific parser by name without scanning all parsers.
+
+    This is much faster than get_parsers() when you know which parser you need.
+
+    Args:
+        parser_name: The name of the parser (e.g., "Motorola MB8611 (Static)")
+
+    Returns:
+        Parser class if found, None otherwise
+    """
+    if parser_name not in _PARSER_MODULE_MAP:
+        _LOGGER.warning("Parser '%s' not found in known parsers map", parser_name)
+        return None
+
+    manufacturer, module_name, class_name = _PARSER_MODULE_MAP[parser_name]
+
+    try:
+        # Import only the specific parser module
+        full_module_name = f".{manufacturer}.{module_name}"
+        _LOGGER.debug("Loading specific parser: %s from %s", parser_name, full_module_name)
+        module = importlib.import_module(full_module_name, package=__name__)
+
+        # Get the parser class
+        parser_class = getattr(module, class_name, None)
+        if parser_class and issubclass(parser_class, ModemParser):
+            _LOGGER.info("Loaded parser: %s (skipped discovery - direct load)", parser_name)
+            return parser_class
+
+        _LOGGER.error("Parser class %s not found in module %s", class_name, full_module_name)
+        return None
+
+    except Exception as e:
+        _LOGGER.error("Failed to load parser %s: %s", parser_name, e, exc_info=True)
+        return None
+
+
+def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
+    """
+    Auto-discover and return all parser modules in this package.
+
+    Args:
+        use_cache: If True, return cached parsers if available (faster).
+                   Set to False to force re-discovery (useful for testing).
+
+    Returns:
+        List of all discovered parser classes
+    """
+    global _PARSER_CACHE
+
+    # Return cached parsers if available
+    if use_cache and _PARSER_CACHE is not None:
+        _LOGGER.debug("Returning %d cached parsers (skipped discovery)", len(_PARSER_CACHE))
+        return _PARSER_CACHE
+
     parsers = []
     package_dir = os.path.dirname(__file__)
 
-    _LOGGER.debug(f"Starting parser discovery in {package_dir}")
+    _LOGGER.debug("Starting parser discovery in %s", package_dir)
 
     # Iterate through manufacturer subdirectories (e.g., 'arris', 'motorola', 'technicolor')
     for manufacturer_dir_name in os.listdir(package_dir):
@@ -25,21 +94,21 @@ def get_parsers() -> list[type[ModemParser]]:
         if not os.path.isdir(manufacturer_dir_path) or manufacturer_dir_name.startswith("__"):
             continue
 
-        _LOGGER.debug(f"Searching in manufacturer directory: {manufacturer_dir_name}")
+        _LOGGER.debug("Searching in manufacturer directory: %s", manufacturer_dir_name)
 
         # Recursively find modules within each manufacturer directory
         for _, module_name, _ in pkgutil.iter_modules([manufacturer_dir_path]):
-            _LOGGER.debug(f"Found module candidate: {module_name} in {manufacturer_dir_name}")
+            _LOGGER.debug("Found module candidate: %s in %s", module_name, manufacturer_dir_name)
             if module_name in ("base_parser", "__init__", "parser_template"):
-                _LOGGER.debug(f"Skipping module: {module_name}")
+                _LOGGER.debug("Skipping module: %s", module_name)
                 continue
 
             try:
                 # Construct the full module path relative to the 'parsers' package
                 full_module_name = f".{manufacturer_dir_name}.{module_name}"
-                _LOGGER.debug(f"Attempting to import module: {full_module_name}")
+                _LOGGER.debug("Attempting to import module: %s", full_module_name)
                 module = importlib.import_module(full_module_name, package=__name__)
-                _LOGGER.debug(f"Successfully imported module: {full_module_name}")
+                _LOGGER.debug("Successfully imported module: %s", full_module_name)
 
                 found_parser_in_module = False
                 for attr_name in dir(module):
@@ -52,18 +121,21 @@ def get_parsers() -> list[type[ModemParser]]:
                         and attr.__module__ == module.__name__
                     ):
                         parsers.append(attr)
-                        _LOGGER.info(f"Registered parser: {attr.name} ({attr.manufacturer}, models: {attr.models})")
+                        _LOGGER.info("Registered parser: %s (%s, models: %s)", attr.name, attr.manufacturer, attr.models)
                         found_parser_in_module = True
                 if not found_parser_in_module:
-                    _LOGGER.debug(f"No ModemParser subclass found in module: {full_module_name}")
+                    _LOGGER.debug("No ModemParser subclass found in module: %s", full_module_name)
             except Exception as e:
-                _LOGGER.error(f"Failed to load parser module {full_module_name}: {e}", exc_info=True)
+                _LOGGER.error("Failed to load parser module %s: %s", full_module_name, e, exc_info=True)
 
     # Sort parsers by manufacturer, then by priority (higher priority first)
     # This ensures model-specific parsers are tried before generic ones within the same manufacturer
     parsers.sort(key=lambda p: (p.manufacturer, p.priority), reverse=True)
 
-    _LOGGER.debug(f"Finished parser discovery. Found {len(parsers)} parsers.")
-    _LOGGER.debug(f"Parser order by priority: {[f'{p.name} (priority={p.priority})' for p in parsers]}")
+    _LOGGER.debug("Finished parser discovery. Found %d parsers.", len(parsers))
+    _LOGGER.debug("Parser order by priority: %s", [f"{p.name} (priority={p.priority})" for p in parsers])
+
+    # Cache the results
+    _PARSER_CACHE = parsers
 
     return parsers

@@ -94,12 +94,26 @@ class ModemRestartButton(ModemButtonBase):
         username = self._entry.data.get(CONF_USERNAME)
         password = self._entry.data.get(CONF_PASSWORD)
         cached_url = self._entry.data.get(CONF_WORKING_URL)
+        modem_choice = self._entry.data.get("modem_choice", "auto")
         # Use hardcoded VERIFY_SSL constant (see const.py for security rationale)
         verify_ssl = VERIFY_SSL
 
-        # Get parsers in executor to avoid blocking I/O in async context
-        parsers = await self.hass.async_add_executor_job(get_parsers)
-        scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
+        # Optimization: Only load the specific parser if user selected one
+        if modem_choice and modem_choice != "auto":
+            from .parsers import get_parser_by_name
+
+            parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
+            if parser_class:
+                parser = parser_class()
+                scraper = ModemScraper(host, username, password, parser, cached_url, verify_ssl=verify_ssl)
+            else:
+                # Fallback to all parsers
+                parsers = await self.hass.async_add_executor_job(get_parsers)
+                scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
+        else:
+            # Auto mode - get all parsers (but use cache for speed)
+            parsers = await self.hass.async_add_executor_job(get_parsers)
+            scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
 
         # Run the restart in an executor since it uses requests (blocking I/O)
         success = await self.hass.async_add_executor_job(scraper.restart_modem)
