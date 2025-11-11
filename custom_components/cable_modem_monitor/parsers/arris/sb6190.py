@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from bs4 import BeautifulSoup
 
@@ -99,7 +100,7 @@ class ArrisSB6190Parser(ModemParser):
         return data_map, channel_count
 
     def _build_channel_data(self, i, data_map, is_upstream):
-        channel_data = {}
+        channel_data: dict[str, Any] = {}
         if "Channel ID" in data_map and i < len(data_map["Channel ID"]):
             channel_id = extract_number(data_map["Channel ID"][i])
             if channel_id is None:
@@ -150,7 +151,7 @@ class ArrisSB6190Parser(ModemParser):
 
     def _parse_downstream_table(self, table) -> list[dict]:
         """Parse non-transposed downstream table."""
-        channels = []
+        channels: list[dict[str, Any]] = []
         rows = table.find_all("tr")
         if not rows or len(rows) < 2:
             return channels
@@ -181,7 +182,7 @@ class ArrisSB6190Parser(ModemParser):
 
     def _parse_upstream_table(self, table) -> list[dict]:
         """Parse non-transposed upstream table."""
-        channels = []
+        channels: list[dict[str, Any]] = []
         rows = table.find_all("tr")
         if not rows or len(rows) < 2:
             return channels
