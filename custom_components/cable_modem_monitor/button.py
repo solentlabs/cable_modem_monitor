@@ -57,6 +57,7 @@ async def async_setup_entry(
             ModemRestartButton(coordinator, entry),
             CleanupEntitiesButton(coordinator, entry),
             ResetEntitiesButton(coordinator, entry),
+            UpdateModemDataButton(coordinator, entry),
         ]
     )
 
@@ -516,3 +517,34 @@ class ResetEntitiesButton(ModemButtonBase):
         )
 
         _LOGGER.info("Entity reset completed")
+
+
+class UpdateModemDataButton(ModemButtonBase):
+    """Button to manually trigger modem data update."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Update Modem Data"
+        self._attr_unique_id = f"{entry.entry_id}_update_data_button"
+        self._attr_icon = "mdi:update"
+
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        _LOGGER.info("Update modem data button pressed")
+
+        # Trigger coordinator refresh
+        await self.coordinator.async_request_refresh()
+
+        # Create notification
+        await self.hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": "Modem Data Update",
+                "message": "Modem data update has been triggered.",
+                "notification_id": "cable_modem_update",
+            },
+        )
+
+        _LOGGER.info("Modem data update triggered")

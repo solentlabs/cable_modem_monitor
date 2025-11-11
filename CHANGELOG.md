@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.1.0] - 2025-11-11
 
+### Added
+- **Update Modem Data Button** - Manual refresh button for on-demand data updates
+  - `button.cable_modem_update_data` - Triggers immediate coordinator refresh
+  - Useful for verifying changes after modem configuration or troubleshooting
+  - Complements automatic polling with user-controlled updates
+  - Shows notification when update is triggered
+
 ### Fixed
 - **MB8611 Static Parser Missing URL Patterns** - Fixed "No URL patterns available to try" error (Fixes #6)
   - Added missing `url_patterns` attribute to `MotorolaMB8611StaticParser` class
