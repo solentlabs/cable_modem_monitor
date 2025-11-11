@@ -365,6 +365,7 @@ class CleanupEntitiesButton(ModemButtonBase):
         self._attr_name = "Cleanup Entities"
         self._attr_unique_id = f"{entry.entry_id}_cleanup_entities_button"
         self._attr_icon = "mdi:broom"
+        self._attr_entity_category = EntityCategory.CONFIG
 
     async def async_press(self) -> None:
         """Handle the button press."""
@@ -529,6 +530,7 @@ class UpdateModemDataButton(ModemButtonBase):
         self._attr_name = "Update Modem Data"
         self._attr_unique_id = f"{entry.entry_id}_update_data_button"
         self._attr_icon = "mdi:update"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     async def async_press(self) -> None:
         """Handle the button press."""

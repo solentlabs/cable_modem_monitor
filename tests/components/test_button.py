@@ -311,6 +311,8 @@ async def test_cleanup_button_initialization(mock_coordinator, mock_config_entry
     assert button._attr_name == "Cleanup Entities"
     assert button._attr_unique_id == "test_entry_id_cleanup_entities_button"
     assert button._attr_icon == "mdi:broom"
+    from homeassistant.const import EntityCategory
+    assert button._attr_entity_category == EntityCategory.CONFIG
 
 
 @pytest.mark.asyncio
@@ -521,6 +523,8 @@ async def test_update_data_button_initialization(mock_coordinator, mock_config_e
     assert button._attr_name == "Update Modem Data"
     assert button._attr_unique_id == "test_entry_id_update_data_button"
     assert button._attr_icon == "mdi:update"
+    from homeassistant.const import EntityCategory
+    assert button._attr_entity_category == EntityCategory.DIAGNOSTIC
 
 
 @pytest.mark.asyncio
