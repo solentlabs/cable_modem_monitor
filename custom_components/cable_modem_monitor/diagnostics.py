@@ -52,64 +52,65 @@ def _sanitize_html(html: str) -> str:
         Sanitized HTML with sensitive data redacted
     """
     # 1. MAC Addresses
-    html = re.sub(
-        r'\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b',
-        'XX:XX:XX:XX:XX:XX',
-        html
-    )
+    html = re.sub(r"\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b", "XX:XX:XX:XX:XX:XX", html)
 
     # 2. Serial Numbers (various formats)
     html = re.sub(
-        r'(Serial\s*Number|SN|S/N)\s*[:\s=]+\S+',
-        r'\1: ***REDACTED***',
+        r"(Serial\s*Number|SN|S/N)\s*[:\s=]*(?:<[^>]*>)*\s*([a-zA-Z0-9\-]{5,})",
+        r"\1: ***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 3. Account/Subscriber IDs
     html = re.sub(
-        r'(Account|Subscriber|Customer|Device)\s*(ID|Number)\s*[:\s=]+\S+',
-        r'\1 \2: ***REDACTED***',
+        r"(Account|Subscriber|Customer|Device)\s*(ID|Number)\s*[:\s=]+\S+",
+        r"\1 \2: ***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 4. Private IPs (except common modem IPs like 192.168.100.1, 192.168.0.1, etc.)
     html = re.sub(
-        r'\b(?!192\.168\.100\.1\b)(?!192\.168\.0\.1\b)(?!192\.168\.1\.1\b)'
-        r'(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b',
-        '***PRIVATE_IP***',
-        html
+        r"\b(?!192\.168\.100\.1\b)(?!192\.168\.0\.1\b)(?!192\.168\.1\.1\b)"
+        r"(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b",
+        "***PRIVATE_IP***",
+        html,
     )
 
     # 5. WiFi Passwords/Passphrases
     html = re.sub(
         r'(password|passphrase|psk|key|wpa[0-9]*key)\s*[=:]\s*["\']?([^"\'<>\s]+)',
-        r'\1=***REDACTED***',
+        r"\1=***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 6. HTML Forms with password fields - redact values
     html = re.sub(
         r'(<input[^>]*type=["\']password["\'][^>]*value=["\'])([^"\']+)(["\'])',
-        r'\1***REDACTED***\3',
+        r"\1***REDACTED***\3",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 7. Remove session tokens/cookies from HTML
+    # Handle session=, token=, auth=
     html = re.sub(
-        r'(session|token|csrf|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})',
-        r'\1=***REDACTED***',
+        r'(session|token|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})', r"\1=***REDACTED***", html, flags=re.IGNORECASE
+    )
+    # Handle <meta name="csrf-token" content="...">
+    html = re.sub(
+        r'(<meta[^>]*name=["\']csrf-token["\'][^>]*content=["\'])([^"\']+)(["\'])',
+        r"\1***REDACTED***\3",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     return html
 
 
-def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:
+def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:  # noqa: C901
     """Get recent log records for cable_modem_monitor.
 
     Args:
@@ -183,7 +184,9 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                     {
                                         "timestamp": 0,  # system_log doesn't store timestamp in this format
                                         "level": "ERROR",  # system_log only stores errors/warnings
-                                        "logger": str(logger_name).replace("custom_components.cable_modem_monitor.", ""),
+                                        "logger": str(logger_name).replace(
+                                            "custom_components.cable_modem_monitor.", ""
+                                        ),
                                         "message": sanitized_message,
                                     }
                                 )
@@ -399,6 +402,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
 
         # Check if capture has expired (5 minute TTL)
         from datetime import datetime
+
         try:
             expires_at = datetime.fromisoformat(capture.get("ttl_expires", ""))
             if datetime.now() < expires_at:
@@ -416,10 +420,13 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
                     "captured_at": capture.get("timestamp"),
                     "expires_at": capture.get("ttl_expires"),
                     "trigger": capture.get("trigger", "unknown"),
-                    "note": "Raw HTML has been sanitized to remove sensitive information (MACs, serials, passwords, private IPs)",
+                    "note": (
+                        "Raw HTML has been sanitized to remove sensitive information "
+                        "(MACs, serials, passwords, private IPs)"
+                    ),
                     "url_count": len(sanitized_urls),
                     "total_size_kb": sum(u.get("size_bytes", 0) for u in sanitized_urls) / 1024,
-                    "urls": sanitized_urls
+                    "urls": sanitized_urls,
                 }
                 _LOGGER.info("Including raw HTML capture in diagnostics (%d URLs)", len(sanitized_urls))
             else:

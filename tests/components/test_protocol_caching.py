@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 
 

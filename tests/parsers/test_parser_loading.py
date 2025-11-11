@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from custom_components.cable_modem_monitor.parsers import (
-    _PARSER_CACHE,
     get_parser_by_name,
     get_parsers,
 )
@@ -25,7 +22,7 @@ class TestParserCaching:
         # First call should populate cache
         parsers1 = get_parsers(use_cache=True)
         assert parser_module._PARSER_CACHE is not None
-        assert len(parsers1) > 0
+        assert len(parsers1) > 0  # type: ignore[unreachable]
 
         # Second call should return cached results
         parsers2 = get_parsers(use_cache=True)
@@ -50,7 +47,7 @@ class TestParserCaching:
         # Check for known parsers
         assert "ARRIS SB6141" in parser_names
         assert "ARRIS SB6190" in parser_names
-        assert "Motorola MB Series" in parser_names
+        assert "Motorola MB Series (Generic)" in parser_names
         assert "Motorola MB7621" in parser_names
         assert "Motorola MB8611 (HNAP)" in parser_names
         assert "Motorola MB8611 (Static)" in parser_names

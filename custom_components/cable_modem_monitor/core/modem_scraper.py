@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
 
 import requests
 from bs4 import BeautifulSoup
@@ -33,7 +34,7 @@ class CapturingSession(requests.Session):
         super().__init__()
         self._capture_callback = capture_callback
 
-    def request(self, method: str, url: str, **kwargs) -> requests.Response:
+    def request(self, method: str, url: str, **kwargs) -> requests.Response:  # type: ignore[override]
         """Override request to capture responses."""
         response = super().request(method, url, **kwargs)
 
@@ -148,19 +149,23 @@ class ModemScraper:
             # Get parser name if available
             parser_name = self.parser.name if self.parser else "unknown"
 
-            self._captured_urls.append({
-                "url": response.url,
-                "method": response.request.method if response.request else "GET",
-                "status_code": response.status_code,
-                "content_type": response.headers.get("Content-Type", "unknown"),
-                "size_bytes": len(response.text) if hasattr(response, 'text') else 0,
-                "html": response.text if hasattr(response, 'text') else "",
-                "parser": parser_name,
-                "description": description
-            })
+            self._captured_urls.append(
+                {
+                    "url": response.url,
+                    "method": response.request.method if response.request else "GET",
+                    "status_code": response.status_code,
+                    "content_type": response.headers.get("Content-Type", "unknown"),
+                    "size_bytes": len(response.text) if hasattr(response, "text") else 0,
+                    "html": response.text if hasattr(response, "text") else "",
+                    "parser": parser_name,
+                    "description": description,
+                }
+            )
             _LOGGER.debug("Captured response: %s (%d bytes) - %s", response.url, len(response.text), description)
         except Exception as e:
-            _LOGGER.warning("Failed to capture response from %s: %s", response.url if hasattr(response, 'url') else 'unknown', e)
+            _LOGGER.warning(
+                "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
+            )
 
     def _login(self) -> bool | tuple[bool, str | None]:
         """
@@ -563,11 +568,12 @@ class ModemScraper:
             # Include captured HTML if requested
             if capture_raw and self._captured_urls:
                 from datetime import datetime, timedelta
+
                 response["_raw_html_capture"] = {
                     "timestamp": datetime.now().isoformat(),
                     "trigger": "manual",
                     "ttl_expires": (datetime.now() + timedelta(minutes=5)).isoformat(),
-                    "urls": self._captured_urls
+                    "urls": self._captured_urls,
                 }
                 _LOGGER.info("Captured %d HTML pages for diagnostics", len(self._captured_urls))
 

@@ -17,7 +17,7 @@ _PARSER_CACHE: list[type[ModemParser]] | None = None
 # Mapping of parser names to their module paths for direct loading
 _PARSER_MODULE_MAP = {
     "ARRIS SB6141": ("arris", "sb6141", "ARRISSb6141Parser"),
-    "ARRIS SB6190": ("arris", "sb6190", "ARRISSb6190Parser"),
+    "ARRIS SB6190": ("arris", "sb6190", "ArrisSB6190Parser"),
     "Motorola MB Series (Generic)": ("motorola", "generic", "MotorolaGenericParser"),
     "Motorola MB7621": ("motorola", "mb7621", "MotorolaMB7621Parser"),
     "Motorola MB8611 (HNAP)": ("motorola", "mb8611_hnap", "MotorolaMB8611HnapParser"),
@@ -39,25 +39,41 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
     Returns:
         Parser class if found, None otherwise
     """
+    _LOGGER.debug("Attempting to get parser by name: %s", parser_name)
     if parser_name not in _PARSER_MODULE_MAP:
         _LOGGER.warning("Parser '%s' not found in known parsers map", parser_name)
         return None
 
     manufacturer, module_name, class_name = _PARSER_MODULE_MAP[parser_name]
+    _LOGGER.debug(
+        "Found parser details in map: manufacturer=%s, module=%s, class=%s",
+        manufacturer,
+        module_name,
+        class_name,
+    )
 
     try:
         # Import only the specific parser module
         full_module_name = f".{manufacturer}.{module_name}"
-        _LOGGER.debug("Loading specific parser: %s from %s", parser_name, full_module_name)
+        _LOGGER.debug("Loading specific parser module: %s", full_module_name)
         module = importlib.import_module(full_module_name, package=__name__)
+        _LOGGER.debug("Successfully imported module: %s", full_module_name)
 
         # Get the parser class
         parser_class = getattr(module, class_name, None)
-        if parser_class and issubclass(parser_class, ModemParser):
-            _LOGGER.info("Loaded parser: %s (skipped discovery - direct load)", parser_name)
-            return parser_class
-
-        _LOGGER.error("Parser class %s not found in module %s", class_name, full_module_name)
+        if parser_class:
+            _LOGGER.debug("Found class '%s' in module '%s'", class_name, full_module_name)
+            if issubclass(parser_class, ModemParser):
+                _LOGGER.info("Loaded parser: %s (skipped discovery - direct load)", parser_name)
+                return parser_class  # type: ignore[no-any-return]
+            else:
+                _LOGGER.error(
+                    "Class '%s' found in module '%s' is not a subclass of ModemParser",
+                    class_name,
+                    full_module_name,
+                )
+        else:
+            _LOGGER.error("Parser class %s not found in module %s", class_name, full_module_name)
         return None
 
     except Exception as e:
@@ -121,7 +137,9 @@ def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
                         and attr.__module__ == module.__name__
                     ):
                         parsers.append(attr)
-                        _LOGGER.info("Registered parser: %s (%s, models: %s)", attr.name, attr.manufacturer, attr.models)
+                        _LOGGER.info(
+                            "Registered parser: %s (%s, models: %s)", attr.name, attr.manufacturer, attr.models
+                        )
                         found_parser_in_module = True
                 if not found_parser_in_module:
                     _LOGGER.debug("No ModemParser subclass found in module: %s", full_module_name)

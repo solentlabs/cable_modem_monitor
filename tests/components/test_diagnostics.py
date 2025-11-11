@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.diagnostics import (
     _sanitize_html,
     _sanitize_log_message,
@@ -58,7 +59,9 @@ class TestSanitizeHtml:
             sanitized = _sanitize_html(original)
             assert "***REDACTED***" in sanitized
             # Original ID should be removed (check for the digits/unique part)
-            assert not any(char.isdigit() for word in sanitized.split("***REDACTED***") for char in word if char.isalnum())
+            assert not any(
+                char.isdigit() for word in sanitized.split("***REDACTED***") for char in word if char.isalnum()
+            )
 
     def test_sanitize_html_removes_private_ips(self):
         """Test that private IP addresses are sanitized."""
@@ -79,8 +82,8 @@ class TestSanitizeHtml:
         """Test that common modem IPs are preserved for debugging."""
         common_ips = [
             "192.168.100.1",  # Common Motorola modem IP
-            "192.168.0.1",    # Common router IP
-            "192.168.1.1",    # Common router IP
+            "192.168.0.1",  # Common router IP
+            "192.168.1.1",  # Common router IP
         ]
 
         for ip in common_ips:
@@ -272,6 +275,7 @@ def mock_coordinator():
 async def test_diagnostics_basic_structure(mock_config_entry, mock_coordinator):
     """Test basic diagnostics structure without HTML capture."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
@@ -296,6 +300,7 @@ async def test_diagnostics_basic_structure(mock_config_entry, mock_coordinator):
 async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, mock_coordinator):
     """Test diagnostics includes HTML capture when available and not expired."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     # Add HTML capture to coordinator data (not expired)
     future_time = datetime.now() + timedelta(minutes=3)
@@ -317,12 +322,12 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
                     <tr><td>Serial Number</td><td>ABC123XYZ</td></tr>
                 </html>
                 """,
-                "parser": "Motorola MB8611"
+                "parser": "Motorola MB8611",
             }
-        ]
+        ],
     }
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Verify HTML capture is included
     assert "raw_html_capture" in diagnostics
@@ -340,8 +345,8 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
 
 @pytest.mark.asyncio
 async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, mock_coordinator):
-    """Test diagnostics includes multiple captured pages from parser fetches."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     # Add HTML capture with multiple pages (login, status, software info, event log)
     future_time = datetime.now() + timedelta(minutes=3)
@@ -358,7 +363,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "size_bytes": 5432,
                 "html": "<html><form action='/login'>Username: <input name='user'></form></html>",
                 "parser": "Motorola MB8611",
-                "description": "Login/Auth page"
+                "description": "Login/Auth page",
             },
             {
                 "url": "https://192.168.100.1/login.html",
@@ -368,7 +373,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "size_bytes": 150,
                 "html": "<html><body>Redirecting...</body></html>",
                 "parser": "Motorola MB8611",
-                "description": "Login/Auth page"
+                "description": "Login/Auth page",
             },
             {
                 "url": "https://192.168.100.1/MotoConnection.asp",
@@ -383,7 +388,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 </html>
                 """,
                 "parser": "Motorola MB8611",
-                "description": "Initial connection page"
+                "description": "Initial connection page",
             },
             {
                 "url": "https://192.168.100.1/MotoStatusSoftware.asp",
@@ -393,7 +398,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "size_bytes": 3200,
                 "html": "<html><tr><td>Software Version</td><td>3.0.1</td></tr></html>",
                 "parser": "Motorola MB8611",
-                "description": "Software info page"
+                "description": "Software info page",
             },
             {
                 "url": "https://192.168.100.1/MotoEventLog.asp",
@@ -403,12 +408,12 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "size_bytes": 8900,
                 "html": "<html><tr><td>Event</td><td>Connection established</td></tr></html>",
                 "parser": "Motorola MB8611",
-                "description": "Event log page"
-            }
-        ]
+                "description": "Event log page",
+            },
+        ],
     }
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Verify HTML capture is included with all pages
     assert "raw_html_capture" in diagnostics
@@ -441,6 +446,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
 async def test_diagnostics_excludes_expired_html_capture(mock_config_entry, mock_coordinator):
     """Test diagnostics excludes HTML capture when expired."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     # Add HTML capture to coordinator data (expired)
     past_time = datetime.now() - timedelta(minutes=10)
@@ -453,10 +459,10 @@ async def test_diagnostics_excludes_expired_html_capture(mock_config_entry, mock
                 "url": "https://192.168.100.1/MotoConnection.asp",
                 "html": "<html>test</html>",
             }
-        ]
+        ],
     }
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Verify HTML capture is NOT included (expired)
     assert "raw_html_capture" not in diagnostics
@@ -466,11 +472,12 @@ async def test_diagnostics_excludes_expired_html_capture(mock_config_entry, mock
 async def test_diagnostics_without_html_capture(mock_config_entry, mock_coordinator):
     """Test diagnostics works normally when no HTML capture present."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     # Ensure no HTML capture in coordinator data
     assert "_raw_html_capture" not in mock_coordinator.data
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Should work fine without HTML capture
     assert "config_entry" in diagnostics
@@ -479,10 +486,7 @@ async def test_diagnostics_without_html_capture(mock_config_entry, mock_coordina
 
 
 @pytest.mark.asyncio
-async def test_diagnostics_handles_coordinator_without_data(mock_config_entry):
-    """Test diagnostics handles coordinator with no data gracefully."""
-    hass = Mock(spec=HomeAssistant)
-
+async def test_diagnostics_handles_coordinator_without_data(mock_config_entry, mock_coordinator):
     # Create coordinator with no data
     coordinator = Mock(spec=DataUpdateCoordinator)
     coordinator.last_update_success = False
@@ -490,7 +494,10 @@ async def test_diagnostics_handles_coordinator_without_data(mock_config_entry):
     coordinator.last_exception = Exception("Connection failed")
     coordinator.data = None
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, coordinator)
+    hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: coordinator}}
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Should still return basic structure
     assert "config_entry" in diagnostics
@@ -503,13 +510,12 @@ async def test_diagnostics_handles_coordinator_without_data(mock_config_entry):
 async def test_diagnostics_sanitizes_exception_messages(mock_config_entry, mock_coordinator):
     """Test that exception messages are sanitized."""
     hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
 
     # Add exception with sensitive data
-    mock_coordinator.last_exception = Exception(
-        "Failed to connect to 10.0.0.5 with password=secret123"
-    )
+    mock_coordinator.last_exception = Exception("Failed to connect to 10.0.0.5 with password=secret123")
 
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     # Verify exception is included but sanitized
     assert "last_error" in diagnostics

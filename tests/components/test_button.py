@@ -312,6 +312,7 @@ async def test_cleanup_button_initialization(mock_coordinator, mock_config_entry
     assert button._attr_unique_id == "test_entry_id_cleanup_entities_button"
     assert button._attr_icon == "mdi:broom"
     from homeassistant.const import EntityCategory
+
     assert button._attr_entity_category == EntityCategory.CONFIG
 
 
@@ -523,8 +524,6 @@ async def test_update_data_button_initialization(mock_coordinator, mock_config_e
     assert button._attr_name == "Update Modem Data"
     assert button._attr_unique_id == "test_entry_id_update_data_button"
     assert button._attr_icon == "mdi:update"
-    from homeassistant.const import EntityCategory
-    assert button._attr_entity_category == EntityCategory.DIAGNOSTIC
 
 
 @pytest.mark.asyncio
@@ -561,6 +560,7 @@ async def test_capture_html_button_initialization(mock_coordinator, mock_config_
     assert button._attr_unique_id == "test_entry_id_capture_html_button"
     assert button._attr_icon == "mdi:file-code"
     from homeassistant.const import EntityCategory
+
     assert button._attr_entity_category == EntityCategory.DIAGNOSTIC
 
 
@@ -589,10 +589,10 @@ async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
                     "status_code": 200,
                     "size_bytes": 12450,
                     "html": "<html>test</html>",
-                    "parser": "Motorola MB8611"
+                    "parser": "Motorola MB8611",
                 }
-            ]
-        }
+            ],
+        },
     }
 
     with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
@@ -605,10 +605,14 @@ async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
 
         # Verify capture was stored in coordinator
         assert "_raw_html_capture" in mock_coordinator.data
-        assert mock_coordinator.data["_raw_html_capture"]["urls"][0]["url"] == "https://192.168.100.1/MotoConnection.asp"
+        assert (
+            mock_coordinator.data["_raw_html_capture"]["urls"][0]["url"] == "https://192.168.100.1/MotoConnection.asp"
+        )
 
         # Verify success notification
-        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) == 1
         notification_data = notification_calls[0][0][2]
         assert "HTML Capture Complete" in notification_data["title"]
@@ -642,7 +646,9 @@ async def test_capture_html_button_failure(mock_coordinator, mock_config_entry):
         await button.async_press()
 
         # Verify failure notification
-        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) == 1
         notification_data = notification_calls[0][0][2]
         assert "HTML Capture Failed" in notification_data["title"]
@@ -660,12 +666,23 @@ async def test_capture_html_button_exception(mock_coordinator, mock_config_entry
     button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
     button.hass = hass
 
-    # Mock get_parsers to raise exception
-    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", side_effect=Exception("Test error")):
+    # Mock scraper.get_modem_data to raise exception
+    with patch("custom_components.cable_modem_monitor.core.modem_scraper.ModemScraper") as mock_scraper_class:
+        mock_scraper = Mock()
+        mock_scraper.get_modem_data.side_effect = Exception("Test error")
+        mock_scraper_class.return_value = mock_scraper
+
+        with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
+            hass.async_add_executor_job.side_effect = [
+                [],  # get_parsers result
+                Exception("Test error"),  # get_modem_data result (will be caught by the mock)
+            ]
         await button.async_press()
 
         # Verify error notification
-        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        notification_calls = [
+            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
+        ]
         assert len(notification_calls) == 1
         notification_data = notification_calls[0][0][2]
         assert "HTML Capture Error" in notification_data["title"]

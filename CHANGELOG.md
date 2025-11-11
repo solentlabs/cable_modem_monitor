@@ -80,6 +80,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - HTML sanitization tests (13 test cases covering MACs, serials, IPs, passwords, tokens)
   - Diagnostics integration tests (capture inclusion, expiry, sanitization verification)
   - Updated button setup test to verify all 5 buttons
+- **Fixed 5 Failing Tests in test_version_and_startup.py** - All 283 tests now pass
+  - Fixed HomeAssistant mock setup with proper attributes (data, config_entries, services)
+  - Made async_add_executor_job properly execute functions and return awaitable results
+  - Added async mocks for coordinator.async_config_entry_first_refresh
+  - Patched _update_device_registry to avoid deep HA registry initialization
+  - Added ConfigEntryState.SETUP_IN_PROGRESS to mock config entries
+  - All version logging and parser selection optimization tests now pass
 
 ### Technical Details
 - **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `modem_scraper.py`, `const.py`, `manifest.json`

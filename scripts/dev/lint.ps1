@@ -12,7 +12,7 @@ $ExitCode = 0
 # Check if linting tools are installed
 function Test-Tool {
     param([string]$ToolName)
-    
+
     try {
         $null = Get-Command $ToolName -ErrorAction Stop
         Write-Host "✓ $ToolName found" -ForegroundColor Green
@@ -118,4 +118,3 @@ else {
     Write-Host ""
     exit 1
 }
-
