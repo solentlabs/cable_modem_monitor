@@ -25,7 +25,12 @@ After installation:
 1. Go to **Settings** → **Devices & Services** → **Cable Modem Monitor**
 2. Find the button called **"Capture HTML"**
 3. **Press it!**
-4. Wait about 10 seconds
+4. Wait about 10-15 seconds
+
+The capture tool will:
+- Fetch the main modem pages
+- **Automatically follow links** to discover all modem pages
+- Capture up to 20+ pages automatically!
 
 You'll see a notification that says "HTML Capture Complete"
 

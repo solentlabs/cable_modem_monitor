@@ -167,6 +167,86 @@ class ModemScraper:
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
 
+    def _crawl_additional_pages(self, max_pages: int = 20) -> None:
+        """Crawl additional pages by following links found in captured HTML.
+
+        This enhances HTML capture by automatically discovering and fetching
+        additional modem pages that might contain useful information for
+        parser development.
+
+        Args:
+            max_pages: Maximum number of additional pages to crawl (default 20)
+        """
+        from urllib.parse import urljoin, urlparse
+
+        from bs4 import BeautifulSoup
+
+        if not self._captured_urls:
+            return
+
+        _LOGGER.info("Starting link crawl to discover additional pages (max %d pages)", max_pages)
+
+        # Get already captured URLs to avoid duplicates
+        captured_url_set = {item["url"] for item in self._captured_urls}
+        base_host = urlparse(self.base_url).netloc
+
+        # Extract all links from captured HTML
+        links_to_try = set()
+        for captured in self._captured_urls:
+            try:
+                soup = BeautifulSoup(captured["html"], "html.parser")
+
+                # Find all <a> tags with href attributes
+                for link in soup.find_all("a", href=True):
+                    href = link["href"]
+
+                    # Convert relative URLs to absolute
+                    absolute_url = urljoin(self.base_url, href)
+
+                    # Only crawl same-host links
+                    parsed = urlparse(absolute_url)
+                    if parsed.netloc != base_host:
+                        continue
+
+                    # Skip anchors, javascript, mailto, etc.
+                    if href.startswith(("#", "javascript:", "mailto:")):
+                        continue
+
+                    # Skip common binary file extensions
+                    if any(absolute_url.lower().endswith(ext) for ext in [".jpg", ".png", ".gif", ".css", ".js", ".ico", ".pdf", ".zip"]):
+                        continue
+
+                    # Add if not already captured
+                    if absolute_url not in captured_url_set:
+                        links_to_try.add(absolute_url)
+
+            except Exception as e:
+                _LOGGER.debug("Error extracting links from %s: %s", captured.get("url", "unknown"), e)
+
+        _LOGGER.info("Found %d unique links to try (already have %d pages)", len(links_to_try), len(captured_url_set))
+
+        # Crawl discovered links (up to max_pages)
+        pages_crawled = 0
+        for link_url in list(links_to_try)[:max_pages]:
+            try:
+                _LOGGER.debug("Crawling additional page: %s", link_url)
+                response = self.session.get(link_url, timeout=5)
+
+                if response.status_code == 200:
+                    # Capture this page
+                    self._capture_response(response, "Link crawl")
+                    captured_url_set.add(link_url)
+                    pages_crawled += 1
+                    _LOGGER.debug("Successfully captured: %s (%d bytes)", link_url, len(response.text))
+                else:
+                    _LOGGER.debug("Got status %d from: %s", response.status_code, link_url)
+
+            except Exception as e:
+                _LOGGER.debug("Failed to fetch %s: %s", link_url, e)
+                continue
+
+        _LOGGER.info("Link crawl complete: captured %d additional pages (total: %d)", pages_crawled, len(self._captured_urls))
+
     def _login(self) -> bool | tuple[bool, str | None]:
         """
         Log in to the modem web interface.
@@ -564,6 +644,10 @@ class ModemScraper:
             # Parse data and build response
             data = self._parse_data(html)
             response = self._build_response(data)
+
+            # Crawl additional pages if in capture mode
+            if capture_raw and self._captured_urls:
+                self._crawl_additional_pages()
 
             # Include captured HTML if requested
             if capture_raw and self._captured_urls:
