@@ -91,11 +91,19 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             # Also try direct records access (older HA versions)
             elif hasattr(system_log, "records"):
                 _LOGGER.debug("system_log.records found (direct), record count: %d", len(system_log.records))
-                for record in system_log.records:
+                for idx, record in enumerate(system_log.records):
                     # system_log.records can be either LogRecord objects or tuples
                     # depending on Home Assistant version
                     try:
                         if isinstance(record, tuple):
+                            # Debug: log the first record to understand structure
+                            if idx == 0:
+                                _LOGGER.debug(
+                                    "First record structure - type: %s, length: %d, content: %s",
+                                    type(record),
+                                    len(record),
+                                    str(record)[:200],
+                                )
                             # Tuple format: (timestamp, level, logger_name, message)
                             if len(record) >= 4 and "cable_modem_monitor" in str(record[2]):
                                 timestamp, level, logger_name, message = record[0], record[1], record[2], record[3]
