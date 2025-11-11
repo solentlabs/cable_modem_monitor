@@ -25,6 +25,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     VERIFY_SSL,
+    VERSION,
 )
 from .core.modem_scraper import ModemScraper
 
@@ -433,6 +434,8 @@ def _create_cleanup_entities_handler(hass: HomeAssistant):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cable Modem Monitor from a config entry."""
+    _LOGGER.info("Cable Modem Monitor version %s is starting", VERSION)
+
     # Migrate config data and entity IDs
     _migrate_config_data(hass, entry)
     await async_migrate_entity_ids(hass, entry)

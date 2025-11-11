@@ -92,17 +92,37 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             elif hasattr(system_log, "records"):
                 _LOGGER.debug("system_log.records found (direct), record count: %d", len(system_log.records))
                 for record in system_log.records:
-                    # Filter for cable_modem_monitor logs
-                    if "cable_modem_monitor" in record.name:
-                        sanitized_message = _sanitize_log_message(record.getMessage())
-                        recent_logs.append(
-                            {
-                                "timestamp": record.created,
-                                "level": record.levelname,
-                                "logger": record.name.replace("custom_components.cable_modem_monitor.", ""),
-                                "message": sanitized_message,
-                            }
-                        )
+                    # system_log.records can be either LogRecord objects or tuples
+                    # depending on Home Assistant version
+                    try:
+                        if isinstance(record, tuple):
+                            # Tuple format: (timestamp, level, logger_name, message)
+                            if len(record) >= 4 and "cable_modem_monitor" in str(record[2]):
+                                timestamp, level, logger_name, message = record[0], record[1], record[2], record[3]
+                                sanitized_message = _sanitize_log_message(str(message))
+                                recent_logs.append(
+                                    {
+                                        "timestamp": timestamp,
+                                        "level": level,
+                                        "logger": str(logger_name).replace("custom_components.cable_modem_monitor.", ""),
+                                        "message": sanitized_message,
+                                    }
+                                )
+                        else:
+                            # LogRecord object format
+                            if "cable_modem_monitor" in record.name:
+                                sanitized_message = _sanitize_log_message(record.getMessage())
+                                recent_logs.append(
+                                    {
+                                        "timestamp": record.created,
+                                        "level": record.levelname,
+                                        "logger": record.name.replace("custom_components.cable_modem_monitor.", ""),
+                                        "message": sanitized_message,
+                                    }
+                                )
+                    except (IndexError, AttributeError) as e:
+                        _LOGGER.debug("Error parsing log record: %s", e)
+                        continue
 
                 # If we found logs via system_log, return them
                 if recent_logs:
