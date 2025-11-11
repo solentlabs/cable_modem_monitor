@@ -23,7 +23,7 @@ RESTART_WINDOW_SECONDS = 300
 class MotorolaGenericParser(ModemParser):
     """Parser for Motorola MB series cable modems (MB7420, MB8600, etc.)."""
 
-    name = "Motorola MB Series"
+    name = "Motorola MB Series (Generic)"
     manufacturer = "Motorola"
     models = ["MB7420", "MB8600", "MB8611"]
     priority = 50  # Generic fallback parser, try after model-specific parsers

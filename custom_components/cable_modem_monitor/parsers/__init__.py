@@ -18,7 +18,7 @@ _PARSER_CACHE: list[type[ModemParser]] | None = None
 _PARSER_MODULE_MAP = {
     "ARRIS SB6141": ("arris", "sb6141", "ARRISSb6141Parser"),
     "ARRIS SB6190": ("arris", "sb6190", "ARRISSb6190Parser"),
-    "Motorola MB Series": ("motorola", "generic", "MotorolaGenericParser"),
+    "Motorola MB Series (Generic)": ("motorola", "generic", "MotorolaGenericParser"),
     "Motorola MB7621": ("motorola", "mb7621", "MotorolaMB7621Parser"),
     "Motorola MB8611 (HNAP)": ("motorola", "mb8611_hnap", "MotorolaMB8611HnapParser"),
     "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),

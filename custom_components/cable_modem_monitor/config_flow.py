@@ -212,8 +212,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        # Sort by manufacturer (alphabetical), then by priority (descending) within each manufacturer
-        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority))
+        # Sort by manufacturer (alphabetical), then by priority (descending), then by name (alphabetical)
+        # The name tie-breaker ensures consistent ordering when parsers have the same priority
+        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority, p.name))
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
@@ -338,8 +339,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        # Sort by manufacturer (alphabetical), then by priority (descending) within each manufacturer
-        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority))
+        # Sort by manufacturer (alphabetical), then by priority (descending), then by name (alphabetical)
+        # The name tie-breaker ensures consistent ordering when parsers have the same priority
+        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority, p.name))
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
