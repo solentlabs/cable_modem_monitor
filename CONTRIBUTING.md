@@ -106,10 +106,26 @@ Make your code changes or additions on a new branch.
 
 Before committing, ensure your code is well-formatted and passes all quality checks.
 
+**Recommended Workflow:**
+```bash
+# Option 1: Smart commit helper (formats, checks, and commits)
+./scripts/dev/commit.sh "your commit message"
+
+# Option 2: Manual workflow
+make format        # Auto-format code
+make quick-check   # Fast checks (lint + format)
+make check         # Full checks (lint + format + type-check)
+git add -A
+git commit -m "your message"
+```
+
 **Quick commands (using Make):**
 ```bash
 # Run all code quality checks
-make check
+make check         # Full checks (recommended before push)
+
+# Quick checks (faster, skips type-check)
+make quick-check
 
 # Auto-fix linting issues
 make lint-fix
@@ -141,7 +157,20 @@ bash scripts/dev/lint.sh
 # .\scripts\dev\lint.ps1
 ```
 
-**Pre-commit hooks (recommended):**
+**Automated Quality Checks:**
+
+The repository includes a **pre-push hook** that automatically runs quality checks before pushing to GitHub. This prevents CI failures by catching issues locally.
+
+```bash
+# The pre-push hook runs automatically and checks:
+# - Code formatting (Black)
+# - Linting (Ruff)
+
+# To skip the hook in emergencies (not recommended):
+git push --no-verify
+```
+
+**Pre-commit hooks (alternative method):**
 ```bash
 # Install pre-commit hooks (runs automatically on commit)
 pip install pre-commit
@@ -149,6 +178,8 @@ pre-commit install
 
 # Run manually on all files
 pre-commit run --all-files
+
+# Note: May have permission issues in WSL environments
 ```
 
 ### 4. Run Tests
