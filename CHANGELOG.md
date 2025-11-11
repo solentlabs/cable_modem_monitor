@@ -25,8 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added primary method: retrieve logs from Home Assistant's system_log integration (in-memory circular buffer)
   - Falls back to reading home-assistant.log file if system_log unavailable
   - Fixes issue where diagnostics showed "Log file not available" on Docker/supervised installations
-  - Fixed 'tuple' object has no attribute 'name' error by supporting both tuple and LogRecord formats
-  - Better error messages guide users to alternative log access methods (journalctl, HA logs UI)
+  - Fixed 'tuple' object has no attribute 'name' error by correctly parsing system_log tuple format
+  - Discovered system_log only stores errors/warnings, not INFO/DEBUG logs (by design)
+  - Updated to correctly parse tuple format: (logger_name, (file, line_num), exception_or_none)
+  - Better error messages explain that full logs require HA logs UI, journalctl, or container logs
+  - Will capture cable_modem_monitor errors when they occur for troubleshooting
 - **Version Logging on Startup** - Integration now logs version number when it starts
   - Example: "Cable Modem Monitor version 3.0.1 is starting"
   - Helps identify which version is loaded when troubleshooting issues

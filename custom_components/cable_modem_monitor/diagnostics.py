@@ -91,33 +91,37 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             # Also try direct records access (older HA versions)
             elif hasattr(system_log, "records"):
                 _LOGGER.debug("system_log.records found (direct), record count: %d", len(system_log.records))
-                for idx, record in enumerate(system_log.records):
-                    # system_log.records can be either LogRecord objects or tuples
-                    # depending on Home Assistant version
+
+                # system_log only stores errors/warnings, not INFO/DEBUG logs
+                # Record format is: (logger_name, (file, line_num), exception_or_none)
+                for record in system_log.records:
                     try:
-                        if isinstance(record, tuple):
-                            # Debug: log the first record to understand structure
-                            if idx == 0:
-                                _LOGGER.debug(
-                                    "First record structure - type: %s, length: %d, content: %s",
-                                    type(record),
-                                    len(record),
-                                    str(record)[:200],
-                                )
-                            # Tuple format: (timestamp, level, logger_name, message)
-                            if len(record) >= 4 and "cable_modem_monitor" in str(record[2]):
-                                timestamp, level, logger_name, message = record[0], record[1], record[2], record[3]
-                                sanitized_message = _sanitize_log_message(str(message))
+                        if isinstance(record, tuple) and len(record) >= 3:
+                            logger_name, location_info, exception_info = record[0], record[1], record[2]
+
+                            # Filter for cable_modem_monitor logs
+                            if "cable_modem_monitor" in str(logger_name):
+                                # Extract file and line number if available
+                                file_info = ""
+                                if isinstance(location_info, tuple) and len(location_info) >= 2:
+                                    file_info = f" at {location_info[0]}:{location_info[1]}"
+
+                                # Format the message
+                                message = f"Error{file_info}"
+                                if exception_info:
+                                    message += f": {str(exception_info)[:200]}"
+
+                                sanitized_message = _sanitize_log_message(message)
                                 recent_logs.append(
                                     {
-                                        "timestamp": timestamp,
-                                        "level": level,
+                                        "timestamp": 0,  # system_log doesn't store timestamp in this format
+                                        "level": "ERROR",  # system_log only stores errors/warnings
                                         "logger": str(logger_name).replace("custom_components.cable_modem_monitor.", ""),
                                         "message": sanitized_message,
                                     }
                                 )
-                        else:
-                            # LogRecord object format
+                        elif hasattr(record, "name"):
+                            # LogRecord object format (fallback for older versions)
                             if "cable_modem_monitor" in record.name:
                                 sanitized_message = _sanitize_log_message(record.getMessage())
                                 recent_logs.append(
@@ -134,8 +138,10 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
 
                 # If we found logs via system_log, return them
                 if recent_logs:
-                    _LOGGER.debug("Retrieved %d logs from system_log (direct)", len(recent_logs))
+                    _LOGGER.debug("Retrieved %d error logs from system_log (direct)", len(recent_logs))
                     return recent_logs[-max_records:]
+                else:
+                    _LOGGER.debug("No cable_modem_monitor errors found in system_log (only errors/warnings are stored)")
             else:
                 _LOGGER.debug("system_log found but no records/handler attribute, attributes: %s", dir(system_log))
         else:
@@ -155,7 +161,12 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                     "timestamp": 0,
                     "level": "INFO",
                     "logger": "diagnostics",
-                    "message": "Log file not available. Logs may be sent to system journal. Use 'journalctl -u home-assistant' or check HA logs UI.",
+                    "message": (
+                        "No logs available in diagnostics. "
+                        "Note: system_log only captures errors/warnings, not INFO/DEBUG logs. "
+                        "For full logs: 1) Check HA logs UI, 2) Use 'journalctl -u home-assistant' (supervised), "
+                        "or 3) Check container logs (Docker/dev environments)."
+                    ),
                 }
             ]
 
@@ -216,7 +227,12 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             "timestamp": 0,
             "level": "INFO",
             "logger": "diagnostics",
-            "message": "Unable to retrieve recent logs. Check Home Assistant logs UI or use 'journalctl -u home-assistant' on supervised installs.",
+            "message": (
+                "No logs available in diagnostics. "
+                "Note: system_log only captures errors/warnings, not INFO/DEBUG logs. "
+                "For full logs: 1) Check HA logs UI, 2) Use 'journalctl -u home-assistant' (supervised), "
+                "or 3) Check container logs (Docker/dev environments)."
+            ),
         }
     ]
 
