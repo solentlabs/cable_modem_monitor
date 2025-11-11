@@ -21,11 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - While `session.verify=False` was already configured, some requests library versions may not reliably inherit this setting
   - Ensures SSL verification setting is explicitly passed to every HTTP request for consistent behavior
   - Resolves HTTPS connection failures for Motorola MB8611 and other modems using self-signed certificates
+- **Diagnostics Log Retrieval** - Improved log collection for diagnostics downloads
+  - Added primary method: retrieve logs from Home Assistant's system_log integration (in-memory circular buffer)
+  - Falls back to reading home-assistant.log file if system_log unavailable
+  - Fixes issue where diagnostics showed "Log file not available" on Docker/supervised installations
+  - Better error messages guide users to alternative log access methods (journalctl, HA logs UI)
 
 ### Technical Details
-- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `const.py`, `manifest.json`
+- **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `const.py`, `manifest.json`
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
 - **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
+- **Diagnostics**: Now works reliably across all Home Assistant installation types (Docker, supervised, core, OS)
 - **Compatibility**: No breaking changes, fully backward compatible with existing configurations
 
 ## [3.0.0] - 2025-11-10

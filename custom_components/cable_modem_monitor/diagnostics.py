@@ -56,7 +56,33 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
 
     recent_logs = []
 
-    # Try to read from Home Assistant's log file
+    # Method 1: Try to get logs from system_log integration (if available)
+    try:
+        if "system_log" in hass.data:
+            system_log = hass.data["system_log"]
+            # Get records from the system_log circular buffer
+            if hasattr(system_log, "records"):
+                for record in system_log.records:
+                    # Filter for cable_modem_monitor logs
+                    if "cable_modem_monitor" in record.name:
+                        sanitized_message = _sanitize_log_message(record.getMessage())
+                        recent_logs.append(
+                            {
+                                "timestamp": record.created,
+                                "level": record.levelname,
+                                "logger": record.name.replace("custom_components.cable_modem_monitor.", ""),
+                                "message": sanitized_message,
+                            }
+                        )
+
+                # If we found logs via system_log, return them
+                if recent_logs:
+                    _LOGGER.debug("Retrieved %d logs from system_log integration", len(recent_logs))
+                    return recent_logs[-max_records:]
+    except Exception as err:
+        _LOGGER.debug("Could not retrieve logs from system_log: %s", err)
+
+    # Method 2: Try to read from Home Assistant's log file
     try:
         # Home Assistant stores logs in config/home-assistant.log
         log_file = Path(hass.config.path("home-assistant.log"))
@@ -68,7 +94,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                     "timestamp": 0,
                     "level": "INFO",
                     "logger": "diagnostics",
-                    "message": "Log file not available. Check Home Assistant logs for full history.",
+                    "message": "Log file not available. Logs may be sent to system journal. Use 'journalctl -u home-assistant' or check HA logs UI.",
                 }
             ]
 
@@ -117,6 +143,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
 
         # If we found logs, return the most recent ones
         if recent_logs:
+            _LOGGER.debug("Retrieved %d logs from log file", len(recent_logs))
             return recent_logs[-max_records:]
 
     except Exception as err:
@@ -128,7 +155,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             "timestamp": 0,
             "level": "INFO",
             "logger": "diagnostics",
-            "message": "Unable to retrieve recent logs. Check Home Assistant logs for full history.",
+            "message": "Unable to retrieve recent logs. Check Home Assistant logs UI or use 'journalctl -u home-assistant' on supervised installs.",
         }
     ]
 
