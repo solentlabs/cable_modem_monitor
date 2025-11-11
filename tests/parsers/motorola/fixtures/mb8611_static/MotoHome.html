@@ -1,0 +1,175 @@
+<html id="html"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=1200">
+
+<meta http-equiv="Pragma" content="No-cache">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<link rel="shortcut icon" href="https://192.168.100.1/image/mobile_motologin.png">
+<link rel="stylesheet" type="text/css" href="https://192.168.100.1/css/moto.css">
+<title>MB8611</title>
+
+
+
+
+
+</head>
+
+<body>
+
+<div class="moto-global" id="moto-home-top">
+<div class="moto-icon">
+
+<table class="table-icon" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td class="td-icon" width="20%" valign="middle">
+<table cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td><img src="https://192.168.100.1/image/motolog.jpg" width="112px" height="82px"></td>
+</tr>
+</tbody></table>
+</td>
+<td width="55%">&nbsp;</td>
+<td width="25%">
+<input class="moto-home-button" type="button" name="" value="Advanced">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://192.168.100.1/Logout.html" class="moto-logout-button"><span style="font-size: 18px;">Logout</span></a></td>
+</tr>
+</tbody></table>
+
+</div>
+
+
+<div id="moto-content">
+
+<div class="moto-first-title">
+Basic Status and Settings
+</div>
+
+<form action="https://192.168.100.1/goform/MotoHome" method="POST" name="MotoHome">
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Internet Connection</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;Online</td>
+  <td class="moto-param-value"><span id="MotoHomeOnline">Connected</span></td>
+  <td class="moto-param-action"></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg">
+  <span>Online:<br>This tells you whether your cable modem is Connected to the Internet. </span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;Number of Channels Connected</td>
+  <td class="moto-param-value"></td>
+  <td class="moto-param-action"></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg">
+  <span>Number of Channels Connected:<br>This item shows how many channels are connected on your cable modem. <br>
+  Downstream channels carry data to your cable modem from the Internet.<br>
+  Upstream channels carry data from your cable modem to the Internet.<br>
+  The more connected channels, the higher the potential connection speed, and the smoother the delivery of content like streaming video and games.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Downstream</td>
+  <td class="moto-param-value"><span id="MotoHomeDownNum">34</span></td>
+  <td class="moto-param-action"></td>
+  <td class="moto-param-help"></td>
+  </tr>
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Upstream</td>
+  <td class="moto-param-value"><span id="MotoHomeUpNum">4</span></td>
+  <td class="moto-param-action"></td>
+  <td class="moto-param-help"></td>
+  </tr>
+  </tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Cable Modem Addresses and Version</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+          <tbody><tr>
+          <td class="moto-param-name">&nbsp;&nbsp;&nbsp;MAC Address</td>
+          <td class="moto-param-value"><span id="MotoHomeMacAddress">XX:XX:XX:XX:XX:XX/span></td>
+          <td class="moto-param-action"></td>
+          <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>
+          MAC Address:<br>The MAC Address (physical address) of your cable modem/router.</span></a>&nbsp;&nbsp;</td>i
+          </tr>
+<!--
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;IP Address</td>
+  <td class="moto-param-value"><span id="MotoHomeIpAddress"></span></td>
+  <td class="moto-param-action"></td>
+  <td  class="moto-param-help"><a href='javascript:void(0);'  class="tooltip"><img src="/image/motohelp.jpg"/><span>
+  IP Address:<br>Assigned to your cable modem by your cable provider.<br>
+  The assignment is referred to as a Lease.<br>
+  This is an IPv4 Address, an earlier type of IP Address. Your cable provider may assign an IPv4 Address, an IPv6 Address, or both.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;IPv6 Address</td>
+  <td class="moto-param-value"><span id="MotoHomeIpv6Address"></span></td>
+  <td class="moto-param-action"></td>
+  <td  class="moto-param-help"><a href='javascript:void(0);'  class="tooltip"><img src="/image/motohelp.jpg"/><span>
+  IPv6 Address:<br>Assigned to your cable modem by your cable provider.<br>
+  The assignment is referred to as a Lease.<br>
+  IPv6 is a newer, longer style of IP Address. Your cable provider may assign an IPv4 Address, an IPv6 Address, or both.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+-->
+  <tr>
+  <td class="moto-param-name">&nbsp;&nbsp;&nbsp;Software Version</td>
+  <td class="moto-param-value" colspan="2"><span id="MotoHomeSfVer">8611-19.2.18</span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>
+  Software Version:<br>Version number of the software that runs on your cable modem.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<table>
+<tbody><tr>
+<td class="moto-wlan-Note" colspan="4">
+
+
+</td>
+</tr>
+</tbody></table>
+
+<br>
+</form>
+
+</div>
+
+</div>
+
+
+
+
+
+</body></html>

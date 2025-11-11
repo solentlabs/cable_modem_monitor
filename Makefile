@@ -19,6 +19,7 @@ help:
 	@echo "  make format      - Format code with black"
 	@echo "  make format-check - Check code formatting without modifying"
 	@echo "  make check       - Run all code quality checks (lint, format, type)"
+	@echo "  make quick-check - Quick checks (lint + format, skip type-check)"
 	@echo ""
 	@echo "Docker Development:"
 	@echo "  make docker-start   - Start Home Assistant dev environment"
@@ -79,6 +80,10 @@ format-check:
 ***REMOVED*** Run all code quality checks
 check: lint format-check type-check
 	@echo "✅ All code quality checks passed!"
+
+***REMOVED*** Quick check (lint + format only, skip type-check for speed)
+quick-check: lint format-check
+	@echo "✅ Quick quality checks passed!"
 
 ***REMOVED*** Run all linters (comprehensive)
 lint-all: lint type-check

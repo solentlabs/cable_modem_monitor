@@ -15,15 +15,15 @@ from custom_components.cable_modem_monitor.core.auth_config import (
 from custom_components.cable_modem_monitor.core.authentication import (
     AuthStrategyType,
 )
-from custom_components.cable_modem_monitor.parsers.motorola.mb8611 import (
-    MotorolaMB8611Parser,
+from custom_components.cable_modem_monitor.parsers.motorola.mb8611_hnap import (
+    MotorolaMB8611HnapParser,
 )
 
 
 @pytest.fixture
 def hnap_full_status():
     """Load hnap_full_status.json fixture."""
-    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611", "hnap_full_status.json")
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611_hnap", "hnap_full_status.json")
     with open(fixture_path) as f:
         return json.load(f)
 
@@ -31,7 +31,7 @@ def hnap_full_status():
 @pytest.fixture
 def login_html():
     """Load Login.html fixture."""
-    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611", "Login.html")
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611_hnap", "Login.html")
     with open(fixture_path) as f:
         return f.read()
 
@@ -43,7 +43,7 @@ class TestDetection:
         """Test detection from MB8611 in HTML."""
         html = "<html><body>Motorola MB8611 Cable Modem</body></html>"
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is True
 
@@ -51,7 +51,7 @@ class TestDetection:
         """Test detection from model number with spaces."""
         html = "<html><body>Motorola MB 8611</body></html>"
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is True
 
@@ -59,7 +59,7 @@ class TestDetection:
         """Test detection from serial number format."""
         html = "<html><body>Serial: 2251-MB8611-30-1526</body></html>"
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is True
 
@@ -67,7 +67,7 @@ class TestDetection:
         """Test detection from HNAP protocol indicators."""
         html = "<html><body>Motorola Modem" '<script src="/HNAP1/"></script></body></html>'
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is True
 
@@ -75,7 +75,7 @@ class TestDetection:
         """Test that other modems are not detected."""
         html = "<html><body>Arris SB6190</body></html>"
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is False
 
@@ -83,7 +83,7 @@ class TestDetection:
         """Test that HNAP alone is not enough without Motorola."""
         html = "<html><body>Generic Modem" '<script src="/HNAP1/"></script></body></html>'
         soup = BeautifulSoup(html, "html.parser")
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.can_parse(soup, "http://192.168.100.1", html) is False
 
@@ -93,7 +93,7 @@ class TestAuthentication:
 
     def test_has_hnap_auth_config(self):
         """Test that parser has HNAP authentication config."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert parser.auth_config is not None
         assert isinstance(parser.auth_config, HNAPAuthConfig)
@@ -104,7 +104,7 @@ class TestAuthentication:
 
     def test_url_patterns_require_hnap_auth(self):
         """Test that URL patterns require HNAP authentication."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
 
         assert len(parser.url_patterns) > 0
         for pattern in parser.url_patterns:
@@ -113,7 +113,7 @@ class TestAuthentication:
 
     def test_login_uses_auth_factory(self):
         """Test that login delegates to AuthFactory."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -136,7 +136,7 @@ class TestHnapParsing:
 
     def test_requires_session_and_base_url(self):
         """Test that parse raises error without session and base_url."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         soup = BeautifulSoup("<html></html>", "html.parser")
 
         error_msg = "MB8611 requires session and base_url"
@@ -149,10 +149,10 @@ class TestHnapParsing:
         with pytest.raises(ValueError, match=error_msg):
             parser.parse(soup, base_url="http://192.168.100.1")
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_downstream_channels(self, mock_builder_class, hnap_full_status):
         """Test parsing of downstream channels from HNAP response."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -191,10 +191,10 @@ class TestHnapParsing:
         assert ofdm_channel["corrected"] == 936482395
         assert ofdm_channel["uncorrected"] == 23115
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_upstream_channels(self, mock_builder_class, hnap_full_status):
         """Test parsing of upstream channels from HNAP response."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -231,10 +231,10 @@ class TestHnapParsing:
         assert abs(last_channel["frequency"] - 35_600_000) <= 1
         assert last_channel["power"] == 45.5
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_system_info(self, mock_builder_class, hnap_full_status):
         """Test parsing of system info from HNAP response."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -269,10 +269,10 @@ class TestHnapParsing:
         ***REMOVED*** Check downstream frequency
         assert system_info["downstream_frequency"] == "543000000 Hz"
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_builder_called_correctly(self, mock_builder_class, hnap_full_status):
         """Test that HNAPRequestBuilder is called with correct parameters."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -301,10 +301,10 @@ class TestHnapParsing:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_handles_invalid_json(self, mock_builder_class):
         """Test that parse handles invalid JSON gracefully."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -321,10 +321,10 @@ class TestEdgeCases:
         assert data["upstream"] == []
         assert data["system_info"] == {}
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_handles_missing_downstream_data(self, mock_builder_class):
         """Test that parse handles missing downstream channel data."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -348,10 +348,10 @@ class TestEdgeCases:
         ***REMOVED*** Should handle empty data
         assert data["downstream"] == []
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_handles_malformed_channel_entry(self, mock_builder_class):
         """Test that parse handles malformed channel entries."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -376,10 +376,10 @@ class TestEdgeCases:
         assert len(data["downstream"]) == 1
         assert data["downstream"][0]["channel_id"] == 2
 
-    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611_hnap.HNAPRequestBuilder")
     def test_handles_exception_in_builder(self, mock_builder_class):
         """Test that parse handles exceptions from builder."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
@@ -398,7 +398,7 @@ class TestEdgeCases:
 
     def test_empty_downstream_data(self):
         """Test downstream parsing with empty HNAP data."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         hnap_data: dict = {}
 
         channels = parser._parse_downstream_from_hnap(hnap_data)
@@ -407,7 +407,7 @@ class TestEdgeCases:
 
     def test_empty_upstream_data(self):
         """Test upstream parsing with empty HNAP data."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         hnap_data: dict = {}
 
         channels = parser._parse_upstream_from_hnap(hnap_data)
@@ -416,7 +416,7 @@ class TestEdgeCases:
 
     def test_empty_system_info_data(self):
         """Test system info parsing with empty HNAP data."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         hnap_data: dict = {}
 
         system_info = parser._parse_system_info_from_hnap(hnap_data)
@@ -429,21 +429,21 @@ class TestMetadata:
 
     def test_name(self):
         """Test parser name."""
-        parser = MotorolaMB8611Parser()
-        assert parser.name == "Motorola MB8611"
+        parser = MotorolaMB8611HnapParser()
+        assert parser.name == "Motorola MB8611 (HNAP)"
 
     def test_manufacturer(self):
         """Test parser manufacturer."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         assert parser.manufacturer == "Motorola"
 
     def test_models(self):
         """Test parser supported models."""
-        parser = MotorolaMB8611Parser()
+        parser = MotorolaMB8611HnapParser()
         assert "MB8611" in parser.models
         assert "MB8612" in parser.models
 
     def test_priority(self):
         """Test parser priority (model-specific should be high)."""
-        parser = MotorolaMB8611Parser()
-        assert parser.priority == 100  ***REMOVED*** Model-specific, higher than generic
+        parser = MotorolaMB8611HnapParser()
+        assert parser.priority == 101  ***REMOVED*** Higher priority for the API-based method

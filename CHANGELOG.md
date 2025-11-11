@@ -7,16 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
-***REMOVED******REMOVED******REMOVED*** Fixed
-- **Type Checking Errors** - Resolved all mypy type checking errors
-  - Added type annotations (`dict[str, Any]`) for channel data dictionaries in SB6190 parser (custom_components/cable_modem_monitor/parsers/arris/sb6190.py:103, :154, :185)
-  - Removed `[mypy-requests.*]` ignore from mypy.ini to allow types-requests stubs (required by CI)
-  - Added urllib3 to mypy.ini ignored imports list (mypy.ini:52-53)
-  - All code quality checks (ruff, black, mypy with types-requests) now pass successfully
-
 ***REMOVED******REMOVED*** [3.0.0] - 2025-11-10
 
 ***REMOVED******REMOVED******REMOVED*** Added
+- **MB8611 Dual-Parser Support** - Two parsing strategies for Motorola MB8611 modems
+  - HNAP/SOAP protocol parser (priority 101) for API-based access with authentication
+  - Static HTML parser (priority 100) as fallback for basic HTML table scraping
+  - Increases compatibility and provides graceful fallback for different configurations
+  - Both parsers support MB8611 and MB8612 models
+  - Comprehensive test coverage for both parsers
 - **Enhanced Discovery System** - Automatic modem detection with HNAP and HTTP-based discovery
   - HNAP protocol builder for Arris/Motorola modems
   - Discovery helpers for automatic modem identification
@@ -57,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Total test improvements across authentication and discovery modules
 
 ***REMOVED******REMOVED******REMOVED*** Changed
+- **MB8611 Parser Refactoring** - Enhanced parser architecture
+  - Renamed `mb8611.py` → `mb8611_hnap.py` with class rename to `MotorolaMB8611HnapParser`
+  - Updated display name to "Motorola MB8611 (HNAP)" for clarity
+  - Increased HNAP parser priority to 101 (tries before static parser)
+  - Fixed frequency conversion to use `int(round())` for consistent integer output in both parsers
+  - Reorganized test fixtures: `mb8611/` → `mb8611_hnap/` and new `mb8611_static/` directories
 - **Session Management Improvements** - Better connection handling and modem restart monitoring
   - Improved modem restart detection and availability handling
   - Enhanced button component with better reload handling
@@ -75,6 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enforced line length limits (removed E501 exception)
 
 ***REMOVED******REMOVED******REMOVED*** Fixed
+- **Type Checking Errors** - Resolved all mypy type checking errors
+  - Added type annotations (`dict[str, Any]`) for channel data dictionaries in SB6190 parser
+  - Removed `[mypy-requests.*]` ignore from mypy.ini to allow types-requests stubs (required by CI)
+  - Added urllib3 to mypy.ini ignored imports list
+  - All code quality checks (ruff, black, mypy with types-requests) now pass successfully
+- **Code Cleanup** - Removed unused `import re` from diagnostics.py
 - **Config Flow Handler Registration** - Fixed "Flow handler not found" error
   - Added @config_entries.HANDLERS.register(DOMAIN) decorator
   - Renamed ConfigFlow to CableModemMonitorConfigFlow for clarity

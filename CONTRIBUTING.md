@@ -106,10 +106,26 @@ Make your code changes or additions on a new branch.
 
 Before committing, ensure your code is well-formatted and passes all quality checks.
 
+**Recommended Workflow:**
+```bash
+***REMOVED*** Option 1: Smart commit helper (formats, checks, and commits)
+./scripts/dev/commit.sh "your commit message"
+
+***REMOVED*** Option 2: Manual workflow
+make format        ***REMOVED*** Auto-format code
+make quick-check   ***REMOVED*** Fast checks (lint + format)
+make check         ***REMOVED*** Full checks (lint + format + type-check)
+git add -A
+git commit -m "your message"
+```
+
 **Quick commands (using Make):**
 ```bash
 ***REMOVED*** Run all code quality checks
-make check
+make check         ***REMOVED*** Full checks (recommended before push)
+
+***REMOVED*** Quick checks (faster, skips type-check)
+make quick-check
 
 ***REMOVED*** Auto-fix linting issues
 make lint-fix
@@ -141,7 +157,20 @@ bash scripts/dev/lint.sh
 ***REMOVED*** .\scripts\dev\lint.ps1
 ```
 
-**Pre-commit hooks (recommended):**
+**Automated Quality Checks:**
+
+The repository includes a **pre-push hook** that automatically runs quality checks before pushing to GitHub. This prevents CI failures by catching issues locally.
+
+```bash
+***REMOVED*** The pre-push hook runs automatically and checks:
+***REMOVED*** - Code formatting (Black)
+***REMOVED*** - Linting (Ruff)
+
+***REMOVED*** To skip the hook in emergencies (not recommended):
+git push --no-verify
+```
+
+**Pre-commit hooks (alternative method):**
 ```bash
 ***REMOVED*** Install pre-commit hooks (runs automatically on commit)
 pip install pre-commit
@@ -149,6 +178,8 @@ pre-commit install
 
 ***REMOVED*** Run manually on all files
 pre-commit run --all-files
+
+***REMOVED*** Note: May have permission issues in WSL environments
 ```
 
 ***REMOVED******REMOVED******REMOVED*** 4. Run Tests

@@ -16,13 +16,13 @@ from ..base_parser import ModemParser
 _LOGGER = logging.getLogger(__name__)
 
 
-class MotorolaMB8611Parser(ModemParser):
+class MotorolaMB8611HnapParser(ModemParser):
     """Parser for Motorola MB8611 cable modem using HNAP/SOAP protocol."""
 
-    name = "Motorola MB8611"
+    name = "Motorola MB8611 (HNAP)"
     manufacturer = "Motorola"
     models = ["MB8611", "MB8612"]
-    priority = 100  ***REMOVED*** Model-specific parser, try before generic
+    priority = 101  ***REMOVED*** Higher priority for the API-based method
 
     ***REMOVED*** HNAP authentication configuration
     auth_config = HNAPAuthConfig(
@@ -161,7 +161,7 @@ class MotorolaMB8611Parser(ModemParser):
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
                     ch_id = int(fields[3])
-                    frequency = float(fields[4].strip()) * 1_000_000  ***REMOVED*** MHz to Hz
+                    frequency = int(round(float(fields[4].strip()) * 1_000_000))  ***REMOVED*** MHz to Hz
                     power = float(fields[5].strip())
                     snr = float(fields[6].strip())
                     corrected = int(fields[7])
@@ -228,7 +228,7 @@ class MotorolaMB8611Parser(ModemParser):
                     modulation = fields[2].strip()
                     ch_id = int(fields[3])
                     symbol_rate = int(fields[4])
-                    frequency = float(fields[5].strip()) * 1_000_000  ***REMOVED*** MHz to Hz
+                    frequency = int(round(float(fields[5].strip()) * 1_000_000))  ***REMOVED*** MHz to Hz
                     power = float(fields[6].strip())
 
                     channel_info = {

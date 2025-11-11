@@ -1,0 +1,271 @@
+<html id="html"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=1200">
+
+<meta http-equiv="Pragma" content="No-cache">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<link rel="shortcut icon" href="https://192.168.100.1/image/mobile_motologin.png">
+<link rel="stylesheet" type="text/css" href="https://192.168.100.1/css/moto.css">
+<title>MB8611</title>
+
+
+
+
+
+</head>
+
+<body>
+
+<div id="moto-new-top" style=""><table class="table-top" cellspacing="0" cellpadding="0" width="100%">		<tbody><tr>			<td width="115px"><a class="loginfo"><img src="https://192.168.100.1/image/motolog.jpg" width="90%" height="90%"><span>Back</span></a></td>			<td width="90px" class="td-top" id="tdBack">Back to<br>Basic Page</td>			<td width="82px">&nbsp;</td>			<td class="td-top-tail">&nbsp;</td>		</tr>	</tbody></table></div>
+<div id="moto-new-menu" style="height: 608px;">   <li id="MotoMenuStatus"><span><b>Status</b></span></li>   <ul class="SubMenu" id="subMotoStatus" style="display: block;">     <li><a href="https://192.168.100.1/MotoStatusConnection.html***REMOVED***"><b id="MotoStatusSoftware">&nbsp;Software&nbsp;</b></a></li>     <li><a href="https://192.168.100.1/MotoStatusConnection.html***REMOVED***"><b id="MotoStatusConnection">&nbsp;Connection&nbsp;</b></a></li>     <li><a href="https://192.168.100.1/MotoStatusConnection.html***REMOVED***"><b id="MotoStatusSecurity">&nbsp;Security&nbsp;</b></a></li>     <li><a href="https://192.168.100.1/MotoStatusConnection.html***REMOVED***"><b id="MotoStatusLog">&nbsp;Event&nbsp;Log</b></a></li>   </ul></div>
+
+<div id="moto-new-content" style="height: 608px; width: 984px;">
+<table cellspacing="0" cellpadding="0" width="100%">
+<tbody><tr>
+<td class="moto-content-title">Connection</td>
+</tr>
+<tr>
+<td>
+
+<form action="https://192.168.100.1/goform/MotoConnection" method="POST" name="MotoConnection">
+
+
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Startup Sequence</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+  <td class="moto-param-header">&nbsp;&nbsp;&nbsp;Startup Step</td>
+  <td class="moto-param-header">Status</td>
+  <td class="moto-param-header">Comment</td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Startup Step:<br>The Startup Sequence shows steps in your Cable Modem's registration process. <br>
+If your modem doesn't come online, you can often tell which step is causing a problem by noting the first step that remains <b style="font-family:Moto Sans Semibold,verdana,helvetica">In Progress</b>.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Acquire Downstream Channel</td>
+  <td class="moto-content-value"><span id="MotoConnDSFreq">639000000 Hz</span></td>
+  <td class="moto-content-value"><span id="MotoConnDSComment">Locked</span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Acquire Downstream Channel:<br>The first step your cable modem takes is to lock on a downstream channel. If this step fails, it could be because there is no live coax cable connected to your modem, or because the signal is too weak or noisy to connect successfully.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Upstream Connection</td>
+  <td class="moto-content-value"><span id="MotoConnConnectivityStatus">OK</span></td>
+  <td class="moto-content-value"><span id="MotoConnConnectivityComment">Operational</span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Upstream Connection:<br>The next step is to establish an upstream connection. If this step fails, it could be because the quality of the cable connection is marginal. (This step is sometimes referred to as the Connectivity State. This reflects negotiation of upstream frequency, time slot, synchronization for Forward Error Correction framing, and similar items.)</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Boot State</td>
+  <td class="moto-content-value"><span id="MotoConnBootStatus">OK</span></td>
+  <td class="moto-content-value"><span id="MotoConnBootComment">Operational</span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Boot State:<br>
+In this step, your cable modem receives an IP Address and time of day information from the network. <br>If this step fails, it may be because of a network issue, or a problem with your account.
+
+  </span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Configuration File</td>
+  <td class="moto-content-value"><span id="MotoConnConfigurationFileStatus">OK</span></td>
+  <td class="moto-content-value"><span id="MotoConnConfigurationFileComment"></span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Configuration File:<br>In the next step, your cable modem receives a configuration file from the network. This file configures your cable modem for the service level that you subscribe to. If this step fails, it could be because there is a problem with your account.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Security</td>
+  <td class="moto-content-value"><span id="MotoConnSecurityStatus">Enabled</span></td>
+  <td class="moto-content-value"><span id="MotoConnSecurityComment">BPI+</span></td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Security:<br>Finally, your cable modem exchanges tokens with your service provider to protect your Internet traffic. It is rare for this step to fail.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br>
+<br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Connection Status</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+  <td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+  <td class="moto-content-value"><span id="MotoConnSystemUpTime">0 days 00h:27m:18s</span></td>
+  <td>&nbsp;</td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>System Up Time:<br>How long your cable modem has been connected to the Internet.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+  <td>&nbsp;&nbsp;&nbsp;Network Access</td>
+  <td class="moto-content-value"><span id="MotoConnNetworkAccess">Allowed</span></td>
+  <td>&nbsp;</td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Network Access:<br>Network Access indicates whether your cable company lets you access the Internet. If you are connected but do not have access to the Internet, there may be a problem with your account.</span></a>&nbsp;&nbsp;</td>
+  </tr>
+  </tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Downstream Bonded Channels</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Downstream Bonded Channels:<br>Your cable modem is capable of connecting over multiple channels at the same time. When at least two channels are connected, this is called channel bonding. The Downstream Channel List shows the connection status of each channel, including indicators of connection quality. Channel bonding enables faster download speeds, and it also helps to smooth out spikes in traffic by spreading them across multiple channels.</span></a>&nbsp;&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td colspan="4">
+  <table class="moto-table-content" cellspacing="0" cellpadding="0" id="MotoConnDownstreamChannel"><tbody><tr align="center"><td class="moto-param-header-s">&nbsp;&nbsp;&nbsp;Channel</td><td class="moto-param-header-s">Lock Status</td><td class="moto-param-header-s">Modulation</td><td class="moto-param-header-s">Channel ID</td><td class="moto-param-header-s">Freq. (MHz)</td><td class="moto-param-header-s">Pwr (dBmV)</td><td class="moto-param-header-s">SNR (dB)</td><td class="moto-param-header-s">Corrected</td><td class="moto-param-header-s">Uncorrected</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;1</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">44</td><td class="moto-param-value">639.0</td><td class="moto-param-value">-4.6</td><td class="moto-param-value">40.0</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;2</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">13</td><td class="moto-param-value">453.0</td><td class="moto-param-value"> 0.3</td><td class="moto-param-value">44.1</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;3</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">14</td><td class="moto-param-value">459.0</td><td class="moto-param-value"> 0.1</td><td class="moto-param-value">43.9</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;4</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">15</td><td class="moto-param-value">465.0</td><td class="moto-param-value"> 0.8</td><td class="moto-param-value">44.2</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;5</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">16</td><td class="moto-param-value">471.0</td><td class="moto-param-value"> 0.7</td><td class="moto-param-value">44.2</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;6</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">17</td><td class="moto-param-value">477.0</td><td class="moto-param-value"> 0.4</td><td class="moto-param-value">43.9</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;7</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">18</td><td class="moto-param-value">483.0</td><td class="moto-param-value"> 0.5</td><td class="moto-param-value">44.0</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;8</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">19</td><td class="moto-param-value">489.0</td><td class="moto-param-value"> 0.0</td><td class="moto-param-value">43.5</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;9</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">20</td><td class="moto-param-value">495.0</td><td class="moto-param-value">-0.4</td><td class="moto-param-value">43.4</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;10</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">21</td><td class="moto-param-value">501.0</td><td class="moto-param-value"> 0.0</td><td class="moto-param-value">33.6</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;11</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">22</td><td class="moto-param-value">507.0</td><td class="moto-param-value">-0.2</td><td class="moto-param-value">34.4</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;12</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">23</td><td class="moto-param-value">513.0</td><td class="moto-param-value">-0.3</td><td class="moto-param-value">37.6</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;13</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">24</td><td class="moto-param-value">519.0</td><td class="moto-param-value">-0.9</td><td class="moto-param-value">43.1</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;14</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">25</td><td class="moto-param-value">525.0</td><td class="moto-param-value">-1.0</td><td class="moto-param-value">42.6</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;15</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">26</td><td class="moto-param-value">531.0</td><td class="moto-param-value">-0.9</td><td class="moto-param-value">43.1</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;16</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">27</td><td class="moto-param-value">537.0</td><td class="moto-param-value">-1.1</td><td class="moto-param-value">42.9</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;17</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">28</td><td class="moto-param-value">543.0</td><td class="moto-param-value">-1.7</td><td class="moto-param-value">42.5</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;18</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">29</td><td class="moto-param-value">549.0</td><td class="moto-param-value">-1.5</td><td class="moto-param-value">42.5</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;19</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">30</td><td class="moto-param-value">555.0</td><td class="moto-param-value">-1.6</td><td class="moto-param-value">42.3</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;20</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">31</td><td class="moto-param-value">561.0</td><td class="moto-param-value">-2.2</td><td class="moto-param-value">41.6</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;21</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">32</td><td class="moto-param-value">567.0</td><td class="moto-param-value">-2.5</td><td class="moto-param-value">41.7</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;22</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">33</td><td class="moto-param-value">573.0</td><td class="moto-param-value">-2.7</td><td class="moto-param-value">41.9</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;23</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">34</td><td class="moto-param-value">579.0</td><td class="moto-param-value">-2.2</td><td class="moto-param-value">42.0</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;24</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">35</td><td class="moto-param-value">585.0</td><td class="moto-param-value">-1.7</td><td class="moto-param-value">42.6</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;25</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">36</td><td class="moto-param-value">591.0</td><td class="moto-param-value">-2.0</td><td class="moto-param-value">42.4</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;26</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">37</td><td class="moto-param-value">597.0</td><td class="moto-param-value">-2.1</td><td class="moto-param-value">42.3</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;27</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">38</td><td class="moto-param-value">603.0</td><td class="moto-param-value">-2.0</td><td class="moto-param-value">38.5</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;28</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">39</td><td class="moto-param-value">609.0</td><td class="moto-param-value">-1.7</td><td class="moto-param-value">40.4</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;29</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">40</td><td class="moto-param-value">615.0</td><td class="moto-param-value">-2.0</td><td class="moto-param-value">42.2</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;30</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">41</td><td class="moto-param-value">621.0</td><td class="moto-param-value">-2.5</td><td class="moto-param-value">41.7</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;31</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">42</td><td class="moto-param-value">627.0</td><td class="moto-param-value">-2.7</td><td class="moto-param-value">41.8</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;32</td><td class="moto-param-value">Locked</td><td class="moto-param-value">QAM256</td><td class="moto-param-value">43</td><td class="moto-param-value">633.0</td><td class="moto-param-value">-3.3</td><td class="moto-param-value">41.2</td><td class="moto-param-value">0</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;33</td><td class="moto-param-value">Locked</td><td class="moto-param-value">OFDM PLC</td><td class="moto-param-value">193</td><td class="moto-param-value">722.0</td><td class="moto-param-value">-3.5</td><td class="moto-param-value">39.6</td><td class="moto-param-value">6605462</td><td class="moto-param-value">0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;34</td><td class="moto-param-value">Locked</td><td class="moto-param-value">OFDM PLC</td><td class="moto-param-value">194</td><td class="moto-param-value">957.0</td><td class="moto-param-value">-5.4</td><td class="moto-param-value">37.4</td><td class="moto-param-value">6557784</td><td class="moto-param-value">0</td></tr></tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Upstream Bonded Channels</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Upstream Bonded Channels:<br>Similar to downstream channel bonding, upstream channel bonding enables faster speeds. Upstream channel bonding also helps to smooth out spikes in traffic by spreading them across multiple channels. The Upstream Channel List shows the connection status of each bonded channel, including indicators of connection quality.</span></a>&nbsp;&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td colspan="4">
+  <table class="moto-table-content" cellspacing="0" cellpadding="0" id="MotoConnUpstreamChannel"><tbody><tr align="center"><td class="moto-param-header-s">&nbsp;&nbsp;&nbsp;Channel</td><td class="moto-param-header-s">Lock Status</td><td class="moto-param-header-s">Channel Type</td><td class="moto-param-header-s">Channel ID</td><td class="moto-param-header-s">Symb. Rate (Ksym/sec)</td><td class="moto-param-header-s">Freq. (MHz)</td><td class="moto-param-header-s">Pwr (dBmV)</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;1</td><td class="moto-param-value">Locked</td><td class="moto-param-value">SC-QAM</td><td class="moto-param-value">1</td><td class="moto-param-value">5120</td><td class="moto-param-value">16.4</td><td class="moto-param-value">46.0</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;2</td><td class="moto-param-value">Locked</td><td class="moto-param-value">SC-QAM</td><td class="moto-param-value">2</td><td class="moto-param-value">5120</td><td class="moto-param-value">22.8</td><td class="moto-param-value">46.8</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;3</td><td class="moto-param-value">Locked</td><td class="moto-param-value">SC-QAM</td><td class="moto-param-value">3</td><td class="moto-param-value">5120</td><td class="moto-param-value">29.2</td><td class="moto-param-value">47.3</td></tr><tr align="center"><td class="moto-param-value">&nbsp;&nbsp;&nbsp;4</td><td class="moto-param-value">Locked</td><td class="moto-param-value">SC-QAM</td><td class="moto-param-value">4</td><td class="moto-param-value">5120</td><td class="moto-param-value">35.6</td><td class="moto-param-value">48.3</td></tr></tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;Downstream Frequency Setting</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>&nbsp;&nbsp;&nbsp;Downstream Frequency Select</td>
+<td class="moto-content-value"><input type="text" id="MotoCmRescanTargetFreq" name="MotoCmRescanTargetFreq" size="15" maxlength="15" value=""></td>
+  <td class="moto-param-action">
+  <input type="button" class="moto-change-button" name="" value="Save">&nbsp;&nbsp;
+  </td>
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>Downstream Frequency Setting:<br>If your service provider tells you to do so, enter a Downstream Frequency value here, in Hz.</span></a>&nbsp;&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table>
+
+<br><br>
+<table class="moto-table-title" cellspacing="0" cellpadding="0" style="display:none">
+<tbody><tr>
+<td>
+  <table class="moto-table-content-title" cellspacing="0" cellpadding="0">
+  <tbody><tr>
+<td class="moto-param-title">&nbsp;&nbsp;&nbsp;LAG Enable/Disable</td>
+<td class="moto-param-value"><img src="https://192.168.100.1/image/mototitle.jpg"></td>
+<td class="moto-param-value">&nbsp;</td>
+<td class="moto-param-help">&nbsp;</td>
+</tr>
+  </tbody></table>
+</td>
+</tr>
+<tr>
+<td>
+  <table class="moto-table-content" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td>&nbsp;&nbsp;&nbsp;LAG(Link Aggregation Group, or Ethernet Port Bonding)</td>
+
+   <td>
+   	 <select style="display: inline;" name="MotoConnBondStatus" id="bond-status" size="1" value="2">
+		<option value="0">Disable</option>
+		<option value="1">Enable</option>
+	 </select>
+   </td>
+    
+   <td class="moto-param-action">
+  <input type="button" class="moto-change-button" name="" value="Save">&nbsp;&nbsp;
+  </td>
+
+  <td class="moto-param-help"><a class="tooltip"><img src="https://192.168.100.1/image/motohelp.jpg"><span>LAG Enable/Disable:<br>Enable LAG to bond two or more Ethernet (LAN) ports. Bonded ports allow you to achieve throughputs greater than 1 Gbps, if your service provider offers these speeds. To bond two ports, use LAN ports 1 &amp; 2 on your MB8600.<br>
+  Note that you must connect the bonded ports to a device (typically a router or switch) that supports LAG. Do not enable LAG unless you have connected to a device that supports LAG.</span></a>&nbsp;&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody></table>
+<br><br>
+
+</form>
+
+</td>
+</tr>
+</tbody></table>
+
+</div>
+
+
+<div id="moto-reboot-top" style="display:none">
+	<table class="table-top" cellspacing="0" cellpadding="0" width="100%">
+		<tbody><tr height="78px">
+			<td width="112px" align="center"><img src="https://192.168.100.1/image/motolog.jpg" width="106px" height="78px"></td>
+			<td width="93px">&nbsp;</td>
+			<td width="82px">&nbsp;</td>
+			<td class="td-top-tail">&nbsp;</td>
+		</tr>
+		<tr><td class="moto-reboot-title" colspan="4">Rebooting...</td></tr>
+		<tr><td class="moto-reboot-msg" colspan="4">Please wait 3 minutes, then click button to log in again.</td></tr>
+		<tr><td class="moto-reboot-msg" colspan="4" align="center"><input class="moto-long-button" type="button" value="Log in again"></td></tr>
+	</tbody></table>
+</div>
+
+<div id="moto-apply-top" style="display: none;"><table class="table-top" cellspacing="0" cellpadding="0" width="100%">	<tbody><tr height="78px">		<td width="112px" align="center"><img src="https://192.168.100.1/image/motolog.jpg" width="106px" height="78px"></td>		<td width="93px">&nbsp;</td>		<td width="82px">&nbsp;</td>		<td class="td-top-tail">&nbsp;</td>	</tr>	<tr><td class="moto-reboot-title" colspan="4">Loading...</td></tr>	<tr><td class="moto-reboot-msg" colspan="4">Please wait a moment.</td></tr>	<tr><td class="moto-reboot-msg" colspan="4" align="center"><img src="https://192.168.100.1/image/submit.gif"></td></tr></tbody></table></div>
+
+
+
+
+</body></html>
