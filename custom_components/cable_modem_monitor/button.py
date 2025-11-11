@@ -58,6 +58,7 @@ async def async_setup_entry(
             CleanupEntitiesButton(coordinator, entry),
             ResetEntitiesButton(coordinator, entry),
             UpdateModemDataButton(coordinator, entry),
+            CaptureHtmlButton(coordinator, entry),
         ]
     )
 
@@ -548,3 +549,111 @@ class UpdateModemDataButton(ModemButtonBase):
         )
 
         _LOGGER.info("Modem data update triggered")
+
+
+class CaptureHtmlButton(ModemButtonBase):
+    """Button to capture raw HTML for diagnostics."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator, entry)
+        self._attr_name = "Capture HTML"
+        self._attr_unique_id = f"{entry.entry_id}_capture_html_button"
+        self._attr_icon = "mdi:file-code"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    async def async_press(self) -> None:
+        """Handle the button press - capture raw HTML for diagnostics."""
+        _LOGGER.info("Capture HTML button pressed")
+
+        # Get the scraper components from coordinator
+        from .const import (
+            CONF_HOST as HOST_KEY,
+            CONF_PASSWORD,
+            CONF_USERNAME,
+            CONF_WORKING_URL,
+            VERIFY_SSL,
+        )
+        from .core.modem_scraper import ModemScraper
+        from .parsers import get_parsers
+
+        host = self._entry.data[HOST_KEY]
+        username = self._entry.data.get(CONF_USERNAME)
+        password = self._entry.data.get(CONF_PASSWORD)
+        cached_url = self._entry.data.get(CONF_WORKING_URL)
+        modem_choice = self._entry.data.get("modem_choice", "auto")
+        verify_ssl = VERIFY_SSL
+
+        # Load parser (same logic as restart button)
+        if modem_choice and modem_choice != "auto":
+            from .parsers import get_parser_by_name
+
+            parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
+            if parser_class:
+                parser = parser_class()
+                scraper = ModemScraper(host, username, password, parser, cached_url, verify_ssl=verify_ssl)
+            else:
+                parsers = await self.hass.async_add_executor_job(get_parsers)
+                scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
+        else:
+            parsers = await self.hass.async_add_executor_job(get_parsers)
+            scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
+
+        # Fetch data with HTML capture enabled
+        try:
+            data = await self.hass.async_add_executor_job(scraper.get_modem_data, True)
+
+            # Check if capture was successful
+            if "_raw_html_capture" in data:
+                capture = data["_raw_html_capture"]
+                url_count = len(capture.get("urls", []))
+                total_size = sum(url.get("size_bytes", 0) for url in capture.get("urls", []))
+                size_kb = total_size / 1024
+
+                # Update coordinator data with the capture
+                # This makes it available to diagnostics for the next 5 minutes
+                if self.coordinator.data:
+                    self.coordinator.data["_raw_html_capture"] = capture
+
+                _LOGGER.info(
+                    "HTML capture successful: %d URLs, %.1f KB total",
+                    url_count,
+                    size_kb
+                )
+
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": "HTML Capture Complete",
+                        "message": (
+                            f"Captured {url_count} page(s) ({size_kb:.1f} KB). "
+                            "Download diagnostics within 5 minutes to retrieve the data. "
+                            "Go to: Settings → Devices → Cable Modem → Download Diagnostics."
+                        ),
+                        "notification_id": "cable_modem_html_capture",
+                    },
+                )
+            else:
+                _LOGGER.warning("HTML capture failed - no data captured")
+                await self.hass.services.async_call(
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": "HTML Capture Failed",
+                        "message": "Failed to capture HTML data. Check logs for details.",
+                        "notification_id": "cable_modem_html_capture",
+                    },
+                )
+
+        except Exception as e:
+            _LOGGER.error("Error during HTML capture: %s", e, exc_info=True)
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": "HTML Capture Error",
+                    "message": f"Error capturing HTML: {str(e)}",
+                    "notification_id": "cable_modem_html_capture",
+                },
+            )

@@ -42,6 +42,73 @@ def _sanitize_log_message(message: str) -> str:
     return message
 
 
+def _sanitize_html(html: str) -> str:
+    """Sanitize HTML to remove sensitive information.
+
+    Args:
+        html: Raw HTML content from modem
+
+    Returns:
+        Sanitized HTML with sensitive data redacted
+    """
+    # 1. MAC Addresses
+    html = re.sub(
+        r'\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b',
+        'XX:XX:XX:XX:XX:XX',
+        html
+    )
+
+    # 2. Serial Numbers (various formats)
+    html = re.sub(
+        r'(Serial\s*Number|SN|S/N)\s*[:\s=]+\S+',
+        r'\1: ***REDACTED***',
+        html,
+        flags=re.IGNORECASE
+    )
+
+    # 3. Account/Subscriber IDs
+    html = re.sub(
+        r'(Account|Subscriber|Customer|Device)\s*(ID|Number)\s*[:\s=]+\S+',
+        r'\1 \2: ***REDACTED***',
+        html,
+        flags=re.IGNORECASE
+    )
+
+    # 4. Private IPs (except common modem IPs like 192.168.100.1, 192.168.0.1, etc.)
+    html = re.sub(
+        r'\b(?!192\.168\.100\.1\b)(?!192\.168\.0\.1\b)(?!192\.168\.1\.1\b)'
+        r'(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b',
+        '***PRIVATE_IP***',
+        html
+    )
+
+    # 5. WiFi Passwords/Passphrases
+    html = re.sub(
+        r'(password|passphrase|psk|key|wpa[0-9]*key)\s*[=:]\s*["\']?([^"\'<>\s]+)',
+        r'\1=***REDACTED***',
+        html,
+        flags=re.IGNORECASE
+    )
+
+    # 6. HTML Forms with password fields - redact values
+    html = re.sub(
+        r'(<input[^>]*type=["\']password["\'][^>]*value=["\'])([^"\']+)(["\'])',
+        r'\1***REDACTED***\3',
+        html,
+        flags=re.IGNORECASE
+    )
+
+    # 7. Remove session tokens/cookies from HTML
+    html = re.sub(
+        r'(session|token|csrf|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})',
+        r'\1=***REDACTED***',
+        html,
+        flags=re.IGNORECASE
+    )
+
+    return html
+
+
 def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:
     """Get recent log records for cable_modem_monitor.
 
@@ -325,5 +392,39 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
         # If we can't get logs, add a note but don't fail diagnostics
         _LOGGER.warning("Failed to retrieve recent logs for diagnostics: %s", err)
         diagnostics["recent_logs"] = {"note": "Unable to retrieve recent logs", "error": str(err)}
+
+    # Add raw HTML capture if available and not expired
+    if coordinator.data and "_raw_html_capture" in coordinator.data:
+        capture = coordinator.data["_raw_html_capture"]
+
+        # Check if capture has expired (5 minute TTL)
+        from datetime import datetime
+        try:
+            expires_at = datetime.fromisoformat(capture.get("ttl_expires", ""))
+            if datetime.now() < expires_at:
+                # Sanitize HTML in each captured URL
+                sanitized_urls = []
+                for url_data in capture.get("urls", []):
+                    sanitized_url = url_data.copy()
+                    if "html" in sanitized_url:
+                        sanitized_url["html"] = _sanitize_html(sanitized_url["html"])
+                        # Add size info for sanitized HTML
+                        sanitized_url["sanitized_size_bytes"] = len(sanitized_url["html"])
+                    sanitized_urls.append(sanitized_url)
+
+                diagnostics["raw_html_capture"] = {
+                    "captured_at": capture.get("timestamp"),
+                    "expires_at": capture.get("ttl_expires"),
+                    "trigger": capture.get("trigger", "unknown"),
+                    "note": "Raw HTML has been sanitized to remove sensitive information (MACs, serials, passwords, private IPs)",
+                    "url_count": len(sanitized_urls),
+                    "total_size_kb": sum(u.get("size_bytes", 0) for u in sanitized_urls) / 1024,
+                    "urls": sanitized_urls
+                }
+                _LOGGER.info("Including raw HTML capture in diagnostics (%d URLs)", len(sanitized_urls))
+            else:
+                _LOGGER.debug("Raw HTML capture has expired, not including in diagnostics")
+        except (ValueError, TypeError) as e:
+            _LOGGER.warning("Error checking HTML capture expiry: %s", e)
 
     return diagnostics

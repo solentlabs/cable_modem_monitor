@@ -98,6 +98,7 @@ class ModemScraper:
         self.cached_url = cached_url
         self.parser_name = parser_name  # For Tier 2: load cached parser by name
         self.last_successful_url = ""
+        self._captured_urls: list[dict[str, Any]] = []  # For HTML capture feature
 
     def _login(self) -> bool | tuple[bool, str | None]:
         """
@@ -230,10 +231,13 @@ class ModemScraper:
         # Tier 3: Auto-detection mode
         return self._get_tier3_urls()
 
-    def _fetch_data(self) -> tuple[str, str, type[ModemParser]] | None:
+    def _fetch_data(self, capture_raw: bool = False) -> tuple[str, str, type[ModemParser]] | None:
         """
         Fetch data from the modem using parser-defined URL patterns.
         Automatically tries both HTTPS and HTTP protocols.
+
+        Args:
+            capture_raw: If True, capture raw HTML responses for diagnostics
 
         Returns:
             tuple of (html, successful_url, parser_class) or None if failed
@@ -279,6 +283,19 @@ class ModemScraper:
                             parser_name,
                         )
                         self.last_successful_url = url
+
+                        # Capture raw HTML if requested
+                        if capture_raw:
+                            self._captured_urls.append({
+                                "url": url,
+                                "method": "GET",
+                                "status_code": response.status_code,
+                                "content_type": response.headers.get("Content-Type", "unknown"),
+                                "size_bytes": len(response.text),
+                                "html": response.text,
+                                "parser": parser_name
+                            })
+
                         # Update base_url to the working protocol
                         _LOGGER.debug("About to update base_url from %s to %s", self.base_url, current_base_url)
                         self.base_url = current_base_url
@@ -447,10 +464,20 @@ class ModemScraper:
         data = self.parser.parse(soup, session=self.session, base_url=self.base_url)
         return data
 
-    def get_modem_data(self) -> dict:
-        """Fetch and parse modem data."""
+    def get_modem_data(self, capture_raw: bool = False) -> dict:
+        """Fetch and parse modem data.
+
+        Args:
+            capture_raw: If True, capture raw HTML responses for diagnostics
+
+        Returns:
+            Dictionary with modem data and optionally raw HTML captures
+        """
+        # Clear previous captures
+        self._captured_urls = []
+
         try:
-            fetched_data = self._fetch_data()
+            fetched_data = self._fetch_data(capture_raw=capture_raw)
             if not fetched_data:
                 return self._create_error_response("unreachable")
 
@@ -468,7 +495,19 @@ class ModemScraper:
 
             # Parse data and build response
             data = self._parse_data(html)
-            return self._build_response(data)
+            response = self._build_response(data)
+
+            # Include captured HTML if requested
+            if capture_raw and self._captured_urls:
+                from datetime import datetime, timedelta
+                response["_raw_html_capture"] = {
+                    "timestamp": datetime.now().isoformat(),
+                    "trigger": "manual",
+                    "ttl_expires": (datetime.now() + timedelta(minutes=5)).isoformat(),
+                    "urls": self._captured_urls
+                }
+
+            return response
 
         except Exception as e:
             _LOGGER.error("Error fetching modem data: %s", e)

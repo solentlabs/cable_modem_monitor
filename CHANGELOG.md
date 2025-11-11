@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Useful for verifying changes after modem configuration or troubleshooting
   - Complements automatic polling with user-controlled updates
   - Shows notification when update is triggered
+- **HTML Capture for Diagnostics** - Capture raw modem HTML for support requests
+  - `button.cable_modem_capture_html` - Captures raw HTML responses from modem
+  - Stores captured data in memory for 5 minutes with automatic expiry
+  - Automatically sanitizes sensitive data (MACs, serials, passwords, private IPs)
+  - Included in diagnostics download when available
+  - Makes requesting support for unsupported modems much easier
+  - Notification shows capture status and reminds user to download diagnostics
+  - Diagnostic button category - grouped with other diagnostic tools
 
 ### Fixed
 - **MB8611 Static Parser Missing URL Patterns** - Fixed "No URL patterns available to try" error (Fixes #6)
@@ -67,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `modem_scraper.py`, `const.py`, `manifest.json`
+- **HTML Capture Implementation**: Added `capture_raw` parameter to `get_modem_data()` and `_fetch_data()` methods, stores raw HTML in coordinator data with 5-minute TTL, sanitization removes MACs/serials/passwords/IPs while preserving signal data for debugging
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
 - **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
 - **Diagnostics**: Now works reliably across all Home Assistant installation types (Docker, supervised, core, OS)
