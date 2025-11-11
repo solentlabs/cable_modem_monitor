@@ -75,17 +75,19 @@ class MotorolaMB8611StaticParser(ModemParser):
                 continue
 
             try:
-                channels.append({
-                    "channel_id": int(cells[0].text.strip()),
-                    "lock_status": cells[1].text.strip(),
-                    "modulation": cells[2].text.strip(),
-                    "ch_id": int(cells[3].text.strip()),
-                    "frequency": int(round(float(cells[4].text.strip()) * 1_000_000)),
-                    "power": float(cells[5].text.strip()),
-                    "snr": float(cells[6].text.strip()),
-                    "corrected": int(cells[7].text.strip().replace(",", "")),
-                    "uncorrected": int(cells[8].text.strip().replace(",", "")),
-                })
+                channels.append(
+                    {
+                        "channel_id": int(cells[0].text.strip()),
+                        "lock_status": cells[1].text.strip(),
+                        "modulation": cells[2].text.strip(),
+                        "ch_id": int(cells[3].text.strip()),
+                        "frequency": int(round(float(cells[4].text.strip()) * 1_000_000)),
+                        "power": float(cells[5].text.strip()),
+                        "snr": float(cells[6].text.strip()),
+                        "corrected": int(cells[7].text.strip().replace(",", "")),
+                        "uncorrected": int(cells[8].text.strip().replace(",", "")),
+                    }
+                )
             except (ValueError, IndexError) as e:
                 _LOGGER.warning("MB8611Static: Error parsing downstream row: %s - %s", row, e)
                 continue
@@ -109,15 +111,17 @@ class MotorolaMB8611StaticParser(ModemParser):
                 continue
 
             try:
-                channels.append({
-                    "channel_id": int(cells[0].text.strip()),
-                    "lock_status": cells[1].text.strip(),
-                    "modulation": cells[2].text.strip(),  # Channel Type in HTML
-                    "ch_id": int(cells[3].text.strip()),
-                    "symbol_rate": int(cells[4].text.strip().replace(",", "")),
-                    "frequency": int(round(float(cells[5].text.strip()) * 1_000_000)),
-                    "power": float(cells[6].text.strip()),
-                })
+                channels.append(
+                    {
+                        "channel_id": int(cells[0].text.strip()),
+                        "lock_status": cells[1].text.strip(),
+                        "modulation": cells[2].text.strip(),  # Channel Type in HTML
+                        "ch_id": int(cells[3].text.strip()),
+                        "symbol_rate": int(cells[4].text.strip().replace(",", "")),
+                        "frequency": int(round(float(cells[5].text.strip()) * 1_000_000)),
+                        "power": float(cells[6].text.strip()),
+                    }
+                )
             except (ValueError, IndexError) as e:
                 _LOGGER.warning("MB8611Static: Error parsing upstream row: %s - %s", row, e)
                 continue

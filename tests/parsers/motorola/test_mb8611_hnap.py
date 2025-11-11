@@ -424,8 +424,6 @@ class TestEdgeCases:
         assert system_info == {}
 
 
-
-
 class TestMetadata:
     """Test parser metadata."""
 

@@ -15,9 +15,7 @@ from custom_components.cable_modem_monitor.parsers.motorola.mb8611_static import
 @pytest.fixture
 def static_conn_html():
     """Load static MotoStatusConnection.html fixture from issue #6."""
-    fixture_path = os.path.join(
-        os.path.dirname(__file__), "fixtures", "mb8611_static", "MotoStatusConnection.html"
-    )
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611_static", "MotoStatusConnection.html")
     with open(fixture_path) as f:
         return f.read()
 
@@ -25,9 +23,7 @@ def static_conn_html():
 @pytest.fixture
 def static_sw_html():
     """Load static MotoStatusSoftware.html fixture from issue #6."""
-    fixture_path = os.path.join(
-        os.path.dirname(__file__), "fixtures", "mb8611_static", "MotoStatusSoftware.html"
-    )
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "mb8611_static", "MotoStatusSoftware.html")
     with open(fixture_path) as f:
         return f.read()
 
