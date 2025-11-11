@@ -60,8 +60,37 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
     try:
         if "system_log" in hass.data:
             system_log = hass.data["system_log"]
-            # Get records from the system_log circular buffer
-            if hasattr(system_log, "records"):
+            _LOGGER.debug("system_log found in hass.data, type: %s", type(system_log))
+
+            # system_log exposes a DomainData object with a handler attribute
+            if hasattr(system_log, "handler"):
+                handler = system_log.handler
+                _LOGGER.debug("system_log.handler found, type: %s", type(handler))
+
+                if hasattr(handler, "records"):
+                    _LOGGER.debug("handler.records found, record count: %d", len(handler.records))
+                    for record in handler.records:
+                        # Filter for cable_modem_monitor logs
+                        if "cable_modem_monitor" in record.name:
+                            sanitized_message = _sanitize_log_message(record.getMessage())
+                            recent_logs.append(
+                                {
+                                    "timestamp": record.created,
+                                    "level": record.levelname,
+                                    "logger": record.name.replace("custom_components.cable_modem_monitor.", ""),
+                                    "message": sanitized_message,
+                                }
+                            )
+
+                    # If we found logs via system_log, return them
+                    if recent_logs:
+                        _LOGGER.debug("Retrieved %d logs from system_log handler", len(recent_logs))
+                        return recent_logs[-max_records:]
+                else:
+                    _LOGGER.debug("handler.records not found, attributes: %s", dir(handler))
+            # Also try direct records access (older HA versions)
+            elif hasattr(system_log, "records"):
+                _LOGGER.debug("system_log.records found (direct), record count: %d", len(system_log.records))
                 for record in system_log.records:
                     # Filter for cable_modem_monitor logs
                     if "cable_modem_monitor" in record.name:
@@ -77,10 +106,14 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
 
                 # If we found logs via system_log, return them
                 if recent_logs:
-                    _LOGGER.debug("Retrieved %d logs from system_log integration", len(recent_logs))
+                    _LOGGER.debug("Retrieved %d logs from system_log (direct)", len(recent_logs))
                     return recent_logs[-max_records:]
+            else:
+                _LOGGER.debug("system_log found but no records/handler attribute, attributes: %s", dir(system_log))
+        else:
+            _LOGGER.debug("system_log not found in hass.data, available keys: %s", list(hass.data.keys())[:10])
     except Exception as err:
-        _LOGGER.debug("Could not retrieve logs from system_log: %s", err)
+        _LOGGER.warning("Could not retrieve logs from system_log: %s", err, exc_info=True)
 
     # Method 2: Try to read from Home Assistant's log file
     try:
