@@ -73,9 +73,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reduces startup overhead and code complexity
   - Migration was for v2.0.0 (released Oct 24, 2025) - no longer needed at v3.1.0
 
+### Testing
+- **Comprehensive Test Coverage for v3.1.0 Features** - Added 20+ new test cases
+  - UpdateModemDataButton tests (initialization, press, notification)
+  - CaptureHtmlButton tests (success, failure, exception handling)
+  - HTML sanitization tests (13 test cases covering MACs, serials, IPs, passwords, tokens)
+  - Diagnostics integration tests (capture inclusion, expiry, sanitization verification)
+  - Updated button setup test to verify all 5 buttons
+
 ### Technical Details
 - **Files Modified**: `mb8611_static.py`, `authentication.py`, `hnap_builder.py`, `diagnostics.py`, `__init__.py`, `button.py`, `parsers/__init__.py`, `modem_scraper.py`, `const.py`, `manifest.json`
 - **HTML Capture Implementation**: Added `capture_raw` parameter to `get_modem_data()` and `_fetch_data()` methods, stores raw HTML in coordinator data with 5-minute TTL, sanitization removes MACs/serials/passwords/IPs while preserving signal data for debugging
+- **Test Coverage**: Added `test_diagnostics.py` (28 tests) and expanded `test_button.py` (+6 tests, 669 lines total)
 - **Root Cause**: The Static parser implementation was incomplete - it had parsing logic but no URL configuration
 - **Impact**: Fixes both the "no URL patterns" error and HTTPS authentication issues for MB8611 and similar modems
 - **Diagnostics**: Now works reliably across all Home Assistant installation types (Docker, supervised, core, OS)

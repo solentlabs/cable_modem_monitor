@@ -10,9 +10,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.button import (
+    CaptureHtmlButton,
     CleanupEntitiesButton,
     ModemRestartButton,
     ResetEntitiesButton,
+    UpdateModemDataButton,
     async_setup_entry,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN
@@ -57,10 +59,10 @@ async def test_async_setup_entry(mock_coordinator, mock_config_entry):
 
     await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-    # Verify three buttons were added (Restart, Cleanup, Reset)
+    # Verify five buttons were added (Restart, Cleanup, Reset, Update, Capture)
     assert async_add_entities.call_count == 1
     added_entities = async_add_entities.call_args[0][0]
-    assert len(added_entities) == 3
+    assert len(added_entities) == 5
     assert isinstance(added_entities[0], ModemRestartButton)
     assert isinstance(added_entities[1], CleanupEntitiesButton)
     assert isinstance(added_entities[2], ResetEntitiesButton)
@@ -509,3 +511,158 @@ async def test_restart_monitoring_grace_period_resets_on_change(mock_coordinator
     assert "grace_period_active = False" in source
     # Should reset grace period when channels change
     assert "stable_count = 0" in source
+
+
+@pytest.mark.asyncio
+async def test_update_data_button_initialization(mock_coordinator, mock_config_entry):
+    """Test update data button initialization."""
+    button = UpdateModemDataButton(mock_coordinator, mock_config_entry)
+
+    assert button._attr_name == "Update Modem Data"
+    assert button._attr_unique_id == "test_entry_id_update_data_button"
+    assert button._attr_icon == "mdi:update"
+
+
+@pytest.mark.asyncio
+async def test_update_data_button_press(mock_coordinator, mock_config_entry):
+    """Test update data button triggers coordinator refresh."""
+    hass = Mock(spec=HomeAssistant)
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    button = UpdateModemDataButton(mock_coordinator, mock_config_entry)
+    button.hass = hass
+
+    await button.async_press()
+
+    # Verify coordinator refresh was requested
+    mock_coordinator.async_request_refresh.assert_called_once()
+
+    # Verify notification was created
+    assert hass.services.async_call.call_count == 1
+    call_args = hass.services.async_call.call_args
+    assert call_args[0][0] == "persistent_notification"
+    assert call_args[0][1] == "create"
+    notification_data = call_args[0][2]
+    assert "Modem data update has been triggered" in notification_data["message"]
+    assert notification_data["notification_id"] == "cable_modem_update"
+
+
+@pytest.mark.asyncio
+async def test_capture_html_button_initialization(mock_coordinator, mock_config_entry):
+    """Test capture HTML button initialization."""
+    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+
+    assert button._attr_name == "Capture HTML"
+    assert button._attr_unique_id == "test_entry_id_capture_html_button"
+    assert button._attr_icon == "mdi:file-code"
+    from homeassistant.const import EntityCategory
+    assert button._attr_entity_category == EntityCategory.DIAGNOSTIC
+
+
+@pytest.mark.asyncio
+async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
+    """Test successful HTML capture."""
+    hass = Mock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock()
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+    button.hass = hass
+
+    # Mock get_modem_data to return captured HTML
+    mock_capture_data = {
+        "cable_modem_connection_status": "online",
+        "_raw_html_capture": {
+            "timestamp": "2025-11-11T10:00:00",
+            "trigger": "manual",
+            "ttl_expires": "2025-11-11T10:05:00",
+            "urls": [
+                {
+                    "url": "https://192.168.100.1/MotoConnection.asp",
+                    "method": "GET",
+                    "status_code": 200,
+                    "size_bytes": 12450,
+                    "html": "<html>test</html>",
+                    "parser": "Motorola MB8611"
+                }
+            ]
+        }
+    }
+
+    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
+        hass.async_add_executor_job.side_effect = [
+            [],  # get_parsers result
+            mock_capture_data,  # get_modem_data result
+        ]
+
+        await button.async_press()
+
+        # Verify capture was stored in coordinator
+        assert "_raw_html_capture" in mock_coordinator.data
+        assert mock_coordinator.data["_raw_html_capture"]["urls"][0]["url"] == "https://192.168.100.1/MotoConnection.asp"
+
+        # Verify success notification
+        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        assert len(notification_calls) == 1
+        notification_data = notification_calls[0][0][2]
+        assert "HTML Capture Complete" in notification_data["title"]
+        assert "Captured 1 page(s)" in notification_data["message"]
+        assert "12.2 KB" in notification_data["message"]
+        assert "Download diagnostics within 5 minutes" in notification_data["message"]
+
+
+@pytest.mark.asyncio
+async def test_capture_html_button_failure(mock_coordinator, mock_config_entry):
+    """Test HTML capture failure when no data captured."""
+    hass = Mock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock()
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+    button.hass = hass
+
+    # Mock get_modem_data to return data without capture
+    mock_data = {
+        "cable_modem_connection_status": "online",
+    }
+
+    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
+        hass.async_add_executor_job.side_effect = [
+            [],  # get_parsers result
+            mock_data,  # get_modem_data result without capture
+        ]
+
+        await button.async_press()
+
+        # Verify failure notification
+        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        assert len(notification_calls) == 1
+        notification_data = notification_calls[0][0][2]
+        assert "HTML Capture Failed" in notification_data["title"]
+        assert "Failed to capture HTML data" in notification_data["message"]
+
+
+@pytest.mark.asyncio
+async def test_capture_html_button_exception(mock_coordinator, mock_config_entry):
+    """Test HTML capture handles exceptions gracefully."""
+    hass = Mock(spec=HomeAssistant)
+    hass.async_add_executor_job = AsyncMock()
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+    button.hass = hass
+
+    # Mock get_parsers to raise exception
+    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", side_effect=Exception("Test error")):
+        await button.async_press()
+
+        # Verify error notification
+        notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+        assert len(notification_calls) == 1
+        notification_data = notification_calls[0][0][2]
+        assert "HTML Capture Error" in notification_data["title"]
+        assert "Test error" in notification_data["message"]
