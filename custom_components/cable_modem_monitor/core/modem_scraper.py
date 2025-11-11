@@ -50,6 +50,11 @@ class ModemScraper:
         # Support both plain IP addresses and full URLs (http:// or https://)
         if host.startswith(("http://", "https://")):
             self.base_url = host.rstrip("/")
+        elif cached_url and (cached_url.startswith("http://") or cached_url.startswith("https://")):
+            # Optimization: Use protocol from cached working URL (skip protocol discovery)
+            protocol = "https" if cached_url.startswith("https://") else "http"
+            self.base_url = f"{protocol}://{host}"
+            _LOGGER.debug("Using cached protocol %s from working URL: %s", protocol, cached_url)
         else:
             # Try HTTPS first (MB8611 and newer modems), fallback to HTTP
             self.base_url = f"https://{host}"
