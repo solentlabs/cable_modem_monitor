@@ -339,6 +339,105 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
 
 
 @pytest.mark.asyncio
+async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, mock_coordinator):
+    """Test diagnostics includes multiple captured pages from parser fetches."""
+    hass = Mock(spec=HomeAssistant)
+
+    # Add HTML capture with multiple pages (login, status, software info, event log)
+    future_time = datetime.now() + timedelta(minutes=3)
+    mock_coordinator.data["_raw_html_capture"] = {
+        "timestamp": datetime.now().isoformat(),
+        "trigger": "manual",
+        "ttl_expires": future_time.isoformat(),
+        "urls": [
+            {
+                "url": "https://192.168.100.1/login.html",
+                "method": "GET",
+                "status_code": 200,
+                "content_type": "text/html",
+                "size_bytes": 5432,
+                "html": "<html><form action='/login'>Username: <input name='user'></form></html>",
+                "parser": "Motorola MB8611",
+                "description": "Login/Auth page"
+            },
+            {
+                "url": "https://192.168.100.1/login.html",
+                "method": "POST",
+                "status_code": 302,
+                "content_type": "text/html",
+                "size_bytes": 150,
+                "html": "<html><body>Redirecting...</body></html>",
+                "parser": "Motorola MB8611",
+                "description": "Login/Auth page"
+            },
+            {
+                "url": "https://192.168.100.1/MotoConnection.asp",
+                "method": "GET",
+                "status_code": 200,
+                "content_type": "text/html",
+                "size_bytes": 12450,
+                "html": """
+                <html>
+                    <tr><td>MAC</td><td>AA:BB:CC:DD:EE:FF</td></tr>
+                    <tr><td>Power</td><td>7.0 dBmV</td></tr>
+                </html>
+                """,
+                "parser": "Motorola MB8611",
+                "description": "Initial connection page"
+            },
+            {
+                "url": "https://192.168.100.1/MotoStatusSoftware.asp",
+                "method": "GET",
+                "status_code": 200,
+                "content_type": "text/html",
+                "size_bytes": 3200,
+                "html": "<html><tr><td>Software Version</td><td>3.0.1</td></tr></html>",
+                "parser": "Motorola MB8611",
+                "description": "Software info page"
+            },
+            {
+                "url": "https://192.168.100.1/MotoEventLog.asp",
+                "method": "GET",
+                "status_code": 200,
+                "content_type": "text/html",
+                "size_bytes": 8900,
+                "html": "<html><tr><td>Event</td><td>Connection established</td></tr></html>",
+                "parser": "Motorola MB8611",
+                "description": "Event log page"
+            }
+        ]
+    }
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_coordinator)
+
+    # Verify HTML capture is included with all pages
+    assert "raw_html_capture" in diagnostics
+    assert diagnostics["raw_html_capture"]["url_count"] == 5
+    assert diagnostics["raw_html_capture"]["trigger"] == "manual"
+
+    # Verify all page types are present
+    urls = diagnostics["raw_html_capture"]["urls"]
+    descriptions = [url.get("description", "") for url in urls]
+    assert "Login/Auth page" in descriptions
+    assert "Initial connection page" in descriptions
+    assert "Software info page" in descriptions
+    assert "Event log page" in descriptions
+
+    # Verify both GET and POST methods are captured
+    methods = [url.get("method") for url in urls]
+    assert "GET" in methods
+    assert "POST" in methods
+
+    # Verify sanitization occurred across all pages
+    for url_data in urls:
+        html = url_data.get("html", "")
+        if "AA:BB:CC:DD:EE:FF" in mock_coordinator.data["_raw_html_capture"]["urls"][urls.index(url_data)]["html"]:
+            # Original MAC should be removed, replacement should be present
+            assert "AA:BB:CC:DD:EE:FF" not in html
+            assert "XX:XX:XX:XX:XX:XX" in html
+
+
+@pytest.mark.asyncio
 async def test_diagnostics_excludes_expired_html_capture(mock_config_entry, mock_coordinator):
     """Test diagnostics excludes HTML capture when expired."""
     hass = Mock(spec=HomeAssistant)
