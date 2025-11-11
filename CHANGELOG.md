@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.0.1] - 2025-11-11
+## [3.1.0] - 2025-11-11
 
 ### Fixed
 - **MB8611 Static Parser Missing URL Patterns** - Fixed "No URL patterns available to try" error (Fixes #6)
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better error messages explain that full logs require HA logs UI, journalctl, or container logs
   - Will capture cable_modem_monitor errors when they occur for troubleshooting
 - **Version Logging on Startup** - Integration now logs version number when it starts
-  - Example: "Cable Modem Monitor version 3.0.1 is starting"
+  - Example: "Cable Modem Monitor version 3.1.0 is starting"
   - Helps identify which version is loaded when troubleshooting issues
   - Makes it easy to confirm integration loaded properly from diagnostic logs
 
