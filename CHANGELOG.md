@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Type Checking Errors** - Resolved all mypy type checking errors
   - Added type annotations (`dict[str, Any]`) for channel data dictionaries in SB6190 parser (custom_components/cable_modem_monitor/parsers/arris/sb6190.py:103, :154, :185)
-  - Added `# type: ignore[no-any-return]` for response.text returns in HNAP builder (custom_components/cable_modem_monitor/core/hnap_builder.py:70, :97)
+  - Removed `[mypy-requests.*]` ignore from mypy.ini to allow types-requests stubs (required by CI)
   - Added urllib3 to mypy.ini ignored imports list (mypy.ini:52-53)
-  - All code quality checks (ruff, black, mypy) now pass successfully
+  - All code quality checks (ruff, black, mypy with types-requests) now pass successfully
 
 ## [3.0.0] - 2025-11-10
 

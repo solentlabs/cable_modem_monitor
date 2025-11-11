@@ -67,7 +67,7 @@ class HNAPRequestBuilder:
         )
 
         response.raise_for_status()
-        return response.text  # type: ignore[no-any-return]
+        return response.text
 
     def call_multiple(self, session: requests.Session, base_url: str, actions: list[str]) -> str:
         """
@@ -94,7 +94,7 @@ class HNAPRequestBuilder:
         )
 
         response.raise_for_status()
-        return response.text  # type: ignore[no-any-return]
+        return response.text
 
     def _build_envelope(self, action: str, params: dict | None) -> str:
         """
