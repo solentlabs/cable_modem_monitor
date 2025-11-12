@@ -489,12 +489,17 @@ class TestFallbackParserDetection:
         # Fallback parser should NOT contribute URLs in tier 3
         assert "Unknown Modem (Fallback Mode)" not in parser_names
 
-    def test_fallback_only_tried_in_phase4_as_last_resort(self, mocker):
-        """Test that fallback parser is only tried in Phase 4 after all other parsers fail."""
+    def test_fallback_not_auto_selected_raises_error(self, mocker):
+        """Test that fallback parser is NOT auto-selected when detection fails.
+
+        User must manually select "Unknown Modem (Fallback Mode)" from the list.
+        This prevents accidental fallback for supported modems with connection issues.
+        """
+        from custom_components.cable_modem_monitor.core.discovery_helpers import ParserNotFoundError
         from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
         from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
 
-        # Use real fallback parser to ensure it instantiates properly
+        # Use real fallback parser to ensure it's available but not auto-selected
         scraper = ModemScraper("192.168.100.1", parser=[UniversalFallbackParser])
 
         html = "<html><body>Unknown Modem</body></html>"
@@ -508,12 +513,9 @@ class TestFallbackParserDetection:
         mocker.patch.object(scraper.session, "get", return_value=mock_response)
 
         # Call _detect_parser with correct signature (html, url, suggested_parser)
-        result = scraper._detect_parser(html, url, suggested_parser=None)
-
-        # Fallback parser should be returned (Phase 4)
-        assert result is not None
-        assert isinstance(result, UniversalFallbackParser)
-        assert result.name == "Unknown Modem (Fallback Mode)"
+        # Should raise ParserNotFoundError instead of auto-selecting fallback
+        with pytest.raises(ParserNotFoundError):
+            scraper._detect_parser(html, url, suggested_parser=None)
 
     def test_known_modem_detected_before_fallback(self):
         """Test that a known modem parser is detected before fallback parser."""

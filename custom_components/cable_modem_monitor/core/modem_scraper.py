@@ -652,15 +652,8 @@ class ModemScraper:
         if parser:
             return parser
 
-        # Phase 4: Try fallback parser as absolute last resort
-        _LOGGER.info("Phase 4: All specific parsers failed, trying fallback parser as last resort")
-        for parser_class in self.parsers:
-            if parser_class.manufacturer == "Unknown":
-                _LOGGER.info("Using fallback parser: %s (modem not specifically supported)", parser_class.name)
-                attempted_parsers.append(parser_class.name)
-                return parser_class()
-
-        # No parser matched (including fallback) - raise detailed error
+        # No parser matched - raise detailed error
+        # User can manually select "Unknown Modem (Fallback Mode)" from the list
         modem_info = {
             "title": soup.title.string if soup.title else "NO TITLE",
             "url": url,
