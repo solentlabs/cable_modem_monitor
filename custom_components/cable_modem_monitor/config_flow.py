@@ -218,9 +218,11 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        # Sort by manufacturer (alphabetical), then by priority (descending), then by name (alphabetical)
-        # The name tie-breaker ensures consistent ordering when parsers have the same priority
-        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority, p.name))
+
+        # Simple alphabetical sort, with fallback mode at the end
+        fallback_parsers = [p for p in parsers if "Fallback Mode" in p.name or p.manufacturer == "Unknown"]
+        regular_parsers = [p for p in parsers if "Fallback Mode" not in p.name and p.manufacturer != "Unknown"]
+        sorted_parsers = sorted(regular_parsers, key=lambda p: p.name) + sorted(fallback_parsers, key=lambda p: p.name)
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
@@ -351,9 +353,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
-        # Sort by manufacturer (alphabetical), then by priority (descending), then by name (alphabetical)
-        # The name tie-breaker ensures consistent ordering when parsers have the same priority
-        sorted_parsers = sorted(parsers, key=lambda p: (p.manufacturer, -p.priority, p.name))
+
+        # Simple alphabetical sort, with fallback mode at the end
+        fallback_parsers = [p for p in parsers if "Fallback Mode" in p.name or p.manufacturer == "Unknown"]
+        regular_parsers = [p for p in parsers if "Fallback Mode" not in p.name and p.manufacturer != "Unknown"]
+        sorted_parsers = sorted(regular_parsers, key=lambda p: p.name) + sorted(fallback_parsers, key=lambda p: p.name)
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
