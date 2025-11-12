@@ -54,7 +54,8 @@ async def async_setup_entry(
 
     # Check if we're in fallback mode (unsupported modem)
     # In fallback mode, only connectivity sensors have data
-    is_fallback_mode = coordinator.data.get("system_info", {}).get("fallback_mode", False)
+    # Note: system_info keys are prefixed with cable_modem_ in the coordinator data
+    is_fallback_mode = coordinator.data.get("cable_modem_fallback_mode", False)
 
     if not is_fallback_mode:
         # Add total error sensors (not available in fallback mode)

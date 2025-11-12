@@ -503,13 +503,12 @@ class TestFallbackModeSensorCreation:
                 {"channel": "1", "frequency": 591000000, "power": 3.5, "snr": 40.5, "corrected": 0, "uncorrected": 0}
             ],
             "cable_modem_upstream": [{"channel": "1", "frequency": 36000000, "power": 45.0}],
-            "system_info": {
-                "model": "Test Modem",
-                "manufacturer": "TestBrand",
-                "software_version": "1.0.0",
-                "uptime": "5 days",
-                "fallback_mode": False,  # Normal mode
-            },
+            # system_info keys are prefixed with cable_modem_
+            "cable_modem_model": "Test Modem",
+            "cable_modem_manufacturer": "TestBrand",
+            "cable_modem_software_version": "1.0.0",
+            "cable_modem_uptime": "5 days",
+            "cable_modem_fallback_mode": False,  # Normal mode
             "health_status": "healthy",
             "ping_latency_ms": 2.5,
             "http_latency_ms": 45.0,
@@ -524,12 +523,11 @@ class TestFallbackModeSensorCreation:
             "cable_modem_connection_status": "limited",
             "cable_modem_downstream": [],  # No channel data in fallback
             "cable_modem_upstream": [],  # No channel data in fallback
-            "system_info": {
-                "model": "Unknown Model",
-                "manufacturer": "Unknown",
-                "fallback_mode": True,  # Fallback mode flag
-                "status_message": "Modem not fully supported...",
-            },
+            # system_info keys are prefixed with cable_modem_
+            "cable_modem_model": "Unknown Model",
+            "cable_modem_manufacturer": "Unknown",
+            "cable_modem_fallback_mode": True,  # Fallback mode flag
+            "cable_modem_status_message": "Modem not fully supported...",
             "health_status": "healthy",
             "ping_latency_ms": 2.5,
             "http_latency_ms": 45.0,
