@@ -160,25 +160,13 @@ class UniversalFallbackParser(ModemParser):
         # Try to extract any basic info from the page if possible
         model_info = self._try_extract_model_info(soup)
 
-        # Return one dummy channel so the connection status becomes "online"
-        # This allows installation to succeed. Without this, modem_scraper
-        # sets status to "offline" which causes CannotConnectError
-        dummy_channel = {
-            "channel_id": "1",
-            "frequency": "0 Hz",
-            "power": "0 dBmV",
-            "snr": "0 dB",
-            "modulation": "Unknown",
-            "corrected": 0,
-            "uncorrected": 0,
-        }
-
         return {
-            "downstream": [dummy_channel],  # One dummy channel to pass validation
-            "upstream": [],  # Can be empty
+            "downstream": [],  # No channel data - modem not supported
+            "upstream": [],  # No channel data - modem not supported
             "system_info": {
                 "model": model_info or "Unknown Model",
                 "manufacturer": "Unknown",
+                "fallback_mode": True,  # Special flag to indicate fallback parser
                 "status_message": (
                     "⚠️ Your modem is not yet fully supported. "
                     "Press the 'Capture HTML' button to help us add support!"

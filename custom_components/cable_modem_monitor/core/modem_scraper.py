@@ -774,11 +774,21 @@ class ModemScraper:
         total_corrected = sum(ch.get("corrected") or 0 for ch in downstream)
         total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in downstream)
 
+        # Determine connection status
+        # If fallback mode is active (unsupported modem), use "limited" status
+        # This allows installation to succeed without showing dummy channel data
+        if system_info.get("fallback_mode"):
+            status = "limited"
+        elif downstream or upstream:
+            status = "online"
+        else:
+            status = "offline"
+
         # Prefix system_info keys with cable_modem_
         prefixed_system_info = {f"cable_modem_{key}": value for key, value in system_info.items()}
 
         return {
-            "cable_modem_connection_status": "online" if (downstream or upstream) else "offline",
+            "cable_modem_connection_status": status,
             "cable_modem_downstream": downstream,
             "cable_modem_upstream": upstream,
             "cable_modem_total_corrected": total_corrected,
