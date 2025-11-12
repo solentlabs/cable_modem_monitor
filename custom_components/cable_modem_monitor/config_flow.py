@@ -219,18 +219,20 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
 
-        # Simple alphabetical sort, with generic and fallback parsers at the end
-        # Generic parsers (like "MB Series (Generic)") are catch-alls for a manufacturer
-        # Fallback parsers (like "Unknown Modem") are catch-alls for any modem
-        special_parsers = [
-            p for p in parsers
-            if "Generic" in p.name or "Fallback Mode" in p.name or p.manufacturer == "Unknown"
-        ]
-        regular_parsers = [
-            p for p in parsers
-            if "Generic" not in p.name and "Fallback Mode" not in p.name and p.manufacturer != "Unknown"
-        ]
-        sorted_parsers = sorted(regular_parsers, key=lambda p: p.name) + sorted(special_parsers, key=lambda p: p.name)
+        # Sort by manufacturer (alphabetical), then by name (alphabetical)
+        # Generic parsers appear last within their manufacturer group
+        # Unknown/Fallback parsers appear at the very end
+        def sort_key(p):
+            # Unknown manufacturer goes last
+            if p.manufacturer == "Unknown":
+                return ("ZZZZ", "ZZZZ")  # Sort to end
+            # Within each manufacturer, Generic parsers go last
+            if "Generic" in p.name:
+                return (p.manufacturer, "ZZZZ")  # Generic last in manufacturer
+            # Regular parsers sort by manufacturer then name
+            return (p.manufacturer, p.name)
+
+        sorted_parsers = sorted(parsers, key=sort_key)
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
@@ -362,18 +364,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
 
-        # Simple alphabetical sort, with generic and fallback parsers at the end
-        # Generic parsers (like "MB Series (Generic)") are catch-alls for a manufacturer
-        # Fallback parsers (like "Unknown Modem") are catch-alls for any modem
-        special_parsers = [
-            p for p in parsers
-            if "Generic" in p.name or "Fallback Mode" in p.name or p.manufacturer == "Unknown"
-        ]
-        regular_parsers = [
-            p for p in parsers
-            if "Generic" not in p.name and "Fallback Mode" not in p.name and p.manufacturer != "Unknown"
-        ]
-        sorted_parsers = sorted(regular_parsers, key=lambda p: p.name) + sorted(special_parsers, key=lambda p: p.name)
+        # Sort by manufacturer (alphabetical), then by name (alphabetical)
+        # Generic parsers appear last within their manufacturer group
+        # Unknown/Fallback parsers appear at the very end
+        def sort_key(p):
+            # Unknown manufacturer goes last
+            if p.manufacturer == "Unknown":
+                return ("ZZZZ", "ZZZZ")  # Sort to end
+            # Within each manufacturer, Generic parsers go last
+            if "Generic" in p.name:
+                return (p.manufacturer, "ZZZZ")  # Generic last in manufacturer
+            # Regular parsers sort by manufacturer then name
+            return (p.manufacturer, p.name)
+
+        sorted_parsers = sorted(parsers, key=sort_key)
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
