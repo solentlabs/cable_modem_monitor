@@ -572,7 +572,7 @@ class TestFallbackModeSensorCreation:
         assert len(added_entities) >= 10
 
     @pytest.mark.asyncio
-    async def test_fallback_mode_skips_unavailable_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
+    async def test_skips_unavailable_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
         """Test that fallback mode only creates sensors that have data."""
 
         from custom_components.cable_modem_monitor.const import DOMAIN
@@ -611,7 +611,7 @@ class TestFallbackModeSensorCreation:
         assert len(added_entities) == 4
 
     @pytest.mark.asyncio
-    async def test_fallback_mode_no_channel_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
+    async def test_no_channel_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
         """Test that fallback mode creates no per-channel sensors."""
 
         from custom_components.cable_modem_monitor.const import DOMAIN

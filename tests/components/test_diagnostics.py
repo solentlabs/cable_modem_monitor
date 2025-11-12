@@ -21,7 +21,7 @@ from custom_components.cable_modem_monitor.diagnostics import (
 class TestSanitizeHtml:
     """Test HTML sanitization function."""
 
-    def test_sanitize_html_removes_mac_addresses(self):
+    def test_removes_mac_addresses(self):
         """Test that MAC addresses are sanitized."""
         html = """
         <tr><td>MAC Address</td><td>AA:BB:CC:DD:EE:FF</td></tr>
@@ -33,7 +33,7 @@ class TestSanitizeHtml:
         assert "11-22-33-44-55-66" not in sanitized
         assert "XX:XX:XX:XX:XX:XX" in sanitized
 
-    def test_sanitize_html_removes_serial_numbers(self):
+    def test_removes_serial_numbers(self):
         """Test that serial numbers are sanitized."""
         test_cases = [
             ("Serial Number: 123456789ABC", "Serial Number: ***REDACTED***"),
@@ -46,7 +46,7 @@ class TestSanitizeHtml:
             assert expected_pattern in sanitized
             assert original not in sanitized
 
-    def test_sanitize_html_removes_account_ids(self):
+    def test_removes_account_ids(self):
         """Test that account/subscriber IDs are sanitized."""
         test_cases = [
             "Account ID: 123456789",
@@ -63,7 +63,7 @@ class TestSanitizeHtml:
                 char.isdigit() for word in sanitized.split("***REDACTED***") for char in word if char.isalnum()
             )
 
-    def test_sanitize_html_removes_private_ips(self):
+    def test_removes_private_ips(self):
         """Test that private IP addresses are sanitized."""
         test_cases = [
             ("Gateway: 10.0.1.1", "Gateway: ***PRIVATE_IP***"),
@@ -78,7 +78,7 @@ class TestSanitizeHtml:
             original_ip = original.split(": ")[1]
             assert original_ip not in sanitized
 
-    def test_sanitize_html_preserves_common_modem_ips(self):
+    def test_preserves_common_modem_ips(self):
         """Test that common modem IPs are preserved for debugging."""
         common_ips = [
             "192.168.100.1",  # Common Motorola modem IP
@@ -91,7 +91,7 @@ class TestSanitizeHtml:
             sanitized = _sanitize_html(html)
             assert ip in sanitized  # Should be preserved
 
-    def test_sanitize_html_removes_passwords(self):
+    def test_removes_passwords(self):
         """Test that passwords and passphrases are sanitized."""
         test_cases = [
             'password="secret123"',
@@ -105,7 +105,7 @@ class TestSanitizeHtml:
             assert "***REDACTED***" in sanitized
             assert "secret" not in sanitized.lower() or "***REDACTED***" in sanitized
 
-    def test_sanitize_html_removes_password_form_values(self):
+    def test_removes_password_form_values(self):
         """Test that password input field values are sanitized."""
         html = '<input type="password" name="pwd" value="MyPassword123">'
         sanitized = _sanitize_html(html)
@@ -114,7 +114,7 @@ class TestSanitizeHtml:
         assert "***REDACTED***" in sanitized
         assert 'type="password"' in sanitized  # Structure preserved
 
-    def test_sanitize_html_removes_session_tokens(self):
+    def test_removes_session_tokens(self):
         """Test that session tokens and auth tokens are sanitized."""
         html = """
         <meta name="csrf-token" content="abc123def456ghi789jkl012mno345pqr678stu">
@@ -126,7 +126,7 @@ class TestSanitizeHtml:
         assert "xyz999abc888def777ghi666" not in sanitized
         assert "***REDACTED***" in sanitized
 
-    def test_sanitize_html_preserves_signal_data(self):
+    def test_preserves_signal_data(self):
         """Test that signal quality data is preserved for debugging."""
         html = """
         <tr>
@@ -142,7 +142,7 @@ class TestSanitizeHtml:
         assert "40.0 dB" in sanitized
         assert "555000000 Hz" in sanitized
 
-    def test_sanitize_html_preserves_channel_ids(self):
+    def test_preserves_channel_ids(self):
         """Test that channel IDs and counts are preserved."""
         html = """
         <tr><td>Channel ID</td><td>23</td></tr>
@@ -156,7 +156,7 @@ class TestSanitizeHtml:
         assert "32" in sanitized
         assert "12345" in sanitized
 
-    def test_sanitize_html_handles_multiple_macs(self):
+    def test_handles_multiple_macs(self):
         """Test sanitization of multiple MAC addresses in same HTML."""
         html = """
         WAN MAC: AA:BB:CC:DD:EE:FF
@@ -172,12 +172,12 @@ class TestSanitizeHtml:
         # Should have 3 XX:XX:XX:XX:XX:XX replacements
         assert sanitized.count("XX:XX:XX:XX:XX:XX") == 3
 
-    def test_sanitize_html_handles_empty_string(self):
+    def test_handles_empty_string(self):
         """Test that empty string is handled gracefully."""
         sanitized = _sanitize_html("")
         assert sanitized == ""
 
-    def test_sanitize_html_handles_no_sensitive_data(self):
+    def test_handles_no_sensitive_data(self):
         """Test HTML with no sensitive data passes through mostly unchanged."""
         html = """
         <tr><td>Power</td><td>5.0 dBmV</td></tr>
@@ -193,7 +193,7 @@ class TestSanitizeHtml:
 class TestSanitizeLogMessage:
     """Test log message sanitization function."""
 
-    def test_sanitize_log_removes_credentials(self):
+    def test_removes_credentials(self):
         """Test that credentials are removed from log messages."""
         test_cases = [
             "password=secret123",
@@ -205,7 +205,7 @@ class TestSanitizeLogMessage:
             sanitized = _sanitize_log_message(message)
             assert "***REDACTED***" in sanitized
 
-    def test_sanitize_log_removes_file_paths(self):
+    def test_removes_file_paths(self):
         """Test that file paths are sanitized."""
         message = "Error in /config/custom_components/test.py and /home/user/.homeassistant/test.log"
         sanitized = _sanitize_log_message(message)
@@ -214,7 +214,7 @@ class TestSanitizeLogMessage:
         assert "/home/***PATH***" in sanitized
         assert "/config/custom_components/test.py" not in sanitized
 
-    def test_sanitize_log_removes_private_ips(self):
+    def test_removes_private_ips(self):
         """Test that private IPs are removed but common modem IPs preserved."""
         message = "Connecting to 10.0.0.1 and 192.168.100.1 and 172.16.5.5"
         sanitized = _sanitize_log_message(message)

@@ -405,7 +405,7 @@ class TestFallbackParserDetection:
         mock_class.url_patterns = [{"path": "/", "auth_method": "basic", "auth_required": False}]
         return mock_class
 
-    def test_fallback_excluded_from_anonymous_probing(
+    def test_excluded_from_anonymous_probing(
         self, mocker, mock_normal_parser_class, mock_fallback_parser_class
     ):
         """Test that fallback parser is excluded from Phase 1 (anonymous probing)."""
@@ -433,7 +433,7 @@ class TestFallbackParserDetection:
         # Normal parser should have been tried
         assert mock_normal_parser_class.can_parse.call_count > 0
 
-    def test_fallback_excluded_from_prioritized_parsers(
+    def test_excluded_from_prioritized_parsers(
         self, mocker, mock_normal_parser_class, mock_fallback_parser_class
     ):
         """Test that fallback parser is excluded from Phase 3 (prioritized parsers)."""
@@ -460,7 +460,7 @@ class TestFallbackParserDetection:
         # Normal parser should have been tried
         assert mock_normal_parser_class.can_parse.call_count > 0
 
-    def test_fallback_excluded_from_url_discovery_tier2(
+    def test_excluded_from_url_discovery_tier2(
         self, mocker, mock_normal_parser_class, mock_fallback_parser_class
     ):
         """Test that fallback parser is excluded from Tier 2 URL discovery."""
@@ -481,7 +481,7 @@ class TestFallbackParserDetection:
         # Normal parser should contribute URLs
         assert "Test Parser" in parser_names
 
-    def test_fallback_excluded_from_url_discovery_tier3(
+    def test_excluded_from_url_discovery_tier3(
         self, mocker, mock_normal_parser_class, mock_fallback_parser_class
     ):
         """Test that fallback parser is excluded from Tier 3 URL discovery."""
@@ -497,7 +497,7 @@ class TestFallbackParserDetection:
         # Fallback parser should NOT contribute URLs in tier 3
         assert "Unknown Modem (Fallback Mode)" not in parser_names
 
-    def test_fallback_not_auto_selected_raises_error(self, mocker):
+    def test_not_auto_selected_raises_error(self, mocker):
         """Test that fallback parser is NOT auto-selected when detection fails.
 
         User must manually select "Unknown Modem (Fallback Mode)" from the list.

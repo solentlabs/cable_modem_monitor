@@ -165,31 +165,3 @@ class TestParserLoadingPerformance:
         assert cached_time < 0.001
 
 
-class TestMB8611StaticParserFix:
-    """Test that MB8611 Static parser has required url_patterns."""
-
-    def test_mb8611_static_has_url_patterns(self):
-        """Test that MB8611 Static parser has url_patterns attribute."""
-        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
-        assert parser_class is not None
-
-        # Check for url_patterns attribute
-        assert hasattr(parser_class, "url_patterns")
-        assert isinstance(parser_class.url_patterns, list)
-        assert len(parser_class.url_patterns) > 0
-
-    def test_mb8611_static_url_patterns_format(self):
-        """Test that MB8611 Static url_patterns are correctly formatted."""
-        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
-        assert parser_class is not None
-
-        # Check first pattern
-        pattern = parser_class.url_patterns[0]
-        assert "path" in pattern
-        assert "auth_method" in pattern
-        assert "auth_required" in pattern
-
-        # Check specific values
-        assert pattern["path"] == "/MotoStatusConnection.html"
-        assert pattern["auth_method"] == "none"
-        assert pattern["auth_required"] is False

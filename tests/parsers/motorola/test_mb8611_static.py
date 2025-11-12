@@ -135,3 +135,37 @@ class TestMetadata:
         """Test parser priority."""
         parser = MotorolaMB8611StaticParser()
         assert parser.priority == 100
+
+
+class TestUrlPatterns:
+    """Test parser URL patterns configuration."""
+
+    def test_has_url_patterns(self):
+        """Test that parser has url_patterns attribute."""
+        from custom_components.cable_modem_monitor.parsers import get_parser_by_name
+
+        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
+        assert parser_class is not None
+
+        # Check for url_patterns attribute
+        assert hasattr(parser_class, "url_patterns")
+        assert isinstance(parser_class.url_patterns, list)
+        assert len(parser_class.url_patterns) > 0
+
+    def test_url_patterns_format(self):
+        """Test that url_patterns are correctly formatted."""
+        from custom_components.cable_modem_monitor.parsers import get_parser_by_name
+
+        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
+        assert parser_class is not None
+
+        # Check first pattern
+        pattern = parser_class.url_patterns[0]
+        assert "path" in pattern
+        assert "auth_method" in pattern
+        assert "auth_required" in pattern
+
+        # Check specific values
+        assert pattern["path"] == "/MotoStatusConnection.html"
+        assert pattern["auth_method"] == "none"
+        assert pattern["auth_required"] is False

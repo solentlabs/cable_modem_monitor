@@ -60,41 +60,41 @@ class TestExtractFloat:
 class TestParseUptime:
     """Test the parse_uptime_to_seconds function."""
 
-    def test_parse_uptime_days_hours(self):
+    def test_days_hours(self):
         """Test parsing uptime with days and hours."""
         result = parse_uptime_to_seconds("2 days 5 hours")
         expected = (2 * 86400) + (5 * 3600)  # 2 days + 5 hours
         assert result == expected
 
-    def test_parse_uptime_hours_only(self):
+    def test_hours_only(self):
         """Test parsing uptime with only hours."""
         result = parse_uptime_to_seconds("3 hours")
         expected = 3 * 3600
         assert result == expected
 
-    def test_parse_uptime_with_minutes(self):
+    def test_with_minutes(self):
         """Test parsing uptime with hours and minutes."""
         result = parse_uptime_to_seconds("3 hours 45 minutes")
         expected = (3 * 3600) + (45 * 60)
         assert result == expected
 
-    def test_parse_uptime_complex(self):
+    def test_complex(self):
         """Test parsing complex uptime string."""
         result = parse_uptime_to_seconds("5 days 12 hours 30 minutes 15 seconds")
         expected = (5 * 86400) + (12 * 3600) + (30 * 60) + 15
         assert result == expected
 
-    def test_parse_uptime_unknown(self):
+    def test_unknown(self):
         """Test parsing Unknown uptime."""
         result = parse_uptime_to_seconds("Unknown")
         assert result is None
 
-    def test_parse_uptime_empty(self):
+    def test_empty(self):
         """Test parsing empty uptime."""
         result = parse_uptime_to_seconds("")
         assert result is None
 
-    def test_parse_uptime_none(self):
+    def test_none(self):
         """Test parsing None uptime."""
         result = parse_uptime_to_seconds(None)
         assert result is None

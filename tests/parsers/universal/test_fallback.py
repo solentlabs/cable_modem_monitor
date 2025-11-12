@@ -82,7 +82,7 @@ class TestParse:
 class TestModelExtraction:
     """Test the _try_extract_model_info method."""
 
-    def test_extracts_model_from_title(self):
+    def test_from_title(self):
         """Test extracting modem model from HTML title tag."""
         parser = UniversalFallbackParser()
         html = "<html><head><title>NETGEAR CM600</title></head></html>"
@@ -92,7 +92,7 @@ class TestModelExtraction:
 
         assert result["system_info"]["model"] == "NETGEAR CM600"
 
-    def test_extracts_model_from_meta_tags(self):
+    def test_from_meta_tags(self):
         """Test extracting modem model from meta tags."""
         parser = UniversalFallbackParser()
         html = '<html><head><meta name="product" content="ARRIS SB8200"/></head></html>'
@@ -102,7 +102,7 @@ class TestModelExtraction:
 
         assert result["system_info"]["model"] == "ARRIS SB8200"
 
-    def test_extracts_netgear_model_from_body(self):
+    def test_netgear_from_body(self):
         """Test extracting NETGEAR model from HTML body text."""
         parser = UniversalFallbackParser()
         html = "<html><body>Welcome to your NETGEAR CM1000 Cable Modem</body></html>"
@@ -112,7 +112,7 @@ class TestModelExtraction:
 
         assert "NETGEAR CM1000" in result["system_info"]["model"]
 
-    def test_extracts_arris_model_from_body(self):
+    def test_arris_from_body(self):
         """Test extracting ARRIS model from HTML body text."""
         parser = UniversalFallbackParser()
         html = "<html><body>ARRIS SB6190 Status Page</body></html>"
@@ -122,7 +122,7 @@ class TestModelExtraction:
 
         assert "ARRIS SB6190" in result["system_info"]["model"]
 
-    def test_extracts_motorola_model_from_body(self):
+    def test_motorola_from_body(self):
         """Test extracting Motorola model from HTML body text."""
         parser = UniversalFallbackParser()
         html = "<html><body>Motorola MB8600 Configuration</body></html>"
