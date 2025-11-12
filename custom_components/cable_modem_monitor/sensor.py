@@ -155,7 +155,8 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         return self.coordinator.last_update_success and status in (
             "online",
             "offline",
-        )  # Available for both online and offline (just rebooting)
+            "limited",  # Fallback mode - basic connectivity only
+        )
 
 
 class ModemConnectionStatusSensor(ModemSensorBase):
