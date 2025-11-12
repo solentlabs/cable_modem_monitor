@@ -566,8 +566,8 @@ class TestFallbackModeSensorCreation:
         assert "HTTP Latency" in sensor_names
         assert "Total Corrected Errors" in sensor_names  # Should be present
         assert "Total Uncorrected Errors" in sensor_names  # Should be present
-        assert "Downstream Channel Count" in sensor_names  # Should be present
-        assert "Upstream Channel Count" in sensor_names  # Should be present
+        assert "DS Channel Count" in sensor_names  # Should be present (abbreviated name)
+        assert "US Channel Count" in sensor_names  # Should be present (abbreviated name)
         assert "Software Version" in sensor_names  # Should be present
         assert "System Uptime" in sensor_names  # Should be present
 
@@ -606,8 +606,8 @@ class TestFallbackModeSensorCreation:
         # Should NOT include sensors that require channel/system data
         assert "Total Corrected Errors" not in sensor_names  # Skipped in fallback
         assert "Total Uncorrected Errors" not in sensor_names  # Skipped in fallback
-        assert "Downstream Channel Count" not in sensor_names  # Skipped in fallback
-        assert "Upstream Channel Count" not in sensor_names  # Skipped in fallback
+        assert "DS Channel Count" not in sensor_names  # Skipped in fallback (abbreviated name)
+        assert "US Channel Count" not in sensor_names  # Skipped in fallback (abbreviated name)
         assert "Software Version" not in sensor_names  # Skipped in fallback
         assert "System Uptime" not in sensor_names  # Skipped in fallback
 
