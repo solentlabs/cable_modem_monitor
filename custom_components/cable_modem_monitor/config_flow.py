@@ -269,12 +269,18 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
         from homeassistant.helpers import selector
 
+        # Preserve user input when showing form again after error
+        default_host = user_input.get(CONF_HOST, "192.168.100.1") if user_input else "192.168.100.1"
+        default_username = user_input.get(CONF_USERNAME, "") if user_input else ""
+        default_password = user_input.get(CONF_PASSWORD, "") if user_input else ""
+        default_modem = user_input.get(CONF_MODEM_CHOICE, "auto") if user_input else "auto"
+
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_HOST, default="192.168.100.1"): str,
-                vol.Optional(CONF_USERNAME, default=""): str,
-                vol.Optional(CONF_PASSWORD, default=""): str,
-                vol.Required(CONF_MODEM_CHOICE, default="auto"): selector.SelectSelector(
+                vol.Required(CONF_HOST, default=default_host): str,
+                vol.Optional(CONF_USERNAME, default=default_username): str,
+                vol.Optional(CONF_PASSWORD, default=default_password): str,
+                vol.Required(CONF_MODEM_CHOICE, default=default_modem): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=modem_choices,
                         mode=selector.SelectSelectorMode.DROPDOWN,
