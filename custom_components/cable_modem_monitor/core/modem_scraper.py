@@ -146,6 +146,29 @@ class ModemScraper:
             return
 
         try:
+            # Normalize URL for deduplication
+            from urllib.parse import urlparse, urlunparse
+
+            def normalize_url(url: str) -> str:
+                """Normalize URL for deduplication."""
+                parsed = urlparse(url)
+                # Remove fragment, normalize path
+                path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+                normalized = urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, parsed.query, ""))
+                return normalized
+
+            normalized_url = normalize_url(response.url)
+
+            # Check if we've already captured this URL
+            for existing in self._captured_urls:
+                if normalize_url(existing["url"]) == normalized_url:
+                    _LOGGER.debug(
+                        "Skipping duplicate capture: %s (already captured as '%s')",
+                        response.url,
+                        existing["description"],
+                    )
+                    return
+
             # Get parser name if available
             parser_name = self.parser.name if self.parser else "unknown"
 
