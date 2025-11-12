@@ -364,30 +364,46 @@ class ModemScraper:
         # Add other URLs from cached parser
         self._add_parser_urls(urls, parser, exclude_url=self.cached_url)
 
-        # Add other parsers as fallback
+        # Add other parsers as fallback (excluding fallback parser itself)
         for parser_class in self.parsers:
             if parser_class.name != self.parser_name:
+                # Skip fallback parser - it should only be tried as last resort
+                if parser_class.manufacturer == "Unknown":
+                    continue
                 # Cast to type[ModemParser] to satisfy type checker
                 self._add_parser_urls(urls, cast(type[ModemParser], parser_class))
 
         return urls
 
     def _get_tier3_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
-        """Get URLs for Tier 3: Auto-detection mode - try all parsers."""
+        """Get URLs for Tier 3: Auto-detection mode - try all parsers.
+
+        Note: Excludes fallback parser (Unknown manufacturer) from URL discovery.
+        Fallback parser should only be tried as last resort during detection phases.
+        """
         _LOGGER.info("Tier 3: Auto-detection mode - trying all parsers")
         urls = []
 
-        # Try cached URL first with any compatible parser
+        # Try cached URL first with any compatible parser (excluding fallback)
         if self.cached_url:
             for parser_class in self.parsers:
+                # Skip fallback parser - it should only be tried as last resort
+                if parser_class.manufacturer == "Unknown":
+                    continue
+
                 for pattern in parser_class.url_patterns:
                     path = pattern.get("path")
                     if isinstance(path, str) and path in self.cached_url:
                         urls.append((self.cached_url, str(pattern["auth_method"]), parser_class))
                         break
 
-        # Add all parser URLs
+        # Add all parser URLs (excluding fallback)
         for parser_class in self.parsers:
+            # Skip fallback parser - it should only be tried as last resort during detection
+            if parser_class.manufacturer == "Unknown":
+                _LOGGER.debug("Skipping fallback parser in URL discovery: %s", parser_class.name)
+                continue
+
             for pattern in parser_class.url_patterns:
                 url = f"{self.base_url}{pattern['path']}"
                 if url != self.cached_url:
