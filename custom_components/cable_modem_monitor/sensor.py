@@ -615,12 +615,12 @@ class ModemPingLatencySensor(ModemSensorBase):
         # No device_class - latency measurements don't have a standard class
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         """Return the ping latency in milliseconds."""
         ping_latency = self.coordinator.data.get("ping_latency_ms")
         if ping_latency is None:
             return None
-        return float(ping_latency)
+        return round(ping_latency)
 
 
 class ModemHttpLatencySensor(ModemSensorBase):
@@ -637,9 +637,9 @@ class ModemHttpLatencySensor(ModemSensorBase):
         # No device_class - latency measurements don't have a standard class
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         """Return the HTTP latency in milliseconds."""
         http_latency = self.coordinator.data.get("http_latency_ms")
         if http_latency is None:
             return None
-        return float(http_latency)
+        return round(http_latency)
