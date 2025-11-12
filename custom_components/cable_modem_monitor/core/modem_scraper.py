@@ -901,10 +901,10 @@ class ModemScraper:
             True if parser supports restart, False otherwise
         """
         if self.parser is None:
-            _LOGGER.error("Cannot validate restart capability: parser is not set")
+            _LOGGER.warning("Cannot validate restart capability: parser is not set")
             return False
         if not hasattr(self.parser, "restart"):
-            _LOGGER.error("Parser %s does not support restart functionality", self.parser.name)
+            _LOGGER.warning("Parser %s does not support restart functionality", self.parser.name)
             return False
         return True
 

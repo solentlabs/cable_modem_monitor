@@ -73,6 +73,40 @@ class ModemRestartButton(ModemButtonBase):
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
         self._attr_icon = "mdi:restart"
 
+    @property
+    def available(self) -> bool:
+        """Return if button is available (modem supports restart)."""
+        # Check if modem supports restart functionality
+        parser_name = self._entry.data.get("parser_name", "")
+        detected_modem = self._entry.data.get("detected_modem", "")
+
+        # Fallback mode doesn't support restart
+        if "Fallback Mode" in parser_name or "Unknown" in detected_modem:
+            return False
+
+        # Check if parser has restart method
+        modem_choice = self._entry.data.get("modem_choice", "")
+        if modem_choice and modem_choice != "auto":
+            from .parsers import get_parser_by_name
+            try:
+                parser_class = get_parser_by_name(modem_choice)
+                if parser_class and hasattr(parser_class, "restart"):
+                    return True
+            except Exception:
+                pass
+
+        # Default to unavailable for safety
+        return False
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional state attributes."""
+        parser_name = self._entry.data.get("parser_name", "Unknown")
+        return {
+            "parser": parser_name,
+            "reason": "Modem does not support remote restart" if not self.available else "Ready",
+        }
+
     async def async_press(self) -> None:
         """Handle the button press."""
         import asyncio
@@ -136,7 +170,7 @@ class ModemRestartButton(ModemButtonBase):
             # Start monitoring task
             asyncio.create_task(self._monitor_restart())
         else:
-            _LOGGER.error("Failed to restart modem")
+            _LOGGER.warning("Failed to restart modem - may not be supported by this modem model")
             # Check if it's an unsupported modem
             detected_modem = self._entry.data.get("detected_modem", "Unknown")
             # Create an error notification with helpful message
