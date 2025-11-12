@@ -494,13 +494,10 @@ class TestFallbackParserDetection:
         from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
         from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
 
-        from bs4 import BeautifulSoup
-
         # Use real fallback parser to ensure it instantiates properly
         scraper = ModemScraper("192.168.100.1", parser=[UniversalFallbackParser])
 
         html = "<html><body>Unknown Modem</body></html>"
-        soup = BeautifulSoup(html, "html.parser")
         url = "http://192.168.100.1/"
 
         # Mock session.get
@@ -510,11 +507,8 @@ class TestFallbackParserDetection:
         mock_response.url = url
         mocker.patch.object(scraper.session, "get", return_value=mock_response)
 
-        # Mock _fetch_data to return our HTML
-        mocker.patch.object(scraper, "_fetch_data", return_value=(html, url, None))
-
-        # Call _detect_parser (which includes all phases)
-        result = scraper._detect_parser(soup, url, html)
+        # Call _detect_parser with correct signature (html, url, suggested_parser)
+        result = scraper._detect_parser(html, url, suggested_parser=None)
 
         # Fallback parser should be returned (Phase 4)
         assert result is not None
