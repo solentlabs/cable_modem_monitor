@@ -150,8 +150,11 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
         _LOGGER.error("Error connecting to modem: %s", err)
         raise CannotConnectError from err
 
-    # Allow "limited" status for fallback parser (unsupported modems)
-    # This enables installation even when modem isn't fully supported
+    # Allow installation for various status levels:
+    # - "online": Normal operation with channel data
+    # - "limited": Fallback mode (unsupported modem)
+    # - "parser_issue": Known parser but no channel data (bridge mode, parser bug, etc.)
+    # Only reject truly offline/unreachable modems
     status = modem_data.get("cable_modem_connection_status")
     if status in ["offline", "unreachable"]:
         raise CannotConnectError

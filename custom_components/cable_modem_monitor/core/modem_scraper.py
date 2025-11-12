@@ -814,10 +814,28 @@ class ModemScraper:
         # This allows installation to succeed without showing dummy channel data
         if system_info.get("fallback_mode"):
             status = "limited"
-        elif downstream or upstream:
-            status = "online"
+        elif not downstream and not upstream:
+            # Known parser detected but extracted no channel data
+            # This could happen if: modem in bridge mode, parser bug, HTML format changed
+            status = "parser_issue"
+            # Add helpful status message if not already present
+            if "status_message" not in system_info:
+                parser_name = self.parser.name if self.parser else "Unknown"
+                system_info["status_message"] = (
+                    f"⚠️  Parser Issue: No Channel Data\n\n"
+                    f"Connected to {parser_name}, but unable to extract channel data.\n\n"
+                    f"Possible causes:\n"
+                    f"• Modem is in bridge mode (no RF data available)\n"
+                    f"• Modem firmware changed HTML structure\n"
+                    f"• Modem still initializing after reboot\n\n"
+                    f"What you can do:\n"
+                    f"1. Check if modem is in bridge mode (contact ISP)\n"
+                    f"2. Click 'Capture HTML' to help debug parser\n"
+                    f"3. Wait a few minutes if modem just rebooted"
+                )
         else:
-            status = "offline"
+            # Normal operation - parser found channel data
+            status = "online"
 
         # Prefix system_info keys with cable_modem_
         prefixed_system_info = {f"cable_modem_{key}": value for key, value in system_info.items()}

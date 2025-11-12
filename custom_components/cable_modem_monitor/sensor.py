@@ -156,6 +156,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
             "online",
             "offline",
             "limited",  # Fallback mode - basic connectivity only
+            "parser_issue",  # Known parser but no channel data extracted
         )
 
 
