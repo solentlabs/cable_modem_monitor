@@ -34,7 +34,7 @@ class HealthCheckResult:
     def status(self) -> str:
         """Return human-readable status."""
         if self.ping_success and self.http_success:
-            return "healthy"
+            return "responsive"
         elif self.ping_success and not self.http_success:
             return "degraded"
         elif not self.ping_success and self.http_success:

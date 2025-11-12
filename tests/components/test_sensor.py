@@ -509,7 +509,7 @@ class TestFallbackModeSensorCreation:
             "cable_modem_software_version": "1.0.0",
             "cable_modem_uptime": "5 days",
             "cable_modem_fallback_mode": False,  # Normal mode
-            "health_status": "healthy",
+            "health_status": "responsive",
             "ping_latency_ms": 2.5,
             "http_latency_ms": 45.0,
         }
@@ -528,7 +528,7 @@ class TestFallbackModeSensorCreation:
             "cable_modem_manufacturer": "Unknown",
             "cable_modem_fallback_mode": True,  # Fallback mode flag
             "cable_modem_status_message": "Modem not fully supported...",
-            "health_status": "healthy",
+            "health_status": "responsive",
             "ping_latency_ms": 2.5,
             "http_latency_ms": 45.0,
         }
