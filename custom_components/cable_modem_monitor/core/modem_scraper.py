@@ -503,10 +503,17 @@ class ModemScraper:
         return None
 
     def _try_anonymous_probing(self, circuit_breaker, attempted_parsers: list) -> ModemParser | None:
-        """Try anonymous probing for modems with public pages."""
-        _LOGGER.info("Phase 3: Attempting anonymous probing before authentication")
+        """Try anonymous probing for modems with public pages.
+
+        Note: Excludes fallback parser - only tries real modem parsers.
+        """
+        _LOGGER.info("Phase 1: Attempting anonymous probing before authentication")
 
         for parser_class in self.parsers:
+            # Skip fallback parser - it should only be used as last resort
+            if parser_class.manufacturer == "Unknown":
+                continue
+
             if not circuit_breaker.should_continue():
                 break
 
@@ -568,7 +575,10 @@ class ModemScraper:
     def _try_prioritized_parsers(
         self, soup, url: str, html: str, suggested_parser, circuit_breaker, attempted_parsers: list
     ) -> ModemParser | None:
-        """Try parsers in prioritized order using heuristics."""
+        """Try parsers in prioritized order using heuristics.
+
+        Note: Excludes fallback parser - only tries real modem parsers.
+        """
         _LOGGER.info("Phase 3: Using parser heuristics to prioritize likely parsers")
         prioritized_parsers = ParserHeuristics.get_likely_parsers(
             self.base_url, self.parsers, self.session, self.verify_ssl
@@ -577,6 +587,11 @@ class ModemScraper:
         _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)", len(prioritized_parsers))
 
         for parser_class in prioritized_parsers:
+            # Skip fallback parser - it should only be used as last resort
+            if parser_class.manufacturer == "Unknown":
+                _LOGGER.debug("Skipping fallback parser in detection: %s", parser_class.name)
+                continue
+
             if not circuit_breaker.should_continue():
                 break
 
@@ -637,7 +652,15 @@ class ModemScraper:
         if parser:
             return parser
 
-        # No parser matched - raise detailed error
+        # Phase 4: Try fallback parser as absolute last resort
+        _LOGGER.info("Phase 4: All specific parsers failed, trying fallback parser as last resort")
+        for parser_class in self.parsers:
+            if parser_class.manufacturer == "Unknown":
+                _LOGGER.info("Using fallback parser: %s (modem not specifically supported)", parser_class.name)
+                attempted_parsers.append(parser_class.name)
+                return parser_class()
+
+        # No parser matched (including fallback) - raise detailed error
         modem_info = {
             "title": soup.title.string if soup.title else "NO TITLE",
             "url": url,
