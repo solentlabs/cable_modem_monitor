@@ -610,7 +610,7 @@ class ModemPingLatencySensor(ModemSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:speedometer"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.DURATION
+        # No device_class - latency measurements don't have a standard class
 
     @property
     def native_value(self) -> float | None:
@@ -632,7 +632,7 @@ class ModemHttpLatencySensor(ModemSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.DURATION
+        # No device_class - latency measurements don't have a standard class
 
     @property
     def native_value(self) -> float | None:
