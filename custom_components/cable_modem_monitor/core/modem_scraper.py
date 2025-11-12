@@ -248,7 +248,8 @@ class ModemScraper:
                         continue
 
                     # Skip common binary file extensions
-                    if any(absolute_url.lower().endswith(ext) for ext in [".jpg", ".png", ".gif", ".css", ".js", ".ico", ".pdf", ".zip"]):
+                    binary_extensions = [".jpg", ".png", ".gif", ".css", ".js", ".ico", ".pdf", ".zip"]
+                    if any(absolute_url.lower().endswith(ext) for ext in binary_extensions):
                         continue
 
                     # Normalize and check if not already captured
@@ -263,7 +264,8 @@ class ModemScraper:
             except Exception as e:
                 _LOGGER.debug("Error extracting links from %s: %s", captured.get("url", "unknown"), e)
 
-        _LOGGER.info("Found %d new links to crawl (already have %d pages)", len(links_to_try), len(captured_url_set) - len(links_to_try))
+        already_captured = len(captured_url_set) - len(links_to_try)
+        _LOGGER.info("Found %d new links to crawl (already have %d pages)", len(links_to_try), already_captured)
 
         # Crawl discovered links (up to max_pages)
         pages_crawled = 0
@@ -284,7 +286,8 @@ class ModemScraper:
                 _LOGGER.debug("Failed to fetch %s: %s", link_url, e)
                 continue
 
-        _LOGGER.info("Link crawl complete: captured %d additional pages (total: %d)", pages_crawled, len(self._captured_urls))
+        total_captured = len(self._captured_urls)
+        _LOGGER.info("Link crawl complete: captured %d additional pages (total: %d)", pages_crawled, total_captured)
 
     def _login(self) -> bool | tuple[bool, str | None]:
         """
