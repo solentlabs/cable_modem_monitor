@@ -54,6 +54,7 @@ async def test_async_setup_entry(mock_coordinator, mock_config_entry):
     """Test button platform setup."""
     hass = Mock(spec=HomeAssistant)
     hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
+    hass.async_add_executor_job = AsyncMock(return_value=False)  # Mock restart check
 
     async_add_entities = Mock()
 
@@ -71,13 +72,14 @@ async def test_async_setup_entry(mock_coordinator, mock_config_entry):
 @pytest.mark.asyncio
 async def test_restart_button_initialization(mock_coordinator, mock_config_entry):
     """Test restart button initialization."""
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
 
     assert button._attr_name == "Restart Modem"
     assert button._attr_unique_id == "test_entry_id_restart_button"
     assert button._attr_icon == "mdi:restart"
     assert button._attr_device_info is not None
     assert button._attr_device_info.get("identifiers") == {(DOMAIN, "test_entry_id")}
+    assert button.available is True
 
 
 @pytest.mark.asyncio
@@ -88,7 +90,7 @@ async def test_restart_button_success(mock_coordinator, mock_config_entry):
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
     # Mock scraper restart to return success
@@ -125,7 +127,7 @@ async def test_restart_button_failure(mock_coordinator, mock_config_entry):
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
     # Mock scraper restart to return failure
@@ -156,7 +158,7 @@ async def test_monitor_restart_phase1_success_phase2_success(mock_coordinator, m
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
     button.coordinator = mock_coordinator
 
@@ -218,7 +220,7 @@ async def test_monitor_restart_phase1_timeout(mock_coordinator, mock_config_entr
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
     button.coordinator = mock_coordinator
 
@@ -247,7 +249,7 @@ async def test_monitor_restart_phase2_timeout(mock_coordinator, mock_config_entr
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
     button.coordinator = mock_coordinator
 
@@ -280,7 +282,7 @@ async def test_monitor_restart_exception_handling(mock_coordinator, mock_config_
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry)
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
     button.coordinator = mock_coordinator
 

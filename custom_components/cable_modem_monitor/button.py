@@ -50,11 +50,14 @@ async def async_setup_entry(
     """Set up Cable Modem Monitor button."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Check restart availability once during setup (avoid blocking in property)
+    restart_available = await _check_restart_support(hass, entry)
+
     # Add control buttons
     # Note: Restart button will show error if modem doesn't support restart
     async_add_entities(
         [
-            ModemRestartButton(coordinator, entry),
+            ModemRestartButton(coordinator, entry, restart_available),
             CleanupEntitiesButton(coordinator, entry),
             ResetEntitiesButton(coordinator, entry),
             UpdateModemDataButton(coordinator, entry),
@@ -63,40 +66,50 @@ async def async_setup_entry(
     )
 
 
+async def _check_restart_support(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Check if modem supports restart (run in executor to avoid blocking)."""
+    parser_name = entry.data.get("parser_name", "")
+    detected_modem = entry.data.get("detected_modem", "")
+
+    # Fallback mode doesn't support restart
+    if "Fallback Mode" in parser_name or "Unknown" in detected_modem:
+        return False
+
+    # Check if parser has restart method
+    modem_choice = entry.data.get("modem_choice", "")
+    if modem_choice and modem_choice != "auto":
+        from .parsers import get_parser_by_name
+
+        def check_parser():
+            try:
+                parser_class = get_parser_by_name(modem_choice)
+                return parser_class and hasattr(parser_class, "restart")
+            except Exception:
+                return False
+
+        return await hass.async_add_executor_job(check_parser)
+
+    # Default to unavailable for safety
+    return False
+
+
 class ModemRestartButton(ModemButtonBase):
     """Button to restart the cable modem."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, is_available: bool
+    ) -> None:
         """Initialize the button."""
         super().__init__(coordinator, entry)
         self._attr_name = "Restart Modem"
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
         self._attr_icon = "mdi:restart"
+        self._is_available = is_available
 
     @property
     def available(self) -> bool:
         """Return if button is available (modem supports restart)."""
-        # Check if modem supports restart functionality
-        parser_name = self._entry.data.get("parser_name", "")
-        detected_modem = self._entry.data.get("detected_modem", "")
-
-        # Fallback mode doesn't support restart
-        if "Fallback Mode" in parser_name or "Unknown" in detected_modem:
-            return False
-
-        # Check if parser has restart method
-        modem_choice = self._entry.data.get("modem_choice", "")
-        if modem_choice and modem_choice != "auto":
-            from .parsers import get_parser_by_name
-            try:
-                parser_class = get_parser_by_name(modem_choice)
-                if parser_class and hasattr(parser_class, "restart"):
-                    return True
-            except Exception:
-                pass
-
-        # Default to unavailable for safety
-        return False
+        return self._is_available
 
     @property
     def extra_state_attributes(self) -> dict:
