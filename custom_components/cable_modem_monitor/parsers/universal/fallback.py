@@ -168,15 +168,15 @@ class UniversalFallbackParser(ModemParser):
                 "manufacturer": "Unknown",
                 "fallback_mode": True,  # Special flag to indicate fallback parser
                 "status_message": (
-                    "⚠️ Your modem is not yet fully supported. "
-                    "Press the 'Capture HTML' button to help us add support!"
-                ),
-                "next_steps": (
-                    "1. Press the 'Capture HTML' button\n"
-                    "2. Download diagnostics within 5 minutes\n"
-                    "3. Attach to GitHub issue for your modem model\n"
-                    "4. Developer will create a parser\n"
-                    "5. Full support in next release!"
+                    "⚠️  Modem Not Fully Supported\n"
+                    "✓  Connectivity monitoring is active (ping & HTTP latency)\n"
+                    "📋 Press 'Capture HTML' to help us add channel data support\n\n"
+                    "Next Steps:\n"
+                    "1. Monitor basic connectivity using Ping Latency and HTTP Latency sensors\n"
+                    "2. Press the 'Capture HTML' button to help add full support\n"
+                    "3. Download diagnostics within 5 minutes\n"
+                    "4. Attach to GitHub issue for your modem model\n"
+                    "5. Developer will create parser for channel/signal data"
                 ),
             },
         }

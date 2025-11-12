@@ -52,18 +52,25 @@ async def async_setup_entry(
         ]
     )
 
-    # Add total error sensors
-    entities.append(ModemTotalCorrectedSensor(coordinator, entry))
-    entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
+    # Check if we're in fallback mode (unsupported modem)
+    # In fallback mode, only connectivity sensors have data
+    is_fallback_mode = coordinator.data.get("system_info", {}).get("fallback_mode", False)
 
-    # Add channel count sensors
-    entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
-    entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+    if not is_fallback_mode:
+        # Add total error sensors (not available in fallback mode)
+        entities.append(ModemTotalCorrectedSensor(coordinator, entry))
+        entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
 
-    # Add software version and uptime sensors
-    entities.append(ModemSoftwareVersionSensor(coordinator, entry))
-    entities.append(ModemSystemUptimeSensor(coordinator, entry))
-    entities.append(ModemLastBootTimeSensor(coordinator, entry))
+        # Add channel count sensors (not available in fallback mode)
+        entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
+        entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+
+        # Add software version and uptime sensors (not available in fallback mode)
+        entities.append(ModemSoftwareVersionSensor(coordinator, entry))
+        entities.append(ModemSystemUptimeSensor(coordinator, entry))
+        entities.append(ModemLastBootTimeSensor(coordinator, entry))
+    else:
+        _LOGGER.info("Fallback mode detected - skipping sensors that require channel/system data")
 
     # Add per-channel downstream sensors
     if coordinator.data.get("cable_modem_downstream"):
