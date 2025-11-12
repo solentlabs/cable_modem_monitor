@@ -378,3 +378,174 @@ class TestModemScraper:
         assert scraper.base_url == "http://192.168.100.1"
         # Restart should have been called on the cached parser
         mock_parser_instance.restart.assert_called_once_with(scraper.session, scraper.base_url)
+
+
+class TestFallbackParserDetection:
+    """Test that fallback parser is excluded from detection phases and only used as last resort."""
+
+    @pytest.fixture
+    def mock_normal_parser_class(self, mocker):
+        """Create a mock normal (non-fallback) parser class."""
+        mock_class = mocker.Mock()
+        mock_class.name = "Test Parser"
+        mock_class.manufacturer = "TestBrand"
+        mock_class.priority = 50
+        mock_class.can_parse.return_value = False  # Won't match by default
+        mock_class.url_patterns = [{"path": "/status.html", "auth_method": "basic", "auth_required": False}]
+        return mock_class
+
+    @pytest.fixture
+    def mock_fallback_parser_class(self, mocker):
+        """Create a mock fallback parser class."""
+        mock_class = mocker.Mock()
+        mock_class.name = "Unknown Modem (Fallback Mode)"
+        mock_class.manufacturer = "Unknown"  # Key identifier for fallback
+        mock_class.priority = 1
+        mock_class.can_parse.return_value = True  # Always matches
+        mock_class.url_patterns = [{"path": "/", "auth_method": "basic", "auth_required": False}]
+        return mock_class
+
+    def test_fallback_excluded_from_anonymous_probing(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Phase 1 (anonymous probing)."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        # Mock session.get to return HTML
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = "<html><body>Test</body></html>"
+        mock_response.url = "http://192.168.100.1/"
+        mocker.patch.object(scraper.session, "get", return_value=mock_response)
+
+        # Create circuit breaker mock
+        mock_circuit_breaker = mocker.Mock()
+        mock_circuit_breaker.should_continue.return_value = True
+
+        # Call _try_anonymous_probing
+        attempted_parsers = []
+        result = scraper._try_anonymous_probing(mock_circuit_breaker, attempted_parsers)
+
+        # Fallback parser should NOT have been tried
+        assert mock_fallback_parser_class.can_parse.call_count == 0
+        # Normal parser should have been tried
+        assert mock_normal_parser_class.can_parse.call_count > 0
+
+    def test_fallback_excluded_from_prioritized_parsers(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Phase 3 (prioritized parsers)."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        from bs4 import BeautifulSoup
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        html = "<html><body>Test</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        url = "http://192.168.100.1/"
+
+        # Create circuit breaker mock
+        mock_circuit_breaker = mocker.Mock()
+        mock_circuit_breaker.should_continue.return_value = True
+
+        # Call _try_prioritized_parsers
+        attempted_parsers = []
+        result = scraper._try_prioritized_parsers(soup, url, html, None, mock_circuit_breaker, attempted_parsers)
+
+        # Fallback parser should NOT have been tried
+        assert mock_fallback_parser_class.can_parse.call_count == 0
+        # Normal parser should have been tried
+        assert mock_normal_parser_class.can_parse.call_count > 0
+
+    def test_fallback_excluded_from_url_discovery_tier2(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Tier 2 URL discovery."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        # Set a cached parser name to trigger tier 2
+        scraper = ModemScraper(
+            "192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class], parser_name="Test Parser"
+        )
+
+        urls = scraper._get_tier2_urls()
+
+        # Convert URLs to list of parser names that contributed URLs
+        parser_names = [parser_class.name for _, _, parser_class in urls]
+
+        # Fallback parser should NOT contribute URLs in tier 2
+        assert "Unknown Modem (Fallback Mode)" not in parser_names
+        # Normal parser should contribute URLs
+        assert "Test Parser" in parser_names
+
+    def test_fallback_excluded_from_url_discovery_tier3(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Tier 3 URL discovery."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        urls = scraper._get_tier3_urls()
+
+        # Convert URLs to list of parser names that contributed URLs
+        parser_names = [parser_class.name for _, _, parser_class in urls]
+
+        # Fallback parser should NOT contribute URLs in tier 3
+        assert "Unknown Modem (Fallback Mode)" not in parser_names
+
+    def test_fallback_only_tried_in_phase4_as_last_resort(self, mocker, mock_fallback_parser_class):
+        """Test that fallback parser is only tried in Phase 4 after all other parsers fail."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        from bs4 import BeautifulSoup
+
+        # Create scraper with ONLY fallback parser (simulating all others failed)
+        scraper = ModemScraper("192.168.100.1", parser=[mock_fallback_parser_class])
+
+        html = "<html><body>Unknown Modem</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        url = "http://192.168.100.1/"
+
+        # Mock session.get
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = html
+        mock_response.url = url
+        mocker.patch.object(scraper.session, "get", return_value=mock_response)
+
+        # Mock _fetch_data to return our HTML
+        mocker.patch.object(scraper, "_fetch_data", return_value=(html, url, None))
+
+        # Call _detect_parser (which includes all phases)
+        result = scraper._detect_parser(soup, url, html)
+
+        # Fallback parser should be returned (Phase 4)
+        assert result is not None
+        assert result.__class__ == mock_fallback_parser_class.return_value.__class__
+
+    def test_known_modem_detected_before_fallback(self, mocker):
+        """Test that a known modem parser is detected before fallback parser."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
+        from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+
+        from bs4 import BeautifulSoup
+
+        # Use real parsers
+        scraper = ModemScraper("192.168.100.1", parser=[MotorolaMB7621Parser, UniversalFallbackParser])
+
+        # HTML from Motorola MB7621
+        html = "<html><title>Motorola Cable Modem : Login</title><body>MB7621</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        url = "http://192.168.100.1/"
+
+        # Mock session.get
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = html
+        mock_response.url = url
+        mocker.patch.object(scraper.session, "get", return_value=mock_response)
+
+        # Call _detect_parser
+        result = scraper._detect_parser(soup, url, html)
+
+        # Should detect Motorola, NOT fallback
+        assert result is not None
+        assert isinstance(result, MotorolaMB7621Parser)
+        assert result.name == "Motorola MB7621"
