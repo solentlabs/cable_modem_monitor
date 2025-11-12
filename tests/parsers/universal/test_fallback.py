@@ -167,7 +167,7 @@ class TestLogin:
         assert success is True
         assert html is None
 
-    @patch("custom_components.cable_modem_monitor.parsers.universal.fallback.AuthFactory")
+    @patch("custom_components.cable_modem_monitor.core.authentication.AuthFactory")
     def test_attempts_basic_auth_with_credentials(self, mock_auth_factory):
         """Test that login attempts HTTP Basic Auth when credentials provided."""
         parser = UniversalFallbackParser()
@@ -188,7 +188,7 @@ class TestLogin:
         assert success is True
         assert html == "<html>authenticated</html>"
 
-    @patch("custom_components.cable_modem_monitor.parsers.universal.fallback.AuthFactory")
+    @patch("custom_components.cable_modem_monitor.core.authentication.AuthFactory")
     def test_returns_true_even_when_auth_fails(self, mock_auth_factory):
         """Test that login returns True even if authentication fails."""
         parser = UniversalFallbackParser()
@@ -205,7 +205,7 @@ class TestLogin:
         assert success is True
         assert html is None
 
-    @patch("custom_components.cable_modem_monitor.parsers.universal.fallback.AuthFactory")
+    @patch("custom_components.cable_modem_monitor.core.authentication.AuthFactory")
     def test_returns_true_when_auth_raises_exception(self, mock_auth_factory):
         """Test that login returns True even if authentication raises exception."""
         parser = UniversalFallbackParser()

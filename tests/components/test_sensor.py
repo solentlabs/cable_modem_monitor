@@ -536,6 +536,7 @@ class TestFallbackModeSensorCreation:
         }
         return coordinator
 
+    @pytest.mark.asyncio
     async def test_normal_mode_creates_all_sensors(self, mock_hass, mock_entry, mock_coordinator_normal_mode):
         """Test that normal mode creates all sensor types."""
         from homeassistant.const import CONF_HOST
@@ -573,6 +574,7 @@ class TestFallbackModeSensorCreation:
         # Should have at least 10 base sensors + per-channel sensors
         assert len(added_entities) >= 10
 
+    @pytest.mark.asyncio
     async def test_fallback_mode_skips_unavailable_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
         """Test that fallback mode only creates sensors that have data."""
         from homeassistant.const import CONF_HOST
@@ -612,6 +614,7 @@ class TestFallbackModeSensorCreation:
         # Should have exactly 4 sensors (Connection, Health, Ping, HTTP)
         assert len(added_entities) == 4
 
+    @pytest.mark.asyncio
     async def test_fallback_mode_no_channel_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
         """Test that fallback mode creates no per-channel sensors."""
         from homeassistant.const import CONF_HOST

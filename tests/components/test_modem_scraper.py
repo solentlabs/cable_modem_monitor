@@ -495,6 +495,11 @@ class TestFallbackParserDetection:
 
         from bs4 import BeautifulSoup
 
+        # Create a mock parser instance that will be returned when fallback class is instantiated
+        mock_parser_instance = mocker.Mock()
+        mock_parser_instance.name = "Unknown Modem (Fallback Mode)"
+        mock_fallback_parser_class.return_value = mock_parser_instance
+
         # Create scraper with ONLY fallback parser (simulating all others failed)
         scraper = ModemScraper("192.168.100.1", parser=[mock_fallback_parser_class])
 
@@ -517,7 +522,7 @@ class TestFallbackParserDetection:
 
         # Fallback parser should be returned (Phase 4)
         assert result is not None
-        assert result.__class__ == mock_fallback_parser_class.return_value.__class__
+        assert result == mock_parser_instance
 
     def test_known_modem_detected_before_fallback(self, mocker):
         """Test that a known modem parser is detected before fallback parser."""
