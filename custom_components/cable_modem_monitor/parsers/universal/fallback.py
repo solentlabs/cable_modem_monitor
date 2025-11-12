@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 
 from bs4 import BeautifulSoup
-from requests.auth import HTTPBasicAuth
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType

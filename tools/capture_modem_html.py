@@ -22,7 +22,6 @@ import re
 import sys
 import zipfile
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -246,7 +245,7 @@ def capture_modem_html(
         else:
             failed_count += 1
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"  ✅ Captured: {len(captured_pages)} pages")
     print(f"  ❌ Failed: {failed_count} pages")
 

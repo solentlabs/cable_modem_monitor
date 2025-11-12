@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
