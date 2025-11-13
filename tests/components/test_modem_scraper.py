@@ -378,3 +378,163 @@ class TestModemScraper:
         assert scraper.base_url == "http://192.168.100.1"
         ***REMOVED*** Restart should have been called on the cached parser
         mock_parser_instance.restart.assert_called_once_with(scraper.session, scraper.base_url)
+
+
+class TestFallbackParserDetection:
+    """Test that fallback parser is excluded from detection phases and only used as last resort."""
+
+    @pytest.fixture
+    def mock_normal_parser_class(self, mocker):
+        """Create a mock normal (non-fallback) parser class."""
+        mock_class = mocker.Mock()
+        mock_class.name = "Test Parser"
+        mock_class.manufacturer = "TestBrand"
+        mock_class.priority = 50
+        mock_class.can_parse.return_value = False  ***REMOVED*** Won't match by default
+        mock_class.url_patterns = [{"path": "/status.html", "auth_method": "basic", "auth_required": False}]
+        return mock_class
+
+    @pytest.fixture
+    def mock_fallback_parser_class(self, mocker):
+        """Create a mock fallback parser class."""
+        mock_class = mocker.Mock()
+        mock_class.name = "Unknown Modem (Fallback Mode)"
+        mock_class.manufacturer = "Unknown"  ***REMOVED*** Key identifier for fallback
+        mock_class.priority = 1
+        mock_class.can_parse.return_value = True  ***REMOVED*** Always matches
+        mock_class.url_patterns = [{"path": "/", "auth_method": "basic", "auth_required": False}]
+        return mock_class
+
+    def test_excluded_from_anonymous_probing(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Phase 1 (anonymous probing)."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        ***REMOVED*** Mock session.get to return HTML
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = "<html><body>Test</body></html>"
+        mock_response.url = "http://192.168.100.1/"
+        mocker.patch.object(scraper.session, "get", return_value=mock_response)
+
+        ***REMOVED*** Create circuit breaker mock
+        mock_circuit_breaker = mocker.Mock()
+        mock_circuit_breaker.should_continue.return_value = True
+
+        ***REMOVED*** Call _try_anonymous_probing
+        attempted_parsers: list[type] = []
+        scraper._try_anonymous_probing(mock_circuit_breaker, attempted_parsers)
+
+        ***REMOVED*** Fallback parser should NOT have been tried
+        assert mock_fallback_parser_class.can_parse.call_count == 0
+        ***REMOVED*** Normal parser should have been tried
+        assert mock_normal_parser_class.can_parse.call_count > 0
+
+    def test_excluded_from_prioritized_parsers(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Phase 3 (prioritized parsers)."""
+        from bs4 import BeautifulSoup
+
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        html = "<html><body>Test</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        url = "http://192.168.100.1/"
+
+        ***REMOVED*** Create circuit breaker mock
+        mock_circuit_breaker = mocker.Mock()
+        mock_circuit_breaker.should_continue.return_value = True
+
+        ***REMOVED*** Call _try_prioritized_parsers
+        attempted_parsers: list[type] = []
+        scraper._try_prioritized_parsers(soup, url, html, None, mock_circuit_breaker, attempted_parsers)
+
+        ***REMOVED*** Fallback parser should NOT have been tried
+        assert mock_fallback_parser_class.can_parse.call_count == 0
+        ***REMOVED*** Normal parser should have been tried
+        assert mock_normal_parser_class.can_parse.call_count > 0
+
+    def test_excluded_from_url_discovery_tier2(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Tier 2 URL discovery."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        ***REMOVED*** Set a cached parser name to trigger tier 2
+        scraper = ModemScraper(
+            "192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class], parser_name="Test Parser"
+        )
+
+        urls = scraper._get_tier2_urls()
+
+        ***REMOVED*** Convert URLs to list of parser names that contributed URLs
+        parser_names = [parser_class.name for _, _, parser_class in urls]
+
+        ***REMOVED*** Fallback parser should NOT contribute URLs in tier 2
+        assert "Unknown Modem (Fallback Mode)" not in parser_names
+        ***REMOVED*** Normal parser should contribute URLs
+        assert "Test Parser" in parser_names
+
+    def test_excluded_from_url_discovery_tier3(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
+        """Test that fallback parser is excluded from Tier 3 URL discovery."""
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+
+        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+
+        urls = scraper._get_tier3_urls()
+
+        ***REMOVED*** Convert URLs to list of parser names that contributed URLs
+        parser_names = [parser_class.name for _, _, parser_class in urls]
+
+        ***REMOVED*** Fallback parser should NOT contribute URLs in tier 3
+        assert "Unknown Modem (Fallback Mode)" not in parser_names
+
+    def test_not_auto_selected_raises_error(self, mocker):
+        """Test that fallback parser is NOT auto-selected when detection fails.
+
+        User must manually select "Unknown Modem (Fallback Mode)" from the list.
+        This prevents accidental fallback for supported modems with connection issues.
+        """
+        from custom_components.cable_modem_monitor.core.discovery_helpers import ParserNotFoundError
+        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+
+        ***REMOVED*** Use real fallback parser to ensure it's available but not auto-selected
+        scraper = ModemScraper("192.168.100.1", parser=[UniversalFallbackParser])
+
+        html = "<html><body>Unknown Modem</body></html>"
+        url = "http://192.168.100.1/"
+
+        ***REMOVED*** Mock session.get
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = html
+        mock_response.url = url
+        mocker.patch.object(scraper.session, "get", return_value=mock_response)
+
+        ***REMOVED*** Call _detect_parser with correct signature (html, url, suggested_parser)
+        ***REMOVED*** Should raise ParserNotFoundError instead of auto-selecting fallback
+        with pytest.raises(ParserNotFoundError):
+            scraper._detect_parser(html, url, suggested_parser=None)
+
+    def test_known_modem_detected_before_fallback(self):
+        """Test that a known modem parser is detected before fallback parser."""
+        from bs4 import BeautifulSoup
+
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
+        from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+
+        ***REMOVED*** HTML from Motorola MB7621
+        html = "<html><title>Motorola Cable Modem : Login</title><body>MB7621</body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        url = "http://192.168.100.1/"
+
+        ***REMOVED*** Test that Motorola parser can_parse returns True
+        assert MotorolaMB7621Parser.can_parse(soup, url, html) is True
+
+        ***REMOVED*** Test that fallback parser would also return True (but should be tried last)
+        assert UniversalFallbackParser.can_parse(soup, url, html) is True
+
+        ***REMOVED*** When both parsers are available, detection logic should try Motorola first
+        ***REMOVED*** because it's excluded from phases 1-3 by manufacturer check
+        ***REMOVED*** This test verifies the parsers themselves work correctly

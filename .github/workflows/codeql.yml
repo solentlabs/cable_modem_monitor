@@ -39,6 +39,8 @@ jobs:
         ***REMOVED*** Specify CodeQL query suites
         ***REMOVED*** Available options: security-extended, security-and-quality
         queries: security-and-quality
+        ***REMOVED*** Use custom configuration to exclude intentional design decisions
+        config-file: .github/codeql/codeql-config.yml
 
     ***REMOVED*** Autobuild attempts to build any compiled languages (C/C++, C***REMOVED***, Go, Java, or Swift).
     ***REMOVED*** For Python, this step is not strictly necessary but included for completeness

@@ -95,9 +95,9 @@ class TestVersionLogging:
         assert len(parts) == 3
         assert all(part.isdigit() for part in parts)
 
-    def test_version_is_3_1_0(self):
-        """Test that version is updated to 3.1.0."""
-        assert VERSION == "3.1.0"
+    def test_version_is_3_2_0(self):
+        """Test that version is updated to 3.2.0."""
+        assert VERSION == "3.2.0"
 
 
 class TestParserSelectionOptimization:

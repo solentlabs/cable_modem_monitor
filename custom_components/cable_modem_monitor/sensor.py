@@ -52,18 +52,26 @@ async def async_setup_entry(
         ]
     )
 
-    ***REMOVED*** Add total error sensors
-    entities.append(ModemTotalCorrectedSensor(coordinator, entry))
-    entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
+    ***REMOVED*** Check if we're in fallback mode (unsupported modem)
+    ***REMOVED*** In fallback mode, only connectivity sensors have data
+    ***REMOVED*** Note: system_info keys are prefixed with cable_modem_ in the coordinator data
+    is_fallback_mode = coordinator.data.get("cable_modem_fallback_mode", False)
 
-    ***REMOVED*** Add channel count sensors
-    entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
-    entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+    if not is_fallback_mode:
+        ***REMOVED*** Add total error sensors (not available in fallback mode)
+        entities.append(ModemTotalCorrectedSensor(coordinator, entry))
+        entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
 
-    ***REMOVED*** Add software version and uptime sensors
-    entities.append(ModemSoftwareVersionSensor(coordinator, entry))
-    entities.append(ModemSystemUptimeSensor(coordinator, entry))
-    entities.append(ModemLastBootTimeSensor(coordinator, entry))
+        ***REMOVED*** Add channel count sensors (not available in fallback mode)
+        entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
+        entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+
+        ***REMOVED*** Add software version and uptime sensors (not available in fallback mode)
+        entities.append(ModemSoftwareVersionSensor(coordinator, entry))
+        entities.append(ModemSystemUptimeSensor(coordinator, entry))
+        entities.append(ModemLastBootTimeSensor(coordinator, entry))
+    else:
+        _LOGGER.info("Fallback mode detected - skipping sensors that require channel/system data")
 
     ***REMOVED*** Add per-channel downstream sensors
     if coordinator.data.get("cable_modem_downstream"):
@@ -147,7 +155,9 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         return self.coordinator.last_update_success and status in (
             "online",
             "offline",
-        )  ***REMOVED*** Available for both online and offline (just rebooting)
+            "limited",  ***REMOVED*** Fallback mode - basic connectivity only
+            "parser_issue",  ***REMOVED*** Known parser but no channel data extracted
+        )
 
 
 class ModemConnectionStatusSensor(ModemSensorBase):
@@ -603,15 +613,15 @@ class ModemPingLatencySensor(ModemSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:speedometer"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.DURATION
+        ***REMOVED*** No device_class - latency measurements don't have a standard class
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         """Return the ping latency in milliseconds."""
         ping_latency = self.coordinator.data.get("ping_latency_ms")
         if ping_latency is None:
             return None
-        return float(ping_latency)
+        return int(round(ping_latency))
 
 
 class ModemHttpLatencySensor(ModemSensorBase):
@@ -625,12 +635,12 @@ class ModemHttpLatencySensor(ModemSensorBase):
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.DURATION
+        ***REMOVED*** No device_class - latency measurements don't have a standard class
 
     @property
-    def native_value(self) -> float | None:
+    def native_value(self) -> int | None:
         """Return the HTTP latency in milliseconds."""
         http_latency = self.coordinator.data.get("http_latency_ms")
         if http_latency is None:
             return None
-        return float(http_latency)
+        return int(round(http_latency))

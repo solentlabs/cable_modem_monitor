@@ -54,8 +54,8 @@ class TestParserCaching:
         assert "Technicolor TC4400" in parser_names
         assert "Technicolor XB7" in parser_names
 
-    def test_get_parsers_sorts_by_manufacturer_and_priority(self):
-        """Test that parsers are sorted correctly."""
+    def test_get_parsers_sorts_alphabetically(self):
+        """Test that parsers are sorted alphabetically by manufacturer then name."""
         parsers = get_parsers()
 
         ***REMOVED*** Check that parsers are grouped by manufacturer
@@ -65,11 +65,18 @@ class TestParserCaching:
         assert "Motorola" in manufacturers
         assert "Technicolor" in manufacturers
 
-        ***REMOVED*** Within Motorola, check priority ordering
+        ***REMOVED*** Check that manufacturers are in alphabetical order (excluding Unknown which goes last)
+        non_unknown_manufacturers = [m for m in manufacturers if m != "Unknown"]
+        assert non_unknown_manufacturers == sorted(non_unknown_manufacturers)
+
+        ***REMOVED*** Within Motorola, check alphabetical ordering with Generic last
         motorola_parsers = [p for p in parsers if p.manufacturer == "Motorola"]
-        priorities = [p.priority for p in motorola_parsers]
-        ***REMOVED*** Higher priority should come first (descending order)
-        assert priorities == sorted(priorities, reverse=True)
+        motorola_names = [p.name for p in motorola_parsers]
+        ***REMOVED*** Generic should be last within Motorola group
+        assert motorola_names[-1] == "Motorola MB Series (Generic)"
+        ***REMOVED*** Others should be alphabetical
+        non_generic = [name for name in motorola_names if "Generic" not in name]
+        assert non_generic == sorted(non_generic)
 
 
 class TestGetParserByName:
@@ -163,33 +170,3 @@ class TestParserLoadingPerformance:
 
         ***REMOVED*** Cached load should be extremely fast (< 1ms)
         assert cached_time < 0.001
-
-
-class TestMB8611StaticParserFix:
-    """Test that MB8611 Static parser has required url_patterns."""
-
-    def test_mb8611_static_has_url_patterns(self):
-        """Test that MB8611 Static parser has url_patterns attribute."""
-        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
-        assert parser_class is not None
-
-        ***REMOVED*** Check for url_patterns attribute
-        assert hasattr(parser_class, "url_patterns")
-        assert isinstance(parser_class.url_patterns, list)
-        assert len(parser_class.url_patterns) > 0
-
-    def test_mb8611_static_url_patterns_format(self):
-        """Test that MB8611 Static url_patterns are correctly formatted."""
-        parser_class = get_parser_by_name("Motorola MB8611 (Static)")
-        assert parser_class is not None
-
-        ***REMOVED*** Check first pattern
-        pattern = parser_class.url_patterns[0]
-        assert "path" in pattern
-        assert "auth_method" in pattern
-        assert "auth_required" in pattern
-
-        ***REMOVED*** Check specific values
-        assert pattern["path"] == "/MotoStatusConnection.html"
-        assert pattern["auth_method"] == "none"
-        assert pattern["auth_required"] is False

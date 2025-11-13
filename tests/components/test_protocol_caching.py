@@ -137,7 +137,7 @@ class TestProtocolDiscoveryBehavior:
 class TestSSLVerification:
     """Test SSL verification settings."""
 
-    def test_verify_ssl_false_by_default(self):
+    def test_false_by_default(self):
         """Test that SSL verification is disabled by default."""
         scraper = ModemScraper(
             host="192.168.100.1",
@@ -147,7 +147,7 @@ class TestSSLVerification:
         assert scraper.verify_ssl is False
         assert scraper.session.verify is False
 
-    def test_verify_ssl_can_be_enabled(self):
+    def test_can_be_enabled(self):
         """Test that SSL verification can be enabled."""
         scraper = ModemScraper(
             host="192.168.100.1",
@@ -158,7 +158,7 @@ class TestSSLVerification:
         assert scraper.verify_ssl is True
         assert scraper.session.verify is True
 
-    def test_verify_ssl_passed_through_requests(self, mocker):
+    def test_passed_through_requests(self, mocker):
         """Test that verify parameter is passed to requests."""
         scraper = ModemScraper(
             host="192.168.100.1",
