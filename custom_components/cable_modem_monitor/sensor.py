@@ -621,7 +621,7 @@ class ModemPingLatencySensor(ModemSensorBase):
         ping_latency = self.coordinator.data.get("ping_latency_ms")
         if ping_latency is None:
             return None
-        return round(ping_latency)
+        return int(round(ping_latency))
 
 
 class ModemHttpLatencySensor(ModemSensorBase):
@@ -643,4 +643,4 @@ class ModemHttpLatencySensor(ModemSensorBase):
         http_latency = self.coordinator.data.get("http_latency_ms")
         if http_latency is None:
             return None
-        return round(http_latency)
+        return int(round(http_latency))

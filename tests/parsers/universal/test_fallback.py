@@ -247,7 +247,7 @@ class TestParserConfiguration:
     def test_url_patterns_include_common_pages(self):
         """Test that URL patterns include common status pages."""
         paths = [p["path"] for p in UniversalFallbackParser.url_patterns]
-        assert any("status" in p.lower() for p in paths)
+        assert any("status" in p.lower() for p in paths if isinstance(p, str))
 
     def test_uses_basic_auth_config(self):
         """Test that parser uses BasicAuthConfig."""

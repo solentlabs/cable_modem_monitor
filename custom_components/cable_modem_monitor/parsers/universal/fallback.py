@@ -197,7 +197,7 @@ class UniversalFallbackParser(ModemParser):
             title = soup.title.string.strip()
             if title and title != "":
                 _LOGGER.debug(f"Found page title: {title}")
-                return title
+                return str(title)
 
         # Try meta tags
         meta_tags = soup.find_all("meta", attrs={"name": True, "content": True})
@@ -207,7 +207,7 @@ class UniversalFallbackParser(ModemParser):
                 content = meta.get("content", "").strip()
                 if content:
                     _LOGGER.debug(f"Found model in meta tag: {content}")
-                    return content
+                    return str(content)
 
         # Try common modem identifiers in HTML
         # Look for common patterns like "NETGEAR", "ARRIS", "CM600", etc.

@@ -423,7 +423,7 @@ class TestFallbackParserDetection:
         mock_circuit_breaker.should_continue.return_value = True
 
         # Call _try_anonymous_probing
-        attempted_parsers = []
+        attempted_parsers: list[type] = []
         scraper._try_anonymous_probing(mock_circuit_breaker, attempted_parsers)
 
         # Fallback parser should NOT have been tried
@@ -448,7 +448,7 @@ class TestFallbackParserDetection:
         mock_circuit_breaker.should_continue.return_value = True
 
         # Call _try_prioritized_parsers
-        attempted_parsers = []
+        attempted_parsers: list[type] = []
         scraper._try_prioritized_parsers(soup, url, html, None, mock_circuit_breaker, attempted_parsers)
 
         # Fallback parser should NOT have been tried

@@ -80,14 +80,14 @@ async def _check_restart_support(hass: HomeAssistant, entry: ConfigEntry) -> boo
     if modem_choice and modem_choice != "auto":
         from .parsers import get_parser_by_name
 
-        def check_parser():
+        def check_parser() -> bool:
             try:
                 parser_class = get_parser_by_name(modem_choice)
-                return parser_class and hasattr(parser_class, "restart")
+                return bool(parser_class and hasattr(parser_class, "restart"))
             except Exception:
                 return False
 
-        return await hass.async_add_executor_job(check_parser)
+        return bool(await hass.async_add_executor_job(check_parser))
 
     # Default to unavailable for safety
     return False
