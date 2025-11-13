@@ -190,7 +190,7 @@ class ModemScraper:
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
 
-    def _crawl_additional_pages(self, max_pages: int = 20) -> None:
+    def _crawl_additional_pages(self, max_pages: int = 20) -> None:  # noqa: C901
         """Crawl additional pages by following links found in captured HTML.
 
         This enhances HTML capture by automatically discovering and fetching

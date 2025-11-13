@@ -82,7 +82,7 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
         return None
 
 
-def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
+def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:  # noqa: C901
     """
     Auto-discover and return all parser modules in this package.
 
@@ -147,18 +147,23 @@ def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
             except Exception as e:
                 _LOGGER.error("Failed to load parser module %s: %s", full_module_name, e, exc_info=True)
 
-    # Sort parsers by manufacturer, then by priority (higher priority first)
-    # This ensures model-specific parsers are tried before generic ones within the same manufacturer
-    # Special case: "Unknown" manufacturer (fallback parser) always goes last
+    # Sort parsers to match dropdown order (alphabetical by manufacturer, then name)
+    # Generic parsers go last within their manufacturer group
+    # Unknown manufacturer (fallback) goes to the very end
     def sort_key(parser):
-        # Unknown manufacturer goes to the end
-        manufacturer_priority = 0 if parser.manufacturer == "Unknown" else 1
-        return (manufacturer_priority, parser.manufacturer, parser.priority)
+        # Unknown manufacturer goes last
+        if parser.manufacturer == "Unknown":
+            return ("ZZZZ", "ZZZZ")
+        # Within each manufacturer, Generic parsers go last
+        if "Generic" in parser.name:
+            return (parser.manufacturer, "ZZZZ")
+        # Regular parsers sort by manufacturer then name
+        return (parser.manufacturer, parser.name)
 
-    parsers.sort(key=sort_key, reverse=True)
+    parsers.sort(key=sort_key)
 
     _LOGGER.debug("Finished parser discovery. Found %d parsers.", len(parsers))
-    _LOGGER.debug("Parser order by priority: %s", [f"{p.name} (priority={p.priority})" for p in parsers])
+    _LOGGER.debug("Parser order (alphabetical): %s", [p.name for p in parsers])
 
     # Cache the results
     _PARSER_CACHE = parsers

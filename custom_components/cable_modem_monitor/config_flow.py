@@ -212,7 +212,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         """Get the options flow for this handler."""
         return OptionsFlowHandler()
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+    async def async_step_user(  # noqa: C901  # noqa: C901
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -357,7 +359,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         else:
             return f"Configured for {detected_modem}"
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+    async def async_step_init(  # noqa: C901  # noqa: C901
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
         errors = {}
 

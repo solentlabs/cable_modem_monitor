@@ -54,8 +54,8 @@ class TestParserCaching:
         assert "Technicolor TC4400" in parser_names
         assert "Technicolor XB7" in parser_names
 
-    def test_get_parsers_sorts_by_manufacturer_and_priority(self):
-        """Test that parsers are sorted correctly."""
+    def test_get_parsers_sorts_alphabetically(self):
+        """Test that parsers are sorted alphabetically by manufacturer then name."""
         parsers = get_parsers()
 
         # Check that parsers are grouped by manufacturer
@@ -65,11 +65,18 @@ class TestParserCaching:
         assert "Motorola" in manufacturers
         assert "Technicolor" in manufacturers
 
-        # Within Motorola, check priority ordering
+        # Check that manufacturers are in alphabetical order (excluding Unknown which goes last)
+        non_unknown_manufacturers = [m for m in manufacturers if m != "Unknown"]
+        assert non_unknown_manufacturers == sorted(non_unknown_manufacturers)
+
+        # Within Motorola, check alphabetical ordering with Generic last
         motorola_parsers = [p for p in parsers if p.manufacturer == "Motorola"]
-        priorities = [p.priority for p in motorola_parsers]
-        # Higher priority should come first (descending order)
-        assert priorities == sorted(priorities, reverse=True)
+        motorola_names = [p.name for p in motorola_parsers]
+        # Generic should be last within Motorola group
+        assert motorola_names[-1] == "Motorola MB Series (Generic)"
+        # Others should be alphabetical
+        non_generic = [name for name in motorola_names if "Generic" not in name]
+        assert non_generic == sorted(non_generic)
 
 
 class TestGetParserByName:
@@ -163,5 +170,3 @@ class TestParserLoadingPerformance:
 
         # Cached load should be extremely fast (< 1ms)
         assert cached_time < 0.001
-
-
