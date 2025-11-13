@@ -39,6 +39,8 @@ jobs:
         # Specify CodeQL query suites
         # Available options: security-extended, security-and-quality
         queries: security-and-quality
+        # Use custom configuration to exclude intentional design decisions
+        config-file: .github/codeql/codeql-config.yml
 
     # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
     # For Python, this step is not strictly necessary but included for completeness

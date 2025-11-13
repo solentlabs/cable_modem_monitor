@@ -1,0 +1,15 @@
+name: "CodeQL Security Scanning Configuration"
+
+# Query filters to exclude specific security warnings for intentional design decisions
+query-filters:
+  # Exclude certificate validation warnings for tools directory
+  # Rationale: Tools are diagnostic scripts for local network cable modems that use
+  # self-signed certificates. Same security reasoning as documented in const.py:
+  # 1. Cable modems universally use self-signed certificates (no CA-signed option)
+  # 2. Target environment is private LANs (192.168.x.x, 10.0.x.x)
+  # 3. MITM risk acceptable in private network context
+  # 4. Self-signed cert still provides encryption in transit
+  - exclude:
+      id: py/request-without-cert-validation
+      paths:
+        - tools/**
