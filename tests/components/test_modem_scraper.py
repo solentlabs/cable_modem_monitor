@@ -405,9 +405,7 @@ class TestFallbackParserDetection:
         mock_class.url_patterns = [{"path": "/", "auth_method": "basic", "auth_required": False}]
         return mock_class
 
-    def test_excluded_from_anonymous_probing(
-        self, mocker, mock_normal_parser_class, mock_fallback_parser_class
-    ):
+    def test_excluded_from_anonymous_probing(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Phase 1 (anonymous probing)."""
         from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 
@@ -433,9 +431,7 @@ class TestFallbackParserDetection:
         # Normal parser should have been tried
         assert mock_normal_parser_class.can_parse.call_count > 0
 
-    def test_excluded_from_prioritized_parsers(
-        self, mocker, mock_normal_parser_class, mock_fallback_parser_class
-    ):
+    def test_excluded_from_prioritized_parsers(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Phase 3 (prioritized parsers)."""
         from bs4 import BeautifulSoup
 
@@ -460,9 +456,7 @@ class TestFallbackParserDetection:
         # Normal parser should have been tried
         assert mock_normal_parser_class.can_parse.call_count > 0
 
-    def test_excluded_from_url_discovery_tier2(
-        self, mocker, mock_normal_parser_class, mock_fallback_parser_class
-    ):
+    def test_excluded_from_url_discovery_tier2(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Tier 2 URL discovery."""
         from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 
@@ -481,9 +475,7 @@ class TestFallbackParserDetection:
         # Normal parser should contribute URLs
         assert "Test Parser" in parser_names
 
-    def test_excluded_from_url_discovery_tier3(
-        self, mocker, mock_normal_parser_class, mock_fallback_parser_class
-    ):
+    def test_excluded_from_url_discovery_tier3(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Tier 3 URL discovery."""
         from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
 

@@ -96,9 +96,7 @@ async def _check_restart_support(hass: HomeAssistant, entry: ConfigEntry) -> boo
 class ModemRestartButton(ModemButtonBase):
     """Button to restart the cable modem."""
 
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, is_available: bool
-    ) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, is_available: bool) -> None:
         """Initialize the button."""
         super().__init__(coordinator, entry)
         self._attr_name = "Restart Modem"
