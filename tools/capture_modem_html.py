@@ -156,7 +156,13 @@ def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int
     url = f"{base_url}{path}"
 
     try:
-        response = session.get(url, timeout=timeout, verify=False)
+        # Cable modems use self-signed certificates on private LANs (192.168.x.x/10.0.x.x)
+        # Certificate validation disabled for the same reasons as in const.py:
+        # 1. No cable modem manufacturer provides CA-signed certificates
+        # 2. LANs are private networks where MITM risk is different threat model
+        # 3. Self-signed cert still provides encryption in transit
+        # 4. This is a diagnostic tool for local network devices only
+        response = session.get(url, timeout=timeout, verify=False)  # nosec B501 - Local network device with self-signed cert
 
         # Consider 200 and 401 as "found" (401 means auth needed but page exists)
         if response.status_code in (200, 401):
