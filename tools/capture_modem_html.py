@@ -80,18 +80,14 @@ def sanitize_html(html: str) -> str:
         Sanitized HTML with personal info removed
     """
     # 1. MAC Addresses (various formats)
-    html = re.sub(
-        r"\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b",
-        "XX:XX:XX:XX:XX:XX",
-        html
-    )
+    html = re.sub(r"\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b", "XX:XX:XX:XX:XX:XX", html)
 
     # 2. Serial Numbers
     html = re.sub(
         r"(Serial\s*Number|SN|S/N)\s*[:\s=]*(?:<[^>]*>)*\s*([a-zA-Z0-9\-]{5,})",
         r"\1: ***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 3. Account/Subscriber IDs
@@ -99,7 +95,7 @@ def sanitize_html(html: str) -> str:
         r"(Account|Subscriber|Customer|Device)\s*(ID|Number)\s*[:\s=]+\S+",
         r"\1 \2: ***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 4. Private IP addresses (keep common modem IPs for context)
@@ -107,23 +103,18 @@ def sanitize_html(html: str) -> str:
         r"\b(?!192\.168\.100\.1\b)(?!192\.168\.0\.1\b)(?!192\.168\.1\.1\b)"
         r"(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b",
         "***PRIVATE_IP***",
-        html
+        html,
     )
 
     # 5. IPv6 Addresses
-    html = re.sub(
-        r"\b([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}\b",
-        "***IPv6***",
-        html,
-        flags=re.IGNORECASE
-    )
+    html = re.sub(r"\b([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}\b", "***IPv6***", html, flags=re.IGNORECASE)
 
     # 6. Passwords/Passphrases in HTML forms or text
     html = re.sub(
         r'(password|passphrase|psk|key|wpa[0-9]*key)\s*[=:]\s*["\']?([^"\'<>\s]+)',
         r"\1=***REDACTED***",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 7. Password input fields
@@ -131,15 +122,12 @@ def sanitize_html(html: str) -> str:
         r'(<input[^>]*type=["\']password["\'][^>]*value=["\'])([^"\']+)(["\'])',
         r"\1***REDACTED***\3",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     # 8. Session tokens/cookies
     html = re.sub(
-        r'(session|token|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})',
-        r"\1=***REDACTED***",
-        html,
-        flags=re.IGNORECASE
+        r'(session|token|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})', r"\1=***REDACTED***", html, flags=re.IGNORECASE
     )
 
     # 9. CSRF tokens in meta tags
@@ -147,18 +135,13 @@ def sanitize_html(html: str) -> str:
         r'(<meta[^>]*name=["\']csrf-token["\'][^>]*content=["\'])([^"\']+)(["\'])',
         r"\1***REDACTED***\3",
         html,
-        flags=re.IGNORECASE
+        flags=re.IGNORECASE,
     )
 
     return html
 
 
-def fetch_page(
-    session: requests.Session,
-    base_url: str,
-    path: str,
-    timeout: int = 10
-) -> dict[str, Any] | None:
+def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int = 10) -> dict[str, Any] | None:
     """Fetch a single page from the modem.
 
     Args:
@@ -200,11 +183,7 @@ def fetch_page(
     return None
 
 
-def capture_modem_html(
-    host: str,
-    username: str | None = None,
-    password: str | None = None
-) -> dict[str, Any]:
+def capture_modem_html(host: str, username: str | None = None, password: str | None = None) -> dict[str, Any]:
     """Capture HTML pages from a cable modem.
 
     Args:
@@ -217,6 +196,7 @@ def capture_modem_html(
     """
     # Disable SSL warnings for self-signed certs
     import urllib3
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     base_url = f"http://{host}"
@@ -272,7 +252,7 @@ def create_zip_file(capture_data: dict[str, Any], output_path: Path) -> None:
         capture_data: Capture results from capture_modem_html()
         output_path: Path for output ZIP file
     """
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # Add README
         readme = f"""Modem HTML Capture
 ==================
@@ -320,10 +300,7 @@ Thank you for contributing! 🎉
             "tool": "capture_modem_html.py",
             "tool_version": "1.0.0",
         }
-        zf.writestr(
-            "capture_info.json",
-            json.dumps(metadata, indent=2)
-        )
+        zf.writestr("capture_info.json", json.dumps(metadata, indent=2))
 
         # Add each HTML page
         for page in capture_data["pages"]:
@@ -403,6 +380,7 @@ def main():
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
