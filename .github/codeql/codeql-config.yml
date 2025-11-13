@@ -1,0 +1,12 @@
+name: "CodeQL Security Scanning Configuration"
+
+***REMOVED*** Exclude tools directory from CodeQL scanning
+***REMOVED*** Rationale: Tools are diagnostic scripts for local network cable modems that use
+***REMOVED*** self-signed certificates. Same security reasoning as documented in const.py:
+***REMOVED*** 1. Cable modems universally use self-signed certificates (no CA-signed option)
+***REMOVED*** 2. Target environment is private LANs (192.168.x.x, 10.0.x.x)
+***REMOVED*** 3. MITM risk acceptable in private network context
+***REMOVED*** 4. Self-signed cert still provides encryption in transit
+***REMOVED*** 5. These are diagnostic utilities, not production code
+paths-ignore:
+  - "tools/**"

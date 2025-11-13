@@ -341,6 +341,13 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "total_uncorrected_errors": data.get("cable_modem_total_uncorrected", 0),
             "software_version": data.get("cable_modem_software_version", "Unknown"),
             "system_uptime": data.get("cable_modem_system_uptime", "Unknown"),
+            "health_status": data.get("health_status", "not_available"),
+            "health_diagnosis": data.get("health_diagnosis", ""),
+            "ping_success": data.get("ping_success", False),
+            "ping_latency_ms": data.get("ping_latency_ms"),
+            "http_success": data.get("http_success", False),
+            "http_latency_ms": data.get("http_latency_ms"),
+            "consecutive_failures": data.get("consecutive_failures", 0),
         },
         "downstream_channels": [
             {

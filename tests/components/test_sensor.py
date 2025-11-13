@@ -471,3 +471,173 @@ class TestLanStatsSensors:
 
         sensor = ModemLanTransmittedPacketsSensor(mock_coordinator, mock_entry, "eth0")
         assert sensor.native_value == 395114324
+
+
+class TestFallbackModeSensorCreation:
+    """Test that sensors are conditionally created based on fallback mode."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create a mock Home Assistant instance."""
+        return Mock()
+
+    @pytest.fixture
+    def mock_entry(self):
+        """Create a mock config entry."""
+        entry = Mock()
+        entry.entry_id = "test_entry_123"
+        entry.data = {
+            "host": "192.168.100.1",
+            "detected_modem": "Unknown Modem (Fallback Mode)",
+            "detected_manufacturer": "Unknown",
+        }
+        return entry
+
+    @pytest.fixture
+    def mock_coordinator_normal_mode(self):
+        """Create mock coordinator with normal modem data (not fallback)."""
+        coordinator = Mock()
+        coordinator.data = {
+            "cable_modem_connection_status": "online",
+            "cable_modem_downstream": [
+                {"channel": "1", "frequency": 591000000, "power": 3.5, "snr": 40.5, "corrected": 0, "uncorrected": 0}
+            ],
+            "cable_modem_upstream": [{"channel": "1", "frequency": 36000000, "power": 45.0}],
+            ***REMOVED*** system_info keys are prefixed with cable_modem_
+            "cable_modem_model": "Test Modem",
+            "cable_modem_manufacturer": "TestBrand",
+            "cable_modem_software_version": "1.0.0",
+            "cable_modem_uptime": "5 days",
+            "cable_modem_fallback_mode": False,  ***REMOVED*** Normal mode
+            "health_status": "responsive",
+            "ping_latency_ms": 2.5,
+            "http_latency_ms": 45.0,
+        }
+        return coordinator
+
+    @pytest.fixture
+    def mock_coordinator_fallback_mode(self):
+        """Create mock coordinator with fallback mode data."""
+        coordinator = Mock()
+        coordinator.data = {
+            "cable_modem_connection_status": "limited",
+            "cable_modem_downstream": [],  ***REMOVED*** No channel data in fallback
+            "cable_modem_upstream": [],  ***REMOVED*** No channel data in fallback
+            ***REMOVED*** system_info keys are prefixed with cable_modem_
+            "cable_modem_model": "Unknown Model",
+            "cable_modem_manufacturer": "Unknown",
+            "cable_modem_fallback_mode": True,  ***REMOVED*** Fallback mode flag
+            "cable_modem_status_message": "Modem not fully supported...",
+            "health_status": "responsive",
+            "ping_latency_ms": 2.5,
+            "http_latency_ms": 45.0,
+        }
+        return coordinator
+
+    @pytest.mark.asyncio
+    async def test_normal_mode_creates_all_sensors(self, mock_hass, mock_entry, mock_coordinator_normal_mode):
+        """Test that normal mode creates all sensor types."""
+
+        from custom_components.cable_modem_monitor.const import DOMAIN
+        from custom_components.cable_modem_monitor.sensor import async_setup_entry
+
+        ***REMOVED*** Setup hass.data
+        mock_hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator_normal_mode}}
+
+        ***REMOVED*** Track entities added
+        added_entities = []
+
+        def mock_add_entities(entities):
+            added_entities.extend(entities)
+
+        ***REMOVED*** Call async_setup_entry
+        await async_setup_entry(mock_hass, mock_entry, mock_add_entities)
+
+        ***REMOVED*** Count sensor types
+        sensor_names = [entity._attr_name for entity in added_entities]
+
+        ***REMOVED*** Should include ALL sensor types in normal mode
+        assert "Connection Status" in sensor_names
+        assert "Health Status" in sensor_names
+        assert "Ping Latency" in sensor_names
+        assert "HTTP Latency" in sensor_names
+        assert "Total Corrected Errors" in sensor_names  ***REMOVED*** Should be present
+        assert "Total Uncorrected Errors" in sensor_names  ***REMOVED*** Should be present
+        assert "DS Channel Count" in sensor_names  ***REMOVED*** Should be present (abbreviated name)
+        assert "US Channel Count" in sensor_names  ***REMOVED*** Should be present (abbreviated name)
+        assert "Software Version" in sensor_names  ***REMOVED*** Should be present
+        assert "System Uptime" in sensor_names  ***REMOVED*** Should be present
+
+        ***REMOVED*** Should have at least 10 base sensors + per-channel sensors
+        assert len(added_entities) >= 10
+
+    @pytest.mark.asyncio
+    async def test_skips_unavailable_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
+        """Test that fallback mode only creates sensors that have data."""
+
+        from custom_components.cable_modem_monitor.const import DOMAIN
+        from custom_components.cable_modem_monitor.sensor import async_setup_entry
+
+        ***REMOVED*** Setup hass.data
+        mock_hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator_fallback_mode}}
+
+        ***REMOVED*** Track entities added
+        added_entities = []
+
+        def mock_add_entities(entities):
+            added_entities.extend(entities)
+
+        ***REMOVED*** Call async_setup_entry
+        await async_setup_entry(mock_hass, mock_entry, mock_add_entities)
+
+        ***REMOVED*** Count sensor types
+        sensor_names = [entity._attr_name for entity in added_entities]
+
+        ***REMOVED*** Should include connectivity sensors (have data in fallback)
+        assert "Connection Status" in sensor_names
+        assert "Health Status" in sensor_names
+        assert "Ping Latency" in sensor_names
+        assert "HTTP Latency" in sensor_names
+
+        ***REMOVED*** Should NOT include sensors that require channel/system data
+        assert "Total Corrected Errors" not in sensor_names  ***REMOVED*** Skipped in fallback
+        assert "Total Uncorrected Errors" not in sensor_names  ***REMOVED*** Skipped in fallback
+        assert "DS Channel Count" not in sensor_names  ***REMOVED*** Skipped in fallback (abbreviated name)
+        assert "US Channel Count" not in sensor_names  ***REMOVED*** Skipped in fallback (abbreviated name)
+        assert "Software Version" not in sensor_names  ***REMOVED*** Skipped in fallback
+        assert "System Uptime" not in sensor_names  ***REMOVED*** Skipped in fallback
+
+        ***REMOVED*** Should have exactly 4 sensors (Connection, Health, Ping, HTTP)
+        assert len(added_entities) == 4
+
+    @pytest.mark.asyncio
+    async def test_no_channel_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
+        """Test that fallback mode creates no per-channel sensors."""
+
+        from custom_components.cable_modem_monitor.const import DOMAIN
+        from custom_components.cable_modem_monitor.sensor import async_setup_entry
+
+        ***REMOVED*** Setup hass.data
+        mock_hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator_fallback_mode}}
+
+        ***REMOVED*** Track entities added
+        added_entities = []
+
+        def mock_add_entities(entities):
+            added_entities.extend(entities)
+
+        ***REMOVED*** Call async_setup_entry
+        await async_setup_entry(mock_hass, mock_entry, mock_add_entities)
+
+        ***REMOVED*** Check that no channel-specific sensors were created
+        sensor_unique_ids = [entity._attr_unique_id for entity in added_entities]
+
+        ***REMOVED*** Should NOT have any channel-specific sensors
+        assert not any("_ds_" in uid for uid in sensor_unique_ids)  ***REMOVED*** No downstream channel sensors
+        assert not any("_us_" in uid for uid in sensor_unique_ids)  ***REMOVED*** No upstream channel sensors
+
+    def test_connection_status_shows_limited_in_fallback(self, mock_coordinator_fallback_mode, mock_entry):
+        """Test that connection status sensor shows 'limited' in fallback mode."""
+        sensor = ModemConnectionStatusSensor(mock_coordinator_fallback_mode, mock_entry)
+
+        assert sensor.native_value == "limited"

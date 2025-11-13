@@ -24,6 +24,7 @@ _PARSER_MODULE_MAP = {
     "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),
     "Technicolor TC4400": ("technicolor", "tc4400", "TechnicolorTC4400Parser"),
     "Technicolor XB7": ("technicolor", "xb7", "TechnicolorXB7Parser"),
+    "Unknown Modem (Fallback Mode)": ("universal", "fallback", "UniversalFallbackParser"),
 }
 
 
@@ -81,7 +82,7 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
         return None
 
 
-def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
+def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:  ***REMOVED*** noqa: C901
     """
     Auto-discover and return all parser modules in this package.
 
@@ -146,12 +147,23 @@ def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:
             except Exception as e:
                 _LOGGER.error("Failed to load parser module %s: %s", full_module_name, e, exc_info=True)
 
-    ***REMOVED*** Sort parsers by manufacturer, then by priority (higher priority first)
-    ***REMOVED*** This ensures model-specific parsers are tried before generic ones within the same manufacturer
-    parsers.sort(key=lambda p: (p.manufacturer, p.priority), reverse=True)
+    ***REMOVED*** Sort parsers to match dropdown order (alphabetical by manufacturer, then name)
+    ***REMOVED*** Generic parsers go last within their manufacturer group
+    ***REMOVED*** Unknown manufacturer (fallback) goes to the very end
+    def sort_key(parser):
+        ***REMOVED*** Unknown manufacturer goes last
+        if parser.manufacturer == "Unknown":
+            return ("ZZZZ", "ZZZZ")
+        ***REMOVED*** Within each manufacturer, Generic parsers go last
+        if "Generic" in parser.name:
+            return (parser.manufacturer, "ZZZZ")
+        ***REMOVED*** Regular parsers sort by manufacturer then name
+        return (parser.manufacturer, parser.name)
+
+    parsers.sort(key=sort_key)
 
     _LOGGER.debug("Finished parser discovery. Found %d parsers.", len(parsers))
-    _LOGGER.debug("Parser order by priority: %s", [f"{p.name} (priority={p.priority})" for p in parsers])
+    _LOGGER.debug("Parser order (alphabetical): %s", [p.name for p in parsers])
 
     ***REMOVED*** Cache the results
     _PARSER_CACHE = parsers
