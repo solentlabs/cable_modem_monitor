@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
 from ..base_parser import ModemParser
 
@@ -48,14 +49,20 @@ class UniversalFallbackParser(ModemParser):
         strategy=AuthStrategyType.BASIC_HTTP,
     )
 
+    # Priority seed URLs - generic patterns, not manufacturer-specific
+    # Link crawler will discover all other pages automatically
+    # Uses reusable pattern generation from html_crawler utility
+    from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
+
+    _seed_urls = generate_seed_urls(
+        bases=["", "index", "status", "connection"],
+        extensions=["", ".html", ".htm", ".asp"]
+    )
+
+    # Convert to url_patterns format
     url_patterns = [
-        # Try common public status pages first
-        {"path": "/", "auth_method": "basic", "auth_required": False},
-        {"path": "/status.html", "auth_method": "basic", "auth_required": False},
-        {"path": "/index.html", "auth_method": "basic", "auth_required": False},
-        # Common modem status pages
-        {"path": "/cmconnectionstatus.html", "auth_method": "basic", "auth_required": False},
-        {"path": "/DocsisStatus.htm", "auth_method": "basic", "auth_required": False},
+        {"path": path, "auth_method": "basic", "auth_required": False}
+        for path in _seed_urls
     ]
 
     @classmethod

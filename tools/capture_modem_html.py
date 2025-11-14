@@ -34,40 +34,72 @@ except ImportError:
     sys.exit(1)
 
 
-# Common modem pages to try (covers most manufacturers)
-COMMON_PAGES = [
-    "/",  # Home page
-    "/index.html",
-    "/index.asp",
-    "/index.htm",
-    # ARRIS
-    "/cmSignalData.htm",
-    "/cmswinfo.html",
-    "/cmLogsStatus.htm",
-    # Motorola
-    "/MotoConnection.asp",
-    "/MotoHome.asp",
-    "/MotoSwInfo.asp",
-    "/MotoSaStatusConnectionInfo.asp",
-    # Netgear
-    "/cmconnectionstatus.html",
-    "/DocsisStatus.htm",
-    "/status.asp",
-    "/status.html",
-    "/cmswinfo.html",
-    # Technicolor TC4400
-    "/cmconnectionstatus.html",
-    "/cmswinfo.html",
-    # Technicolor XB7
-    "/network_setup.jst",
-    "/at_a_glance.jst",
-    # Generic
-    "/status.html",
-    "/status.asp",
-    "/status.htm",
-    "/connection.html",
-    "/signal.html",
+# Generate modem page URLs dynamically using patterns
+# Instead of hardcoding every variant, combine common base names with extensions.
+#
+# Strategy:
+# 1. Try priority "seed" pages first (common entry points)
+# 2. Discover additional links from captured pages (link crawling)
+#
+# To add support for new patterns:
+# - New extension? Add to COMMON_EXTENSIONS (e.g., ".shtml")
+# - New seed page? Add to SEED_BASES (e.g., "diagnostics")
+
+# Priority seed bases - common entry points for modems
+# These are generic patterns, not manufacturer-specific filenames
+SEED_BASES = [
+    "",  # Root path
+    "index",
+    "status",
+    "connection",  # Generic - catches cmconnectionstatus, MotoConnection, etc.
 ]
+
+COMMON_EXTENSIONS = [
+    "",  # No extension (for root and some pages)
+    ".html",
+    ".htm",
+    ".asp",
+    ".php",
+    ".jsp",
+    ".cgi",
+    ".jst",  # Technicolor
+]
+
+
+def generate_seed_pages():
+    """Generate priority seed URLs to try first.
+
+    These are common entry points that typically link to other pages.
+    Link discovery will find manufacturer-specific pages automatically.
+
+    Returns:
+        List of seed URL paths
+    """
+    pages = []
+
+    # Generate combinations of seed bases + extensions
+    for base in SEED_BASES:
+        for ext in COMMON_EXTENSIONS:
+            if base == "":
+                # Root path - only add once without extension
+                if ext == "":
+                    pages.append("/")
+            else:
+                # Regular pages - combine base + extension
+                pages.append(f"/{base}{ext}")
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_pages = []
+    for page in pages:
+        if page not in seen:
+            seen.add(page)
+            unique_pages.append(page)
+
+    return unique_pages
+
+
+SEED_PAGES = generate_seed_pages()
 
 
 def sanitize_html(html: str) -> str:
@@ -218,12 +250,13 @@ def capture_modem_html(host: str, username: str | None = None, password: str | N
         print("\n📖 No authentication (trying public pages)")
 
     print(f"🌐 Connecting to: {base_url}")
-    print(f"📄 Trying {len(COMMON_PAGES)} common modem pages...\n")
+    print(f"📄 Phase 1: Trying {len(SEED_PAGES)} seed pages...\n")
 
     captured_pages = []
     failed_count = 0
 
-    for page in COMMON_PAGES:
+    # Phase 1: Fetch seed pages
+    for page in SEED_PAGES:
         result = fetch_page(session, base_url, page)
         if result:
             status = "🔒 Auth Required" if result["status_code"] == 401 else "✅ Captured"
@@ -233,8 +266,65 @@ def capture_modem_html(host: str, username: str | None = None, password: str | N
         else:
             failed_count += 1
 
-    print("\n📊 Summary:")
-    print(f"  ✅ Captured: {len(captured_pages)} pages")
+    print(f"\n📊 Phase 1 Complete: {len(captured_pages)} pages captured")
+
+    # Phase 2: Discover additional links from captured pages
+    if captured_pages:
+        print(f"\n📄 Phase 2: Discovering additional pages via link crawling...\n")
+
+        # Import link discovery utilities
+        from urllib.parse import urljoin, urlparse
+
+        # Extract all links from captured HTML
+        discovered_links = set()
+        captured_urls = {page["url"] for page in captured_pages}
+
+        for page in captured_pages:
+            try:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(page["html"], "html.parser")
+
+                for link_tag in soup.find_all("a", href=True):
+                    href = link_tag["href"]
+
+                    # Skip anchors, javascript, mailto
+                    if href.startswith(("#", "javascript:", "mailto:")):
+                        continue
+
+                    # Convert to absolute URL
+                    absolute_url = urljoin(base_url, href)
+
+                    # Only same-host links
+                    if urlparse(absolute_url).netloc != urlparse(base_url).netloc:
+                        continue
+
+                    # Skip binary files (but keep .js and .css for API/data discovery)
+                    skip_exts = [".jpg", ".png", ".gif", ".ico", ".pdf", ".zip", ".svg", ".woff", ".woff2", ".ttf"]
+                    if any(absolute_url.lower().endswith(ext) for ext in skip_exts):
+                        continue
+
+                    # Add if not already captured
+                    if absolute_url not in captured_urls:
+                        discovered_links.add(absolute_url)
+
+            except Exception as e:
+                print(f"  ⚠️  Error discovering links from {page.get('url', 'unknown')}: {e}")
+
+        print(f"  🔍 Discovered {len(discovered_links)} new pages to fetch")
+
+        # Fetch discovered pages
+        for url in discovered_links:
+            path = urlparse(url).path
+            result = fetch_page(session, base_url, path)
+            if result:
+                size_kb = result["size_bytes"] / 1024
+                print(f"  ✅ Captured: {path} ({size_kb:.1f} KB)")
+                captured_pages.append(result)
+            else:
+                failed_count += 1
+
+    print("\n📊 Final Summary:")
+    print(f"  ✅ Total Captured: {len(captured_pages)} pages")
     print(f"  ❌ Failed: {failed_count} pages")
 
     total_size = sum(p["size_bytes"] for p in captured_pages)

@@ -190,92 +190,53 @@ class ModemScraper:
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
 
-    def _crawl_additional_pages(self, max_pages: int = 20) -> None:  # noqa: C901
+    def _crawl_additional_pages(self, max_pages: int = 20) -> None:
         """Crawl additional pages by following links found in captured HTML.
 
         This enhances HTML capture by automatically discovering and fetching
         additional modem pages that might contain useful information for
         parser development.
 
+        Uses the reusable html_crawler utility for link discovery.
+
         Args:
             max_pages: Maximum number of additional pages to crawl (default 20)
         """
-        from urllib.parse import urljoin, urlparse, urlunparse
-
-        from bs4 import BeautifulSoup
+        from custom_components.cable_modem_monitor.lib.html_crawler import (
+            discover_links_from_pages,
+            get_new_links_to_crawl,
+            normalize_url,
+        )
 
         if not self._captured_urls:
             return
 
         _LOGGER.info("Starting link crawl to discover additional pages (max %d pages)", max_pages)
 
-        # Normalize URL for comparison (remove fragments, normalize trailing slashes)
-        def normalize_url(url: str) -> str:
-            """Normalize URL for deduplication."""
-            parsed = urlparse(url)
-            # Remove fragment, normalize path (remove trailing slash unless it's root)
-            path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
-            # Reconstruct without fragment
-            normalized = urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, parsed.query, ""))
-            return normalized
-
-        # Get already captured URLs to avoid duplicates (normalized)
+        # Get already captured URLs (normalized)
         captured_url_set = {normalize_url(item["url"]) for item in self._captured_urls}
-        base_host = urlparse(self.base_url).netloc
-
         _LOGGER.debug("Already captured %d unique pages (normalized)", len(captured_url_set))
 
-        # Extract all links from captured HTML
-        links_to_try = set()
-        for captured in self._captured_urls:
-            try:
-                soup = BeautifulSoup(captured["html"], "html.parser")
+        # Discover all links from captured pages using utility
+        discovered_links = discover_links_from_pages(self._captured_urls, self.base_url)
 
-                # Find all <a> tags with href attributes
-                for link in soup.find_all("a", href=True):
-                    href = link["href"]
+        # Get new links to crawl (not already captured)
+        links_to_try = get_new_links_to_crawl(discovered_links, captured_url_set, max_pages)
 
-                    # Skip anchors, javascript, mailto, etc.
-                    if href.startswith(("#", "javascript:", "mailto:")):
-                        continue
+        if not links_to_try:
+            _LOGGER.info("No new links discovered to crawl")
+            return
 
-                    # Convert relative URLs to absolute
-                    absolute_url = urljoin(self.base_url, href)
+        _LOGGER.info("Found %d new links to crawl", len(links_to_try))
 
-                    # Only crawl same-host links
-                    parsed = urlparse(absolute_url)
-                    if parsed.netloc != base_host:
-                        continue
-
-                    # Skip common binary file extensions
-                    binary_extensions = [".jpg", ".png", ".gif", ".css", ".js", ".ico", ".pdf", ".zip"]
-                    if any(absolute_url.lower().endswith(ext) for ext in binary_extensions):
-                        continue
-
-                    # Normalize and check if not already captured
-                    normalized = normalize_url(absolute_url)
-                    if normalized not in captured_url_set:
-                        links_to_try.add(absolute_url)
-                        captured_url_set.add(normalized)  # Mark as "will be captured"
-                        _LOGGER.debug("Will crawl new page: %s", absolute_url)
-                    else:
-                        _LOGGER.debug("Skipping already captured page: %s (normalized: %s)", absolute_url, normalized)
-
-            except Exception as e:
-                _LOGGER.debug("Error extracting links from %s: %s", captured.get("url", "unknown"), e)
-
-        already_captured = len(captured_url_set) - len(links_to_try)
-        _LOGGER.info("Found %d new links to crawl (already have %d pages)", len(links_to_try), already_captured)
-
-        # Crawl discovered links (up to max_pages)
+        # Crawl discovered links
         pages_crawled = 0
-        for link_url in list(links_to_try)[:max_pages]:
+        for link_url in links_to_try:
             try:
                 _LOGGER.debug("Crawling additional page: %s", link_url)
                 response = self.session.get(link_url, timeout=5)
 
                 if response.status_code == 200:
-                    # Capture this page (already marked as captured in captured_url_set above)
                     self._capture_response(response, "Link crawl")
                     pages_crawled += 1
                     _LOGGER.debug("Successfully captured: %s (%d bytes)", link_url, len(response.text))
