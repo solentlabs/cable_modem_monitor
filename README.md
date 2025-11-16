@@ -18,6 +18,38 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 - [**Supported Modems**](#supported-modems)
 - [**Troubleshooting Guide**](./docs/TROUBLESHOOTING.md)
 - [**Contributing Guide**](./CONTRIBUTING.md)
+- [**Development Setup**](#development-setup) (for contributors)
+
+---
+
+## Development Setup
+
+Want to contribute? Get set up in 30 seconds:
+
+```bash
+# Clone the repository
+git clone https://github.com/kwschulz/cable_modem_monitor.git
+cd cable_modem_monitor
+
+# Run automated setup
+./scripts/setup.sh
+
+# Verify everything works
+./scripts/verify-setup.sh
+
+# You're ready! Run tests
+make test
+```
+
+The setup script will:
+- ✅ Create Python virtual environment (.venv)
+- ✅ Install all dependencies
+- ✅ Configure pre-commit hooks
+- ✅ Verify your environment
+
+**Having issues?** Run `./scripts/verify-setup.sh` to diagnose problems. The verification script will check your environment and report any issues.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md) for detailed development guides.
 
 ---
 
