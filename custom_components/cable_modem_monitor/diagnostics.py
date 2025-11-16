@@ -42,72 +42,7 @@ def _sanitize_log_message(message: str) -> str:
     return message
 
 
-def _sanitize_html(html: str) -> str:
-    """Sanitize HTML to remove sensitive information.
-
-    Args:
-        html: Raw HTML content from modem
-
-    Returns:
-        Sanitized HTML with sensitive data redacted
-    """
-    # 1. MAC Addresses
-    html = re.sub(r"\b([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b", "XX:XX:XX:XX:XX:XX", html)
-
-    # 2. Serial Numbers (various formats)
-    html = re.sub(
-        r"(Serial\s*Number|SN|S/N)\s*[:\s=]*(?:<[^>]*>)*\s*([a-zA-Z0-9\-]{5,})",
-        r"\1: ***REDACTED***",
-        html,
-        flags=re.IGNORECASE,
-    )
-
-    # 3. Account/Subscriber IDs
-    html = re.sub(
-        r"(Account|Subscriber|Customer|Device)\s*(ID|Number)\s*[:\s=]+\S+",
-        r"\1 \2: ***REDACTED***",
-        html,
-        flags=re.IGNORECASE,
-    )
-
-    # 4. Private IPs (except common modem IPs like 192.168.100.1, 192.168.0.1, etc.)
-    html = re.sub(
-        r"\b(?!192\.168\.100\.1\b)(?!192\.168\.0\.1\b)(?!192\.168\.1\.1\b)"
-        r"(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\b",
-        "***PRIVATE_IP***",
-        html,
-    )
-
-    # 5. WiFi Passwords/Passphrases
-    html = re.sub(
-        r'(password|passphrase|psk|key|wpa[0-9]*key)\s*[=:]\s*["\']?([^"\'<>\s]+)',
-        r"\1=***REDACTED***",
-        html,
-        flags=re.IGNORECASE,
-    )
-
-    # 6. HTML Forms with password fields - redact values
-    html = re.sub(
-        r'(<input[^>]*type=["\']password["\'][^>]*value=["\'])([^"\']+)(["\'])',
-        r"\1***REDACTED***\3",
-        html,
-        flags=re.IGNORECASE,
-    )
-
-    # 7. Remove session tokens/cookies from HTML
-    # Handle session=, token=, auth=
-    html = re.sub(
-        r'(session|token|auth)\s*[=:]\s*["\']?([^"\'<>\s]{20,})', r"\1=***REDACTED***", html, flags=re.IGNORECASE
-    )
-    # Handle <meta name="csrf-token" content="...">
-    html = re.sub(
-        r'(<meta[^>]*name=["\']csrf-token["\'][^>]*content=["\'])([^"\']+)(["\'])',
-        r"\1***REDACTED***\3",
-        html,
-        flags=re.IGNORECASE,
-    )
-
-    return html
+from .utils.html_helper import sanitize_html
 
 
 def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:  # noqa: C901
@@ -418,7 +353,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
                 for url_data in capture.get("urls", []):
                     sanitized_url = url_data.copy()
                     if "html" in sanitized_url:
-                        sanitized_url["html"] = _sanitize_html(sanitized_url["html"])
+                        sanitized_url["html"] = sanitize_html(sanitized_url["html"])
                         # Add size info for sanitized HTML
                         sanitized_url["sanitized_size_bytes"] = len(sanitized_url["html"])
                     sanitized_urls.append(sanitized_url)

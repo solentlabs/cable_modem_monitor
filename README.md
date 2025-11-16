@@ -49,13 +49,13 @@ These models have test coverage and confirmed working by users:
 
 - **ARRIS SB6141** - Full support
 - **Motorola MB7621** - Full support
-- **Technicolor XB7 (CGM4331COM)** - Working (system info enhancements coming in v2.6.0)
+- **Technicolor XB7 (CGM4331COM)** - Full support (system info enhancements complete)
 
 ### 🔧 Partial Support / Known Issues
 Parsers exist but have known limitations:
 
+- **Motorola MB8611** - Parser exists, but still needs more analysis for full HNAP/SOAP support.
 - **Technicolor TC4400** - Parser exists, investigating entity availability issues ([Issue #1](https://github.com/kwschulz/cable_modem_monitor/issues/1))
-- **Motorola MB8611** - Requires HNAP/SOAP support (planned for v3.0.0, [Issue #4](https://github.com/kwschulz/cable_modem_monitor/issues/4))
 
 ### 📋 Requested Models
 Community members have requested support for these models:
@@ -65,18 +65,20 @@ Community members have requested support for these models:
 ### ℹ️ Motorola Generic Parser
 A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that use standard HTML pages (not HNAP/SOAP). Try "auto" detection during setup.
 
+## How to Help Add Support for Your Modem
+
+If your modem isn't fully supported or you'd like to help expand compatibility:
+
+1.  **Capture HTML Samples**: Provide us with the HTML source from your modem's status pages. This is crucial for building new parsers.
+    *   See the [HTML Capture Guide](./docs/HTML_CAPTURE_GUIDE.md) for detailed instructions on how to safely capture and share HTML.
+2.  **Open a GitHub Issue**: Create an issue with your modem model and attach the captured HTML samples.
+    *   This helps us prioritize and implement support for your modem.
+
+**Your contribution helps everyone with the same modem model!**
+
 **Have a different modem?** This integration uses a plugin architecture that makes adding new models easy. Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
 
-### 🆘 Unsupported Modem? No Problem!
 
-**NEW in v3.1.0:** The integration now includes a **Universal Fallback Mode** that allows installation even if your modem isn't specifically supported yet. This makes it easy to help us add support for your modem:
-
-1. **Install the integration** - It will work in fallback mode with limited functionality
-2. **Press the "Capture HTML" button** - Takes 10 seconds, one click!
-3. **Download diagnostics** - All personal info automatically removed
-4. **Share on GitHub** - We'll build a parser for your modem
-
-**No technical skills needed!** The fallback mode is designed for non-technical users to easily contribute HTML samples. See [CM600 User Instructions](./docs/CM600_USER_INSTRUCTIONS.md) for a step-by-step guide.
 
 ## Installation
 
@@ -137,11 +139,6 @@ After installation, you can configure additional settings:
    - **Modem Model**: Select your modem model or use "auto" for automatic detection (recommended)
    - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
-   - **Entity Naming**: Choose how entities are named:
-     - **Default**: No prefix (e.g., "Modem Connection Status")
-     - **Domain**: Add "Cable Modem" prefix (e.g., "Cable Modem Modem Connection Status")
-     - **IP Address**: Use modem IP as prefix (e.g., "192_168_100_1 Modem Connection Status")
-     - **Custom**: Define your own prefix (e.g., "Living Room Modem Connection Status")
 
 ![Cable Modem Configuration Settings](images/cable-modem-settings.png)
 

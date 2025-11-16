@@ -1,9 +1,12 @@
 {
   "recommendations": [
-    "GitHub.vscode-codeql",
     "ms-python.python",
     "ms-python.vscode-pylance",
-    "ms-python.flake8",
-    "charliermarsh.ruff"
+    "ms-python.black-formatter",
+    "charliermarsh.ruff",
+    "esbenp.prettier-vscode",
+    "redhat.vscode-yaml",
+    "streetsidesoftware.code-spell-checker",
+    "GitHub.vscode-codeql"
   ]
 }

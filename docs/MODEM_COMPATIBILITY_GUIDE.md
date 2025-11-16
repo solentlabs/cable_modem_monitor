@@ -9,21 +9,23 @@ This integration relies on community contributions for modem support. Compatibil
 ### ✅ Confirmed Working
 These models are actively tested or have been confirmed to work reliably by the community.
 
-- **Motorola MB Series**: MB7420, MB7621, MB8600, MB8611
+- **Motorola MB Series**: MB7420, MB7621, MB8600
 - **ARRIS SB6141**
 - **ARRIS SB6190**
+- **Technicolor XB7 (CGM4331COM)**
 
 ### ⚠️ Community Reported (Mixed Results)
 These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
 
+- **Motorola MB8611** - Parser exists, but still needs more analysis for full HNAP/SOAP support.
 - **Arris SB6183**
 - **Arris SB8200**
 
 ### 🧪 Experimental / Untested
 Parsers for these models exist in the code, but they have not been fully validated by the community. They may be incomplete or may not work at all.
 
+- **Netgear CM600** - Support planned for v3.3, awaiting HTML samples for full implementation.
 - **Technicolor TC4400**
-- **Technicolor XB7 (CGM4331COM)**
 
 ### ❌ Known Incompatible
 - None reported yet.

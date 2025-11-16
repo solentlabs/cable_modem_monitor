@@ -143,63 +143,85 @@ class NetgearCM600Parser(ModemParser):
         channels = []
 
         try:
-            # Find the InitDsTableTagValue function with downstream data
-            script_tags = soup.find_all("script", text=re.compile("InitDsTableTagValue"))
+            regex_pattern = re.compile("InitDsTableTagValue")
+            _LOGGER.debug("CM600 Downstream: Compiled regex pattern: %s", regex_pattern)
+            all_scripts = soup.find_all("script")
+            _LOGGER.debug("CM600 Downstream: Found %d total script tags.", len(all_scripts))
 
-            for script in script_tags:
-                # Extract the tagValueList value from the function
-                match = re.search(r"var tagValueList = ['\"]([^'\"]+)['\"]", script.string or "")
-                if not match:
-                    continue
+            match = None # Initialize match to None
+            for script in all_scripts:
+                if script.string and regex_pattern.search(script.string):
+                    _LOGGER.debug("CM600 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d", len(script.string))
+                    # Extract the function body first, then get tagValueList from within it
+                    func_match = re.search(r"function InitDsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL)
+                    if func_match:
+                        func_body = func_match.group(1)
+                        # Remove block comments /* ... */ to avoid matching commented-out code
+                        func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+                        # Now find tagValueList within this function (skip // commented lines)
+                        match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
+                        if match:
+                            _LOGGER.debug("CM600 Downstream: tagValueList match found. Extracted value length: %d", len(match.group(1)))
 
-                # Split by pipe delimiter
-                values = match.group(1).split("|")
-
-                if len(values) < 10:  # Need at least count + 1 channel (9 fields)
-                    _LOGGER.warning("Insufficient downstream data: %d values", len(values))
-                    continue
-
-                # First value is channel count
-                channel_count = int(values[0])
-                _LOGGER.debug("Found %d downstream channels", channel_count)
-
-                # Each channel has 9 fields: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
-                fields_per_channel = 9
-                idx = 1  # Start after channel count
-
-                for i in range(channel_count):
-                    if idx + fields_per_channel > len(values):
-                        _LOGGER.warning("Incomplete data for downstream channel %d", i + 1)
-                        break
-
-                    try:
-                        # Extract frequency value (remove " Hz" suffix if present)
-                        freq_str = values[idx + 4].replace(" Hz", "").strip()
-                        freq = int(freq_str)
-
-                        channel = {
-                            "channel_id": values[idx + 3],  # Channel ID
-                            "frequency": freq,  # Frequency in Hz
-                            "power": float(values[idx + 5]),  # Power in dBmV
-                            "snr": float(values[idx + 6]),  # SNR in dB
-                            "modulation": values[idx + 2],  # Modulation (QAM256, etc.)
-                            "corrected": int(values[idx + 7]),  # Corrected errors
-                            "uncorrected": int(values[idx + 8]),  # Uncorrected errors
-                        }
-
-                        channels.append(channel)
-                        idx += fields_per_channel
-
-                    except (ValueError, IndexError) as e:
-                        _LOGGER.warning("Error parsing downstream channel %d: %s", i + 1, e)
-                        idx += fields_per_channel
+                            # Split by pipe delimiter
+                            values = match.group(1).split("|")
+                            break # Found the data, stop searching
+                        else:
+                            _LOGGER.debug("CM600 Downstream: No tagValueList match found in function body.")
+                            continue
+                    else:
+                        _LOGGER.debug("CM600 Downstream: Could not extract function body.")
                         continue
+            
+            if match is None: # If no match was found after iterating all scripts
+                _LOGGER.debug("CM600 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted.")
+                return channels # Return empty list if no data found
 
-                _LOGGER.info("Parsed %d downstream channels", len(channels))
-                break  # Found the data, stop searching
+            if len(values) < 10:  # Need at least count + 1 channel (9 fields)
+                _LOGGER.warning("Insufficient downstream data: %d values", len(values))
+                return channels # Return empty list if insufficient data
+
+            # First value is channel count
+            channel_count = int(values[0])
+            _LOGGER.debug("Found %d downstream channels", channel_count)
+
+            # Each channel has 9 fields: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
+            fields_per_channel = 9
+            idx = 1  # Start after channel count
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    _LOGGER.warning("Incomplete data for downstream channel %d", i + 1)
+                    break
+
+                try:
+                    # Extract frequency value (remove " Hz" suffix if present)
+                    freq_str = values[idx + 4].replace(" Hz", "").strip()
+                    freq = int(freq_str)
+
+                    channel = {
+                        "channel_id": values[idx + 3],  # Channel ID
+                        "frequency": freq,  # Frequency in Hz
+                        "power": float(values[idx + 5]),  # Power in dBmV
+                        "snr": float(values[idx + 6]),  # SNR in dB
+                        "modulation": values[idx + 2],  # Modulation (QAM256, etc.)
+                        "corrected": int(values[idx + 7]),  # Corrected errors
+                        "uncorrected": int(values[idx + 8]),  # Uncorrected errors
+                    }
+
+                    channels.append(channel)
+                    idx += fields_per_channel
+
+                except (ValueError, IndexError) as e:
+                    _LOGGER.warning("Error parsing downstream channel %d: %s", i + 1, e)
+                    idx += fields_per_channel
+                    continue
+
+            _LOGGER.info("Parsed %d downstream channels", len(channels))
+            # No break here, as we want to parse all channels
 
         except Exception as e:
-            _LOGGER.error("Error parsing CM600 downstream channels: %s", e)
+            _LOGGER.error("Error parsing CM600 downstream channels: %s", e, exc_info=True)
 
         return channels
 
@@ -218,62 +240,84 @@ class NetgearCM600Parser(ModemParser):
 
         try:
             # Find the InitUsTableTagValue function with upstream data
-            script_tags = soup.find_all("script", text=re.compile("InitUsTableTagValue"))
+            regex_pattern = re.compile("InitUsTableTagValue")
+            _LOGGER.debug("CM600 Upstream: Compiled regex pattern: %s", regex_pattern)
+            all_scripts = soup.find_all("script")
+            _LOGGER.debug("CM600 Upstream: Found %d total script tags.", len(all_scripts))
 
-            for script in script_tags:
-                # Extract the tagValueList value from the function
-                match = re.search(r"var tagValueList = ['\"]([^'\"]+)['\"]", script.string or "")
-                if not match:
-                    continue
+            match = None # Initialize match to None
+            for script in all_scripts:
+                if script.string and regex_pattern.search(script.string):
+                    _LOGGER.debug("CM600 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d", len(script.string))
+                    # Extract the function body first, then get tagValueList from within it
+                    func_match = re.search(r"function InitUsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL)
+                    if func_match:
+                        func_body = func_match.group(1)
+                        # Remove block comments /* ... */ to avoid matching commented-out code
+                        func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+                        # Now find tagValueList within this function (skip // commented lines)
+                        match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
+                        if match:
+                            _LOGGER.debug("CM600 Upstream: tagValueList match found. Extracted value length: %d", len(match.group(1)))
 
-                # Split by pipe delimiter
-                values = match.group(1).split("|")
-
-                if len(values) < 8:  # Need at least count + 1 channel (7 fields)
-                    _LOGGER.warning("Insufficient upstream data: %d values", len(values))
-                    continue
-
-                # First value is channel count
-                channel_count = int(values[0])
-                _LOGGER.debug("Found %d upstream channels", channel_count)
-
-                # Each channel has 7 fields: num|lock|channel_type|id|symbol_rate|frequency|power
-                fields_per_channel = 7
-                idx = 1  # Start after channel count
-
-                for i in range(channel_count):
-                    if idx + fields_per_channel > len(values):
-                        _LOGGER.warning("Incomplete data for upstream channel %d", i + 1)
-                        break
-
-                    try:
-                        # Extract frequency value (remove " Hz" suffix if present)
-                        freq_str = values[idx + 5].replace(" Hz", "").strip()
-                        freq = int(freq_str)
-
-                        channel = {
-                            "channel_id": values[idx + 3],  # Channel ID
-                            "frequency": freq,  # Frequency in Hz
-                            "power": float(values[idx + 6]),  # Power in dBmV
-                            "channel_type": values[idx + 2],  # Channel type (ATDMA, etc.)
-                        }
-
-                        channels.append(channel)
-                        idx += fields_per_channel
-
-                    except (ValueError, IndexError) as e:
-                        _LOGGER.warning("Error parsing upstream channel %d: %s", i + 1, e)
-                        idx += fields_per_channel
+                            # Split by pipe delimiter
+                            values = match.group(1).split("|")
+                            break # Found the data, stop searching
+                        else:
+                            _LOGGER.debug("CM600 Upstream: No tagValueList match found in function body.")
+                            continue
+                    else:
+                        _LOGGER.debug("CM600 Upstream: Could not extract function body.")
                         continue
 
-                _LOGGER.info("Parsed %d upstream channels", len(channels))
-                break  # Found the data, stop searching
+            if match is None: # If no match was found after iterating all scripts
+                _LOGGER.debug("CM600 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted.")
+                return channels # Return empty list if no data found
+
+            if len(values) < 8:  # Need at least count + 1 channel (7 fields)
+                _LOGGER.warning("Insufficient upstream data: %d values", len(values))
+                return channels # Return empty list if insufficient data
+
+            # First value is channel count
+            channel_count = int(values[0])
+            _LOGGER.debug("Found %d upstream channels", channel_count)
+
+            # Each channel has 7 fields: num|lock|channel_type|id|symbol_rate|frequency|power
+            fields_per_channel = 7
+            idx = 1  # Start after channel count
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    _LOGGER.warning("Incomplete data for upstream channel %d", i + 1)
+                    break
+
+                try:
+                    # Extract frequency value (remove " Hz" suffix if present)
+                    freq_str = values[idx + 5].replace(" Hz", "").strip()
+                    freq = int(freq_str)
+
+                    channel = {
+                        "channel_id": values[idx + 3],  # Channel ID
+                        "frequency": freq,  # Frequency in Hz
+                        "power": float(values[idx + 6]),  # Power in dBmV
+                        "channel_type": values[idx + 2],  # Channel type (ATDMA, etc.)
+                    }
+
+                    channels.append(channel)
+                    idx += fields_per_channel
+
+                except (ValueError, IndexError) as e:
+                    _LOGGER.warning("Error parsing upstream channel %d: %s", i + 1, e)
+                    idx += fields_per_channel
+                    continue
+
+            _LOGGER.info("Parsed %d upstream channels", len(channels))
+            # No break here, as we want to parse all channels
 
         except Exception as e:
-            _LOGGER.error("Error parsing CM600 upstream channels: %s", e)
+            _LOGGER.error("Error parsing CM600 upstream channels: %s", e, exc_info=True)
 
         return channels
-
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from RouterStatus.asp or DashBoard.asp.
 
@@ -294,7 +338,7 @@ class NetgearCM600Parser(ModemParser):
 
             for script in script_tags:
                 # Extract the tagValueList value
-                match = re.search(r"var tagValueList = ['\"]([^'\"]+)['\"]", script.string or "")
+                match = re.search(r"var tagValueList = [\"']([^\"']+)[\"']", script.string or "")
                 if match:
                     # Split by pipe delimiter
                     values = match.group(1).split("|")

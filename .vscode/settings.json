@@ -1,4 +1,5 @@
 {
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
     "python.linting.flake8Enabled": false,
     "python.linting.enabled": true,
     "python.linting.lintOnSave": true,
@@ -22,5 +23,11 @@
         "-v",
         "--tb=short"
     ],
-    "python.testing.autoTestDiscoverOnSaveEnabled": true
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "black-formatter.interpreter": [
+        "${workspaceFolder}/venv/bin/python"
+    ],
+    "black-formatter.path": [
+        "black"
+    ]
 }

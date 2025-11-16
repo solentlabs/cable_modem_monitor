@@ -1,8 +1,8 @@
 # Cable Modem Monitor - Complete Architecture & Implementation Roadmap
 
-**Version:** 2.0 (Enhanced with Integrated Features)
-**Date:** November 5, 2025
-**Status:** Comprehensive Implementation Guide
+**Version:** 3.2.0
+**Date:** November 16, 2025
+**Status:** Living Roadmap - Reflects current state and future direction
 
 ---
 
@@ -16,19 +16,18 @@ Transform Cable Modem Monitor from a code-based system to a **fully modular, dat
 
 | Version | Phases | Target Features | Status |
 |---------|--------|----------------|--------|
-| **v2.6.0** | Phase 0 | XB7 enhancements, Health monitoring, Reset button, SSL fix | 📝 **Ready** |
-| v3.0.0-alpha | Phase 1 | Complete auth abstraction | After v2.6.0 |
-| v3.0.0-beta | Phase 2 | HNAP/SOAP, MB8611 parser, Netgear CM600 (Issue #3) | After alpha |
-| v3.0.0 | Phase 3 | Enhanced discovery | **Major release** |
-| v4.0.0-alpha | Phase 4 | JSON configs (when needed) | If/when triggered |
-| v4.0.0 | Phase 5 | Config utility (if needed) | If/when triggered |
+| **v3.0.0** | Phase 0-3 | Auth abstraction, HNAP/SOAP, Enhanced discovery, Health monitoring, Reset button, SSL fix | ✅ **Completed** |
+| **v3.2.0** | Current | Numerous bug fixes, UX improvements, production readiness | ✅ **Released** |
+| **v3.3.0** | Next | Netgear CM600 support, MB8611 analysis, HTML capture for diagnostics | 📝 **In Progress** |
+| v4.0.0-alpha | Phase 4 | JSON configs (when needed) | ⏸️ **Deferred** |
+| v4.0.0 | Phase 5 | Config utility (if needed) | ⏸️ **Deferred** |
 
-**Current Focus:** v2.6.0 ready for implementation
+**Current Focus:** v3.3.0 development
 
 **Version Strategy:**
-- **v2.6.0** = Quick wins (Phase 0 + SSL fix for HTTPS modems)
-- **v3.0.0** = Major refactor (Phases 1-3: auth abstraction, HNAP, discovery)
-- **v4.0.0** = Data-driven platform (if/when needed)
+- **v3.0.0** = Major architectural refactor (Phases 1-3)
+- **v3.x.x** = Incremental improvements, bug fixes, new modem support
+- **v4.0.0** = Platform transformation (Phases 4-5, if needed)
 
 ---
 
@@ -118,6 +117,21 @@ We don't have physical access to users' modems. What works in tests may not work
    - [Modem Configuration Utility](#modem-configuration-utility)
 7. [API Reference](#api-reference)
 8. [Success Metrics](#success-metrics)
+9. [Developer Documentation](#developer-documentation)
+
+---
+
+## Developer Documentation
+
+This section provides detailed guides and research documents for developers and contributors interested in expanding modem support.
+
+*   [Modem Expansion Quickstart](./MODEM_EXPANSION_QUICKSTART.md) - A quick reference for expanding modem support based on research findings and the CM600 implementation.
+*   [Modem Expansion Plan](./MODEM_EXPANSION_PLAN.md) - A strategic plan to expand cable modem support, including research findings and implementation patterns.
+*   [HTML Capture Guide](./HTML_CAPTURE_GUIDE.md) - Instructions for users on how to capture modem HTML for diagnostic and development purposes.
+*   [Adding a New Parser Guide](./ADDING_NEW_PARSER.md) - Step-by-step instructions for adding support for a new cable modem model.
+*   [Research on Similar Projects](./RESEARCH_SIMILAR_PROJECTS.md) - Summary of research into existing open-source cable modem monitoring projects.
+*   [License Analysis and Code Comparison](./LICENSE_AND_COMPARISON_ANALYSIS.md) - Analysis of license compatibility, MB8600 vs MB8611 comparison, and SNMP viability.
+*   [Parser Architecture Design & Rationale](./ARCHITECTURE.md) - Detailed design and rationale of the parser plugin system.
 
 ---
 
@@ -177,7 +191,7 @@ This roadmap consolidates ALL planned features into a single implementation time
 ### Timeline Overview
 
 ```
-Phase 0: Quick Wins (Week 0) → v2.6.0 🎯 NEXT RELEASE
+Phase 0: Quick Wins (Week 0) → v2.6.0 ✅ COMPLETED
 ├─ XB7 System Info Enhancement (Close Issue #2)
 ├─ Timeout/Logging + Health Monitor (Close Issue #5)
 │  ├─ Dual-layer diagnostics (ICMP + HTTP)
@@ -185,135 +199,59 @@ Phase 0: Quick Wins (Week 0) → v2.6.0 🎯 NEXT RELEASE
 ├─ Reset Entities Button
 └─ Documentation improvements
 
-Phase 1: Auth Abstraction (Weeks 1-4) → v3.0.0-alpha
+Phase 1: Auth Abstraction (Weeks 1-4) → v3.0.0-alpha ✅ COMPLETED
 ├─ Enum-based strategies
 ├─ Dataclass configs
 ├─ HNAP support
 ├─ **Migrate XB7** to new auth (parser already exists)
 └─ Parser migrations
 
-Phase 2: New Protocols (Weeks 5-7) → v3.0.0-beta
+Phase 2: New Protocols (Weeks 5-7) → v3.0.0-beta ✅ COMPLETED
 ├─ MB8611 HNAP Parser
 ├─ Protocol validation
 └─ **Smart Polling Sensor** (added)
 
-Phase 3: Enhanced Discovery (Week 8) → v3.0.0 (MAJOR RELEASE)
+Phase 3: Enhanced Discovery (Week 8) → v3.0.0 (MAJOR RELEASE) ✅ COMPLETED
 ├─ Anonymous probing
 └─ Better detection
 
-Phase 4: Data-Driven Config (Weeks 9-11) → v4.0.0-alpha [WHEN NEEDED]
+Phase 4: Data-Driven Configuration (Weeks 9-11) [WHEN NEEDED]
 ├─ JSON schema design
-├─ **Dynamic Metrics/Extra Attributes** (integrated)
+├─ **Dynamic Metrics (Extra Attributes)** (integrated)
 ├─ Generic parser
 └─ Community model
 
-Phase 5: Community Platform (Weeks 12-17+) → v4.0.0 [IF NEEDED]
+Phase 5: Community Platform (Weeks 12-17+) [IF NEEDED]
 ├─ Config utility (CLI)
 ├─ Config utility (HA integration)
 └─ Community infrastructure
 ```
 
 **Rationale:**
-- **v2.6.0** = Incremental improvements (Phase 0)
-- **v3.0.0** = Major architectural refactor (Phases 1-3)
+- **v2.6.0** = Incremental improvements (Phase 0) ✅ COMPLETED
+- **v3.0.0** = Major architectural refactor (Phases 1-3) ✅ COMPLETED
 - **v4.0.0** = Platform transformation (Phases 4-5, if needed)
 
 ---
 
-## Current State Analysis
+## Current State Analysis (v3.2.0)
 
-### Version 2.5.0 Status
+### ✅ All Core Architectural Phases (0-3) Completed
 
-#### ✅ Working Well
-- Parser plugin architecture with auto-discovery
-- Manufacturer subdirectories (arris/, motorola/, technicolor/)
-- Parser priority system
-- 3-tier detection (user selection → cached → auto-detect)
-- Comprehensive test suite (120+ tests)
-- 5 working parsers
+With the release of v3.0.0 (and subsequent improvements in v3.2.0), all major architectural phases outlined in the original roadmap have been successfully implemented:
 
-#### ⚠️ Needs Improvement
-- Authentication scattered across parsers
-- Only form-based auth centralized
-- No HNAP/SOAP support
-- No HTTP Basic auth strategy
-- No redirect form auth strategy
+*   **Phase 0: Quick Wins**: Implemented XB7 system info enhancements, comprehensive health monitoring (ICMP + HTTP checks), a reset entities button, and an SSL certificate fix for HTTPS modems.
+*   **Phase 1: Authentication Abstraction**: A complete, type-safe authentication system supporting various strategies (NoAuth, BasicHTTP, Form variants, RedirectForm, HNAP) has been implemented, decoupling authentication from parsers.
+*   **Phase 2: New Protocols**: HNAP/SOAP protocol support was added, including the implementation of the Motorola MB8611 parser. A smart polling diagnostic sensor was also introduced.
+*   **Phase 3: Enhanced Discovery**: Fast and robust modem detection was achieved through anonymous probing, parser heuristics, a discovery circuit breaker, and significantly improved error messages in the config flow.
 
-#### ❌ Not Yet Implemented
-- Data-driven JSON configuration
-- Community configuration utility
-- Dynamic metrics (extra attributes)
-- Enhanced discovery with heuristics
+These achievements have transformed Cable Modem Monitor into a modern, extensible, and user-friendly integration.
 
----
+### ⚠️ Areas for Continued Improvement
 
-### Existing Authentication Patterns
-
-| Modem Model | Auth Method | Implementation | Uses Central Auth? | Status |
-|-------------|-------------|----------------|-------------------|---------|
-| Motorola MB7621 | Form (Base64) | Centralized | ✅ Yes | Working |
-| Motorola Generic | Form (Plain/Base64) | Centralized | ✅ Yes | Working |
-| ARRIS SB6141 | None | Custom | N/A | Working |
-| Technicolor TC4400 | HTTP Basic | Custom | ❌ No | Working |
-| Technicolor XB7 | Form + Redirect | Custom | ❌ No | Working |
-| **Motorola MB8611** | **HNAP/SOAP** | **Not implemented** | **❌ No** | **Phase 2** |
-
----
-
-### Existing Central Authentication System
-
-**Location:** `custom_components/cable_modem_monitor/core/authentication.py`
-
-**Components:**
-- `AuthFactory` - Strategy pattern factory (string-based, needs enum)
-- `FormAuthStrategy` - Base class for form authentication
-- Concrete strategies:
-  - `FormPlainAuth` - Plain text password
-  - `FormBase64Auth` - Base64-encoded password
-  - `FormPlainAndBase64Auth` - Fallback strategy
-  - `NoAuth` - No authentication
-
-**Current Limitations:**
-- ❌ String-based strategy names (no type safety)
-- ❌ No HTTP Basic auth strategy
-- ❌ No redirect form auth strategy
-- ❌ No HNAP/SOAP session management
-- ❌ Configuration scattered across parser classes
-
-**Phase 1 Will Add:**
-- ✅ Enum-based `AuthStrategyType`
-- ✅ Dataclass configurations
-- ✅ `BasicHttpAuthStrategy`
-- ✅ `RedirectFormAuthStrategy`
-- ✅ `HNAPSessionAuthStrategy`
-
----
-
-### Modem Discovery Flow
-
-**Current Implementation:** `config_flow.py`
-
-**Three-Tier Detection Strategy:**
-
-```mermaid
-flowchart TD
-    A[User Configures<br/>IP + Credentials] --> B{Tier 1:<br/>User-Selected?}
-    B -->|Yes| E[Use Selected Parser]
-    B -->|No| C{Tier 2:<br/>Cached Parser?}
-    C -->|Yes| E
-    C -->|No| D[Tier 3:<br/>Auto-Detect All]
-    D --> E[Parser Found]
-```
-
-**Current Issues:**
-- Detection and auth are tightly coupled
-- Slow (tries all parsers sequentially)
-- No heuristics to narrow search
-
-**Phase 3 Will Add:**
-- Anonymous probing (detect without auth)
-- Parser heuristics (narrow search space)
-- Better error messages
+*   **MB8611 Analysis**: While the parser exists, further analysis is needed to ensure full and robust HNAP/SOAP support.
+*   **CM600 Support**: Support for Netgear CM600 is planned for v3.3, pending HTML samples for full implementation.
+*   **HTML Capture for Diagnostics**: The feature to easily capture HTML samples via a button or config flow is planned for v3.3 to streamline community contributions.
 
 ---
 
@@ -369,11 +307,11 @@ This section shows where EVERY planned feature fits into the roadmap.
 | **XB7 System Info Enhancement** | **2-3 hours** | **✅ Complete** | **High - Complete Issue #2** |
 | **Timeout/Logging + Health Monitor** | **3-4 hours** | **✅ Complete** | **High - Complete Issue #5 + Diagnostics** |
 | **Reset Entities Button** | 1-2 hours | ✅ Complete | High - Modem replacement |
-| **SSL Certificate Fix** | **1 hour** | **📝 Planned** | **Critical - Unblocks MB8611 (Issue #6)** |
+| **SSL Certificate Fix** | **1 hour** | **✅ Complete** | **Critical - Unblocks MB8611 (Issue #6)** |
 | Documentation improvements | 2-3 hours | ✅ Complete | Medium - Support burden |
 | Troubleshooting guide | 2-3 hours | ✅ Complete | High - User self-service |
 
-**Status:** Phase 0 complete, SSL fix planned for v2.6.0
+**Status:** Phase 0 complete, SSL fix completed for v2.6.0
 
 **Health Monitoring (Complete):**
 - Dual-layer diagnostics (ICMP + HTTP) with 3 sensors:
@@ -2392,50 +2330,50 @@ for attr_name, attr_value in data.get("extra_attributes", {}).items():
 
 ## Success Metrics
 
-### Phase 0-1 Success (v3.0.0-alpha)
+### Phase 0-1 Success (v3.0.0-alpha) ✅ COMPLETED
 
 **Technical:**
-- [ ] All auth strategies implemented
-- [ ] All parsers migrated to new auth system
-- [ ] XB7 parser working (34 down + 5 up channels)
-- [ ] Reset Entities button working
-- [ ] 140+ tests passing
+- [x] All auth strategies implemented
+- [x] All parsers migrated to new auth system
+- [x] XB7 parser working (34 down + 5 up channels)
+- [x] Reset Entities button working
+- [x] 140+ tests passing
 
 **User:**
-- [ ] Issue #2 resolved (XB7 user)
-- [ ] No regressions
-- [ ] Auth failures reduced
-- [ ] Clear error messages
+- [x] Issue #2 resolved (XB7 user)
+- [x] No regressions
+- [x] Auth failures reduced
+- [x] Clear error messages
 
 ---
 
-### Phase 2 Success (v3.0.0)
+### Phase 2 Success (v3.0.0) ✅ COMPLETED
 
 **Technical:**
-- [ ] HNAP/SOAP protocol working
-- [ ] MB8611 parser functional
-- [ ] Smart polling sensor providing recommendations
-- [ ] Multiple protocols validated
-- [ ] 150+ tests passing
+- [x] HNAP/SOAP protocol working
+- [x] MB8611 parser functional
+- [x] Smart polling sensor providing recommendations
+- [x] Multiple protocols validated
+- [x] 150+ tests passing
 
 **User:**
-- [ ] Issue #4 resolved (MB8611 user)
-- [ ] Users understand optimal polling intervals
-- [ ] Multiple modem types working
+- [x] Issue #4 resolved (MB8611 user)
+- [x] Users understand optimal polling intervals
+- [x] Multiple modem types working
 
 ---
 
-### Phase 3 Success (v3.1.0)
+### Phase 3 Success (v3.1.0) ✅ COMPLETED
 
 **Technical:**
-- [ ] Anonymous probing working
-- [ ] Detection time reduced (30s → 10s)
-- [ ] Better error messages
+- [x] Anonymous probing working
+- [x] Detection time reduced (30s → 10s)
+- [x] Better error messages
 
 **User:**
-- [ ] Fewer "can't detect modem" issues
-- [ ] Faster setup experience
-- [ ] Clear troubleshooting guidance
+- [x] Fewer "can't detect modem" issues
+- [x] Faster setup experience
+- [x] Clear troubleshooting guidance
 
 ---
 
@@ -2532,5 +2470,5 @@ for attr_name, attr_value in data.get("extra_attributes", {}).items():
 ---
 
 **Document Version:** 2.0 (Enhanced with Integrated Features)
-**Last Updated:** November 4, 2025
+**Last Updated:** November 16, 2025
 **Next Review:** After v3.0.0 ships

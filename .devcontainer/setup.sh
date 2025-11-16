@@ -3,7 +3,7 @@ set -e
 
 echo "Installing Python packages..."
 pip install --upgrade pip
-pip install pytest pytest-cov pytest-mock pytest-asyncio pytest-homeassistant-custom-component beautifulsoup4 requests aiohttp lxml defusedxml
+pip install pytest pytest-cov pytest-mock pytest-asyncio pytest-homeassistant-custom-component beautifulsoup4 requests aiohttp lxml defusedxml black
 
 echo "Installing Docker CLI..."
 apk add --no-cache docker-cli docker-cli-compose

@@ -12,10 +12,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.diagnostics import (
-    _sanitize_html,
     _sanitize_log_message,
     async_get_config_entry_diagnostics,
 )
+from custom_components.cable_modem_monitor.utils.html_helper import sanitize_html
 
 
 class TestSanitizeHtml:
@@ -27,7 +27,7 @@ class TestSanitizeHtml:
         <tr><td>MAC Address</td><td>AA:BB:CC:DD:EE:FF</td></tr>
         <tr><td>HFC MAC</td><td>11-22-33-44-55-66</td></tr>
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11-22-33-44-55-66" not in sanitized
@@ -42,7 +42,7 @@ class TestSanitizeHtml:
         ]
 
         for original, expected_pattern in test_cases:
-            sanitized = _sanitize_html(original)
+            sanitized = sanitize_html(original)
             assert expected_pattern in sanitized
             assert original not in sanitized
 
@@ -56,7 +56,7 @@ class TestSanitizeHtml:
         ]
 
         for original in test_cases:
-            sanitized = _sanitize_html(original)
+            sanitized = sanitize_html(original)
             assert "***REDACTED***" in sanitized
             # Original ID should be removed (check for the digits/unique part)
             assert not any(
@@ -72,7 +72,7 @@ class TestSanitizeHtml:
         ]
 
         for original, expected in test_cases:
-            sanitized = _sanitize_html(original)
+            sanitized = sanitize_html(original)
             assert expected in sanitized
             # Extract the original IP and verify it's gone
             original_ip = original.split(": ")[1]
@@ -88,7 +88,7 @@ class TestSanitizeHtml:
 
         for ip in common_ips:
             html = f"<td>Modem IP: {ip}</td>"
-            sanitized = _sanitize_html(html)
+            sanitized = sanitize_html(html)
             assert ip in sanitized  # Should be preserved
 
     def test_removes_passwords(self):
@@ -101,14 +101,14 @@ class TestSanitizeHtml:
         ]
 
         for original in test_cases:
-            sanitized = _sanitize_html(original)
+            sanitized = sanitize_html(original)
             assert "***REDACTED***" in sanitized
             assert "secret" not in sanitized.lower() or "***REDACTED***" in sanitized
 
     def test_removes_password_form_values(self):
         """Test that password input field values are sanitized."""
         html = '<input type="password" name="pwd" value="MyPassword123">'
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         assert "MyPassword123" not in sanitized
         assert "***REDACTED***" in sanitized
@@ -120,7 +120,7 @@ class TestSanitizeHtml:
         <meta name="csrf-token" content="abc123def456ghi789jkl012mno345pqr678stu">
         session=xyz999abc888def777ghi666
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         assert "abc123def456ghi789jkl012mno345pqr678stu" not in sanitized
         assert "xyz999abc888def777ghi666" not in sanitized
@@ -135,7 +135,7 @@ class TestSanitizeHtml:
             <td>Frequency</td><td>555000000 Hz</td>
         </tr>
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         # Signal data should be preserved
         assert "7.0 dBmV" in sanitized
@@ -149,7 +149,7 @@ class TestSanitizeHtml:
         <tr><td>Downstream Channels</td><td>32</td></tr>
         <tr><td>Corrected Errors</td><td>12345</td></tr>
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         assert "Channel ID" in sanitized
         assert "23" in sanitized
@@ -163,7 +163,7 @@ class TestSanitizeHtml:
         LAN MAC: 11:22:33:44:55:66
         WIFI MAC: 99-88-77-66-55-44
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         # All MACs should be sanitized
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
@@ -174,7 +174,7 @@ class TestSanitizeHtml:
 
     def test_handles_empty_string(self):
         """Test that empty string is handled gracefully."""
-        sanitized = _sanitize_html("")
+        sanitized = sanitize_html("")
         assert sanitized == ""
 
     def test_handles_no_sensitive_data(self):
@@ -183,7 +183,7 @@ class TestSanitizeHtml:
         <tr><td>Power</td><td>5.0 dBmV</td></tr>
         <tr><td>SNR</td><td>38 dB</td></tr>
         """
-        sanitized = _sanitize_html(html)
+        sanitized = sanitize_html(html)
 
         # Should be largely unchanged
         assert "5.0 dBmV" in sanitized

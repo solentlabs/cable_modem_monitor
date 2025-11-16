@@ -67,6 +67,8 @@ make lint               # Check code quality
 **Pros**: Fastest iteration, no Docker overhead
 **Cons**: No real Home Assistant testing, manual setup
 
+> **Note for VS Code Users**: If you choose this method, the `.vscode` directory in this repository contains recommended extensions, workspace settings, and tasks to streamline local development. However, for the best experience, the **Dev Container** method is still recommended.
+
 ---
 
 ## Common Tasks
@@ -193,33 +195,9 @@ cable_modem_monitor/
 
 ## Adding a New Modem Parser
 
-1. **Capture HTML** from your modem:
-   ```bash
-   curl http://192.168.100.1/status.html > tests/fixtures/my_modem.html
-   ```
+For a detailed guide on how to add support for a new cable modem model, please refer to the dedicated documentation:
 
-2. **Create parser** in `custom_components/cable_modem_monitor/parsers/my_modem.py`:
-   ```python
-   from .base_parser import ModemParser
-
-   class MyModemParser(ModemParser):
-       name = "My Modem Model"
-       manufacturer = "Brand"
-       models = ["Model123"]
-
-       def can_parse(cls, soup, url, html):
-           return "My Modem" in html
-
-       def parse(self, soup, session=None, base_url=None):
-           # Parse logic here
-           return {"downstream": [], "upstream": [], "system_info": {}}
-   ```
-
-3. **Create tests** in `tests/test_parser_my_modem.py`
-
-4. **Run tests**: `make test`
-
-See `CONTRIBUTING.md` for detailed parser guide.
+*   [Guide: Adding a New Modem Parser](./ADDING_NEW_PARSER.md)
 
 ---
 
