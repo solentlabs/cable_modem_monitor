@@ -85,7 +85,7 @@
   },
 
   // Run setup script after container is created
-  "postCreateCommand": "pip install -r requirements-dev.txt",
+  "postCreateCommand": "pip install -r /workspace/requirements-dev.txt",
 
   // Use root user inside the container
   "remoteUser": "root"
