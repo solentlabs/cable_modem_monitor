@@ -24,7 +24,6 @@ from __future__ import annotations
 import os
 
 import pytest
-
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.netgear.cm600 import NetgearCM600Parser

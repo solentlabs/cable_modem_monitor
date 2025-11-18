@@ -1,33 +1,91 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
-    "python.linting.flake8Enabled": false,
-    "python.linting.enabled": true,
-    "python.linting.lintOnSave": true,
-    "python.linting.ruffEnabled": true,
-    "python.linting.ruffArgs": [
-        "--config",
-        "pyproject.toml"
-    ],
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "ms-python.black-formatter",
-    "[python]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        },
-        "editor.defaultFormatter": "ms-python.black-formatter"
+  // ========================================
+  // Cable Modem Monitor - VSCode Settings
+  // Cross-platform configuration for Windows 11 and Chrome OS Flex
+  // ========================================
+
+  // ========================================
+  // Python Configuration
+  // ========================================
+
+  // Path to the Python interpreter - uses .venv (cross-platform standard)
+  // Using just the .venv folder path, VSCode finds the correct python executable
+  // Windows: .venv\Scripts\python.exe
+  // Unix: .venv/bin/python
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+
+  // Enable Python linting with Ruff (modern, fast linter)
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": false,
+  "python.linting.lintOnSave": true,
+  "python.linting.ruffEnabled": true,
+  "python.linting.ruffArgs": [
+    "--config",
+    "pyproject.toml"
+  ],
+
+  // ========================================
+  // Code Formatting
+  // ========================================
+
+  // Format files automatically on save
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-python.black-formatter",
+
+  // Language-specific overrides for Python
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
     },
-    "python.testing.pytestEnabled": true,
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestArgs": [
-        "tests",
-        "-v",
-        "--tb=short"
-    ],
-    "python.testing.autoTestDiscoverOnSaveEnabled": true,
-    "black-formatter.interpreter": [
-        "${workspaceFolder}/venv/bin/python"
-    ],
-    "black-formatter.path": [
-        "black"
-    ]
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+
+  // Black formatter configuration (cross-platform)
+  // Uses the selected Python interpreter automatically
+  // No need to specify interpreter - uses python.defaultInterpreterPath
+  "black-formatter.path": [
+    "black"
+  ],
+
+  // ========================================
+  // Testing Configuration
+  // ========================================
+
+  // Enable pytest and configure discovery
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests",
+    "-v",
+    "--tb=short"
+  ],
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+  // ========================================
+  // File and Editor Settings
+  // ========================================
+
+  // Use LF (Unix-style) line endings (enforced by .gitattributes)
+  "files.eol": "\n",
+
+  // Rulers for code length (matching Black/Ruff config)
+  "editor.rulers": [88, 120],
+
+  // Trim trailing whitespace on save
+  "files.trimTrailingWhitespace": true,
+
+  // Insert final newline
+  "files.insertFinalNewline": true,
+
+  // Trim final newlines
+  "files.trimFinalNewlines": true,
+
+  // ========================================
+  // Python Language Server Configuration
+  // ========================================
+
+  // Pylance type checking
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "workspace"
 }

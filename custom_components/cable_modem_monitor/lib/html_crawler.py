@@ -179,9 +179,7 @@ def get_new_links_to_crawl(
     # Find links not yet captured
     new_links = discovered_links - already_captured_urls
 
-    _LOGGER.debug(
-        "Found %d new links to crawl (already have %d pages)", len(new_links), len(already_captured_urls)
-    )
+    _LOGGER.debug("Found %d new links to crawl (already have %d pages)", len(new_links), len(already_captured_urls))
 
     # Return up to max_new_links
     return list(new_links)[:max_new_links]

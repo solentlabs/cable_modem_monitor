@@ -1,0 +1,2 @@
+| test.py:4:1:4:34 | Attribute() | requests.get without timeout |
+| test.py:7:1:7:66 | Attribute() | requests.get without timeout |

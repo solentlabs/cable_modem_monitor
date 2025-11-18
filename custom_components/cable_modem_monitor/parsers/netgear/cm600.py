@@ -129,7 +129,7 @@ class NetgearCM600Parser(ModemParser):
 
         return False
 
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
         """Parse downstream channel data from DocsisStatus.asp.
 
         The CM600 embeds channel data in JavaScript variables. The data format is:
@@ -140,7 +140,7 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             List of downstream channel dictionaries
         """
-        channels = []
+        channels: list[dict] = []
 
         try:
             regex_pattern = re.compile("InitDsTableTagValue")
@@ -148,12 +148,17 @@ class NetgearCM600Parser(ModemParser):
             all_scripts = soup.find_all("script")
             _LOGGER.debug("CM600 Downstream: Found %d total script tags.", len(all_scripts))
 
-            match = None # Initialize match to None
+            match = None  # Initialize match to None
             for script in all_scripts:
                 if script.string and regex_pattern.search(script.string):
-                    _LOGGER.debug("CM600 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d", len(script.string))
+                    _LOGGER.debug(
+                        "CM600 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d",
+                        len(script.string),
+                    )
                     # Extract the function body first, then get tagValueList from within it
-                    func_match = re.search(r"function InitDsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL)
+                    func_match = re.search(
+                        r"function InitDsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL
+                    )
                     if func_match:
                         func_body = func_match.group(1)
                         # Remove block comments /* ... */ to avoid matching commented-out code
@@ -161,25 +166,30 @@ class NetgearCM600Parser(ModemParser):
                         # Now find tagValueList within this function (skip // commented lines)
                         match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
                         if match:
-                            _LOGGER.debug("CM600 Downstream: tagValueList match found. Extracted value length: %d", len(match.group(1)))
+                            _LOGGER.debug(
+                                "CM600 Downstream: tagValueList match found. Extracted value length: %d",
+                                len(match.group(1)),
+                            )
 
                             # Split by pipe delimiter
                             values = match.group(1).split("|")
-                            break # Found the data, stop searching
+                            break  # Found the data, stop searching
                         else:
                             _LOGGER.debug("CM600 Downstream: No tagValueList match found in function body.")
                             continue
                     else:
                         _LOGGER.debug("CM600 Downstream: Could not extract function body.")
                         continue
-            
-            if match is None: # If no match was found after iterating all scripts
-                _LOGGER.debug("CM600 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted.")
-                return channels # Return empty list if no data found
+
+            if match is None:  # If no match was found after iterating all scripts
+                _LOGGER.debug(
+                    "CM600 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted."
+                )
+                return channels  # Return empty list if no data found
 
             if len(values) < 10:  # Need at least count + 1 channel (9 fields)
                 _LOGGER.warning("Insufficient downstream data: %d values", len(values))
-                return channels # Return empty list if insufficient data
+                return channels  # Return empty list if insufficient data
 
             # First value is channel count
             channel_count = int(values[0])
@@ -225,7 +235,7 @@ class NetgearCM600Parser(ModemParser):
 
         return channels
 
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
         """Parse upstream channel data from DocsisStatus.asp.
 
         The CM600 embeds channel data in JavaScript variables. The data format is:
@@ -236,7 +246,7 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             List of upstream channel dictionaries
         """
-        channels = []
+        channels: list[dict] = []
 
         try:
             # Find the InitUsTableTagValue function with upstream data
@@ -245,12 +255,17 @@ class NetgearCM600Parser(ModemParser):
             all_scripts = soup.find_all("script")
             _LOGGER.debug("CM600 Upstream: Found %d total script tags.", len(all_scripts))
 
-            match = None # Initialize match to None
+            match = None  # Initialize match to None
             for script in all_scripts:
                 if script.string and regex_pattern.search(script.string):
-                    _LOGGER.debug("CM600 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d", len(script.string))
+                    _LOGGER.debug(
+                        "CM600 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d",
+                        len(script.string),
+                    )
                     # Extract the function body first, then get tagValueList from within it
-                    func_match = re.search(r"function InitUsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL)
+                    func_match = re.search(
+                        r"function InitUsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL
+                    )
                     if func_match:
                         func_body = func_match.group(1)
                         # Remove block comments /* ... */ to avoid matching commented-out code
@@ -258,11 +273,14 @@ class NetgearCM600Parser(ModemParser):
                         # Now find tagValueList within this function (skip // commented lines)
                         match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
                         if match:
-                            _LOGGER.debug("CM600 Upstream: tagValueList match found. Extracted value length: %d", len(match.group(1)))
+                            _LOGGER.debug(
+                                "CM600 Upstream: tagValueList match found. Extracted value length: %d",
+                                len(match.group(1)),
+                            )
 
                             # Split by pipe delimiter
                             values = match.group(1).split("|")
-                            break # Found the data, stop searching
+                            break  # Found the data, stop searching
                         else:
                             _LOGGER.debug("CM600 Upstream: No tagValueList match found in function body.")
                             continue
@@ -270,13 +288,15 @@ class NetgearCM600Parser(ModemParser):
                         _LOGGER.debug("CM600 Upstream: Could not extract function body.")
                         continue
 
-            if match is None: # If no match was found after iterating all scripts
-                _LOGGER.debug("CM600 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted.")
-                return channels # Return empty list if no data found
+            if match is None:  # If no match was found after iterating all scripts
+                _LOGGER.debug(
+                    "CM600 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted."
+                )
+                return channels  # Return empty list if no data found
 
             if len(values) < 8:  # Need at least count + 1 channel (7 fields)
                 _LOGGER.warning("Insufficient upstream data: %d values", len(values))
-                return channels # Return empty list if insufficient data
+                return channels  # Return empty list if insufficient data
 
             # First value is channel count
             channel_count = int(values[0])
@@ -318,6 +338,7 @@ class NetgearCM600Parser(ModemParser):
             _LOGGER.error("Error parsing CM600 upstream channels: %s", e, exc_info=True)
 
         return channels
+
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from RouterStatus.asp or DashBoard.asp.
 

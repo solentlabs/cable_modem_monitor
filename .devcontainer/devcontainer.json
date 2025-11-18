@@ -1,47 +1,92 @@
 {
-    "name": "Cable Modem Monitor Development",
-    "dockerComposeFile": "../docker-compose.test.yml",
-    "service": "homeassistant-test",
-    "workspaceFolder": "/workspace",
+  // Display name for the Dev Container
+  "name": "Cable Modem Monitor Development",
 
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "ms-python.black-formatter",
-                "charliermarsh.ruff",
-                "esbenp.prettier-vscode",
-                "redhat.vscode-yaml",
-                "streetsidesoftware.code-spell-checker"
-            ],
-            "settings": {
-                "python.defaultInterpreterPath": "/usr/local/bin/python",
-                "python.linting.enabled": true,
-                "python.linting.ruffEnabled": true,
-                "python.formatting.provider": "black",
-                "editor.formatOnSave": true,
-                "editor.codeActionsOnSave": {
-                    "source.organizeImports": "explicit",
-                    "source.fixAll.ruff": "explicit"
-                },
-                "files.exclude": {
-                    "**/__pycache__": true,
-                    "**/*.pyc": true
-                }
-            }
-        }
-    },
+  // Build the container using a custom Dockerfile
+  "build": {
+    "dockerfile": "Dockerfile",       // Use Dockerfile in this folder
+    "context": ".."                   // Build context is the parent directory
+  },
 
-    "forwardPorts": [8123],
-    "portsAttributes": {
-        "8123": {
-            "label": "Home Assistant",
-            "onAutoForward": "notify"
-        }
-    },
+  // Folder inside the container where VS Code opens the workspace
+  "workspaceFolder": "/workspace",
 
-    "postCreateCommand": "sh /workspace/.devcontainer/setup.sh",
+  // VS Code customizations for extensions and settings
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python support and language server
+        "ms-python.python",
+        "ms-python.vscode-pylance",
 
-    "remoteUser": "root"
+        // Formatters and linters
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+
+        // YAML and spell checking
+        "esbenp.prettier-vscode",
+        "redhat.vscode-yaml",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        // Use Python 3.12 inside the container
+        "python.defaultInterpreterPath": "/usr/local/bin/python3.12",
+
+        // Enable linting and configure Ruff
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": false,
+        "python.linting.lintOnSave": true,
+        "python.linting.ruffEnabled": true,
+        "python.linting.ruffArgs": [
+          "--config",
+          "pyproject.toml"
+        ],
+
+        // Enable formatting on save using Black
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+
+        // Python-specific formatting and import organization
+        "[python]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          },
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+
+        // Enable pytest and configure test discovery
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": [
+          "tests",
+          "-v",
+          "--tb=short"
+        ],
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+        // Configure Black formatter path and interpreter
+        "black-formatter.interpreter": [
+          "/usr/local/bin/python3.12"
+        ],
+        "black-formatter.path": [
+          "black"
+        ]
+      }
+    }
+  },
+
+  // Forward Home Assistant port
+  "forwardPorts": [8123],
+  "portsAttributes": {
+    "8123": {
+      "label": "Home Assistant",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // Run setup script after container is created
+  "postCreateCommand": "sh /workspace/.devcontainer/setup.sh",
+
+  // Use root user inside the container
+  "remoteUser": "root"
 }

@@ -46,6 +46,35 @@
 - Follow semantic versioning
 - **Line Endings**: Project uses LF (Unix-style) line endings enforced via `.gitattributes`. If files show as modified with equal insertions/deletions after commits, it's likely a line ending normalization issue - not real changes
 
+## VSCode Setup (Cross-Platform)
+
+The project is **fully cross-platform** and works identically on Windows 11, macOS, and Chrome OS Flex.
+
+### Configuration Files
+- **`cable_modem_monitor.code-workspace`** - Workspace file with pre-configured tasks and debugging
+- **`.vscode/settings.json`** - Cross-platform settings (no shims needed!)
+- VSCode automatically translates paths (e.g., `.venv/bin/python` → `.venv\Scripts\python.exe` on Windows)
+
+### Quick Start
+```bash
+# Clone and setup
+git clone https://github.com/kwschulz/cable_modem_monitor.git
+cd cable_modem_monitor
+bash scripts/setup.sh
+
+# Open in VSCode (either method works)
+code cable_modem_monitor.code-workspace  # Recommended
+# or
+code .  # Also works
+```
+
+### Key Improvements (2025-11-18)
+- ✅ Fully cross-platform VSCode configuration
+- ✅ No platform-specific shims required for Black formatter
+- ✅ Uses `.venv/` (Python standard location)
+- ✅ Workspace file includes tasks and debugging configurations
+- ✅ See `docs/DEVELOPER_QUICKSTART.md` for platform-specific notes
+
 ## Recent Development History
 
 ### v2.5.0 - Current Release ✅

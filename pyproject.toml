@@ -1,72 +1,103 @@
-# Python project configuration for Cable Modem Monitor
+# pyproject.toml
+# This file defines formatting, linting, type-checking, and test configuration
+# for development consistency across the cable-modem-monitor project.
 
+[project]
+name = "cable-modem-monitor"
+version = "0.1.0"
+description = "Monitor and analyze cable modem metrics with Home Assistant integration."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"  # Pin to Python 3.12 for compatibility and reproducibility
+
+dependencies = [
+    # Runtime dependencies
+    "requests>=2.31",     # HTTP client for modem polling
+    "pydantic>=2.0",      # Data validation and modeling
+]
+
+[project.optional-dependencies]
+dev = [
+    # Development tools
+    "black>=24.0",        # Code formatter
+    "ruff>=0.5.0",        # Linter and import sorter
+    "mypy>=1.10",         # Static type checker
+    "pytest>=8.0",        # Test runner
+    "pytest-cov>=5.0",    # Coverage reporting
+]
+
+# -------------------------------
+# Black (code formatter)
+# -------------------------------
 [tool.black]
-line-length = 120
-target-version = ['py311']
-include = '\.pyi?$'
+line-length = 120                  # Match Ruff and improve readability
+target-version = ['py312']         # Align with runtime Python version
+include = '\.pyi?$'                # Format .py and .pyi files
 extend-exclude = '''
 /(
-  # Exclude test HTML files
-  tests/.*\.html
+  tests/.*\.html                   # Exclude test HTML fixture files
 )/
 '''
 
+# -------------------------------
+# Ruff (linter + import sorter)
+# -------------------------------
 [tool.ruff]
-line-length = 120
-target-version = "py311"
-
-# Exclude test HTML files and other non-Python files
+line-length = 120                  # Match Black line length
+target-version = "py312"           # Align with runtime
 exclude = [
-    "tests/*.html",
-    "__pycache__",
-    ".venv",
-    "venv",
-    ".git",
+    "tests/**/*.html",             # Ignore test fixtures
+    "__pycache__",                 # Skip Python cache
+    ".venv", "venv",               # Ignore virtual environments
+    ".git",                        # Skip Git metadata
 ]
 
 [tool.ruff.lint]
-# Rule categories enabled:
-# E: pycodestyle errors, F: Pyflakes, W: pycodestyle warnings
-# C90: McCabe complexity, I: isort, UP: pyupgrade
-# B: flake8-bugbear, SIM: flake8-simplify, TID: flake8-tidy-imports, N: pep8-naming
-select = ["E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N"]
+select = [
+    "E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N"
+]  # Enable key rule categories: style, complexity, import sorting, modern syntax
 
-# Ignore specific rules
 ignore = [
-    "B008",   # Do not perform function calls in argument defaults (common in HA)
-    "B904",   # Allow `raise` without specifying exception (useful for re-raising)
-    "SIM108", # Use ternary operator (can reduce readability)
-    "TID252", # Relative imports are banned (not applicable for package structure)
-    "UP007",  # Use `X | Y` for type annotations (we use Optional for compatibility)
+    "B008",   # Allow function calls in default args (common in HA)
+    "B904",   # Allow bare `raise` for re-raising
+    "SIM108", # Avoid forced ternary expressions
+    "TID252", # Allow relative imports in HA custom components
 ]
 
 [tool.ruff.lint.mccabe]
-# McCabe complexity threshold
-max-complexity = 10
+max-complexity = 10                # Keep functions readable
 
 [tool.ruff.lint.isort]
-# Import sorting configuration
-known-first-party = ["custom_components.cable_modem_monitor"]
+known-first-party = ["custom_components.cable_modem_monitor"]  # Treat integration code as first-party
 split-on-trailing-comma = true
 force-wrap-aliases = true
 combine-as-imports = true
 
 [tool.ruff.lint.per-file-ignores]
-# Per-file ignores for specific patterns
-"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
-"tests/**/*.py" = ["B011", "S101"]  # Allow assert in tests
-"scripts/**/*.py" = ["T201"]  # Allow print statements in scripts
+"__init__.py" = ["F401"]           # Allow unused imports for package exposure
+"tests/**/*.py" = ["B011", "S101"] # Allow assert and safe eval in tests
+"scripts/**/*.py" = ["T201"]       # Allow print statements in scripts
 
 [tool.ruff.lint.flake8-type-checking]
-# Type checking imports configuration
-strict = false
+strict = false                     # Avoid strict import enforcement for type-checking
 
+# -------------------------------
+# Mypy (static type checker)
+# -------------------------------
 [tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-ignore_missing_imports = true
+python_version = "3.12"            # Match runtime
+warn_return_any = true             # Catch overly permissive return types
+warn_unused_configs = true         # Alert on unused mypy settings
+disallow_untyped_defs = true       # Enforce type hints on all function definitions
+ignore_missing_imports = true      # Avoid errors for missing stubs
 
-# Limit mypy to the integration code
-files = ["custom_components/cable_modem_monitor/**/*.py"]
+files = ["custom_components/cable_modem_monitor/**/*.py"]  # Limit scope to integration code
+
+# -------------------------------
+# Pytest (test runner)
+# -------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"                 # Ensure compatibility with latest plugins
+addopts = "-v --tb=short --cov=custom_components.cable_modem_monitor --cov-report=term-missing"
+testpaths = [
+    "tests"                        # Discover tests in this folder
+]

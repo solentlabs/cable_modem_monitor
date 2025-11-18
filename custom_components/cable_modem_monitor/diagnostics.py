@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+from .utils.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,9 +41,6 @@ def _sanitize_log_message(message: str) -> str:
         message,
     )
     return message
-
-
-from .utils.html_helper import sanitize_html
 
 
 def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:  # noqa: C901

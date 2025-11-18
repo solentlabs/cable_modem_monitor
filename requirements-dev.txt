@@ -1,28 +1,50 @@
 # Development dependencies for Cable Modem Monitor
+# Used for local development, testing, linting, type checking, and security scanning
 
-# Testing framework
-pytest>=7.4.3
-pytest-cov>=4.1.0
-pytest-asyncio>=0.21.1
-pytest-homeassistant-custom-component>=0.13.0
+# -------------------------------
+# 🏠 Home Assistant (install FIRST to resolve dependencies)
+# -------------------------------
+homeassistant>=2025.1.0                     # Home Assistant core (for integration testing)
 
-# Code quality tools
-ruff>=0.8.2
-black>=23.11.0
-pre-commit>=3.6.0
-# Legacy linters (kept for compatibility, but ruff is preferred)
-pylint>=3.0.0
+# -------------------------------
+# ⚙️ Runtime dependencies (mirrors pyproject.toml)
+# -------------------------------
+beautifulsoup4>=4.12.0,<5.0                 # HTML parsing
+lxml>=4.9.0,<5.0                            # XML/HTML parser backend
+requests>=2.31.0                            # HTTP client (HA determines version)
+aiohttp>=3.9.0                              # Async HTTP client (HA determines version)
 
-# Type checking
-mypy>=1.7.0
-types-requests>=2.31.0.10
+# -------------------------------
+# 🧪 Testing framework and plugins
+# -------------------------------
+pytest>=7.4.3                               # Core test runner (HA determines version)
+pytest-cov>=4.1.0                           # Coverage reporting (allow 5.x+ for HA compat)
+pytest-asyncio>=0.21.1                      # Async test support (allow 1.x+ for HA compat)
+pytest-homeassistant-custom-component>=0.13.0,<1.0  # HA integration test harness
+pytest-mock>=3.12.0                         # Mocking utilities (allow 4.x+ for HA compat)
 
-# Security scanning
-bandit>=1.7.5
+# -------------------------------
+# 🧹 Code quality and formatting
+# -------------------------------
+ruff>=0.8.2                                 # Linter and import sorter
+black>=23.11.0                              # Code formatter
+pre-commit>=3.6.0                           # Git hook manager
+pylint>=3.0.0                               # Optional static analysis
 
-# Security-focused XML parsing (prevents XXE attacks)
-defusedxml>=0.7.1
+# -------------------------------
+# 🔍 Type checking
+# -------------------------------
+mypy>=1.7.0                                 # Static type checker
+types-requests>=2.31.0.10                   # Type stubs for requests (HA determines version)
 
-# Additional testing utilities
-freezegun>=1.2.2
-responses>=0.24.0
+# -------------------------------
+# 🔐 Security scanning
+# -------------------------------
+bandit>=1.7.5                               # Static security analyzer
+defusedxml>=0.7.1                           # Safer XML parsing
+
+# -------------------------------
+# 🧪 Additional testing utilities
+# -------------------------------
+freezegun>=1.2.2                            # Time-freezing for deterministic tests
+responses>=0.24.0                           # Mock HTTP responses

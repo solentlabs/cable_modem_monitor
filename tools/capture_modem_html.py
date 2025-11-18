@@ -18,7 +18,6 @@ Privacy:
 """
 
 import json
-import re
 import sys
 import zipfile
 from datetime import datetime
@@ -104,12 +103,13 @@ SEED_PAGES = generate_seed_pages()
 
 try:
     # Try to import from the custom_component structure
-    from custom_components.cable_modem_monitor.utils import sanitize_html
+    from custom_components.cable_modem_monitor.utils import sanitize_html  # type: ignore[attr-defined]
 except ImportError:
     # If running as a standalone script, adjust the path
     try:
         import sys
         from pathlib import Path
+
         # Add the parent directory of 'tools' to the path
         # This allows importing from custom_components
         sys.path.append(str(Path(__file__).parent.parent))
@@ -171,7 +171,9 @@ def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int
     return None
 
 
-def capture_modem_html(host: str, username: str | None = None, password: str | None = None) -> dict[str, Any]:
+def capture_modem_html(  # noqa: C901
+    host: str, username: str | None = None, password: str | None = None
+) -> dict[str, Any]:
     """Capture HTML pages from a cable modem.
 
     Args:
@@ -218,7 +220,7 @@ def capture_modem_html(host: str, username: str | None = None, password: str | N
 
     # Phase 2: Discover additional links from captured pages
     if captured_pages:
-        print(f"\n📄 Phase 2: Discovering additional pages via link crawling...\n")
+        print("\n📄 Phase 2: Discovering additional pages via link crawling...\n")
 
         # Import link discovery utilities
         from urllib.parse import urljoin, urlparse
@@ -230,6 +232,7 @@ def capture_modem_html(host: str, username: str | None = None, password: str | N
         for page in captured_pages:
             try:
                 from bs4 import BeautifulSoup
+
                 soup = BeautifulSoup(page["html"], "html.parser")
 
                 for link_tag in soup.find_all("a", href=True):

@@ -52,18 +52,35 @@ echo ""
 
 # Step 1: Check Python version
 print_step "Checking Python version..."
-if ! command -v python3 &> /dev/null; then
-    print_error "Python 3 not found"
+
+# Check for python3 first (Linux/macOS), fall back to python (Windows)
+# Test that the command actually works, not just that it exists
+PYTHON_CMD=""
+if python3 --version &> /dev/null; then
+    PYTHON_CMD="python3"
+elif python --version &> /dev/null; then
+    PYTHON_CMD="python"
+fi
+
+if [ -z "$PYTHON_CMD" ]; then
+    print_error "Python not found"
     echo "Please install Python 3.11+ first"
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
 PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
 
+# Validate version is numeric
+if ! [[ "$PYTHON_MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$PYTHON_MINOR" =~ ^[0-9]+$ ]]; then
+    print_error "Could not detect Python version"
+    echo "Got: $PYTHON_VERSION"
+    exit 1
+fi
+
 if [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 11 ]; then
-    print_success "Python $PYTHON_VERSION found (requirement: 3.11+)"
+    print_success "Python $PYTHON_VERSION found (requirement: 3.11+) using '$PYTHON_CMD'"
 else
     print_error "Python $PYTHON_VERSION found, but 3.11+ required"
     echo "Please install Python 3.11 or newer"
@@ -71,15 +88,16 @@ else
 fi
 echo ""
 
-# Step 2: Check for python3-venv
-print_step "Checking for python3-venv module..."
-if python3 -c "import venv" 2> /dev/null; then
-    print_success "python3-venv module available"
+# Step 2: Check for venv module
+print_step "Checking for venv module..."
+if $PYTHON_CMD -c "import venv" 2> /dev/null; then
+    print_success "venv module available"
 else
-    print_error "python3-venv module not installed"
+    print_error "venv module not installed"
     echo ""
     echo "Install it with:"
-    echo "  sudo apt install python3-venv"
+    echo "  Linux/macOS: sudo apt install ${PYTHON_CMD}-venv"
+    echo "  Windows: venv is included with Python"
     echo ""
     exit 1
 fi
@@ -96,7 +114,7 @@ fi
 # Step 4: Create virtual environment
 if [ ! -d ".venv" ]; then
     print_step "Creating virtual environment..."
-    python3 -m venv .venv
+    $PYTHON_CMD -m venv .venv
     print_success "Virtual environment created"
     echo ""
 else
@@ -104,33 +122,46 @@ else
     echo ""
 fi
 
+# Detect pip location (cross-platform)
+if [ -f ".venv/Scripts/pip.exe" ]; then
+    PIP_CMD=".venv/Scripts/pip.exe"
+    PRECOMMIT_CMD=".venv/Scripts/pre-commit.exe"
+else
+    PIP_CMD=".venv/bin/pip"
+    PRECOMMIT_CMD=".venv/bin/pre-commit"
+fi
+
 # Step 5: Upgrade pip
 print_step "Upgrading pip..."
-.venv/bin/pip install --upgrade pip --quiet
-print_success "pip upgraded"
+# On Windows, pip upgrade can fail if pip is running, so make it non-fatal
+$PIP_CMD install --upgrade pip --quiet || print_warning "pip upgrade skipped (will work next run)"
+print_success "pip ready"
 echo ""
 
 # Step 6: Install dependencies
-print_step "Installing development dependencies..."
-echo "  (This may take a minute...)"
-.venv/bin/pip install -r requirements-dev.txt --quiet
+# Install Home Assistant first to resolve dependencies, then install dev tools
+print_step "Installing Home Assistant..."
+echo "  (This may take a few minutes...)"
+$PIP_CMD install --quiet homeassistant>=2025.1.0 beautifulsoup4 lxml
+print_success "Home Assistant installed"
+echo ""
+
+print_step "Installing development tools..."
+$PIP_CMD install --quiet pytest pytest-cov pytest-asyncio pytest-mock pytest-homeassistant-custom-component
+$PIP_CMD install --quiet ruff black pre-commit pylint mypy types-requests bandit defusedxml
+$PIP_CMD install --quiet freezegun responses
+# Install requests/aiohttp last, respecting HA's urllib3 constraint
+$PIP_CMD install --quiet --upgrade requests aiohttp "urllib3<2,>=1.26.5"
 print_success "Development dependencies installed"
 echo ""
 
-print_step "Installing test dependencies..."
-.venv/bin/pip install -r tests/requirements.txt --quiet
-print_success "Test dependencies installed"
-echo ""
-
-# Step 7: Install pre-commit hooks
+# Step 7: Install pre-commit hooks (optional)
 print_step "Setting up pre-commit hooks..."
-if .venv/bin/pip show pre-commit &> /dev/null; then
-    .venv/bin/pre-commit install --install-hooks
+if $PIP_CMD show pre-commit &> /dev/null; then
+    $PRECOMMIT_CMD install --install-hooks 2>&1 | grep -v "Stored" || true
     print_success "Pre-commit hooks installed"
 else
-    .venv/bin/pip install pre-commit --quiet
-    .venv/bin/pre-commit install --install-hooks
-    print_success "Pre-commit installed and configured"
+    print_warning "Pre-commit not installed (optional)"
 fi
 echo ""
 

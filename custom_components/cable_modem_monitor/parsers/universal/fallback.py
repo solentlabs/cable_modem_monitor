@@ -52,18 +52,13 @@ class UniversalFallbackParser(ModemParser):
     # Priority seed URLs - generic patterns, not manufacturer-specific
     # Link crawler will discover all other pages automatically
     # Uses reusable pattern generation from html_crawler utility
-    from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
     _seed_urls = generate_seed_urls(
-        bases=["", "index", "status", "connection"],
-        extensions=["", ".html", ".htm", ".asp"]
+        bases=["", "index", "status", "connection"], extensions=["", ".html", ".htm", ".asp"]
     )
 
     # Convert to url_patterns format
-    url_patterns = [
-        {"path": path, "auth_method": "basic", "auth_required": False}
-        for path in _seed_urls
-    ]
+    url_patterns = [{"path": path, "auth_method": "basic", "auth_required": False} for path in _seed_urls]
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
