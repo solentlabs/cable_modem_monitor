@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy types-requests
+          pip install ruff black mypy types-requests pytest-socket
 
       - name: Lint with ruff
         run: |
