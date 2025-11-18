@@ -26,6 +26,7 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
+          - pytest-socket
         files: \.py$
 
   # General file checks
