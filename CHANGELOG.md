@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2025-11-18
+
+### Added
+- **Netgear CM600 Support** - Full support for Netgear CM600 cable modem
+  - JavaScript-based parser for DocsisStatus.asp page
+  - Extracts channel data from InitDsTableTagValue and InitUsTableTagValue functions
+  - Comprehensive test coverage with real modem fixtures
+  - Handles downstream and upstream channel parsing
+- **CodeQL Security Testing** - Static analysis for security vulnerabilities
+  - Query to detect requests.get() calls without timeout parameters
+  - Prevents potential hanging connections in HTTP requests
+  - Automated testing framework with 2 test scenarios
+  - All tests passing with proper expected results validation
+- **Development Environment Improvements**
+  - Automated bootstrap script for Python virtual environment setup
+  - Enhanced devcontainer configuration with custom Dockerfile
+  - Cross-platform VSCode workspace configuration (Windows 11, Chrome OS Flex, macOS)
+  - Improved pytest configuration with better test discovery
+  - Developer quickstart documentation
+  - Setup verification scripts
+
+### Changed
+- **Makefile Simplification** - Streamlined development commands
+  - Reduced from 126 lines to 54 lines
+  - Clearer command structure and documentation
+  - Better cross-platform compatibility
+- **Pre-commit Configuration** - Excluded JSONC files from JSON validation
+  - Allows comments in devcontainer.json and VS Code settings.json
+  - Maintains strict JSON checking for other configuration files
+- **VSCode Settings Enhancement** - Comprehensive cross-platform configuration
+  - Python interpreter path using .venv standard
+  - Black formatter with proper cross-platform paths
+  - Ruff linter configuration
+  - Testing configuration for pytest
+  - File handling and editor settings
+
+### Fixed
+- **CM600 Parser Robustness** - Improved error handling and data extraction
+  - Better handling of JavaScript variable parsing
+  - Type annotations for better code quality
+  - Complexity warnings addressed with proper annotations
+- **Import Organization** - Fixed module-level import ordering
+  - Moved sanitize_html import to top of diagnostics.py
+  - Sorted imports in test files for consistency
+- **Type Checking Issues** - Added type ignore comments where appropriate
+  - Fixed mypy errors in socket patching code
+  - Proper type annotations for list variables
+
 ## [3.2.0] - 2025-11-13
 
 ### Added
