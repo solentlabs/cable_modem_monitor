@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `parser_detection_history` tracks attempted parsers during failures
   - Helps diagnose parser mismatch issues (like Issue #4)
   - New `_get_detection_method()` helper function in diagnostics.py
+  - Comprehensive test coverage (4 new diagnostics tests)
+- **Core Module Test Coverage** - 115 new unit tests for previously untested modules
+  - `core/signal_analyzer.py`: 22 tests covering SNR/power analysis, error trending, polling recommendations
+  - `core/health_monitor.py`: 45 tests covering ping/HTTP checks, input validation, latency calculations
+  - `core/hnap_builder.py`: 25 tests covering SOAP envelope building, XML parsing, HNAP requests
+  - `core/discovery_helpers.py`: 3 tests covering ParserNotFoundError exception
+  - `core/authentication.py`: 11 tests covering NoAuth, BasicHTTP, and Form auth strategies
+  - `lib/html_crawler.py`: 9 tests covering HTML fetching, error handling, session management
+  - Total test count increased from 328 to 443 tests (+35% coverage)
 - **CodeQL Security Testing** - Static analysis for security vulnerabilities
   - Query to detect requests.get() calls without timeout parameters
   - Prevents potential hanging connections in HTTP requests
