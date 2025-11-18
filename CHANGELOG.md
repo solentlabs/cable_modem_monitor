@@ -10,11 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.3.0] - 2025-11-18
 
 ### Added
-- **Netgear CM600 Support** - Full support for Netgear CM600 cable modem
+- **Netgear CM600 Support** - Full support for Netgear CM600 cable modem (Issue #3)
   - JavaScript-based parser for DocsisStatus.asp page
   - Extracts channel data from InitDsTableTagValue and InitUsTableTagValue functions
   - Comprehensive test coverage with real modem fixtures
   - Handles downstream and upstream channel parsing
+  - Status: Awaiting user confirmation on hardware
+- **Enhanced Parser Diagnostics** - Better troubleshooting information
+  - `parser_detection` section shows user selection vs. auto-detection
+  - `detection_method` field: "user_selected", "cached", or "auto_detected"
+  - `parser_detection_history` tracks attempted parsers during failures
+  - Helps diagnose parser mismatch issues (like Issue #4)
+  - New `_get_detection_method()` helper function in diagnostics.py
 - **CodeQL Security Testing** - Static analysis for security vulnerabilities
   - Query to detect requests.get() calls without timeout parameters
   - Prevents potential hanging connections in HTTP requests
@@ -29,6 +36,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Setup verification scripts
 
 ### Changed
+- **Documentation Cleanup** - Archived historical documents and streamlined roadmap
+  - Trimmed ARCHITECTURE_ROADMAP.md from 2,474 to 313 lines (87% reduction)
+  - Moved 7 historical documents to docs/archive/ (~130 KB)
+  - Created archive structure: v3.3.0_dev_sessions/, completed_features/
+  - Focused roadmap on current v3.x status and open issues
+  - Better maintainability and navigation
+- **Parser Detection Logging** - Enhanced troubleshooting output
+  - Shows attempted parsers when detection fails
+  - Added TC4400 detection debug logging (Issue #1)
+  - Parser error messages include attempted parser list
+  - Better visibility into detection failures
+- **MB8611 Static Parser Enhancement** - Added MB8600 fallback URL compatibility
+  - New URL pattern: `/MotoConnection.asp` (MB8600-style)
+  - Handles firmware variations that use older MB8600 URLs
+  - Form-based authentication support for legacy endpoints
+- **Issue Status Updates** - Accurate tracking in TEST_FIXTURE_STATUS.md
+  - Issue #2 (XB7 system info): Marked RESOLVED (v2.6.0)
+  - Issue #3 (CM600): Marked IMPLEMENTED (v3.3.0), awaiting testing
+  - Issue #4 (MB8611): Analysis shows parser mismatch issue
+  - Issue #5 (XB7 timeout): Marked RESOLVED (v2.6.0)
+- **Modem Compatibility Documentation** - Accurate status for all modems
+  - CM600 listed as "Experimental / Newly Implemented"
+  - MB8611 clarified as having dual parsers (HNAP vs Static)
+  - Clear guidance on parser selection importance
 - **Makefile Simplification** - Streamlined development commands
   - Reduced from 126 lines to 54 lines
   - Clearer command structure and documentation

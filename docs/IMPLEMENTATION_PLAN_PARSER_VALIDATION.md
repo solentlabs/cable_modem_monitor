@@ -1,15 +1,15 @@
-# Implementation Plan: Parser Mismatch Validation & Enhanced Diagnostics
+# Implementation Plan: Enhanced Parser Diagnostics
 
-**Target Version:** v3.3.1 or v3.4.0
+**Target Version:** v3.3.0
 **Priority:** Medium
-**Effort:** ~50 minutes total
-**Status:** Design Complete - Ready to Implement
+**Effort:** ~20 minutes
+**Status:** ✅ IMPLEMENTED in v3.3.0
 
 ---
 
 ## Overview
 
-Prevent user confusion by detecting parser/URL mismatches during configuration and providing better diagnostic information when parser selection fails.
+Provide better diagnostic information when parser selection fails to help troubleshoot issues.
 
 ### Problem Statement
 
@@ -18,9 +18,20 @@ Users select parsers that don't match their modem's actual protocol:
 - Result: Entities show as unavailable, logs show parsing errors
 - User confusion: "Why doesn't it work?"
 
+### Design Decision
+
+**Enhancement #1 (Parser Mismatch Validation) was NOT implemented** based on the following rationale:
+- Users should use "auto" detection for best results
+- Manual parser selection = user responsibility
+- "Fallback" modem option exists for diagnostics
+- Adding warnings would be patronizing and add friction
+- Better to improve documentation emphasizing "auto" as recommended
+
+**Enhancement #2 (Enhanced Diagnostics) WAS implemented** to help troubleshoot issues when users report problems.
+
 ---
 
-## Enhancement #1: Parser Mismatch Validation
+## ~~Enhancement #1: Parser Mismatch Validation~~ (NOT IMPLEMENTED)
 
 ### Goal
 Warn users during config flow when their selected parser doesn't match detected modem characteristics.
@@ -353,25 +364,23 @@ Not needed - both enhancements are:
 
 ## Implementation Checklist
 
-- [ ] Implement `_check_parser_mismatch()` in config_flow.py
-- [ ] Add parser mismatch error messages to strings.json
-- [ ] Enhance diagnostics output in diagnostics.py
-- [ ] Add parser detection history tracking to modem_scraper.py
-- [ ] Write unit tests for mismatch detection
+- [x] Enhance diagnostics output in diagnostics.py
+- [x] Add `_get_detection_method()` helper function
+- [x] Add parser_detection section to diagnostics
+- [x] Add parser_detection_history to diagnostics
+- [ ] Add parser detection history tracking to modem_scraper.py (future enhancement)
 - [ ] Write unit tests for enhanced diagnostics
-- [ ] Manual test with MB8611 (both parsers)
-- [ ] Update CHANGELOG.md
-- [ ] Update README.md (if needed)
-- [ ] Create PR with description of enhancements
+- [x] Update CHANGELOG.md
+- [x] Document design decision (Enhancement #1 not implemented)
 
 ---
 
-**Estimated Total Time:** 50 minutes (30 min coding + 20 min testing)
-**Recommended Version:** v3.3.1 or v3.4.0
-**Priority:** Medium (nice-to-have, not blocking)
+**Estimated Total Time:** 20 minutes
+**Implemented Version:** v3.3.0
+**Priority:** Medium (helpful for troubleshooting)
 
 ---
 
 **Author:** Claude + @kwschulz
 **Date:** November 18, 2025
-**Status:** Design Complete - Awaiting Implementation Decision
+**Status:** ✅ IMPLEMENTED (Enhancement #2 only)
