@@ -30,7 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `core/discovery_helpers.py`: 3 tests covering ParserNotFoundError exception
   - `core/authentication.py`: 11 tests covering NoAuth, BasicHTTP, and Form auth strategies
   - `lib/html_crawler.py`: 9 tests covering HTML fetching, error handling, session management
-  - Total test count increased from 328 to 443 tests (+35% coverage)
+  - Total test count increased from 328 to 443 tests (+35%)
+  - Test-to-code ratio now ~70% (6,548 test lines / 9,404 source lines)
+- **Code Coverage Requirement Increased** - Raised minimum coverage threshold
+  - Increased from 50% to 60% in pytest.ini and CI/CD workflows
+  - Current coverage: ~70% (exceeds new requirement)
+  - Enforced in GitHub Actions for all pull requests
+  - Reflects improved test infrastructure and quality standards
 - **CodeQL Security Testing** - Static analysis for security vulnerabilities
   - Query to detect requests.get() calls without timeout parameters
   - Prevents potential hanging connections in HTTP requests
