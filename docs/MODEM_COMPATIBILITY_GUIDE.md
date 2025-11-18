@@ -12,20 +12,20 @@ These models are actively tested or have been confirmed to work reliably by the 
 - **Motorola MB Series**: MB7420, MB7621, MB8600
 - **ARRIS SB6141**
 - **ARRIS SB6190**
-- **Technicolor XB7 (CGM4331COM)**
+- **Technicolor XB7 (CGM4331COM)** - Full system info support added in v2.6.0
 
 ### ⚠️ Community Reported (Mixed Results)
 These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
 
-- **Motorola MB8611** - Parser exists, but still needs more analysis for full HNAP/SOAP support.
+- **Motorola MB8611** - Two parsers available: "HNAP" (for HNAP/SOAP protocol) and "Static" (for HTML scraping). **Important:** Select the correct parser for your firmware. If entities show as unavailable, try the other parser variant or check diagnostics.
+- **Technicolor TC4400** - Parser has 95% test coverage, but some users report entity availability issues (Issue #1). Awaiting debug logs from affected users.
 - **Arris SB6183**
 - **Arris SB8200**
 
-### 🧪 Experimental / Untested
-Parsers for these models exist in the code, but they have not been fully validated by the community. They may be incomplete or may not work at all.
+### 🧪 Experimental / Newly Implemented (Awaiting Confirmation)
+Parsers for these models have been recently implemented but have not been confirmed by community testing. They should work based on HTML samples, but require real-world validation.
 
-- **Netgear CM600** - Support planned for v3.3, awaiting HTML samples for full implementation.
-- **Technicolor TC4400**
+- **Netgear CM600** - ✨ NEW in v3.3.0! Full JavaScript-based parser with comprehensive test coverage. Awaiting user confirmation (Issue #3).
 
 ### ❌ Known Incompatible
 - None reported yet.
