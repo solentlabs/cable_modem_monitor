@@ -450,11 +450,25 @@ class TestHealthCheckHTTP:
         """Test HTTP check handles timeout."""
         monitor = ModemHealthMonitor()
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
+        time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
+        timeout_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
+        session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
+
+        with (
+            patch(time_patch),
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            # Create the session
             mock_session = MagicMock()
-            mock_session.head.side_effect = TimeoutError("Connection timeout")
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = AsyncMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            # Both HEAD and GET timeout
+            mock_session.head = MagicMock(side_effect=TimeoutError("Connection timeout"))
+            mock_session.get = MagicMock(side_effect=TimeoutError("Connection timeout"))
+
             mock_session_class.return_value = mock_session
 
             success, latency = await monitor._check_http("http://192.168.1.1")
