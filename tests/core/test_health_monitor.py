@@ -237,22 +237,23 @@ class TestHealthCheckPing:
         monitor = ModemHealthMonitor()
 
         with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec:
-            # Mock successful ping
-            mock_proc = AsyncMock()
-            mock_proc.communicate.return_value = (b"", b"")
-            mock_proc.returncode = 0
-            mock_exec.return_value = mock_proc
+            with patch("time.time", side_effect=[1000.0, 1000.05]):  # 50ms elapsed
+                # Mock successful ping
+                mock_proc = AsyncMock()
+                mock_proc.communicate.return_value = (b"", b"")
+                mock_proc.returncode = 0
+                mock_exec.return_value = mock_proc
 
-            success, latency = await monitor._check_ping("192.168.1.1")
+                success, latency = await monitor._check_ping("192.168.1.1")
 
-            assert success is True
-            assert latency is not None
-            assert latency > 0
+                assert success is True
+                assert latency is not None
+                assert latency > 0
 
-            # Verify ping command
-            mock_exec.assert_called_once_with(
-                "ping", "-c", "1", "-W", "2", "192.168.1.1", stdout=-1, stderr=-1  # asyncio.subprocess.PIPE
-            )
+                # Verify ping command
+                mock_exec.assert_called_once_with(
+                    "ping", "-c", "1", "-W", "2", "192.168.1.1", stdout=-1, stderr=-1  # asyncio.subprocess.PIPE
+                )
 
     async def test_ping_failure(self):
         """Test failed ping check."""
@@ -298,64 +299,70 @@ class TestHealthCheckHTTP:
         """Test successful HTTP HEAD check."""
         monitor = ModemHealthMonitor()
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = MagicMock()
-            mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_response.__aenter__.return_value = mock_response
-            mock_session.head.return_value = mock_response
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = AsyncMock()
-            mock_session_class.return_value = mock_session
+        with patch("time.time", side_effect=[1000.0, 1000.01]):  # 10ms elapsed
+            with patch("aiohttp.ClientSession") as mock_session_class:
+                mock_session = AsyncMock()
+                mock_response = AsyncMock()
+                mock_response.status = 200
+                mock_response.__aenter__.return_value = mock_response
+                mock_response.__aexit__.return_value = AsyncMock()
+                mock_session.head.return_value = mock_response
+                mock_session.__aenter__.return_value = mock_session
+                mock_session.__aexit__.return_value = AsyncMock()
+                mock_session_class.return_value = mock_session
 
-            success, latency = await monitor._check_http("http://192.168.1.1")
+                success, latency = await monitor._check_http("http://192.168.1.1")
 
-            assert success is True
-            assert latency is not None
-            assert latency > 0
+                assert success is True
+                assert latency is not None
+                assert latency > 0
 
     async def test_http_fallback_to_get(self):
         """Test HTTP falls back to GET when HEAD fails."""
         monitor = ModemHealthMonitor()
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = MagicMock()
+        with patch("time.time", side_effect=[1000.0, 1000.015]):  # 15ms elapsed for GET
+            with patch("aiohttp.ClientSession") as mock_session_class:
+                mock_session = AsyncMock()
 
-            # HEAD fails
-            mock_session.head.side_effect = aiohttp.ClientError("HEAD not supported")
+                # HEAD fails
+                mock_session.head.side_effect = aiohttp.ClientError("HEAD not supported")
 
-            # GET succeeds
-            mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_response.__aenter__.return_value = mock_response
-            mock_session.get.return_value = mock_response
+                # GET succeeds
+                mock_response = AsyncMock()
+                mock_response.status = 200
+                mock_response.__aenter__.return_value = mock_response
+                mock_response.__aexit__.return_value = AsyncMock()
+                mock_session.get.return_value = mock_response
 
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = AsyncMock()
-            mock_session_class.return_value = mock_session
+                mock_session.__aenter__.return_value = mock_session
+                mock_session.__aexit__.return_value = AsyncMock()
+                mock_session_class.return_value = mock_session
 
-            success, latency = await monitor._check_http("http://192.168.1.1")
+                success, latency = await monitor._check_http("http://192.168.1.1")
 
-            assert success is True
-            assert latency is not None
+                assert success is True
+                assert latency is not None
 
     async def test_http_accepts_4xx_as_alive(self):
         """Test that 4xx responses are considered alive."""
         monitor = ModemHealthMonitor()
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = MagicMock()
-            mock_response = AsyncMock()
-            mock_response.status = 404  # Not Found, but server is alive
-            mock_response.__aenter__.return_value = mock_response
-            mock_session.head.return_value = mock_response
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = AsyncMock()
-            mock_session_class.return_value = mock_session
+        with patch("time.time", side_effect=[1000.0, 1000.012]):  # 12ms elapsed
+            with patch("aiohttp.ClientSession") as mock_session_class:
+                mock_session = AsyncMock()
+                mock_response = AsyncMock()
+                mock_response.status = 404  # Not Found, but server is alive
+                mock_response.__aenter__.return_value = mock_response
+                mock_response.__aexit__.return_value = AsyncMock()
+                mock_session.head.return_value = mock_response
+                mock_session.__aenter__.return_value = mock_session
+                mock_session.__aexit__.return_value = AsyncMock()
+                mock_session_class.return_value = mock_session
 
-            success, latency = await monitor._check_http("http://192.168.1.1")
+                success, latency = await monitor._check_http("http://192.168.1.1")
 
-            assert success is True  # Server responded
+                assert success is True  # Server responded
 
     async def test_http_rejects_5xx(self):
         """Test that 5xx responses are considered failures."""
