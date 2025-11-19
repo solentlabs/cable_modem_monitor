@@ -304,18 +304,22 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
-                # Create properly configured async mocks
-                mock_response = AsyncMock()
+                # Create the response that will be returned when entering the context manager
+                mock_response = MagicMock()
                 mock_response.status = 200
-                # Response needs to be an async context manager
-                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_response.__aexit__ = AsyncMock(return_value=None)
+                mock_response.headers = {}
 
-                mock_session = AsyncMock()
-                # Session needs to be an async context manager
+                # Create the async context manager that head() returns
+                mock_head_cm = MagicMock()
+                mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+                # Create the session
+                mock_session = MagicMock()
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session.__aexit__ = AsyncMock(return_value=None)
-                mock_session.head = AsyncMock(return_value=mock_response)
+                # head() returns the context manager directly (not a coroutine)
+                mock_session.head = MagicMock(return_value=mock_head_cm)
 
                 mock_session_class.return_value = mock_session
 
@@ -335,18 +339,23 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
                 # GET response
-                mock_response = AsyncMock()
+                mock_response = MagicMock()
                 mock_response.status = 200
-                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_response.__aexit__ = AsyncMock(return_value=None)
+                mock_response.headers = {}
 
-                mock_session = AsyncMock()
+                # Create the async context manager that get() returns
+                mock_get_cm = MagicMock()
+                mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+
+                # Create the session
+                mock_session = MagicMock()
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session.__aexit__ = AsyncMock(return_value=None)
                 # HEAD fails
-                mock_session.head = AsyncMock(side_effect=aiohttp.ClientError("HEAD not supported"))
-                # GET succeeds
-                mock_session.get = AsyncMock(return_value=mock_response)
+                mock_session.head = MagicMock(side_effect=aiohttp.ClientError("HEAD not supported"))
+                # GET returns the context manager directly (not a coroutine)
+                mock_session.get = MagicMock(return_value=mock_get_cm)
 
                 mock_session_class.return_value = mock_session
 
@@ -364,16 +373,22 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
-                # Create properly configured async mocks
-                mock_response = AsyncMock()
+                # Create the response that will be returned when entering the context manager
+                mock_response = MagicMock()
                 mock_response.status = 404  # Not Found, but server is alive
-                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_response.__aexit__ = AsyncMock(return_value=None)
+                mock_response.headers = {}
 
-                mock_session = AsyncMock()
+                # Create the async context manager that head() returns
+                mock_head_cm = MagicMock()
+                mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+                # Create the session
+                mock_session = MagicMock()
                 mock_session.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session.__aexit__ = AsyncMock(return_value=None)
-                mock_session.head = AsyncMock(return_value=mock_response)
+                # head() returns the context manager directly (not a coroutine)
+                mock_session.head = MagicMock(return_value=mock_head_cm)
 
                 mock_session_class.return_value = mock_session
 
