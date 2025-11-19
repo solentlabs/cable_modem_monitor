@@ -304,14 +304,19 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
-                mock_session = AsyncMock()
+                # Create properly configured async mocks
                 mock_response = AsyncMock()
                 mock_response.status = 200
-                mock_response.__aenter__.return_value = mock_response
-                mock_response.__aexit__.return_value = AsyncMock()
-                mock_session.head.return_value = mock_response
-                mock_session.__aenter__.return_value = mock_session
-                mock_session.__aexit__.return_value = AsyncMock()
+                # Response needs to be an async context manager
+                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_response.__aexit__ = AsyncMock(return_value=None)
+
+                mock_session = AsyncMock()
+                # Session needs to be an async context manager
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session.head = AsyncMock(return_value=mock_response)
+
                 mock_session_class.return_value = mock_session
 
                 success, latency = await monitor._check_http("http://192.168.1.1")
@@ -329,20 +334,20 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
-                mock_session = AsyncMock()
-
-                # HEAD fails
-                mock_session.head.side_effect = aiohttp.ClientError("HEAD not supported")
-
-                # GET succeeds
+                # GET response
                 mock_response = AsyncMock()
                 mock_response.status = 200
-                mock_response.__aenter__.return_value = mock_response
-                mock_response.__aexit__.return_value = AsyncMock()
-                mock_session.get.return_value = mock_response
+                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_response.__aexit__ = AsyncMock(return_value=None)
 
-                mock_session.__aenter__.return_value = mock_session
-                mock_session.__aexit__.return_value = AsyncMock()
+                mock_session = AsyncMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                # HEAD fails
+                mock_session.head = AsyncMock(side_effect=aiohttp.ClientError("HEAD not supported"))
+                # GET succeeds
+                mock_session.get = AsyncMock(return_value=mock_response)
+
                 mock_session_class.return_value = mock_session
 
                 success, latency = await monitor._check_http("http://192.168.1.1")
@@ -359,14 +364,17 @@ class TestHealthCheckHTTP:
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
 
-                mock_session = AsyncMock()
+                # Create properly configured async mocks
                 mock_response = AsyncMock()
                 mock_response.status = 404  # Not Found, but server is alive
-                mock_response.__aenter__.return_value = mock_response
-                mock_response.__aexit__.return_value = AsyncMock()
-                mock_session.head.return_value = mock_response
-                mock_session.__aenter__.return_value = mock_session
-                mock_session.__aexit__.return_value = AsyncMock()
+                mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+                mock_response.__aexit__ = AsyncMock(return_value=None)
+
+                mock_session = AsyncMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session.head = AsyncMock(return_value=mock_response)
+
                 mock_session_class.return_value = mock_session
 
                 success, latency = await monitor._check_http("http://192.168.1.1")
