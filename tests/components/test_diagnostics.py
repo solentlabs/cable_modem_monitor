@@ -523,3 +523,95 @@ async def test_diagnostics_sanitizes_exception_messages(mock_config_entry, mock_
     assert "***REDACTED***" in error_msg
     assert "secret123" not in error_msg
     assert "***PRIVATE_IP***" in error_msg or "10.0.0.5" not in error_msg
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_includes_parser_detection_info(mock_config_entry, mock_coordinator):
+    """Test that diagnostics includes parser detection information."""
+    hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+
+    # Verify parser_detection section exists
+    assert "config_entry" in diagnostics
+    assert "parser_detection" in diagnostics["config_entry"]
+
+    parser_detection = diagnostics["config_entry"]["parser_detection"]
+
+    # Verify parser detection fields
+    assert "user_selected" in parser_detection
+    assert "auto_detection_used" in parser_detection
+    assert "detection_method" in parser_detection
+    assert "parser_class" in parser_detection
+
+    # Verify values match config entry
+    assert parser_detection["user_selected"] == "Motorola MB8611"
+    assert parser_detection["auto_detection_used"] is False  # User selected specific modem
+    assert parser_detection["detection_method"] == "user_selected"
+    assert parser_detection["parser_class"] == "Motorola MB8611 (Static)"
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_parser_detection_auto_mode(mock_config_entry, mock_coordinator):
+    """Test parser detection info when auto mode is used."""
+    hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
+
+    # Set config entry to auto mode
+    mock_config_entry.data["modem_choice"] = "auto"
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+
+    parser_detection = diagnostics["config_entry"]["parser_detection"]
+
+    # Verify auto detection is indicated
+    assert parser_detection["user_selected"] == "auto"
+    assert parser_detection["auto_detection_used"] is True
+    assert parser_detection["detection_method"] == "cached"  # Has parser_name, so cached
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_parser_detection_history(mock_config_entry, mock_coordinator):
+    """Test parser detection history is included when available."""
+    hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
+
+    # Add parser detection history to coordinator data
+    mock_coordinator.data["_parser_detection_history"] = {
+        "attempted_parsers": ["Motorola MB8611 (Static)", "Motorola MB8600", "Generic Motorola"],
+        "detection_phases_run": ["anonymous_probing", "suggested_parser", "prioritized"],
+        "timestamp": "2025-11-18T10:00:00",
+    }
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+
+    # Verify parser detection history exists
+    assert "parser_detection_history" in diagnostics
+
+    history = diagnostics["parser_detection_history"]
+    assert "attempted_parsers" in history
+    assert len(history["attempted_parsers"]) == 3
+    assert "Motorola MB8611 (Static)" in history["attempted_parsers"]
+    assert "detection_phases_run" in history
+    assert "timestamp" in history
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_parser_detection_history_not_available(mock_config_entry, mock_coordinator):
+    """Test parser detection history shows note when not available."""
+    hass = Mock(spec=HomeAssistant)
+    hass.data = {DOMAIN: {mock_config_entry.entry_id: mock_coordinator}}
+
+    # Ensure no parser detection history in coordinator data
+    assert "_parser_detection_history" not in mock_coordinator.data
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+
+    # Verify parser detection history exists with note
+    assert "parser_detection_history" in diagnostics
+
+    history = diagnostics["parser_detection_history"]
+    assert "note" in history
+    assert "succeeded on first attempt" in history["note"]
+    assert history["attempted_parsers"] == []

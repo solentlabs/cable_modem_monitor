@@ -10,3 +10,26 @@ name: "CodeQL Security Scanning Configuration"
 # 5. These are diagnostic utilities, not production code
 paths-ignore:
   - "tools/**"
+  - "scripts/**"
+  - "docs/**"
+  - "tests/parsers/**/fixtures/**"
+
+# Custom queries specific to this integration
+queries:
+  - name: Cable Modem Security Queries
+    uses: ./.github/codeql/queries/cable-modem-security.qls
+
+# Query filters to reduce false positives
+query-filters:
+  - exclude:
+      id: py/clear-text-logging-sensitive-data
+      # Rationale: Cable modem diagnostics intentionally log configuration
+      # for troubleshooting. Data is local to Home Assistant instance.
+  - exclude:
+      id: py/clear-text-storage-sensitive-data
+      # Rationale: Home Assistant handles credential encryption.
+      # Integration uses HA's built-in secure storage.
+
+# Enable all security-related query metadata
+# This ensures comprehensive coverage of CWE categories
+disable-default-queries: false

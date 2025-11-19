@@ -21,6 +21,8 @@ class MotorolaMB8611StaticParser(ModemParser):
 
     url_patterns = [
         {"path": "/MotoStatusConnection.html", "auth_method": "none", "auth_required": False},
+        # MB8600 compatibility: Some MB8611 firmware may use older MB8600-style URLs
+        {"path": "/MotoConnection.asp", "auth_method": "form", "auth_required": True},
     ]
 
     @classmethod

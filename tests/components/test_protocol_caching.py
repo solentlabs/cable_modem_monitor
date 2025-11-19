@@ -80,7 +80,7 @@ class TestProtocolCaching:
         # Should still use HTTP protocol from cached URL
         assert scraper.base_url == "http://192.168.100.1"
 
-    def test_protocol_caching_with_different_hosts(self):
+    def test_with_different_hosts(self):
         """Test that protocol caching only applies to same host."""
         # This is a defensive test - cached URL is from different host
         cached_url = "http://192.168.1.1/MotoConnection.asp"

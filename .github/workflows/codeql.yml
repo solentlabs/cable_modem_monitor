@@ -37,10 +37,15 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         # Specify CodeQL query suites
-        # Available options: security-extended, security-and-quality
-        queries: security-and-quality
+        # security-extended: Includes all security queries (high + medium precision)
+        # security-and-quality: Adds code quality checks
+        queries: security-extended,security-and-quality
         # Use custom configuration to exclude intentional design decisions
         config-file: .github/codeql/codeql-config.yml
+        # Enable debug mode for troubleshooting (can be disabled in production)
+        debug: false
+        # Setup Python dependencies for better analysis
+        setup-python-dependencies: true
 
     # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
     # For Python, this step is not strictly necessary but included for completeness

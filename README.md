@@ -44,10 +44,14 @@ make test
 The setup script will:
 - ✅ Create Python virtual environment (.venv)
 - ✅ Install all dependencies
-- ✅ Configure pre-commit hooks
+- ✅ Configure pre-commit hooks (auto-format code on commit)
 - ✅ Verify your environment
 
-**Having issues?** Run `./scripts/verify-setup.sh` to diagnose problems. The verification script will check your environment and report any issues.
+**Having issues?** See the [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
+- Environment troubleshooting (dependency conflicts, import errors)
+- Pre-commit hook details
+- Running CI checks locally (`./scripts/ci-check.sh`)
+- Recommended development workflow
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md) for detailed development guides.
 
