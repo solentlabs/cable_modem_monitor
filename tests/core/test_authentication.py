@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 
-from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfig
+from custom_components.cable_modem_monitor.core.auth_config import AuthStrategyType, FormAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import (
     BasicHttpAuthStrategy,
     FormPlainAuthStrategy,
@@ -27,6 +27,7 @@ def mock_session():
 def form_auth_config():
     """Create a form auth configuration."""
     return FormAuthConfig(
+        strategy=AuthStrategyType.FORM_PLAIN,
         login_url="/login.asp",
         username_field="username",
         password_field="password",
@@ -155,6 +156,7 @@ class TestFormPlainAuthStrategy:
         """Test form auth with size-based success indicator."""
         # Config with digit success indicator (response size check)
         config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
             login_url="/login.asp",
             username_field="username",
             password_field="password",
