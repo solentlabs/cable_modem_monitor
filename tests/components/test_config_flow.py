@@ -96,9 +96,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.config_flow.get_parsers")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_connection_failure(
-        self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input
-    ):
+    async def test_connection_failure(self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
         # Mock get_parsers to return a mock parser
         mock_parser = Mock()

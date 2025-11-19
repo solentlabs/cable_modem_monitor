@@ -119,9 +119,7 @@ class TestFormPlainAuthStrategy:
         mock_response.status_code = 200
         mock_session.post.return_value = mock_response
 
-        success, response = strategy.login(
-            mock_session, "http://192.168.1.1", "admin", "password", form_auth_config
-        )
+        success, response = strategy.login(mock_session, "http://192.168.1.1", "admin", "password", form_auth_config)
 
         assert success is True
         assert response is not None

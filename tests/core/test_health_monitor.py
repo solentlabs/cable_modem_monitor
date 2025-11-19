@@ -257,8 +257,8 @@ class TestHealthCheckPing:
 
             # Verify ping command
             mock_exec.assert_called_once_with(
-                    "ping", "-c", "1", "-W", "2", "192.168.1.1", stdout=-1, stderr=-1  # asyncio.subprocess.PIPE
-                )
+                "ping", "-c", "1", "-W", "2", "192.168.1.1", stdout=-1, stderr=-1  # asyncio.subprocess.PIPE
+            )
 
     async def test_ping_failure(self):
         """Test failed ping check."""
@@ -471,8 +471,9 @@ class TestHealthCheckFullFlow:
         """Test health check when both ping and HTTP succeed."""
         monitor = ModemHealthMonitor()
 
-        with patch.object(monitor, "_check_ping", return_value=(True, 5.0)), patch.object(
-            monitor, "_check_http", return_value=(True, 10.0)
+        with (
+            patch.object(monitor, "_check_ping", return_value=(True, 5.0)),
+            patch.object(monitor, "_check_http", return_value=(True, 10.0)),
         ):
             result = await monitor.check_health("http://192.168.1.1")
 
@@ -488,8 +489,9 @@ class TestHealthCheckFullFlow:
         """Test health check when both checks fail."""
         monitor = ModemHealthMonitor()
 
-        with patch.object(monitor, "_check_ping", return_value=(False, None)), patch.object(
-            monitor, "_check_http", return_value=(False, None)
+        with (
+            patch.object(monitor, "_check_ping", return_value=(False, None)),
+            patch.object(monitor, "_check_http", return_value=(False, None)),
         ):
             result = await monitor.check_health("http://192.168.1.1")
 
@@ -504,8 +506,9 @@ class TestHealthCheckFullFlow:
         """Test that check_health handles exceptions gracefully."""
         monitor = ModemHealthMonitor()
 
-        with patch.object(monitor, "_check_ping", side_effect=Exception("Ping error")), patch.object(
-            monitor, "_check_http", side_effect=Exception("HTTP error")
+        with (
+            patch.object(monitor, "_check_ping", side_effect=Exception("Ping error")),
+            patch.object(monitor, "_check_http", side_effect=Exception("HTTP error")),
         ):
             result = await monitor.check_health("http://192.168.1.1")
 
@@ -517,8 +520,9 @@ class TestHealthCheckFullFlow:
         """Test that history is limited to max_history."""
         monitor = ModemHealthMonitor(max_history=5)
 
-        with patch.object(monitor, "_check_ping", return_value=(True, 5.0)), patch.object(
-            monitor, "_check_http", return_value=(True, 10.0)
+        with (
+            patch.object(monitor, "_check_ping", return_value=(True, 5.0)),
+            patch.object(monitor, "_check_http", return_value=(True, 10.0)),
         ):
             # Add 10 checks
             for _ in range(10):
@@ -532,8 +536,9 @@ class TestHealthCheckFullFlow:
         monitor = ModemHealthMonitor()
 
         # Fail twice
-        with patch.object(monitor, "_check_ping", return_value=(False, None)), patch.object(
-            monitor, "_check_http", return_value=(False, None)
+        with (
+            patch.object(monitor, "_check_ping", return_value=(False, None)),
+            patch.object(monitor, "_check_http", return_value=(False, None)),
         ):
             await monitor.check_health("http://192.168.1.1")
             await monitor.check_health("http://192.168.1.1")
@@ -541,8 +546,9 @@ class TestHealthCheckFullFlow:
         assert monitor.consecutive_failures == 2
 
         # Succeed once
-        with patch.object(monitor, "_check_ping", return_value=(True, 5.0)), patch.object(
-            monitor, "_check_http", return_value=(True, 10.0)
+        with (
+            patch.object(monitor, "_check_ping", return_value=(True, 5.0)),
+            patch.object(monitor, "_check_http", return_value=(True, 10.0)),
         ):
             await monitor.check_health("http://192.168.1.1")
 
