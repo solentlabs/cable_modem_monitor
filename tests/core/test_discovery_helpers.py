@@ -42,8 +42,8 @@ class TestParserNotFoundError:
         with pytest.raises(ParserNotFoundError) as exc_info:
             raise ParserNotFoundError()
 
-        # Assertions after context exit (false positive unreachable from mypy)
-        error_msg = str(exc_info.value)  # type: ignore[unreachable]
+        # Assertions after context exit
+        error_msg = str(exc_info.value)
         assert "Could not detect modem type" in error_msg
         assert "No parser matched" in error_msg
 
