@@ -240,6 +240,26 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
     ]
 
 
+def _get_detection_method(entry: ConfigEntry) -> str:
+    """Determine how parser was detected.
+
+    Args:
+        entry: Config entry to analyze
+
+    Returns:
+        Detection method: "user_selected", "cached", or "auto_detected"
+    """
+    modem_choice = entry.data.get("modem_choice", "auto")
+    cached_parser = entry.data.get("parser_name")
+
+    if modem_choice != "auto":
+        return "user_selected"
+    elif cached_parser:
+        return "cached"
+    else:
+        return "auto_detected"
+
+
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -259,6 +279,12 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "parser_name": entry.data.get("parser_name", "Unknown"),
             "working_url": entry.data.get("working_url", "Unknown"),
             "last_detection": entry.data.get("last_detection", "Never"),
+            "parser_detection": {
+                "user_selected": entry.data.get("modem_choice", "not_set"),
+                "auto_detection_used": entry.data.get("modem_choice", "auto") == "auto",
+                "detection_method": _get_detection_method(entry),
+                "parser_class": entry.data.get("parser_name", "Unknown"),
+            },
         },
         "coordinator": {
             "last_update_success": coordinator.last_update_success,
@@ -320,6 +346,15 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "type": exception_type,
             "message": exception_msg,
             "note": "Exception details have been sanitized for security",
+        }
+
+    ***REMOVED*** Add parser detection history if available (helpful for troubleshooting)
+    if "_parser_detection_history" in data:
+        diagnostics["parser_detection_history"] = data["_parser_detection_history"]
+    else:
+        diagnostics["parser_detection_history"] = {
+            "note": "Parser detection succeeded on first attempt",
+            "attempted_parsers": [],
         }
 
     ***REMOVED*** Add recent logs (last 150 records)

@@ -82,7 +82,7 @@ class TestParserCaching:
 class TestGetParserByName:
     """Test get_parser_by_name functionality."""
 
-    def test_get_parser_by_name_motorola_mb7621(self):
+    def test_motorola_mb7621(self):
         """Test loading Motorola MB7621 parser by name."""
         parser_class = get_parser_by_name("Motorola MB7621")
         assert parser_class is not None
@@ -90,7 +90,7 @@ class TestGetParserByName:
         assert parser_class.name == "Motorola MB7621"
         assert parser_class.manufacturer == "Motorola"
 
-    def test_get_parser_by_name_mb8611_static(self):
+    def test_mb8611_static(self):
         """Test loading MB8611 Static parser by name."""
         parser_class = get_parser_by_name("Motorola MB8611 (Static)")
         assert parser_class is not None
@@ -100,14 +100,14 @@ class TestGetParserByName:
         assert hasattr(parser_class, "url_patterns")
         assert len(parser_class.url_patterns) > 0
 
-    def test_get_parser_by_name_mb8611_hnap(self):
+    def test_mb8611_hnap(self):
         """Test loading MB8611 HNAP parser by name."""
         parser_class = get_parser_by_name("Motorola MB8611 (HNAP)")
         assert parser_class is not None
         assert issubclass(parser_class, ModemParser)
         assert parser_class.name == "Motorola MB8611 (HNAP)"
 
-    def test_get_parser_by_name_arris_sb6190(self):
+    def test_arris_sb6190(self):
         """Test loading ARRIS SB6190 parser by name."""
         parser_class = get_parser_by_name("ARRIS SB6190")
         assert parser_class is not None
@@ -115,12 +115,12 @@ class TestGetParserByName:
         assert parser_class.name == "ARRIS SB6190"
         assert parser_class.manufacturer == "ARRIS"
 
-    def test_get_parser_by_name_invalid(self):
+    def test_invalid(self):
         """Test that invalid parser name returns None."""
         parser_class = get_parser_by_name("Invalid Parser Name")
         assert parser_class is None
 
-    def test_get_parser_by_name_instantiable(self):
+    def test_instantiable(self):
         """Test that returned parser class can be instantiated."""
         parser_class = get_parser_by_name("Motorola MB7621")
         assert parser_class is not None

@@ -1,6 +1,6 @@
 ***REMOVED*** Test Fixture Status & Issue HTML Samples
 
-**Date:** November 5, 2025
+**Date:** November 18, 2025 (Updated for v3.3.0)
 **Purpose:** Track HTML samples from users and test fixture coverage
 
 ---
@@ -9,11 +9,11 @@
 
 | Issue | Modem Model | HTML Samples Provided | Fixtures in Repo | Status | Action Needed |
 |-------|-------------|----------------------|------------------|--------|---------------|
-| ***REMOVED***1 | TC-4400 | ✅ Yes (3 files) | ✅ Yes (3 files) | ⚠️ Parser Issue | Fix parser logic |
-| ***REMOVED***2 | XB7 | ✅ Yes (1 file) | ✅ Yes (1 file) | ⚠️ Incomplete | Add system info fields |
-| ***REMOVED***3 | Netgear CM600 | ❌ No | ❌ No | 🆕 New Parser Needed | Request HTML samples |
-| ***REMOVED***4 | MB8611 | ✅ Yes (5 files) | ❌ No | 🚧 HNAP/SOAP Needed | Add fixtures, Phase 2 |
-| ***REMOVED***5 | XB7 (timeout) | N/A | N/A | 📝 Logging Issue | Fix exception handling |
+| ***REMOVED***1 | TC-4400 | ✅ Yes (3 files) | ✅ Yes (3 files) | ⚠️ **OPEN** - Entities Unavailable | Debug with user |
+| ***REMOVED***2 | XB7 | ✅ Yes (1 file) | ✅ Yes (1 file) | ✅ **RESOLVED** (v2.6.0) | Awaiting user confirmation |
+| ***REMOVED***3 | Netgear CM600 | ✅ Yes (7 files) | ✅ Yes (7 files) | 🧪 **IMPLEMENTED** (v3.3.0) | Awaiting user testing |
+| ***REMOVED***4 | MB8611 | ✅ Yes (6 files + HNAP JSON) | ✅ Yes (HNAP fixtures) | ⚠️ **OPEN** - Parser Mismatch | User needs HNAP parser |
+| ***REMOVED***5 | XB7 (timeout) | N/A | N/A | ✅ **RESOLVED** (v2.6.0) | Awaiting user confirmation |
 
 ---
 
@@ -63,197 +63,172 @@
 ***REMOVED******REMOVED*** Issue ***REMOVED***2: XB7 Support
 
 **User:** esand
-**Status:** Authentication working, parsing working, but missing system info fields
-**Root Cause:** Parser incomplete - missing uptime, software version, primary channel
+**Status:** ✅ **RESOLVED in v2.6.0**
+**Resolution:** All requested system info fields have been implemented
 
 ***REMOVED******REMOVED******REMOVED*** HTML Sample Provided ✅
 
 **File:** Provided in issue comments (used to build XB7 parser)
 **Location in tests:** `tests/parsers/technicolor/xb7/fixtures/technicolor_xb7_network_setup.html`
 
-***REMOVED******REMOVED******REMOVED*** Available Fields in HTML (Not Yet Parsed)
+***REMOVED******REMOVED******REMOVED*** Implementation Status ✅
 
-**System Info:**
-- ✅ System Uptime: "21 days 15h: 20m: 33s" (Line 512-514)
-- ✅ Software Version: "Prod_23.2_231009 & Prod_23.2_231009" (Line 836-837, Download Version)
-- ✅ BOOT Version: Also available (Line 830-831)
-- ✅ Last Boot Time: Can calculate from uptime
-
-**Channel Info:**
-- ✅ Primary Channel: "*Channel ID 10 is the Primary channel" (Line 884)
+**Completed in v2.6.0 (2025-11-06):**
+- ✅ `sensor.cable_modem_system_uptime` - Human-readable uptime
+- ✅ `sensor.cable_modem_last_boot_time` - Calculated timestamp
+- ✅ `sensor.cable_modem_software_version` - Firmware/software version
+- ✅ Primary downstream channel detection
 
 ***REMOVED******REMOVED******REMOVED*** Test Fixtures Status ✅
 
 **Location:** `tests/parsers/technicolor/xb7/fixtures/`
 
 ```
-✅ technicolor_xb7_network_setup.html (complete, ready for enhancement)
+✅ technicolor_xb7_network_setup.html (complete, all fields parsed)
 ```
 
-***REMOVED******REMOVED******REMOVED*** Action Items
+***REMOVED******REMOVED******REMOVED*** Next Steps
 
-✅ **READY TO IMPLEMENT** - See Phase 0 roadmap
-
-- [ ] Parse System Uptime from HTML (Line 512-514)
-- [ ] Parse Download Version as software_version (Line 836-837)
-- [ ] Calculate last_boot_time from uptime
-- [ ] Parse Primary Channel ID (Line 884)
-- [ ] Add 4 new tests to test suite
-- [ ] Update Issue ***REMOVED***2 when complete
+- [ ] **User confirmation needed** - Verify sensors appear and are accurate
+- [ ] Close issue once user confirms success
 
 ---
 
 ***REMOVED******REMOVED*** Issue ***REMOVED***3: Netgear CM600 - Login Doesn't Work
 
 **User:** (no username shown)
-**Status:** New parser needed
-**Root Cause:** Netgear CM600 not supported
+**Status:** 🧪 **IMPLEMENTED in v3.3.0 - Awaiting User Testing**
+**Implementation:** Full JavaScript-based parser with comprehensive test coverage
 
-***REMOVED******REMOVED******REMOVED*** HTML Samples Provided ❌
+***REMOVED******REMOVED******REMOVED*** HTML Samples Provided ✅
 
-**No HTML samples provided yet**
+**Complete set of 7 files captured from real modem:**
 
-***REMOVED******REMOVED******REMOVED*** Action Items
+1. **index.html** - Main page (914 lines)
+2. **DocsisStatus.asp** - Primary data source (816 lines) - Contains `InitDsTableTagValue()` and `InitUsTableTagValue()` JavaScript functions
+3. **DashBoard.asp** - Dashboard page (1392 lines)
+4. **DocsisOffline.asp** - Offline status page (117 lines)
+5. **EventLog.asp** - Event log (291 lines)
+6. **RouterStatus.asp** - Router status (2056 lines)
+7. **SetPassword.asp** - Password settings (522 lines)
 
-- [ ] **REQUEST HTML SAMPLES FROM USER**
-  - Login page (if auth required)
-  - Connection/status page with downstream/upstream channels
-  - System info page
-  - Any other relevant pages
+***REMOVED******REMOVED******REMOVED*** Test Fixtures Status ✅
 
-- [ ] Create test fixture directory: `tests/parsers/netgear/cm600/fixtures/`
-- [ ] Implement parser (Phase 1 or later)
-- [ ] Add to supported modems list
+**Location:** `tests/parsers/netgear/fixtures/cm600/`
 
-***REMOVED******REMOVED******REMOVED*** Template Message for User
-
-```markdown
-@<username> To help add support for your Netgear CM600, could you please provide HTML samples?
-
-**What we need:**
-1. Right-click on the modem's web interface pages and "View Page Source"
-2. Save the HTML for these pages:
-   - Login page (if auth is required)
-   - Connection/Status page (with downstream/upstream channel data)
-   - System information page
-   - Any other pages showing modem metrics
-
-**How to share:**
-- Save each page as a `.txt` or `.html` file
-- Attach to this issue
-
-**Privacy:** Please redact any sensitive info like:
-- MAC addresses
-- Serial numbers
-- IP addresses
-- Usernames/passwords
-
-Thank you!
 ```
+✅ index.html - Main interface page
+✅ DocsisStatus.asp - Primary parsing source (JavaScript channel data)
+✅ DashBoard.asp - Dashboard with modem info
+✅ DocsisOffline.asp - Offline handling
+✅ EventLog.asp - Event log page
+✅ RouterStatus.asp - Router interface data
+✅ SetPassword.asp - Configuration page
+```
+
+***REMOVED******REMOVED******REMOVED*** Implementation Status ✅
+
+**Completed in v3.3.0:**
+- ✅ Parser created at `custom_components/cable_modem_monitor/parsers/netgear/cm600.py` (384 lines)
+- ✅ JavaScript variable extraction from `DocsisStatus.asp`
+- ✅ Regex-based parsing of `InitDsTableTagValue()` and `InitUsTableTagValue()` functions
+- ✅ Comprehensive test coverage - 5 tests (all passing)
+- ✅ Handles downstream and upstream channels
+- ✅ System info extraction
+
+***REMOVED******REMOVED******REMOVED*** Next Steps
+
+- [ ] **User testing required** - User needs to upgrade to v3.3.0 and test
+- [ ] **Await feedback** - Verify parser works on user's actual modem/firmware
+- [ ] **Only close after user confirmation** - Follow issue management policy
+- [ ] If successful, move CM600 to "Confirmed Working" in compatibility guide
 
 ---
 
 ***REMOVED******REMOVED*** Issue ***REMOVED***4: All Entities Unavailable (MB8611)
 
 **User:** dlindnegm
-**Status:** HNAP/SOAP protocol needed (Phase 2 work)
-**Root Cause:** MB8611 uses HNAP (Home Network Administration Protocol), not HTML scraping
+**Status:** ⚠️ **OPEN - Parser Mismatch Detected**
+**Root Cause:** User selected "Static" parser but modem uses HNAP protocol
 
-***REMOVED******REMOVED******REMOVED*** HTML Samples Provided ✅ (5 files)
+***REMOVED******REMOVED******REMOVED*** HTML Samples Provided ✅ (6 files)
 
-**Attached to Issue ***REMOVED***4:**
+**HTML Pages (5 files from original issue):**
 
-1. **Login Page.txt** - HNAP login page
-2. **Landing Page.txt** - Main dashboard after login
-3. **Advanced Page.txt** - Advanced settings
-4. **Connection Page.txt** - Connection status (may contain HNAP endpoints)
-5. **Event Log Page.txt** - System event log
+1. **Login.html** - HNAP login page
+2. **MotoHome.html** - Main dashboard
+3. **MotoStatusConnection.html** - Connection status (26K, channel tables)
+4. **MotoStatusSoftware.html** - Software/settings page
+5. **MotoStatusLog.html** - Event log
 
-**Note:** These are actual HTML page sources, but MB8611 likely uses HNAP SOAP API calls underneath.
+**HNAP API Data (added Nov 5, 2025):**
 
-***REMOVED******REMOVED******REMOVED*** Test Fixtures Status ❌
+6. **hnap_full_status.json** ✅ - Complete HNAP `GetMultipleHNAPs` response
+   - 33 downstream channels (including OFDM PLC)
+   - 4 upstream channels
+   - System uptime: "47 days 21h:15m:38s"
+   - Format: Caret-delimited channel data (`ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^`)
 
-**Location:** DOES NOT EXIST YET
+***REMOVED******REMOVED******REMOVED*** Test Fixtures Status ✅
 
-**Needs creation:** `tests/parsers/motorola/mb8611/fixtures/`
+**Location:** `tests/parsers/motorola/fixtures/mb8611_hnap/` and `mb8611_static/`
 
 ```
-❌ login_page.html (need to add from Issue ***REMOVED***4)
-❌ landing_page.html (need to add from Issue ***REMOVED***4)
-❌ connection_page.html (need to add from Issue ***REMOVED***4)
-❌ HNAP SOAP response samples (NEED TO REQUEST)
+✅ Login.html
+✅ MotoHome.html
+✅ MotoStatusConnection.html
+✅ MotoStatusSoftware.html
+✅ MotoStatusLog.html
+✅ hnap_full_status.json - Complete HNAP SOAP API response
 ```
+
+***REMOVED******REMOVED******REMOVED*** Diagnostics Analysis (Nov 13, 2025)
+
+**Problem identified from diagnostics dump:**
+```json
+"parser_name": "Motorola MB8611 (Static)",  // ❌ Wrong parser selected
+"working_url": "https://192.168.100.1/HNAP1/",  // ✅ Modem uses HNAP!
+"connection_status": "parser_issue",
+"downstream_channel_count": 0,  // ❌ 0 channels parsed
+```
+
+**Root cause:** Static parser expects HTML tables at `/MotoStatusConnection.html`, but modem only serves data via HNAP SOAP API at `/HNAP1/`. Parser tried to parse Login.html as if it contained channel tables.
 
 ***REMOVED******REMOVED******REMOVED*** Action Items
 
-- [ ] **Download HTML samples from Issue ***REMOVED***4 attachments**
-  - [Login Page.txt](https://github.com/user-attachments/files/23267508/Login.Page.txt)
-  - [Landing Page.txt](https://github.com/user-attachments/files/23267507/Landing.Page.txt)
-  - [Advanced Page.txt](https://github.com/user-attachments/files/23267505/Advanced.Page.txt)
-  - [Connection Page.txt](https://github.com/user-attachments/files/23267509/Connection.Page.txt)
-  - [Event Log Page.txt](https://github.com/user-attachments/files/23267506/Event.Log.Page.txt)
-
-- [ ] **REQUEST HNAP SOAP RESPONSE SAMPLES**
-  - User needs to capture HNAP API calls using browser dev tools
-  - Network tab → Filter XHR → Capture POST requests to `/HNAP1/`
-  - Save request/response XML for:
-    - GetMotoStatusStartupSequence
-    - GetMotoStatusConnectionInfo
-    - GetMotoStatusDownstreamChannelInfo
-    - GetMotoStatusUpstreamChannelInfo
-
-- [ ] Create fixtures directory structure
-- [ ] Implement MB8611 parser (Phase 2)
-- [ ] Test with user's modem
-
-***REMOVED******REMOVED******REMOVED*** Template Message for User (HNAP Samples)
-
-```markdown
-@dlindnegm Thank you for the HTML samples! However, the MB8611 uses HNAP (a SOAP-based API) which means we need to capture the actual API requests to parse the data.
-
-**How to capture HNAP requests:**
-
-1. Open your modem's web interface (`http://192.168.100.1`)
-2. Open browser Developer Tools (F12)
-3. Go to the **Network** tab
-4. Filter by **XHR** or **Fetch**
-5. Navigate to the Connection/Status page
-6. Look for POST requests to `/HNAP1/`
-7. Click on each request and copy:
-   - **Request payload** (XML)
-   - **Response** (XML)
-
-**HNAP actions we need:**
-- GetMotoStatusStartupSequence
-- GetMotoStatusConnectionInfo
-- GetMotoStatusDownstreamChannelInfo
-- GetMotoStatusUpstreamChannelInfo
-- Login (if there's a login SOAP action)
-
-Please attach these as text files. Thank you!
-```
+- [x] Parsers implemented (both HNAP and Static) in v3.1.0
+- [x] HNAP JSON fixtures added to test suite
+- [x] Diagnostics capability added in v3.2.0
+- [x] SSL certificate fixes applied in v3.1.0
+- [ ] **User needs to switch to HNAP parser** - Email instructions sent
+- [ ] **User reconfigures and tests with HNAP parser**
+- [ ] **If still failing, capture HNAP diagnostics** using HTML Capture button
+- [ ] Troubleshoot based on HNAP response data
 
 ---
 
 ***REMOVED******REMOVED*** Issue ***REMOVED***5: Login Timeouts Not Handled
 
 **User:** esand (XB7 owner)
-**Status:** Logging issue, not parser issue
-**Root Cause:** Timeout exceptions logging full stack traces instead of graceful debug messages
+**Status:** ✅ **RESOLVED in v2.6.0**
+**Resolution:** Improved exception handling with proper log levels
 
 ***REMOVED******REMOVED******REMOVED*** HTML Samples Needed ❌
 
 N/A - This is an exception handling issue, not a parsing issue
 
-***REMOVED******REMOVED******REMOVED*** Action Items
+***REMOVED******REMOVED******REMOVED*** Implementation Status ✅
 
-✅ **READY TO IMPLEMENT** - See Phase 0 roadmap
+**Completed in v2.6.0 (2025-11-06):**
+- ✅ Timeout errors logged at DEBUG level (reduces log noise during reboots)
+- ✅ Connection errors logged at WARNING level
+- ✅ Authentication errors logged at ERROR level
+- ✅ Helps distinguish between network issues, modem reboots, and auth problems
 
-- [ ] Improve exception handling in XB7 `login()` method
-- [ ] Specific catch blocks for timeout exceptions
-- [ ] Log timeouts at debug level, not error level
-- [ ] Apply pattern to other parsers
-- [ ] Add timeout test cases
+***REMOVED******REMOVED******REMOVED*** Next Steps
+
+- [ ] **User confirmation needed** - Verify timeout logs no longer show stack traces
+- [ ] Close issue once user confirms success
 
 ---
 

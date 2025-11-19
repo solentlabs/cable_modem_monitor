@@ -4,7 +4,7 @@
 ***REMOVED*** -------------------------------
 ***REMOVED*** 🏠 Home Assistant (install FIRST to resolve dependencies)
 ***REMOVED*** -------------------------------
-homeassistant>=2025.1.0                     ***REMOVED*** Home Assistant core (for integration testing)
+homeassistant>=2024.1.0                     ***REMOVED*** Home Assistant core (for integration testing)
 
 ***REMOVED*** -------------------------------
 ***REMOVED*** ⚙️ Runtime dependencies (mirrors pyproject.toml)
@@ -22,6 +22,7 @@ pytest-cov>=4.1.0                           ***REMOVED*** Coverage reporting (al
 pytest-asyncio>=0.21.1                      ***REMOVED*** Async test support (allow 1.x+ for HA compat)
 pytest-homeassistant-custom-component>=0.13.0,<1.0  ***REMOVED*** HA integration test harness
 pytest-mock>=3.12.0                         ***REMOVED*** Mocking utilities (allow 4.x+ for HA compat)
+pytest-socket>=0.6.0                        ***REMOVED*** Network access control for tests (matches CI)
 
 ***REMOVED*** -------------------------------
 ***REMOVED*** 🧹 Code quality and formatting
@@ -35,7 +36,7 @@ pylint>=3.0.0                               ***REMOVED*** Optional static analys
 ***REMOVED*** 🔍 Type checking
 ***REMOVED*** -------------------------------
 mypy>=1.7.0                                 ***REMOVED*** Static type checker
-types-requests>=2.31.0.10                   ***REMOVED*** Type stubs for requests (HA determines version)
+types-requests>=2.31.0.10                   ***REMOVED*** Type stubs for requests (matches CI)
 
 ***REMOVED*** -------------------------------
 ***REMOVED*** 🔐 Security scanning

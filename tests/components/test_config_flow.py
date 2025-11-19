@@ -68,7 +68,7 @@ class TestValidateInput:
 
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_validate_input_success(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_success(self, mock_scraper_class, mock_hass, valid_input):
         """Test successful validation."""
         ***REMOVED*** Mock scraper to return valid data
         mock_scraper = Mock()
@@ -96,9 +96,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.config_flow.get_parsers")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_validate_input_connection_failure(
-        self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input
-    ):
+    async def test_connection_failure(self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
         ***REMOVED*** Mock get_parsers to return a mock parser
         mock_parser = Mock()
@@ -118,7 +116,7 @@ class TestValidateInput:
         with pytest.raises(CannotConnectError):
             await validate_input(mock_hass, valid_input)
 
-    def test_validate_input_requires_host(self, valid_input):
+    def test_requires_host(self, valid_input):
         """Test that host is required."""
         ***REMOVED*** Host should be in valid input
         assert CONF_HOST in valid_input
@@ -310,15 +308,15 @@ class TestConfigConstants:
 class TestOptionsFlow:
     """Test the options flow for reconfiguration."""
 
-    def test_options_flow_exists(self):
+    def test_exists(self):
         """Test that OptionsFlowHandler class exists."""
         assert OptionsFlowHandler is not None
 
-    def test_options_flow_has_init_step(self):
+    def test_has_init_step(self):
         """Test that options flow has init step."""
         assert hasattr(OptionsFlowHandler, "async_step_init")
 
-    def test_options_flow_can_instantiate_without_arguments(self):
+    def test_can_instantiate_without_arguments(self):
         """Test that OptionsFlowHandler can be instantiated without arguments.
 
         This prevents the TypeError that caused a 500 error when trying to

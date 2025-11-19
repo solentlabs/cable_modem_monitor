@@ -623,7 +623,10 @@ class ModemScraper:
             "url": url,
         }
         _LOGGER.error(
-            "No parser matched after trying %s parsers. Title: %s", len(attempted_parsers), modem_info["title"]
+            "No parser matched after trying %s parsers: %s. Modem title: %s",
+            len(attempted_parsers),
+            ", ".join(attempted_parsers) if attempted_parsers else "none",
+            modem_info["title"],
         )
 
         raise ParserNotFoundError(modem_info=modem_info, attempted_parsers=attempted_parsers)

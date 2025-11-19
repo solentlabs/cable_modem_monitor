@@ -65,13 +65,18 @@ tts/
 *.sqlite-wal
 
 ***REMOVED*** -----------------------------
-***REMOVED*** CodeQL artifacts
+***REMOVED*** CodeQL artifacts (exclude runtime/build artifacts, keep custom queries and config)
 codeql-pack.lock.yml
 db-*/
 *.testproj/
 .codeql/
-.github/codeql/
+.github/codeql/databases/
+.github/codeql/results/
 .aider*
+
+***REMOVED*** Keep custom queries and configuration
+!.github/codeql/queries/
+!.github/codeql/*.yml
 
 ***REMOVED*** CodeQL test outputs
 *.actual

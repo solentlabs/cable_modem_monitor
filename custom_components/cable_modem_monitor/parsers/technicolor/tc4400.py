@@ -36,11 +36,20 @@ class TechnicolorTC4400Parser(ModemParser):
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """Detect if this is a Technicolor TC4400 modem."""
-        return (
-            "cmconnectionstatus.html" in url.lower()
-            or "cmswinfo.html" in url.lower()
-            or ("Board ID:" in html and "Build Timestamp:" in html)
+        url_match = "cmconnectionstatus.html" in url.lower() or "cmswinfo.html" in url.lower()
+        html_match = "Board ID:" in html and "Build Timestamp:" in html
+
+        result = url_match or html_match
+
+        _LOGGER.debug(
+            "TC4400 detection: url_match=%s, html_match=%s, url=%s, result=%s",
+            url_match,
+            html_match,
+            url,
+            result,
         )
+
+        return result
 
     def login(self, session, base_url, username, password) -> bool:
         """
