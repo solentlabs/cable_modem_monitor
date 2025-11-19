@@ -236,22 +236,27 @@ class TestHealthCheckPing:
         """Test successful ping check."""
         monitor = ModemHealthMonitor()
 
-        with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec:
-            with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.05]):
-                # Mock successful ping
-                mock_proc = AsyncMock()
-                mock_proc.communicate.return_value = (b"", b"")
-                mock_proc.returncode = 0
-                mock_exec.return_value = mock_proc
+        with (
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec,
+            patch(
+                "custom_components.cable_modem_monitor.core.health_monitor.time.time",
+                side_effect=[1000.0, 1000.05],
+            ),
+        ):
+            # Mock successful ping
+            mock_proc = AsyncMock()
+            mock_proc.communicate.return_value = (b"", b"")
+            mock_proc.returncode = 0
+            mock_exec.return_value = mock_proc
 
-                success, latency = await monitor._check_ping("192.168.1.1")
+            success, latency = await monitor._check_ping("192.168.1.1")
 
-                assert success is True
-                assert latency is not None
-                assert latency > 0
+            assert success is True
+            assert latency is not None
+            assert latency > 0
 
-                # Verify ping command
-                mock_exec.assert_called_once_with(
+            # Verify ping command
+            mock_exec.assert_called_once_with(
                     "ping", "-c", "1", "-W", "2", "192.168.1.1", stdout=-1, stderr=-1  # asyncio.subprocess.PIPE
                 )
 
@@ -299,100 +304,118 @@ class TestHealthCheckHTTP:
         """Test successful HTTP HEAD check."""
         monitor = ModemHealthMonitor()
 
-        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.01]):
-            with patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
+        time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
+        timeout_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
+        session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
 
-                # Create the response that will be returned when entering the context manager
-                mock_response = MagicMock()
-                mock_response.status = 200
-                mock_response.headers = {}
+        with (
+            patch(time_patch, side_effect=[1000.0, 1000.01]),
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            # Create the response that will be returned when entering the context manager
+            mock_response = MagicMock()
+            mock_response.status = 200
+            mock_response.headers = {}
 
-                # Create the async context manager that head() returns
-                mock_head_cm = MagicMock()
-                mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+            # Create the async context manager that head() returns
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
 
-                # Create the session
-                mock_session = MagicMock()
-                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock(return_value=None)
-                # head() returns the context manager directly (not a coroutine)
-                mock_session.head = MagicMock(return_value=mock_head_cm)
+            # Create the session
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            # head() returns the context manager directly (not a coroutine)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
 
-                mock_session_class.return_value = mock_session
+            mock_session_class.return_value = mock_session
 
-                success, latency = await monitor._check_http("http://192.168.1.1")
+            success, latency = await monitor._check_http("http://192.168.1.1")
 
-                assert success is True
-                assert latency is not None
-                assert latency > 0
+            assert success is True
+            assert latency is not None
+            assert latency > 0
 
     async def test_http_fallback_to_get(self):
         """Test HTTP falls back to GET when HEAD fails."""
         monitor = ModemHealthMonitor()
 
-        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.005, 1000.020]):
-            with patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
+        time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
+        timeout_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
+        session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
 
-                # GET response
-                mock_response = MagicMock()
-                mock_response.status = 200
-                mock_response.headers = {}
+        with (
+            patch(time_patch, side_effect=[1000.0, 1000.005, 1000.020]),
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            # GET response
+            mock_response = MagicMock()
+            mock_response.status = 200
+            mock_response.headers = {}
 
-                # Create the async context manager that get() returns
-                mock_get_cm = MagicMock()
-                mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            # Create the async context manager that get() returns
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
 
-                # Create the session
-                mock_session = MagicMock()
-                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock(return_value=None)
-                # HEAD fails
-                mock_session.head = MagicMock(side_effect=aiohttp.ClientError("HEAD not supported"))
-                # GET returns the context manager directly (not a coroutine)
-                mock_session.get = MagicMock(return_value=mock_get_cm)
+            # Create the session
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            # HEAD fails
+            mock_session.head = MagicMock(side_effect=aiohttp.ClientError("HEAD not supported"))
+            # GET returns the context manager directly (not a coroutine)
+            mock_session.get = MagicMock(return_value=mock_get_cm)
 
-                mock_session_class.return_value = mock_session
+            mock_session_class.return_value = mock_session
 
-                success, latency = await monitor._check_http("http://192.168.1.1")
+            success, latency = await monitor._check_http("http://192.168.1.1")
 
-                assert success is True
-                assert latency is not None
+            assert success is True
+            assert latency is not None
 
     async def test_http_accepts_4xx_as_alive(self):
         """Test that 4xx responses are considered alive."""
         monitor = ModemHealthMonitor()
 
-        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.012]):
-            with patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
-                 patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
+        time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
+        timeout_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
+        session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
 
-                # Create the response that will be returned when entering the context manager
-                mock_response = MagicMock()
-                mock_response.status = 404  # Not Found, but server is alive
-                mock_response.headers = {}
+        with (
+            patch(time_patch, side_effect=[1000.0, 1000.012]),
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            # Create the response that will be returned when entering the context manager
+            mock_response = MagicMock()
+            mock_response.status = 404  # Not Found, but server is alive
+            mock_response.headers = {}
 
-                # Create the async context manager that head() returns
-                mock_head_cm = MagicMock()
-                mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
-                mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+            # Create the async context manager that head() returns
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
 
-                # Create the session
-                mock_session = MagicMock()
-                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock(return_value=None)
-                # head() returns the context manager directly (not a coroutine)
-                mock_session.head = MagicMock(return_value=mock_head_cm)
+            # Create the session
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            # head() returns the context manager directly (not a coroutine)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
 
-                mock_session_class.return_value = mock_session
+            mock_session_class.return_value = mock_session
 
-                success, latency = await monitor._check_http("http://192.168.1.1")
+            success, latency = await monitor._check_http("http://192.168.1.1")
 
                 assert success is True  # Server responded
 
