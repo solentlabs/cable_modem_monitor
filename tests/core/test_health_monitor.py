@@ -417,7 +417,7 @@ class TestHealthCheckHTTP:
 
             success, latency = await monitor._check_http("http://192.168.1.1")
 
-                assert success is True  # Server responded
+            assert success is True  # Server responded
 
     async def test_http_rejects_5xx(self):
         """Test that 5xx responses are considered failures."""
