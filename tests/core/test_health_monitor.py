@@ -333,7 +333,7 @@ class TestHealthCheckHTTP:
         """Test HTTP falls back to GET when HEAD fails."""
         monitor = ModemHealthMonitor()
 
-        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.015]):
+        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.005, 1000.020]):
             with patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"), \
                  patch("custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession") as mock_session_class:
