@@ -252,9 +252,9 @@ class TestRecommendations:
         """Test recommendation for problematic signal."""
         base_time = datetime(2025, 1, 1, 12, 0, 0)
 
-        # Add problematic samples with increasing errors
-        for i in range(10):
-            mock_datetime.now.return_value = base_time + timedelta(hours=i * 2.4)
+        # Add 13 problematic samples with increasing errors (need 12+ after filter for high confidence)
+        for i in range(13):
+            mock_datetime.now.return_value = base_time + timedelta(hours=i * 1.8)
             sample = {
                 "downstream_channels": [
                     {"channel_id": 1, "snr": 25.0 - i, "power": 10.0 + i},  # Degrading SNR
@@ -280,14 +280,14 @@ class TestRecommendations:
         base_time = datetime(2025, 1, 1, 12, 0, 0)
 
         # Add samples with moderate SNR variance (5-10 dB)
-        # Create patterns that produce clear variance > 5 dB
-        snr_values = [30, 42, 31, 41, 32, 40, 33, 39, 34, 38]  # Alternating pattern
+        # Pattern oscillates between 28-43 dB to create clear variance > 5 dB
+        snr_values = [28, 43, 30, 42, 29, 43, 31, 41, 28, 42]  # High variance pattern
         for i in range(10):
             mock_datetime.now.return_value = base_time + timedelta(hours=i * 2.4)
             sample = {
                 "downstream_channels": [
                     {"channel_id": 1, "snr": snr_values[i], "power": 5.0},
-                    {"channel_id": 2, "snr": snr_values[i] + 1, "power": 5.1},
+                    {"channel_id": 2, "snr": snr_values[i], "power": 5.0},  # Same values to amplify variance
                 ],
                 "total_uncorrected_errors": 50,
             }

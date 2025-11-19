@@ -237,7 +237,7 @@ class TestHealthCheckPing:
         monitor = ModemHealthMonitor()
 
         with patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec:
-            with patch("time.time", side_effect=[1000.0, 1000.05]):  # 50ms elapsed
+            with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.05]):
                 # Mock successful ping
                 mock_proc = AsyncMock()
                 mock_proc.communicate.return_value = (b"", b"")
@@ -299,7 +299,7 @@ class TestHealthCheckHTTP:
         """Test successful HTTP HEAD check."""
         monitor = ModemHealthMonitor()
 
-        with patch("time.time", side_effect=[1000.0, 1000.01]):  # 10ms elapsed
+        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.01]):
             with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = AsyncMock()
                 mock_response = AsyncMock()
@@ -321,7 +321,7 @@ class TestHealthCheckHTTP:
         """Test HTTP falls back to GET when HEAD fails."""
         monitor = ModemHealthMonitor()
 
-        with patch("time.time", side_effect=[1000.0, 1000.015]):  # 15ms elapsed for GET
+        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.015]):
             with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = AsyncMock()
 
@@ -348,7 +348,7 @@ class TestHealthCheckHTTP:
         """Test that 4xx responses are considered alive."""
         monitor = ModemHealthMonitor()
 
-        with patch("time.time", side_effect=[1000.0, 1000.012]):  # 12ms elapsed
+        with patch("custom_components.cable_modem_monitor.core.health_monitor.time.time", side_effect=[1000.0, 1000.012]):
             with patch("aiohttp.ClientSession") as mock_session_class:
                 mock_session = AsyncMock()
                 mock_response = AsyncMock()
