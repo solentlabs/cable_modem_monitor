@@ -232,9 +232,9 @@ class TestRecommendations:
         """Test recommendation for very stable signal."""
         base_time = datetime(2025, 1, 1, 12, 0, 0)
 
-        # Add 10 stable samples over 24 hours
-        for i in range(10):
-            mock_datetime.now.return_value = base_time + timedelta(hours=i * 2.4)
+        # Add 13 stable samples over 24 hours (need 12+ for medium/high confidence)
+        for i in range(13):
+            mock_datetime.now.return_value = base_time + timedelta(hours=i * 1.8)
             analyzer.add_sample(stable_sample)
 
         # Get recommendation
@@ -243,6 +243,7 @@ class TestRecommendations:
 
         assert recommendation["signal_status"] == "very_stable"
         assert recommendation["recommended_seconds"] == 600  # Increased from 300 (gradual 2x)
+        # With 12+ samples (after 24h filter excludes first), confidence is medium or high
         assert recommendation["confidence"] in ["medium", "high"]
         assert "stable" in recommendation["reason"].lower()
 
@@ -267,9 +268,11 @@ class TestRecommendations:
         recommendation = analyzer.get_recommended_interval(300)
 
         assert recommendation["signal_status"] == "problematic"
-        assert recommendation["recommended_seconds"] == 60  # Frequent monitoring
+        # Gradual adjustment: would be 60, but capped to 50% of current (300 * 0.5 = 150)
+        assert recommendation["recommended_seconds"] == 150
         assert recommendation["confidence"] == "high"
         assert "degrading" in recommendation["reason"].lower() or "problematic" in recommendation["reason"].lower()
+        assert "gradual" in recommendation["reason"].lower()  # Gradual adjustment mentioned
 
     @patch("custom_components.cable_modem_monitor.core.signal_analyzer.datetime")
     def test_fluctuating_signal_recommendation(self, mock_datetime, analyzer):
@@ -277,12 +280,14 @@ class TestRecommendations:
         base_time = datetime(2025, 1, 1, 12, 0, 0)
 
         # Add samples with moderate SNR variance (5-10 dB)
-        # Using 32-44 dB range creates ~6.3 dB variance, which is in the fluctuating range
+        # Create patterns that produce clear variance > 5 dB
+        snr_values = [30, 42, 31, 41, 32, 40, 33, 39, 34, 38]  # Alternating pattern
         for i in range(10):
             mock_datetime.now.return_value = base_time + timedelta(hours=i * 2.4)
             sample = {
                 "downstream_channels": [
-                    {"channel_id": 1, "snr": 32.0 + (i % 2) * 12, "power": 5.0},  # SNR varies 32-44 (~6 dB stdev)
+                    {"channel_id": 1, "snr": snr_values[i], "power": 5.0},
+                    {"channel_id": 2, "snr": snr_values[i] + 1, "power": 5.1},
                 ],
                 "total_uncorrected_errors": 50,
             }
