@@ -297,10 +297,11 @@ lsof -ti:8123 | xargs kill
 
 ## Getting Help
 
-1. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guides
-2. Read [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
-3. Open a [GitHub Issue](https://github.com/kwschulz/cable_modem_monitor/issues)
-4. Ask in [GitHub Discussions](https://github.com/kwschulz/cable_modem_monitor/discussions)
+1. **Environment issues?** See [LOCAL_ENVIRONMENT_SETUP.md](./LOCAL_ENVIRONMENT_SETUP.md) for dependency troubleshooting
+2. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guides
+3. Read [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
+4. Open a [GitHub Issue](https://github.com/kwschulz/cable_modem_monitor/issues)
+5. Ask in [GitHub Discussions](https://github.com/kwschulz/cable_modem_monitor/discussions)
 
 ---
 

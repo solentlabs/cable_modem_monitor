@@ -139,20 +139,22 @@ print_success "pip ready"
 echo ""
 
 # Step 6: Install dependencies
-# Install Home Assistant first to resolve dependencies, then install dev tools
-print_step "Installing Home Assistant..."
+# Use requirements-dev.txt to ensure consistency with CI
+print_step "Installing development dependencies..."
 echo "  (This may take a few minutes...)"
-$PIP_CMD install --quiet homeassistant>=2025.1.0 beautifulsoup4 lxml
-print_success "Home Assistant installed"
-echo ""
-
-print_step "Installing development tools..."
-$PIP_CMD install --quiet pytest pytest-cov pytest-asyncio pytest-mock pytest-homeassistant-custom-component
-$PIP_CMD install --quiet ruff black pre-commit pylint mypy types-requests bandit defusedxml
-$PIP_CMD install --quiet freezegun responses
-# Install requests/aiohttp last, respecting HA's urllib3 constraint
-$PIP_CMD install --quiet --upgrade requests aiohttp "urllib3<2,>=1.26.5"
-print_success "Development dependencies installed"
+if [ -f "requirements-dev.txt" ]; then
+    $PIP_CMD install --quiet -r requirements-dev.txt
+    print_success "Development dependencies installed from requirements-dev.txt"
+else
+    # Fallback to manual installation if requirements-dev.txt doesn't exist
+    print_warning "requirements-dev.txt not found, using fallback installation"
+    $PIP_CMD install --quiet homeassistant>=2024.1.0 beautifulsoup4 lxml
+    $PIP_CMD install --quiet pytest pytest-cov pytest-asyncio pytest-mock pytest-homeassistant-custom-component
+    $PIP_CMD install --quiet ruff black pre-commit pylint mypy types-requests bandit defusedxml
+    $PIP_CMD install --quiet freezegun responses pytest-socket
+    $PIP_CMD install --quiet --upgrade requests aiohttp
+    print_success "Development dependencies installed"
+fi
 echo ""
 
 # Step 7: Install pre-commit hooks (optional)

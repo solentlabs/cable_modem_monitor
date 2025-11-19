@@ -95,8 +95,20 @@ First, clone the repository and install the development dependencies. This will 
 ```bash
 git clone https://github.com/kwschulz/cable_modem_monitor.git
 cd cable_modem_monitor
-pip install -r tests/requirements.txt
+
+# Option 1: Use the automated setup script (recommended)
+./scripts/setup.sh
+
+# Option 2: Manual installation
+pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes types, linters, pre-commit)
+pre-commit install  # Install git hooks for automatic code formatting
 ```
+
+**Having environment issues?** See [docs/LOCAL_ENVIRONMENT_SETUP.md](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
+- Troubleshooting dependency conflicts
+- Pre-commit hook configuration
+- Running CI checks locally
+- Environment consistency tips
 
 ### 2. Write Your Code
 

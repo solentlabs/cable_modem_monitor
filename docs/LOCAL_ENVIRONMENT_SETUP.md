@@ -1,6 +1,11 @@
 # Local Development Environment Setup
 
-This document explains how to set up your local development environment and addresses common issues.
+> **📖 Quick Start?** See [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) for fast setup commands
+> **📖 Full Contributing Guide?** See [CONTRIBUTING.md](../CONTRIBUTING.md) for the complete workflow
+>
+> This guide focuses on environment setup, dependency troubleshooting, and preventing CI failures.
+
+---
 
 ## Quick Setup
 
