@@ -312,11 +312,11 @@ class TestIntegration:
 
     def test_full_workflow_single_action(self, builder, mock_session):
         """Test complete workflow: build envelope, call, parse response."""
-        # Mock response
+        # Mock response - namespace is handled by parse_response, child elements should not be namespaced
         mock_response_xml = """<?xml version="1.0"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
           <soap:Body>
-            <GetMotoStatusConnectionInfoResponse xmlns="http://purenetworks.com/HNAP1/">
+            <GetMotoStatusConnectionInfoResponse>
               <Frequency>555000000</Frequency>
               <Power>5.0</Power>
             </GetMotoStatusConnectionInfoResponse>
