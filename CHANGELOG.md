@@ -37,11 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Current coverage: ~70% (exceeds new requirement)
   - Enforced in GitHub Actions for all pull requests
   - Reflects improved test infrastructure and quality standards
-- **CodeQL Security Testing** - Static analysis for security vulnerabilities
-  - Query to detect requests.get() calls without timeout parameters
-  - Prevents potential hanging connections in HTTP requests
-  - Automated testing framework with 2 test scenarios
-  - All tests passing with proper expected results validation
+- **Enhanced CodeQL Security Scanning** - Comprehensive static analysis for security vulnerabilities
+  - **5 Custom Security Queries** tailored for network device integrations:
+    - `subprocess-injection.ql`: Detects command injection in subprocess calls (CWE-078, severity 9.0)
+    - `unsafe-xml-parsing.ql`: Ensures defusedxml usage to prevent XXE attacks (CWE-611, severity 7.5)
+    - `hardcoded-credentials.ql`: Finds hardcoded passwords/API keys (CWE-798, severity 8.5)
+    - `insecure-ssl-config.ql`: Validates SSL/TLS configuration justifications (CWE-295, severity 6.0)
+    - `path-traversal.ql`: Prevents file system path traversal (CWE-022, severity 8.0)
+  - **Expanded Query Packs**: Added security-extended suite for comprehensive coverage
+  - **Query Suite Organization**: `cable-modem-security.qls` organizes all custom queries
+  - **Smart Exclusions**: Filters out false positives with documented rationale
+  - **Enhanced Configuration**: Setup Python dependencies for better code flow analysis
+  - **Comprehensive Documentation**: Full README with examples, justifications, and local testing guide
+  - **Automated Scanning**: Runs on push, PRs, and weekly schedule (Mondays 9 AM UTC)
 - **Development Environment Improvements**
   - Automated bootstrap script for Python virtual environment setup
   - Enhanced devcontainer configuration with custom Dockerfile
