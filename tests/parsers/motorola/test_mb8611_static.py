@@ -152,7 +152,7 @@ class TestUrlPatterns:
         assert isinstance(parser_class.url_patterns, list)
         assert len(parser_class.url_patterns) > 0
 
-    def test_url_patterns_format(self):
+    def test_format(self):
         """Test that url_patterns are correctly formatted."""
         from custom_components.cable_modem_monitor.parsers import get_parser_by_name
 

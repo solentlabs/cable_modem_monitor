@@ -98,7 +98,7 @@ class TestEnvelopeBuilding:
 class TestCallSingle:
     """Test single HNAP action calls."""
 
-    def test_call_single_success(self, builder, mock_session):
+    def test_success(self, builder, mock_session):
         """Test successful single action call."""
         mock_response = MagicMock()
         mock_response.text = "<xml>response</xml>"
@@ -117,7 +117,7 @@ class TestCallSingle:
         assert call_args[1]["headers"]["Content-Type"] == "text/xml; charset=utf-8"
         assert call_args[1]["timeout"] == 10
 
-    def test_call_single_with_params(self, builder, mock_session):
+    def test_with_params(self, builder, mock_session):
         """Test single call with parameters."""
         mock_response = MagicMock()
         mock_response.text = "<xml>response</xml>"
@@ -133,7 +133,7 @@ class TestCallSingle:
         envelope = call_args[1]["data"]
         assert "<Username>admin</Username>" in envelope
 
-    def test_call_single_handles_http_error(self, builder, mock_session):
+    def test_handles_http_error(self, builder, mock_session):
         """Test that HTTP errors are raised."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = requests.HTTPError("404 Not Found")
@@ -142,7 +142,7 @@ class TestCallSingle:
         with pytest.raises(requests.HTTPError):
             builder.call_single(mock_session, "http://192.168.100.1", "GetMotoStatusConnectionInfo")
 
-    def test_call_single_uses_session_verify(self, builder, mock_session):
+    def test_uses_session_verify(self, builder, mock_session):
         """Test that session verify setting is used."""
         mock_response = MagicMock()
         mock_response.text = "<xml>response</xml>"
@@ -158,7 +158,7 @@ class TestCallSingle:
 class TestCallMultiple:
     """Test batched HNAP action calls."""
 
-    def test_call_multiple_success(self, builder, mock_session):
+    def test_success(self, builder, mock_session):
         """Test successful batched call."""
         mock_response = MagicMock()
         mock_response.text = "<xml>batched response</xml>"
@@ -173,7 +173,7 @@ class TestCallMultiple:
         call_args = mock_session.post.call_args
         assert call_args[1]["headers"]["SOAPAction"] == '"http://purenetworks.com/HNAP1/GetMultipleHNAPs"'
 
-    def test_call_multiple_handles_http_error(self, builder, mock_session):
+    def test_handles_http_error(self, builder, mock_session):
         """Test that HTTP errors are raised for batched calls."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
@@ -186,7 +186,7 @@ class TestCallMultiple:
 class TestParseResponse:
     """Test XML response parsing."""
 
-    def test_parse_response_success(self):
+    def test_success(self):
         """Test parsing a valid HNAP response."""
         xml_response = """<?xml version="1.0"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -207,7 +207,7 @@ class TestParseResponse:
         assert isinstance(result, Element)
         assert result.tag.endswith("GetMotoStatusConnectionInfoResponse")
 
-    def test_parse_response_without_namespace_prefix(self):
+    def test_without_namespace_prefix(self):
         """Test parsing response without namespace prefix."""
         xml_response = """<?xml version="1.0"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -223,7 +223,7 @@ class TestParseResponse:
         assert result is not None
         assert result.tag == "TestActionResponse"
 
-    def test_parse_response_not_found(self):
+    def test_not_found(self):
         """Test parsing when action response is not found."""
         xml_response = """<?xml version="1.0"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -238,7 +238,7 @@ class TestParseResponse:
 
         assert result is None
 
-    def test_parse_response_invalid_xml(self):
+    def test_invalid_xml(self):
         """Test parsing invalid XML."""
         invalid_xml = "<invalid xml >"
 
@@ -250,7 +250,7 @@ class TestParseResponse:
 class TestGetTextValue:
     """Test text value extraction from XML elements."""
 
-    def test_get_text_value_found(self):
+    def test_found(self):
         """Test extracting text value from element."""
         xml = """<root>
             <Frequency>555000000</Frequency>
@@ -264,7 +264,7 @@ class TestGetTextValue:
         assert frequency == "555000000"
         assert power == "5.0"
 
-    def test_get_text_value_not_found(self):
+    def test_not_found(self):
         """Test getting text value when tag doesn't exist."""
         xml = "<root><Frequency>555000000</Frequency></root>"
         element = fromstring(xml)
@@ -273,7 +273,7 @@ class TestGetTextValue:
 
         assert value == ""  # Default value
 
-    def test_get_text_value_with_custom_default(self):
+    def test_with_custom_default(self):
         """Test custom default value."""
         xml = "<root><Frequency>555000000</Frequency></root>"
         element = fromstring(xml)
@@ -282,13 +282,13 @@ class TestGetTextValue:
 
         assert value == "N/A"
 
-    def test_get_text_value_none_element(self):
+    def test_none_element(self):
         """Test getting value from None element."""
         value = HNAPRequestBuilder.get_text_value(None, "AnyTag")
 
         assert value == ""
 
-    def test_get_text_value_empty_tag(self):
+    def test_empty_tag(self):
         """Test getting value from empty tag."""
         xml = "<root><EmptyTag></EmptyTag></root>"
         element = fromstring(xml)
@@ -297,7 +297,7 @@ class TestGetTextValue:
 
         assert value == "default"  # Empty text returns default
 
-    def test_get_text_value_strips_whitespace(self):
+    def test_strips_whitespace(self):
         """Test that whitespace is stripped from values."""
         xml = "<root><Value>  text with spaces  </Value></root>"
         element = fromstring(xml)

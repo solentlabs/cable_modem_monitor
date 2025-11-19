@@ -556,14 +556,14 @@ class TestAverageLatency:
 
         assert avg == pytest.approx(20.0)  # (10 + 20 + 30) / 3
 
-    def test_average_latency_no_history(self):
+    def test_no_history(self):
         """Test average latency with no history."""
         monitor = ModemHealthMonitor()
 
         assert monitor.average_ping_latency is None
         assert monitor.average_http_latency is None
 
-    def test_average_latency_filters_failures(self):
+    def test_filters_failures(self):
         """Test that failed checks are excluded from averages."""
         monitor = ModemHealthMonitor()
 
@@ -579,7 +579,7 @@ class TestStatusSummary:
     """Test status summary generation."""
 
     @pytest.mark.asyncio
-    async def test_status_summary_with_history(self):
+    async def test_with_history(self):
         """Test status summary with check history."""
         monitor = ModemHealthMonitor()
 
@@ -600,7 +600,7 @@ class TestStatusSummary:
         assert "avg_ping_latency_ms" in summary
         assert "avg_http_latency_ms" in summary
 
-    def test_status_summary_no_history(self):
+    def test_no_history(self):
         """Test status summary with no history."""
         monitor = ModemHealthMonitor()
 

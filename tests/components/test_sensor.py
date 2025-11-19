@@ -346,7 +346,7 @@ class TestLastBootTimeSensor:
         entry.data = {"host": "192.168.100.1"}
         return entry
 
-    def test_last_boot_time_calculation(self, mock_coordinator, mock_entry):
+    def test_calculation(self, mock_coordinator, mock_entry):
         """Test last boot time calculation from uptime."""
         from datetime import datetime, timedelta
 
@@ -371,7 +371,7 @@ class TestLastBootTimeSensor:
         time_diff = abs((last_boot - expected_boot).total_seconds())
         assert time_diff < 5  # Within 5 seconds
 
-    def test_last_boot_time_unknown_uptime(self, mock_entry):
+    def test_unknown_uptime(self, mock_entry):
         """Test last boot time with unknown uptime."""
         from custom_components.cable_modem_monitor.sensor import ModemLastBootTimeSensor
 
@@ -384,7 +384,7 @@ class TestLastBootTimeSensor:
         # Should return None for unknown uptime
         assert sensor.native_value is None
 
-    def test_last_boot_time_missing_uptime(self, mock_entry):
+    def test_missing_uptime(self, mock_entry):
         """Test last boot time with missing uptime data."""
         from custom_components.cable_modem_monitor.sensor import ModemLastBootTimeSensor
 
@@ -397,7 +397,7 @@ class TestLastBootTimeSensor:
         # Should return None when uptime is missing
         assert sensor.native_value is None
 
-    def test_last_boot_time_sensor_attributes(self, mock_coordinator, mock_entry):
+    def test_sensor_attributes(self, mock_coordinator, mock_entry):
         """Test last boot time sensor attributes."""
         from homeassistant.components.sensor import SensorDeviceClass
 
