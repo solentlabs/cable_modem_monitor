@@ -7,48 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **CI Check Script** - Local validation before pushing changes
-  - `scripts/ci-check.sh` runs Black, Ruff, Mypy, and Pytest locally
-  - Matches CI environment checks to catch issues before push
-  - Provides immediate feedback without waiting for GitHub Actions
-- **Local Environment Setup Guide** - Comprehensive troubleshooting documentation
-  - `docs/LOCAL_ENVIRONMENT_SETUP.md` covers environment setup and common issues
-  - Documents yarl import errors and dependency conflicts
-  - Explains mypy behavior differences (with/without types-requests)
-  - Provides pre-commit hook setup instructions
-  - Includes recommended development workflow
-
-### Changed
-- **Development Dependencies** - Aligned local environment with CI
-  - Updated `requirements-dev.txt`: homeassistant 2025.1.0 → 2024.1.0 (fixes non-existent version)
-  - Added `pytest-socket>=0.6.0` to match CI lint job requirements
-  - Updated `scripts/setup.sh` to use `requirements-dev.txt` instead of manual package list
-  - Updated `CONTRIBUTING.md` to use `requirements-dev.txt` instead of `tests/requirements.txt`
-- **Documentation Cross-References** - Improved documentation discoverability
-  - README.md now links to LOCAL_ENVIRONMENT_SETUP.md for troubleshooting
-  - CONTRIBUTING.md references LOCAL_ENVIRONMENT_SETUP.md for environment issues
-  - DEVELOPER_QUICKSTART.md includes LOCAL_ENVIRONMENT_SETUP.md in "Getting Help"
-  - LOCAL_ENVIRONMENT_SETUP.md includes navigation header linking to other dev docs
-  - Clear documentation hierarchy: README → CONTRIBUTING → specialized guides
-
-### Fixed
-- **CI/CD Pipeline Issues** - Resolved multiple CI check failures
-  - CodeQL configuration: Removed invalid `packs` section causing fatal error
-  - Black formatting: Applied formatting to 3 test files (test_config_flow, test_authentication, test_health_monitor)
-  - Mypy type checking: Configured to work with and without types-requests package
-    - Disabled warn_redundant_casts and warn_unused_ignores (handles CI vs local differences)
-    - Disabled warn_unreachable (prevents false positives with pytest.raises)
-    - Excluded tests/ and tools/ directories from type checking
-    - Added requests to mypy ignore list for consistency
-  - Test failure: Fixed async mock setup in test_http_timeout (proper AsyncMock usage)
-  - Removed test_html_crawler.py (tested non-existent HTMLCrawler class)
-- **Type Checking Consistency** - Fixed environment-specific mypy errors
-  - Added type casting in hnap_builder.py for response.text
-  - Configured mypy.ini to handle both local (no stubs) and CI (with stubs) environments
-  - Prevents "redundant cast" errors in CI and "returning Any" errors locally
-
-
 ## [3.3.0] - 2025-11-18
 
 ### Added
@@ -99,6 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved pytest configuration with better test discovery
   - Developer quickstart documentation
   - Setup verification scripts
+- **CI Check Script** - Local validation before pushing changes
+  - `scripts/ci-check.sh` runs Black, Ruff, Mypy, and Pytest locally
+  - Matches CI environment checks to catch issues before push
+  - Provides immediate feedback without waiting for GitHub Actions
+- **Local Environment Setup Guide** - Comprehensive troubleshooting documentation
+  - `docs/LOCAL_ENVIRONMENT_SETUP.md` covers environment setup and common issues
+  - Documents yarl import errors and dependency conflicts
+  - Explains mypy behavior differences (with/without types-requests)
+  - Provides pre-commit hook setup instructions
+  - Includes recommended development workflow
 
 ### Changed
 - **Documentation Cleanup** - Archived historical documents and streamlined roadmap
@@ -138,6 +106,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ruff linter configuration
   - Testing configuration for pytest
   - File handling and editor settings
+- **Development Dependencies** - Aligned local environment with CI
+  - Updated `requirements-dev.txt`: homeassistant 2025.1.0 → 2024.1.0 (fixes non-existent version)
+  - Added `pytest-socket>=0.6.0` to match CI lint job requirements
+  - Updated `scripts/setup.sh` to use `requirements-dev.txt` instead of manual package list
+  - Updated `CONTRIBUTING.md` to use `requirements-dev.txt` instead of `tests/requirements.txt`
+- **Documentation Cross-References** - Improved documentation discoverability
+  - README.md now links to LOCAL_ENVIRONMENT_SETUP.md for troubleshooting
+  - CONTRIBUTING.md references LOCAL_ENVIRONMENT_SETUP.md for environment issues
+  - DEVELOPER_QUICKSTART.md includes LOCAL_ENVIRONMENT_SETUP.md in "Getting Help"
+  - LOCAL_ENVIRONMENT_SETUP.md includes navigation header linking to other dev docs
+  - Clear documentation hierarchy: README → CONTRIBUTING → specialized guides
 
 ### Fixed
 - **CM600 Parser Robustness** - Improved error handling and data extraction
@@ -150,6 +129,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Type Checking Issues** - Added type ignore comments where appropriate
   - Fixed mypy errors in socket patching code
   - Proper type annotations for list variables
+- **CI/CD Pipeline Issues** - Resolved multiple CI check failures
+  - CodeQL configuration: Removed invalid `packs` section causing fatal error
+  - Black formatting: Applied formatting to 3 test files (test_config_flow, test_authentication, test_health_monitor)
+  - Mypy type checking: Configured to work with and without types-requests package
+    - Disabled warn_redundant_casts and warn_unused_ignores (handles CI vs local differences)
+    - Disabled warn_unreachable (prevents false positives with pytest.raises)
+    - Excluded tests/ and tools/ directories from type checking
+    - Added requests to mypy ignore list for consistency
+  - Test failure: Fixed async mock setup in test_http_timeout (proper AsyncMock usage)
+  - Removed test_html_crawler.py (tested non-existent HTMLCrawler class)
+- **Type Checking Consistency** - Fixed environment-specific mypy errors
+  - Added type casting in hnap_builder.py for response.text
+  - Configured mypy.ini to handle both local (no stubs) and CI (with stubs) environments
+  - Prevents "redundant cast" errors in CI and "returning Any" errors locally
+- **Workflow Permissions** - Fixed GitHub Actions permissions for PR comments
+  - Added write permissions to commit-lint.yml and changelog-check.yml workflows
+  - Allows workflows to post helpful feedback comments when checks fail
+  - Resolves "Resource not accessible by integration" 403 errors
 
 ## [3.2.0] - 2025-11-13
 
