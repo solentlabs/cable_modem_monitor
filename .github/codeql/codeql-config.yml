@@ -14,12 +14,6 @@ paths-ignore:
   - "docs/**"
   - "tests/parsers/**/fixtures/**"
 
-# Additional query packs for comprehensive security scanning
-packs:
-  - codeql/python-queries:AlertSuppression.ql
-  - codeql/python-queries:Security
-  - codeql/python-queries:Correctness
-
 # Custom queries specific to this integration
 queries:
   - name: Cable Modem Security Queries
