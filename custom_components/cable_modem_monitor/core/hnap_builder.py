@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import requests
 
@@ -68,7 +68,7 @@ class HNAPRequestBuilder:
         )
 
         response.raise_for_status()
-        return response.text
+        return cast(str, response.text)
 
     def call_multiple(self, session: requests.Session, base_url: str, actions: list[str]) -> str:
         """
@@ -96,7 +96,7 @@ class HNAPRequestBuilder:
         )
 
         response.raise_for_status()
-        return response.text
+        return cast(str, response.text)
 
     def _build_envelope(self, action: str, params: dict | None) -> str:
         """

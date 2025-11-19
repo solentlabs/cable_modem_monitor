@@ -34,7 +34,7 @@ class CapturingSession(requests.Session):
         super().__init__()
         self._capture_callback = capture_callback
 
-    def request(self, method: str, url: str, **kwargs) -> requests.Response:  # type: ignore[override]
+    def request(self, method: str, url: str, **kwargs) -> requests.Response:
         """Override request to capture responses."""
         response = super().request(method, url, **kwargs)
 
