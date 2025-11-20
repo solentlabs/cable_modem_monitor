@@ -20,6 +20,10 @@
   // Unix: .venv/bin/python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
 
+  // Disable automatic venv activation (we handle it with custom wrapper script)
+  // This prevents conflicts with our activate_venv.ps1/.sh scripts
+  "python.terminal.activateEnvironment": false,
+
   // Workspace-level enforcement (prevents user extension conflicts)
   "python.linting.pylintEnabled": false,
   "python.linting.flake8Enabled": false,
@@ -109,18 +113,20 @@
   "python.analysis.diagnosticMode": "workspace",
 
   // ========================================
-  // CodeQL Configuration
+  // CodeQL Configuration (Optional)
   // ========================================
+  // CodeQL is OPTIONAL - only needed for security analysis development
+  // If you don't have the CodeQL extension, you can ignore these settings
 
-  // Let the CodeQL extension manage its own CLI installation
+  // Let the CodeQL extension manage its own CLI installation (if extension is installed)
   // The project uses a local CLI at ./codeql/codeql for command-line testing
   // But the VS Code extension works best with its own managed installation
   "codeQL.cli.executablePath.updateChannel": "latest",
 
-  // Enable CodeQL test discovery
+  // Enable CodeQL test discovery (if extension is installed)
   "codeQL.runningTests.numberOfThreads": 1,
 
-  // Auto-save databases
+  // Auto-save databases (if extension is installed)
   "codeQL.runningQueries.autoSave": true,
 
   // ========================================
