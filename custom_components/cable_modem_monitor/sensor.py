@@ -231,12 +231,10 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_downstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return float(ch.get("power"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        if self._channel in channel_map:
+            return float(channel_map[self._channel].get("power"))
         return None
 
 
@@ -256,12 +254,10 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_downstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return float(ch.get("snr"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        if self._channel in channel_map:
+            return float(channel_map[self._channel].get("snr"))
         return None
 
 
@@ -282,12 +278,10 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_downstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return int(ch.get("frequency"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        if self._channel in channel_map:
+            return int(channel_map[self._channel].get("frequency"))
         return None
 
 
@@ -306,12 +300,10 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_downstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return int(ch.get("corrected"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        if self._channel in channel_map:
+            return int(channel_map[self._channel].get("corrected"))
         return None
 
 
@@ -330,12 +322,10 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_downstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return int(ch.get("uncorrected"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        if self._channel in channel_map:
+            return int(channel_map[self._channel].get("uncorrected"))
         return None
 
 
@@ -355,12 +345,10 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_upstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return float(ch.get("power"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_upstream_by_id", {})
+        if self._channel in channel_map:
+            return float(channel_map[self._channel].get("power"))
         return None
 
 
@@ -381,12 +369,10 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
     @property
     def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        for ch in self.coordinator.data.get("cable_modem_upstream", []):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to 0 if neither exists (will not match, returns None)
-            ch_num = int(ch.get("channel_id", ch.get("channel", 0)))
-            if ch_num == self._channel:
-                return int(ch.get("frequency"))
+        # Use indexed lookup for O(1) performance instead of O(n) linear search
+        channel_map = self.coordinator.data.get("_upstream_by_id", {})
+        if self._channel in channel_map:
+            return int(channel_map[self._channel].get("frequency"))
         return None
 
 
