@@ -242,7 +242,7 @@
       "type": "shell",
       "command": "./scripts/setup.sh",
       "windows": {
-        "command": "bash ./scripts/setup.sh",
+        "command": "\"C:\\Program Files\\Git\\bin\\bash.exe\" ./scripts/setup.sh",
         "options": {
           "shell": {
             "executable": "cmd.exe",
