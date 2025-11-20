@@ -201,7 +201,7 @@
     {
       "label": "🔄 Fresh Start (Reset VS Code State)",
       "type": "shell",
-      "command": "python",
+      "command": "python3",
       "args": ["${workspaceFolder}/scripts/dev/fresh_start.py"],
       "presentation": {
         "reveal": "always",
