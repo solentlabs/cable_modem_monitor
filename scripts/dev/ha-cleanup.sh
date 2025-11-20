@@ -113,15 +113,17 @@ fi
 
 echo ""
 
-# Clean up any stopped HA containers
-echo "🗑️  Removing stopped containers..."
-STOPPED_CONTAINERS=$(docker ps -aq --filter "name=ha-cable-modem" 2>/dev/null || true)
+# Clean up ALL HA containers (running, stopped, created, etc.)
+echo "🗑️  Removing all Home Assistant containers..."
+ALL_CONTAINERS=$(docker ps -aq --filter "name=ha-cable-modem" 2>/dev/null || true)
 
-if [ -n "$STOPPED_CONTAINERS" ]; then
-    docker rm -f $STOPPED_CONTAINERS 2>/dev/null || true
-    echo "✅ Removed stopped containers"
+if [ -n "$ALL_CONTAINERS" ]; then
+    docker rm -f $ALL_CONTAINERS 2>/dev/null || true
+    echo "✅ Removed all Home Assistant containers"
+    # Give Docker a moment to fully release ports
+    sleep 1
 else
-    echo "✅ No stopped containers to remove"
+    echo "✅ No containers to remove"
 fi
 
 echo ""
