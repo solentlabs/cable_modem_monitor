@@ -2,11 +2,11 @@
 
 ## Project Details
 - **GitHub Repository**: https://github.com/kwschulz/cable_modem_monitor
-- **Current Version**: 3.3.0 (see `custom_components/cable_modem_monitor/manifest.json` or `const.py`)
+- **Current Version**: 3.3.1 (see `custom_components/cable_modem_monitor/manifest.json` or `const.py`)
 - **Type**: Home Assistant integration (installable via HACS)
-- **Test Count**: 443 tests (440 pytest + CodeQL security tests)
+- **Test Count**: ~440+ pytest tests
 - **Test Coverage**: ~70% (exceeds 60% minimum requirement)
-- **Latest Release Notes**: See `CHANGELOG.md` for detailed v3.3.0 features
+- **Latest Release Notes**: See `CHANGELOG.md` for detailed version history
 
 ## Community & Feedback
 - **Forum Post**: https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant
@@ -47,66 +47,86 @@
 - Follow semantic versioning
 - **Line Endings**: Project uses LF (Unix-style) line endings enforced via `.gitattributes`. If files show as modified with equal insertions/deletions after commits, it's likely a line ending normalization issue - not real changes
 
-## Development Environment (Dev Container)
+## Development Environment
 
-The project uses **VS Code Dev Containers** for a consistent, low-friction development experience.
+The project supports **two development modes**:
 
-### Configuration Files
-- **`.devcontainer/devcontainer.json`** - Container configuration with extensions and settings
-- **`.devcontainer/Dockerfile`** - Python 3.12 environment with all dev dependencies
-- **`.vscode/tasks.json`** - Pre-configured tasks (test, lint, format, docker)
-- **`.vscode/launch.json`** - Debugging configurations
-- **`.vscode/settings.json`** - Editor settings
+### Option 1: Local Python (Fastest)
+- Run `./scripts/setup.sh` or use VS Code task "Setup Local Python Environment"
+- Creates `.venv/` and installs all dependencies
+- Terminal auto-activation with welcome messages
+- Cross-platform (Windows, macOS, Linux, Chrome OS Flex)
 
-### Quick Start
+### Option 2: Dev Container (Consistent)
+- Click "Reopen in Container" in VS Code
+- All dependencies pre-installed, matches CI exactly
+- Docker-in-Docker for Home Assistant testing
+- Slightly slower than native but guaranteed consistency
+
+See `docs/GETTING_STARTED.md` for detailed comparison and setup instructions.
+
+### Key Developer Tools (v3.3.1+)
+- **`fresh_start.py`** - Reset VS Code state to test onboarding (cross-platform)
+- **`ha-cleanup.sh`** - Auto-resolve port conflicts and stale containers
+- **Terminal Auto-Activation** - Scripts automatically activate `.venv` with helpful messages
+- **VS Code Tasks** - 20+ tasks for common workflows (HA: Start, Run Tests, etc.)
+- **Port Conflict Resolution** - Automatic detection and cleanup of port 8123 issues
+
+### Home Assistant Testing Workflow
 ```bash
-# Clone the repository
-git clone https://github.com/kwschulz/cable_modem_monitor.git
-cd cable_modem_monitor
+# Start HA fresh (auto-cleanup + docker-compose)
+Ctrl+Shift+P → Tasks: Run Task → "HA: Start (Fresh)"
 
-# Open in VSCode
-code .
+# View logs
+Ctrl+Shift+P → Tasks: Run Task → "HA: View Logs"
 
-# When prompted, click "Reopen in Container"
-# Container will build and install all dependencies automatically
+# Check integration status
+Ctrl+Shift+P → Tasks: Run Task → "HA: Check Integration Status"
+
+# Diagnose port conflicts
+Ctrl+Shift+P → Tasks: Run Task → "HA: Diagnose Port 8123"
 ```
 
-### Container Features
-- ✅ Python 3.12 with all dev dependencies (Home Assistant, pytest, etc.)
-- ✅ Docker-in-Docker (run Home Assistant test environment)
-- ✅ CodeQL CLI for security testing
-- ✅ All linting/formatting tools pre-configured
-- ✅ Test discovery works out of the box
-- ✅ Low friction: One command to get started
+### Testing
+- **Quick tests**: `./scripts/dev/quick_test.sh` (~5-10s)
+- **Full tests**: `./scripts/dev/run_tests_local.sh` (~1-2 min)
+- **VS Code tasks**: Use tasks for Run All Tests, Quick Validation
+- **Make targets**: `make test`, `make test-quick`, `make validate`
 
-### Development Workflow
-All development happens in the container:
-- **Testing**: `make test` or use VS Code Testing panel
-- **Linting**: `make lint` or run on save
-- **Formatting**: `make format` or format on save
-- **Docker HA**: `make docker-start` (Docker-in-Docker)
-- **CodeQL**: Runs automatically in CI/CD
-
-See `.devcontainer/README.md` for detailed setup information.
+See `CONTRIBUTING.md` for full development workflow.
 
 ## Recent Development History
 
-### v3.3.0 - Current Release ✅
-**Status:** Released on main branch (2024-11-18)
-**Test Count:** 443 tests (440 pytest + CodeQL)
-**Test Coverage:** ~70% (exceeds 60% minimum requirement)
+### v3.4.0 - In Development 🚧
+**Status:** Planning phase, features TBD
+**Target:** To be determined based on new features
 
-**For complete release notes, see `CHANGELOG.md`**
+See `CHANGELOG.md` [Unreleased] section for planned changes.
 
+### v3.3.1 - Current Release ✅
+**Status:** Released (2025-11-20)
+**Key Changes:**
+- **Developer Experience Improvements** - Comprehensive dev environment overhaul
+  - Fresh start script for testing onboarding (cross-platform)
+  - Automatic port conflict resolution for Home Assistant
+  - Enhanced terminal auto-activation with helpful messages
+  - 20+ VS Code tasks for common workflows
+  - Fixed dev container volume mounting for Docker-in-Docker
+  - Comprehensive documentation cleanup (removed 16 obsolete files)
+  - Fixed venv naming bugs in test scripts
+- **Documentation** - Fixed 9 broken references, updated all script paths
+- **Scripts** - Removed 6 obsolete scripts (~570 lines of old code)
+
+### v3.3.0 - Previous Release
+**Status:** Released (2024-11-18)
 **Key Features:**
 - **Netgear CM600 Support** - Full parser for CM600 modem
 - **Enhanced CodeQL Security** - 5 custom security queries + expanded query packs
 - **Core Module Testing** - 115 new tests for signal analyzer, health monitor, HNAP, auth
 - **Dev Container Environment** - Low-friction setup with Docker-in-Docker
 - **Parser Diagnostics** - Enhanced troubleshooting with detection history
-- **Increased Coverage** - Raised minimum from 50% to 60%
 
-**Previous Versions:**
+**Historical Versions:**
 - v3.0.0 - MB8611 parser, enhanced discovery & authentication
 - v2.6.0 - XB7 improvements, system info parsing
 - v2.5.0 - Parser plugin architecture, entity naming modes
@@ -127,6 +147,6 @@ See `.devcontainer/README.md` for detailed setup information.
 - **Additional Modem Support** - Community contributions welcome
 
 ---
-*Last Updated: 2024-11-19 (v3.3.0 on main branch, 443 tests, ~70% coverage)*
+*Last Updated: 2025-11-20 (v3.3.1, preparing for v3.4.0)*
 *For detailed changes, see `CHANGELOG.md`*
 *For version info, see `custom_components/cable_modem_monitor/manifest.json`*

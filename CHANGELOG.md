@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planning
+- This section is for v3.4.0 features currently in planning/development
+- See GitHub issues and milestones for upcoming features
+
 ## [3.3.1] - 2025-11-20
 
 ### Added
