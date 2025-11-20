@@ -34,7 +34,8 @@ Scripts used during development and testing:
 | `setup_vscode_testing.ps1` | Configures VS Code for testing (PowerShell) | 0: Success |
 | `test_simple.sh` | Basic tests without venv (global install) | 0: Pass, 1: Fail |
 | `test-codeql.sh` | Run CodeQL query tests (requires CodeQL CLI) | 0: Pass, 1: Fail |
-| `fresh-start.sh` | Reset VS Code state to test new developer experience | 0: Success |
+| `fresh-start.sh` | Reset VS Code state to test new developer experience (Linux/macOS) | 0: Success |
+| `fresh-start.ps1` | Reset VS Code state to test new developer experience (Windows) | 0: Success |
 
 ### `maintenance/` - Maintenance Scripts
 Scripts for maintaining the integration in production:
@@ -90,6 +91,26 @@ bash scripts/dev/test-codeql.sh
 > **Note:** CodeQL CLI must be installed first. See `docs/CODEQL_TESTING_GUIDE.md` for setup instructions.
 
 **Testing Fresh Developer Experience:**
+
+Linux/macOS:
+```bash
+# Reset VS Code state to see what a new developer sees
+./scripts/dev/fresh-start.sh
+
+# Then open fresh
+code .
+```
+
+Windows (PowerShell):
+```powershell
+# Reset VS Code state to see what a new developer sees
+.\scripts\dev\fresh-start.ps1
+
+# Then open fresh
+code .
+```
+
+Windows (Git Bash):
 ```bash
 # Reset VS Code state to see what a new developer sees
 bash scripts/dev/fresh-start.sh
