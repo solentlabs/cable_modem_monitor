@@ -9,11 +9,11 @@ services:
       - "8300:8300"      # Home Assistant internal
     volumes:
       # Mount a temporary config directory
-      - ./test-ha-config:/config
+      - ${PWD}/test-ha-config:/config
       # Mount the integration directly into custom_components
-      - ./custom_components/cable_modem_monitor:/config/custom_components/cable_modem_monitor
+      - ${PWD}/custom_components/cable_modem_monitor:/config/custom_components/cable_modem_monitor
       # Mount the entire project for development and testing
-      - .:/workspace:cached
+      - ${PWD}:/workspace:cached
       # Mount Docker socket for Docker-from-Docker
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
