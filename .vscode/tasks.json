@@ -197,6 +197,20 @@
         "clear": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "🔄 Fresh Start (Reset VS Code State)",
+      "type": "shell",
+      "command": "python",
+      "args": ["${workspaceFolder}/scripts/dev/fresh_start.py"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Reset VS Code state to test new developer experience (testing only)"
     }
   ]
 }
