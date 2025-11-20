@@ -242,7 +242,29 @@
       "type": "shell",
       "command": "./scripts/setup.sh",
       "windows": {
-        "command": "bash ./scripts/setup.sh"
+        "command": "bash ./scripts/setup.sh",
+        "options": {
+          "shell": {
+            "executable": "cmd.exe",
+            "args": ["/c"]
+          }
+        }
+      },
+      "linux": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "osx": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
       },
       "options": {
         "cwd": "${workspaceFolder}"
