@@ -45,8 +45,23 @@ def print_info(text: str) -> None:
     print(f"→ {text}")
 
 
+def is_running_from_vscode() -> bool:
+    """Check if script is running from VS Code integrated terminal."""
+    # Check common VS Code environment variables
+    return any([
+        os.environ.get("TERM_PROGRAM") == "vscode",
+        os.environ.get("VSCODE_PID"),
+        os.environ.get("VSCODE_IPC_HOOK"),
+        os.environ.get("VSCODE_GIT_ASKPASS_NODE"),
+    ])
+
+
 def is_vscode_running() -> bool:
     """Check if VS Code is running."""
+    # Skip check if we're running FROM VS Code
+    if is_running_from_vscode():
+        return False
+
     try:
         if platform.system() == "Windows":
             result = subprocess.run(
@@ -122,8 +137,21 @@ def main() -> None:
     print_warning("Note: This is ONLY for testing. Normal development doesn't need this.")
     print()
 
-    # Step 1: Check if VS Code is running
-    if is_vscode_running():
+    # Step 1: Check if running from VS Code
+    if is_running_from_vscode():
+        print_warning("Running from VS Code integrated terminal")
+        print()
+        print("After this script completes:")
+        print("  1. This will clear VS Code's cache")
+        print("  2. You'll need to close and reopen VS Code")
+        print("  3. Run: code .")
+        print()
+        response = input("Continue? (Y/n): ").strip().lower()
+        if response in ("n", "no"):
+            print("\n❌ Cancelled")
+            exit(0)
+        print()
+    elif is_vscode_running():
         print_warning("VS Code appears to be running")
         print()
         input("Close all VS Code windows and press Enter to continue (or Ctrl+C to cancel)... ")
@@ -170,10 +198,19 @@ def main() -> None:
     print()
     print_header("✅ Fresh start ready!")
     print()
-    print("Now open VS Code to see the new developer experience:")
-    print()
-    print("   code .")
-    print()
+
+    if is_running_from_vscode():
+        print("⚠️  You're still in VS Code - you need to close it now!")
+        print()
+        print("Next steps:")
+        print("  1. Close this VS Code window (File → Exit)")
+        print("  2. Reopen fresh: code .")
+        print()
+    else:
+        print("Now open VS Code to see the new developer experience:")
+        print()
+        print("   code .")
+        print()
     print_header("What You Should See:")
     print()
     print("Notifications (in order):")
