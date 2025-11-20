@@ -112,23 +112,36 @@ if [ -d "venv" ]; then
 fi
 
 # Step 4: Create virtual environment
-if [ ! -d ".venv" ]; then
-    print_step "Creating virtual environment..."
+# Detect expected pip location based on platform
+if [ -d ".venv/Scripts" ] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+    # Windows
+    EXPECTED_PIP=".venv/Scripts/pip.exe"
+    PIP_CMD=".venv/Scripts/pip.exe"
+    PRECOMMIT_CMD=".venv/Scripts/pre-commit.exe"
+else
+    # Linux/macOS
+    EXPECTED_PIP=".venv/bin/pip"
+    PIP_CMD=".venv/bin/pip"
+    PRECOMMIT_CMD=".venv/bin/pre-commit"
+fi
+
+# Check if venv exists and is valid
+if [ -d ".venv" ] && [ -f "$EXPECTED_PIP" ]; then
+    print_success "Virtual environment already exists"
+    echo ""
+elif [ -d ".venv" ]; then
+    # venv directory exists but is incomplete - recreate it
+    print_warning "Virtual environment is incomplete, recreating..."
+    rm -rf .venv
     $PYTHON_CMD -m venv .venv
     print_success "Virtual environment created"
     echo ""
 else
-    print_success "Virtual environment already exists"
+    # No venv - create it
+    print_step "Creating virtual environment..."
+    $PYTHON_CMD -m venv .venv
+    print_success "Virtual environment created"
     echo ""
-fi
-
-# Detect pip location (cross-platform)
-if [ -f ".venv/Scripts/pip.exe" ]; then
-    PIP_CMD=".venv/Scripts/pip.exe"
-    PRECOMMIT_CMD=".venv/Scripts/pre-commit.exe"
-else
-    PIP_CMD=".venv/bin/pip"
-    PRECOMMIT_CMD=".venv/bin/pre-commit"
 fi
 
 # Step 5: Upgrade pip
