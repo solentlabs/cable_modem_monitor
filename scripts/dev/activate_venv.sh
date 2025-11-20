@@ -3,12 +3,13 @@
 # This runs automatically when you open a terminal in VS Code
 
 VENV_PATH=".venv"
+ACTIVATE_SCRIPT="$VENV_PATH/bin/activate"
 
-if [ -d "$VENV_PATH" ]; then
-    # .venv exists - activate it
-    source "$VENV_PATH/bin/activate"
+if [ -f "$ACTIVATE_SCRIPT" ]; then
+    # .venv exists and is set up - activate it
+    source "$ACTIVATE_SCRIPT"
 else
-    # .venv doesn't exist - show helpful instructions
+    # .venv doesn't exist or isn't set up - show helpful instructions
     echo ""
     echo "👋 Welcome to Cable Modem Monitor!"
     echo ""

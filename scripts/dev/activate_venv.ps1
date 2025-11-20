@@ -2,10 +2,11 @@
 # This runs automatically when you open a terminal in VS Code
 
 $venvPath = ".venv"
+$activateScript = "$venvPath\Scripts\Activate.ps1"
 
-if (Test-Path $venvPath) {
-    # .venv exists - activate it
-    & "$venvPath\Scripts\Activate.ps1"
+if (Test-Path $activateScript) {
+    # .venv exists and is set up - activate it
+    & $activateScript
 } else {
     # .venv doesn't exist - show helpful instructions
     Write-Host ""
