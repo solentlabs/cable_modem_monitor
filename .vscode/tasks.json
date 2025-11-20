@@ -215,13 +215,12 @@
     {
       "label": "⚙️ Setup Local Python Environment",
       "type": "shell",
-      "command": "bash",
-      "args": ["${workspaceFolder}/scripts/setup.sh"],
+      "command": "./scripts/setup.sh",
+      "windows": {
+        "command": "bash ./scripts/setup.sh"
+      },
       "options": {
-        "shell": {
-          "executable": "bash",
-          "args": []
-        }
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
