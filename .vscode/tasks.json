@@ -217,6 +217,12 @@
       "type": "shell",
       "command": "bash",
       "args": ["${workspaceFolder}/scripts/setup.sh"],
+      "options": {
+        "shell": {
+          "executable": "bash",
+          "args": []
+        }
+      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
