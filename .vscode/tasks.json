@@ -201,8 +201,33 @@
     {
       "label": "🔄 Fresh Start (Reset VS Code State)",
       "type": "shell",
-      "command": "python3",
-      "args": ["${workspaceFolder}/scripts/dev/fresh_start.py"],
+      "command": "python3 ${workspaceFolder}/scripts/dev/fresh_start.py",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/dev/fresh_start.py"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/c"]
+        }
+      },
+      "linux": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "osx": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
