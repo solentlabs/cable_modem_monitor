@@ -24,36 +24,31 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ## Development Setup
 
-Want to contribute? Get set up in 30 seconds:
+Want to contribute? Choose your setup:
 
+### Option 1: VSCode Workspace (Fastest - Recommended for Most)
 ```bash
-# Clone the repository
 git clone https://github.com/kwschulz/cable_modem_monitor.git
 cd cable_modem_monitor
-
-# Run automated setup
-./scripts/setup.sh
-
-# Verify everything works
-./scripts/verify-setup.sh
-
-# You're ready! Run tests
-make test
+./scripts/setup.sh        # Installs dependencies
+code cable_modem_monitor.code-workspace   # Opens in VSCode
 ```
+✅ Fastest test execution • Uses your system Python • Great for daily development
 
-The setup script will:
-- ✅ Create Python virtual environment (.venv)
-- ✅ Install all dependencies
-- ✅ Configure pre-commit hooks (auto-format code on commit)
-- ✅ Verify your environment
+### Option 2: VSCode Dev Container (Best for Consistency)
+```bash
+git clone https://github.com/kwschulz/cable_modem_monitor.git
+cd cable_modem_monitor
+code .                    # Opens in VSCode
+# Then: F1 → "Dev Containers: Reopen in Container"
+```
+✅ Zero setup hassles • Matches CI exactly • Best for teams
 
-**Having issues?** See the [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
-- Environment troubleshooting (dependency conflicts, import errors)
-- Pre-commit hook details
-- Running CI checks locally (`./scripts/ci-check.sh`)
-- Recommended development workflow
+**Not sure which to choose?** → **[WORKSPACE_VS_CONTAINER.md](./WORKSPACE_VS_CONTAINER.md)** ← Read this 30-second guide!
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md) for detailed development guides.
+**Having issues?** See [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md) for troubleshooting.
+
+Full guides: [CONTRIBUTING.md](./CONTRIBUTING.md) | [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md)
 
 ---
 

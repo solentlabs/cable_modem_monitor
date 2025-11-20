@@ -1,4 +1,20 @@
 {
+  // ========================================
+  // 🐳 DEV CONTAINER MODE ACTIVE
+  // ========================================
+  // You're using the VSCode Dev Container (Docker-based)
+  // - Isolated environment, matches CI exactly
+  // - Zero local setup needed
+  // - Slightly slower than native
+  //
+  // Want Workspace mode instead?
+  // 1. F1 → "Dev Containers: Reopen Folder Locally"
+  // 2. Open: cable_modem_monitor.code-workspace
+  // 3. Run: ./scripts/setup.sh
+  //
+  // See WORKSPACE_VS_CONTAINER.md for comparison
+  // ========================================
+
   // Display name for the Dev Container
   "name": "Cable Modem Monitor Development",
 

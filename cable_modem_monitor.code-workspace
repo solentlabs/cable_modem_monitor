@@ -6,6 +6,22 @@
     }
   ],
   "settings": {
+    // ========================================
+    // 🚀 WORKSPACE MODE ACTIVE
+    // ========================================
+    // You're using the VSCode Workspace with local Python environment
+    // - Fastest test execution
+    // - Uses .venv on your system
+    // - Requires ./scripts/setup.sh first
+    //
+    // Want Dev Container instead?
+    // 1. Close this workspace
+    // 2. Open folder: code .
+    // 3. F1 → "Dev Containers: Reopen in Container"
+    //
+    // See WORKSPACE_VS_CONTAINER.md for comparison
+    // ========================================
+
     // Workspace inherits from .vscode/settings.json
     // Only add workspace-specific overrides here
 
