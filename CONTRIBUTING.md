@@ -466,11 +466,11 @@ python3 -m venv --help
 Run the full test suite (creates virtual environment automatically):
 
 ```bash
-./run_tests_local.sh
+./scripts/dev/run_tests_local.sh
 ```
 
 This will:
-- Create a Python virtual environment (`venv/`)
+- Create a Python virtual environment (`.venv/`)
 - Install all test dependencies
 - Run code quality checks (ruff)
 - Run all tests with pytest
@@ -483,7 +483,7 @@ This will:
 After initial setup, use the quick test script:
 
 ```bash
-./quick_test.sh
+./scripts/dev/quick_test.sh
 ```
 
 This runs tests with minimal output for rapid feedback during development.
@@ -503,8 +503,8 @@ This runs tests with minimal output for rapid feedback during development.
 
 **Recommended Workflow:**
 1. Make code changes
-2. Run `./quick_test.sh` frequently during development
-3. Run `./run_tests_local.sh` before committing
+2. Run `./scripts/dev/quick_test.sh` frequently during development
+3. Run `./scripts/dev/run_tests_local.sh` before committing
 4. Push to GitHub only when local tests pass
 
 ---
@@ -700,7 +700,7 @@ venv\Scripts\activate.bat
 
 **Solution:** Make scripts executable
 ```bash
-chmod +x run_tests_local.sh quick_test.sh
+chmod +x scripts/dev/run_tests_local.sh scripts/dev/quick_test.sh
 ```
 
 ---

@@ -471,7 +471,7 @@ Ask yourself:
 ## Getting Help
 
 **Setup Issues:**
-- Check [LOCAL_ENVIRONMENT_SETUP.md](LOCAL_ENVIRONMENT_SETUP.md) for detailed troubleshooting
+- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed troubleshooting
 - Check [VSCODE_DEVCONTAINER_GUIDE.md](VSCODE_DEVCONTAINER_GUIDE.md) for dev container details
 
 **Development Questions:**

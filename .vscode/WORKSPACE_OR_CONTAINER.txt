@@ -23,5 +23,5 @@ Option B: Use Dev Container (Consistent & Isolated)
   ⚠️ Slightly slower than native
 
 ================================================================================
-NOT SURE? → Read WORKSPACE_VS_CONTAINER.md in project root
+NOT SURE? → Read docs/GETTING_STARTED.md for detailed comparison
 ================================================================================

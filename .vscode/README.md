@@ -326,10 +326,10 @@ See [docs/VSCODE_DEVCONTAINER_GUIDE.md](../docs/VSCODE_DEVCONTAINER_GUIDE.md) fo
 
 ## Getting Help
 
-- **Environment setup**: [docs/LOCAL_ENVIRONMENT_SETUP.md](../docs/LOCAL_ENVIRONMENT_SETUP.md)
+- **Environment setup**: [docs/GETTING_STARTED.md](../docs/GETTING_STARTED.md)
 - **Dev Container**: [docs/VSCODE_DEVCONTAINER_GUIDE.md](../docs/VSCODE_DEVCONTAINER_GUIDE.md)
 - **Development workflow**: [docs/DEVELOPER_QUICKSTART.md](../docs/DEVELOPER_QUICKSTART.md)
-- **Environment choice**: [docs/DEVELOPMENT_ENVIRONMENT_GUIDE.md](../docs/DEVELOPMENT_ENVIRONMENT_GUIDE.md)
+- **Troubleshooting**: [docs/TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md)
 
 ---
 

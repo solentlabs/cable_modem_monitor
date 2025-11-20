@@ -313,7 +313,7 @@ lsof -ti:8123 | xargs kill
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for full development workflow
 - Check [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the codebase
 - Review [MODEM_COMPATIBILITY_GUIDE.md](./MODEM_COMPATIBILITY_GUIDE.md) for parser details
-- See [TEST_COVERAGE_SUMMARY.md](./TEST_COVERAGE_SUMMARY.md) for testing info
+- See [TEST_FIXTURE_STATUS.md](./TEST_FIXTURE_STATUS.md) for testing info
 
 ---
 

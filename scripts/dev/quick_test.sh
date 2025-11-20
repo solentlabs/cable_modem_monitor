@@ -11,8 +11,8 @@
 set -e
 
 # Activate venv if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
 fi
 
 # Run tests with minimal output
