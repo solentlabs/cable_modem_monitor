@@ -766,10 +766,54 @@ If tests fail:
 ***REMOVED******REMOVED******REMOVED*** Pull Request Guidelines
 
 - **Clear description**: Explain what changes you made and why
-- **Link issues**: Reference any related GitHub issues
+- **Link issues**: Reference any related GitHub issues (see Issue Closing Policy below)
 - **Test results**: Include test output showing all tests pass
 - **Screenshots**: For UI changes, include before/after screenshots
 - **Documentation**: Update README, CHANGELOG, or other docs as needed
+
+***REMOVED******REMOVED******REMOVED*** Issue Closing Policy
+
+**Important**: Developers should NEVER auto-close user-reported issues via PR keywords like "Fixes ***REMOVED***123" or "Closes ***REMOVED***456".
+
+**Auto-close is ONLY appropriate for:**
+- ✅ Developer-only improvements (code refactoring, test improvements)
+- ✅ Quality of life enhancements for developers
+- ✅ Documentation-only updates
+- ✅ CI/CD pipeline improvements
+- ✅ Development tooling updates
+
+**User validation REQUIRED for:**
+- ❌ Bug fixes affecting user experience
+- ❌ New modem support or parser changes
+- ❌ Authentication or connection handling
+- ❌ Any feature that changes integration behavior
+- ❌ Performance or reliability improvements
+
+**How to link issues without auto-closing:**
+```markdown
+***REMOVED*** ❌ DO NOT use these keywords (they auto-close):
+Fixes ***REMOVED***123
+Closes ***REMOVED***456
+Resolves ***REMOVED***789
+
+***REMOVED*** ✅ USE these phrases instead:
+Addresses ***REMOVED***123
+Related to ***REMOVED***456
+Implements changes for ***REMOVED***789
+See ***REMOVED***123 (awaiting user validation)
+```
+
+**Why this matters:**
+- Users need to test and validate fixes in their environment
+- What works in tests may not work with all modem firmware versions
+- User feedback helps catch edge cases and regressions
+- Maintainers manually close issues after user confirmation
+
+**After the PR is merged:**
+1. Comment on the issue linking to the release
+2. Request user testing and validation
+3. Wait for user confirmation
+4. Maintainer manually closes the issue after validation
 
 ***REMOVED******REMOVED******REMOVED*** Commit Message Format
 

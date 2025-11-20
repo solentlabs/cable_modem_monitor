@@ -1,0 +1,31 @@
+{
+  // Recommended VS Code extensions for Cable Modem Monitor development
+  "recommendations": [
+    // Python development
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "charliermarsh.ruff",
+
+    // Security and code quality
+    "github.vscode-codeql",
+
+    // Git and version control
+    "eamodio.gitlens",
+
+    // YAML (for Home Assistant configs and workflows)
+    "redhat.vscode-yaml",
+
+    // Markdown (for documentation)
+    "yzhang.markdown-all-in-one",
+
+    // DevContainers (if using the container)
+    "ms-vscode-remote.remote-containers"
+  ],
+
+  // Extensions that are not needed or conflict with project setup
+  "unwantedRecommendations": [
+    "ms-python.pylint",  // Using Ruff instead
+    "littlefoxteam.vscode-python-test-adapter"  // Conflicts with native Python test support
+  ]
+}

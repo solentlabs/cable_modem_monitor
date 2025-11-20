@@ -174,6 +174,7 @@ We don't have physical access to users' modems. What works in tests may not work
    - Debug TC4400 entity availability (Issue ***REMOVED***1)
    - Verify CM600 implementation with users (Issue ***REMOVED***3)
    - Guide MB8611 users to correct parser (Issue ***REMOVED***4)
+     - See [DESIGN_IMPROVEMENTS.md](./DESIGN_IMPROVEMENTS.md) for detailed auth fixes from ***REMOVED***4
 
 2. **Parser Improvements**
    - Add MB8600 fallback URL to MB8611 Static parser

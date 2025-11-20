@@ -16,6 +16,7 @@
       }
     },
     "error": {
+      "invalid_auth": "Authentication failed - modem returned login page.\n\nPlease verify:\n1. Username is correct (typically 'admin', check modem label)\n2. Password is correct (check modem label)\n3. Credentials have not been changed from defaults\n\nIf you continue to have issues:\n1. Try logging into the modem manually at https://192.168.100.1\n2. Ensure the same credentials work in a web browser\n3. Enable debug logging and download diagnostics to share with developers",
       "cannot_connect": "Failed to connect to the modem.\n\nPlease verify:\n1. IP address is correct (typically 192.168.100.1)\n2. If modem requires authentication, enter username/password (leave blank if no auth needed)\n3. Modem's web interface is accessible from Home Assistant's network\n\nIf your modem model is not supported:\nSelect 'Unknown Modem (Fallback Mode)' from the Modem Model dropdown to enable basic connectivity monitoring and HTML capture for future support.",
       "unsupported_modem": "Auto-detection could not identify your modem model.\n\nTo proceed:\n1. Select 'Unknown Modem (Fallback Mode)' from the Modem Model dropdown below\n2. This will enable basic connectivity monitoring (ping/HTTP latency)\n3. After installation, click 'Capture HTML' button\n4. Download diagnostics and share with developers to add full support",
       "invalid_input": "Invalid input provided. Please check the values and try again.",

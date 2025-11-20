@@ -1,0 +1,73 @@
+***REMOVED*** CodeQL Custom Queries
+
+This directory contains custom CodeQL queries for security and quality analysis of the Cable Modem Monitor codebase.
+
+***REMOVED******REMOVED*** Queries
+
+***REMOVED******REMOVED******REMOVED*** `no_timeout.ql`
+Detects `requests.get()` calls without timeout parameters, which can lead to indefinite hangs and potential security issues.
+
+**Severity**: Warning
+**Category**: Security
+
+***REMOVED******REMOVED*** Testing Queries Locally
+
+***REMOVED******REMOVED******REMOVED*** Prerequisites
+The CodeQL CLI is installed automatically in the project root if you run the test script. If you need to install it manually:
+
+```bash
+***REMOVED*** From project root
+wget https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip
+unzip codeql-linux64.zip
+rm codeql-linux64.zip
+```
+
+***REMOVED******REMOVED******REMOVED*** Running Tests
+
+Use the provided test script:
+
+```bash
+***REMOVED*** From project root
+bash scripts/dev/test-codeql.sh
+```
+
+Or run tests manually:
+
+```bash
+***REMOVED*** Test all queries
+./codeql/codeql test run cable-modem-monitor-ql/
+
+***REMOVED*** Test specific query
+./codeql/codeql test run cable-modem-monitor-ql/tests/no_timeout/
+./codeql/codeql test run cable-modem-monitor-ql/queries/
+```
+
+***REMOVED******REMOVED******REMOVED*** First-time Setup
+
+Install CodeQL pack dependencies (done automatically by test script):
+
+```bash
+cd cable-modem-monitor-ql
+../codeql/codeql pack install
+```
+
+This downloads the required CodeQL libraries (like `codeql/python-all`) to `~/.codeql/packages/`.
+
+***REMOVED******REMOVED*** CI/CD Integration
+
+These queries run automatically in GitHub Actions via the CodeQL workflow (`.github/workflows/codeql.yml`). Local testing ensures your queries work before pushing.
+
+***REMOVED******REMOVED*** Writing New Queries
+
+1. Create a new `.ql` file in `queries/`
+2. Add test cases in `tests/<query-name>/`:
+   - `test.py` - Sample Python code to test
+   - `test.ql` - Query that imports your main query
+   - `test.expected` - Expected results
+3. Run `./test-codeql.sh` to validate
+
+***REMOVED******REMOVED*** Documentation
+
+- [CodeQL Query Reference](https://codeql.github.com/docs/ql-language-reference/)
+- [CodeQL for Python](https://codeql.github.com/docs/codeql-language-guides/codeql-for-python/)
+- [Writing CodeQL queries](https://codeql.github.com/docs/writing-codeql-queries/)

@@ -52,23 +52,66 @@ class MotorolaMB8611StaticParser(ModemParser):
         Returns:
             Dict with downstream, upstream, and system_info.
         """
-        _LOGGER.debug("MB8611Static: Parsing data from static HTML")
+        ***REMOVED*** Enhanced logging to detect authentication issues
+        title_tag = soup.find("title")
+        title_text = title_tag.text if title_tag else "No title"
+
+        ***REMOVED*** Check if we're on a login page instead of status page
+        is_login_page = "login" in title_text.lower() or soup.find("input", {"name": "loginUsername"})
+
+        _LOGGER.debug(
+            "MB8611Static: Parsing HTML page. Title: %s, Is login page: %s",
+            title_text,
+            is_login_page,
+        )
+
+        if is_login_page:
+            _LOGGER.warning(
+                "MB8611Static: Received login page instead of status page. "
+                "This usually means authentication failed or credentials are required. "
+                "Please check your username/password configuration."
+            )
+
         downstream = self._parse_downstream_from_html(soup)
         upstream = self._parse_upstream_from_html(soup)
         system_info = self._parse_system_info_from_html(soup)
 
-        return {
+        result = {
             "downstream": downstream,
             "upstream": upstream,
             "system_info": system_info,
         }
+
+        ***REMOVED*** Add diagnostic flags for config flow and diagnostics
+        if is_login_page:
+            result["_login_page_detected"] = True  ***REMOVED*** type: ignore[assignment]
+            result["_auth_failure"] = True  ***REMOVED*** type: ignore[assignment]
+            result["_diagnostic_context"] = {
+                "page_title": title_text,
+                "available_forms": [f.get("action", "no-action") for f in soup.find_all("form")][:5],
+                "table_ids": [t.get("id", "no-id") for t in soup.find_all("table")][:10],
+                "input_fields": [i.get("name", "no-name") for i in soup.find_all("input")][:10],
+            }
+
+        return result
 
     def _parse_downstream_from_html(self, soup: BeautifulSoup) -> list[dict]:
         """Parse downstream channels from a static HTML table."""
         channels: list[dict] = []
         downstream_table = soup.find("table", id="MotoConnDownstreamChannel")
         if not downstream_table:
-            _LOGGER.warning("MB8611Static: Downstream channel table not found.")
+            ***REMOVED*** Enhanced logging to help diagnose the issue
+            all_table_ids = [t.get("id", "no-id") for t in soup.find_all("table")]
+            all_div_ids = [d.get("id", "no-id") for d in soup.find_all("div")][:20]  ***REMOVED*** Limit to first 20
+            _LOGGER.warning(
+                "MB8611Static: Downstream channel table not found. "
+                "Looking for table with id='MotoConnDownstreamChannel'. "
+                "Found %d tables with IDs: %s. "
+                "Sample div IDs: %s",
+                len(all_table_ids),
+                all_table_ids[:10],  ***REMOVED*** Show first 10 table IDs
+                all_div_ids,
+            )
             return channels
 
         rows = downstream_table.find_all("tr")
@@ -104,7 +147,15 @@ class MotorolaMB8611StaticParser(ModemParser):
         channels: list[dict] = []
         upstream_table = soup.find("table", id="MotoConnUpstreamChannel")
         if not upstream_table:
-            _LOGGER.warning("MB8611Static: Upstream channel table not found.")
+            ***REMOVED*** Enhanced logging to help diagnose the issue
+            all_table_ids = [t.get("id", "no-id") for t in soup.find_all("table")]
+            _LOGGER.warning(
+                "MB8611Static: Upstream channel table not found. "
+                "Looking for table with id='MotoConnUpstreamChannel'. "
+                "Found %d tables with IDs: %s",
+                len(all_table_ids),
+                all_table_ids[:10],  ***REMOVED*** Show first 10 table IDs
+            )
             return channels
 
         rows = upstream_table.find_all("tr")

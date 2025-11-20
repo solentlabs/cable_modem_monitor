@@ -8,8 +8,11 @@
     "context": ".."                   // Build context is the parent directory
   },
 
+  // Explicitly mount the workspace folder
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/cable_modem_monitor,type=bind",
+
   // Folder inside the container where VS Code opens the workspace
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspaces/cable_modem_monitor",
 
   // VS Code customizations for extensions and settings
   "customizations": {
@@ -26,7 +29,11 @@
         // YAML and spell checking
         "esbenp.prettier-vscode",
         "redhat.vscode-yaml",
-        "streetsidesoftware.code-spell-checker"
+        "streetsidesoftware.code-spell-checker",
+
+        // CodeQL security testing
+        "github.vscode-codeql",
+        "geekmasher.codeql-scanner-vscode"
       ],
       "settings": {
         // Use Python 3.12 inside the container
@@ -84,6 +91,30 @@
     }
   },
 
-  // Use root user inside the container
+  // Enable Docker-in-Docker for running docker commands inside the container
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  // Mount Docker socket from host (fallback method)
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  // Post-create command to install Python dependencies and CodeQL CLI
+  // This runs once when the container is first created
+  "postCreateCommand": "bash -c 'pip install -r requirements-dev.txt && if ! command -v codeql &> /dev/null; then echo \"Installing CodeQL CLI...\" && wget -q https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip && unzip -q codeql-linux64.zip -d /usr/local && rm codeql-linux64.zip && ln -s /usr/local/codeql/codeql /usr/local/bin/codeql; fi && echo \"✅ Dev environment ready!\" && echo \"\" && echo \"📖 Quick Start:\" && echo \"  • Run tests: Press Ctrl+Shift+P → 'Tasks: Run Task' → 'Run All Tests'\" && echo \"  • Start HA: Press Ctrl+Shift+P → 'Tasks: Run Task' → 'HA: Start (Fresh)'\" && echo \"  • View all tasks: Press Ctrl+Shift+P → 'Tasks: Run Task'\" && echo \"\"'",
+
+  // Post-start command to launch Home Assistant test container
+  // This runs every time the container starts (after reboot, etc.)
+  "postStartCommand": "bash -c 'echo \"🚀 Dev container started!\" && echo \"💡 Use VS Code Tasks to manage Home Assistant (Ctrl+Shift+P → Tasks: Run Task)\"'",
+
+  // Use root user inside the container (required for docker-in-docker)
   "remoteUser": "root"
 }

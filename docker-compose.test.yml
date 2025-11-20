@@ -4,6 +4,9 @@ services:
   homeassistant-test:
     container_name: ha-cable-modem-test
     image: ghcr.io/home-assistant/home-assistant:stable
+    ports:
+      - "8123:8123"      ***REMOVED*** Home Assistant web interface
+      - "8300:8300"      ***REMOVED*** Home Assistant internal
     volumes:
       ***REMOVED*** Mount a temporary config directory
       - ./test-ha-config:/config
@@ -15,7 +18,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=America/New_York
-    network_mode: host
     restart: unless-stopped
     privileged: true
     working_dir: /workspace

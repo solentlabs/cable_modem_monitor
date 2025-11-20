@@ -61,6 +61,14 @@
   ],
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
 
+  // Exclude CodeQL test fixtures from pytest discovery
+  // These are sample Python files for CodeQL analysis, not actual tests
+  "python.testing.ignorePatterns": [
+    "**/cable-modem-monitor-ql/**",
+    "**/.venv/**",
+    "**/codeql/**"
+  ],
+
   // ========================================
   // File and Editor Settings
   // ========================================
@@ -87,5 +95,20 @@
   // Pylance type checking
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
-  "python.analysis.diagnosticMode": "workspace"
+  "python.analysis.diagnosticMode": "workspace",
+
+  // ========================================
+  // CodeQL Configuration
+  // ========================================
+
+  // Let the CodeQL extension manage its own CLI installation
+  // The project uses a local CLI at ./codeql/codeql for command-line testing
+  // But the VS Code extension works best with its own managed installation
+  "codeQL.cli.executablePath.updateChannel": "latest",
+
+  // Enable CodeQL test discovery
+  "codeQL.runningTests.numberOfThreads": 1,
+
+  // Auto-save databases
+  "codeQL.runningQueries.autoSave": true
 }

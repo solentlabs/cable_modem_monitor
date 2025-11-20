@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.3.1] - 2025-11-20
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **VS Code Development Environment Configuration** - Comprehensive IDE setup for consistent development
+  - Extension recommendations for Python, testing, security (CodeQL), YAML, and Markdown
+  - Excludes conflicting extensions (test adapters, pylint) that interfere with native Python testing
+  - CodeQL extension settings for local query development and testing
+  - Home Assistant development tasks for container lifecycle management
+  - Enhanced devcontainer startup messages with quick-start guide
+- **CodeQL Testing Infrastructure** - Local testing support for security queries
+  - Command-line test runner script at `scripts/dev/test-codeql.sh`
+  - Comprehensive testing guide at `docs/CODEQL_TESTING_GUIDE.md`
+  - CodeQL pack documentation at `cable-modem-monitor-ql/README.md`
+  - Automated CodeQL CLI installation in test script
+- **Development Container Guide** - Cross-platform setup documentation
+  - Complete guide at `docs/VSCODE_DEVCONTAINER_GUIDE.md` for Windows, macOS, Linux, Chrome OS
+  - Home Assistant container management workflows
+  - Testing panel usage instructions
+  - Troubleshooting for common development issues
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Test Configuration** - Improved pytest discovery reliability
+  - Excluded CodeQL test fixtures from pytest discovery (prevents false test detection)
+  - Added `norecursedirs` in pytest.ini to ignore `cable-modem-monitor-ql`, `.venv`, and `codeql` directories
+  - VS Code pytest settings now ignore CodeQL and venv directories
+  - Fixes issue where CodeQL `.py` fixtures were incorrectly detected as Python tests
+- **Git Ignore Configuration** - Better development artifact handling
+  - Ignores local CodeQL CLI installation directory (`/codeql/`)
+  - Separates local development artifacts from GitHub workflow artifacts
+  - Clarified comments distinguishing local vs CI/CD CodeQL resources
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Threading Cleanup Error in Tests** - Resolved race condition in HTTP error handling tests
+  - Fixed `test_http_rejects_5xx` test that had intermittent threading cleanup errors
+  - Proper async mock teardown and session cleanup
+  - Prevents "Task was destroyed but it is pending" warnings
+- **Authentication Failure Handling** - Universal fix for setup blocking on auth failures (Issue ***REMOVED***4)
+  - Integration setup now properly blocks when authentication fails
+  - Prevents "Retrying setup" loops for incorrect credentials
+  - Returns proper `ConfigEntryNotReady` with auth error details
+  - Applies to all authentication methods (Basic, Form, HNAP)
+  - Users see clear error message: "Authentication failed" instead of infinite retry
+- **Enhanced Diagnostic Logging** - Better troubleshooting for parser and auth issues
+  - HNAP authentication shows full request/response details when auth fails
+  - MB8611 HNAP parser logs attempted URLs and responses
+  - MB8611 Static parser logs detection attempts and failures
+  - Helps diagnose parser selection issues (related to Issue ***REMOVED***4)
+- **Parser Loading Performance Test** - Fixed flaky test timing assertion
+  - Increased cached load threshold from 1ms to 10ms
+  - Prevents intermittent failures on slower systems or under load
+  - More realistic timing expectation for cached operations
+
 ***REMOVED******REMOVED*** [3.3.0] - 2025-11-18
 
 ***REMOVED******REMOVED******REMOVED*** Added
