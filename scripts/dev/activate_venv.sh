@@ -17,6 +17,7 @@ else
     echo ""
     echo -e "\033[32mOption 1: Local Python (Fastest)\033[0m"
     echo -e "\033[1m  Run: ./scripts/setup.sh\033[0m"
+    echo "  Or: Ctrl+Shift+P -> Tasks -> 'Setup Local Python Environment'"
     echo "  - Takes ~2 minutes"
     echo "  - Fastest test execution"
     echo "  - After setup, close and reopen this terminal"

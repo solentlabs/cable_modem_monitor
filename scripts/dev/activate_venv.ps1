@@ -16,6 +16,7 @@ if (Test-Path $activateScript) {
     Write-Host ""
     Write-Host "Option 1: Local Python (Fastest)" -ForegroundColor Green
     Write-Host "  Run: bash scripts/setup.sh" -ForegroundColor White
+    Write-Host "  Or: Ctrl+Shift+P -> Tasks -> 'Setup Local Python Environment'" -ForegroundColor White
     Write-Host "  - Takes ~2 minutes" -ForegroundColor Gray
     Write-Host "  - Fastest test execution" -ForegroundColor Gray
     Write-Host "  - After setup, close and reopen this terminal" -ForegroundColor Gray

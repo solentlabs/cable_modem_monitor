@@ -211,6 +211,20 @@
       },
       "problemMatcher": [],
       "detail": "Reset VS Code state to test new developer experience (testing only)"
+    },
+    {
+      "label": "⚙️ Setup Local Python Environment",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/setup.sh"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Create .venv and install all dependencies (Option 1: Local Python)"
     }
   ]
 }
