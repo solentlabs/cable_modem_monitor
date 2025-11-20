@@ -132,7 +132,30 @@ if [ -d ".venv" ] && [ -f "$EXPECTED_PIP" ]; then
 elif [ -d ".venv" ]; then
     # venv directory exists but is incomplete - recreate it
     print_warning "Virtual environment is incomplete, recreating..."
-    rm -rf .venv
+
+    # Try to remove with error handling for Windows file locking
+    if rm -rf .venv 2>/dev/null; then
+        print_success "Removed incomplete venv"
+    else
+        print_error "Cannot remove .venv (files are locked)"
+        echo ""
+        echo "This happens when VS Code or another process is using the venv."
+        echo ""
+        echo "Solutions:"
+        if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [ -d ".venv/Scripts" ]; then
+            echo "  1. Close ALL VS Code windows"
+            echo "  2. Open PowerShell/Command Prompt (NOT VS Code)"
+            echo "  3. Run: Remove-Item -Recurse -Force .venv"
+            echo "  4. Run this setup again"
+        else
+            echo "  1. Close VS Code"
+            echo "  2. Run: rm -rf .venv"
+            echo "  3. Run this setup again"
+        fi
+        echo ""
+        exit 1
+    fi
+
     $PYTHON_CMD -m venv .venv
     print_success "Virtual environment created"
     echo ""
