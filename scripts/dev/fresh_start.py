@@ -15,6 +15,7 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -43,6 +44,11 @@ def print_warning(text: str) -> None:
 def print_info(text: str) -> None:
     """Print an info message."""
     print(f"→ {text}")
+
+
+def print_error(text: str) -> None:
+    """Print an error message."""
+    print(f"❌ {text}")
 
 
 def is_running_from_vscode() -> bool:
@@ -95,6 +101,101 @@ def get_vscode_cache_path() -> Path:
         cache_path = Path.home() / ".config" / "Code" / "User" / "workspaceStorage"
 
     return cache_path
+
+
+def is_running_from_venv() -> bool:
+    """Check if script is running from the project's .venv."""
+    # Check if running in a virtual environment
+    if not hasattr(sys, 'prefix') or sys.prefix == sys.base_prefix:
+        return False
+
+    # Check if the venv is in the current directory
+    venv_path = Path(".venv").resolve()
+    current_prefix = Path(sys.prefix).resolve()
+
+    return venv_path == current_prefix or str(venv_path) in str(current_prefix)
+
+
+def remove_venv() -> bool:
+    """
+    Safely remove .venv directory with Windows file locking handling.
+
+    Returns:
+        True if successful, False if failed
+    """
+    venv_path = Path(".venv")
+
+    if not venv_path.exists():
+        print_info("No .venv found")
+        return True
+
+    # Check if we're running from the venv itself
+    if is_running_from_venv():
+        print_error("Cannot remove .venv while running from it")
+        print()
+        print("This happens when:")
+        print("  • VS Code terminal has activated the venv")
+        print("  • You're running this script with .venv/bin/python")
+        print()
+        print("Solutions:")
+        if platform.system() == "Windows":
+            print("  1. Close this VS Code window completely")
+            print("  2. Open PowerShell/Command Prompt (NOT VS Code)")
+            print("  3. Run: python scripts/dev/fresh_start.py")
+            print()
+            print("  OR manually remove .venv:")
+            print("  1. Close VS Code completely")
+            print("  2. Run: Remove-Item -Recurse -Force .venv")
+        else:
+            print("  1. Close VS Code")
+            print("  2. Run this script from a regular terminal")
+            print("  OR: rm -rf .venv")
+        return False
+
+    print_info("Removing .venv...")
+
+    # Windows-specific: Handle file locking with retry logic
+    if platform.system() == "Windows":
+        import time
+
+        def handle_remove_readonly(func, path, exc):
+            """Error handler for Windows readonly files."""
+            import stat
+            if not os.access(path, os.W_OK):
+                os.chmod(path, stat.S_IWUSR)
+                func(path)
+            else:
+                raise
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                shutil.rmtree(venv_path, onerror=handle_remove_readonly)
+                print_success("Removed .venv")
+                return True
+            except PermissionError as e:
+                if attempt < max_retries - 1:
+                    print_warning(f"Retry {attempt + 1}/{max_retries}...")
+                    time.sleep(1)
+                else:
+                    print_error(f"Failed to remove .venv: {e}")
+                    print()
+                    print("The .venv directory is likely in use.")
+                    print()
+                    print("To remove it manually:")
+                    print("  1. Close VS Code completely")
+                    print("  2. Close any Python processes")
+                    print("  3. Run: Remove-Item -Recurse -Force .venv")
+                    return False
+    else:
+        # Linux/Mac: Usually no file locking issues
+        try:
+            shutil.rmtree(venv_path)
+            print_success("Removed .venv")
+            return True
+        except Exception as e:
+            print_error(f"Failed to remove .venv: {e}")
+            return False
 
 
 def clear_workspace_cache() -> int:
@@ -184,13 +285,7 @@ def main() -> None:
     response = input("Remove .venv? (y/N): ").strip().lower()
 
     if response in ("y", "yes"):
-        venv_path = Path(".venv")
-        if venv_path.exists():
-            print_info("Removing .venv...")
-            shutil.rmtree(venv_path)
-            print_success("Removed .venv")
-        else:
-            print_info("No .venv found")
+        remove_venv()
     else:
         print_info("Keeping .venv (faster testing)")
 
