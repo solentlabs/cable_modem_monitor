@@ -12,7 +12,9 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ## Development Workflow
 
-You can develop using either Docker (recommended for beginners) or a local Python environment (recommended for advanced users).
+You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).
+
+> **📖 See [Getting Started Guide](./docs/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
 
 ### Docker Development (Recommended)
 
@@ -58,7 +60,7 @@ For the best development experience, use VS Code with Dev Containers:
 - Press `F1` → "Dev Containers: Reopen in Container"
 - Wait for the container to build (2-3 minutes first time)
 
-See `.devcontainer/README.md` for detailed instructions and troubleshooting.
+See [Getting Started Guide](./docs/GETTING_STARTED.md) or [VS Code Dev Container Guide](./docs/VSCODE_DEVCONTAINER_GUIDE.md) for detailed instructions and troubleshooting.
 
 #### Docker Commands
 
@@ -104,11 +106,13 @@ pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes 
 pre-commit install  # Install git hooks for automatic code formatting
 ```
 
-**Having environment issues?** See [docs/LOCAL_ENVIRONMENT_SETUP.md](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
-- Troubleshooting dependency conflicts
-- Pre-commit hook configuration
-- Running CI checks locally
-- Environment consistency tips
+**Having environment issues?** See [Getting Started Guide](./docs/GETTING_STARTED.md) for:
+- Comprehensive troubleshooting
+- Environment comparison and decision tree
+- Platform-specific notes
+- Switching between environments
+
+**Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py` to reset VS Code state.
 
 ### 2. Write Your Code
 

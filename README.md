@@ -42,7 +42,7 @@ code .                # Opens in VS Code
 # Click "Reopen in Container" when prompted (wait 2-3 min first time)
 ```
 
-**Both work identically** - choose based on preference. See [WORKSPACE_VS_CONTAINER.md](./WORKSPACE_VS_CONTAINER.md) for comparison.
+**Both work identically** - choose based on preference. See [Getting Started Guide](./docs/GETTING_STARTED.md) for detailed comparison and troubleshooting.
 
 ### After Opening in VS Code
 
@@ -60,9 +60,11 @@ Then validate everything works:
 make validate
 ```
 
-**Having issues?** See [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md)
+**Having issues?** See [Getting Started Guide](./docs/GETTING_STARTED.md) for detailed troubleshooting.
 
-Full guides: [CONTRIBUTING.md](./CONTRIBUTING.md) | [DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md)
+**Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py` to reset VS Code state.
+
+Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CONTRIBUTING.md) | [Developer Quickstart](./docs/DEVELOPER_QUICKSTART.md)
 
 ---
 

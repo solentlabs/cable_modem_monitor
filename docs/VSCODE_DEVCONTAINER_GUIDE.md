@@ -1,6 +1,10 @@
 # VS Code Dev Container Guide
 
-**Quick, cross-platform development setup for Cable Modem Monitor**
+**Comprehensive reference for dev container development**
+
+> **🚀 Quick Start?** See [Getting Started Guide](./GETTING_STARTED.md) for setup comparison and decision tree.
+>
+> This guide provides detailed dev container instructions, troubleshooting, and advanced topics.
 
 This guide shows you how to use VS Code's Dev Container feature for a consistent development environment across Windows, macOS, Linux, and Chrome OS.
 
