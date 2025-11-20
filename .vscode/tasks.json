@@ -156,6 +156,19 @@
       "problemMatcher": [],
       "detail": "Stop any processes using port 8123 and clean up containers"
     },
+    {
+      "label": "HA: Diagnose Port 8123",
+      "type": "shell",
+      "command": "echo '=== Checking what is using port 8123 ===' && echo '' && echo 'Method 1: lsof' && sudo lsof -i :8123 2>/dev/null || echo 'No results from lsof' && echo '' && echo 'Method 2: netstat' && sudo netstat -tulpn 2>/dev/null | grep 8123 || echo 'No results from netstat' && echo '' && echo 'Method 3: ss' && sudo ss -tulpn 2>/dev/null | grep 8123 || echo 'No results from ss' && echo '' && echo '=== Docker containers ===' && docker ps -a && echo '' && echo '=== Docker networks ===' && docker network ls",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Show detailed info about what's using port 8123"
+    },
     // ========================================
     // Legacy Docker Tasks (for backwards compatibility)
     // ========================================
