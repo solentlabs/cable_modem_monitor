@@ -123,6 +123,12 @@
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
 
+  // Pass the host workspace path as an environment variable
+  // This allows docker-compose to use the correct path for volume mounts
+  "remoteEnv": {
+    "HOST_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+
   // Post-create command to install Python dependencies and CodeQL CLI
   // This runs once when the container is first created
   "postCreateCommand": "bash .devcontainer/post-create.sh",
