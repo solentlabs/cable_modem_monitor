@@ -130,6 +130,19 @@
       },
       "problemMatcher": []
     },
+    {
+      "label": "HA: Check Integration Status",
+      "type": "shell",
+      "command": "docker exec ha-cable-modem-test bash -c 'echo \"=== Integration Files ===\"; ls -la /config/custom_components/cable_modem_monitor/ 2>&1 | head -10; echo \"\"; echo \"=== Recent Integration Logs ===\"; grep -i cable_modem /config/home-assistant.log 2>&1 | tail -10 || echo \"No logs found (HA may not have started yet)\"'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Check if the integration is loaded and view any errors"
+    },
     // ========================================
     // Legacy Docker Tasks (for backwards compatibility)
     // ========================================
