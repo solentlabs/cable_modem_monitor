@@ -24,31 +24,45 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ## Development Setup
 
-Want to contribute? Choose your setup:
+### Quick Start (2 options)
 
-### Option 1: VSCode Workspace (Fastest - Recommended for Most)
+**Option 1: Local Python (Fastest)**
 ```bash
 git clone https://github.com/kwschulz/cable_modem_monitor.git
 cd cable_modem_monitor
-./scripts/setup.sh        # Installs dependencies
-code cable_modem_monitor.code-workspace   # Opens in VSCode
+./scripts/setup.sh    # Installs dependencies in .venv
+code .                # Opens in VS Code - that's it!
 ```
-✅ Fastest test execution • Uses your system Python • Great for daily development
 
-### Option 2: VSCode Dev Container (Best for Consistency)
+**Option 2: Dev Container (Zero setup)**
 ```bash
 git clone https://github.com/kwschulz/cable_modem_monitor.git
 cd cable_modem_monitor
-code .                    # Opens in VSCode
-# Then: F1 → "Dev Containers: Reopen in Container"
+code .                # Opens in VS Code
+# Click "Reopen in Container" when prompted (wait 2-3 min first time)
 ```
-✅ Zero setup hassles • Matches CI exactly • Best for teams
 
-**Not sure which to choose?** → **[WORKSPACE_VS_CONTAINER.md](./WORKSPACE_VS_CONTAINER.md)** ← Read this 30-second guide!
+**Both work identically** - choose based on preference. See [WORKSPACE_VS_CONTAINER.md](./WORKSPACE_VS_CONTAINER.md) for comparison.
 
-**Having issues?** See [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md) for troubleshooting.
+### After Opening in VS Code
 
-Full guides: [CONTRIBUTING.md](./CONTRIBUTING.md) | [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md)
+You'll see notifications - here's what to do:
+
+| Notification | Action |
+|--------------|--------|
+| "Dev Container configuration available..." | **Option A:** Click "Reopen in Container" (no setup needed)<br>**Option B:** Dismiss and use local Python (run `./scripts/setup.sh` first) |
+| "Install recommended extensions?" | Click **"Install"** (Python, Ruff, Black, YAML) |
+| "GitLens" or "CodeQL" | **Optional** - dismiss if you don't need them |
+
+Then validate everything works:
+```bash
+# In terminal OR use VS Code task (Ctrl+Shift+P → Tasks → Quick Validation)
+make validate
+```
+
+**Having issues?** See [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md)
+
+Full guides: [CONTRIBUTING.md](./CONTRIBUTING.md) | [DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md)
 
 ---
 

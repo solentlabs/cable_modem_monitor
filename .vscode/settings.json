@@ -7,12 +7,23 @@
   // ========================================
   // Python Configuration
   // ========================================
+  //
+  // First time opening? Run: ./scripts/setup.sh
+  // Or use Dev Container: F1 → "Reopen in Container"
+  // See WORKSPACE_VS_CONTAINER.md for comparison
+  //
+  // ========================================
 
   // Path to the Python interpreter - uses .venv (cross-platform standard)
   // Using just the .venv folder path, VSCode finds the correct python executable
   // Windows: .venv\Scripts\python.exe
   // Unix: .venv/bin/python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+
+  // Workspace-level enforcement (prevents user extension conflicts)
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": false,
+  "python.formatting.provider": "none",
 
   // Enable Python linting with Ruff (modern, fast linter)
   "python.linting.enabled": true,
