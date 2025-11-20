@@ -95,6 +95,17 @@ lint-all: lint type-check
 	fi
 	@echo "✅ All linting checks completed!"
 
+# Quick pre-commit validation (fast)
+validate:
+	@echo "🔍 Running quick validation..."
+	@$(MAKE) quick-check
+	@$(MAKE) test-quick
+	@echo "✅ Validation passed! Safe to commit."
+
+# Full CI validation (comprehensive)
+validate-ci:
+	@./scripts/ci-check.sh
+
 # Deploy to Home Assistant
 deploy:
 	@bash scripts/maintenance/deploy_updates.sh

@@ -154,6 +154,49 @@
         "panel": "shared"
       },
       "problemMatcher": []
+    },
+    // ========================================
+    // Validation Tasks (Before Commit/PR)
+    // ========================================
+    {
+      "label": "🚀 Quick Validation (Pre-commit)",
+      "type": "shell",
+      "command": "echo '🔍 Running quick validation...' && echo '' && make quick-check && echo '' && make test-quick && echo '' && echo '✅ Quick validation passed! Safe to commit.' || (echo '' && echo '❌ Validation failed. Fix issues before committing.' && exit 1)",
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔍 Full CI Validation",
+      "type": "shell",
+      "command": "./scripts/ci-check.sh",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔌 Check Extension Conflicts",
+      "type": "shell",
+      "command": "echo '🔌 Checking VSCode extensions...' && echo '' && echo 'Recommended extensions: 10' && echo 'Unwanted extensions: 7' && echo '' && echo 'If you have conflicting extensions installed, please disable them for this workspace.' && echo 'See .vscode/extensions.json for details.'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
     }
   ]
 }

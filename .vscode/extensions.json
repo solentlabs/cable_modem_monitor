@@ -25,7 +25,17 @@
 
   // Extensions that are not needed or conflict with project setup
   "unwantedRecommendations": [
-    "ms-python.pylint",  // Using Ruff instead
-    "littlefoxteam.vscode-python-test-adapter"  // Conflicts with native Python test support
+    // Replaced by Ruff (modern, fast linter)
+    "ms-python.pylint",
+    "ms-python.flake8",
+    "ms-python.isort",
+    "pycqa.pylint",
+
+    // Conflicts with native Python testing
+    "littlefoxteam.vscode-python-test-adapter",
+    "hbenl.vscode-test-explorer",
+
+    // Conflicts with Black formatter
+    "ms-python.autopep8"
   ]
 }

@@ -101,3 +101,9 @@ addopts = "-v --tb=short --cov=custom_components.cable_modem_monitor --cov-repor
 testpaths = [
     "tests"                        # Discover tests in this folder
 ]
+
+# -------------------------------
+# Note: mypy configuration moved from mypy.ini to pyproject.toml
+# See [tool.mypy] section above for type checking settings
+# pytest.ini has been deprecated - all settings now in pyproject.toml
+# -------------------------------
