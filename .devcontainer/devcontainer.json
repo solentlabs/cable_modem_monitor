@@ -98,14 +98,8 @@
     }
   },
 
-  // Forward Home Assistant port
-  "forwardPorts": [8123],
-  "portsAttributes": {
-    "8123": {
-      "label": "Home Assistant",
-      "onAutoForward": "notify"
-    }
-  },
+  // NOTE: Port forwarding is handled by docker-compose, not by VS Code
+  // The HA container exposes port 8123 and VS Code will auto-detect it
 
   // Enable Docker-in-Docker for running docker commands inside the container
   "features": {
