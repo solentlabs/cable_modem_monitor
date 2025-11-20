@@ -121,5 +121,56 @@
   "codeQL.runningTests.numberOfThreads": 1,
 
   // Auto-save databases
-  "codeQL.runningQueries.autoSave": true
+  "codeQL.runningQueries.autoSave": true,
+
+  // ========================================
+  // Terminal Configuration
+  // ========================================
+
+  // Automatically activate .venv (or show setup instructions if missing)
+  // Uses wrapper scripts that provide helpful guidance for new users
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell",
+      "args": [
+        "-NoExit",
+        "-File",
+        "${workspaceFolder}/scripts/dev/activate_venv.ps1"
+      ]
+    }
+  },
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash",
+      "args": [
+        "--init-file",
+        "${workspaceFolder}/scripts/dev/activate_venv.sh"
+      ]
+    }
+  },
+  "terminal.integrated.profiles.osx": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash",
+      "args": [
+        "--init-file",
+        "${workspaceFolder}/scripts/dev/activate_venv.sh"
+      ]
+    },
+    "zsh": {
+      "path": "zsh",
+      "icon": "terminal",
+      "args": [
+        "-c",
+        "source ${workspaceFolder}/scripts/dev/activate_venv.sh && exec zsh"
+      ]
+    }
+  },
+
+  // Set default profiles
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.defaultProfile.osx": "zsh"
 }

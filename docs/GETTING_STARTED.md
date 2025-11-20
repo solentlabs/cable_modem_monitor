@@ -113,9 +113,10 @@ Do you have dependency or environment issues?
    code .
    ```
 
-4. **Install recommended extensions when prompted:**
-   - Click "Install" when VS Code asks (6 essential extensions)
-   - These provide Python support, linting, and formatting
+4. **What you'll see:**
+   - **Notifications:** "Install recommended extensions?" - Click "Install" (6 essential extensions)
+   - **Terminal:** Automatically shows setup instructions if `.venv` is missing
+   - **After setup:** Terminal auto-activates `.venv` on next open
 
 5. **Verify everything works:**
    ```bash

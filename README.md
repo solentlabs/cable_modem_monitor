@@ -46,13 +46,20 @@ code .                # Opens in VS Code
 
 ### After Opening in VS Code
 
-You'll see notifications - here's what to do:
+#### What You'll See
+
+**Notifications:**
 
 | Notification | Action |
 |--------------|--------|
-| "Dev Container configuration available..." | **Option A:** Click "Reopen in Container" (no setup needed)<br>**Option B:** Dismiss and use local Python (run `./scripts/setup.sh` first) |
+| "Dev Container configuration available..." | **Option A:** Click "Reopen in Container" (no setup needed)<br>**Option B:** Dismiss and use local Python |
 | "Install recommended extensions?" | Click **"Install"** (Python, Ruff, Black, YAML) |
 | "GitLens" or "CodeQL" | **Optional** - dismiss if you don't need them |
+
+**Terminal Window:**
+- If `.venv` doesn't exist yet, you'll see friendly setup instructions
+- Run `bash scripts/setup.sh` to set up (takes ~2 minutes)
+- After setup, close and reopen the terminal - it will auto-activate `.venv`
 
 Then validate everything works:
 ```bash
