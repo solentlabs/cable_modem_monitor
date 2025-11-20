@@ -120,8 +120,33 @@ ALL_CONTAINERS=$(docker ps -aq --filter "name=ha-cable-modem" 2>/dev/null || tru
 if [ -n "$ALL_CONTAINERS" ]; then
     docker rm -f $ALL_CONTAINERS 2>/dev/null || true
     echo "✅ Removed all Home Assistant containers"
-    # Give Docker a moment to fully release ports
-    sleep 1
+
+    # Wait for Docker to fully release port 8123
+    echo "   Waiting for port 8123 to be released..."
+    max_wait=10
+    for i in $(seq 1 $max_wait); do
+        # Check if port is free using multiple methods
+        port_free=true
+
+        if command -v lsof &> /dev/null && (lsof -i :8123 &> /dev/null || sudo lsof -i :8123 &> /dev/null 2>&1); then
+            port_free=false
+        elif command -v netstat &> /dev/null && (netstat -tuln 2>/dev/null | grep -q ":8123 " || sudo netstat -tulpn 2>/dev/null | grep -q ":8123 "); then
+            port_free=false
+        elif command -v ss &> /dev/null && (ss -tuln 2>/dev/null | grep -q ":8123 " || sudo ss -tulpn 2>/dev/null | grep -q ":8123 "); then
+            port_free=false
+        fi
+
+        if [ "$port_free" = true ]; then
+            echo "   ✅ Port 8123 is free (waited ${i}s)"
+            break
+        fi
+
+        if [ $i -eq $max_wait ]; then
+            echo "   ⚠️  Port 8123 still in use after ${max_wait}s, proceeding anyway..."
+        else
+            sleep 1
+        fi
+    done
 else
     echo "✅ No containers to remove"
 fi
