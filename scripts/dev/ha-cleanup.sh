@@ -6,32 +6,91 @@ set -e
 echo "🧹 Cleaning up Home Assistant environment..."
 echo ""
 
-# Check if port 8123 is in use
-if command -v lsof &> /dev/null && lsof -i :8123 &> /dev/null; then
-    echo "⚠️  Port 8123 is in use. Finding and stopping processes..."
-
-    # Get PIDs using port 8123 (works on both Linux and macOS)
-    PIDS=$(lsof -ti :8123 2>/dev/null || true)
-
-    if [ -n "$PIDS" ]; then
-        echo "   Found processes: $PIDS"
-        for PID in $PIDS; do
-            echo "   Stopping process $PID..."
-            kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
-        done
-        echo "✅ Stopped processes using port 8123"
+# Function to check if port 8123 is in use
+check_port_in_use() {
+    # Try multiple methods to check port usage
+    if command -v lsof &> /dev/null; then
+        if lsof -i :8123 &> /dev/null || sudo lsof -i :8123 &> /dev/null 2>&1; then
+            return 0
+        fi
     fi
-elif command -v netstat &> /dev/null && netstat -tuln 2>/dev/null | grep -q ":8123 "; then
+
+    if command -v netstat &> /dev/null; then
+        if netstat -tuln 2>/dev/null | grep -q ":8123 " || sudo netstat -tulpn 2>/dev/null | grep -q ":8123 "; then
+            return 0
+        fi
+    fi
+
+    if command -v ss &> /dev/null; then
+        if ss -tuln 2>/dev/null | grep -q ":8123 " || sudo ss -tulpn 2>/dev/null | grep -q ":8123 "; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Function to kill processes using port 8123
+kill_port_processes() {
+    local killed=0
+
+    # Try lsof first
+    if command -v lsof &> /dev/null; then
+        PIDS=$(lsof -ti :8123 2>/dev/null || sudo lsof -ti :8123 2>/dev/null || true)
+        if [ -n "$PIDS" ]; then
+            echo "   Found processes: $PIDS"
+            for PID in $PIDS; do
+                echo "   Killing process $PID..."
+                kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
+                killed=1
+            done
+        fi
+    fi
+
+    # Try netstat as fallback
+    if [ $killed -eq 0 ] && command -v netstat &> /dev/null; then
+        PIDS=$(sudo netstat -tulpn 2>/dev/null | grep ":8123 " | awk '{print $7}' | cut -d'/' -f1 | sort -u || true)
+        if [ -n "$PIDS" ]; then
+            echo "   Found processes: $PIDS"
+            for PID in $PIDS; do
+                if [ "$PID" != "-" ] && [ -n "$PID" ]; then
+                    echo "   Killing process $PID..."
+                    kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
+                    killed=1
+                fi
+            done
+        fi
+    fi
+
+    # Try ss as last resort
+    if [ $killed -eq 0 ] && command -v ss &> /dev/null; then
+        PIDS=$(sudo ss -tulpn 2>/dev/null | grep ":8123 " | awk -F'pid=' '{print $2}' | awk '{print $1}' | cut -d',' -f1 | sort -u || true)
+        if [ -n "$PIDS" ]; then
+            echo "   Found processes: $PIDS"
+            for PID in $PIDS; do
+                if [ "$PID" != "-" ] && [ -n "$PID" ]; then
+                    echo "   Killing process $PID..."
+                    kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
+                    killed=1
+                fi
+            done
+        fi
+    fi
+
+    return $killed
+}
+
+# Check if port 8123 is in use
+if check_port_in_use; then
     echo "⚠️  Port 8123 is in use. Finding and stopping processes..."
 
-    # Fallback for systems without lsof
-    PID=$(sudo netstat -tulpn 2>/dev/null | grep ":8123 " | awk '{print $7}' | cut -d'/' -f1 | head -1)
-
-    if [ -n "$PID" ]; then
-        echo "   Found process: $PID"
-        echo "   Stopping process $PID..."
-        kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
-        echo "✅ Stopped process using port 8123"
+    if kill_port_processes; then
+        echo "✅ Stopped processes using port 8123"
+        # Give the OS a moment to fully release the port
+        sleep 1
+    else
+        echo "❌ Could not find/kill processes using port 8123"
+        echo "   Attempting to continue anyway..."
     fi
 else
     echo "✅ Port 8123 is free"
