@@ -423,14 +423,34 @@ class TestHealthCheckHTTP:
         """Test that 5xx responses are considered failures."""
         monitor = ModemHealthMonitor()
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = MagicMock()
-            mock_response = AsyncMock()
+        time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
+        timeout_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
+        session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
+
+        with (
+            patch(time_patch, side_effect=[1000.0, 1000.01]),
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            ***REMOVED*** Create the response that will be returned when entering the context manager
+            mock_response = MagicMock()
             mock_response.status = 500  ***REMOVED*** Server error
-            mock_response.__aenter__.return_value = mock_response
-            mock_session.head.return_value = mock_response
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = AsyncMock()
+            mock_response.headers = {}
+
+            ***REMOVED*** Create the async context manager that head() returns
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+            ***REMOVED*** Create the session
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            ***REMOVED*** head() returns the context manager directly (not a coroutine)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
+
             mock_session_class.return_value = mock_session
 
             success, latency = await monitor._check_http("http://192.168.1.1")

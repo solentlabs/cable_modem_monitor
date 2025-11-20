@@ -134,7 +134,7 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
     """Attempt to connect to modem and get data.
 
     Returns modem_data dict.
-    Raises CannotConnectError or UnsupportedModemError on failure.
+    Raises CannotConnectError, InvalidAuthError, or UnsupportedModemError on failure.
     """
     try:
         modem_data: dict[str, Any] = await hass.async_add_executor_job(scraper.get_modem_data)
@@ -149,6 +149,14 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
     except Exception as err:
         _LOGGER.error("Error connecting to modem: %s", err)
         raise CannotConnectError from err
+
+    ***REMOVED*** Check for authentication failures (login page detected)
+    if modem_data.get("_auth_failure") or modem_data.get("_login_page_detected"):
+        _LOGGER.error(
+            "Authentication failure detected. Modem returned login page. " "Diagnostic context: %s",
+            modem_data.get("_diagnostic_context", {}),
+        )
+        raise InvalidAuthError("Received login page - please check username and password")
 
     ***REMOVED*** Allow installation for various status levels:
     ***REMOVED*** - "online": Normal operation with channel data
@@ -240,6 +248,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         if user_input is not None:
             try:
                 info = await validate_input(self.hass, user_input)
+            except InvalidAuthError:
+                errors["base"] = "invalid_auth"
             except UnsupportedModemError:
                 errors["base"] = "unsupported_modem"
             except CannotConnectError:
@@ -480,6 +490,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
 class CannotConnectError(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
+
+class InvalidAuthError(HomeAssistantError):
+    """Error to indicate authentication failed."""
 
 
 class UnsupportedModemError(HomeAssistantError):

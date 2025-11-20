@@ -102,6 +102,13 @@ class MotorolaMB8611HnapParser(ModemParser):
             else:
                 hnap_data = response_data
 
+            ***REMOVED*** Enhanced logging to help diagnose response structure
+            _LOGGER.debug(
+                "MB8611: HNAP response received. Top-level keys: %s, response size: %d bytes",
+                list(hnap_data.keys()),
+                len(json_response),
+            )
+
             ***REMOVED*** Parse downstream channels
             downstream = self._parse_downstream_from_hnap(hnap_data)
 
@@ -118,7 +125,11 @@ class MotorolaMB8611HnapParser(ModemParser):
             }
 
         except json.JSONDecodeError as e:
-            _LOGGER.error("MB8611: Failed to parse HNAP JSON response: %s", e)
+            _LOGGER.error(
+                "MB8611: Failed to parse HNAP JSON response: %s. Response preview: %s",
+                e,
+                json_response[:500] if json_response else "empty",
+            )
             return {"downstream": [], "upstream": [], "system_info": {}}
         except Exception as e:
             _LOGGER.error("MB8611: Error parsing HNAP data: %s", e, exc_info=True)
@@ -138,7 +149,14 @@ class MotorolaMB8611HnapParser(ModemParser):
             channel_data = downstream_response.get("MotoConnDownstreamChannel", "")
 
             if not channel_data:
-                _LOGGER.warning("MB8611: No downstream channel data found")
+                ***REMOVED*** Enhanced logging to help diagnose the issue
+                _LOGGER.warning(
+                    "MB8611: No downstream channel data found. "
+                    "Response keys: %s, downstream_response type: %s, content: %s",
+                    list(hnap_data.keys()),
+                    type(downstream_response).__name__,
+                    str(downstream_response)[:500] if downstream_response else "empty",
+                )
                 return channels
 
             ***REMOVED*** Split by |+| delimiter
@@ -204,7 +222,14 @@ class MotorolaMB8611HnapParser(ModemParser):
             channel_data = upstream_response.get("MotoConnUpstreamChannel", "")
 
             if not channel_data:
-                _LOGGER.warning("MB8611: No upstream channel data found")
+                ***REMOVED*** Enhanced logging to help diagnose the issue
+                _LOGGER.warning(
+                    "MB8611: No upstream channel data found. "
+                    "Response keys: %s, upstream_response type: %s, content: %s",
+                    list(hnap_data.keys()),
+                    type(upstream_response).__name__,
+                    str(upstream_response)[:500] if upstream_response else "empty",
+                )
                 return channels
 
             ***REMOVED*** Split by |+| delimiter

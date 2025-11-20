@@ -33,6 +33,7 @@ Scripts used during development and testing:
 | `run_tests_local.sh` | Full test suite with venv setup and coverage | 0: Pass, 1: Fail |
 | `setup_vscode_testing.ps1` | Configures VS Code for testing (PowerShell) | 0: Success |
 | `test_simple.sh` | Basic tests without venv (global install) | 0: Pass, 1: Fail |
+| `test-codeql.sh` | Run CodeQL query tests (requires CodeQL CLI) | 0: Pass, 1: Fail |
 
 ***REMOVED******REMOVED******REMOVED*** `maintenance/` - Maintenance Scripts
 Scripts for maintaining the integration in production:
@@ -78,6 +79,14 @@ python3 scripts/dev/cleanup_test_artifacts.py
 ***REMOVED*** OR use Make
 make clean
 ```
+
+**CodeQL Security Query Testing:**
+```bash
+***REMOVED*** Test custom CodeQL security queries
+bash scripts/dev/test-codeql.sh
+```
+
+> **Note:** CodeQL CLI must be installed first. See `docs/CODEQL_TESTING_GUIDE.md` for setup instructions.
 
 ***REMOVED******REMOVED******REMOVED*** Maintenance Operations
 

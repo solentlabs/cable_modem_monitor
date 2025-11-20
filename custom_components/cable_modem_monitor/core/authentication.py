@@ -330,7 +330,13 @@ class HNAPSessionAuthStrategy(AuthStrategy):
     ) -> tuple[bool, str | None]:
         """Establish HNAP session."""
         if not username or not password:
-            _LOGGER.debug("No credentials provided for HNAP auth")
+            _LOGGER.warning(
+                "HNAP authentication requires credentials. "
+                "Username provided: %s, Password provided: %s. "
+                "Please configure username and password in the integration settings.",
+                bool(username),
+                bool(password),
+            )
             return (False, None)
 
         from .auth_config import HNAPAuthConfig
@@ -344,7 +350,13 @@ class HNAPSessionAuthStrategy(AuthStrategy):
             login_envelope = self._build_login_envelope(username, password, config)
 
             hnap_url = f"{base_url}{config.hnap_endpoint}"
-            _LOGGER.debug("Posting HNAP login to %s", hnap_url)
+            _LOGGER.debug(
+                "HNAP login attempt: URL=%s, Username=%s (length=%d), Password length=%d",
+                hnap_url,
+                username,
+                len(username) if username else 0,
+                len(password) if password else 0,
+            )
 
             response = session.post(
                 hnap_url,
@@ -357,25 +369,51 @@ class HNAPSessionAuthStrategy(AuthStrategy):
                 verify=session.verify,
             )
 
+            _LOGGER.debug(
+                "HNAP login response: status=%d, response_length=%d bytes, content_type=%s",
+                response.status_code,
+                len(response.text),
+                response.headers.get("Content-Type", "unknown"),
+            )
+
             if response.status_code != 200:
-                _LOGGER.error("HNAP login failed with status %s", response.status_code)
+                _LOGGER.error(
+                    "HNAP login failed with HTTP status %s. Response preview: %s",
+                    response.status_code,
+                    response.text[:500] if response.text else "empty",
+                )
                 return (False, None)
 
             ***REMOVED*** Check for session timeout indicator (means auth failed)
             if config.session_timeout_indicator in response.text:
-                _LOGGER.warning("HNAP login failed: session timeout indicator found")
+                _LOGGER.warning(
+                    "HNAP login failed: Found '%s' in response (authentication rejected). " "Response preview: %s",
+                    config.session_timeout_indicator,
+                    response.text[:500],
+                )
                 return (False, None)
 
-            _LOGGER.debug("HNAP login successful")
+            ***REMOVED*** Log success indicators
+            _LOGGER.info(
+                "HNAP login successful! Session established with modem. " "Response size: %d bytes",
+                len(response.text),
+            )
+            _LOGGER.debug("HNAP login response preview: %s", response.text[:300])
             return (True, response.text)
 
+        except requests.exceptions.Timeout as e:
+            _LOGGER.error("HNAP login timeout - modem took too long to respond: %s", str(e))
+            return (False, None)
+        except requests.exceptions.ConnectionError as e:
+            _LOGGER.error("HNAP login connection error - cannot reach modem: %s", str(e))
+            return (False, None)
         except Exception as e:
             _LOGGER.error("HNAP login exception: %s", str(e), exc_info=True)
             return (False, None)
 
     def _build_login_envelope(self, username: str, password: str, config: HNAPAuthConfig) -> str:
         """Build SOAP login envelope for HNAP."""
-        return f"""<?xml version="1.0" encoding="utf-8"?>
+        envelope = f"""<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
@@ -388,6 +426,12 @@ class HNAPSessionAuthStrategy(AuthStrategy):
     </Login>
   </soap:Body>
 </soap:Envelope>"""
+        _LOGGER.debug(
+            "HNAP SOAP envelope built: namespace=%s, envelope_size=%d bytes",
+            config.soap_action_namespace,
+            len(envelope),
+        )
+        return envelope
 
 
 class AuthFactory:
