@@ -60,7 +60,7 @@
     {
       "label": "HA: Start (Fresh)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
+      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -72,7 +72,7 @@
     {
       "label": "HA: Start (Keep Data)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
+      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -142,6 +142,19 @@
       },
       "problemMatcher": [],
       "detail": "Check if the integration is loaded and view any errors"
+    },
+    {
+      "label": "HA: Fix Port Conflicts",
+      "type": "shell",
+      "command": "bash scripts/dev/ha-cleanup.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Stop any processes using port 8123 and clean up containers"
     },
     // ========================================
     // Legacy Docker Tasks (for backwards compatibility)
