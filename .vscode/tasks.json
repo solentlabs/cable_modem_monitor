@@ -1,0 +1,159 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ========================================
+    // Testing Tasks
+    // ========================================
+    {
+      "label": "Run All Tests",
+      "type": "shell",
+      "command": "make test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Quick Tests",
+      "type": "shell",
+      "command": "make test-quick",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    // ========================================
+    // Code Quality Tasks
+    // ========================================
+    {
+      "label": "Lint Code",
+      "type": "shell",
+      "command": "make lint",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format Code",
+      "type": "shell",
+      "command": "make format",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    // ========================================
+    // Home Assistant Development Tasks
+    // ========================================
+    {
+      "label": "HA: Start (Fresh)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "HA: Start (Keep Data)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "HA: Restart (Reload Integration)",
+      "type": "shell",
+      "command": "docker restart ha-cable-modem-test && echo '✅ Home Assistant restarted - integration code reloaded'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "HA: Stop",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.test.yml down && echo '✅ Home Assistant stopped'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "HA: View Logs",
+      "type": "shell",
+      "command": "docker logs -f ha-cable-modem-test",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "HA: Clean All Data (Reset)",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.test.yml down -v && rm -rf test-ha-config/* && echo '✅ All Home Assistant data cleaned'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": []
+    },
+    // ========================================
+    // Legacy Docker Tasks (for backwards compatibility)
+    // ========================================
+    {
+      "label": "Start Docker Dev Environment",
+      "type": "shell",
+      "command": "make docker-start",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop Docker Dev Environment",
+      "type": "shell",
+      "command": "make docker-stop",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
