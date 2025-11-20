@@ -12,17 +12,20 @@ if (Test-Path $activateScript) {
     Write-Host ""
     Write-Host "Welcome to Cable Modem Monitor!" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Setup required - .venv not found" -ForegroundColor Yellow
+    Write-Host "Choose your development environment:" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "Run this command to set up your development environment:" -ForegroundColor Green
-    Write-Host "    bash scripts/setup.sh" -ForegroundColor White
-    Write-Host ""
-    Write-Host "This will:" -ForegroundColor Gray
-    Write-Host "  - Create Python virtual environment (.venv)" -ForegroundColor Gray
-    Write-Host "  - Install all dependencies" -ForegroundColor Gray
-    Write-Host "  - Set up pre-commit hooks" -ForegroundColor Gray
+    Write-Host "Option 1: Local Python (Fastest)" -ForegroundColor Green
+    Write-Host "  Run: bash scripts/setup.sh" -ForegroundColor White
     Write-Host "  - Takes ~2 minutes" -ForegroundColor Gray
+    Write-Host "  - Fastest test execution" -ForegroundColor Gray
+    Write-Host "  - After setup, close and reopen this terminal" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "After setup, close and reopen this terminal." -ForegroundColor Gray
+    Write-Host "Option 2: Dev Container (Zero Setup)" -ForegroundColor Green
+    Write-Host "  Press F1 -> 'Dev Containers: Reopen in Container'" -ForegroundColor White
+    Write-Host "  - Takes ~5 minutes first time" -ForegroundColor Gray
+    Write-Host "  - All dependencies pre-installed" -ForegroundColor Gray
+    Write-Host "  - Guaranteed consistency with CI" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "See docs/GETTING_STARTED.md for detailed comparison" -ForegroundColor Gray
     Write-Host ""
 }
