@@ -87,6 +87,35 @@ class MotorolaMB8611HnapParser(ModemParser):
 
         return (success, response)
 
+    def _is_auth_failure(self, error: Exception) -> bool:
+        """
+        Detect if an exception indicates an authentication failure.
+
+        Common auth failure indicators:
+        - HTTP 401/403 status codes
+        - "LoginResult":"FAILED" in response
+        - "Unauthorized" or "Forbidden" in error message
+        - Session timeout or invalid session errors
+        """
+        error_str = str(error).lower()
+
+        # Check for common auth failure indicators
+        auth_indicators = [
+            "401",
+            "403",
+            "unauthorized",
+            "forbidden",
+            "authentication failed",
+            "login failed",
+            "invalid credentials",
+            "session timeout",
+            "invalid session",
+            '"loginresult":"failed"',
+            '"loginresult": "failed"',
+        ]
+
+        return any(indicator in error_str for indicator in auth_indicators)
+
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """
         Parse data using HNAP calls (JSON or XML/SOAP).
@@ -121,7 +150,25 @@ class MotorolaMB8611HnapParser(ModemParser):
                     str(xml_error),
                     exc_info=True,
                 )
-                return {"downstream": [], "upstream": [], "system_info": {}}
+
+                # Check if failures are due to authentication issues
+                auth_failure = self._is_auth_failure(json_error) or self._is_auth_failure(xml_error)
+
+                result: dict[str, list | dict] = {"downstream": [], "upstream": [], "system_info": {}}
+
+                if auth_failure:
+                    # Mark as auth failure so config_flow can block setup
+                    result["_auth_failure"] = True  # type: ignore[assignment]
+                    result["_login_page_detected"] = True  # type: ignore[assignment]
+                    result["_diagnostic_context"] = {
+                        "parser": "MB8611 HNAP",
+                        "json_error": str(json_error)[:200],
+                        "xml_error": str(xml_error)[:200],
+                        "error_type": "HNAP authentication failure",
+                    }
+                    _LOGGER.warning("MB8611: HNAP authentication failure detected - modem requires valid credentials")
+
+                return result
 
     def _parse_with_json_hnap(self, session, base_url: str) -> dict:
         """Parse modem data using JSON-based HNAP requests."""

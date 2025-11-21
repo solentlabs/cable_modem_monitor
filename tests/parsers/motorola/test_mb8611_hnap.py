@@ -543,3 +543,125 @@ class TestJsonHnapSupport:
             assert data["downstream"] == []
             assert data["upstream"] == []
             assert data["system_info"] == {}
+
+    def test_both_json_and_xml_fail_with_auth_error(self):
+        """Test that auth failures are properly detected and flagged."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock both methods failing with auth errors
+        with (
+            patch.object(HNAPJsonRequestBuilder, "call_multiple", side_effect=Exception("401 Unauthorized")),
+            patch.object(HNAPRequestBuilder, "call_multiple", side_effect=Exception("Login failed")),
+        ):
+            soup = BeautifulSoup("<html></html>", "html.parser")
+            data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+            # Should return empty data structures
+            assert data["downstream"] == []
+            assert data["upstream"] == []
+            assert data["system_info"] == {}
+
+            # Should flag auth failure
+            assert data["_auth_failure"] is True
+            assert data["_login_page_detected"] is True
+            assert "_diagnostic_context" in data
+            assert data["_diagnostic_context"]["parser"] == "MB8611 HNAP"
+            assert data["_diagnostic_context"]["error_type"] == "HNAP authentication failure"
+
+    def test_json_fails_with_401_xml_succeeds(self, hnap_full_status):
+        """Test that only JSON auth failure doesn't trigger false positive."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock JSON failing with 401, but XML succeeding
+        with (
+            patch.object(HNAPJsonRequestBuilder, "call_multiple", side_effect=Exception("401 Unauthorized")),
+            patch.object(HNAPRequestBuilder, "call_multiple", return_value=json.dumps(hnap_full_status)),
+        ):
+            soup = BeautifulSoup("<html></html>", "html.parser")
+            data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+            # Should successfully parse using XML/SOAP fallback
+            assert "downstream" in data
+            assert len(data["downstream"]) == 33
+            # Should NOT flag auth failure (XML succeeded)
+            assert "_auth_failure" not in data
+            assert "_login_page_detected" not in data
+
+    def test_non_auth_errors_dont_trigger_auth_failure(self):
+        """Test that non-auth errors (network, parsing) don't trigger auth failure flag."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock both methods failing with non-auth errors
+        with (
+            patch.object(HNAPJsonRequestBuilder, "call_multiple", side_effect=Exception("Connection timeout")),
+            patch.object(HNAPRequestBuilder, "call_multiple", side_effect=Exception("Invalid JSON response")),
+        ):
+            soup = BeautifulSoup("<html></html>", "html.parser")
+            data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+            # Should return empty data structures
+            assert data["downstream"] == []
+            assert data["upstream"] == []
+            assert data["system_info"] == {}
+
+            # Should NOT flag auth failure (these are network/parsing errors)
+            assert "_auth_failure" not in data
+            assert "_login_page_detected" not in data
+
+
+class TestAuthFailureDetection:
+    """Test authentication failure detection helper method."""
+
+    def test_detects_401_error(self):
+        """Test that 401 errors are detected as auth failures."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("HTTP 401 Unauthorized")
+        assert parser._is_auth_failure(error) is True
+
+    def test_detects_403_error(self):
+        """Test that 403 errors are detected as auth failures."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("HTTP 403 Forbidden")
+        assert parser._is_auth_failure(error) is True
+
+    def test_detects_login_failed(self):
+        """Test that login failed messages are detected."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception('Response contains "LoginResult":"FAILED"')
+        assert parser._is_auth_failure(error) is True
+
+    def test_detects_authentication_failed(self):
+        """Test that authentication failed messages are detected."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("Authentication failed - invalid credentials")
+        assert parser._is_auth_failure(error) is True
+
+    def test_detects_session_timeout(self):
+        """Test that session timeout errors are detected."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("Session timeout - please login again")
+        assert parser._is_auth_failure(error) is True
+
+    def test_ignores_network_errors(self):
+        """Test that network errors are NOT detected as auth failures."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("Connection timeout")
+        assert parser._is_auth_failure(error) is False
+
+    def test_ignores_parsing_errors(self):
+        """Test that parsing errors are NOT detected as auth failures."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("Invalid JSON response")
+        assert parser._is_auth_failure(error) is False
+
+    def test_ignores_generic_errors(self):
+        """Test that generic errors are NOT detected as auth failures."""
+        parser = MotorolaMB8611HnapParser()
+        error = Exception("Something went wrong")
+        assert parser._is_auth_failure(error) is False
