@@ -48,9 +48,9 @@ class NetgearCM600Parser(ModemParser):
     url_patterns = [
         {"path": "/", "auth_method": "basic", "auth_required": False},
         {"path": "/index.html", "auth_method": "basic", "auth_required": False},
-        {"path": "/DocsisStatus.asp", "auth_method": "basic", "auth_required": False},
-        {"path": "/DashBoard.asp", "auth_method": "basic", "auth_required": False},
-        {"path": "/RouterStatus.asp", "auth_method": "basic", "auth_required": False},
+        {"path": "/DocsisStatus.asp", "auth_method": "basic", "auth_required": True},
+        {"path": "/DashBoard.asp", "auth_method": "basic", "auth_required": True},
+        {"path": "/RouterStatus.asp", "auth_method": "basic", "auth_required": True},
     ]
 
     def login(self, session, base_url, username, password) -> bool:
@@ -65,10 +65,12 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             True if login successful or not required
         """
-        # CM600 uses HTTP Basic Auth which is handled automatically by the session
-        # If credentials are provided, they're set in the session auth
-        # No explicit login page to navigate
-        return True
+        # CM600 uses HTTP Basic Auth - use AuthFactory to set it up
+        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
+
+        auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
+        success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
+        return success
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem.

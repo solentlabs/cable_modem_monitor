@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
+from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
 
 from ..base_parser import ModemParser
 
@@ -50,19 +51,46 @@ class MotorolaMB8611HnapParser(ModemParser):
 
     def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """
-        Log in using HNAP authentication (backward compatibility).
+        Log in using HNAP authentication (tries JSON first, then XML/SOAP).
+
+        Some MB8611 firmware variants use JSON-formatted HNAP authentication,
+        while others use XML/SOAP. This method tries both.
 
         Note: This method is maintained for backward compatibility.
         New code should use auth_config with AuthFactory instead.
         """
+        # Try JSON-based HNAP login first
+        json_builder = HNAPJsonRequestBuilder(
+            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
+        )
+
+        _LOGGER.debug("MB8611: Attempting JSON-based HNAP login")
+        success, response = json_builder.login(session, base_url, username, password)
+
+        if success:
+            _LOGGER.info("MB8611: JSON HNAP login successful")
+            return (True, response)
+
+        # Fall back to XML/SOAP-based HNAP login
+        _LOGGER.debug("MB8611: JSON login failed, trying XML/SOAP-based HNAP login")
         from custom_components.cable_modem_monitor.core.authentication import AuthFactory
 
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-        return auth_strategy.login(session, base_url, username, password, self.auth_config)
+        success, response = auth_strategy.login(session, base_url, username, password, self.auth_config)
+
+        if success:
+            _LOGGER.info("MB8611: XML/SOAP HNAP login successful")
+        else:
+            _LOGGER.warning("MB8611: Both JSON and XML/SOAP HNAP login methods failed")
+
+        return (success, response)
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """
-        Parse data using HNAP SOAP calls.
+        Parse data using HNAP calls (JSON or XML/SOAP).
+
+        Some MB8611 firmware variants use JSON-formatted HNAP, others use XML/SOAP.
+        This method tries JSON first, then falls back to XML/SOAP.
 
         Args:
             soup: BeautifulSoup object (may not be used for HNAP modems)
@@ -75,65 +103,134 @@ class MotorolaMB8611HnapParser(ModemParser):
         if not session or not base_url:
             raise ValueError("MB8611 requires session and base_url for HNAP calls")
 
-        # Build HNAP request builder
+        # Try JSON-based HNAP first (newer firmware)
+        try:
+            return self._parse_with_json_hnap(session, base_url)
+        except Exception as json_error:
+            _LOGGER.debug("MB8611: JSON HNAP failed (%s), trying XML/SOAP HNAP...", str(json_error))
+
+            # Fall back to XML/SOAP-based HNAP (older firmware)
+            try:
+                return self._parse_with_xml_hnap(session, base_url)
+            except Exception as xml_error:
+                _LOGGER.error(
+                    "MB8611: Both JSON and XML/SOAP HNAP methods failed. "
+                    "JSON error: %s, XML error: %s",
+                    str(json_error),
+                    str(xml_error),
+                    exc_info=True,
+                )
+                return {"downstream": [], "upstream": [], "system_info": {}}
+
+    def _parse_with_json_hnap(self, session, base_url: str) -> dict:
+        """Parse modem data using JSON-based HNAP requests."""
+        _LOGGER.debug("MB8611: Attempting JSON-based HNAP communication")
+
+        # Build JSON HNAP request builder
+        builder = HNAPJsonRequestBuilder(
+            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
+        )
+
+        # Make batched HNAP request for all data
+        hnap_actions = [
+            "GetMotoStatusStartupSequence",
+            "GetMotoStatusConnectionInfo",
+            "GetMotoStatusDownstreamChannelInfo",
+            "GetMotoStatusUpstreamChannelInfo",
+            "GetMotoLagStatus",
+        ]
+
+        _LOGGER.debug("MB8611: Fetching modem data via JSON HNAP GetMultipleHNAPs")
+        json_response = builder.call_multiple(session, base_url, hnap_actions)
+
+        # Parse JSON response
+        response_data = json.loads(json_response)
+
+        # Extract nested response
+        if "GetMultipleHNAPsResponse" in response_data:
+            hnap_data = response_data["GetMultipleHNAPsResponse"]
+        else:
+            hnap_data = response_data
+
+        # Enhanced logging to help diagnose response structure
+        _LOGGER.debug(
+            "MB8611: JSON HNAP response received. Top-level keys: %s, response size: %d bytes",
+            list(hnap_data.keys()),
+            len(json_response),
+        )
+
+        # Parse channels and system info
+        downstream = self._parse_downstream_from_hnap(hnap_data)
+        upstream = self._parse_upstream_from_hnap(hnap_data)
+        system_info = self._parse_system_info_from_hnap(hnap_data)
+
+        _LOGGER.info(
+            "MB8611: Successfully parsed data using JSON HNAP "
+            "(downstream: %d channels, upstream: %d channels)",
+            len(downstream),
+            len(upstream),
+        )
+
+        return {
+            "downstream": downstream,
+            "upstream": upstream,
+            "system_info": system_info,
+        }
+
+    def _parse_with_xml_hnap(self, session, base_url: str) -> dict:
+        """Parse modem data using XML/SOAP-based HNAP requests."""
+        _LOGGER.debug("MB8611: Attempting XML/SOAP-based HNAP communication")
+
+        # Build XML/SOAP HNAP request builder
         builder = HNAPRequestBuilder(
             endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
         )
 
-        try:
-            # Make batched HNAP request for all data
-            soap_actions = [
-                "GetMotoStatusStartupSequence",
-                "GetMotoStatusConnectionInfo",
-                "GetMotoStatusDownstreamChannelInfo",
-                "GetMotoStatusUpstreamChannelInfo",
-                "GetMotoLagStatus",
-            ]
+        # Make batched HNAP request for all data
+        soap_actions = [
+            "GetMotoStatusStartupSequence",
+            "GetMotoStatusConnectionInfo",
+            "GetMotoStatusDownstreamChannelInfo",
+            "GetMotoStatusUpstreamChannelInfo",
+            "GetMotoLagStatus",
+        ]
 
-            _LOGGER.debug("MB8611: Fetching modem data via HNAP GetMultipleHNAPs")
-            json_response = builder.call_multiple(session, base_url, soap_actions)
+        _LOGGER.debug("MB8611: Fetching modem data via XML/SOAP HNAP GetMultipleHNAPs")
+        json_response = builder.call_multiple(session, base_url, soap_actions)
 
-            # Parse JSON response (MB8611 uses JSON, not XML)
-            response_data = json.loads(json_response)
+        # Parse JSON response (MB8611 uses JSON, not XML)
+        response_data = json.loads(json_response)
 
-            # Extract nested response
-            if "GetMultipleHNAPsResponse" in response_data:
-                hnap_data = response_data["GetMultipleHNAPsResponse"]
-            else:
-                hnap_data = response_data
+        # Extract nested response
+        if "GetMultipleHNAPsResponse" in response_data:
+            hnap_data = response_data["GetMultipleHNAPsResponse"]
+        else:
+            hnap_data = response_data
 
-            # Enhanced logging to help diagnose response structure
-            _LOGGER.debug(
-                "MB8611: HNAP response received. Top-level keys: %s, response size: %d bytes",
-                list(hnap_data.keys()),
-                len(json_response),
-            )
+        # Enhanced logging to help diagnose response structure
+        _LOGGER.debug(
+            "MB8611: XML/SOAP HNAP response received. Top-level keys: %s, response size: %d bytes",
+            list(hnap_data.keys()),
+            len(json_response),
+        )
 
-            # Parse downstream channels
-            downstream = self._parse_downstream_from_hnap(hnap_data)
+        # Parse channels and system info
+        downstream = self._parse_downstream_from_hnap(hnap_data)
+        upstream = self._parse_upstream_from_hnap(hnap_data)
+        system_info = self._parse_system_info_from_hnap(hnap_data)
 
-            # Parse upstream channels
-            upstream = self._parse_upstream_from_hnap(hnap_data)
+        _LOGGER.info(
+            "MB8611: Successfully parsed data using XML/SOAP HNAP "
+            "(downstream: %d channels, upstream: %d channels)",
+            len(downstream),
+            len(upstream),
+        )
 
-            # Parse system info
-            system_info = self._parse_system_info_from_hnap(hnap_data)
-
-            return {
-                "downstream": downstream,
-                "upstream": upstream,
-                "system_info": system_info,
-            }
-
-        except json.JSONDecodeError as e:
-            _LOGGER.error(
-                "MB8611: Failed to parse HNAP JSON response: %s. Response preview: %s",
-                e,
-                json_response[:500] if json_response else "empty",
-            )
-            return {"downstream": [], "upstream": [], "system_info": {}}
-        except Exception as e:
-            _LOGGER.error("MB8611: Error parsing HNAP data: %s", e, exc_info=True)
-            return {"downstream": [], "upstream": [], "system_info": {}}
+        return {
+            "downstream": downstream,
+            "upstream": upstream,
+            "system_info": system_info,
+        }
 
     def _parse_downstream_from_hnap(self, hnap_data: dict) -> list[dict]:
         """

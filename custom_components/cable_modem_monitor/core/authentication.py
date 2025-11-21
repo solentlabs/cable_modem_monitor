@@ -393,6 +393,19 @@ class HNAPSessionAuthStrategy(AuthStrategy):
                 )
                 return (False, None)
 
+            # Check for JSON error responses (some MB8611 firmwares return JSON errors)
+            error_indicators = ["SET_JSON_FORMAT_ERROR", "ERROR", '"LoginResult":"FAILED"', '"LoginResult": "FAILED"']
+            for error_indicator in error_indicators:
+                if error_indicator in response.text:
+                    _LOGGER.warning(
+                        "HNAP login failed: Found error indicator '%s' in response. "
+                        "This may indicate the modem requires JSON-formatted HNAP requests instead of XML/SOAP. "
+                        "Response preview: %s",
+                        error_indicator,
+                        response.text[:500],
+                    )
+                    return (False, None)
+
             # Log success indicators
             _LOGGER.info(
                 "HNAP login successful! Session established with modem. " "Response size: %d bytes",

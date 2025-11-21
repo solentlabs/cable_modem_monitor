@@ -447,3 +447,101 @@ class TestMetadata:
         """Test parser priority (model-specific should be high)."""
         parser = MotorolaMB8611HnapParser()
         assert parser.priority == 101  # Higher priority for the API-based method
+
+
+class TestJsonHnapSupport:
+    """Test JSON-based HNAP support for firmware variants that use JSON instead of XML/SOAP."""
+
+    def test_json_hnap_login_success(self):
+        """Test that JSON HNAP login succeeds and returns proper response."""
+        from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock successful JSON HNAP login
+        with patch.object(HNAPJsonRequestBuilder, "login", return_value=(True, '{"LoginResponse":{"LoginResult":"OK"}}')):
+            success, response = parser.login(mock_session, base_url, "admin", "password")
+
+            assert success is True
+            assert "LoginResponse" in response
+
+    def test_json_hnap_login_fallback_to_xml(self):
+        """Test that login falls back to XML/SOAP when JSON fails."""
+        from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock JSON login failure, XML/SOAP login success
+        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
+        with patch.object(HNAPJsonRequestBuilder, "login", return_value=(False, "")):
+            with patch(auth_path) as mock_factory:
+                mock_strategy = Mock()
+                mock_strategy.login.return_value = (True, "XML Login OK")
+                mock_factory.get_strategy.return_value = mock_strategy
+
+                success, response = parser.login(mock_session, base_url, "admin", "password")
+
+                assert success is True
+                assert response == "XML Login OK"
+
+    def test_json_hnap_parse_success(self, hnap_full_status):
+        """Test parsing modem data using JSON HNAP."""
+        from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock JSON HNAP response
+        with patch.object(HNAPJsonRequestBuilder, "call_multiple", return_value=json.dumps(hnap_full_status)):
+            soup = BeautifulSoup("<html></html>", "html.parser")
+            data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+            # Should successfully parse using JSON HNAP
+            assert "downstream" in data
+            assert "upstream" in data
+            assert len(data["downstream"]) == 33
+            assert len(data["upstream"]) == 4
+
+    def test_json_hnap_parse_fallback_to_xml(self, hnap_full_status):
+        """Test that parsing falls back to XML/SOAP when JSON HNAP fails."""
+        from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+        from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
+
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock JSON failure, XML/SOAP success
+        with patch.object(HNAPJsonRequestBuilder, "call_multiple", side_effect=Exception("JSON not supported")):
+            with patch.object(HNAPRequestBuilder, "call_multiple", return_value=json.dumps(hnap_full_status)):
+                soup = BeautifulSoup("<html></html>", "html.parser")
+                data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+                # Should successfully parse using XML/SOAP fallback
+                assert "downstream" in data
+                assert len(data["downstream"]) == 33
+
+    def test_both_json_and_xml_fail(self):
+        """Test error handling when both JSON and XML/SOAP HNAP fail."""
+        from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+        from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
+
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        # Mock both methods failing
+        with patch.object(HNAPJsonRequestBuilder, "call_multiple", side_effect=Exception("JSON failed")):
+            with patch.object(HNAPRequestBuilder, "call_multiple", side_effect=Exception("XML failed")):
+                soup = BeautifulSoup("<html></html>", "html.parser")
+                data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+                # Should return empty data structures
+                assert data["downstream"] == []
+                assert data["upstream"] == []
+                assert data["system_info"] == {}
