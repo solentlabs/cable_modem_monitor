@@ -260,14 +260,10 @@ def _get_detection_method(entry: ConfigEntry) -> str:
         return "auto_detected"
 
 
-async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
-    """Return diagnostics for a config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    # Get current data
+def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry) -> dict[str, Any]:
+    """Build the main diagnostics dictionary from coordinator data."""
     data = coordinator.data if coordinator.data else {}
 
-    # Build diagnostics info
     diagnostics = {
         "config_entry": {
             "title": entry.title,
@@ -410,3 +406,23 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             _LOGGER.warning("Error checking HTML capture expiry: %s", e)
 
     return diagnostics
+
+
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
+    """Return diagnostics for a config entry."""
+    # Check if coordinator exists (might not if setup failed)
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+
+    if not coordinator:
+        # Return basic diagnostics if coordinator doesn't exist
+        return {
+            "error": "Integration not fully initialized - coordinator not found",
+            "config_entry": {
+                "title": entry.title,
+                "host": entry.data.get("host"),
+                "entry_id": entry.entry_id,
+                "state": str(entry.state),
+            },
+        }
+
+    return _build_diagnostics_dict(hass, coordinator, entry)
