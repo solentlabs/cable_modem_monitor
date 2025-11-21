@@ -210,9 +210,7 @@ class TestAuthentication:
             success = parser.login(mock_session, base_url, "admin", "password")
 
             assert success is True
-            mock_strategy.login.assert_called_once_with(
-                mock_session, base_url, "admin", "password", parser.auth_config
-            )
+            mock_strategy.login.assert_called_once_with(mock_session, base_url, "admin", "password", parser.auth_config)
 
     def test_login_without_credentials(self):
         """Test login behavior when no credentials provided."""
