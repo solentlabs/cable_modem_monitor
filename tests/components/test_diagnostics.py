@@ -486,6 +486,28 @@ async def test_diagnostics_without_html_capture(mock_config_entry, mock_coordina
 
 
 @pytest.mark.asyncio
+async def test_diagnostics_handles_missing_coordinator(mock_config_entry):
+    """Test diagnostics handles case where coordinator doesn't exist."""
+    from homeassistant.config_entries import ConfigEntryState
+
+    hass = Mock(spec=HomeAssistant)
+    # Coordinator doesn't exist in hass.data (setup failed or incomplete)
+    hass.data = {DOMAIN: {}}
+    # Add state attribute to mock
+    mock_config_entry.state = ConfigEntryState.LOADED
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
+
+    # Should return error diagnostics
+    assert "error" in diagnostics
+    assert "coordinator not found" in diagnostics["error"]
+    assert "config_entry" in diagnostics
+    assert diagnostics["config_entry"]["title"] == "Test Modem"
+    assert diagnostics["config_entry"]["host"] == "192.168.100.1"
+    assert diagnostics["config_entry"]["entry_id"] == "test_entry"
+
+
+@pytest.mark.asyncio
 async def test_diagnostics_handles_coordinator_without_data(mock_config_entry, mock_coordinator):
     # Create coordinator with no data
     coordinator = Mock(spec=DataUpdateCoordinator)
