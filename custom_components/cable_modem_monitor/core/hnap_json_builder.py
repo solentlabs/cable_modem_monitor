@@ -81,7 +81,7 @@ class HNAPJsonRequestBuilder:
             requests.RequestException: If request fails
         """
         # Build JSON request with nested action objects
-        action_objects = {action: {} for action in actions}
+        action_objects: dict[str, dict] = {action: {} for action in actions}
         request_data = {"GetMultipleHNAPs": action_objects}
 
         _LOGGER.debug(

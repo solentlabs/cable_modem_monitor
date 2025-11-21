@@ -65,6 +65,8 @@ class MotorolaMB8611HnapParser(ModemParser):
         )
 
         _LOGGER.debug("MB8611: Attempting JSON-based HNAP login")
+        success: bool
+        response: str | None
         success, response = json_builder.login(session, base_url, username, password)
 
         if success:
@@ -114,8 +116,7 @@ class MotorolaMB8611HnapParser(ModemParser):
                 return self._parse_with_xml_hnap(session, base_url)
             except Exception as xml_error:
                 _LOGGER.error(
-                    "MB8611: Both JSON and XML/SOAP HNAP methods failed. "
-                    "JSON error: %s, XML error: %s",
+                    "MB8611: Both JSON and XML/SOAP HNAP methods failed. " "JSON error: %s, XML error: %s",
                     str(json_error),
                     str(xml_error),
                     exc_info=True,
@@ -147,10 +148,7 @@ class MotorolaMB8611HnapParser(ModemParser):
         response_data = json.loads(json_response)
 
         # Extract nested response
-        if "GetMultipleHNAPsResponse" in response_data:
-            hnap_data = response_data["GetMultipleHNAPsResponse"]
-        else:
-            hnap_data = response_data
+        hnap_data = response_data.get("GetMultipleHNAPsResponse", response_data)
 
         # Enhanced logging to help diagnose response structure
         _LOGGER.debug(
@@ -165,8 +163,7 @@ class MotorolaMB8611HnapParser(ModemParser):
         system_info = self._parse_system_info_from_hnap(hnap_data)
 
         _LOGGER.info(
-            "MB8611: Successfully parsed data using JSON HNAP "
-            "(downstream: %d channels, upstream: %d channels)",
+            "MB8611: Successfully parsed data using JSON HNAP " "(downstream: %d channels, upstream: %d channels)",
             len(downstream),
             len(upstream),
         )
@@ -202,10 +199,7 @@ class MotorolaMB8611HnapParser(ModemParser):
         response_data = json.loads(json_response)
 
         # Extract nested response
-        if "GetMultipleHNAPsResponse" in response_data:
-            hnap_data = response_data["GetMultipleHNAPsResponse"]
-        else:
-            hnap_data = response_data
+        hnap_data = response_data.get("GetMultipleHNAPsResponse", response_data)
 
         # Enhanced logging to help diagnose response structure
         _LOGGER.debug(
@@ -220,8 +214,7 @@ class MotorolaMB8611HnapParser(ModemParser):
         system_info = self._parse_system_info_from_hnap(hnap_data)
 
         _LOGGER.info(
-            "MB8611: Successfully parsed data using XML/SOAP HNAP "
-            "(downstream: %d channels, upstream: %d channels)",
+            "MB8611: Successfully parsed data using XML/SOAP HNAP " "(downstream: %d channels, upstream: %d channels)",
             len(downstream),
             len(upstream),
         )

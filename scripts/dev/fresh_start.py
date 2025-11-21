@@ -54,12 +54,14 @@ def print_error(text: str) -> None:
 def is_running_from_vscode() -> bool:
     """Check if script is running from VS Code integrated terminal."""
     # Check common VS Code environment variables
-    return any([
-        os.environ.get("TERM_PROGRAM") == "vscode",
-        os.environ.get("VSCODE_PID"),
-        os.environ.get("VSCODE_IPC_HOOK"),
-        os.environ.get("VSCODE_GIT_ASKPASS_NODE"),
-    ])
+    return any(
+        [
+            os.environ.get("TERM_PROGRAM") == "vscode",
+            os.environ.get("VSCODE_PID"),
+            os.environ.get("VSCODE_IPC_HOOK"),
+            os.environ.get("VSCODE_GIT_ASKPASS_NODE"),
+        ]
+    )
 
 
 def is_vscode_running() -> bool:
@@ -106,7 +108,7 @@ def get_vscode_cache_path() -> Path:
 def is_running_from_venv() -> bool:
     """Check if script is running from the project's .venv."""
     # Check if running in a virtual environment
-    if not hasattr(sys, 'prefix') or sys.prefix == sys.base_prefix:
+    if not hasattr(sys, "prefix") or sys.prefix == sys.base_prefix:
         return False
 
     # Check if the venv is in the current directory
@@ -114,6 +116,43 @@ def is_running_from_venv() -> bool:
     current_prefix = Path(sys.prefix).resolve()
 
     return venv_path == current_prefix or str(venv_path) in str(current_prefix)
+
+
+def _handle_windows_remove(venv_path: Path) -> bool:
+    """Handle .venv removal on Windows with retry logic."""
+    import time
+
+    def handle_remove_readonly(func, path, exc):
+        """Error handler for Windows readonly files."""
+        import stat
+
+        if not os.access(path, os.W_OK):
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+        else:
+            raise
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            shutil.rmtree(venv_path, onerror=handle_remove_readonly)
+            print_success("Removed .venv")
+            return True
+        except PermissionError as e:
+            if attempt < max_retries - 1:
+                print_warning(f"Retry {attempt + 1}/{max_retries}...")
+                time.sleep(1)
+            else:
+                print_error(f"Failed to remove .venv: {e}")
+                print()
+                print("The .venv directory is likely in use.")
+                print()
+                print("To remove it manually:")
+                print("  1. Close VS Code completely")
+                print("  2. Close any Python processes")
+                print("  3. Run: Remove-Item -Recurse -Force .venv")
+                return False
+    return False
 
 
 def remove_venv() -> bool:
@@ -154,48 +193,17 @@ def remove_venv() -> bool:
 
     print_info("Removing .venv...")
 
-    # Windows-specific: Handle file locking with retry logic
     if platform.system() == "Windows":
-        import time
+        return _handle_windows_remove(venv_path)
 
-        def handle_remove_readonly(func, path, exc):
-            """Error handler for Windows readonly files."""
-            import stat
-            if not os.access(path, os.W_OK):
-                os.chmod(path, stat.S_IWUSR)
-                func(path)
-            else:
-                raise
-
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                shutil.rmtree(venv_path, onerror=handle_remove_readonly)
-                print_success("Removed .venv")
-                return True
-            except PermissionError as e:
-                if attempt < max_retries - 1:
-                    print_warning(f"Retry {attempt + 1}/{max_retries}...")
-                    time.sleep(1)
-                else:
-                    print_error(f"Failed to remove .venv: {e}")
-                    print()
-                    print("The .venv directory is likely in use.")
-                    print()
-                    print("To remove it manually:")
-                    print("  1. Close VS Code completely")
-                    print("  2. Close any Python processes")
-                    print("  3. Run: Remove-Item -Recurse -Force .venv")
-                    return False
-    else:
-        # Linux/Mac: Usually no file locking issues
-        try:
-            shutil.rmtree(venv_path)
-            print_success("Removed .venv")
-            return True
-        except Exception as e:
-            print_error(f"Failed to remove .venv: {e}")
-            return False
+    # Linux/Mac: Usually no file locking issues
+    try:
+        shutil.rmtree(venv_path)
+        print_success("Removed .venv")
+        return True
+    except Exception as e:
+        print_error(f"Failed to remove .venv: {e}")
+        return False
 
 
 def clear_workspace_cache() -> int:
@@ -260,9 +268,7 @@ def main() -> None:
 
     # Step 2: Detect OS
     system_name = platform.system()
-    display_name = {"Windows": "Windows", "Darwin": "macOS", "Linux": "Linux"}.get(
-        system_name, system_name
-    )
+    display_name = {"Windows": "Windows", "Darwin": "macOS", "Linux": "Linux"}.get(system_name, system_name)
     print(f"🖥️  Detected: {display_name}")
     print()
 
