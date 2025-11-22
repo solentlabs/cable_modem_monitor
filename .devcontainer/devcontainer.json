@@ -47,9 +47,7 @@
         "redhat.vscode-yaml",
         "streetsidesoftware.code-spell-checker",
 
-        // CodeQL security testing
-        "github.vscode-codeql",
-        "geekmasher.codeql-scanner-vscode"
+        // CodeQL security testing (extensions removed, tests run via pre-commit)
       ],
       "settings": {
         // Use Python 3.12 inside the container

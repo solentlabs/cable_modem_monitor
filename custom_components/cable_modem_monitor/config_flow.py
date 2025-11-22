@@ -170,11 +170,69 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
     return modem_data
 
 
+def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
+    """Perform quick HTTP connectivity check to modem (sync version for executor).
+
+    Args:
+        host: Modem IP address or hostname
+
+    Returns:
+        tuple of (is_reachable, error_message)
+        - (True, None) if modem responds to HTTP request
+        - (False, error_message) if unreachable with specific reason
+    """
+    import requests
+
+    # Determine base URL - try HTTPS first like main scraper
+    if host.startswith(("http://", "https://")):
+        test_urls = [host]
+    else:
+        test_urls = [f"https://{host}", f"http://{host}"]
+
+    # Disable SSL warnings for this test
+    import urllib3
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    for test_url in test_urls:
+        try:
+            # Quick HEAD request with short timeout
+            response = requests.head(test_url, timeout=2, verify=False, allow_redirects=True)
+            # Any response (200, 401, 403, etc.) means modem is reachable
+            _LOGGER.debug("Quick connectivity check passed: %s returned status %d", test_url, response.status_code)
+            return True, None
+        except requests.exceptions.Timeout:
+            _LOGGER.debug("Quick connectivity check timeout for %s", test_url)
+            continue
+        except requests.exceptions.ConnectionError as e:
+            _LOGGER.debug("Quick connectivity check connection error for %s: %s", test_url, e)
+            continue
+        except Exception as e:
+            _LOGGER.debug("Quick connectivity check failed for %s: %s", test_url, e)
+            continue
+
+    # All attempts failed
+    error_msg = (
+        f"Cannot reach modem at {host}. "
+        f"Please check: (1) Network connection - ensure you're on the correct network, "
+        f"not on guest WiFi or VPN. (2) Modem IP address is correct. "
+        f"(3) Modem web interface is enabled."
+    )
+    return False, error_msg
+
+
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     # Validate host format
     host = data[CONF_HOST]
     _validate_host_format(host)
+
+    # Quick connectivity pre-check (run in executor to avoid blocking)
+    _LOGGER.info("Performing quick connectivity check to %s", host)
+    is_reachable, error_msg = await hass.async_add_executor_job(_do_quick_connectivity_check, host)
+    if not is_reachable:
+        _LOGGER.error("Quick connectivity check failed: %s", error_msg)
+        raise CannotConnectError(error_msg)
 
     # Get parsers and select appropriate one(s)
     all_parsers = await hass.async_add_executor_job(get_parsers)
@@ -214,6 +272,12 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize config flow."""
+        self._user_input: dict[str, Any] | None = None
+        self._validation_task: Any = None
+        self._validation_error: Exception | None = None
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -224,7 +288,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
-        errors: dict[str, str] = {}
+        # When coming back from progress step, restore user input
+        if user_input is None and self._user_input:
+            user_input = self._user_input
 
         # Get parsers for the dropdown
         parsers = await self.hass.async_add_executor_job(get_parsers)
@@ -246,58 +312,156 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         modem_choices = ["auto"] + [p.name for p in sorted_parsers]
 
         if user_input is not None:
-            try:
-                info = await validate_input(self.hass, user_input)
-            except InvalidAuthError:
-                errors["base"] = "invalid_auth"
-            except UnsupportedModemError:
-                errors["base"] = "unsupported_modem"
-            except CannotConnectError:
-                errors["base"] = "cannot_connect"
-            except (ValueError, TypeError) as err:
-                _LOGGER.error("Invalid input data: %s", err)
-                errors["base"] = "invalid_input"
-            except Exception:
-                # Log exception details for debugging, but sanitize error shown to user
-                _LOGGER.exception("Unexpected exception during validation")
-                errors["base"] = "unknown"
-            else:
-                # Set unique ID to prevent duplicate entries
-                await self.async_set_unique_id(user_input[CONF_HOST])
-                self._abort_if_unique_id_configured()
-
-                # Add default values for fields not in initial setup
-                user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-                # Note: VERIFY_SSL is now a hardcoded constant (see const.py)
-
-                # Store detection info from validation
-                detection_info = info.get("detection_info", {})
-                if detection_info:
-                    detected_modem_name = detection_info.get("modem_name")
-                    user_input[CONF_PARSER_NAME] = detected_modem_name  # Cache parser name
-                    user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
-                    user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
-                    user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
-                    from datetime import datetime
-
-                    user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
-
-                    # If user selected "auto", update the choice to show what was detected
-                    if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
-                        _LOGGER.info(
-                            "Auto-detection successful: updating modem_choice from 'auto' to '%s'", detected_modem_name
-                        )
-                        user_input[CONF_MODEM_CHOICE] = detected_modem_name
-
-                return self.async_create_entry(title=info["title"], data=user_input)
+            # Store user input and start validation with progress
+            self._user_input = user_input
+            return await self.async_step_validate()
 
         from homeassistant.helpers import selector
 
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST, default="192.168.100.1"): str,
+                vol.Optional(CONF_USERNAME, default=""): str,
+                vol.Optional(CONF_PASSWORD, default=""): str,
+                vol.Required(CONF_MODEM_CHOICE, default="auto"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=modem_choices,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(step_id="user", data_schema=data_schema, errors={})
+
+    async def async_step_validate(  # noqa: C901
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle validation with progress indicator."""
+        if not self._validation_task:
+            self._validation_task = self.hass.async_create_task(validate_input(self.hass, self._user_input))
+
+        if not self._validation_task.done():
+            return self.async_show_progress(
+                step_id="validate",
+                progress_action="validate",
+                progress_task=self._validation_task,
+            )
+
+        errors: dict[str, str] = {}
+        try:
+            info = await self._validation_task
+        except InvalidAuthError as err:
+            errors["base"] = "invalid_auth"
+            self._validation_error = err
+        except UnsupportedModemError as err:
+            errors["base"] = "unsupported_modem"
+            self._validation_error = err
+        except CannotConnectError as err:
+            # Use detailed error message if available, otherwise use generic error
+            if hasattr(err, "user_message") and err.user_message:
+                errors["base"] = "network_unreachable"
+            else:
+                errors["base"] = "cannot_connect"
+            self._validation_error = err
+        except (ValueError, TypeError) as err:
+            _LOGGER.error("Invalid input data: %s", err)
+            errors["base"] = "invalid_input"
+            self._validation_error = err
+        except Exception as err:
+            # Log exception details for debugging, but sanitize error shown to user
+            _LOGGER.exception("Unexpected exception during validation")
+            errors["base"] = "unknown"
+            self._validation_error = err
+        finally:
+            self._validation_task = None
+
+        if errors:
+            # Return to user form with errors
+            return self.async_show_progress_done(next_step_id="user_with_errors")
+
+        # Validation successful - complete setup
+        user_input = self._user_input
+        self._user_input = None
+
+        # Set unique ID to prevent duplicate entries
+        await self.async_set_unique_id(user_input[CONF_HOST])
+        self._abort_if_unique_id_configured()
+
+        # Add default values for fields not in initial setup
+        user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        # Note: VERIFY_SSL is now a hardcoded constant (see const.py)
+
+        # Store detection info from validation
+        detection_info = info.get("detection_info", {})
+        if detection_info:
+            detected_modem_name = detection_info.get("modem_name")
+            user_input[CONF_PARSER_NAME] = detected_modem_name  # Cache parser name
+            user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
+            user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+            user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
+            from datetime import datetime
+
+            user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+
+            # If user selected "auto", update the choice to show what was detected
+            if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
+                _LOGGER.info(
+                    "Auto-detection successful: updating modem_choice from 'auto' to '%s'", detected_modem_name
+                )
+                user_input[CONF_MODEM_CHOICE] = detected_modem_name
+
+        return self.async_create_entry(title=info["title"], data=user_input)
+
+    async def async_step_user_with_errors(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Show form again with errors after validation failure."""
+        # Get parsers for the dropdown
+        parsers = await self.hass.async_add_executor_job(get_parsers)
+
+        def sort_key(p):
+            if p.manufacturer == "Unknown":
+                return ("ZZZZ", "ZZZZ")
+            if "Generic" in p.name:
+                return (p.manufacturer, "ZZZZ")
+            return (p.manufacturer, p.name)
+
+        sorted_parsers = sorted(parsers, key=sort_key)
+        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
+
+        from homeassistant.helpers import selector
+
+        # Get the stored user input and errors
+        saved_input = self._user_input or {}
+        errors = {"base": "cannot_connect"}  # Default error
+
+        # Extract specific error from saved validation error
+        if self._validation_error:
+            if isinstance(self._validation_error, InvalidAuthError):
+                errors["base"] = "invalid_auth"
+            elif isinstance(self._validation_error, UnsupportedModemError):
+                errors["base"] = "unsupported_modem"
+            elif isinstance(self._validation_error, CannotConnectError):
+                if hasattr(self._validation_error, "user_message") and self._validation_error.user_message:
+                    errors["base"] = "network_unreachable"
+                else:
+                    errors["base"] = "cannot_connect"
+            elif isinstance(self._validation_error, (ValueError, TypeError)):
+                errors["base"] = "invalid_input"
+            else:
+                errors["base"] = "unknown"
+
+        # Reset for next attempt
+        self._user_input = None
+        self._validation_task = None
+        self._validation_error = None
+
         # Preserve user input when showing form again after error
-        default_host = user_input.get(CONF_HOST, "192.168.100.1") if user_input else "192.168.100.1"
-        default_username = user_input.get(CONF_USERNAME, "") if user_input else ""
-        default_password = user_input.get(CONF_PASSWORD, "") if user_input else ""
-        default_modem = user_input.get(CONF_MODEM_CHOICE, "auto") if user_input else "auto"
+        default_host = saved_input.get(CONF_HOST, "192.168.100.1")
+        default_username = saved_input.get(CONF_USERNAME, "")
+        default_password = saved_input.get(CONF_PASSWORD, "")
+        default_modem = saved_input.get(CONF_MODEM_CHOICE, "auto")
 
         data_schema = vol.Schema(
             {
@@ -490,6 +654,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
 class CannotConnectError(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
+    def __init__(self, message: str | None = None):
+        """Initialize error with optional message."""
+        super().__init__(message or "Cannot connect to modem")
+        self.user_message = message
 
 
 class InvalidAuthError(HomeAssistantError):

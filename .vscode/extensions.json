@@ -12,7 +12,9 @@
     "redhat.vscode-yaml",
 
     // Dev Container support (only needed if using containers)
-    "ms-vscode-remote.remote-containers"
+    "ms-vscode-remote.remote-containers",
+    "yzhang.markdown-all-in-one",
+    "christoph.mermaid-preview"
   ],
 
   // Optional extensions (useful but not required)
@@ -24,6 +26,7 @@
 
   // Extensions that are not needed or conflict with project setup
   "unwantedRecommendations": [
+    "gitkraken.gitlens",
     // Replaced by Ruff (modern, fast linter)
     "ms-python.pylint",
     "ms-python.flake8",

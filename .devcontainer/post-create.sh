@@ -7,6 +7,16 @@ set -e
 echo "📦 Installing Python dependencies..."
 pip install -r requirements-dev.txt
 
+echo "📦 Installing CodeQL dependencies..."
+codeql pack install ./cable-modem-monitor-ql
+
+echo "📦 Installing pre-commit..."
+pip install --break-system-packages pre-commit
+
+echo "📦 Installing pre-commit hooks..."
+pre-commit install
+
+
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then
     echo "🔍 Installing CodeQL CLI..."

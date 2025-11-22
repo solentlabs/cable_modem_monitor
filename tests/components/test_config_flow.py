@@ -67,9 +67,13 @@ class TestValidateInput:
         }
 
     @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_success(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_success(self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input):
         """Test successful validation."""
+        # Mock connectivity check to succeed
+        mock_connectivity_check.return_value = (True, None)
+
         # Mock scraper to return valid data
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
@@ -85,6 +89,8 @@ class TestValidateInput:
 
         # Mock async_add_executor_job to return the data
         async def mock_executor_job(func, *args):
+            if func == mock_connectivity_check:
+                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -175,9 +181,14 @@ class TestModemNameFormatting:
         }
 
     @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_without_duplicate_manufacturer(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_title_without_duplicate_manufacturer(
+        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
+    ):
         """Test that manufacturer name is not duplicated when modem name includes it."""
+        mock_connectivity_check.return_value = (True, None)
+
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
             "cable_modem_connection_status": "online",
@@ -190,6 +201,8 @@ class TestModemNameFormatting:
         mock_scraper_class.return_value = mock_scraper
 
         async def mock_executor_job(func, *args):
+            if func == mock_connectivity_check:
+                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -200,9 +213,14 @@ class TestModemNameFormatting:
         assert result["title"] == "Motorola MB7621 (192.168.100.1)"
 
     @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_with_manufacturer_prepended(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_title_with_manufacturer_prepended(
+        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
+    ):
         """Test that manufacturer is prepended when not in modem name."""
+        mock_connectivity_check.return_value = (True, None)
+
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
             "cable_modem_connection_status": "online",
@@ -215,6 +233,8 @@ class TestModemNameFormatting:
         mock_scraper_class.return_value = mock_scraper
 
         async def mock_executor_job(func, *args):
+            if func == mock_connectivity_check:
+                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -225,9 +245,14 @@ class TestModemNameFormatting:
         assert result["title"] == "Technicolor XB7 (192.168.100.1)"
 
     @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_without_manufacturer(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_title_without_manufacturer(
+        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
+    ):
         """Test title when manufacturer is Unknown."""
+        mock_connectivity_check.return_value = (True, None)
+
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
             "cable_modem_connection_status": "online",
@@ -239,6 +264,8 @@ class TestModemNameFormatting:
         mock_scraper_class.return_value = mock_scraper
 
         async def mock_executor_job(func, *args):
+            if func == mock_connectivity_check:
+                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -249,9 +276,14 @@ class TestModemNameFormatting:
         assert result["title"] == "Generic Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
     @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_detection_info_included(self, mock_scraper_class, mock_hass, valid_input):
+    async def test_title_detection_info_included(
+        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
+    ):
         """Test that detection_info is included in result."""
+        mock_connectivity_check.return_value = (True, None)
+
         mock_scraper = Mock()
         mock_scraper.get_modem_data.return_value = {
             "cable_modem_connection_status": "online",
@@ -265,6 +297,8 @@ class TestModemNameFormatting:
         mock_scraper_class.return_value = mock_scraper
 
         async def mock_executor_job(func, *args):
+            if func == mock_connectivity_check:
+                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job

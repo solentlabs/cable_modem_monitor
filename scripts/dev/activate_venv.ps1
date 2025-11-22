@@ -15,14 +15,15 @@ if (Test-Path $activateScript) {
     Write-Host "Choose your development environment:" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Option 1: Local Python (Fastest)" -ForegroundColor Green
-    Write-Host "  Run: bash scripts/setup.sh" -ForegroundColor White
-    Write-Host "  Or: Ctrl+Shift+P -> Tasks -> 'Setup Local Python Environment'" -ForegroundColor White
+    Write-Host "  A. Use VS Code Menu: Ctrl+Shift+P -> Tasks -> 'Setup Local Python Environment'" -ForegroundColor White
+    Write-Host "  B. Or run from terminal: bash scripts/setup.sh" -ForegroundColor White
     Write-Host "  - Takes ~2 minutes" -ForegroundColor Gray
     Write-Host "  - Fastest test execution" -ForegroundColor Gray
     Write-Host "  - After setup, close and reopen this terminal" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Option 2: Dev Container (Zero Setup)" -ForegroundColor Green
-    Write-Host "  Press F1 -> 'Dev Containers: Reopen in Container'" -ForegroundColor White
+    Write-Host "  A. Use VS Code Menu: Ctrl+Shift+P -> 'Dev Containers: Reopen in Container'" -ForegroundColor White
+    Write-Host "  B. VS Code may also show a pop-up notification suggesting this." -ForegroundColor Gray
     Write-Host "  - Takes ~5 minutes first time" -ForegroundColor Gray
     Write-Host "  - All dependencies pre-installed" -ForegroundColor Gray
     Write-Host "  - Guaranteed consistency with CI" -ForegroundColor Gray

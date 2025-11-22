@@ -48,6 +48,25 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
 
+  # Shell script formatting
+  - repo: https://github.com/pecigonzalo/pre-commit-shfmt
+    rev: master
+    hooks:
+    - id: shell-fmt
+      args: ["-i", "2"]
+  - repo: https://github.com/pre-commit/mirrors-beautysh
+    rev: v1.2.1
+    hooks:
+    - id: beautysh
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: 'v4.0.0-alpha.8'
+    hooks:
+    - id: prettier
+      types: [yaml]
+
+
   # Python-specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -56,3 +75,12 @@ repos:
       - id: check-ast
       - id: check-builtin-literals
       - id: check-docstring-first
+
+  # Local hooks
+  - repo: local
+    hooks:
+      - id: codeql-test
+        name: Run CodeQL Tests
+        entry: scripts/dev/test-codeql.sh
+        language: script
+        files: \.(ql|qls)$
