@@ -339,6 +339,8 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     ) -> config_entries.ConfigFlowResult:
         """Handle validation with progress indicator."""
         if not self._validation_task:
+            if not self._user_input:
+                return self.async_abort(reason="missing_input")
             self._validation_task = self.hass.async_create_task(validate_input(self.hass, self._user_input))
 
         if not self._validation_task.done():
@@ -381,6 +383,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             return self.async_show_progress_done(next_step_id="user_with_errors")
 
         # Validation successful - complete setup
+        if not self._user_input:
+            return self.async_abort(reason="missing_input")
+
         user_input = self._user_input
         self._user_input = None
 
@@ -447,7 +452,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
                     errors["base"] = "network_unreachable"
                 else:
                     errors["base"] = "cannot_connect"
-            elif isinstance(self._validation_error, (ValueError, TypeError)):
+            elif isinstance(self._validation_error, ValueError | TypeError):
                 errors["base"] = "invalid_input"
             else:
                 errors["base"] = "unknown"
