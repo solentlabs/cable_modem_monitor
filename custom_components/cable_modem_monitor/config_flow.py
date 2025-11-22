@@ -197,6 +197,8 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
     for test_url in test_urls:
         try:
             # Quick HEAD request with short timeout
+            # Security justification: Cable modems use self-signed certificates on private LAN (192.168.x.x, 10.x.x.x)
+            # This is a pre-flight connectivity check only - actual data fetching uses proper SSL validation
             response = requests.head(test_url, timeout=2, verify=False, allow_redirects=True)
             # Any response (200, 401, 403, etc.) means modem is reachable
             _LOGGER.debug("Quick connectivity check passed: %s returned status %d", test_url, response.status_code)
