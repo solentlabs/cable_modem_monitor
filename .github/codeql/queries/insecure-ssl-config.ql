@@ -79,7 +79,8 @@ class InsecureSSLConfig extends DataFlow::Node {
    */
   predicate isDefaultConfig() {
     this.getLocation().getFile().getRelativePath().matches("%const.py") or
-    this.getLocation().getFile().getRelativePath().matches("%health_monitor.py")
+    this.getLocation().getFile().getRelativePath().matches("%health_monitor.py") or
+    this.getLocation().getFile().getRelativePath().matches("%config_flow.py")
   }
 
   /**

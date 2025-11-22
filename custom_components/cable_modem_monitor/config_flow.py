@@ -353,6 +353,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             )
 
         errors: dict[str, str] = {}
+        info: dict[str, Any] | None = None
         try:
             info = await self._validation_task
         except InvalidAuthError as err:
@@ -380,7 +381,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         finally:
             self._validation_task = None
 
-        if errors:
+        if errors or not info:
             # Return to user form with errors
             return self.async_show_progress_done(next_step_id="user_with_errors")
 
