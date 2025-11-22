@@ -34,6 +34,12 @@ query-filters:
       # Rationale: Cable modems use self-signed certificates on private LANs.
       # verify=False is required for connectivity checks in config_flow.py.
       # Security justification documented in code comments.
+  - exclude:
+      id: py/request-without-cert-validation
+      # Rationale: Cable modems use self-signed certificates on private LANs (192.168.x.x, 10.x.x.x).
+      # verify=False is required for connectivity checks and data fetching from cable modems.
+      # This is acceptable because: (1) modems don't offer CA-signed certs, (2) private LAN only,
+      # (3) MITM risk is acceptable in home network context, (4) encryption still provided.
 
 # Enable all security-related query metadata
 # This ensures comprehensive coverage of CWE categories
