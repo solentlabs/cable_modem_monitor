@@ -29,6 +29,17 @@ query-filters:
       id: py/clear-text-storage-sensitive-data
       ***REMOVED*** Rationale: Home Assistant handles credential encryption.
       ***REMOVED*** Integration uses HA's built-in secure storage.
+  - exclude:
+      id: py/insecure-ssl-config
+      ***REMOVED*** Rationale: Cable modems use self-signed certificates on private LANs.
+      ***REMOVED*** verify=False is required for connectivity checks in config_flow.py.
+      ***REMOVED*** Security justification documented in code comments.
+  - exclude:
+      id: py/request-without-cert-validation
+      ***REMOVED*** Rationale: Cable modems use self-signed certificates on private LANs (192.168.x.x, 10.x.x.x).
+      ***REMOVED*** verify=False is required for connectivity checks and data fetching from cable modems.
+      ***REMOVED*** This is acceptable because: (1) modems don't offer CA-signed certs, (2) private LAN only,
+      ***REMOVED*** (3) MITM risk is acceptable in home network context, (4) encryption still provided.
 
 ***REMOVED*** Enable all security-related query metadata
 ***REMOVED*** This ensures comprehensive coverage of CWE categories

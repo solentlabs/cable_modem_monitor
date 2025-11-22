@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED******REMOVED*** Planning
+- Future features and improvements
+- See GitHub issues and milestones for upcoming features
+
+***REMOVED******REMOVED*** [3.4.0] - 2025-11-21
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **JSON HNAP Support for Motorola MB8611** - Dual-format HNAP authentication and parsing (Fixes Issue ***REMOVED***29)
+  - New `HNAPJsonRequestBuilder` class for JSON-formatted HNAP requests
+  - MB8611 parser now tries JSON HNAP first, then falls back to XML/SOAP
+  - Fixes `SET_JSON_FORMAT_ERROR` for firmware variants that reject XML/SOAP format
+  - Enhanced error detection in authentication module for JSON error responses
+  - Automatic format detection ensures compatibility with all MB8611 firmware variants
+  - Both login and data parsing use dual-format strategy
+- **Comprehensive Test Coverage** - 20 new tests for parser improvements
+  - MB8611: 5 new tests for JSON HNAP support (login, parsing, fallback, error handling)
+  - CM600: 15 new tests covering authentication (4 tests), edge cases (6 tests), and metadata (4 tests)
+  - Validates HTTP Basic Auth configuration and behavior
+  - Tests malformed data handling and graceful error recovery
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Motorola MB8611 (HNAP) Configuration** - Resolved JSON format compatibility issue (Fixes Issue ***REMOVED***29)
+  - Modem firmware variants that respond with `SET_JSON_FORMAT_ERROR` now work correctly
+  - Parser automatically detects and uses JSON-formatted HNAP requests when XML/SOAP fails
+  - Seamless fallback ensures backward compatibility with older firmware
+  - Users no longer need to manually select different parser variants
+- **Netgear CM600 Authentication** - Fixed HTTP 401 errors on protected pages (Fixes Issue ***REMOVED***3)
+  - Enabled HTTP Basic Authentication for `/DocsisStatus.asp`, `/DashBoard.asp`, `/RouterStatus.asp`
+  - Changed `auth_required: False` to `auth_required: True` for protected endpoints
+  - Updated login() method to use AuthFactory for proper credential handling
+  - Index pages remain accessible without authentication for modem detection
+  - Parser now successfully retrieves channel data and system information
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Enhanced Authentication Error Detection** - Better diagnostics for HNAP format mismatches
+  - Authentication module now detects JSON error responses (`SET_JSON_FORMAT_ERROR`, `LoginResult:FAILED`)
+  - Warning messages suggest using JSON-formatted HNAP when XML/SOAP is rejected
+  - Improved logging helps diagnose firmware-specific authentication issues
+- **MB8611 Parser Architecture** - Refactored for dual-format support
+  - Split parsing logic into `_parse_with_json_hnap()` and `_parse_with_xml_hnap()` methods
+  - Consistent error handling across both JSON and XML/SOAP code paths
+  - Enhanced debug logging shows which format succeeded
+  - Channel count and response size logged for troubleshooting
+
+***REMOVED******REMOVED******REMOVED*** Technical Details
+- **Files Added**: `core/hnap_json_builder.py` (212 lines) - JSON HNAP request builder
+- **Files Modified**:
+  - `core/authentication.py` - Added JSON error detection (lines 396-407)
+  - `parsers/motorola/mb8611_hnap.py` - Dual-format login and parsing (lines 51-232)
+  - `parsers/netgear/cm600.py` - HTTP Basic Auth configuration (lines 43-73)
+  - `tests/parsers/motorola/test_mb8611_hnap.py` - 5 new JSON HNAP tests
+  - `tests/parsers/netgear/test_cm600.py` - 15 new authentication and edge case tests
+- **Compatibility**: No breaking changes, fully backward compatible with existing configurations
+- **Test Coverage**: Increased from 443 to 463 tests (all passing)
+
 ***REMOVED******REMOVED*** [3.3.1] - 2025-11-20
 
 ***REMOVED******REMOVED******REMOVED*** Added

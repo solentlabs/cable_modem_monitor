@@ -7,12 +7,27 @@
   // ========================================
   // Python Configuration
   // ========================================
+  //
+  // First time opening? Run: ./scripts/setup.sh
+  // Or use Dev Container: F1 → "Reopen in Container"
+  // See WORKSPACE_VS_CONTAINER.md for comparison
+  //
+  // ========================================
 
   // Path to the Python interpreter - uses .venv (cross-platform standard)
   // Using just the .venv folder path, VSCode finds the correct python executable
   // Windows: .venv\Scripts\python.exe
   // Unix: .venv/bin/python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+
+  // Disable automatic venv activation (we handle it with custom wrapper script)
+  // This prevents conflicts with our activate_venv.ps1/.sh scripts
+  "python.terminal.activateEnvironment": false,
+
+  // Workspace-level enforcement (prevents user extension conflicts)
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": false,
+  "python.formatting.provider": "none",
 
   // Enable Python linting with Ruff (modern, fast linter)
   "python.linting.enabled": true,
@@ -98,17 +113,70 @@
   "python.analysis.diagnosticMode": "workspace",
 
   // ========================================
-  // CodeQL Configuration
+  // CodeQL Configuration (Optional)
   // ========================================
+  // CodeQL is OPTIONAL - only needed for security analysis development
+  // If you don't have the CodeQL extension, you can ignore these settings
 
-  // Let the CodeQL extension manage its own CLI installation
+  // Let the CodeQL extension manage its own CLI installation (if extension is installed)
   // The project uses a local CLI at ./codeql/codeql for command-line testing
   // But the VS Code extension works best with its own managed installation
   "codeQL.cli.executablePath.updateChannel": "latest",
 
-  // Enable CodeQL test discovery
+  // Enable CodeQL test discovery (if extension is installed)
   "codeQL.runningTests.numberOfThreads": 1,
 
-  // Auto-save databases
-  "codeQL.runningQueries.autoSave": true
+  // Auto-save databases (if extension is installed)
+  "codeQL.runningQueries.autoSave": true,
+
+  // ========================================
+  // Terminal Configuration
+  // ========================================
+
+  // Automatically activate .venv (or show setup instructions if missing)
+  // Uses wrapper scripts that provide helpful guidance for new users
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell",
+      "args": [
+        "-NoExit",
+        "-File",
+        "${workspaceFolder}/scripts/dev/activate_venv.ps1"
+      ]
+    }
+  },
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash",
+      "args": [
+        "--init-file",
+        "${workspaceFolder}/scripts/dev/activate_venv.sh"
+      ]
+    }
+  },
+  "terminal.integrated.profiles.osx": {
+    "bash": {
+      "path": "bash",
+      "icon": "terminal-bash",
+      "args": [
+        "--init-file",
+        "${workspaceFolder}/scripts/dev/activate_venv.sh"
+      ]
+    },
+    "zsh": {
+      "path": "zsh",
+      "icon": "terminal",
+      "args": [
+        "-c",
+        "source ${workspaceFolder}/scripts/dev/activate_venv.sh && exec zsh"
+      ]
+    }
+  },
+
+  // Set default profiles
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.defaultProfile.osx": "zsh"
 }

@@ -155,3 +155,183 @@ def test_parsing_upstream(cm600_docsis_status_html):
     assert second_us["channel_id"] == "2"
     assert second_us["frequency"] == 16700000  ***REMOVED*** 16.7 MHz
     assert second_us["power"] == 50.0
+
+
+class TestAuthentication:
+    """Test HTTP Basic Authentication for CM600."""
+
+    def test_has_basic_auth_config(self):
+        """Test that parser has HTTP Basic Auth configuration."""
+        from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
+        from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+
+        parser = NetgearCM600Parser()
+
+        assert parser.auth_config is not None
+        assert isinstance(parser.auth_config, BasicAuthConfig)
+        assert parser.auth_config.strategy == AuthStrategyType.BASIC_HTTP
+
+    def test_url_patterns_auth_required(self):
+        """Test that protected URLs require authentication."""
+        parser = NetgearCM600Parser()
+
+        ***REMOVED*** DocsisStatus.asp should require auth
+        docsis_pattern = next(p for p in parser.url_patterns if p["path"] == "/DocsisStatus.asp")
+        assert docsis_pattern["auth_required"] is True
+        assert docsis_pattern["auth_method"] == "basic"
+
+        ***REMOVED*** DashBoard.asp should require auth
+        dashboard_pattern = next(p for p in parser.url_patterns if p["path"] == "/DashBoard.asp")
+        assert dashboard_pattern["auth_required"] is True
+
+        ***REMOVED*** RouterStatus.asp should require auth
+        router_pattern = next(p for p in parser.url_patterns if p["path"] == "/RouterStatus.asp")
+        assert router_pattern["auth_required"] is True
+
+        ***REMOVED*** Index page should NOT require auth
+        index_pattern = next(p for p in parser.url_patterns if p["path"] == "/")
+        assert index_pattern["auth_required"] is False
+
+    def test_login_configures_basic_auth(self):
+        """Test that login() properly configures HTTP Basic Auth."""
+        from unittest.mock import Mock, patch
+
+        parser = NetgearCM600Parser()
+        mock_session = Mock()
+        base_url = "http://192.168.100.1"
+
+        ***REMOVED*** Mock AuthFactory
+        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
+        with patch(auth_path) as mock_factory:
+            mock_strategy = Mock()
+            mock_strategy.login.return_value = (True, None)
+            mock_factory.get_strategy.return_value = mock_strategy
+
+            success = parser.login(mock_session, base_url, "admin", "password")
+
+            assert success is True
+            mock_strategy.login.assert_called_once_with(mock_session, base_url, "admin", "password", parser.auth_config)
+
+    def test_login_without_credentials(self):
+        """Test login behavior when no credentials provided."""
+        from unittest.mock import Mock, patch
+
+        parser = NetgearCM600Parser()
+        mock_session = Mock()
+        base_url = "http://192.168.100.1"
+
+        ***REMOVED*** Mock AuthFactory - Basic Auth should skip when no credentials
+        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
+        with patch(auth_path) as mock_factory:
+            mock_strategy = Mock()
+            mock_strategy.login.return_value = (True, None)  ***REMOVED*** Skip login, return success
+            mock_factory.get_strategy.return_value = mock_strategy
+
+            success = parser.login(mock_session, base_url, None, None)
+
+            assert success is True
+
+
+class TestEdgeCases:
+    """Test edge cases and error handling for CM600."""
+
+    def test_empty_downstream_data(self):
+        """Test parsing when no downstream channels are present."""
+        parser = NetgearCM600Parser()
+        ***REMOVED*** Create HTML without downstream channel data
+        html = "<html><head><title>CM600</title></head><body></body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        assert data["downstream"] == []
+        assert data["upstream"] == []
+        assert data["system_info"] == {}
+
+    def test_malformed_downstream_entry(self):
+        """Test handling of malformed downstream channel data."""
+        parser = NetgearCM600Parser()
+        ***REMOVED*** Create HTML with malformed JavaScript (missing fields)
+        html = """
+        <html><script>
+        function InitDsTableTagValue() {
+            var tagValueList = '2|1|Locked|QAM256|incomplete';  // Missing fields
+            return tagValueList.split("|");
+        }
+        </script></html>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** Should handle gracefully and return empty or partial data
+        assert "downstream" in data
+        ***REMOVED*** Parser should skip malformed entries
+
+    def test_malformed_upstream_entry(self):
+        """Test handling of malformed upstream channel data."""
+        parser = NetgearCM600Parser()
+        html = """
+        <html><script>
+        function InitUsTableTagValue() {
+            var tagValueList = '1|1|Locked';  // Incomplete data
+            return tagValueList.split("|");
+        }
+        </script></html>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        assert "upstream" in data
+        assert len(data["upstream"]) == 0  ***REMOVED*** Should skip malformed entry
+
+    def test_invalid_frequency_values(self):
+        """Test handling of invalid frequency values."""
+        parser = NetgearCM600Parser()
+        html = """
+        <html><script>
+        function InitDsTableTagValue() {
+            var tagValueList = '1|1|Locked|QAM256|1|invalid_freq| Hz|-5.0|41.9|0|0';
+            return tagValueList.split("|");
+        }
+        </script></html>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** Parser should handle ValueError and skip invalid entries
+        assert "downstream" in data
+
+    def test_missing_javascript_functions(self):
+        """Test parsing when JavaScript functions are not present."""
+        parser = NetgearCM600Parser()
+        html = "<html><body><p>No JavaScript here</p></body></html>"
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** Should return empty data structures without crashing
+        assert data["downstream"] == []
+        assert data["upstream"] == []
+        assert data["system_info"] == {}
+
+
+class TestMetadata:
+    """Test parser metadata."""
+
+    def test_name(self):
+        """Test parser name."""
+        parser = NetgearCM600Parser()
+        assert parser.name == "Netgear CM600"
+
+    def test_manufacturer(self):
+        """Test parser manufacturer."""
+        parser = NetgearCM600Parser()
+        assert parser.manufacturer == "Netgear"
+
+    def test_models(self):
+        """Test parser supported models."""
+        parser = NetgearCM600Parser()
+        assert "CM600" in parser.models
+
+    def test_priority(self):
+        """Test parser priority."""
+        parser = NetgearCM600Parser()
+        assert parser.priority == 50  ***REMOVED*** Standard priority

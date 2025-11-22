@@ -12,7 +12,9 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ***REMOVED******REMOVED*** Development Workflow
 
-You can develop using either Docker (recommended for beginners) or a local Python environment (recommended for advanced users).
+You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).
+
+> **📖 See [Getting Started Guide](./docs/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
 
 ***REMOVED******REMOVED******REMOVED*** Docker Development (Recommended)
 
@@ -58,7 +60,7 @@ For the best development experience, use VS Code with Dev Containers:
 - Press `F1` → "Dev Containers: Reopen in Container"
 - Wait for the container to build (2-3 minutes first time)
 
-See `.devcontainer/README.md` for detailed instructions and troubleshooting.
+See [Getting Started Guide](./docs/GETTING_STARTED.md) or [VS Code Dev Container Guide](./docs/VSCODE_DEVCONTAINER_GUIDE.md) for detailed instructions and troubleshooting.
 
 ***REMOVED******REMOVED******REMOVED******REMOVED*** Docker Commands
 
@@ -104,11 +106,13 @@ pip install -r requirements-dev.txt  ***REMOVED*** Comprehensive dev dependencie
 pre-commit install  ***REMOVED*** Install git hooks for automatic code formatting
 ```
 
-**Having environment issues?** See [docs/LOCAL_ENVIRONMENT_SETUP.md](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
-- Troubleshooting dependency conflicts
-- Pre-commit hook configuration
-- Running CI checks locally
-- Environment consistency tips
+**Having environment issues?** See [Getting Started Guide](./docs/GETTING_STARTED.md) for:
+- Comprehensive troubleshooting
+- Environment comparison and decision tree
+- Platform-specific notes
+- Switching between environments
+
+**Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py` to reset VS Code state.
 
 ***REMOVED******REMOVED******REMOVED*** 2. Write Your Code
 
@@ -462,11 +466,11 @@ python3 -m venv --help
 Run the full test suite (creates virtual environment automatically):
 
 ```bash
-./run_tests_local.sh
+./scripts/dev/run_tests_local.sh
 ```
 
 This will:
-- Create a Python virtual environment (`venv/`)
+- Create a Python virtual environment (`.venv/`)
 - Install all test dependencies
 - Run code quality checks (ruff)
 - Run all tests with pytest
@@ -479,7 +483,7 @@ This will:
 After initial setup, use the quick test script:
 
 ```bash
-./quick_test.sh
+./scripts/dev/quick_test.sh
 ```
 
 This runs tests with minimal output for rapid feedback during development.
@@ -499,8 +503,8 @@ This runs tests with minimal output for rapid feedback during development.
 
 **Recommended Workflow:**
 1. Make code changes
-2. Run `./quick_test.sh` frequently during development
-3. Run `./run_tests_local.sh` before committing
+2. Run `./scripts/dev/quick_test.sh` frequently during development
+3. Run `./scripts/dev/run_tests_local.sh` before committing
 4. Push to GitHub only when local tests pass
 
 ---
@@ -696,7 +700,7 @@ venv\Scripts\activate.bat
 
 **Solution:** Make scripts executable
 ```bash
-chmod +x run_tests_local.sh quick_test.sh
+chmod +x scripts/dev/run_tests_local.sh scripts/dev/quick_test.sh
 ```
 
 ---

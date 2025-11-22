@@ -42,11 +42,25 @@ repos:
       - id: check-json
         exclude: (devcontainer\.json|\.vscode/settings\.json)$
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        args: ["--maxkb=1000"]
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: mixed-line-ending
-        args: ['--fix=lf']
+        args: ["--fix=lf"]
+
+  ***REMOVED*** Shell script formatting
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-1
+    hooks:
+      - id: shfmt
+        args: ["-i", "2", "-ci"]
+
+  ***REMOVED*** YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v3.1.0"
+    hooks:
+      - id: prettier
+        types: [yaml]
 
   ***REMOVED*** Python-specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -56,3 +70,12 @@ repos:
       - id: check-ast
       - id: check-builtin-literals
       - id: check-docstring-first
+
+  ***REMOVED*** Local hooks
+  - repo: local
+    hooks:
+      - id: codeql-test
+        name: Run CodeQL Tests
+        entry: scripts/dev/test-codeql.sh
+        language: script
+        files: \.(ql|qls)$

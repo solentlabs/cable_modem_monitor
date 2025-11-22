@@ -2,6 +2,9 @@
 
 Quick reference for getting started with Cable Modem Monitor development.
 
+> **📖 For comprehensive setup guide:** See [Getting Started](./GETTING_STARTED.md)
+> **🔄 Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py`
+
 ***REMOVED******REMOVED*** TL;DR - Get Started in 30 Seconds
 
 ```bash
@@ -52,7 +55,7 @@ make docker-restart     ***REMOVED*** Restart after changes
 **Pros**: Full IDE integration, debugging, IntelliSense inside container
 **Cons**: Requires VS Code, initial setup time
 
-See `.devcontainer/README.md` for detailed instructions.
+See [VS Code Dev Container Guide](./VSCODE_DEVCONTAINER_GUIDE.md) for detailed instructions.
 
 ***REMOVED******REMOVED******REMOVED*** 3. Local Python (Fastest)
 
@@ -297,8 +300,8 @@ lsof -ti:8123 | xargs kill
 
 ***REMOVED******REMOVED*** Getting Help
 
-1. **Environment issues?** See [LOCAL_ENVIRONMENT_SETUP.md](./LOCAL_ENVIRONMENT_SETUP.md) for dependency troubleshooting
-2. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guides
+1. **Environment issues?** See [Getting Started Guide](./GETTING_STARTED.md) for comprehensive setup and troubleshooting
+2. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed workflow and guidelines
 3. Read [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
 4. Open a [GitHub Issue](https://github.com/kwschulz/cable_modem_monitor/issues)
 5. Ask in [GitHub Discussions](https://github.com/kwschulz/cable_modem_monitor/discussions)
@@ -310,7 +313,7 @@ lsof -ti:8123 | xargs kill
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for full development workflow
 - Check [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the codebase
 - Review [MODEM_COMPATIBILITY_GUIDE.md](./MODEM_COMPATIBILITY_GUIDE.md) for parser details
-- See [TEST_COVERAGE_SUMMARY.md](./TEST_COVERAGE_SUMMARY.md) for testing info
+- See [TEST_FIXTURE_STATUS.md](./TEST_FIXTURE_STATUS.md) for testing info
 
 ---
 

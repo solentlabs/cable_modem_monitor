@@ -1,0 +1,132 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Cable Modem Monitor"
+    }
+  ],
+  "settings": {
+    // ========================================
+    // 🚀 WORKSPACE MODE ACTIVE
+    // ========================================
+    // You're using the VSCode Workspace with local Python environment
+    // - Fastest test execution
+    // - Uses .venv on your system
+    // - Requires ./scripts/setup.sh first
+    //
+    // Want Dev Container instead?
+    // 1. Close this workspace
+    // 2. Open folder: code .
+    // 3. F1 → "Dev Containers: Reopen in Container"
+    //
+    // See WORKSPACE_VS_CONTAINER.md for comparison
+    // ========================================
+
+    // Workspace inherits from .vscode/settings.json
+    // Only add workspace-specific overrides here
+
+    // Ensure consistent Python configuration
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+
+    // Workspace-level enforcement (prevents user extension conflicts)
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": false,
+    "python.formatting.provider": "none",
+
+    // Task configuration
+    "task.quickOpen.history": 10,
+    "task.quickOpen.showAll": true
+  },
+  "extensions": {
+    "recommendations": [
+      // Python development
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "charliermarsh.ruff",
+
+      // Security and code quality
+      "github.vscode-codeql",
+
+      // Git and version control
+      "eamodio.gitlens",
+
+      // YAML (for Home Assistant configs and workflows)
+      "redhat.vscode-yaml",
+
+      // Markdown (for documentation)
+      "yzhang.markdown-all-in-one",
+
+      // DevContainers (if using the container)
+      "ms-vscode-remote.remote-containers"
+    ],
+    "unwantedRecommendations": [
+      // Replaced by Ruff
+      "ms-python.pylint",
+      "ms-python.flake8",
+      "ms-python.isort",
+      "pycqa.pylint",
+
+      // Conflicts with native Python testing
+      "littlefoxteam.vscode-python-test-adapter",
+      "hbenl.vscode-test-explorer",
+
+      // Conflicts with Black formatter
+      "ms-python.autopep8"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      // ========================================
+      // Quick Validation Tasks
+      // ========================================
+      {
+        "label": "🚀 Quick Validation (Pre-commit)",
+        "type": "shell",
+        "command": "echo '🔍 Running quick validation...' && make quick-check && make test-quick && echo '\n✅ Quick validation passed! Safe to commit.' || echo '\n❌ Validation failed. Fix issues before committing.'",
+        "group": {
+          "kind": "test",
+          "isDefault": false
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "clear": true,
+          "focus": false
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🔍 Full CI Validation",
+        "type": "shell",
+        "command": "./scripts/ci-check.sh",
+        "group": "test",
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "clear": true
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "🔌 Check Extension Conflicts",
+        "type": "shell",
+        "command": "echo '🔌 Checking VSCode extensions...' && echo 'Recommended extensions: 10' && echo 'Unwanted extensions: 7' && echo '\nIf you have conflicting extensions installed, please disable them for this workspace.' && echo 'See .vscode/extensions.json for details.'",
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated",
+          "clear": true
+        },
+        "problemMatcher": []
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      // Inherits from .vscode/launch.json
+    ]
+  }
+}

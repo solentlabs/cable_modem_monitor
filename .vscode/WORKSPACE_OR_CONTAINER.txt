@@ -1,0 +1,27 @@
+================================================================================
+WORKSPACE vs DEV CONTAINER - Quick Guide
+================================================================================
+
+YOU OPENED IN VSCODE - NOW WHAT?
+
+Option A: Use Workspace (Fast & Simple)
+  1. Close this window
+  2. Open: cable_modem_monitor.code-workspace
+  3. Run: ./scripts/setup.sh
+
+  ✅ Fast execution
+  ✅ Uses your system Python
+  ⚠️ Requires local setup
+
+Option B: Use Dev Container (Consistent & Isolated)
+  1. Press F1
+  2. Type: "Dev Containers: Reopen in Container"
+  3. Wait for build (2-3 min first time)
+
+  ✅ No local setup needed
+  ✅ Matches CI environment exactly
+  ⚠️ Slightly slower than native
+
+================================================================================
+NOT SURE? → Read docs/GETTING_STARTED.md for detailed comparison
+================================================================================

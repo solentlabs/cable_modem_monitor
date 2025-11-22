@@ -34,6 +34,9 @@ Scripts used during development and testing:
 | `setup_vscode_testing.ps1` | Configures VS Code for testing (PowerShell) | 0: Success |
 | `test_simple.sh` | Basic tests without venv (global install) | 0: Pass, 1: Fail |
 | `test-codeql.sh` | Run CodeQL query tests (requires CodeQL CLI) | 0: Pass, 1: Fail |
+| `fresh_start.py` | Reset VS Code state to test new developer experience (cross-platform) | 0: Success |
+| `fresh-start.sh` | Reset VS Code state (Linux/macOS - legacy, use .py version) | 0: Success |
+| `fresh-start.ps1` | Reset VS Code state (Windows - legacy, use .py version) | 0: Success |
 
 ***REMOVED******REMOVED******REMOVED*** `maintenance/` - Maintenance Scripts
 Scripts for maintaining the integration in production:
@@ -87,6 +90,35 @@ bash scripts/dev/test-codeql.sh
 ```
 
 > **Note:** CodeQL CLI must be installed first. See `docs/CODEQL_TESTING_GUIDE.md` for setup instructions.
+
+**Testing Fresh Developer Experience:**
+
+**Recommended (Cross-platform Python):**
+```bash
+***REMOVED*** Works on all platforms (Windows, macOS, Linux)
+python scripts/dev/fresh_start.py
+
+***REMOVED*** Then open fresh
+code .
+```
+
+**Or use VS Code Task:**
+- Press `Ctrl+Shift+P`
+- Select "Tasks: Run Task"
+- Choose "🔄 Fresh Start (Reset VS Code State)"
+- Close VS Code when prompted
+- Run `code .`
+
+**Alternative (platform-specific scripts):**
+```bash
+***REMOVED*** Linux/macOS
+./scripts/dev/fresh-start.sh
+
+***REMOVED*** Windows PowerShell
+.\scripts\dev\fresh-start.ps1
+```
+
+> **Note:** This is only needed to test onboarding. Normal development doesn't require this.
 
 ***REMOVED******REMOVED******REMOVED*** Maintenance Operations
 

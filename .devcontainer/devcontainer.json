@@ -1,4 +1,20 @@
 {
+  // ========================================
+  // 🐳 DEV CONTAINER MODE ACTIVE
+  // ========================================
+  // You're using the VSCode Dev Container (Docker-based)
+  // - Isolated environment, matches CI exactly
+  // - Zero local setup needed
+  // - Slightly slower than native
+  //
+  // Want Workspace mode instead?
+  // 1. F1 → "Dev Containers: Reopen Folder Locally"
+  // 2. Open: cable_modem_monitor.code-workspace
+  // 3. Run: ./scripts/setup.sh
+  //
+  // See WORKSPACE_VS_CONTAINER.md for comparison
+  // ========================================
+
   // Display name for the Dev Container
   "name": "Cable Modem Monitor Development",
 
@@ -31,9 +47,7 @@
         "redhat.vscode-yaml",
         "streetsidesoftware.code-spell-checker",
 
-        // CodeQL security testing
-        "github.vscode-codeql",
-        "geekmasher.codeql-scanner-vscode"
+        // CodeQL security testing (extensions removed, tests run via pre-commit)
       ],
       "settings": {
         // Use Python 3.12 inside the container
@@ -82,14 +96,8 @@
     }
   },
 
-  // Forward Home Assistant port
-  "forwardPorts": [8123],
-  "portsAttributes": {
-    "8123": {
-      "label": "Home Assistant",
-      "onAutoForward": "notify"
-    }
-  },
+  // NOTE: Port forwarding is handled by docker-compose, not by VS Code
+  // The HA container exposes port 8123 and VS Code will auto-detect it
 
   // Enable Docker-in-Docker for running docker commands inside the container
   "features": {
@@ -107,13 +115,19 @@
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
 
+  // Pass the host workspace path as an environment variable
+  // This allows docker-compose to use the correct path for volume mounts
+  "remoteEnv": {
+    "HOST_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+
   // Post-create command to install Python dependencies and CodeQL CLI
   // This runs once when the container is first created
-  "postCreateCommand": "bash -c 'pip install -r requirements-dev.txt && if ! command -v codeql &> /dev/null; then echo \"Installing CodeQL CLI...\" && wget -q https://github.com/github/codeql-cli-binaries/releases/latest/download/codeql-linux64.zip && unzip -q codeql-linux64.zip -d /usr/local && rm codeql-linux64.zip && ln -s /usr/local/codeql/codeql /usr/local/bin/codeql; fi && echo \"✅ Dev environment ready!\" && echo \"\" && echo \"📖 Quick Start:\" && echo \"  • Run tests: Press Ctrl+Shift+P → 'Tasks: Run Task' → 'Run All Tests'\" && echo \"  • Start HA: Press Ctrl+Shift+P → 'Tasks: Run Task' → 'HA: Start (Fresh)'\" && echo \"  • View all tasks: Press Ctrl+Shift+P → 'Tasks: Run Task'\" && echo \"\"'",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
-  // Post-start command to launch Home Assistant test container
+  // Post-start command to show welcome message
   // This runs every time the container starts (after reboot, etc.)
-  "postStartCommand": "bash -c 'echo \"🚀 Dev container started!\" && echo \"💡 Use VS Code Tasks to manage Home Assistant (Ctrl+Shift+P → Tasks: Run Task)\"'",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
 
   // Use root user inside the container (required for docker-in-docker)
   "remoteUser": "root"

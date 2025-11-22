@@ -24,36 +24,54 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ***REMOVED******REMOVED*** Development Setup
 
-Want to contribute? Get set up in 30 seconds:
+***REMOVED******REMOVED******REMOVED*** Quick Start (2 options)
 
+**Option 1: Local Python (Fastest)**
 ```bash
-***REMOVED*** Clone the repository
 git clone https://github.com/kwschulz/cable_modem_monitor.git
 cd cable_modem_monitor
-
-***REMOVED*** Run automated setup
-./scripts/setup.sh
-
-***REMOVED*** Verify everything works
-./scripts/verify-setup.sh
-
-***REMOVED*** You're ready! Run tests
-make test
+./scripts/setup.sh    ***REMOVED*** Installs dependencies in .venv
+code .                ***REMOVED*** Opens in VS Code - that's it!
 ```
 
-The setup script will:
-- ✅ Create Python virtual environment (.venv)
-- ✅ Install all dependencies
-- ✅ Configure pre-commit hooks (auto-format code on commit)
-- ✅ Verify your environment
+**Option 2: Dev Container (Zero setup)**
+```bash
+git clone https://github.com/kwschulz/cable_modem_monitor.git
+cd cable_modem_monitor
+code .                ***REMOVED*** Opens in VS Code
+***REMOVED*** Click "Reopen in Container" when prompted (wait 2-3 min first time)
+```
 
-**Having issues?** See the [Local Environment Setup Guide](./docs/LOCAL_ENVIRONMENT_SETUP.md) for:
-- Environment troubleshooting (dependency conflicts, import errors)
-- Pre-commit hook details
-- Running CI checks locally (`./scripts/ci-check.sh`)
-- Recommended development workflow
+**Both work identically** - choose based on preference. See [Getting Started Guide](./docs/GETTING_STARTED.md) for detailed comparison and troubleshooting.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/DEVELOPER_QUICKSTART.md](./docs/DEVELOPER_QUICKSTART.md) for detailed development guides.
+***REMOVED******REMOVED******REMOVED*** After Opening in VS Code
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** What You'll See
+
+**Notifications:**
+
+| Notification | Action |
+|--------------|--------|
+| "Dev Container configuration available..." | **Option A:** Click "Reopen in Container" (no setup needed)<br>**Option B:** Dismiss and use local Python |
+| "Install recommended extensions?" | Click **"Install"** (Python, Ruff, Black, YAML) |
+| "GitLens" or "CodeQL" | **Optional** - dismiss if you don't need them |
+
+**Terminal Window:**
+- If `.venv` doesn't exist yet, you'll see friendly setup instructions
+- Run `bash scripts/setup.sh` to set up (takes ~2 minutes)
+- After setup, close and reopen the terminal - it will auto-activate `.venv`
+
+Then validate everything works:
+```bash
+***REMOVED*** In terminal OR use VS Code task (Ctrl+Shift+P → Tasks → Quick Validation)
+make validate
+```
+
+**Having issues?** See [Getting Started Guide](./docs/GETTING_STARTED.md) for detailed troubleshooting.
+
+**Testing fresh developer experience?** Run `python scripts/dev/fresh_start.py` to reset VS Code state.
+
+Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CONTRIBUTING.md) | [Developer Quickstart](./docs/DEVELOPER_QUICKSTART.md)
 
 ---
 

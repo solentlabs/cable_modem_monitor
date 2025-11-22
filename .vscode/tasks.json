@@ -60,7 +60,7 @@
     {
       "label": "HA: Start (Fresh)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
+      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -72,7 +72,7 @@
     {
       "label": "HA: Start (Keep Data)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
+      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -130,6 +130,45 @@
       },
       "problemMatcher": []
     },
+    {
+      "label": "HA: Check Integration Status",
+      "type": "shell",
+      "command": "docker exec ha-cable-modem-test bash -c 'echo \"=== Integration Files ===\"; ls -la /config/custom_components/cable_modem_monitor/ 2>&1 | head -10; echo \"\"; echo \"=== Recent Integration Logs ===\"; grep -i cable_modem /config/home-assistant.log 2>&1 | tail -10 || echo \"No logs found (HA may not have started yet)\"'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Check if the integration is loaded and view any errors"
+    },
+    {
+      "label": "HA: Fix Port Conflicts",
+      "type": "shell",
+      "command": "bash scripts/dev/ha-cleanup.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Stop any processes using port 8123 and clean up containers"
+    },
+    {
+      "label": "HA: Diagnose Port 8123",
+      "type": "shell",
+      "command": "echo '=== Checking what is using port 8123 ===' && echo '' && echo 'Method 1: lsof' && sudo lsof -i :8123 2>/dev/null || echo 'No results from lsof' && echo '' && echo 'Method 2: netstat' && sudo netstat -tulpn 2>/dev/null | grep 8123 || echo 'No results from netstat' && echo '' && echo 'Method 3: ss' && sudo ss -tulpn 2>/dev/null | grep 8123 || echo 'No results from ss' && echo '' && echo '=== Docker containers ===' && docker ps -a && echo '' && echo '=== Docker networks ===' && docker network ls",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Show detailed info about what's using port 8123"
+    },
     // ========================================
     // Legacy Docker Tasks (for backwards compatibility)
     // ========================================
@@ -154,6 +193,129 @@
         "panel": "shared"
       },
       "problemMatcher": []
+    },
+    // ========================================
+    // Validation Tasks (Before Commit/PR)
+    // ========================================
+    {
+      "label": "🚀 Quick Validation (Pre-commit)",
+      "type": "shell",
+      "command": "echo '🔍 Running quick validation...' && echo '' && make quick-check && echo '' && make test-quick && echo '' && echo '✅ Quick validation passed! Safe to commit.' || (echo '' && echo '❌ Validation failed. Fix issues before committing.' && exit 1)",
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔍 Full CI Validation",
+      "type": "shell",
+      "command": "./scripts/ci-check.sh",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔌 Check Extension Conflicts",
+      "type": "shell",
+      "command": "echo '🔌 Checking VSCode extensions...' && echo '' && echo 'Recommended extensions: 10' && echo 'Unwanted extensions: 7' && echo '' && echo 'If you have conflicting extensions installed, please disable them for this workspace.' && echo 'See .vscode/extensions.json for details.'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🔄 Fresh Start (Reset VS Code State)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/dev/fresh_start.py",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/dev/fresh_start.py"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/c"]
+        }
+      },
+      "linux": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "osx": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Reset VS Code state to test new developer experience (testing only)"
+    },
+    {
+      "label": "⚙️ Setup Local Python Environment",
+      "type": "shell",
+      "command": "./scripts/setup.sh",
+      "windows": {
+        "command": "\"C:\\Program Files\\Git\\bin\\bash.exe\" ./scripts/setup.sh",
+        "options": {
+          "shell": {
+            "executable": "cmd.exe",
+            "args": ["/c"]
+          }
+        }
+      },
+      "linux": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "osx": {
+        "options": {
+          "shell": {
+            "executable": "/bin/bash",
+            "args": ["-c"]
+          }
+        }
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Create .venv and install all dependencies (Option 1: Local Python)"
     }
   ]
 }

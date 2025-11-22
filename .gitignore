@@ -16,6 +16,7 @@ __pycache__/
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/tasks.json
+!.vscode/README.md
 .idea/
 .DS_Store
 .claude/

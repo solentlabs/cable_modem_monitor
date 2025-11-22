@@ -112,23 +112,59 @@ if [ -d "venv" ]; then
 fi
 
 ***REMOVED*** Step 4: Create virtual environment
-if [ ! -d ".venv" ]; then
-    print_step "Creating virtual environment..."
+***REMOVED*** Detect expected pip location based on platform
+if [ -d ".venv/Scripts" ] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+    ***REMOVED*** Windows
+    EXPECTED_PIP=".venv/Scripts/pip.exe"
+    PIP_CMD=".venv/Scripts/pip.exe"
+    PRECOMMIT_CMD=".venv/Scripts/pre-commit.exe"
+else
+    ***REMOVED*** Linux/macOS
+    EXPECTED_PIP=".venv/bin/pip"
+    PIP_CMD=".venv/bin/pip"
+    PRECOMMIT_CMD=".venv/bin/pre-commit"
+fi
+
+***REMOVED*** Check if venv exists and is valid
+if [ -d ".venv" ] && [ -f "$EXPECTED_PIP" ]; then
+    print_success "Virtual environment already exists"
+    echo ""
+elif [ -d ".venv" ]; then
+    ***REMOVED*** venv directory exists but is incomplete - recreate it
+    print_warning "Virtual environment is incomplete, recreating..."
+
+    ***REMOVED*** Try to remove with error handling for Windows file locking
+    if rm -rf .venv 2>/dev/null; then
+        print_success "Removed incomplete venv"
+    else
+        print_error "Cannot remove .venv (files are locked)"
+        echo ""
+        echo "This happens when VS Code or another process is using the venv."
+        echo ""
+        echo "Solutions:"
+        if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [ -d ".venv/Scripts" ]; then
+            echo "  1. Close ALL VS Code windows"
+            echo "  2. Open PowerShell/Command Prompt (NOT VS Code)"
+            echo "  3. Run: Remove-Item -Recurse -Force .venv"
+            echo "  4. Run this setup again"
+        else
+            echo "  1. Close VS Code"
+            echo "  2. Run: rm -rf .venv"
+            echo "  3. Run this setup again"
+        fi
+        echo ""
+        exit 1
+    fi
+
     $PYTHON_CMD -m venv .venv
     print_success "Virtual environment created"
     echo ""
 else
-    print_success "Virtual environment already exists"
+    ***REMOVED*** No venv - create it
+    print_step "Creating virtual environment..."
+    $PYTHON_CMD -m venv .venv
+    print_success "Virtual environment created"
     echo ""
-fi
-
-***REMOVED*** Detect pip location (cross-platform)
-if [ -f ".venv/Scripts/pip.exe" ]; then
-    PIP_CMD=".venv/Scripts/pip.exe"
-    PRECOMMIT_CMD=".venv/Scripts/pre-commit.exe"
-else
-    PIP_CMD=".venv/bin/pip"
-    PRECOMMIT_CMD=".venv/bin/pre-commit"
 fi
 
 ***REMOVED*** Step 5: Upgrade pip

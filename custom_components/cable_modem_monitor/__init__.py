@@ -100,6 +100,19 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
             data["http_latency_ms"] = health_result.http_latency_ms
             data["consecutive_failures"] = health_monitor.consecutive_failures
 
+            ***REMOVED*** Create indexed lookups for O(1) channel access (performance optimization)
+            ***REMOVED*** This prevents O(n) linear searches in each sensor's native_value property
+            if "cable_modem_downstream" in data:
+                data["_downstream_by_id"] = {
+                    int(ch.get("channel_id", ch.get("channel", idx + 1))): ch
+                    for idx, ch in enumerate(data["cable_modem_downstream"])
+                }
+            if "cable_modem_upstream" in data:
+                data["_upstream_by_id"] = {
+                    int(ch.get("channel_id", ch.get("channel", idx + 1))): ch
+                    for idx, ch in enumerate(data["cable_modem_upstream"])
+                }
+
             return data
         except Exception as err:
             ***REMOVED*** If scraper fails but health check succeeded, return partial data

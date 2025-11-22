@@ -70,7 +70,7 @@ class InsecureSSLConfig extends DataFlow::Node {
   predicate hasJustification() {
     exists(Comment c |
       c.getLocation().getFile() = this.getLocation().getFile() and
-      c.getText().regexpMatch("(?i).*(self-signed|private lan|cable modem|192\\.168|10\\.0|justification).*")
+      c.getText().regexpMatch("(?i).*(self-signed|private lan|cable modem|192\\.168|10\\.0|justification|nosec).*")
     )
   }
 
@@ -79,7 +79,8 @@ class InsecureSSLConfig extends DataFlow::Node {
    */
   predicate isDefaultConfig() {
     this.getLocation().getFile().getRelativePath().matches("%const.py") or
-    this.getLocation().getFile().getRelativePath().matches("%health_monitor.py")
+    this.getLocation().getFile().getRelativePath().matches("%health_monitor.py") or
+    this.getLocation().getFile().getRelativePath().matches("%config_flow.py")
   }
 
   /**

@@ -1,31 +1,43 @@
 {
   // Recommended VS Code extensions for Cable Modem Monitor development
+  // These are ESSENTIAL for development
   "recommendations": [
-    // Python development
+    // Python development (required)
     "ms-python.python",
     "ms-python.vscode-pylance",
     "ms-python.black-formatter",
     "charliermarsh.ruff",
 
-    // Security and code quality
-    "github.vscode-codeql",
-
-    // Git and version control
-    "eamodio.gitlens",
-
-    // YAML (for Home Assistant configs and workflows)
+    // YAML support (required for HA configs)
     "redhat.vscode-yaml",
 
-    // Markdown (for documentation)
+    // Dev Container support (only needed if using containers)
+    "ms-vscode-remote.remote-containers",
     "yzhang.markdown-all-in-one",
-
-    // DevContainers (if using the container)
-    "ms-vscode-remote.remote-containers"
+    "christoph.mermaid-preview"
   ],
+
+  // Optional extensions (useful but not required)
+  // Install these manually if you want them - they won't auto-prompt
+  // - eamodio.gitlens (enhanced Git features)
+  // - github.vscode-codeql (security analysis)
+  // - yzhang.markdown-all-in-one (markdown editing)
+
 
   // Extensions that are not needed or conflict with project setup
   "unwantedRecommendations": [
-    "ms-python.pylint",  // Using Ruff instead
-    "littlefoxteam.vscode-python-test-adapter"  // Conflicts with native Python test support
+    "gitkraken.gitlens",
+    // Replaced by Ruff (modern, fast linter)
+    "ms-python.pylint",
+    "ms-python.flake8",
+    "ms-python.isort",
+    "pycqa.pylint",
+
+    // Conflicts with native Python testing
+    "littlefoxteam.vscode-python-test-adapter",
+    "hbenl.vscode-test-explorer",
+
+    // Conflicts with Black formatter
+    "ms-python.autopep8"
   ]
 }
