@@ -105,16 +105,19 @@ These models have test coverage and confirmed working by users:
 - **Motorola MB7621** - Full support
 - **Technicolor XB7 (CGM4331COM)** - Full support (system info enhancements complete)
 
-***REMOVED******REMOVED******REMOVED*** 🔧 Partial Support / Known Issues
+***REMOVED******REMOVED******REMOVED*** 🔧 Recently Fixed / Updated
+- **Motorola MB8611** - Full support with dual-format HNAP (JSON + XML/SOAP) - Fixed in v3.4.0
+- **Netgear CM600** - Full support with HTTP Basic Auth - Fixed in v3.4.0
+
+***REMOVED******REMOVED******REMOVED*** 🔄 Under Investigation
 Parsers exist but have known limitations:
 
-- **Motorola MB8611** - Parser exists, but still needs more analysis for full HNAP/SOAP support.
 - **Technicolor TC4400** - Parser exists, investigating entity availability issues ([Issue ***REMOVED***1](https://github.com/kwschulz/cable_modem_monitor/issues/1))
 
 ***REMOVED******REMOVED******REMOVED*** 📋 Requested Models
 Community members have requested support for these models:
 
-- **Netgear CM600** - Awaiting HTML samples ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3))
+- **Netgear CM1000** - Awaiting diagnostics data ([Issue ***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32))
 
 ***REMOVED******REMOVED******REMOVED*** ℹ️ Motorola Generic Parser
 A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that use standard HTML pages (not HNAP/SOAP). Try "auto" detection during setup.
@@ -123,14 +126,26 @@ A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that us
 
 If your modem isn't fully supported or you'd like to help expand compatibility:
 
-1.  **Capture HTML Samples**: Provide us with the HTML source from your modem's status pages. This is crucial for building new parsers.
-    *   See the [HTML Capture Guide](./docs/HTML_CAPTURE_GUIDE.md) for detailed instructions on how to safely capture and share HTML.
-2.  **Open a GitHub Issue**: Create an issue with your modem model and attach the captured HTML samples.
-    *   This helps us prioritize and implement support for your modem.
+***REMOVED******REMOVED******REMOVED*** Easy Way: Built-in Diagnostics (Recommended)
+
+1. **Install the integration** with your modem's IP address
+2. **Go to Settings → Devices & Services → Cable Modem Monitor**
+3. **Click the device**, then **Download Diagnostics**
+4. **Open a GitHub Issue** with your modem model and attach the diagnostics file
+
+The diagnostics file automatically captures all the HTML pages we need to build a parser for your modem!
+
+***REMOVED******REMOVED******REMOVED*** Manual Way: Capture HTML (If needed)
+
+If the built-in diagnostics don't work for some reason:
+
+1. **Capture HTML Samples**: Provide us with the HTML source from your modem's status pages
+   - See the [HTML Capture Guide](./docs/HTML_CAPTURE_GUIDE.md) for detailed instructions
+2. **Open a GitHub Issue**: Create an issue with your modem model and attach the captured HTML samples
 
 **Your contribution helps everyone with the same modem model!**
 
-**Have a different modem?** This integration uses a plugin architecture that makes adding new models easy. Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
+**Want to develop the parser yourself?** This integration uses a plugin architecture that makes adding new models easy. See the [Contributing Guide](./CONTRIBUTING.md) for details on how to add support for your modem.
 
 
 
