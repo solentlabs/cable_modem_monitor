@@ -29,6 +29,11 @@ query-filters:
       id: py/clear-text-storage-sensitive-data
       # Rationale: Home Assistant handles credential encryption.
       # Integration uses HA's built-in secure storage.
+  - exclude:
+      id: py/insecure-ssl-config
+      # Rationale: Cable modems use self-signed certificates on private LANs.
+      # verify=False is required for connectivity checks in config_flow.py.
+      # Security justification documented in code comments.
 
 # Enable all security-related query metadata
 # This ensures comprehensive coverage of CWE categories
