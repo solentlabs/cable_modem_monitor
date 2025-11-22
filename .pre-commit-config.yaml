@@ -42,30 +42,25 @@ repos:
       - id: check-json
         exclude: (devcontainer\.json|\.vscode/settings\.json)$
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        args: ["--maxkb=1000"]
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: mixed-line-ending
-        args: ['--fix=lf']
+        args: ["--fix=lf"]
 
   # Shell script formatting
-  - repo: https://github.com/pecigonzalo/pre-commit-shfmt
-    rev: master
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-1
     hooks:
-    - id: shell-fmt
-      args: ["-i", "2"]
-  - repo: https://github.com/pre-commit/mirrors-beautysh
-    rev: v1.2.1
-    hooks:
-    - id: beautysh
+      - id: shfmt
+        args: ["-i", "2", "-ci"]
 
   # YAML formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: 'v4.0.0-alpha.8'
+    rev: "v3.1.0"
     hooks:
-    - id: prettier
-      types: [yaml]
-
+      - id: prettier
+        types: [yaml]
 
   # Python-specific checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
