@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Future features and improvements
 - See GitHub issues and milestones for upcoming features
 
+***REMOVED******REMOVED*** [3.4.1] - 2025-11-22
+
+***REMOVED******REMOVED******REMOVED*** Enhanced
+- **Connectivity Check Diagnostics** - Significantly improved troubleshooting for modem connection issues
+  - Added detailed timing information for each connection attempt (shows actual elapsed time vs timeout)
+  - Logs now show which protocol (HTTP/HTTPS) and method (HEAD/GET) is being tried
+  - Added GET request fallback when HEAD requests timeout (some modems don't support HEAD)
+  - Comprehensive diagnostic messages now included in error output
+  - Changed logging level from DEBUG to INFO/WARNING for better visibility
+  - Each failure now reports: protocol, method, elapsed time, exception type, and error details
+  - Error messages now include diagnostic summary to help identify root cause
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Connectivity Check Timeout** - Increased from 2s to 10s (Addresses Issue ***REMOVED***3)
+  - Aligns pre-flight connectivity check with main scraper timeout (10s)
+  - More accommodating for slower-responding modems
+  - Reduces false "network_unreachable" errors during setup
+  - Particularly helpful for modems like Netgear CM600 that may need more time
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Test Coverage** - Enhanced connectivity check testing
+  - New test validates GET fallback behavior when HEAD requests timeout
+  - Existing test updated to verify 10-second timeout configuration
+  - Tests ensure both HEAD and GET methods work correctly with proper timeout
+
+***REMOVED******REMOVED******REMOVED*** Technical Details
+- **Files Modified**:
+  - `custom_components/cable_modem_monitor/config_flow.py` - Enhanced `_do_quick_connectivity_check()` with:
+    - Timing measurement for all requests
+    - GET fallback logic after HEAD timeout
+    - Structured diagnostic info collection
+    - Better logging at INFO/WARNING levels instead of DEBUG
+  - `tests/components/test_config_flow.py` - Added GET fallback test case
+  - `custom_components/cable_modem_monitor/const.py` - Version bump to 3.4.1
+  - `custom_components/cable_modem_monitor/manifest.json` - Version bump to 3.4.1
+
+***REMOVED******REMOVED******REMOVED*** Benefits for Issue ***REMOVED***3
+This release provides extensive diagnostic information to help understand why the Netgear CM600 (and other modems) might fail connectivity checks:
+- Identifies if it's a timeout issue vs connection refused vs other errors
+- Shows if HTTP vs HTTPS makes a difference
+- Reveals if HEAD requests aren't supported (fixed by GET fallback)
+- Provides timing data to understand modem response characteristics
+- All diagnostic details appear in Home Assistant logs for troubleshooting
+
 ***REMOVED******REMOVED*** [3.4.0] - 2025-11-21
 
 ***REMOVED******REMOVED******REMOVED*** Added

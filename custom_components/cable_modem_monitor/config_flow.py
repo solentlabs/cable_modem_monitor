@@ -181,6 +181,8 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
         - (True, None) if modem responds to HTTP request
         - (False, error_message) if unreachable with specific reason
     """
+    import time
+
     import requests
 
     ***REMOVED*** Determine base URL - try HTTPS first like main scraper
@@ -194,33 +196,84 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
 
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+    _LOGGER.info("Starting connectivity check for %s (trying %d URL(s))", host, len(test_urls))
+
+    diagnostic_info = []
+    timeout_value = 10
+
     for test_url in test_urls:
+        protocol = "HTTPS" if test_url.startswith("https://") else "HTTP"
+        _LOGGER.info("Trying %s with HEAD request (timeout=%ds)...", test_url, timeout_value)
+        start_time = time.time()
+
         try:
-            ***REMOVED*** Quick HEAD request with short timeout
+            ***REMOVED*** Try HEAD request first (faster, less intrusive)
             ***REMOVED*** Security justification: Cable modems use self-signed certificates on private LAN (192.168.x.x, 10.x.x.x)
             ***REMOVED*** This is a pre-flight connectivity check only - actual data fetching uses proper SSL validation
             response = requests.head(
-                test_url, timeout=2, verify=False, allow_redirects=True
+                test_url, timeout=timeout_value, verify=False, allow_redirects=True
             )  ***REMOVED*** nosec: cable modem self-signed cert
+            elapsed = time.time() - start_time
             ***REMOVED*** Any response (200, 401, 403, etc.) means modem is reachable
-            _LOGGER.debug("Quick connectivity check passed: %s returned status %d", test_url, response.status_code)
+            _LOGGER.info(
+                "✓ Connectivity check PASSED: %s returned HTTP %d in %.2fs", test_url, response.status_code, elapsed
+            )
             return True, None
-        except requests.exceptions.Timeout:
-            _LOGGER.debug("Quick connectivity check timeout for %s", test_url)
-            continue
+        except requests.exceptions.Timeout as e:
+            elapsed = time.time() - start_time
+            msg = f"{protocol} HEAD request timed out after {elapsed:.2f}s (timeout={timeout_value}s)"
+            _LOGGER.warning("%s: %s - %s", test_url, msg, str(e))
+            diagnostic_info.append(msg)
+
+            ***REMOVED*** Try GET as fallback - some modems don't support HEAD
+            _LOGGER.info("Retrying %s with GET request as fallback...", test_url)
+            start_time = time.time()
+            try:
+                response = requests.get(
+                    test_url, timeout=timeout_value, verify=False, allow_redirects=True
+                )  ***REMOVED*** nosec: cable modem self-signed cert
+                elapsed = time.time() - start_time
+                _LOGGER.info(
+                    "✓ Connectivity check PASSED (GET fallback): %s returned HTTP %d in %.2fs",
+                    test_url,
+                    response.status_code,
+                    elapsed,
+                )
+                return True, None
+            except requests.exceptions.Timeout as e2:
+                elapsed = time.time() - start_time
+                msg = f"{protocol} GET request also timed out after {elapsed:.2f}s"
+                _LOGGER.warning("%s: %s - %s", test_url, msg, str(e2))
+                diagnostic_info.append(msg)
+                continue
+            except Exception as e2:
+                elapsed = time.time() - start_time
+                msg = f"{protocol} GET fallback failed after {elapsed:.2f}s: {type(e2).__name__}"
+                _LOGGER.warning("%s: %s - %s", test_url, msg, str(e2))
+                diagnostic_info.append(msg)
+                continue
+
         except requests.exceptions.ConnectionError as e:
-            _LOGGER.debug("Quick connectivity check connection error for %s: %s", test_url, e)
+            elapsed = time.time() - start_time
+            msg = f"{protocol} connection error after {elapsed:.2f}s: {type(e).__name__}"
+            _LOGGER.warning("%s: %s - %s", test_url, msg, str(e))
+            diagnostic_info.append(msg)
             continue
         except Exception as e:
-            _LOGGER.debug("Quick connectivity check failed for %s: %s", test_url, e)
+            elapsed = time.time() - start_time
+            msg = f"{protocol} request failed after {elapsed:.2f}s: {type(e).__name__}"
+            _LOGGER.warning("%s: %s - %s", test_url, msg, str(e))
+            diagnostic_info.append(msg)
             continue
 
-    ***REMOVED*** All attempts failed
+    ***REMOVED*** All attempts failed - provide detailed diagnostic info
+    _LOGGER.error("✗ Connectivity check FAILED for %s. Diagnostic details: %s", host, " | ".join(diagnostic_info))
     error_msg = (
         f"Cannot reach modem at {host}. "
         f"Please check: (1) Network connection - ensure you're on the correct network, "
         f"not on guest WiFi or VPN. (2) Modem IP address is correct. "
-        f"(3) Modem web interface is enabled."
+        f"(3) Modem web interface is enabled.\n\n"
+        f"Diagnostic details: {' | '.join(diagnostic_info)}"
     )
     return False, error_msg
 
