@@ -219,21 +219,31 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
                 "✓ Connectivity check PASSED: %s returned HTTP %d in %.2fs", test_url, response.status_code, elapsed
             )
             return True, None
-        except requests.exceptions.Timeout as e:
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            # BUG FIX (v3.4.0): Some modems (e.g., Netgear C3700 with "PS HTTP Server") reject
+            # HTTP HEAD requests with "Connection reset by peer" (ConnectionError).
+            # Previously only caught Timeout, missing ConnectionError cases.
+            # Now we catch BOTH and try GET fallback for either exception type.
             elapsed = time.time() - start_time
-            msg = f"{protocol} HEAD request timed out after {elapsed:.2f}s (timeout={timeout_value}s)"
+            error_type = "timed out" if isinstance(e, requests.exceptions.Timeout) else "connection error"
+            msg = f"{protocol} HEAD request {error_type} after {elapsed:.2f}s"
+            if isinstance(e, requests.exceptions.Timeout):
+                msg += f" (timeout={timeout_value}s)"
+            else:
+                msg += f": {type(e).__name__}"
             _LOGGER.warning("%s: %s - %s", test_url, msg, str(e))
             diagnostic_info.append(msg)
 
-            # Try GET as fallback - some modems don't support HEAD
-            _LOGGER.info("Retrying %s with GET request as fallback...", test_url)
+            # Try GET as fallback - some modems don't support HEAD or reject HEAD requests
+            # This is critical for modems that return ConnectionError on HEAD requests
+            _LOGGER.warning("Retrying %s with GET request as fallback...", test_url)
             start_time = time.time()
             try:
                 response = requests.get(
                     test_url, timeout=timeout_value, verify=False, allow_redirects=True
                 )  # nosec: cable modem self-signed cert
                 elapsed = time.time() - start_time
-                _LOGGER.info(
+                _LOGGER.warning(
                     "✓ Connectivity check PASSED (GET fallback): %s returned HTTP %d in %.2fs",
                     test_url,
                     response.status_code,
@@ -252,13 +262,6 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
                 _LOGGER.warning("%s: %s - %s", test_url, msg, str(e2))
                 diagnostic_info.append(msg)
                 continue
-
-        except requests.exceptions.ConnectionError as e:
-            elapsed = time.time() - start_time
-            msg = f"{protocol} connection error after {elapsed:.2f}s: {type(e).__name__}"
-            _LOGGER.warning("%s: %s - %s", test_url, msg, str(e))
-            diagnostic_info.append(msg)
-            continue
         except Exception as e:
             elapsed = time.time() - start_time
             msg = f"{protocol} request failed after {elapsed:.2f}s: {type(e).__name__}"
@@ -285,11 +288,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     _validate_host_format(host)
 
     # Quick connectivity pre-check (run in executor to avoid blocking)
-    _LOGGER.info("Performing quick connectivity check to %s", host)
+    # NOTE: Using WARNING level instead of INFO for visibility (HA default log level is WARNING)
+    # This helps users and developers debug setup issues without enabling debug logging
+    _LOGGER.warning("Performing quick connectivity check to %s", host)
     is_reachable, error_msg = await hass.async_add_executor_job(_do_quick_connectivity_check, host)
     if not is_reachable:
         _LOGGER.error("Quick connectivity check failed: %s", error_msg)
         raise CannotConnectError(error_msg)
+    _LOGGER.warning("Quick connectivity check PASSED for %s", host)
 
     # Get parsers and select appropriate one(s)
     all_parsers = await hass.async_add_executor_job(get_parsers)
@@ -298,6 +304,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     )
 
     # Create scraper
+    _LOGGER.warning("Creating scraper for %s", host)
     scraper = ModemScraper(
         host,
         data.get(CONF_USERNAME),
@@ -309,12 +316,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     )
 
     # Connect and validate
-    _LOGGER.info("Attempting to connect to modem at %s", host)
+    _LOGGER.warning("Attempting to connect to modem at %s", host)
     await _connect_to_modem(hass, scraper)
 
     # Get detection info and create title
     detection_info = scraper.get_detection_info()
-    _LOGGER.info("Detection successful: %s", detection_info)
+    _LOGGER.warning("Detection successful: %s", detection_info)
     title = _create_title(detection_info, host)
 
     return {
@@ -334,6 +341,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         self._user_input: dict[str, Any] | None = None
         self._validation_task: Any = None
         self._validation_error: Exception | None = None
+        self._validation_info: dict[str, Any] | None = None  # Added v3.4.0 for progress flow fix
 
     @staticmethod
     @callback
@@ -440,12 +448,36 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             # Return to user form with errors
             return self.async_show_progress_done(next_step_id="user_with_errors")
 
-        # Validation successful - complete setup
-        if not self._user_input:
+        # BUG FIX (v3.4.0): Home Assistant progress flow state machine fix
+        # CRITICAL: Must call async_show_progress_done() before creating entry
+        # State machine requires: progress -> progress_done -> final_step
+        # Previously tried to create entry directly, causing:
+        # "ValueError: Show progress can only transition to show progress or show progress done"
+
+        # Store validation info for next step (data is lost between flow steps)
+        self._validation_info = info
+        # Validation successful - show progress done before completing
+        return self.async_show_progress_done(next_step_id="validate_success")
+
+    async def async_step_validate_success(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Complete the setup after validation succeeds.
+
+        BUG FIX (v3.4.0): This separate step is required by HA's progress flow API.
+        After async_show_progress_done() is called, we transition to this step
+        to actually create the config entry. This fixes the state machine violation
+        that caused spinning/hanging during integration setup.
+        """
+        if not self._user_input or not self._validation_info:
             return self.async_abort(reason="missing_input")
 
         user_input = self._user_input
+        info = self._validation_info
+
+        # Clear stored data
         self._user_input = None
+        self._validation_info = None
 
         # Set unique ID to prevent duplicate entries
         await self.async_set_unique_id(user_input[CONF_HOST])
@@ -469,7 +501,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
             # If user selected "auto", update the choice to show what was detected
             if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
-                _LOGGER.info(
+                _LOGGER.warning(
                     "Auto-detection successful: updating modem_choice from 'auto' to '%s'", detected_modem_name
                 )
                 user_input[CONF_MODEM_CHOICE] = detected_modem_name

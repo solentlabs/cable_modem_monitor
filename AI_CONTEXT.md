@@ -20,6 +20,80 @@
   - **Current State**: Icon now showing in HACS
 - **HACS**: Available as custom repository, icon displaying properly
 
+## Known Issues & Solutions
+
+### Config Flow: Network Connectivity Check (Fixed in v3.4.0)
+
+**Problem:** Some cable modems (e.g., Netgear C3700, modems with "PS HTTP Server") reject HTTP HEAD requests with "Connection reset by peer" (errno 104), causing `network_unreachable` errors during integration setup.
+
+**Root Cause:**
+- The connectivity check in `config_flow.py:_do_quick_connectivity_check()` only tried GET as a fallback for `Timeout` exceptions
+- When modems reject HEAD requests with `ConnectionError` (connection reset), the code didn't try GET fallback
+- Result: Reachable modems appeared unreachable during setup
+
+**Solution Applied:**
+```python
+# BEFORE (Bug - only handles Timeout):
+except requests.exceptions.Timeout as e:
+    # Try GET as fallback
+
+# AFTER (Fixed - handles both Timeout and ConnectionError):
+except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+    # Try GET as fallback - some modems don't support HEAD or reject HEAD requests
+```
+
+**Testing:** Modems known to reject HEAD requests:
+- Netgear C3700-100NAS (PS HTTP Server)
+- Any modem returning "Connection aborted" on HEAD requests
+
+**Location:** `custom_components/cable_modem_monitor/config_flow.py:222`
+
+### Config Flow: Progress State Machine (Fixed in v3.4.0)
+
+**Problem:** Integration setup would hang with a spinning progress indicator. When canceled, the integration would appear (indicating validation succeeded), but trying to add it again would hang. Logs showed: `ValueError: Show progress can only transition to show progress or show progress done.`
+
+**Root Cause:**
+- Home Assistant's config flow progress API requires explicit state transitions
+- After validation completed, code tried to create entry directly without calling `async_show_progress_done()`
+- This violated the state machine: `progress` → `progress_done` → `final_step`
+- Additionally, validation info was lost between steps
+
+**Solution Applied:**
+1. Split validation into two steps:
+   - `async_step_validate`: Runs validation, stores results, calls `async_show_progress_done()`
+   - `async_step_validate_success`: Retrieves stored results, creates entry
+2. Added `self._validation_info` to preserve validation results between steps
+3. Proper state transition: `validate` → `validate_success`
+
+**Code Pattern:**
+```python
+# In async_step_validate - after validation succeeds:
+self._validation_info = info  # Store results
+return self.async_show_progress_done(next_step_id="validate_success")
+
+# In async_step_validate_success - retrieve and use:
+info = self._validation_info
+self._validation_info = None  # Clear
+return self.async_create_entry(title=info["title"], data=user_input)
+```
+
+**Location:** `custom_components/cable_modem_monitor/config_flow.py:394-490`
+
+**Reference:** Home Assistant config flow documentation requires `async_show_progress_done()` before final step.
+
+### Logging Visibility in Home Assistant
+
+**Issue:** Home Assistant default log level is WARNING, so `_LOGGER.info()` messages don't appear in logs, making debugging difficult.
+
+**Solution:** For important setup/validation steps, use `_LOGGER.warning()` instead of `_LOGGER.info()` to ensure visibility without enabling debug logging.
+
+**Affected Code:**
+- Connectivity check progress messages
+- Validation step progress messages
+- Detection success messages
+
+**Best Practice:** Use WARNING for user-facing diagnostic messages, INFO for normal operation details.
+
 ## Development Workflow Rules
 
 ### Before Pushing to GitHub
