@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
@@ -121,6 +122,44 @@ class TestValidateInput:
 
         with pytest.raises(CannotConnectError):
             await validate_input(mock_hass, valid_input)
+
+    @pytest.mark.asyncio
+    @patch("requests.head")
+    async def test_quick_connectivity_check_timeout(self, mock_requests_head, mock_hass, valid_input):
+        """Test that the quick connectivity check uses the correct timeout."""
+        # Mock requests.head to simulate a successful connection
+        mock_requests_head.return_value.status_code = 200
+
+        # Mock async_add_executor_job to call the function
+        async def mock_executor_job(func, *args):
+            # Since we are in an async context, we need to handle both coroutines and regular functions
+            if asyncio.iscoroutinefunction(func):
+                return await func(*args)
+            else:
+                return func(*args)
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        # We need to patch the rest of the validation to isolate the connectivity check
+        with (
+            patch("custom_components.cable_modem_monitor.config_flow.get_parsers"),
+            patch("custom_components.cable_modem_monitor.config_flow.ModemScraper") as mock_scraper_class,
+        ):
+            mock_scraper = Mock()
+            mock_scraper.get_modem_data.return_value = {
+                "cable_modem_software_version": "1.0.0",
+                "cable_modem_connection_status": "online",
+            }
+            mock_scraper.get_detection_info.return_value = {
+                "modem_name": "Cable Modem",
+                "manufacturer": "Unknown",
+            }
+            mock_scraper_class.return_value = mock_scraper
+            await validate_input(mock_hass, valid_input)
+
+        # Assert that requests.head was called with a timeout of 10
+        # The check will try https first
+        mock_requests_head.assert_called_with("https://192.168.100.1", timeout=10, verify=False, allow_redirects=True)
 
     def test_requires_host(self, valid_input):
         """Test that host is required."""
