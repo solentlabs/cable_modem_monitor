@@ -1,0 +1,278 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function check_restore()
+{
+	if(document.forms[0].mtenRestoreCfg.value.length == 0)
+	{
+		alert("File name cannot be blank.");
+		return false;
+	}
+	if(confirm("Warning! \nRestoring settings from a configuration file will erase all of the current settings. \nAre you sure you want to do this?"))
+		return true;
+	else
+		return false;
+}
+
+function InitTagValue()
+{
+/*
+  Backup Filename (text)
+*/
+    //var tagValueList = "GatewaySettings1.bin";
+    //var tagValueList = "GatewaySettings2.bin";
+    var tagValueList = 'NETGEAR_C3700-100NAS.cfg';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Backup Filename (text) */
+    document.getElementById("Backup").onclick = new Function("window.location.href = '" + tagValues[0] + "'");
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+//-->
+</script>
+</head>
+<body onload="BodyInit();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <div class="subhead2">
+            Backup Settings
+        </div>
+        <table border="0" style="height:370px" class="subhead2-table">
+            <tr>
+                <td class="scrollpane-table-seperate-border" colspan="2">
+                    <div class="scroll-pane" style="height:410px;width:620px;overflow:auto;scrolling:auto">
+                        <table style="border-collapse:collapse;width:600px">
+                            <tr>
+                                <td colspan="2" style="height:12px">
+                                    <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                        &nbsp;
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">
+                                    <a href="javascript:loadhelp('BackupSettings','save')"><b>Save a copy of current settings</b></a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" align="center">
+                                    &nbsp;&nbsp;&nbsp;
+                                    <button type="BUTTON" value=" Back Up " name="Backup" id="Backup" class="button-rule" onclick="buttonClick(this,' Back Up ');window.location.href = '';">
+                                        <span class="roundleft_button">
+                                            &nbsp;&nbsp; Back Up
+                                        </span>
+                                        <span class="roundright_button">
+                                            &nbsp;&nbsp;&nbsp;&nbsp;
+                                        </span>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="height:12px">
+                                    <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                        &nbsp;
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">
+                                    <a href="javascript:loadhelp('BackupSettings','restore')"><b>Restore saved settings from a file</b></a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" align="left">
+                                    <form id="target" method="POST" action='/goform/BackupSettings?id=780557778' ENCTYPE="multipart/form-data">
+                                        <!--input type="file" name="mtenRestoreCfg" id="file" size="20" maxlength="1024"
+                                        style="position:absolute;opacity:0;filter:alpha(opacity=0);" onchange="document.getElementById('upfile').value=this.value.substr(this.value.lastIndexOf('\\')+1);"
+                                        contenteditable="false" onkeydown="return false;" onbeforeeditfocus="return false;"
+                                        onpaste="return false;"/-->
+                                        <input type="file" name="mtenRestoreCfg" id="file" size="20" maxlength="1024" style="position:absolute;opacity:0;filter:alpha(opacity=0);"
+                                        onchange="document.getElementById('upfile').value=this.value.substr(this.value.lastIndexOf('\\')+1);"
+                                        onkeydown="return false;" />
+                                        <input type="text" id="upfile" size="20" maxlength="1024" readonly="readonly">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="button" value="browse" class="button-rule" onclick="this.form.file.click();">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Browse
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        <br>
+                                        <div style="width:100%;text-align:center">
+                                            <button TYPE="submit" value=" Restore " class="button-rule" onClick="return check_restore();">
+                                                <span class="roundleft_button">
+                                                    &nbsp;&nbsp; Restore
+                                                </span>
+                                                <span class="roundright_button">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="height:12px">
+                                    <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                        &nbsp;
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="white-space: nowrap;" colspan="2">
+                                    <a href="javascript:loadhelp('BackupSettings','revert')"><b>Revert to factory default settings</b></a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" align="center">
+                                    <form method="POST" action='/goform/BackupSettings2?id=780557778'>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="button" value=" Erase " name="defaults" class="button-rule" onClick="location.href='BackupSettingsDefault.htm'">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Erase
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="height:12px">
+                                    <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                        &nbsp;
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+            <tr valign="middle" align="center">
+                <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                    <div class="help-frame-div">
+                        <iframe src="BackupSettings_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                        </iframe>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div class="subhead2-bottom">
+            <span style="float:left;padding-left:10px;padding-top:5px">
+                <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+            </span>
+            <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                Help Center
+            </span>
+            <span class="button-help-arrow">
+                <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+            </span>
+            <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px"
+            onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                Show/Hide Help Center
+            </span>
+        </div>
+        <a name="helpframe-anchor"></a>
+    </div>
+</body>
+</html>

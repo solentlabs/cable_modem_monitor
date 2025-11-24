@@ -1,19 +1,23 @@
-"""Parser for Netgear CM600 cable modem.
+"""Parser for Netgear C3700 cable modem/router.
 
-The Netgear CM600 is a DOCSIS 3.0 cable modem with 24x8 channel bonding.
+The Netgear C3700 is a DOCSIS 3.0 cable modem with integrated WiFi router
+and 24x8 channel bonding.
 
-Firmware tested: V1.01.22
+Firmware tested: V1.0.0.42_1.0.11
+Hardware version: V2.02.18
 
 Key pages:
-- / or /index.html: Main page (frameset)
-- /DashBoard.asp: Dashboard with connection overview
-- /RouterStatus.asp: Router and wireless status
-- /DocsisStatus.asp: DOCSIS channel data (REQUIRED for parsing)
-- /EventLog.asp: Event logs
+- / or /index.htm: Main page (frameset)
+- /DashBoard.htm: Dashboard with connection overview
+- /RouterStatus.htm: Router and wireless status
+- /DocsisStatus.htm: DOCSIS channel data (REQUIRED for parsing)
+- /DocsisOffline.htm: Displayed when modem is offline
+- /Logs.htm: Event logs
 
 Authentication: HTTP Basic Auth
 
-Related: Issue #3 (Netgear CM600 - Login Doesn't Work)
+Note: The C3700 is a combo modem/router device, unlike the modem-only CM600.
+Page extensions are .htm instead of .asp.
 """
 
 from __future__ import annotations
@@ -31,15 +35,15 @@ from ..base_parser import ModemParser
 _LOGGER = logging.getLogger(__name__)
 
 
-class NetgearCM600Parser(ModemParser):
-    """Parser for Netgear CM600 cable modem."""
+class NetgearC3700Parser(ModemParser):
+    """Parser for Netgear C3700 cable modem/router."""
 
-    name = "Netgear CM600"
+    name = "Netgear C3700"
     manufacturer = "Netgear"
-    models = ["CM600"]
+    models = ["C3700", "C3700-100NAS"]
     priority = 50  # Standard priority
 
-    # CM600 uses HTTP Basic Auth
+    # C3700 uses HTTP Basic Auth
     auth_config = BasicAuthConfig(
         strategy=AuthStrategyType.BASIC_HTTP,
     )
@@ -47,10 +51,10 @@ class NetgearCM600Parser(ModemParser):
     # URL patterns to try for modem data
     url_patterns = [
         {"path": "/", "auth_method": "basic", "auth_required": False},
-        {"path": "/index.html", "auth_method": "basic", "auth_required": False},
-        {"path": "/DocsisStatus.asp", "auth_method": "basic", "auth_required": True},
-        {"path": "/DashBoard.asp", "auth_method": "basic", "auth_required": True},
-        {"path": "/RouterStatus.asp", "auth_method": "basic", "auth_required": True},
+        {"path": "/index.htm", "auth_method": "basic", "auth_required": False},
+        {"path": "/DocsisStatus.htm", "auth_method": "basic", "auth_required": True},
+        {"path": "/DashBoard.htm", "auth_method": "basic", "auth_required": True},
+        {"path": "/RouterStatus.htm", "auth_method": "basic", "auth_required": True},
     ]
 
     def login(self, session, base_url, username, password) -> bool:
@@ -65,7 +69,7 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             True if login successful or not required
         """
-        # CM600 uses HTTP Basic Auth - use AuthFactory to set it up
+        # C3700 uses HTTP Basic Auth - use AuthFactory to set it up
         from custom_components.cable_modem_monitor.core.authentication import AuthFactory
 
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
@@ -83,31 +87,31 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             Dictionary with downstream, upstream, and system_info
         """
-        # CM600 requires fetching DocsisStatus.asp for channel data
+        # C3700 requires fetching DocsisStatus.htm for channel data
         docsis_soup = soup  # Default to provided soup
 
         if session and base_url:
             try:
-                _LOGGER.debug("CM600: Fetching DocsisStatus.asp for channel data")
-                docsis_url = f"{base_url}/DocsisStatus.asp"
+                _LOGGER.debug("C3700: Fetching DocsisStatus.htm for channel data")
+                docsis_url = f"{base_url}/DocsisStatus.htm"
                 docsis_response = session.get(docsis_url, timeout=10)
 
                 if docsis_response.status_code == 200:
                     docsis_soup = BeautifulSoup(docsis_response.text, "html.parser")
-                    _LOGGER.debug("CM600: Successfully fetched DocsisStatus.asp (%d bytes)", len(docsis_response.text))
+                    _LOGGER.debug("C3700: Successfully fetched DocsisStatus.htm (%d bytes)", len(docsis_response.text))
                 else:
                     _LOGGER.warning(
-                        "CM600: Failed to fetch DocsisStatus.asp, status %d - using provided page",
+                        "C3700: Failed to fetch DocsisStatus.htm, status %d - using provided page",
                         docsis_response.status_code,
                     )
             except Exception as e:
-                _LOGGER.warning("CM600: Error fetching DocsisStatus.asp: %s - using provided page", e)
+                _LOGGER.warning("C3700: Error fetching DocsisStatus.htm: %s - using provided page", e)
 
-        # Parse channel data from DocsisStatus.asp
+        # Parse channel data from DocsisStatus.htm
         downstream_channels = self.parse_downstream(docsis_soup)
         upstream_channels = self.parse_upstream(docsis_soup)
 
-        # Parse system info from the main page (could be RouterStatus.asp or index.html)
+        # Parse system info from the main page (could be RouterStatus.htm or index.htm)
         system_info = self.parse_system_info(soup)
 
         return {
@@ -118,12 +122,12 @@ class NetgearCM600Parser(ModemParser):
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
-        """Detect if this is a Netgear CM600.
+        """Detect if this is a Netgear C3700.
 
         Detection strategy:
-        - Check for "NETGEAR Gateway CM600" in title
-        - Check for meta description containing "CM600"
-        - Check for "CM600" in page content
+        - Check for "NETGEAR Gateway C3700" in title
+        - Check for meta description containing "C3700"
+        - Check for "C3700" in page content
 
         Args:
             soup: BeautifulSoup object of the page
@@ -131,33 +135,33 @@ class NetgearCM600Parser(ModemParser):
             html: Raw HTML string
 
         Returns:
-            True if this is a Netgear CM600, False otherwise
+            True if this is a Netgear C3700, False otherwise
         """
         # Check title tag
         title = soup.find("title")
-        if title and "NETGEAR Gateway CM600" in title.text:
-            _LOGGER.info("Detected Netgear CM600 from page title")
+        if title and "NETGEAR Gateway C3700" in title.text:
+            _LOGGER.info("Detected Netgear C3700 from page title")
             return True
 
         # Check meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc:
             content = meta_desc.get("content", "")
-            if "CM600" in content:
-                _LOGGER.info("Detected Netgear CM600 from meta description")
+            if "C3700" in content:
+                _LOGGER.info("Detected Netgear C3700 from meta description")
                 return True
 
-        # Check for CM600 in page text
-        if "CM600" in html and "NETGEAR" in html.upper():
-            _LOGGER.info("Detected Netgear CM600 from page content")
+        # Check for C3700 in page text
+        if "C3700" in html and "NETGEAR" in html.upper():
+            _LOGGER.info("Detected Netgear C3700 from page content")
             return True
 
         return False
 
     def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
-        """Parse downstream channel data from DocsisStatus.asp.
+        """Parse downstream channel data from DocsisStatus.htm.
 
-        The CM600 embeds channel data in JavaScript variables. The data format is:
+        The C3700 embeds channel data in JavaScript variables. The data format is:
         - InitDsTableTagValue() function contains tagValueList
         - Format: 'count|ch1_data|ch2_data|...'
         - Each channel: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
@@ -169,15 +173,15 @@ class NetgearCM600Parser(ModemParser):
 
         try:
             regex_pattern = re.compile("InitDsTableTagValue")
-            _LOGGER.debug("CM600 Downstream: Compiled regex pattern: %s", regex_pattern)
+            _LOGGER.debug("C3700 Downstream: Compiled regex pattern: %s", regex_pattern)
             all_scripts = soup.find_all("script")
-            _LOGGER.debug("CM600 Downstream: Found %d total script tags.", len(all_scripts))
+            _LOGGER.debug("C3700 Downstream: Found %d total script tags.", len(all_scripts))
 
             match = None  # Initialize match to None
             for script in all_scripts:
                 if script.string and regex_pattern.search(script.string):
                     _LOGGER.debug(
-                        "CM600 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d",
+                        "C3700 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d",
                         len(script.string),
                     )
                     # Extract the function body first, then get tagValueList from within it
@@ -192,7 +196,7 @@ class NetgearCM600Parser(ModemParser):
                         match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
                         if match:
                             _LOGGER.debug(
-                                "CM600 Downstream: tagValueList match found. Extracted value length: %d",
+                                "C3700 Downstream: tagValueList match found. Extracted value length: %d",
                                 len(match.group(1)),
                             )
 
@@ -200,15 +204,15 @@ class NetgearCM600Parser(ModemParser):
                             values = match.group(1).split("|")
                             break  # Found the data, stop searching
                         else:
-                            _LOGGER.debug("CM600 Downstream: No tagValueList match found in function body.")
+                            _LOGGER.debug("C3700 Downstream: No tagValueList match found in function body.")
                             continue
                     else:
-                        _LOGGER.debug("CM600 Downstream: Could not extract function body.")
+                        _LOGGER.debug("C3700 Downstream: Could not extract function body.")
                         continue
 
             if match is None:  # If no match was found after iterating all scripts
                 _LOGGER.debug(
-                    "CM600 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted."
+                    "C3700 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted."
                 )
                 return channels  # Return empty list if no data found
 
@@ -271,14 +275,14 @@ class NetgearCM600Parser(ModemParser):
             # No break here, as we want to parse all channels
 
         except Exception as e:
-            _LOGGER.error("Error parsing CM600 downstream channels: %s", e, exc_info=True)
+            _LOGGER.error("Error parsing C3700 downstream channels: %s", e, exc_info=True)
 
         return channels
 
     def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
-        """Parse upstream channel data from DocsisStatus.asp.
+        """Parse upstream channel data from DocsisStatus.htm.
 
-        The CM600 embeds channel data in JavaScript variables. The data format is:
+        The C3700 embeds channel data in JavaScript variables. The data format is:
         - InitUsTableTagValue() function contains tagValueList
         - Format: 'count|ch1_data|ch2_data|...'
         - Each channel: num|lock|channel_type|id|symbol_rate|frequency|power
@@ -291,15 +295,15 @@ class NetgearCM600Parser(ModemParser):
         try:
             # Find the InitUsTableTagValue function with upstream data
             regex_pattern = re.compile("InitUsTableTagValue")
-            _LOGGER.debug("CM600 Upstream: Compiled regex pattern: %s", regex_pattern)
+            _LOGGER.debug("C3700 Upstream: Compiled regex pattern: %s", regex_pattern)
             all_scripts = soup.find_all("script")
-            _LOGGER.debug("CM600 Upstream: Found %d total script tags.", len(all_scripts))
+            _LOGGER.debug("C3700 Upstream: Found %d total script tags.", len(all_scripts))
 
             match = None  # Initialize match to None
             for script in all_scripts:
                 if script.string and regex_pattern.search(script.string):
                     _LOGGER.debug(
-                        "CM600 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d",
+                        "C3700 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d",
                         len(script.string),
                     )
                     # Extract the function body first, then get tagValueList from within it
@@ -314,7 +318,7 @@ class NetgearCM600Parser(ModemParser):
                         match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
                         if match:
                             _LOGGER.debug(
-                                "CM600 Upstream: tagValueList match found. Extracted value length: %d",
+                                "C3700 Upstream: tagValueList match found. Extracted value length: %d",
                                 len(match.group(1)),
                             )
 
@@ -322,15 +326,15 @@ class NetgearCM600Parser(ModemParser):
                             values = match.group(1).split("|")
                             break  # Found the data, stop searching
                         else:
-                            _LOGGER.debug("CM600 Upstream: No tagValueList match found in function body.")
+                            _LOGGER.debug("C3700 Upstream: No tagValueList match found in function body.")
                             continue
                     else:
-                        _LOGGER.debug("CM600 Upstream: Could not extract function body.")
+                        _LOGGER.debug("C3700 Upstream: Could not extract function body.")
                         continue
 
             if match is None:  # If no match was found after iterating all scripts
                 _LOGGER.debug(
-                    "CM600 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted."
+                    "C3700 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted."
                 )
                 return channels  # Return empty list if no data found
 
@@ -390,12 +394,12 @@ class NetgearCM600Parser(ModemParser):
             # No break here, as we want to parse all channels
 
         except Exception as e:
-            _LOGGER.error("Error parsing CM600 upstream channels: %s", e, exc_info=True)
+            _LOGGER.error("Error parsing C3700 upstream channels: %s", e, exc_info=True)
 
         return channels
 
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
-        """Parse system information from RouterStatus.asp or DashBoard.asp.
+        """Parse system information from RouterStatus.htm or DashBoard.htm.
 
         Extracts:
         - Hardware version
@@ -420,7 +424,7 @@ class NetgearCM600Parser(ModemParser):
                     values = match.group(1).split("|")
 
                     if len(values) >= 3:
-                        # Based on RouterStatus.asp structure:
+                        # Based on RouterStatus.htm structure:
                         # values[0] = Hardware Version
                         # values[1] = Firmware Version
                         # values[2] = Serial Number
@@ -430,10 +434,10 @@ class NetgearCM600Parser(ModemParser):
                             info["software_version"] = values[1]
                         # Skip serial number (already redacted in fixtures)
 
-                        _LOGGER.debug(f"Parsed CM600 system info: {info}")
+                        _LOGGER.debug(f"Parsed C3700 system info: {info}")
                         break
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing CM600 system info: {e}")
+            _LOGGER.error(f"Error parsing C3700 system info: {e}")
 
         return info

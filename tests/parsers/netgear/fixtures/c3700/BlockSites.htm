@@ -1,0 +1,622 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function checkData()
+{
+ 	var cf = document.forms[0];
+	var msg = "";
+
+	if (cf.skeyword[0].checked)
+		cf.bs_enable.value = 0;
+	else if (cf.skeyword[1].checked)
+		cf.bs_enable.value = 1;
+	else
+		cf.bs_enable.value = 2;
+
+	if (cf.trustipenble.checked)
+		cf.bs_trustedip_enable.value = 1;
+	else
+		cf.bs_trustedip_enable.value = 0;
+
+	cf.bs_trustedip.value = cf.cfTrusted_IPAddress1.value+'.'+cf.cfTrusted_IPAddress2.value+'.'+cf.cfTrusted_IPAddress3.value+'.'+cf.cfTrusted_IPAddress4.value;
+
+//Nick 20110822
+	var str_lan_ip = cf.lanip.value;
+//Nick 20110822
+//	var str_lan_ip = "192.168.1.1";
+	var str_lan_netmask = "255.255.255.0";
+	var lan_ip = str_lan_ip.split(".");
+	var lan_netmask = str_lan_netmask.split(".");
+	var lan_ipaddr = (lan_ip[0] << 24) | (lan_ip[1] << 16) | (lan_ip[2] << 8)| (lan_ip[3]);
+	var lan_netmaskaddr = (lan_netmask[0] << 24) | (lan_netmask[1] << 16) | (lan_netmask[2] << 8)| (lan_netmask[3]);
+
+	if(cf.trustipenble.checked)
+	{
+		var trusted_ipaddr = (cf.cfTrusted_IPAddress1.value << 24) | (cf.cfTrusted_IPAddress2.value << 16)
+							 | (cf.cfTrusted_IPAddress3.value << 8)| cf.cfTrusted_IPAddress4.value;
+		if(checkIP(cf.cfTrusted_IPAddress1,cf.cfTrusted_IPAddress2,cf.cfTrusted_IPAddress3,cf.cfTrusted_IPAddress4,254)
+			|| (parseInt(cf.cfTrusted_IPAddress4.value,10)==0)
+			|| ( (trusted_ipaddr & lan_netmaskaddr) != (lan_ipaddr & lan_netmaskaddr) ) )
+			msg+= "Invalid IP address. Please enter it again.";
+		else
+		{
+			cf.cfTrusted_IPAddress1.value = parseInt(cf.cfTrusted_IPAddress1.value,10);
+			cf.cfTrusted_IPAddress2.value = parseInt(cf.cfTrusted_IPAddress2.value,10);
+			cf.cfTrusted_IPAddress3.value = parseInt(cf.cfTrusted_IPAddress3.value,10);
+			cf.cfTrusted_IPAddress4.value = parseInt(cf.cfTrusted_IPAddress4.value,10);
+			cf.bs_trustedip.value = cf.cfTrusted_IPAddress1.value+'.'+cf.cfTrusted_IPAddress2.value+'.'
+								+cf.cfTrusted_IPAddress3.value+'.'+cf.cfTrusted_IPAddress4.value;
+		}
+	}
+	if (msg.length > 1)
+	{
+		alert(msg);
+		return false;
+	}
+	return true;
+}
+function checkKeyWord()
+{
+	var cf = document.forms[0];
+	var msg = "";
+	msg+= checkBlank(cf.cfKeyWord_Domain, "");
+	if (msg.length > 1)
+	{
+		cf.cfKeyWord_Domain.focus();
+		//alert(msg);
+		return false;
+	}
+	if (cf.cfKeyWord_Domain.value.match( /[^\x20-\x7E]/ ))
+	{
+		alert("Invalid keyword");
+		return false;
+	}
+
+	if (cf.skeyword[0].checked)
+		cf.bs_enable.value = 0;
+	else if (cf.skeyword[1].checked)
+		cf.bs_enable.value = 1;
+	else
+		cf.bs_enable.value = 2;
+
+	if (cf.trustipenble.checked)
+		cf.bs_trustedip_enable.value = 1;
+	else
+		cf.bs_trustedip_enable.value = 0;
+
+	cf.bs_trustedip.value = cf.cfTrusted_IPAddress1.value+'.'+cf.cfTrusted_IPAddress2.value+'.'+cf.cfTrusted_IPAddress3.value+'.'+cf.cfTrusted_IPAddress4.value;
+
+	return true;
+}
+
+function checkTrustIP()
+{
+	var cf = document.forms[0];
+	if(!cf.trustipenble.checked)
+	{
+		cf.cfTrusted_IPAddress1.disabled = true;
+		cf.cfTrusted_IPAddress2.disabled = true;
+		cf.cfTrusted_IPAddress3.disabled = true;
+		cf.cfTrusted_IPAddress4.disabled = true;
+
+	}
+	else
+	{
+		cf.cfTrusted_IPAddress1.disabled = false;
+		cf.cfTrusted_IPAddress2.disabled = false;
+		cf.cfTrusted_IPAddress3.disabled = false;
+		cf.cfTrusted_IPAddress4.disabled = false;
+	}
+}
+
+function checkTrustIP1()
+{
+	var cf = document.forms[0];
+    var ip = document.forms[0].bs_trustedip.value.split(".");
+
+    cf.cfTrusted_IPAddress1.value = ip[0];
+    cf.cfTrusted_IPAddress2.value = ip[1];
+    cf.cfTrusted_IPAddress3.value = ip[2];
+    cf.cfTrusted_IPAddress4.value = ip[3];
+
+	if(!cf.trustipenble.checked)
+	{
+		cf.cfTrusted_IPAddress1.disabled = true;
+		cf.cfTrusted_IPAddress2.disabled = true;
+		cf.cfTrusted_IPAddress3.disabled = true;
+		cf.cfTrusted_IPAddress4.disabled = true;
+
+	}
+	else
+	{
+		cf.cfTrusted_IPAddress1.disabled = false;
+		cf.cfTrusted_IPAddress2.disabled = false;
+		cf.cfTrusted_IPAddress3.disabled = false;
+		cf.cfTrusted_IPAddress4.disabled = false;
+	}
+}
+
+function checkKeyWordDomainList()
+{
+	var cf = document.forms[0];
+
+    cf.cfKeyWord_Domain.value = "";
+
+	if(cf.cfKeyWord_DomainList.options[0] == null)
+	{
+		return false;
+	}
+
+	if (cf.skeyword[0].checked)
+		cf.bs_enable.value = 0;
+	else if (cf.skeyword[1].checked)
+		cf.bs_enable.value = 1;
+	else
+		cf.bs_enable.value = 2;
+
+	if (cf.trustipenble.checked)
+		cf.bs_trustedip_enable.value = 1;
+	else
+		cf.bs_trustedip_enable.value = 0;
+
+	cf.bs_trustedip.value = cf.cfTrusted_IPAddress1.value+'.'+cf.cfTrusted_IPAddress2.value+'.'+cf.cfTrusted_IPAddress3.value+'.'+cf.cfTrusted_IPAddress4.value;
+
+	return true;
+}
+
+/*
+function chSession(newsession)
+{
+    if(newsession == 2)
+        top.formframe.location.href = "BKS_keyword_ppp2.htm";
+    else if(newsession == 1)
+        top.formframe.location.href = "BKS_keyword.htm";
+}
+*/
+
+// Nick Implement ASP Tag display on GUI
+function updateSchList()
+{
+    document.getElementsByName("sch_list")[0].disabled = !(document.getElementsByName("skeyword")[1].checked);
+}
+
+function updateSchListIdx()
+{
+    document.getElementsByName("SchListIdx")[0].value = document.getElementsByName("sch_list")[0].selectedIndex;
+}
+
+function InitTagValue()
+{
+/*
+  Keyword Blocking(combobox) | Allow trusted IP (checkbox) | Trusted IP Address (text) | Lan IP (hidden)
+  Selected Schedule (text) | Schedule List Size (text) | Schedule List option 1 | Schedule List option 2 | ...
+*/
+//    var tagValueList = "0|1|192.168.100.1|192.168.0.1|0|4|TestSchedule1|Test2|aabc|MySche";
+//    var tagValueList = "1|1|192.168.100.1|192.168.0.1|2|4|TestSchedule1|Test2|aabc|MySche";
+    var tagValueList = '0|0|***PRIVATE_IP***|192.168.0.1|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Keyword Blocking */
+    document.getElementsByName("skeyword")[tagValues[0]].checked = true;
+
+    /* Allow trusted IP */
+    document.getElementsByName("trustipenble")[0].checked = (tagValues[1] == 1) ? true : false;
+
+    /* Trusted IP Address */
+    document.getElementsByName("bs_trustedip")[0].value= tagValues[2];
+
+    /* Lan IP Address */
+    document.getElementsByName("lanip")[0].value= tagValues[3];
+
+    var selSch = new Array();
+    for (i = 0; i < parseInt(tagValues[5]); i++)
+    {
+        selSch.push(tagValues[6+i]);
+    }
+    document.getElementsByName("sch_list")[0].options.remove(document.getElementsByName("sch_list")[0].options[0]);
+    drawSelectOptions("sch_list", selSch);
+
+    if (parseInt(tagValues[5]) == 0)
+    {
+        document.getElementsByName("skeyword")[1].disabled = true;
+        document.getElementsByName("sch_list")[0].disabled = true;
+    }
+    else
+    {
+        document.getElementsByName("sch_list")[0].selectedIndex = parseInt(tagValues[4]);
+    }
+
+    document.getElementById("SelectKeyWord_DomainList").style.minWidth="250px";
+}
+
+function InitTagSelectValue()
+{
+/*
+  List name
+*/
+//    var tagValueList = "2|XXX|1|192.168.100.1|yahoo";
+//    var tagValueList = "2|XXX|1|192.168.100.1|yahoo";
+    var tagValueList = '';
+    return tagValueList.split("|");
+}
+
+// Nick 20111005, it's hard to search the keyword list from cgi.
+function drawSelectOptions(SelectName, tags)
+{
+    for (i = 0; i < tags.length; i++)
+    {
+        if (tags[i].length == 0)
+        {
+            // Skip null string
+            continue;
+        }
+        drawSelectOption(SelectName, i, piplineDecode(tags[i]));
+    }
+}
+
+function drawSelectOption(SelectName, index, tag)
+{
+    var Select =  document.getElementsByName(SelectName)[0];
+
+    var Opt = document.createElement('option');
+    Opt.text = tag;
+    Opt.value = index;
+
+    try {
+       Select.add(Opt, SelectName[null]); // standards compliant; doesn't work in IE
+    }
+    catch(ex) {
+       Select.add(Opt, null); // IE only
+    }
+}
+// Nick 20111005, it's hard to search the keyword list from cgi.
+
+function InitUpdateSelectView(tagValues)
+{
+	  document.getElementsByName("cfKeyWord_DomainList")[0].options.remove(document.getElementsByName("cfKeyWord_DomainList")[0].options[0]);
+    drawSelectOptions ("cfKeyWord_DomainList", tagValues);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitUpdateSelectView(InitTagSelectValue());
+    updateSchList();
+    updateSchListIdx();
+}
+// Nick Implement ASP Tag display on GUI
+</script>
+</head>
+<body onload="BodyInit(); checkTrustIP1();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/BlockSites?id=780557778'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Block Sites
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value=Apply onClick="buttonClick(this,'Apply');return checkData()" type="SUBMIT" name="wzWAN_IPFinish" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value=Cancel onclick="buttonClick(this,'Cancel');" type="SUBMIT" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        To learn more about advanced content filtering and keyword blocking features from NETGEAR, please go to
+                                        <a target='_blank' href='http://www.netgear.com/lpc'>www.netgear.com/lpc</a>
+                                        .
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:18px">
+                                        <a href="javascript:loadhelp('BlockSites','blocking')"><b>Keyword Blocking</b></a>
+                                        <br>
+                                        <input type="radio" name="skeyword" value="never" onclick="updateSchList()">
+                                        Never
+                                        <br>
+                                        <input type="radio" name="skeyword" value="perschedule" onclick="updateSchList()">
+                                        Per Schedule&nbsp;&nbsp;
+                                        <select name="sch_list" size="1" onchange="updateSchListIdx()">
+                                            <option>
+                                            </option>
+                                        </select>
+                                        <br>
+                                        <input type="radio" name="skeyword" value="always" onclick="updateSchList()">
+                                        Always
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('BlockSites','toaddword')"><b>Type Keyword Or Domain Name Here.</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="text" name="cfKeyWord_Domain" size="32" maxlength="60" value="">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:50%;text-align:left" colspan="2">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="submit" value="Add Keyword" name="cfKeyWord_AddKeyword" class="button-rule" onClick="buttonClick(this,'Add Keyword');if(!checkKeyWord()) return false;">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add Keyword
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('BlockSites','blocklist')"><b>Block sites containing these keywords or domain names:</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <select name="cfKeyWord_DomainList" id="SelectKeyWord_DomainList" size="6" multiple="multiple">
+                                            <option>
+                                            </option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="submit" value="Delete Keyword" name="cfKeyWord_DeleteKeyword" class="button-rule" onclick="buttonClick(this,'Delete Keyword');if(!checkKeyWordDomainList()) return false;">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Delete Keyword
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="submit" value="Clear List" name="cfKeyWord_ClearList" class="button-rule" onclick="buttonClick(this,'Clear List');if(!checkKeyWordDomainList()) return false;">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Clear List
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;" colspan="2">
+                                        <input type="checkbox" name="trustipenble" value="" onclick="checkTrustIP();">
+                                        <a href="javascript:loadhelp('BlockSites','trusted')"><b>Allow Trusted IP Address to Visit Blocked Sites</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:50%">
+                                        <a href="javascript:loadhelp('BlockSites','trusted')"><b>Trusted IP Address</b></a>
+                                    </td>
+                                    <td style="width:50%;text-align:right" class="num">
+                                        <input type="text" name="cfTrusted_IPAddress1" class="num" size="4" maxlength="3" value="" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="cfTrusted_IPAddress2" class="num" size="4" maxlength="3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="cfTrusted_IPAddress3" class="num" size="4" maxlength="3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="cfTrusted_IPAddress4" class="num" size="4" maxlength="3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="BlockSites_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT name=bs_enable type=hidden value="0">
+            <INPUT name=bs_trustedip_enable type=hidden value="0">
+            <INPUT name=bs_trustedip type=hidden value="">
+            <!-- Nick 20110822 -->
+            <input name="lanip" type="hidden" value="">
+            <!-- Nick 20110822-->
+            <input type="hidden" name="SchListIdx" value="0">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

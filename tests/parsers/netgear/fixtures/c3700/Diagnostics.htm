@@ -1,0 +1,915 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+<style type="text/css" media="screen,print">
+#inputWidth520 {font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;font-size:11px;width:520px;height:136px}
+td,input
+{
+ font-size:12px;
+ font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;
+}
+</style>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+var isSupportDsUs =  false;
+// for refresh timer
+var ctime;
+
+    $(document).ready(function()
+    {
+        BodyInit();
+        if(get_browser() == "Chrome")
+        {
+            $('#inputWidth520').attr('style','width:510px;height:110px');
+        }
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function StartCommand()
+{
+    ff = document.RgDiagnostics;
+    window.document.RgDiagnostics.UtilityCommand.value=1;
+    //set value
+    if ((ff.DiagnosticUtility.selectedIndex == 0) &&
+        (checkPingParm() == true))
+    {
+        $("#inputWidth370").attr("disabled", true);
+        return true;
+    }
+    else if ((ff.DiagnosticUtility.selectedIndex == 1) &&
+        (checkTrcerParm() == true))
+    {
+        $("#inputWidth370").attr("disabled", true);
+        return true;
+    }
+    else if ((ff.DiagnosticUtility.selectedIndex == 2) &&
+        (checkDSParm() == true)) // 20130107 Emerson, add DS/US throughput page
+    {
+        $("#inputWidth370").attr("disabled", true);
+        return true;
+    }
+    else if ((ff.DiagnosticUtility.selectedIndex == 3) &&
+        (checkUSParm() == true)) // 20130107 Emerson, add DS/US throughput page
+    {
+        $("#inputWidth370").attr("disabled", true);
+        return true;
+    }
+    return false;
+}
+
+function StopCommand()
+{
+  ff = document.RgDiagnostics;
+  //if(ff.UtilityCommand.value == 5)
+  //{
+  //  alert("Ping not run!");
+  //  return false;
+  //}
+  //else
+  //{
+    window.document.RgDiagnostics.UtilityCommand.value=2;
+    if((ff.DiagnosticUtility.options[0].selected == true) &&
+        (checkPingParm() == true))
+    {
+        $("#inputWidth370").attr("disabled", true);
+      return true;
+    }
+    else
+    {
+        $("#inputWidth370").attr("disabled", true);
+      return true;
+    }
+  //}
+}
+
+function ClearCommand()
+{
+  window.document.RgDiagnostics.UtilityCommand.value=3;
+    $("#inputWidth370").attr("disabled", true);
+}
+function Refresh()
+{
+   //mark by Seavia
+   //setTimeout("window.location.reload();",2000);
+}
+
+function checkPingParm()
+{
+  ff = document.RgDiagnostics;
+
+  var PingDestIP = IPv4toString(ff.PingDestinationIP1.value, ff.PingDestinationIP2.value, ff.PingDestinationIP3.value, ff.PingDestinationIP4.value);
+
+  if((ff.UtilityCommand.value!=1) && (ff.UtilityCommand.value!=2))
+  {
+    return true;
+  }
+
+
+// Nick 20110312, should check error checking in CGI handler
+/*
+
+  if (checkIP(ff.PingDestinationIP1,ff.PingDestinationIP2,ff.PingDestinationIP3,ff.PingDestinationIP4,254))
+  {
+    alert("target "+ PingDestIP + " is invalid.");
+    SetFormElementsFocus("PingDestinationIP1");
+    return false;
+  }
+
+  if(parseInt(ff.PingSize.value,10)<64||parseInt(ff.PingSize.value,10)>1518)
+  {
+    alert("Ping Size "+ ff.PingSize.value + " is invalid.(range 64~1518)!");
+    SetFormElementsFocus("PingSize");
+    return false;
+  }
+  if(parseInt(ff.NumberOfPings.value,10)<1||parseInt(ff.NumberOfPings.value,10)>128)
+  {
+    alert("No. of Pings "+ ff.NumberOfPings.value + " is invalid.(range 1~128)!");
+    SetFormElementsFocus("NumberOfPings");
+    return false;
+  }
+
+  if(parseInt(ff.TimeBetweenPings.value,10)<1||parseInt(ff.TimeBetweenPings.value,10)>10000)
+  {
+    alert("Ping Interval "+ ff.TimeBetweenPings.value + " is invalid.(range 1~10000)!");
+    SetFormElementsFocus("TimeBetweenPings");
+    return false;
+  }
+*/
+
+  ff.PingDestinationIP.value = PingDestIP;
+
+  return true;
+}
+
+function checkTrcerParm()
+{
+  ff = document.RgDiagnostics;
+
+  if(ff.UtilityCommand.value!=1)
+  {
+    return true;
+  }
+
+// Nick 20110312, should check error checking in CGI handler
+/*
+  if(parseInt(ff.TracerouteMaxHops.value,10)<1||parseInt(ff.TracerouteMaxHops.value,10)>65535)
+  {
+    alert("Max Hops "+ ff.TracerouteMaxHops.value + " is invalid.");
+    SetFormElementsFocus("TracerouteMaxHops");
+    return false;
+  }
+
+  if(parseInt(ff.TracerouteDataSize.value,10)<1||parseInt(ff.TracerouteDataSize.value,10)>65535)
+  {
+    alert("Data Size "+ ff.TracerouteDataSize.value + " is invalid.");
+    SetFormElementsFocus("TracerouteDataSize");
+    return false;
+  }
+
+  if(parseInt(ff.TracerouteBasePort.value,10)<1||parseInt(ff.TracerouteBasePort.value,10)>65535)
+  {
+    alert("Base port "+ ff.TracerouteBasePort.value + " is invalid.");
+    SetFormElementsFocus("TracerouteBasePort");
+    return false;
+  }
+*/
+  return true;
+}
+// 20130107 Emerson, add DS/US throughput page
+function checkDSParm()
+{
+  ff = document.RgDiagnostics;
+
+  if(ff.UtilityCommand.value!=1)
+  {
+    return true;
+  }
+
+	return true;
+}
+function checkUSParm()
+{
+  ff = document.RgDiagnostics;
+
+  if(ff.UtilityCommand.value!=1)
+  {
+    return true;
+  }
+
+	return true;
+}
+// 20130107 Emerson, add DS/US throughput page end
+
+// Nick 20111103
+//end by alex
+/* Get form element */
+/* Get IPString */
+/* IPv4 to String, ex. 10 7 1 139 -> ***PRIVATE_IP***.139 */
+function IPv4toString()
+{
+    var i;
+    var argc = IPv4toString.arguments.length;
+    var args = IPv4toString.arguments;
+    var addr = new Array();
+
+    if(argc > 4)
+        return false;
+    for(i = 0; i < argc; i++)
+    {
+        if (args[i] =="")
+            addr[i] = "0";
+        else
+            addr[i] = args[i];
+    }
+    return addr.join(".");
+}
+
+/* Set form elements focus */
+function SetFormElementsFocus(name)
+{
+    var isExists = false;
+    var fm = document.forms[0];
+    for(i=0; i< fm.elements.length;i++)
+    {
+        if(fm.elements[i].name == name)
+        {
+            isExists = true;
+            fm.elements[i].focus();
+            break;
+        }
+    }
+
+    return (isExists);
+}
+
+function setGray(state)
+{
+    var cf = document.forms[0];
+
+    var Button;
+    Button=document.getElementsByName("cfAlert_Apply");
+
+    var Cancel_Button;
+    Cancel_Button=document.getElementsByName("cancel");
+
+    var Clear_Button;
+    Clear_Button=document.getElementsByName("Button");
+
+    var Utility_Button;
+    Utility_Button=document.getElementsByName("DiagnosticUtility");
+
+    if (state == "0")
+    {
+		//20120604 Jeffery fix GUI - Diagnostics Page
+        //abort button
+        cf.cancel.disabled = true;
+        Cancel_Button[0].outerHTML= "<button type='submit' disabled='disabled' value='Abort Test' name='cancel' class='button-grey' ><span class='roundleft_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Abort Test&nbsp;&nbsp;<span class='apply-icon'>&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/span><span class='roundright_grey' style='margin-left: -2px; background-position-x: 0%; background-position-y: 0%;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>";
+        Cancel_Button[0].style.cursor='default';
+
+        cf.cfAlert_Apply.disabled = false;
+        Button[0].style.cursor='pointer';
+    }
+    else
+    {
+        //var Button;
+        cf.cfAlert_Apply.disabled = true;
+        Button[0].outerHTML= "<button type='submit' disabled='disabled' value='Start Test' name='cfAlert_Apply' class='button-grey' ><span class='roundleft_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Start Test&nbsp;&nbsp;<span class='apply-icon'>&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/span><span class='roundright_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>";
+        Button[0].style.cursor='default';
+
+		//20120604 Jeffery fix GUI - Diagnostics Page
+        //clear button
+        cf.Button.disabled = true;
+        Clear_Button[0].outerHTML= "<button type='submit' disabled='disabled' value='Clear Results' name='Button' class='button-grey' ><span class='roundleft_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Clear Results&nbsp;&nbsp;<span class='apply-icon'>&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/span><span class='roundright_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>";
+        Clear_Button[0].style.cursor='default';
+
+        //DiagnosticUtility
+
+// 20130107 Emerson, add DS/US throughput page
+
+        if (isSupportDsUs)
+        {
+	        if(cf.DiagnosticUtility.selectedIndex==0)
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0 selected='selected'>Ping<\/option><option value=1 >Traceroute<\/option><option value=2>DS throughput<\/option><option value=3>US throughput<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+	        }
+	        else if (cf.DiagnosticUtility.selectedIndex==1)
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0>Ping<\/option><option value=1 selected='selected'>Traceroute<\/option><option value=2>DS throughput<\/option><option value=3>US throughput<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+	        }
+	        else if (cf.DiagnosticUtility.selectedIndex==2)
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0>Ping<\/option><option value=1>Traceroute<\/option><option value=2 selected='selected'>DS throughput<\/option><option value=3>US throughput<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+        	}
+        	else
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0>Ping<\/option><option value=1>Traceroute<\/option><option value=2>DS throughput<\/option><option value=3 selected='selected'>US throughput<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+        	}
+      	}
+      	else
+      	{
+      		if(cf.DiagnosticUtility.selectedIndex==0)
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0 selected='selected'>Ping<\/option><option value=1 >Traceroute<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+	        }
+	        else if (cf.DiagnosticUtility.selectedIndex==1)
+	        {
+	        cf.DiagnosticUtility.disabled = true;
+	        Utility_Button[0].outerHTML= "<select type='submit' disabled='disabled' name='DiagnosticUtility'><option value=0>Ping<\/option><option value=1 selected='selected'>Traceroute<\/option><\/select>";
+	        Utility_Button[0].style.cursor='default';
+	        }
+      	}
+// 20130107 Emerson, add DS/US throughput page end
+    }
+
+}
+
+function InitTagValue()
+{
+    var tagValueList = '0|192.168.0.1|192.168.0.1|64|3|1000||30|32|33434|0|0|0|0|1|';
+//    var tagValueList = "0|192.168.0.1|***PRIVATE_IP***|64|3|1000||255|32|33434|0|5|0";
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    // 20130107 Emerson, add DS/US throughput page
+    isSupportDsUs = ((tagValues[13]== "1")?true:false);
+    if (isSupportDsUs)
+    {
+        var dsOption = new Option("DS throughput", 2);
+        var usOption = new Option("US throughput", 3);
+        document.getElementsByName("DiagnosticUtility")[0].add(dsOption);
+        document.getElementsByName("DiagnosticUtility")[0].add(usOption);
+    }
+    // 20130107 Emerson, add DS/US throughput page end
+    document.getElementsByName("DiagnosticUtility")[0].selectedIndex = tagValues[0];
+    document.getElementsByName("lan_ipaddr")[0].value = tagValues[1];
+    document.getElementsByName("PingDest_ipaddr")[0].value = tagValues[2];
+    document.getElementsByName("PingSize")[0].value = tagValues[3];
+    document.getElementsByName("NumberOfPings")[0].value = tagValues[4];
+    document.getElementsByName("TimeBetweenPings")[0].value = tagValues[5];
+
+    document.getElementsByName("TracerouteHost")[0].value = tagValues[6];
+    document.getElementsByName("TracerouteMaxHops")[0].value = tagValues[7];
+    document.getElementsByName("TracerouteDataSize")[0].value = tagValues[8];
+    document.getElementsByName("TracerouteBasePort")[0].value = tagValues[9];
+    document.getElementsByName("TracerouteResolveHost")[0].selectedIndex = tagValues[10];
+
+    document.getElementsByName("UtilityCommand")[0].value = tagValues[11];
+
+    if (tagValues[12] == "0")
+    {
+        setGray("0");
+        clearTimeout(ctime);
+
+//        $("#start").show();
+//        $("#stop").hide();
+    }
+    else
+    {
+        setGray("1");
+        ctime = setTimeout("window.location.reload(true);",2000);
+
+//        $("#start").hide();
+//        $("#stop").show();
+    }
+
+    if(tagValues[14] == "1")
+    {
+        $("#IPTYPE").show();
+    }
+    else
+    {
+        $("#IPTYPE").hide();
+    }
+}
+
+function BodyInit()
+{
+    var cf = document.RgDiagnostics;
+    InitUpdateView(InitTagValue());
+
+    var isIPv4Target = true;
+    if(cf.PingDest_ipaddr.value.indexOf(".") == -1)
+    {
+        isIPv4Target = false;
+    }
+
+    if(isIPv4Target)
+    {
+        document.getElementsByName("ip_type")[0].checked = true;
+        changeIpType(0);
+        var destIP = cf.PingDest_ipaddr.value.split(".");
+        var lanIP = cf.lan_ipaddr.value.split(".");
+
+        if (parseInt(destIP[0]) == 0 && parseInt(destIP[1]) == 0 && parseInt(destIP[2]) == 0 && parseInt(destIP[3]) == 0)
+        {
+            cf.PingDestinationIP1.value = lanIP[0];
+            cf.PingDestinationIP2.value = lanIP[1];
+            cf.PingDestinationIP3.value = lanIP[2];
+            cf.PingDestinationIP4.value = destIP[3];
+        }
+        else
+        {
+            cf.PingDestinationIP1.value = destIP[0];
+            cf.PingDestinationIP2.value = destIP[1];
+            cf.PingDestinationIP3.value = destIP[2];
+            cf.PingDestinationIP4.value = destIP[3];
+        }
+    }
+    else
+    {
+        document.getElementsByName("ip_type")[1].checked = true;
+        changeIpType(1);
+        cf.PingDestinationIPv6.value = cf.PingDest_ipaddr.value;
+        var lanIP = cf.lan_ipaddr.value.split(".");
+        cf.PingDestinationIP1.value = lanIP[0];
+        cf.PingDestinationIP2.value = lanIP[1];
+        cf.PingDestinationIP3.value = lanIP[2];
+        cf.PingDestinationIP4.value = lanIP[3];
+    }
+    UtilityChange();
+}
+
+function UtilityChange()
+{
+    var cf = document.RgDiagnostics;
+
+    // 20130107 Emerson, add DS/US throughput page
+    if (isSupportDsUs)
+    {
+	    if (cf.DiagnosticUtility.selectedIndex == 0)
+	    {
+	        $("#pingStyle").show();
+	        $("#tracerouteStyle").hide();
+	        $("#dsStyle").hide();
+	        $("#usStyle").hide();
+	    }
+	    else if (cf.DiagnosticUtility.selectedIndex == 1)
+	    {
+	        $("#pingStyle").hide();
+	        $("#tracerouteStyle").show();
+	        $("#dsStyle").hide();
+	        $("#usStyle").hide();
+	    }
+	    else if (cf.DiagnosticUtility.selectedIndex == 2)
+	    {
+	    	  $("#pingStyle").hide();
+	        $("#tracerouteStyle").hide();
+	        $("#dsStyle").show();
+	        $("#usStyle").hide();
+	    }
+	    else
+	    {
+	    	  $("#pingStyle").hide();
+	        $("#tracerouteStyle").hide();
+	        $("#dsStyle").hide();
+	        $("#usStyle").show();
+	    }
+  	}
+  	else
+  	{
+  		if (cf.DiagnosticUtility.selectedIndex == 0)
+	    {
+	        $("#pingStyle").show();
+	        $("#tracerouteStyle").hide();
+	        $("#dsStyle").hide();
+	        $("#usStyle").hide();
+	    }
+	    else if (cf.DiagnosticUtility.selectedIndex == 1)
+	    {
+	        $("#pingStyle").hide();
+	        $("#tracerouteStyle").show();
+	        $("#dsStyle").hide();
+	        $("#usStyle").hide();
+	    }
+  	}
+    // 20130107 Emerson, add DS/US throughput page end
+
+    //20120604 Jeffery fix GUI - Diagnostics Page
+    //if (cf.UtilityCommand.value != 3 )
+        cf.UtilityCommand.value=5;
+}
+
+// Nick 20111103
+
+function changeIpType(ipType)
+{
+    if(ipType == 0)
+    {
+        $("#target_ipv4").show();
+        $("#target_ipv6").hide();
+    }
+    else
+    {
+        $("#target_ipv4").hide();
+        $("#target_ipv6").show();
+    }
+}
+
+</script>
+</head>
+
+
+<body class="page-body" onload="changeContentSize()" onResize="changeContentSize()">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form action='/goform/Diagnostics?id=842467026' method="POST" name="RgDiagnostics">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Diagnostics
+            </div>
+            <table border="0" style="height:380px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button id="start" value="Start Test" onClick="buttonClick(this,'Start Test');return StartCommand();" type="SUBMIT" name="cfAlert_Apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Start Test&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button id="stop" value="Abort Test" onClick="buttonClick(this,'Abort Test');return StopCommand();" type="SUBMIT" name="cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Abort Test
+                                </span>
+                            </span>
+                            <span class="roundright_button" style="margin-left: -2px; background-position-x: 0%; background-position-y: 0%;">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button id="clean" onClick="buttonClick(this,'Clear Results');return ClearCommand();" type="SUBMIT" name="Button" value="Clear Results" class="button-rule">
+                            <span class="roundleft_button">
+                                &nbsp;&nbsp; Clear Results
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;width:50%;text-align:left">
+                                        Utility&nbsp;
+                                    </td>
+                                    <td style="white-space:nowrap;width:50%;text-align:right">
+                                        <select name="DiagnosticUtility" size=1 onChange="submit();">
+                                            <option value=0 selected="selected"
+                                                >Ping
+                                            </option>
+                                            <option value=1
+                                                >Traceroute
+                                            </option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="pingStyle" style='display:block'>
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        Ping Test Parameters
+                                                    </td>
+                                                </tr>
+                                                <tr id="IPTYPE">
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        IPv4<input type="radio" name="ip_type" id="ip_type_ipv4" value="ipv4" onclick="changeIpType(0)" checked="">
+                                                        &nbsp;
+                                                        IPv6<input type="radio" name="ip_type" id="ip_type_ipv6" value="ipv6" onclick="changeIpType(1)">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Target
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right" id="target_ipv4">
+                                                        <input type="text" name="PingDestinationIP1" class="num" size="4" maxlength="3"
+                                                        onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0);ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                        .
+                                                        <input type="text" name="PingDestinationIP2" class="num" size="4" maxlength="3"
+                                                        onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0);ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                        <input type="text" name="PingDestinationIP3" class="num" size="4" maxlength="3"
+                                                        onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0);ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                        .
+                                                        <input type="text" name="PingDestinationIP4" class="num" size="4" maxlength="3"
+                                                        onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1);ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right;display:none" id="target_ipv6">
+                                                        <input type="text" size="35" name="PingDestinationIPv6">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Ping Size (in bytes)
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="PingSize" size=4 maxlength=4 value=64 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        No. of Pings
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="NumberOfPings" size=4 maxlength=3 value=3 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Ping Interval (in ms)
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="TimeBetweenPings" size=10 maxlength=10 value=3 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="tracerouteStyle" style='display:none'>
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        Traceroute Parameters
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Target (IP address or Name)
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="TracerouteHost" value="" onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Max Hops
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="TracerouteMaxHops" size=3 maxlength=3 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Data Size (in bytes)
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="TracerouteDataSize" size=3 maxlength=3 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Base Port
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <input class="num" type="text" name="TracerouteBasePort" size=5 maxlength=5 onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                        Resolve Host
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        <select class="num" name="TracerouteResolveHost" size=1>
+                                                            <option value=0>
+                                                                Off
+                                                            </option>
+                                                            <option value=1>
+                                                                On
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="dsStyle" style='display:none'>
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        DS Parameters
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="usStyle" style='display:none'>
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;text-align:left">
+                                                    </td>
+                                                    <td style="white-space:nowrap;text-align:right">
+                                                        US Parameters
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- -->
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="0" cellspacing="0" class="TableStyle">
+                                            <tr>
+                                                <td align="center">
+                                                    Results
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <textarea name="PingToolStatus" readonly="readonly" cols="1" rows="10" style="width:520px" id="inputWidth520">
+                                                        Waiting for input...
+
+                                                    </textarea>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    To view result updates, click the REFRESH button.
+                                                    <input name="Refresh" type="button" value='REFRESH' onClick="location.reload()">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="hidden" name="UtilityCommand" value="5">
+                                        <input type="hidden" name="lan_ipaddr" value="0">
+                                        <input type="hidden" name="PingDest_ipaddr" value="0">
+                                        <input type="hidden" name="PingDestinationIP" value="">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src='Diagnostics_h.htm' class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

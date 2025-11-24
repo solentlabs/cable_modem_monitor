@@ -1,0 +1,380 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+// for refresh timer
+var ctime;
+
+    $(document).ready(function()
+    {
+        BodyInit();
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+
+  function changeCursorPointer()
+  {
+        document.body.style.cursor='pointer';
+  }
+
+  function changeCursorDefault()
+  {
+        document.body.style.cursor='default';
+  }
+
+
+
+
+    function buttonFilter()
+    {
+        var buttonElements;
+
+        buttonElements=document.getElementsByTagName('button');
+        var i;
+        for(i=0;i<buttonElements.length;i++)
+        {
+            if(buttonElements[i].type=='submit' || buttonElements[i].type=='button'|| buttonElements[i].type=='reset')
+            {
+                if((buttonElements[i].value!=document.forms[0].buttonHit.name))
+                    buttonElements[i].disabled=1;
+                else
+                {
+                      var name;
+                      name=buttonElements[i].name;
+                      buttonElements[i].name='NoUse';
+                      buttonElements[i].disabled=1;
+                      document.forms[0].buttonValue.name=name;
+                      document.forms[0].buttonHit.disabled=1;
+                }
+            }
+        }
+
+    }
+
+    function buttonClick(btn,value)
+    {
+
+        document.forms[0].buttonHit.value=btn.name;
+        document.forms[0].buttonValue.value=value;
+        return true;
+    }
+
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function ShowMsg()
+{
+  alert("NETGEAR Genie provides two methods for testing speed. One method measures how fast your PC can download website content, and the other method provide a link to an unaffiliated 3rd-party site, www.speedtest.net, that measures your ISP broadband speed. With the first test, the results can vary based on the network conditions at time tests are performed. In addition, the results of this first test can vary based on the responsiveness of the website from which you are downloading content. Both situation are outsite the control of the first speed test, so please keep in mind that the test results are estimates and are to used for informational purposes only. Please refer to www.speedtest.net for any discussions that site may have about factors affecting its measurements of ISP broadband speeds.");
+}
+
+function checkData()
+{
+
+	return true;
+}
+
+function timestamp(){
+	var timestamp = new Date();
+
+
+	document.write(timestamp);
+    return true;
+}
+
+function setGray(state)
+{
+    var cf = document.forms[0];
+
+    var TestButton;
+    TestButton=document.getElementsByName("SpeedTest");
+
+    if (state == "0")
+    {
+        cf.SpeedTest.disabled = false;
+        TestButton[0].style.cursor='pointer';
+    }
+    else
+    {
+        var TestButton;
+        cf.SpeedTest.disabled = true;
+        TestButton[0].outerHTML= "<button type='submit' disabled value='SpeedTest' name='SpeedTest' class='button-grey' ><span class='roundleft_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Test&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><span class='roundright_grey'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>";
+
+        //TestButton[0].outerHTML= "<button type='submit' disabled value='SpeedTest' name='SpeedTest' class='button-grey' ><span class='roundleft_grey'>&nbsp;&nbsp; Test<\/span><span class='roundright_grey'>&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>";
+        TestButton[0].style.cursor='default';
+    }
+
+}
+
+function InitTagValue()
+{
+    var tagValueList = '';
+//    var tagValueList = "1|1";
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+
+  var cf = document.forms[0];
+  if (tagValues[0] == "1")
+    cf.InternetImg.src = "img/main/InternetStatus.gif";
+  else
+    cf.InternetImg.src = "img/main/InternetStatusN: ***REDACTED***.gif";
+
+
+
+    if (tagValues[0] == "0")
+    {
+        setGray("1");
+    }
+    else
+    {
+        setGray(tagValues[1]);
+    // 0: Not In process, 1: In process
+        if (tagValues[1] == "1")
+            ctime = setTimeout("window.location.reload(true);",1000);
+        else
+            clearTimeout(ctime);
+    }
+
+    document.getElementsByName("SpeedTestURL")[0].value = tagValues[2];
+
+    $("#TestResule").html(tagValues[3]);
+
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+
+}
+//-->
+</script>
+</head>
+
+<body onload="" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/SpeedTest?id=900181843'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Speed Test
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <TR>
+                    <TD colSpan=2>
+                        <IMG alt="" name=InternetImg src="">
+                    </TD>
+                </TR>
+                <!--resize the table size, because image size (613x99) is too big <tr><td class="scrollpane-table-seperate-border" colspan="2"><div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">-->
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:305px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <TR>
+                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                        <INPUT maxLength=60 size=32 type=text name=SpeedTestURL>
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button value="SpeedTest" onClick="buttonClick(this,'SpeedTest');return checkData()" type="SUBMIT" name='SpeedTest' class="button-apply">
+                                            <span class="roundleft_apply">
+                                                Speed Test&nbsp;
+                                                <span class="">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                </span>
+                                            </span>
+                                            <span class="roundright_apply">
+                                                &nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </TD>
+                                </TR>
+                                <TR>
+                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                        Enter a website to test its downloading speed.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button value="Disclaimer" onclick="ShowMsg();" type="RESET" name="Disclaimer" class="button-rule">
+                                            <span class="roundleft_button">
+                                                <span class="">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Disclaimer
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <TABLE border=0 width="50%">
+                                            <TBODY>
+                                                <TR>
+                                                    <TD style="background-color:#2e2efe;width:20px">
+                                                    </TD>
+                                                    <TD>
+                                                        Download
+                                                    </TD>
+                                                </TR>
+                                            </TBODY>
+                                        </TABLE>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <TABLE border=0 width="100%">
+                                            <TBODY>
+                                                <TR>
+                                                    <TD id='TestResule'>
+                                                    </TD>
+                                                </TR>
+                                            </TBODY>
+                                        </TABLE>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="SpeedTest_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1152 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<META name="description" content="C3700-100NAS">
+<!-- <META name="description" content="C6250B"> -->
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<!-- <title>NETGEAR Gateway C6250B</title> -->
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script src="jquery.js"></script>
+<script src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+<!-- foxconn, khfan, remove, 2014/09/24
+     Defect # 126
+     C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+  -->
+<script type="text/javascript" src="script/sorttable.js"></script>
+<script src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!-- <link rel="stylesheet" href="css/main/form.css"> -->
+<STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt";
+</style>
+<style type="text/css">
+	.subheadtext
+	{
+		cursor: pointer;
+		text-decoration: underline;
+		font-weight: Bold;
+	}
+</style>
+<script language="javascript" type="text/javascript" src="func.js"></script>
+<script language="javascript" type="text/javascript" src="msg.js"></script>
+<script language="javascript" type="text/javascript" src="utility.js"></script>
+<script language="javascript" type="text/javascript" src="browser.js"></script>
+<script language="javascript" type="text/javascript" src="md5.js"></script>
+<script language="javascript" type="text/javascript" src="wep.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!--
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        BodyInit();
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+    });
+
+    function BodyInit()
+    {
+        InitUpdateView(InitTagValue());
+        InitUpdateOnlineListTableView(InitOnlineListTableTagValue());
+        InitUpdateOfflineWhiteListTableView(InitOfflineWhiteListTableTagValue());
+        InitUpdateOfflineBlackListTableView(InitOfflineBlackListTableTagValue());
+    }
+
+    function InitTagValue()
+    {
+        /*
+        Turn on Access Control(check box)|Access Rule(radio)|Current User MAC Address
+        */
+        //var tagValueList = "1|1|XX:XX:XX:XX:XX:XX";
+        var tagValueList = '0|1|XX:XX:XX:XX:XX:XX|';
+
+        return tagValueList.split("|");
+    }
+
+    function InitOnlineListTableTagValue()
+    {
+        /*
+        Total num[|Status|Device Name|IP Address|MAC Address|Connection Type]
+        */
+        //var tagValueList = "3"
+        //                    + "|1|Deep Blue|123.123.123.123|XX:XX:XX:XX:XX:XX|0"
+        //                    + "|0|Deep Green|***IPv6***|XX:XX:XX:XX:XX:XX|1"
+        //                    + "|1|Deep Red|***IPv6***|XX:XX:XX:XX:XX:XX|0";
+        var tagValueList = '19|1|SUSAN-s-S24-FE|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Bedroom|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|RokuStreamingStick|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Kitchen|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Familyroom|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|HP39EBFE|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Galaxy-S24-FE|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|iPhone|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|PHR254PSX|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|PHR241S4G|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|iPhone|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|MacBookPro|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Pixel-9-Pro|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|Herschel|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|';
+
+        return tagValueList.split("|");
+    }
+
+    function InitOfflineWhiteListTableTagValue()
+    {
+        /*
+        Total num[|Device Name|MAC Address|Connection Type]
+        */
+        //var tagValueList = "4"
+        //                    + "|Deep Pink|XX:XX:XX:XX:XX:XX|2"
+        //                    + "|Deep Yellow|XX:XX:XX:XX:XX:XX|1"
+        //                    + "|Deep White|XX:XX:XX:XX:XX:XX|1"
+        //                    + "|Deep Gray|XX:XX:XX:XX:XX:XX|0";
+        var tagValueList = '0|';
+
+        return tagValueList.split("|");
+    }
+
+    function InitOfflineBlackListTableTagValue()
+    {
+        /*
+        Total num[|Device Name|MAC Address|Connection Type]
+        */
+        //var tagValueList = "2"
+        //                    + "|Deep Black|XX:XX:XX:XX:XX:XX|0"
+        //                    + "|Deep Purple|XX:XX:XX:XX:XX:XX|1";
+        var tagValueList = '0|';
+
+        return tagValueList.split("|");
+    }
+
+    function InitUpdateView(tagValues)
+    {
+        // Turn on Access Control
+        // 0: disabled; 1: enabled
+        document.getElementsByName("enable_access_control")[0].value = tagValues[0];
+
+        // Access Rule
+        // 0: block all; 1: allow all
+        document.getElementsByName("access_all_setting")[0].value = tagValues[1];
+        document.getElementsByName("router_access_user")[0].value = tagValues[2];
+    }
+
+    function InitUpdateOnlineListTableView(tagValues)
+    {
+        var TotalRow = parseInt(tagValues[0]);
+        var AppendRowText = "";
+
+        for(var i = 0; i < TotalRow; i++)
+        {
+            AppendRowText += '<tr name="row_rules">\n';
+            AppendRowText += '<td nowrap align="center"><input name="checkbox" type="checkbox" value="" onclick="handle_checkboxElements(this);"></td>\n';
+            AppendRowText += '<td nowrap align="left"  name="show_status">'
+                            + ((tagValues[i * 5 + 1] == "1")
+                            ? '<span name="rule_status" class="acl_allowed" style="color:green">Allowed</span>'
+                            : '<span name="rule_status" class="acl_blocked" style="color:red">Blocked</span>')
+                            + '</td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 2])) + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span name="rule_ip">' + tagValues[i * 5 + 3] + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span name="rule_mac" class="">' + tagValues[i * 5 + 4] + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">'
+                            + ((tagValues[i * 5 + 5] == "1") ? 'Wireless' : 'Wired')
+                            + '</span></td>\n';
+            AppendRowText += '<input type="hidden" name="rule_status_org" value="'
+                            + ((tagValues[i * 5 + 1] == "1") ? 'allow' : 'block')
+                            + '">\n';
+            AppendRowText += '</tr>\n';
+        }
+
+        $('#online_list_table tr:last').after(AppendRowText);
+    }
+
+    function InitUpdateOfflineWhiteListTableView(tagValues)
+    {
+        var TotalRow = parseInt(tagValues[0]);
+        var AppendRowText = "";
+        var conn_type = ['Wired', 'Wireless', 'Unknown'];
+
+        for(var i = 0; i < TotalRow; i++)
+        {
+            AppendRowText += '<tr name="row_rules_white">\n';
+            AppendRowText += '<td nowrap align="center"><input name="checkbox_white" type="checkbox" value="" onclick="handle_checkboxElements(this);"></td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 3 + 1])) + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span name="rule_mac_white" class="">' + tagValues[i * 3 + 2] + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">'
+                            + conn_type[parseInt(tagValues[i * 3 + 3])]
+                            + '</span></td>\n';
+            AppendRowText += '</tr>\n';
+        }
+
+        $('#offline_white_list_table tr:last').after(AppendRowText);
+    }
+
+    function InitUpdateOfflineBlackListTableView(tagValues)
+    {
+        var TotalRow = parseInt(tagValues[0]);
+        var AppendRowText = "";
+        var conn_type = ['Wired', 'Wireless', 'Unknown'];
+
+        for(var i = 0; i < TotalRow; i++)
+        {
+            AppendRowText += '<tr name="row_rules_black">\n';
+            AppendRowText += '<td nowrap align="center"><input name="checkbox_black" type="checkbox" value="" onclick="handle_checkboxElements(this);"></td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 3 + 1])) + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span name="rule_mac_black" class="">' + tagValues[i * 3 + 2] + '</span></td>\n';
+            AppendRowText += '<td nowrap align="left"><span class="">'
+                            + conn_type[parseInt(tagValues[i * 3 + 3])]
+                            + '</span></td>\n';
+            AppendRowText += '</tr>\n';
+        }
+
+        $('#offline_black_list_table tr:last').after(AppendRowText);
+    }
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+    function showHelpIframe() {
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up") >= 0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible, 500);
+        }
+
+        changeContentSize();
+    }
+
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+    function loadhelp(fname,anchname)
+    {
+        var pane = window.frames["helpframe"].$('#content');
+        var imgSrc=document.getElementById('help-button');
+        if(imgSrc.src.search("up") < 0)
+        {
+            $(".help-frame-div").show();
+            pane.jScrollPane({showArrows:true});
+
+            if ((loadhelp.arguments.length == 1 ) || (anchname == ""))
+            {
+                window.frames["helpframe"].location.href = fname + "_h."+"htm";
+                $(".help-frame-div").show();
+            }
+            else
+            {
+                window.frames["helpframe"].location.href = fname + "_h."+"htm#" + anchname;
+                $(".help-frame-div").show();
+            }
+
+            $(".help-frame-div").show();
+            pane.jScrollPane({showArrows: true});
+        }
+    }
+
+
+    function grayout_all_items()
+    {
+        var i;
+        var checkboxElements = document.getElementsByName("checkbox");
+        var checkboxElementsWhite = document.getElementsByName("checkbox_white");
+        var checkboxElementsBlack = document.getElementsByName("checkbox_black");
+        var checkboxIndex = document.getElementsByName("checkbox_index");
+        var checkboxIndexWhite = document.getElementsByName("checkbox_index_white");
+        var checkboxIndexBlack = document.getElementsByName("checkbox_index_black");
+
+        grayout_button("allow");
+        grayout_button("block");
+        grayout_button("refresh");
+        grayout_button("delete_white");
+        grayout_button("delete_black");
+        grayout_button("add_white");
+        grayout_button("add_black");
+		grayout_button("edit_attached");
+		grayout_button("edit_white");
+		grayout_button("edit_black");
+
+        //$("#allow_all")[0].disabled = true;
+        $("#allow_all")[0].setAttribute("style","opacity : .40;filter  : alpha(opacity=50);");
+        //$("#block_all")[0].disabled = true;
+        $("#block_all")[0].setAttribute("style","opacity : .40;filter  : alpha(opacity=50);");
+        checkboxIndex[0].disabled = true;
+        checkboxIndexWhite[0].disabled = true;
+        checkboxIndexBlack[0].disabled = true;
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            checkboxElements[i].disabled = true;
+        }
+
+        for(i = 0; i < checkboxElementsWhite.length; i++)
+        {
+            checkboxElementsWhite[i].disabled = true;
+        }
+
+        for(i = 0; i < checkboxElementsBlack.length; i++)
+        {
+            checkboxElementsBlack[i].disabled = true;
+        }
+    }
+
+    function ungrayout_all_items()
+    {
+        var i;
+        var checkboxElements = document.getElementsByName("checkbox");
+        var checkboxElementsWhite = document.getElementsByName("checkbox_white");
+        var checkboxElementsBlack = document.getElementsByName("checkbox_black");
+        var checkboxIndex = document.getElementsByName("checkbox_index");
+        var checkboxIndexWhite = document.getElementsByName("checkbox_index_white");
+        var checkboxIndexBlack = document.getElementsByName("checkbox_index_black");
+
+        ungrayout_button("allow");
+        ungrayout_button("block");
+        ungrayout_button("refresh");
+        ungrayout_button("add_white");
+        ungrayout_button("add_black");
+		grayout_button("edit_attached");
+		grayout_button("edit_white");
+		grayout_button("edit_black");
+
+        if($('tr[name=row_rules_white]').length > 0)
+        {
+            ungrayout_button("delete_white");
+            checkboxIndexWhite[0].disabled = false;
+        }
+
+        if($('tr[name=row_rules_black]').length > 0)
+        {
+            ungrayout_button("delete_black");
+            checkboxIndexBlack[0].disabled = false;
+        }
+
+        //$("#allow_all")[0].disabled = false;
+        $("#allow_all")[0].removeAttribute("style","opacity : .40;filter  : alpha(opacity=50);");
+        //$("#block_all")[0].disabled = false;
+        $("#block_all")[0].removeAttribute("style","opacity : .40;filter  : alpha(opacity=50);");
+        checkboxIndex[0].disabled = false;
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            checkboxElements[i].disabled = false;
+        }
+
+        for(i = 0; i < checkboxElementsWhite.length; i++)
+        {
+            checkboxElementsWhite[i].disabled = false;
+        }
+
+        for(i = 0; i < checkboxElementsBlack.length; i++) {
+            checkboxElementsBlack[i].disabled = false;
+        }
+    }
+
+    // Defined in home router's script/script.js
+    function getElementsByName_iefix(tag, name)
+    {
+        var elem = document.getElementsByTagName(tag);
+        var arr = new Array();
+
+        for(i = 0,iarr = 0; i < elem.length; i++)
+        {
+            att = elem[i].getAttribute("name");
+            if(att == name)
+            {
+                arr[iarr] = elem[i];
+                iarr++;
+            }
+        }
+
+        return arr;
+    }
+
+    function handle_all_items(checkbox)
+    {
+        var i;
+        var rule_status = getElementsByName_iefix("span", "rule_status");
+        var rule_status_org = document.getElementsByName("rule_status_org");
+        var allowed_text = document.getElementsByName("allowed_text")[0].value;
+        var blocked_text = document.getElementsByName("blocked_text")[0].value;
+        var checkboxIndexWhite = document.getElementsByName("checkbox_index_white");
+        var checkboxIndexBlack = document.getElementsByName("checkbox_index_black");
+        var access_all_setting = document.getElementsByName("access_all_setting");
+        var access_all_radio = document.getElementsByName("access_all");
+
+        if(access_all_radio[1].checked)
+        {
+            access_all_setting[0].value = "0";
+        }
+        else
+        {
+            access_all_setting[0].value = "1";
+        }
+
+        for(i = 0; i < $('tr[name=row_rules_white]').length; i++)
+        {
+            if($('tr[name=row_rules_white]')[i].style.display == "none")
+            {
+                $('tr[name=row_rules_white]')[i].style.display = "table-row";
+            }
+        }
+
+        for(i = 0; i < $('tr[name=row_rules_black]').length; i++)
+        {
+            if($('tr[name=row_rules_black]')[i].style.display == "none")
+            {
+                $('tr[name=row_rules_black]')[i].style.display = "table-row";
+            }
+        }
+
+        for(i = 0; i < rule_status_org.length; i++)
+        {
+            if(rule_status_org[i].value == "allow")
+            {
+                $(rule_status[i]).addClass("acl_allowed");
+                $(rule_status[i]).removeClass("acl_blocked");
+                rule_status[i].innerHTML = allowed_text;
+            }
+            else
+            {
+                $(rule_status[i]).addClass("acl_blocked");
+                $(rule_status[i]).removeClass("acl_allowed");
+                rule_status[i].innerHTML = blocked_text;
+            }
+        }
+
+        if(checkbox.checked)
+        {
+            ungrayout_all_items();
+        }
+        else
+        {
+            grayout_all_items();
+        }
+
+        if($('tr[name=row_rules_white]').length == 0)
+        {
+            grayout_button("delete_white");
+            checkboxIndexWhite[0].disabled = true;
+        }
+
+        if($('tr[name=row_rules_black]').length == 0)
+        {
+            grayout_button("delete_black");
+            checkboxIndexBlack[0].disabled = true;
+        }
+
+        document.getElementsByName("checkbox_index")[0].checked = false;
+
+        for(i = 0; i < $('tr[name=row_rules]').length; i++)
+        {
+            $('input[name=checkbox]')[i].checked = false;
+        }
+
+        document.getElementsByName("checkbox_index_white")[0].checked = false;
+
+        for(i = 0; i < $('tr[name=row_rules_white]').length; i++)
+        {
+            $('input[name=checkbox_white]')[i].checked = false;
+        }
+
+        document.getElementsByName("checkbox_index_black")[0].checked = false;
+
+        for(i = 0; i < $('tr[name=row_rules_black]').length; i++)
+        {
+            $('input[name=checkbox_black]')[i].checked = false;
+        }
+    }
+
+    function handle_checkboxes(checkbox, name)
+    {
+        var i;
+        var checkboxElements = document.getElementsByName(name);
+
+        if(checkbox.checked)
+        {
+            for(i = 0; i < checkboxElements.length; i++)
+            {
+                checkboxElements[i].checked = true;
+            }
+        }
+        else
+        {
+            for(i = 0; i < checkboxElements.length; i++)
+            {
+                checkboxElements[i].checked = false;
+            }
+        }
+
+		if(checkboxElements.length==1 && checkbox.checked)
+		{
+			if(name=="checkbox")
+				ungrayout_button("edit_attached");
+			else if(name=="checkbox_white")
+				ungrayout_button("edit_white");
+			else if(name=="checkbox_black")
+				ungrayout_button("edit_black");
+		}
+		else
+		{
+			if(name=="checkbox")
+				grayout_button("edit_attached");
+			else if(name=="checkbox_white")
+				grayout_button("edit_white");
+			else if(name=="checkbox_black")
+				grayout_button("edit_black");
+		}
+    }
+
+	function handle_checkboxElements(checkbox)
+	{
+		var i,checked_count=0;
+		var checkboxElements = document.getElementsByName(checkbox.name);
+		for(i=0 ; i<checkboxElements.length ; i++)
+		{
+			if(checkboxElements[i].checked==true)
+			checked_count++;
+		}
+		if(checked_count==1)
+		{
+			if(checkbox.name=="checkbox")
+				ungrayout_button("edit_attached");
+			else if(checkbox.name=="checkbox_white")
+				ungrayout_button("edit_white");
+			else if(checkbox.name=="checkbox_black")
+				ungrayout_button("edit_black");
+		}
+		else
+		{
+			if(checkbox.name=="checkbox")
+				grayout_button("edit_attached");
+			else if(checkbox.name=="checkbox_white")
+				grayout_button("edit_white");
+			else if(checkbox.name=="checkbox_black")
+				grayout_button("edit_black");
+		}
+	}
+
+    function adjust_column_backColor()
+    {
+        var i;
+        var row_rules = document.getElementsByName("row_rules");
+        var row_rules_white = document.getElementsByName("row_rules_white");
+        var row_rules_black = document.getElementsByName("row_rules_black");
+
+        for(i = 0; i < $('tr[name=row_rules]').length; i++)
+        {
+            if(i % 2 == 0)
+            {
+                $('tr[name=row_rules]')[i].style.backgroundColor = "white";
+            }
+            else
+            {
+                $('tr[name=row_rules]')[i].style.backgroundColor = "#e5e5e5";
+            }
+        }
+
+        for(i = 0; i < $('tr[name=row_rules_white]').length; i++)
+        {
+            if($('tr[name=row_rules_white]')[i].style.display == "none")
+            {
+                continue;
+            }
+
+            if(i % 2 == 0)
+            {
+                $('tr[name=row_rules_white]')[i].style.backgroundColor = "#e5e5e5";
+            }
+            else
+            {
+                $('tr[name=row_rules_white]')[i].style.backgroundColor = "white";
+            }
+        }
+
+        for(i = 0; i < $('tr[name=row_rules_black]').length; i++)
+        {
+            if($('tr[name=row_rules_black]')[i].style.display=="none")
+            {
+                continue;
+            }
+
+            if(i % 2 == 0)
+            {
+                $('tr[name=row_rules_black]')[i].style.backgroundColor = "#e5e5e5";
+            }
+            else
+            {
+                $('tr[name=row_rules_black]')[i].style.backgroundColor = "white";
+            }
+        }
+    }
+
+    function set_rule_style(id, style)
+    {
+        var ruleStatus = getElementsByName_iefix("span", "rule_status")[id];
+        var allowed_text = document.getElementsByName("allowed_text")[0].value;
+        var blocked_text = document.getElementsByName("blocked_text")[0].value;
+
+        if(style == "allow")
+        {
+            ruleStatus.innerHTML = allowed_text;
+            $(ruleStatus).addClass("acl_allowed");
+            $(ruleStatus).removeClass("acl_blocked");
+        }
+        else if(style == "block")
+        {
+            ruleStatus.innerHTML = blocked_text;
+            $(ruleStatus).addClass("acl_blocked");
+            $(ruleStatus).removeClass("acl_allowed");
+        }
+    }
+
+    function allow_devices()
+    {
+        var i;
+        var checkboxElements = document.getElementsByName("checkbox");
+        var tmp_settings = "";
+        var checked_num = 0;
+        var macElements = getElementsByName_iefix("span", "rule_mac");
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            if (checkboxElements[i].checked == true)
+            {
+                //set_rule_style(i, "allow");
+                //checkboxElements[i].checked = false;
+
+                checked_num++;
+                tmp_settings += macElements[i].innerHTML + ";" + "1|";
+            }
+        }
+
+        document.getElementsByName("rule_settings")[0].value = checked_num + "|" + tmp_settings;
+    }
+
+    function block_devices()
+    {
+        var i;
+        var checkboxElements = document.getElementsByName("checkbox");
+        var router_user = document.getElementsByName("router_access_user")[0].value;
+        //var rule_ip = getElementsByName_iefix("span", "rule_ip");
+        var rule_mac = getElementsByName_iefix("span", "rule_mac");
+        var ip_checked = 0;
+        var block_checked = 0;
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            if(checkboxElements[i].checked == true)
+            {
+                if(block_checked == 0)
+                {
+                    if(!confirm("Do you really want to block access to selected device(s)?"))
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        block_checked = 1;
+                    }
+                }
+                if(router_user==rule_mac[i].innerHTML && ip_checked==0)
+                {
+                    alert("You cannot block the device that you are using now to connect to your router. To block this device, you should log in to your router from another device.");
+                    ip_checked = 1;
+                    return false;
+                }
+            }
+        }
+
+        var tmp_settings = "";
+        var checked_num = 0;
+        var macElements = getElementsByName_iefix("span", "rule_mac");
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            if(router_user == rule_mac[i].innerHTML)
+            {
+                continue;
+            }
+
+            if(checkboxElements[i].checked == true)
+            {
+                //set_rule_style(i, "block");
+                //checkboxElements[i].checked = false;
+
+                checked_num++;
+                tmp_settings += macElements[i].innerHTML + ";" + "0|";
+            }
+        }
+
+        document.getElementsByName("rule_settings")[0].value = checked_num + "|" + tmp_settings;
+
+        return true;
+    }
+
+    function loadSettings()
+    {
+        var i;
+        var enable_access_control = document.getElementsByName("enable_access_control");
+        var access_all_setting = document.getElementsByName("access_all_setting");
+        var access_all_radio = document.getElementsByName("access_all");
+
+        if(enable_access_control[0].value == "1")
+        {
+            $("#enable_acl")[0].checked = true;
+        }
+        else
+        {
+            $("#enable_acl")[0].checked = false;
+        }
+
+        if(access_all_setting[0].value == "0")
+        {
+            access_all_radio[1].checked = true;
+        }
+        else
+        {
+            access_all_radio[0].checked = true;
+        }
+
+        handle_all_items($("#enable_acl")[0]);
+
+        adjust_column_backColor();
+    }
+
+    function is_deleted_rule(rule_obj)
+    {
+        var i;
+        var elements;
+    }
+/*
+    function checkData()
+    {
+        var i, del_num = 0;
+        var tmp_settings;
+        var checkboxElements = document.getElementsByName("checkbox");
+        var macElements = getElementsByName_iefix("span", "rule_mac");
+        var statusElements = getElementsByName_iefix("span", "rule_status");
+        var rule_settings = document.getElementsByName("rule_settings")[0];
+
+        tmp_settings = checkboxElements.length + "|";
+
+        for(i = 0; i < checkboxElements.length; i++)
+        {
+            if($(statusElements[i]).attr("class") == "acl_allowed")
+            {
+                tmp_settings = tmp_settings + macElements[i].innerHTML + ";" + "1|";
+            }
+            else
+            {
+                tmp_settings = tmp_settings + macElements[i].innerHTML + ";" + "0|";
+            }
+        }
+
+        rule_settings.value = tmp_settings;
+
+        return true;
+    }
+*/
+    function handle_white_list_table()
+    {
+        if($("#white_list_body")[0].style.display == "block")
+        {
+            $("#white_list_body")[0].style.display = "none";
+            document.getElementById("white_list_line").style.display = "none";
+            document.getElementById("white_list_line2").style.display = "none";
+            $("#barrow_white")[0].src = "img/barrow_nobackground.gif";
+        }
+        else
+        {
+            $("#white_list_body")[0].style.display = "block";
+            document.getElementById("white_list_line").style.display = "block";
+            document.getElementById("white_list_line2").style.display = "block";
+            $("#barrow_white")[0].src = "img/barrow_down_nobackground.gif";
+        }
+    }
+
+    function handle_black_list_table()
+    {
+        if($("#black_list_body")[0].style.display == "block")
+        {
+            $("#black_list_body")[0].style.display = "none";
+            document.getElementById("black_list_line").style.display = "none";
+            document.getElementById("black_list_line2").style.display = "none";
+            $("#barrow_black")[0].src = "img/barrow_nobackground.gif";
+        }
+        else
+        {
+            $("#black_list_body")[0].style.display = "block";
+            document.getElementById("black_list_line").style.display = "block";
+            document.getElementById("black_list_line2").style.display = "block";
+            $("#barrow_black")[0].src = "img/barrow_down_nobackground.gif";
+        }
+    }
+
+    function delete_items(type)
+    {
+        var i, del_num = 0;
+        var tmp_settings = "";
+        var checkbox = document.getElementsByName("checkbox_" + type);
+        var row_rules = $('tr[name=row_rules_'+ type + ']');
+        var checkbox_index = document.getElementsByName("checkbox_index_" + type);
+        var rule_mac = getElementsByName_iefix("span", "rule_mac_" + type);
+        var delete_lists = document.getElementsByName("delete_" + type + "_lists")[0];
+
+        for(i = 0; i < row_rules.length; i++)
+        {
+            if(checkbox[i].checked == true)
+            {
+                del_num++;
+                tmp_settings = tmp_settings + rule_mac[i].innerHTML + "|";
+            }
+        }
+
+        delete_lists.value = del_num + "|" + tmp_settings;
+
+        return true;
+    }
+
+	function edit_items(type)
+	{
+		var i;
+		var tmp_settings = "";
+		var router_user = document.getElementsByName("router_access_user")[0].value;
+		var checkbox = document.getElementsByName("checkbox" + type);
+		var row_rules = $('tr[name=row_rules'+ type + ']');
+		var checkbox_index = document.getElementsByName("checkbox_index" + type);
+		var rule_mac = getElementsByName_iefix("span", "rule_mac" + type);
+		var edit_lists = document.getElementsByName("edit_lists")[0];
+
+		for(i=0 ; i<row_rules.length ; i++)
+		{
+			if(checkbox[i].checked==true)
+			{
+				tmp_settings = tmp_settings + rule_mac[i].innerHTML;
+				if(type=='')
+				{
+					if(router_user==rule_mac[i].innerHTML)
+					{
+						document.getElementsByName("is_edit_itself")[0].value = 1;
+					}
+				}
+				break;
+			}
+		}
+		edit_lists.value = tmp_settings;
+		return true;
+	}
+
+    function checkAccessAllInTd()
+    {
+        if($("#enable_acl")[0].checked)
+        {
+            // do nothing
+        }
+        else
+        {
+            var access_all_setting = document.getElementsByName("access_all_setting");
+            var access_all_radio = document.getElementsByName("access_all");
+
+            if(access_all_setting[0].value == "0")
+            {
+                access_all_radio[1].checked = true;
+            }
+            else
+            {
+                access_all_radio[0].checked = true;
+            }
+        }
+    }
+
+    function OnSubmitForm()
+    {
+        if(document.pressed == 'Apply' || document.pressed == 'allow' || document.pressed == 'block' || document.pressed == 'edit_attached')
+        {
+            document.access_ctrl_frm.setAttribute('action', '/goform/AccessControl?id=842467026');
+        }
+        else if(document.pressed == 'delete_white' || document.pressed == 'edit_white')
+        {
+            document.access_ctrl_frm.setAttribute('action', '/goform/OfflineWhiteList?id=842467026');
+        }
+        else if(document.pressed == 'delete_black' || document.pressed == 'edit_black')
+        {
+            document.access_ctrl_frm.setAttribute('action', '/goform/OfflineBlackList?id=842467026');
+        }
+        return true;
+    }
+//-->
+</script>
+</head>
+<body  onload="changeContentSize();loadSettings();" class="page-body"  onResize="changeContentSize();" >
+<!-- <img class="cover-image" src="img/cover-image_noh.gif">
+<img class="body-image" src="img/subhead2-background_noh.jpg"> -->
+<div id="full-page-container">
+
+<form id="target" name="access_ctrl_frm" method="POST" onsubmit="return OnSubmitForm();">
+    <input type="hidden" name="buttonHit">
+    <input type="hidden" name="buttonValue">
+    <!-- <img class="subtop-image" src="img/subhead2-top_noh.gif"> -->
+    <div class="subhead2"> Access Control</div>
+    <table border="0"    style="height:370px"  class="subhead2-table">
+        <tr align="left" valign="middle">
+            <td  style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                <!-- &nbsp;&nbsp;&nbsp;<button value="Apply"  onClick="buttonClick(this,'Apply');return checkData()" type="SUBMIT" name="action" class="button-apply" > -->
+                &nbsp;&nbsp;&nbsp;<button value="Apply"  onClick="buttonClick(this,'Apply');document.pressed=this.value;return true" type="SUBMIT" name="action" class="button-apply" >
+                    <span class="roundleft_apply" >Apply&nbsp;
+                        <span class="apply-icon">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                    </span>
+                    <span class="roundright_apply">&nbsp;&nbsp;&nbsp;</span>
+                </button>
+                &nbsp;&nbsp;&nbsp;<button value="Cancel" onClick="buttonClick(this,'Cancel');loadSettings();" type="BUTTON" name="Cancel" class="button-rule" >
+                    <span class="roundleft_button">
+                        <span class ="cancel-icon">&nbsp;&nbsp;&nbsp;&nbsp;Cancel</span>
+                    </span>
+                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                </button>
+            </td>
+        </tr>
+        <tr>
+            <td class="scrollpane-table-seperate-border" colspan="2">
+                <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                    <table style="border-collapse:collapse;width:97%">
+                        <tr>
+                            <td colspan="2" height="12" >
+                                <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div>
+                                <!-- <div style="background-image:url('img/main/liteblue.gif');width:100%">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <a href="javascript:loadhelp('AccessControl','enable_acc_control')" tabindex="-1">
+                                    <b>You can use Access Control to allow or block computers or electronic devices from accessing your network. </b>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" nowrap>
+                                <input type="checkbox" id="enable_acl" name="enable_acl" value="enable_acl" onclick="handle_all_items(this);">
+                                <a href="javascript:loadhelp('AccessControl','enable_acc_control')" tabindex="-1">Turn on Access Control</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td nowrap>
+                                <a href="javascript:loadhelp('AccessControl','access_rule')" tabindex="-1"><b>Access Rule:</b></a> This is a general rule. You can also allow or block individual devices.
+                            </td>
+                            <td nowrap align="right" class="num"></td>
+                        </tr>
+                        <tr>
+                            <td nowrap onclick="checkAccessAllInTd()">
+                                <input type="radio" id="allow_all" name="access_all" value="allow_all">Allow all new devices to connect
+                            </td>
+                            <td nowrap align="right" class="num"></td>
+                        </tr>
+                        <tr>
+                            <td nowrap onclick="checkAccessAllInTd()">
+                                <input type="radio" id="block_all" name="access_all" value="block_all">Block all new devices from connecting
+                            </td>
+                            <td nowrap align="right" class="num"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" height="12" >
+                                <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div>
+                                <!-- <div style="background-image:url('img/main/liteblue.gif');width:100%">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td >
+                                <!-- &nbsp;&nbsp;&nbsp;<button type="submit" value="allow" id="allow" name="allow" class="button-rule" onclick="buttonClick(this,'allow');allow_devices();return checkData();" > -->
+                                &nbsp;&nbsp;&nbsp;<button type="submit" value="allow" id="allow" name="allow" class="button-rule" onclick="buttonClick(this,'allow');allow_devices();document.pressed=this.value;return true;" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Allow </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                <!-- &nbsp;&nbsp;&nbsp;<button type="submit" value="block" id="block" name="block" class="button-rule" onclick="buttonClick(this,'block');if(block_devices())return checkData();" > -->
+                                &nbsp;&nbsp;&nbsp;<button type="submit" value="block" id="block" name="block" class="button-rule" onclick="buttonClick(this,'block');document.pressed=this.value;return block_devices();" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Block </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                &nbsp;&nbsp;&nbsp;<button type="submit" value="edit" id="edit_attached" name="edit_attached" class="button-rule" onclick="buttonClick(this,'edit');document.pressed=this.name;edit_items('');" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Edit </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                            </td>
+                            <td nowrap align="right">
+                                &nbsp;&nbsp;&nbsp;<button type="button" value="refresh" id="refresh" name="refresh" class="button-rule" onclick="buttonClick(this,'refresh');location.href='AccessControl.htm';" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Refresh </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <table id="online_list_table" class="sortable" border="1" cellpadding="2" cellspacing="0" width="100%" >
+                                    <tr class="table_header">
+                                        <td nowrap align="center" width="5%" class="sorttable_nosort">
+                                            <input type="checkbox" name="checkbox_index" onclick="handle_checkboxes(this, 'checkbox');" >
+                                        </td>
+                                        <td nowrap align="left" width="10%"><span class="subheadtext">Status</span></td>
+                                        <td nowrap align="left" width="35%"><span class="subheadtext">Device Name</span></td>
+                                        <td nowrap align="left" width="20%"><span class="subheadtext">IP Address</span></td>
+                                        <td nowrap align="left" width="20%"><span class="subheadtext">MAC Address</span></td>
+                                        <td nowrap align="left" width="10%"><span class="subheadtext">Connection Type</span></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <span onClick="handle_white_list_table();"  style="cursor:pointer">
+                                    <img id="barrow_white" src="img/barrow_nobackground.gif">
+                                    View list of allowed devices not currently connected to the network
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" >
+                                <div height="12" id="white_list_line" style="background-image:url('liteblue.gif');width:100%;display:none">&nbsp;</div>
+                                <!-- <div height="12" id="white_list_line" style="background-image:url('img/main/liteblue.gif');width:100%;display:none">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                        <tr >
+                            <td colspan="2"  id="white_list_body" style="display:none" width="100%">
+                                &nbsp;&nbsp;&nbsp;<button type="SUBMIT" value="Delete" id="delete_white" name="delete_white" class="button-rule" onclick="buttonClick(this,'Delete');delete_items('white');document.pressed=this.id;" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Remove from the list </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                &nbsp;&nbsp;&nbsp;<button type="button" value="add" id="add_white" name="add_white" class="button-rule" onclick="buttonClick(this,'add_white');location.href='/AddAllowedDevice.htm'" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Add </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                &nbsp;&nbsp;&nbsp;<button type="submit" value="edit" id="edit_white" name="edit_white" class="button-rule" onclick="buttonClick(this,'edit');document.pressed=this.name;edit_items('_white');" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Edit </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                                <table id="offline_white_list_table" class="sortable"  border="1" cellpadding="2" cellspacing="0" width="70%">
+                                    <tr class="table_header">
+                                        <td nowrap align="center" width="5%" class="sorttable_nosort">
+                                            <input type="checkbox" name="checkbox_index_white" onclick="handle_checkboxes(this, 'checkbox_white');" >
+                                        </td>
+                                        <td nowrap align="left" width="50%"><span class="subheadtext">Device Name</span></td>
+                                        <td nowrap align="left" width="30%"><span class="subheadtext">MAC Address</span></td>
+                                        <td nowrap align="left" width="15%"><span class="subheadtext">Connection Type</span></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" >
+                                <div height="12" id="white_list_line2" style="background-image:url('liteblue.gif');width:100%;display:none">&nbsp;</div>
+                                <!-- <div height="12" id="white_list_line2" style="background-image:url('img/main/liteblue.gif');width:100%;display:none">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td >
+                                <span onClick="handle_black_list_table();" style="cursor:pointer">
+                                    <img id="barrow_black" src="img/barrow_nobackground.gif">
+                                    View list of blocked devices not currently connected to the network
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" >
+                                <div height="12" id="black_list_line" style="background-image:url('liteblue.gif');width:100%;display:none">&nbsp;</div>
+                                <!-- <div height="12" id="black_list_line" style="background-image:url('img/main/liteblue.gif');width:100%;display:none">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" id="black_list_body" style="display:none" width="100%">
+                                &nbsp;&nbsp;&nbsp;<button type="SUBMIT" value="Delete" id="delete_black" name="delete_black" class="button-rule" onclick="buttonClick(this,'Delete');delete_items('black');document.pressed=this.id;" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Remove from the list </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                &nbsp;&nbsp;&nbsp;<button type="button" value="add" id="add_black" name="add_black" class="button-rule" onclick="buttonClick(this,'add_black');location.href='/AddBlockedDevice.htm'" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Add </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                &nbsp;&nbsp;&nbsp;<button type="submit" value="edit" id="edit_black" name="edit_black" class="button-rule" onclick="buttonClick(this,'edit');document.pressed=this.name;edit_items('_black');" >
+                                    <span class="roundleft_button">&nbsp;&nbsp;&nbsp;Edit </span>
+                                    <span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                </button>
+                                <table id="offline_black_list_table" class="sortable" border="1" cellpadding="2" cellspacing="0" width="70%">
+                                    <tr class="table_header">
+                                        <td nowrap align="center" width="5%" class="sorttable_nosort">
+                                            <input type="checkbox" name="checkbox_index_black" onclick="handle_checkboxes(this, 'checkbox_black');" >
+                                        </td>
+                                        <td nowrap align="left" width="50%"><span class="subheadtext">Device Name</span></td>
+                                        <td nowrap align="left" width="30%"><span class="subheadtext">MAC Address</span></td>
+                                        <td nowrap align="left" width="15%"><span class="subheadtext">Connection Type</span></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" >
+                                <div height="12" id="black_list_line2" style="background-image:url('liteblue.gif');width:100%;display:none">&nbsp;</div>
+                                <!-- <div height="12" id="black_list_line2" style="background-image:url('img/main/liteblue.gif');width:100%;display:none">&nbsp;</div> -->
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr valign="middle" align="center">
+            <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                <div class="help-frame-div" >
+                    <iframe id="helpframe"  src="AccessControl_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0" onload="showHelpIframe();"></iframe>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <a name="helpframe-anchor"></a>
+    <!-- <img class="subfooter-image" src="img/subhead2-bottom.gif"> -->
+    <div class="subhead2-bottom" >
+        <span style="float:left;padding-left:10px;padding-top:5px">
+            <img src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+        </span>
+        <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Help Center </span>
+        <span class="button-help-arrow">
+            <img src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();" >
+        </span>
+        <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Show/Hide Help Center </span>
+    </div>
+
+    <input name="enable_access_control" type="hidden" value= "1">
+    <input name="access_all_setting" type="hidden" value= "1">
+    <input name="allowed_text" type="hidden" value="Allowed">
+    <input name="blocked_text" type="hidden" value="Blocked">
+    <input name="rule_settings" type="hidden" value="">
+    <input name="delete_white_lists" type="hidden" value="">
+    <input name="delete_black_lists" type="hidden" value="">
+	<input name="edit_lists" type="hidden" value="">
+    <input name="router_access_user" type="hidden" value="***PRIVATE_IP***">
+	<input name="is_edit_itself" type="hidden" value="">
+</form>
+</div>
+</body>
+</html>

@@ -1,0 +1,766 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+// Nick bodyinit()
+        BodyInit();
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function check_data()
+{
+	var cf = document.forms[0];
+	var msg = "";
+	if (cf.dmz_enable.checked)
+	{
+		if(checkIP(cf.dmzip1,cf.dmzip2,cf.dmzip3,cf.dmzip4,254) || (parseInt(cf.dmzip4.value,10) == 0))
+			msg += "DMZ Server is not a valid IP address.\n";
+	}
+
+// Nick, mtu is set zero is mean auto mtu.
+      if (cf.wan_mtu.value != '0')
+      {
+    	msg+= checkInt(cf.wan_mtu, "MTU value", 1, parseInt(cf.wan_way.value,10), true);
+	if((parseInt(cf.wan_mtu.value,10)>parseInt(cf.wan_way.value,10))
+			||(parseInt(cf.wan_mtu.value,10)<256))
+		msg += "Invalid MTU value, valid range is 256 to "+cf.wan_way.value+"\n";
+      }
+
+    // Terry 20120305, Add error checking to prevent DMZ be same as LAN ip address.
+    if (cf.dmz_enable.checked)
+    {
+        var lanIP = cf.lan_ipaddr.value.split(".");
+        if (lanIP[0] == cf.dmzip1.value && lanIP[1] == cf.dmzip2.value && lanIP[2] == cf.dmzip3.value && lanIP[3] == cf.dmzip4.value)
+        {
+            msg += "DMZ Server is not a valid IP address.\n";
+        }
+    }
+
+	if (msg.length > 1)
+	{
+		alert(msg);
+		return false;
+	}
+	cf.dmzip1.value = parseInt(cf.dmzip1.value,10);
+	cf.dmzip2.value = parseInt(cf.dmzip2.value,10);
+	cf.dmzip3.value = parseInt(cf.dmzip3.value,10);
+	cf.dmzip4.value = parseInt(cf.dmzip4.value,10);
+	cf.dmz_ip.value = cf.dmzip1.value+'.'+cf.dmzip2.value+'.'+cf.dmzip3.value+'.'+cf.dmzip4.value;
+	cf.wan_mtu.value = parseInt(cf.wan_mtu.value,10);
+	return true;
+}
+
+//RU_IPTV start
+// Terry 20110921, need to support IPTV?
+function display_ru_iptv()
+{
+	var cf = document.forms[0];
+	var ru_iptv_en = "Disable";
+	var wlan1_en = "Enable";
+	var wlan2_en = "Enable";
+
+	if (ru_iptv_en == "Enable")
+	{
+		document.getElementById("ru_iptv_support_str").style.display = "block";
+		document.getElementById("ru_iptv_support_lan").style.display = "block";
+		if (wlan1_en == "Enable")
+			document.getElementById("ru_iptv_support_wlan1").style.display = "block";
+		else
+			document.getElementById("ru_iptv_support_wlan1").style.display = "none";
+		if (wlan2_en == "Enable")
+			document.getElementById("ru_iptv_support_wlan2").style.display = "block";
+		else
+			document.getElementById("ru_iptv_support_wlan2").style.display = "none";
+		document.getElementById("ru_iptv_support_line").style.display = "block";
+	}
+	else
+	{
+		document.getElementById("ru_iptv_support_str").style.display = "none";
+		document.getElementById("ru_iptv_support_lan").style.display = "none";
+		document.getElementById("ru_iptv_support_wlan1").style.display = "none";
+		document.getElementById("ru_iptv_support_wlan2").style.display = "none";
+		document.getElementById("ru_iptv_support_line").style.display = "none";
+	}
+}
+//RU_IPTV end
+
+function loadSettings()
+{
+	var cf = document.forms[0];
+/*  Terry 20110809, Update content in InitUpdateView()
+	var spiEnable = "1";
+	var dmzEnable = "0";
+	var resp2ping = "0";
+*/
+	var firEnable = cf.firewallEnable.value;
+	var spiEnable = cf.spiEnable.value;
+	var dmzEnable = cf.dmzEnable.value;
+	var resp2ping = cf.resp2ping.value;
+
+	var nat_inbound_filtering = cf.nat_inbound_filtering.value;
+/*  Terry 20110809, Update content in InitUpdateView()
+	var sipenable = "1";
+*/
+	var sipenable = cf.sipenable.value;
+//  Nick 20111102, add new option ethwan
+	var ethwan = cf.ethwan.value;
+//  Nick 20111110, add new option 3gwan
+	var _3gwan = cf._3gwan.value;
+
+
+
+/*
+	var ipv6_enable = "0";
+*/
+	//RU_IPTV start
+/*
+	var var_iptv_lan1 = cf.iptv_intf_lan1.value;
+	var var_iptv_lan2 = cf.iptv_intf_lan2.value;
+	var var_iptv_lan3 = cf.iptv_intf_lan3.value;
+	var var_iptv_lan4 = cf.iptv_intf_lan4.value;
+	var var_iptv_wlan1 = cf.iptv_intf_wlan1.value;
+	var var_iptv_wlan2 = cf.iptv_intf_wlan2.value;
+*/
+	var ru_iptv_en = "Disable";
+	//RU_IPTV end
+
+
+// Terry 20110901, Doesn't support NAT filtering type temporary
+/*
+	if (nat_inbound_filtering == "1")
+		cf.NatInboundFiltering[0].checked = true;
+	else
+		cf.NatInboundFiltering[1].checked = true;
+*/
+	if (firEnable == "1")
+		cf.disable_firewall.checked = false;
+	else
+		cf.disable_firewall.checked = true;
+
+	if (spiEnable == "1")
+		cf.disable_spi.checked = false;
+	else
+		cf.disable_spi.checked = true;
+
+	var dmzIP = cf.dmz_ip.value.split(".");
+    var lanIP = cf.lan_ipaddr.value.split(".");
+
+    if (parseInt(dmzIP[0]) == 0 && parseInt(dmzIP[1]) == 0 && parseInt(dmzIP[2]) == 0 && parseInt(dmzIP[3]) == 0)
+    {
+        cf.dmzip1.value = lanIP[0];
+        cf.dmzip2.value = lanIP[1];
+        cf.dmzip3.value = lanIP[2];
+        cf.dmzip4.value = dmzIP[3];
+    }
+    else
+    {
+        cf.dmzip1.value = dmzIP[0];
+        cf.dmzip2.value = dmzIP[1];
+        cf.dmzip3.value = dmzIP[2];
+        cf.dmzip4.value = dmzIP[3];
+    }
+
+	if (dmzEnable == "1")
+	{
+		cf.dmz_enable.checked = true;
+	}
+	else
+	{
+		cf.dmz_enable.checked = false;
+	}
+
+	if (resp2ping == "1")
+		cf.rspToPing.checked = true;
+	else
+		cf.rspToPing.checked = false;
+
+	if (sipenable == "1")
+		cf.disable_sip.checked = false;
+	else
+		cf.disable_sip.checked = true;
+
+//  Nick 20111102, add new option ethwan
+	if (ethwan == "0")
+		cf.eth_wan.checked = false;
+	else
+		cf.eth_wan.checked = true;
+//  Nick 20111102, add new option ethwan
+
+//  Nick 20111110, add new option 3gwan
+	if (_3gwan == "0")
+		cf._3g_wan.checked = false;
+	else
+		cf._3g_wan.checked = true;
+    onclickMultiWAN();
+//  Nick 20111110, add new option 3gwan
+
+// Terry 20110901, Doesn't support IGMP Proxy temporary
+/*
+	if (gproxy_enable == "1")
+		cf.disable_gproxy.checked = false;
+	else
+		cf.disable_gproxy.checked = true;
+*/
+
+/*
+	if (ipv6_enable == "1")
+		cf.ipv6disable.checked = false;
+	else
+		cf.ipv6disable.checked = true;
+    if (cf.wan_proto.value == "pppoe")
+        cf.wan_way.value = 1454;
+    else if (cf.wan_proto.value == "pptp" || cf.wan_proto.value == "l2tp")
+        cf.wan_way.value = 1460;
+    else
+*/
+
+    if (cf.wan_proto.value == "pppoe")
+        cf.wan_way.value = 1492;
+    else if (cf.wan_proto.value == "pptp")
+        cf.wan_way.value = 1436;
+	else if (cf.wan_proto.value == "l2tp")
+		cf.wan_way.value = 1428;
+	else
+        cf.wan_way.value = 1500;
+
+    if (parseInt(cf.nvram_mtu.value,10) >= parseInt(cf.wan_way.value,10) )
+        cf.wan_mtu.value = cf.wan_way.value;
+    else
+        cf.wan_mtu.value = cf.nvram_mtu.value;
+
+    //RU_IPTV start
+    display_ru_iptv();
+/*
+    if (ru_iptv_en == "Enable")
+    {
+        if (var_iptv_lan1 == 1)
+            cf.enable_iptv_lan1.checked = true;
+        if (var_iptv_lan2 == 2)
+            cf.enable_iptv_lan2.checked = true;
+        if (var_iptv_lan3 == 3)
+            cf.enable_iptv_lan3.checked = true;
+        if (var_iptv_lan4 == 4)
+            cf.enable_iptv_lan4.checked = true;
+        if (var_iptv_wlan1 == 5)
+            cf.enable_iptv_wlan1.checked = true;
+        if (var_iptv_wlan2 == 6)
+            cf.enable_iptv_wlan2.checked = true;
+    }
+*/
+    //RU_IPTV end
+}
+
+//  Nick 20111110, add new option 3gwan
+function onclickMultiWAN()
+{
+    var cf = document.forms[0];
+
+    if (cf.eth_wan.checked)
+        cf._3g_wan.disabled = true;
+    else if (cf._3g_wan.checked)
+        cf.eth_wan.disabled = true;
+    else
+    {
+        cf._3g_wan.disabled = false;
+        cf.eth_wan.disabled = false;
+    }
+}
+//  Nick 20111110, add new option 3gwan
+
+function InitTagValue()
+{
+/*
+  Disable Port Scan and DoS Protection (checkbox) | Default DMZ Server Enable (checkbox) | Default DMZ Server (text) | Respond to Ping on Internet Port (checkbox) |
+  MTU Size (text) | NAT Filtering (radio) | Disable SIP ALG (checkbox) | LAN ip address
+*/
+    //var tagValueList = "0|0|192.168.0.1|0|1444|0|0|1|0|1";
+//    var tagValueList = "1|1|***PRIVATE_IP***|1|1111|1|1|1|1|1";
+    var tagValueList = '0|0|0.0.0.0|0|1500|0|1|192.168.0.1|0|0|0|0|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Disable Port Scan and DoS Protection */
+    document.getElementsByName("spiEnable")[0].value = tagValues[0];
+
+    /* Default DMZ Server Enable */
+    document.getElementsByName("dmzEnable")[0].value = tagValues[1];
+
+    /* Default DMZ Server */
+    document.getElementsByName("dmz_ip")[0].value = tagValues[2];
+
+    /* Respond to Ping on Internet Port */
+    document.getElementsByName("resp2ping")[0].value = tagValues[3];
+
+    /* MTU Size */
+    document.getElementsByName("wan_way")[0].value = tagValues[4];
+    document.getElementsByName("nvram_mtu")[0].value = tagValues[4];
+
+    /* NAT Filtering */
+    document.getElementsByName("nat_inbound_filtering")[0].value = tagValues[5];
+
+    /* Disable SIP ALG */
+    document.getElementsByName("sipenable")[0].value = tagValues[6];
+
+    /* LAN ip address */
+    document.getElementsByName("lan_ipaddr")[0].value = tagValues[7];
+
+    /* Eth WAN */
+    document.getElementsByName("ethwan")[0].value = tagValues[8];
+
+    if (tagValues[9] == "1")
+    {
+        $("#webEthWan1").show();
+        $("#webEthWan2").show();
+    }
+    else
+    {
+        $("#webEthWan1").hide();
+        $("#webEthWan2").hide();
+    }
+
+    /* 3G WAN */
+    document.getElementsByName("_3gwan")[0].value = tagValues[10];
+
+
+    if (tagValues[11] == "1")
+    {
+        $("#web3GWan1").show();
+        $("#web3GWan2").show();
+    }
+    else
+    {
+        $("#web3GWan1").hide();
+        $("#web3GWan2").hide();
+    }
+
+    /* Disable Firewall Protection */
+    document.getElementsByName("firewallEnable")[0].value = tagValues[12];
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+</script>
+</head>
+<body onload="loadSettings();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="frmRules" method="POST" action='/goform/WANSetup?id=842467026'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                WAN Setup
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');return check_data()" type="submit" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');loadSettings();" type="button" name="cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="disable_firewall" value="disable_firewall">
+                                        <a href="javascript:loadhelp('WANSetup','fw')"> <b>Disable IPv4 Firewall Protection</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="disable_spi" value="disable_spi">
+                                        <a href="javascript:loadhelp('WANSetup','spi')"> <b>Disable Port Scan and DoS Protection</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;text-align:left;width:50%">
+                                        <input type="checkbox" name="dmz_enable" value="dmz_enable">
+                                        <a href="javascript:loadhelp('WANSetup','dmz')"><b>Default DMZ Server</b></a>
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right;">
+                                        <span class="num">
+                                            <input type="text" name="dmzip1" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="dmzip2" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="dmzip3" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="dmzip4" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="rspToPing" value="rspToPing">
+                                        <a href="javascript:loadhelp('WANSetup','ping')"> <b>Respond to Ping on Internet Port</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Terry 20110901, Doesnt support IGMP Proxy temporary -->
+                                <!-- <tr>
+                                <td colspan="2"><input type="checkbox" name="disable_gproxy" value="disable_gproxy"><a href="javascript:loadhelp('WANSetup','gproxy')"> <b>Disable IGMP Proxying</b></a></td>
+                                </tr>
+                                <tr><td colspan="2" style="height:12px" ><div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div></td></tr>
+                                -->
+                                <!-- <tr>
+                                <td colspan="2"><input type="checkbox" name="ipv6disable" value="ipv6disable"><a href="javascript:loadhelp('WANSetup','ipv6')"> <b>Disable IPv6 pass-through</b></a></td>
+                                </tr>
+                                <tr><td colspan="2" style="height:12px" ><div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div></td></tr>
+                                -->
+                                <tr>
+                                    <td>
+                                        &nbsp;
+                                        <a href="javascript:loadhelp('WANSetup','mtu')"><b>MTU Size</b>(in bytes)</a>
+                                    </td>
+                                    <td align="right" class="num">
+                                        <input type="text" name="wan_mtu" size="5" maxlength="4">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- <tr>
+                                <td>&nbsp;<a href="javascript:loadhelp('WANSetup','nat')"><b>NAT Filtering</b></a></td>
+                                <td align="right">
+                                <input type="radio" name="NatInboundFiltering" value="Secured">Secured
+                                <input type="radio" name="NatInboundFiltering" value="Open">Open
+                                </td>
+                                </tr>
+                                -->
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="disable_sip" value="disable_sip">
+                                        <a href="javascript:loadhelp('WANSetup','sipalg')"> <b>Disable SIP ALG</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Nick 20111102, add new option ethwan -->
+                                <tr id="webEthWan1">
+                                    <td colspan="2">
+                                        <input type="checkbox" name="eth_wan" value="eth_wan" onclick="onclickMultiWAN();">
+                                        <a href="javascript:loadhelp('WANSetup','ethernet')"><b>
+                                            Ethernet WAN
+                                        </b></a>
+                                    </td>
+                                </tr>
+                                <tr id="webEthWan2">
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Nick 20111102, add new option ethwan -->
+                                <!-- Nick 20111110, add new option 3gwan -->
+                                <tr id="web3GWan1">
+                                    <td colspan="2">
+                                        <input type="checkbox" name="_3g_wan" value="_3g_wan" onclick="onclickMultiWAN();">
+                                        <b>
+                                            3G WAN
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr id="web3GWan2">
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Nick 20111110, add new option ethwan -->
+                                <!-- /* RU_IPTV start */ -->
+                                <!-- Nick -->
+                                <!--<tr id="ru_iptv_support_str" style="display: block;">-->
+                                <tr id="ru_iptv_support_str" style="display: none;">
+                                    <td>
+                                        &nbsp;
+                                        <b>
+                                            Bridge IPTV Streaming to
+                                        </b>
+                                    </td>
+                                </tr>
+                                <!--<tr id="ru_iptv_support_lan" style="display: block;">-->
+                                <tr id="ru_iptv_support_lan" style="display: none;">
+                                    <td colspan="4">
+                                        <input type="checkbox" name="enable_iptv_lan1" value="iptv_lan1">
+                                        <b>
+                                            LAN 1
+                                        </b>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <input type="checkbox" name="enable_iptv_lan2" value="iptv_lan2">
+                                        <b>
+                                            LAN 2
+                                        </b>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <input type="checkbox" name="enable_iptv_lan3" value="iptv_lan3">
+                                        <b>
+                                            LAN 3
+                                        </b>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <input type="checkbox" name="enable_iptv_lan4" value="iptv_lan4">
+                                        <b>
+                                            LAN 4
+                                        </b>
+                                    </td>
+                                </tr>
+                                <!-- Nick -->
+                                <!--<tr id="ru_iptv_support_wlan1" style="display: block;">-->
+                                <tr id="ru_iptv_support_wlan1" style="display: none;">
+                                    <td colspan="2">
+                                        <input type="checkbox" name="enable_iptv_wlan1" value="iptv_wlan1">
+                                        <b>
+                                            Wireless Network NETGEAR4500
+                                        </b>
+                                    </td>
+                                </tr>
+                                <!-- Nick -->
+                                <!--<tr id="ru_iptv_support_wlan2" style="display: block;">-->
+                                <tr id="ru_iptv_support_wlan2" style="display: none;">
+                                    <td colspan="2">
+                                        <input type="checkbox" name="enable_iptv_wlan2" value="iptv_wlan2">
+                                        <b>
+                                            Wireless Network NETGEAR4000-5G
+                                        </b>
+                                    </td>
+                                </tr>
+                                <!-- Nick -->
+                                <!--<tr id="ru_iptv_support_line" style="display: block;">-->
+                                <tr id="ru_iptv_support_line" style="display: none;">
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- /* RU_IPTV end */ -->
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="wan_way" value="1500">
+                                        <INPUT name="nat_inbound_filtering" type=hidden value="1">
+                                        <input type="hidden" name="wan_proto" value="dhcp">
+                                        <input type="hidden" name="nvram_mtu" value="1500">
+                                        <INPUT name="dmz_ip" type=hidden value="***PRIVATE_IP***.0">
+                                        <input type="hidden" name="firewallEnable" value="">
+                                        <input type="hidden" name="spiEnable" value="">
+                                        <input type="hidden" name="dmzEnable" value="">
+                                        <input type="hidden" name="resp2ping" value="">
+                                        <input type="hidden" name="sipenable" value="">
+                                        <!-- Nick 20111102, add new option ethwan -->
+                                        <input type="hidden" name="ethwan" value="">
+                                        <!-- Nick 20111102, add new option ethwan -->
+                                        <!-- Nick 20111110, add new option 3gwan -->
+                                        <input type="hidden" name="_3gwan" value="">
+                                        <!-- Nick 20111110, add new option 3gwan -->
+                                        <input type=hidden name=lan_ipaddr value="">
+                                        <!-- /* RU_IPTV start */ -->
+                                        <!-- <INPUT name="iptv_intf_lan1" type=hidden value=" 0">
+                                        <INPUT name="iptv_intf_lan2" type=hidden value= "0">
+                                        <INPUT name="iptv_intf_lan3" type=hidden value= "0">
+                                        <INPUT name="iptv_intf_lan4" type=hidden value= "0">
+                                        <INPUT name="iptv_intf_wlan1" type=hidden value= "0">
+                                        <INPUT name="iptv_intf_wlan2" type=hidden value= "0">
+                                        -->
+                                        <!-- /* RU_IPTV end */ -->
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="WANSetup_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

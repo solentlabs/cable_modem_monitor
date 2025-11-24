@@ -94,6 +94,88 @@ return self.async_create_entry(title=info["title"], data=user_input)
 
 **Best Practice:** Use WARNING for user-facing diagnostic messages, INFO for normal operation details.
 
+### Multi-Page Parser Support: C3700 and Similar Modems (Fixed in v3.4.1)
+
+**Problem:** Netgear C3700 parser was unable to extract channel data, returning "parser_issue" status with 0 channels detected. The diagnostics HTML capture feature was also missing critical pages like `/DocsisStatus.htm`.
+
+**Root Causes:**
+
+1. **HTML Capture Issue** (`modem_scraper.py`):
+   - The capture feature only fetched the first successful URL from parser's `url_patterns` (e.g., `/index.htm`)
+   - It then relied on crawling `<a href>` links to discover additional pages
+   - Critical pages like `/DocsisStatus.htm` aren't linked from main pages (button is commented out or uses JavaScript)
+   - Result: DocsisStatus.htm was never captured in diagnostics
+
+2. **Parser Implementation Issue** (`parsers/netgear/c3700.py`):
+   - The `parse()` method accepted `session` and `base_url` parameters for multi-page parsing
+   - But it wasn't using them to fetch `/DocsisStatus.htm`
+   - It tried to parse channel data from the initial page (index.htm/RouterStatus.htm)
+   - Channel data only exists in DocsisStatus.htm's JavaScript (`InitDsTableTagValue()` and `InitUsTableTagValue()`)
+   - Result: Parser found no channel data, returned empty arrays
+
+**Solutions Applied:**
+
+**Fix 1: Enhanced HTML Capture** (`modem_scraper.py:193-257, 756`):
+```python
+def _fetch_parser_url_patterns(self) -> None:
+    """Fetch all URLs defined in the parser's url_patterns.
+
+    This ensures that all parser-defined URLs are captured, even if they're
+    not linked from the main pages. This is critical for modems like the
+    Netgear C3700 where DocsisStatus.htm is not linked but contains essential
+    channel data.
+    """
+    # Iterate through all parser.url_patterns and explicitly fetch each URL
+    # Handles auth_required flag and applies basic auth when needed
+    # Skips duplicates using URL normalization
+```
+
+Added call in `get_modem_data()` before link crawling:
+```python
+# Capture additional pages if in capture mode
+if capture_raw and self._captured_urls:
+    # First, fetch all URLs defined in the parser's url_patterns
+    self._fetch_parser_url_patterns()
+
+    # Then crawl for additional pages by following links
+    self._crawl_additional_pages()
+```
+
+**Fix 2: Multi-Page Parsing in C3700** (`parsers/netgear/c3700.py:90-108`):
+```python
+def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+    """Parse all data from the modem."""
+    # C3700 requires fetching DocsisStatus.htm for channel data
+    docsis_soup = soup  # Default to provided soup
+
+    if session and base_url:
+        # Fetch DocsisStatus.htm which contains channel data
+        docsis_response = session.get(f"{base_url}/DocsisStatus.htm", timeout=10)
+        if docsis_response.status_code == 200:
+            docsis_soup = BeautifulSoup(docsis_response.text, "html.parser")
+
+    # Parse channel data from DocsisStatus.htm
+    downstream_channels = self.parse_downstream(docsis_soup)
+    upstream_channels = self.parse_upstream(docsis_soup)
+
+    # Parse system info from the main page
+    system_info = self.parse_system_info(soup)
+```
+
+**Impact:**
+- C3700 now successfully parses all 8/24 downstream channels and 4/8 upstream channels
+- Diagnostics capture now includes all parser-defined URLs automatically
+- Pattern applies to any modem requiring multi-page parsing (CM600, etc.)
+
+**Testing:**
+- Verified DocsisStatus.htm appears in diagnostics capture
+- Confirmed channel data parsing from JavaScript variables
+- Pattern documented for future multi-page parsers
+
+**Locations:**
+- `custom_components/cable_modem_monitor/core/modem_scraper.py:193-257, 756`
+- `custom_components/cable_modem_monitor/parsers/netgear/c3700.py:90-121`
+
 ## Development Workflow Rules
 
 ### Before Pushing to GitHub

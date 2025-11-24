@@ -1,0 +1,1384 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<title>NETGEAR Gateway C3700-100NAS</title>
+  <META name="description" content='C3700-100NAS'>
+  <META http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <META http-equiv="Content-Style-Type" content="text/css">
+  <META http-equiv="Pragma" content="no-cache">
+  <META HTTP-equiv="Cache-Control" content="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+  <script type="text/javascript" src="func.js"></script>
+  <script type="text/javascript" src="utility.js"></script>
+  <style type="text/css">
+
+      .warning-head{
+         height:100%;
+         display:-moz-inline-box;
+         display:inline-block;
+         width:30px;
+         background:url(warning.png) no-repeat;
+      }
+      .error-head{
+         height:100%;
+         display:-moz-inline-box;
+         display:inline-block;
+         width:30px;
+         background:url(error.png) no-repeat 0;
+      }
+
+      .normal-bottom{
+         height:93%;
+         width:188px;
+         background-image:url('DashBottom.gif');
+         background-repeat: repeat-x;
+         margin-left:2px;
+         overflow:hidden;
+      }
+
+      .warning-bottom{
+         height:100%;
+         width:188px;
+         background-image:url('DashBottomY.gif');
+         background-repeat: no-repeat;
+         margin-left:2px;
+      }
+
+      .error-bottom{
+         height:100%;
+         width:188px;
+         background-image:url('DashBottomR.gif');
+         background-repeat: no-repeat;
+         margin-left:2px;
+      }
+
+      .Status-normal{
+         font-size:14px;
+         font-weight:bold;
+         font-family: Arial,Simsun,Helvetica, sans-serif;;
+         color:#323232;
+         white-space: nowrap;
+         overflow:hidden;
+      }
+
+      .Status-unnormal{
+         font-size:14px;
+         font-weight:bold;
+         font-family: Arial,Simsun, Helvetica, sans-serif;;
+         color:#ffffff;
+         display:block;
+      }
+
+       .Condition-normal{
+         font-size:14px;
+         font-weight:bold;
+         font-family: Arial,Simsun,Helvetica, sans-serif;;
+         color:#43A800;
+         white-space: nowrap;
+         overflow:hidden;
+      }
+
+      .Condition-unnormal{
+         font-size:12px;
+         font-weight:bold;
+         color:#ffffff;
+         text-decoration:underline;
+         font-family: Arial,Simsun,Helvetica, sans-serif;;
+         font-style: italic;
+         overflow:hidden;
+      }
+
+      .Status-wireless-normal{
+         font-size:14px;
+         font-weight:bold;
+         font-family: Arial,Simsun,Helvetica, sans-serif;;
+         color:#323232;
+         white-space: nowrap;
+         overflow:hidden;
+      }
+
+      .Status-wireless-unnormal{
+         font-size:14px;
+         font-weight:bold;
+         font-family: Arial,Simsun, Helvetica, sans-serif;;
+         color:#ffffff;
+         /*display:block;*/
+      }
+
+      .subtext{
+         font-family: Arial,Simsun,Helvetica, sans-serif;
+         font-size:20px;font-weight:bold;
+         color:#323232
+      }
+
+      .subtext_pr{
+         font-family: Simsun,Arial,Helvetica, sans-serif;
+         font-size:20px;font-weight:bold;
+         color:#323232
+      }
+  </style>
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript">
+
+var vGood = "GOOD";
+var vOff = "Off";
+var isSupportComHem = false;
+	var ETHERNET_SUPPORT = false;
+  var ethernetConnect = false;
+  var ethernetIp = "";
+var wifiScheduleSupport = false;
+var idGenericBridge = false;
+// Nick 20110927
+(function ($) {
+// VERTICALLY ALIGN FUNCTION
+$.fn.vAlign = function() {
+	return this.each(function(i){
+	var ah = $(this).height();
+	var ph = $(this).parent().parent().height();
+	var mh = Math.ceil((ph-ah) / 2);
+	$(this).css('margin-top', mh);
+	});
+};
+})(jQuery);
+// Nick 20110927
+
+  $(document).ready(function(){
+
+      var form=document.forms[0];
+      var gui_region = form.curlang.value;
+      var browser = get_browser();
+// Nick 20110927
+        BodyInit();
+
+      setInternetState();
+      setWirelessState();
+      setAttachedDevicesState();
+      setParentalControlsState();
+      setReadyShareState();
+      setVoiceState();
+      setGuestNetworkState();
+
+      run_marquee();
+
+
+      $('.subtext').each(function(){
+         if(gui_region=="Chinese"){
+             $(this).addClass("subtext_pr");
+         }else{
+             $(this).removeClass("subtext_pr");
+         }
+         if(browser != "IE" )
+         {
+            if ($(this).text().trim().length >= 16){
+                $(this).css("font-size","15px");
+                $(this).css("position","relative");
+                $(this).css("top","6px");
+            }else{
+                $(this).css("font-size","20px");
+            }
+         }
+         else
+         {
+            if ($.trim($(this).text()).length >= 16){
+                $(this).css("font-size","15px");
+                $(this).css("position","relative");
+                $(this).css("top","6px");
+            }else{
+                $(this).css("font-size","20px");
+            }
+        }
+     });
+
+     function setInternetState()
+     {
+
+// Nick 20110927
+         var Internet_Result = document.forms[0].Internet_Status.value;
+//         var Internet_Result = 1;
+// Nick 20110927
+         {
+             if(Internet_Result == 0){
+
+             }else{
+                 $('#Internet_head').addClass('error-head');
+                 $('#Internet_bottom').addClass('error-bottom');
+                 $('#Internet-status').addClass('Status-unnormal');
+             }
+         }
+// Nick 20110927
+        if(ETHERNET_SUPPORT && ethernetConnect)
+        {
+            $('#Internet').click(function(ev){
+                location.href = "BasicSettingsBottom.htm";
+                itemOnclickCssSetting("basic-int");
+            });
+        }
+        else
+        {
+            $('#Internet').click(function(ev){
+                    location.href = "DocsisOffline.htm";
+                    itemOnclickCssSetting("basic-int");
+                });
+        }
+// Nick 20110927
+
+// Nick 20110927
+     }
+
+     function setWirelessState()
+     {
+
+// Nick 20110927
+          var Wireless_Radio_Result = document.forms[0].Radio_Result.value;
+          var Wireless_Security_Result = document.forms[0].Security_Result.value;
+//          var Wireless_Radio_Result = "both";
+//          var Wireless_Security_Result = "2g";
+// Nick 20110927
+          var Wireless_Result=0;
+          var Wireless_Link_Result=0;
+          if(Wireless_Radio_Result == "none"){
+              Wireless_Result = 1;
+              Wireless_Link_Result=1;
+          }else if(Wireless_Security_Result == "none"){
+              Wireless_Result = 1;
+          }/*else if(Wireless_Radio_Result == Wireless_Security_Result){
+              Wireless_Result = 0;
+          }else if(Wireless_Radio_Result=="both" && Wireless_Security_Result!="none"){
+              Wireless_Result = 0;
+          }else if(Wireless_Security_Result=="both"){
+              if(Wireless_Radio_Result != "none"){
+                  Wireless_Result = 0;
+              }else{
+                  Wireless_Result = 1;
+              }
+          }else if(Wireless_Radio_Result != Wireless_Security_Result){
+              Wireless_Result = 1;
+          }*/
+
+          if(Wireless_Result == 0){
+              if(Wireless_Radio_Result == "2g")
+              {
+                  $('#wireless1').css("display","none");
+                  $('#wireless3').css("display","none");
+              }
+              else if(Wireless_Radio_Result == "5g")
+              {
+                  $('#wireless1_5g').css("display","none");
+                  $('#wireless3_5g').css("display","none");
+              }
+              if(Wireless_Security_Result =="2g" || Wireless_Security_Result =="5g"){
+                  if(Wireless_Security_Result =="2g" && Wireless_Radio_Result != "2g")
+                  {
+                  	  $('#Wireless_head').addClass('warning-head');
+                      $('#wireless3').addClass('Status-wireless-unnormal');
+                      $('#wireless3').attr("style","background-color:#FAE125;text-align: center;");
+                  }
+                  else if(Wireless_Security_Result =="5g" && Wireless_Radio_Result != "5g")
+                  {
+                  	  $('#Wireless_head').addClass('warning-head');
+                      $('#wireless3_5g').addClass('Status-wireless-unnormal');
+                      $('#wireless3_5g').attr("style","background-color:#FAE125;text-align: center;");
+                  }
+              }
+          }else{
+              $('#Wireless_head').addClass('warning-head');
+              $('#Wireless_bottom').addClass('warning-bottom');
+              $('#Wireless-status').addClass('Status-wireless-unnormal');
+          }
+
+          if(isSupportComHem)
+          {
+              $('#Wireless').click(function(ev){
+                  location.href = "WirelessSettings.htm";
+                  itemOnclickCssSetting("basic-wls");
+              });
+              parent.$('#WLS_menu').attr("href","WirelessSettings.htm");
+          }
+		  else if(idGenericBridge) // Chuck 20141001 Can't click wireless in bridge mode with generic GUI
+		  {
+		    return;
+		  }
+          else
+          {
+            if(Wireless_Link_Result == 0){
+                $('#Wireless').click(function(ev){
+                    location.href = "WirelessSettings.htm";
+                    itemOnclickCssSetting("basic-wls");
+                });
+                parent.$('#WLS_menu').attr("href","WirelessSettings.htm");
+            }else if(Wireless_Link_Result == 1){
+
+                $('#Wireless').click(function(ev){
+                    if(wifiScheduleSupport)
+                    {
+                        location.href = "AdvancedWirelessSettingsWithSchedule.htm";
+                    }
+                    else
+                    {
+                        location.href = "";
+                    }
+                    itemOnclickCssSetting("basic-wls");
+                });
+                if(wifiScheduleSupport)
+                {
+                    parent.$('#WLS_menu').attr("href","AdvancedWirelessSettingsWithSchedule.htm");
+                }
+                else
+                {
+                    parent.$('#WLS_menu').attr("href","");
+                }
+
+            }
+          }
+
+     }
+
+     function setAttachedDevicesState()
+     {
+
+          var AttachedDevices_Result = "";
+
+
+          $('#AttachedDevices').click(function(ev){
+              location.href = "AttachedDevices_new.htm";
+              itemOnclickCssSetting("basic-atd");
+          });
+
+
+      }
+
+      function setParentalControlsState()
+     {
+// Nick 20110927
+          var ParentalControls_Result = document.forms[0].PC_Result.value;
+          var support = document.forms[0].PC_Support.value;
+//          var ParentalControls_Result = 0;
+//          var support = 1;
+// Nick 20110927
+          if(support == 0){
+              $('#ParentalControls-condition').text("NOT SUPPORTED");
+          }else{
+              if(ParentalControls_Result == 1){
+                  $('#ParentalControls-condition').text("ENABLED");
+              }else{
+                  $('#ParentalControls-condition').text("NOT ENABLED");
+              }
+          }
+          /* foxconn, khfan, modify, 2014/09/24
+             Defect # 126
+             C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+           */
+          if(1){
+              if(support == 0){
+                  $('#ParentalControls').click(function(ev){
+                       window.open("http://www.netgear.com/ lpc",'_blank','fullscreen=yes,toolbar=yes,location=yes,scrollbars=yes');
+                  });
+                  parent.$('#PAR_menu').attr("href","http://www.netgear.com/lpc");
+                  parent.$('#PAR_menu2').attr("href","http://www.netgear.com/lpc");
+              }else{
+                  if(ParentalControls_Result == 0){
+                      $('#ParentalControls').click(function(ev){
+                           window.open("http://www.netgear.com/lpc",'_blank','fullscreen=yes,toolbar=yes,location=yes,scrollbars=yes');
+                           parent.$('.menuActive').removeClass('menuActive');
+                           parent.$('#basic-par').addClass('menuActive');
+                      });
+                      parent.$('#PAR_menu').attr("href","http://www.netgear.com/lpc");
+                      parent.$('#PAR_menu2').attr("href","http://www.netgear.com/lpc");
+                  }else{
+                      $('#ParentalControls').click(function(){
+                          window.open("http://netgear.opendns.com/",'_blank','fullscreen=yes,toolbar=yes,location=yes,scrollbars=yes');
+                          parent.$('.menuActive').removeClass('menuActive');
+                          parent.$('#basic-par').addClass('menuActive');
+                      });
+                      parent.$('#PAR_menu').attr("href","http://netgear.opendns.com/");
+                      parent.$('#PAR_menu2').attr("href","http://netgear.opendns.com/");
+                  }
+              }
+         }
+
+
+
+      }
+
+      function setReadyShareState()
+     {
+
+// Nick 20110927
+          var ReadyShare_Result = document.forms[0].RS_Result.value;
+//          var ReadyShare_Result = 0;
+
+// Nick 20110927
+
+          if(ReadyShare_Result == 1){
+              $('#ReadyShare-condition').text("READY");
+          }else{
+              $('#ReadyShare-condition').text("No USB drive");
+          }
+
+          $('#ReadyShare').click(function(ev){
+// Nick 20110929 mark
+              location.href = "USBBasic.htm";
+//              location.href = "";
+// Nick 20110929
+              itemOnclickCssSetting("basic-rea");
+          });
+
+
+      }
+
+       function setGuestNetworkState()
+     {
+          var GuestNetwork_Result = document.getElementsByName("Guest_Result")[0].value;
+          if(GuestNetwork_Result == "2g")
+          {
+              $('#guest1_5g').css("display","none");
+              $('#guest3_5g').css("display","none");
+          }
+          else if(GuestNetwork_Result == "5g")
+          {
+              $('#guest1').css("display","none");
+              $('#guest3').css("display","none");
+          }
+
+          $('#GuestNetwork').click(function(ev){
+// Nick 20110929
+            location.href = "GuestNetwork.htm";
+            itemOnclickCssSetting("basic-gst");
+          });
+      }
+
+
+       function setVoiceState()
+     {
+// Nick 20120507
+          var Voice_Result = document.forms[0].Voice_Result.value;
+// Nick 20120507
+
+          if(Voice_Result == 1){
+              $('#Voice-condition').text("READY");
+              document.getElementsByName("VoiceImg")[0].src = "Phone.PNG";
+          }else{
+          	  $('#Voice-condition').text("Not Available");
+              $('#Voice-condition').css("color","red");
+              document.getElementsByName("VoiceImg")[0].src = "Phone_gray.PNG";
+          }
+
+
+          $('#Voice').click(function(ev){
+// Nick 20110929
+            location.href = "";
+            itemOnclickCssSetting("basic-voice");
+          });
+      }
+  });
+function itemOnclickCssSetting(itemId)
+{
+    parent.$('#page').width(685);
+    parent.$('#page').height(parent.page_contain_height);
+    parent.$('#page').css("margin-top","0");
+    parent.$('#page').css("margin-left","30");
+
+    parent.$('.menuActive').removeClass('menuActive');
+    parent.$('#'+itemId).addClass('menuActive');
+    parent.$('#page').css("visibility","hidden");
+    parent.$('#page_contain').addClass('main-page-contain-loading');
+}
+
+function InternetDisplay(connected, comment)
+{
+    if (connected == '1')
+    {
+        if (comment == "Off")
+        {
+            $('#Internet-status1').html(vOff);
+            $('#internet2').css('display', 'none');
+        }
+        else
+            $('#Internet-status1').html(comment);
+        //$('#internet2').css('display', 'none');
+    }
+    else
+    {
+        //$('#Internet-status1').html('STATUS:');
+
+        if (comment == "Good")
+            $('#Internet-condition').html(vGood);
+        else
+            $('#Internet-condition').html(comment);
+
+    }
+}
+
+function InitTagValue()
+{
+    var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|happymango167|happymango167|20|0|1|0|none|NETGEAR-Guest|None|NETGEAR-5G-Guest|None|0|0|0|0|0|1|0|0|1|0|0|0|0|---.---.---.---|1|';
+//    var tagValueList = "0|Good|both|none|1231231312311|pass|5|0|0|0|none|Guest-SSID|NONE|Guest-SSID-5G|NONE|0|0|0|0";
+    return tagValueList.split("|");
+}
+
+function isIE7()
+{
+	if(navigator.userAgent.indexOf("MSIE 7") > -1)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+function InitUpdateView(tagValues)
+{
+    var stringTmp;
+
+    if(tagValues[28] == "1")
+    {
+        ETHERNET_SUPPORT = true;
+        if(tagValues[29] == "1")
+        {
+            ethernetConnect = true;
+            ethernetIp = tagValues[30];
+            $("#connectionText").html("Internet Connection");
+            $("#connectionText").css("font-size","18px");
+        }
+    }
+
+    // Internet Status
+    document.getElementsByName("Internet_Status")[0].value = tagValues[0];
+
+    // Internet Comment
+//    $('#Internet-status1').html(tagValues[1]);
+    InternetDisplay(tagValues[0], tagValues[1]);
+
+    // Wireless Radio Enable
+    document.getElementsByName("Radio_Result")[0].value = tagValues[2];
+
+    // Wireless Security Resule
+    document.getElementsByName("Security_Result")[0].value = tagValues[3];
+
+    // Wireless SSID
+    stringTmp = piplineDecode(tagValues[4]);
+    if (stringTmp.length >10)
+    {
+        tagValues[4] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[4] = encodeHtmlEntities(stringTmp);
+    $('#wiressSSID1').html(tagValues[4]);
+
+    // Wireless SSID 5g
+    stringTmp = piplineDecode(tagValues[5]);
+    if (stringTmp.length >10)
+    {
+        tagValues[5] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[5] = encodeHtmlEntities(stringTmp);
+    $('#wiressSSID1_5g').html(tagValues[5]);
+
+    // Wireless Passphrase
+    if(tagValues[6] == "None")
+    {
+        $('#wireless3').html("No Security");
+    }
+    else if(tagValues[6] == "Enterprise")
+    {
+        $('#wireless3').html('Security:&nbsp&nbsp&nbsp&nbsp&nbsp'+tagValues[6]);
+        $('#wireless3').addClass('Status-wireless-normal');
+        $('#wireless4').addClass('Status-wireless-normal');
+    }
+    else
+    {
+        stringTmp = piplineDecode(tagValues[6]);
+        if (stringTmp.length >10)
+        {
+            tagValues[6] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+        }
+        else
+            tagValues[6] = encodeHtmlEntities(stringTmp);
+        $('#wirelessPassword1').html(tagValues[6]);
+    }
+
+    // Wireless Passphrase 5g
+    if(tagValues[7] == "None")
+    {
+        $('#wireless3_5g').html("No Security");
+    }
+    else if(tagValues[7] == "Enterprise")
+    {
+        $('#wireless3_5g').html('Security:&nbsp&nbsp&nbsp&nbsp&nbsp'+tagValues[7]);
+        $('#wireless3_5g').addClass('Status-wireless-normal');
+    }
+    else
+    {
+        stringTmp = piplineDecode(tagValues[7]);
+        if (stringTmp.length >10)
+        {
+            tagValues[7] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+        }
+        else
+            tagValues[7] = encodeHtmlEntities(stringTmp);
+        $('#wirelessPassword1_5g').html(tagValues[7]);
+    }
+
+
+    // Attached Devices Number
+    $('#AttachedDevices-condition').html(tagValues[8]);
+
+
+    // Parentral Radio Enable
+    document.getElementsByName("PC_Result")[0].value = tagValues[9];
+
+    // Parentral Support
+    document.getElementsByName("PC_Support")[0].value = tagValues[10];
+
+
+    // Ready Share Enable
+    document.getElementsByName("RS_Result")[0].value = tagValues[11];
+
+    // Guest Network Display
+    GuestWirelessDisplay(tagValues[12],tagValues[2]);
+    document.getElementsByName("Guest_Result")[0].value = tagValues[12];
+
+    // Guest SSID
+    stringTmp = piplineDecode(tagValues[13]);
+    if (stringTmp.length >10)
+    {
+        tagValues[13] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[13] = encodeHtmlEntities(stringTmp);
+    $('#guestSSID1').html(tagValues[13]);
+
+    // Guest Passphrase
+    stringTmp = piplineDecode(tagValues[14]);
+    if (stringTmp.length >10)
+    {
+        tagValues[14] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[14] = encodeHtmlEntities(stringTmp);
+    $('#guestPassword1').html(tagValues[14]);
+
+    // Guest SSID 5g
+    stringTmp = piplineDecode(tagValues[15]);
+    if (stringTmp.length >10)
+    {
+        tagValues[15] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[15] = encodeHtmlEntities(stringTmp);
+    $('#guestSSID1_5g').html(tagValues[15]);
+
+    // Guest Passphrase
+    stringTmp = piplineDecode(tagValues[16]);
+    if (stringTmp.length >10)
+    {
+        tagValues[16] = encodeHtmlEntities(stringTmp.substr(0,10)) + "...";
+    }
+    else
+        tagValues[16] = encodeHtmlEntities(stringTmp);
+    $('#guestPassword1_5g').html(tagValues[16]);
+
+    // Rg/Bridge supported
+    var RgMode = tagValues[22];
+
+    WirelessDisplay(tagValues[2], tagValues[3]);
+
+    // MTA support
+    setWebMTASupport(tagValues[17]);
+
+    // always hide nat mode webpage
+    //parent.$("#NatMode").hide();
+
+    if (RgMode == "1")
+    {
+        // Speed Test support
+        setWebSpeedTestSupport(tagValues[20]);
+
+        // Loopback IP
+        setWebLoopbackIPSupport(tagValues[18]);
+
+        // 3G WAN
+        setWeb3GWANSupport(tagValues[19]);
+
+        // comhem supported
+        if (tagValues[21] == "1")
+        {
+            $("#GuestNetwork").hide();
+            parent.$('#guest_set').css('display', 'none');
+        }
+
+        // Voice Supported
+        if (tagValues[23] == "1")
+        {
+            $("#ParentalControls").hide();
+            $("#Voice").show();
+        }
+        else
+        {
+            $("#ParentalControls").show();
+            $("#Voice").hide();
+        }
+    }
+    else
+    {
+        // Voice Supported
+        if (tagValues[23] == "1")
+        {
+            $("#Voice").show();
+        }
+        else
+        {
+            $("#Voice").hide();
+        }
+
+        parent.$("#router_status").show();
+        parent.$("#eventlog").show();
+        // always hide nat mode webpage
+        parent.$("#RouterMode").show();
+        $("#GuestNetwork").hide();
+        $("#ReadyShare").hide();
+        $("#ParentalControls").hide();
+        $("#AttachedDevices").hide();
+		$("#Wireless").hide();
+    }
+
+    document.getElementsByName("Voice_Result")[0].value = tagValues[24];
+
+    var activeLength=0;
+    var heightpadding=9;
+	var oneItemHeight=21;
+
+	if(isIE7())
+	{
+		oneItemHeight=24;
+	}
+
+    parent.$('#set_hdr li').each(function(){
+        //alert ($(this)[0].getAttribute('id'));
+        if($($(this)[0]).css("display") != "none"){
+            activeLength++;
+        }
+    });
+    parent.$('#set_hdr').height(activeLength * oneItemHeight + heightpadding);
+
+    activeLength=0;
+    parent.$('#AdminULId li').each(function(){
+        //alert ($(this)[0].getAttribute('id'));
+        if($($(this)[0]).css("display") != "none"){
+            activeLength++;
+        }
+    });
+    parent.$('#AdminULId').height(activeLength * oneItemHeight + heightpadding);
+
+    activeLength=0;
+    parent.$('#usb_hdr li').each(function(){
+        //alert ($(this)[0].getAttribute('id'));
+        if($($(this)[0]).css("display") != "none"){
+            activeLength++;
+        }
+    });
+    parent.$('#usb_hdr').height(activeLength * oneItemHeight + heightpadding);
+
+    activeLength=0;
+    parent.$('#sec_hdr li').each(function(){
+        //alert ($(this)[0].getAttribute('id'));
+        if($($(this)[0]).css("display") != "none"){
+            activeLength++;
+        }
+    });
+    parent.$('#sec_hdr').height(activeLength * oneItemHeight + heightpadding);
+
+    if (tagValues[25] == "0")
+    {
+        $("#GuestNetwork").hide();
+    }
+
+    // USB hidden supportted
+    if (tagValues[26] == "1")
+    {
+        $("#ReadyShare").hide();
+    }
+    if(tagValues[27] == "1")
+    {
+    	isSupportComHem = true;
+    	$("#Wireless").show();
+    }
+
+	// if is bridge mode and is generic gui
+	if(tagValues[22] == "0" && tagValues[31] == "1")
+	{
+		// Chuck 20141001 show wireless column in bridge mode
+        $("#Wireless").show();
+		idGenericBridge = true;
+	}
+
+    if (tagValues[31] == "1" || tagValues[31] == "2") // 20150203 Emerson modify to replace the NetworkMap by AttachedDevices
+    {
+       $("#AttachedDevices-body").html('<img alt="" src="AttachedDevice.jpg"><br><span class="subtext">Attached Devices<\/span>');
+    }
+}
+
+function InitAdvanceTagValue()
+{
+    var tagValueList = '1|';
+//    var tagValueList = "0";
+    return tagValueList.split("|");
+}
+
+function InitAdvanceUpdateView(tagValues)
+{
+    if(tagValues[0] == 1)
+    {
+        wifiScheduleSupport = 1;
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitAdvanceUpdateView(InitAdvanceTagValue());
+    hiddenWifi('0');
+    var session = '?id=780557778';
+    initBridgeView('0');
+}
+function initBridgeView(statusTag)
+{
+    if(statusTag == "1")
+    {
+        parent.$("#router_status_text").html("Modem Status");
+        parent.$("#RouterMode").hide();
+        parent.$("#SetPassword").show();
+    }
+}
+function hiddenWifi(statusTag)
+{
+    if(statusTag == "1")
+    {
+        $("#GuestNetwork").hide();
+        $("#Wireless").hide();
+    }
+}
+
+
+function setWebMTASupport (enable)
+{
+    if ( enable == '1')
+    {
+        parent.$('#MtaStatus').css('display', 'block');
+    }
+    else
+    {
+        parent.$('#MtaStatus').css('display', 'none');
+    }
+}
+
+function setWebSpeedTestSupport (enable)
+{
+    if ( enable == '1')
+    {
+        parent.$('#SpeedTest').css('display', 'block');
+    }
+    else
+    {
+        parent.$('#SpeedTest').css('display', 'none');
+    }
+}
+
+function setWebLoopbackIPSupport (enable)
+{
+    if ( enable == '1')
+    {
+        parent.$('#OnOLanSetup').css('display', 'block');
+    }
+    else
+    {
+        parent.$('#OnOLanSetup').css('display', 'none');
+    }
+}
+
+function setWeb3GWANSupport (enable)
+{
+    if ( enable == '1')
+    {
+        parent.$('#MobileBroadbandSetup').css('display', 'block');
+        parent.$('#BroadbandSetup').css('display', 'block');
+    }
+    else
+    {
+        parent.$('#MobileBroadbandSetup').css('display', 'none');
+        parent.$('#BroadbandSetup').css('display', 'none');
+    }
+}
+
+function WirelessDisplay(enable, type)
+{
+    var str;
+
+    $('#wireless_none').css('display', 'none');
+    $('#wireless_key').css('display', 'none');
+
+    if (enable == 'none')
+    {
+        $('#wireless_none').css('display', 'block');
+        $('#wireless_none').vAlign();
+        $('#wireless_none').css('text-align', 'center');
+        $('#wirelessRadio').html('OFF');
+
+    }
+    else if (type == 'none')
+    {
+        $('#wirelessRadio').html('No Security');
+        $('#wireless_none').css('display', 'block');
+        $('#wireless_none').vAlign();
+        $('#wireless_none').css('text-align', 'center');
+    }
+    else
+    {
+        $('#wireless_key').css('display', 'block');
+    }
+}
+
+
+function GuestWirelessDisplay(enable,wifiEnable)
+{
+    var str;
+    var noneWidth = $('#guest1_none')[0].offsetWidth;
+
+    $('#guest1_none').css('display', 'none');
+    $('#guest1_key').css('display', 'none');
+    $('#guest1_long').css('display', 'none');
+
+    if (enable == 'none' || wifiEnable == 'none')
+    {
+//    alert (enable);
+        if($('#GuestNetwork-bottom')[0].offsetWidth < noneWidth)
+        {
+            $('#guest1_long').css('display', 'block');
+            $('#guest1_long').vAlign();
+            $('#guest1_long').css('text-align', 'center');
+        }
+        else{
+            $('#guest1_none').css('display', 'block');
+            $('#guest1_none').vAlign();
+            $('#guest1_none').css('text-align', 'center');
+        }
+    }
+    else
+    {
+        $('#guest1_key').css('display', 'block');
+    }
+}
+  </script>
+</head>
+<body style="background:url('background_gradient.jpg') no-repeat left top;background-color:#e5e5e5;margin:0;padding:0;width:605px;height:405px;cursor:pointer">
+    <table style="margin-left:5px;margin-top:7px" CELLSPACING="0" CELLPADDING="0">
+        <tr>
+            <td style="height:192px;width:192px;padding-left:3px" id="Internet">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;"
+                        id="Internet_head">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="Internet.jpg">
+                        <br>
+                        <span id="connectionText" class="subtext">
+                            Cable Connection
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="Internet_bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%">
+                            <tr>
+                                <td id="internet1" style="valign:middle;text-align:center">
+                                    <span id="Internet-status1" class="Status-normal">
+                                        STATUS:&nbsp;&nbsp;&nbsp;
+										<span class="Condition-normal" id="Internet-condition">
+										</span>
+                                    </span>
+                                </td>
+                                <td id="internet2" style="valign:middle;text-align:left">
+                                    <span id="Internet-status2" class="Condition-normal">
+                                    </span>
+                                </td>
+                                <td>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td style="height:192px;width:192px; padding-left:5px" id="Wireless">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;"
+                        id="Wireless_head">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="img/Wireless.gif">
+                        <br>
+                        <span class="subtext">
+                            Wireless
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="Wireless_bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%" CELLPADDING=0 CELLSPACING=0>
+                            <tr>
+                                <td id="wireless_none" style='valign:middle;text-align:center'>
+                                    <span class='Status-wireless-unnormal' id="wirelessRadio">
+                                        No Security
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <table id='wireless_key' style="border-spacing: 0px;border:0px;vertical-align:top">
+                                        <tr style="text-align: center;">
+                                            <td style="text-align: left;" id="wireless1">
+                                                <span id="Wireless-status1" class="Status-wireless-normal">
+                                                    Name(SSID):&nbsp;&nbsp;&nbsp;
+                                                    <span class="Condition-normal" id="wiressSSID1">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: left;" id="wireless1_5g">
+                                                <span id="Wireless-status1_5g" class="Status-wireless-normal">
+                                                    Name(SSID):&nbsp;&nbsp;&nbsp;
+                                                    <span class="Condition-normal" id="wiressSSID1_5g">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: left;" id="wireless2">
+                                                <span class="Status-wireless-normal">
+                                                    Name(SSID):&nbsp;&nbsp;&nbsp;
+                                                    <span class="Condition-normal">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr style="text-align: center;">
+                                            <td style="text-align: left;" id="wireless3">
+                                                <span id="Wireless-status2" class="Status-wireless-normal">
+                                                    Key/Password=***REDACTED***
+                                                    <span class="Condition-normal" id="wirelessPassword1">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: left;" id="wireless3_5g">
+                                                <span id="Wireless-status2_5g" class="Status-wireless-normal">
+                                                    Key/Password=***REDACTED***
+                                                    <span class="Condition-normal" id="wirelessPassword1_5g">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: left;" id="wireless4">
+                                                <span class="Status-wireless-normal">
+                                                    Key/Password=***REDACTED***
+                                                    <span class="Condition-normal">
+                                                    </span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td style="height:192px;width:192px;padding-left:5px" id="AttachedDevices">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;" id="AttachedDevices-head">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div id="AttachedDevices-body" style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="AttachedDevice.jpg">
+                        <br>
+                        <span class="subtext">
+                            Network Map
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="AttachedDevices-bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%">
+                            <tr>
+                                <td id="attached1" style="valign:middle;text-align:center">
+                                    <span id="AttachedDevices-status" class="Status-normal">
+                                        Number of Devices :&nbsp;&nbsp;&nbsp;
+                                        <span id="AttachedDevices-condition" class="Condition-normal">
+                                        </span>
+                                    </span>
+                                </td>
+                                <td id="attached2">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td>
+                &nbsp;
+            </td>
+        </tr>
+        <tr>
+            <td style="height:192px;width:192px;padding-top:5px;padding-left:3px" id="ParentalControls">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;" id="ParentalControls-head">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="ParentalControl.jpg">
+                        <br>
+                        <span class="subtext">
+                            Parental Controls
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="ParentalControls-bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%">
+                            <tr>
+                                <td id="parental1" style="valign:middle;text-align:center">
+                                    <span id="ParentalControls-status" class="Status-normal">
+                                        STATUS:&nbsp;&nbsp;&nbsp;
+                                        <span id="ParentalControls-condition" class="Condition-normal">
+                                        </span>
+                                    </span>
+                                </td>
+                                <td id="parental2">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td style="height:192px;width:192px;padding-top:5px;padding-left:3px" id="Voice">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" name="VoiceImg" src="Phone_gray.PNG">
+                        <br>
+                        <span class="subtext">
+                            Voice
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="voice-bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%">
+                            <tr>
+                                <td id="voice1" style="valign:middle;text-align:center">
+                                    <span id="Voice-status" class="Status-normal">
+                                        STATUS:&nbsp;&nbsp;&nbsp;
+                                        <span id="Voice-condition" class="Condition-normal">
+                                        </span>
+                                    </span>
+                                </td>
+                                <td id="voice2">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td style="height:192px;width:192px;padding-left:5px;padding-top:5px" id="ReadyShare">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;" id="ReadyShare-head">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="img/ReadyShare.gif">
+                        <br>
+                        <span class="subtext" style="font-family:Arial;">
+                            ReadySHARE
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="ReadyShare-bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%">
+                            <tr>
+                                <td id="readyshare1" style="valign:middle;text-align:center">
+                                    <span id="ReadyShare-status" class="Status-normal">
+                                        STATUS:&nbsp;&nbsp;&nbsp;
+                                        <span id="ReadyShare-condition" class="Condition-normal">
+                                        </span>
+                                    </span>
+                                </td>
+                                <td id="readyshare2">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+            <td style="height:192px;width:192px;padding-left:5px;padding-top:5px" id="GuestNetwork">
+                <div style="height:36px;width:192px;background-image:url('DashBackTop.gif'); background-repeat: no-repeat;">
+                    <div style="height:31px;padding-top:5px;">
+                        <span style="display:-moz-inline-box;display:inline-block;width:20px;height:100%;">
+                            &nbsp;
+                        </span>
+                        <span style="height:100%;display:-moz-inline-box;display:inline-block;width:30px;">
+                            &nbsp;
+                        </span>
+                    </div>
+                </div>
+                <div style="position:relative;top:-1px;height:115px;width:192px;background-image:url('DashBackCenter.gif'); background-repeat: no-repeat;text-align:center;border-bottom:1px inset #eaeaea;">
+                    <div style="height:100%;width:188px;background-image:url('DashCenter.gif'); background-repeat: no-repeat;margin-left:2px;text-align:center;border-bottom:1px solid #d4d4d4;">
+                        <img alt="" src="GuestNetwork.jpg">
+                        <br>
+                        <span class="subtext">
+                            Guest Network
+                        </span>
+                    </div>
+                </div>
+                <div style="height:41px;width:192px;background-image:url('DashBackBottom.gif'); background-repeat: no-repeat;align:center">
+                    <div id="GuestNetwork-bottom" class="normal-bottom">
+                        <table style="width:100%;height:100%" CELLPADDING=0 CELLSPACING=0>
+                            <tr>
+                                <td id="guest1_none" style='valign:middle;text-align:center'>
+                                    <span class='Status-normal'>
+                                        STATUS:&nbsp;&nbsp;&nbsp;
+                                        <span class='Condition-normal'>
+                                            NOT ENABLED
+                                        </span>
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                            	  <td>
+                                  <table id='guest1_long' style="border-spacing: 0px;border:0px;vertical-align:top;display:none">
+                                      <tr>
+                                        <td id="guest1_long1" style='valign:middle;text-align:center'>
+                                            <span class='Status-normal'>
+                                                STATUS:&nbsp;&nbsp;
+                                            <span class='Condition-normal'>
+                                                NOT ENABLED
+                                            </span>
+                                            </span>
+                                        </td>
+                                        <td id="guest1_long2" style='valign:middle;text-align:center'>
+                                            <span class='Status-normal'>
+                                                &nbsp;&nbsp;STATUS:&nbsp;&nbsp;
+                                            <span class='Condition-normal'>
+                                                NOT ENABLED
+                                            </span>
+                                            </span>
+                                        </td>
+                                      </tr>
+                                  </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <table id='guest1_key' style="border-spacing: 0px;border:0px;vertical-align:top;display:none">
+                                        <tr style='text-align:center'>
+                                            <td id="guest1">
+                                                <span id='Guest-status1' class='Status-wireless-normal'>
+                                                    Name(SSID):&nbsp;&nbsp;&nbsp;
+                                                    <span class='Condition-normal' id='guestSSID1'>
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td id="guest1_5g">
+                                                <span id='Guest-status1_5g' class='Status-wireless-normal'>
+                                                    Name(SSID):&nbsp;&nbsp;&nbsp;
+                                                    <span class='Condition-normal' id='guestSSID1_5g'>
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td id="guest2">
+                                            </td>
+                                        </tr>
+                                        <tr style='text-align:center'>
+                                            <td id="guest3">
+                                                <span id='Guest-status2' class='Status-wireless-normal'>
+                                                    Key/Password=***REDACTED***
+                                                    <span class='Condition-normal' id='guestPassword1'>
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td id="guest3_5g">
+                                                <span id='Guest-status2_5g' class='Status-wireless-normal'>
+                                                    Key/Password=***REDACTED***
+                                                    <span class='Condition-normal' id='guestPassword1_5g'>
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td id="guest4">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <form action="">
+        <!-- Nick 20110927 -->
+        <input type="hidden" name="Internet_Status" value="0">
+        <input type="hidden" name="Radio_Result" value="0">
+        <input type="hidden" name="Security_Result" value="0">
+        <input type="hidden" name="PC_Result" value="0">
+        <input type="hidden" name="PC_Support" value="0">
+        <input type="hidden" name="RS_Result" value="0">
+        <input type="hidden" name="Voice_Result" value="0">
+        <input type="hidden" name="Guest_Result" value="0">
+        <!-- Nick 20110927 -->
+        <input type="hidden" name="curlang" value="English">
+    </form>
+</body>
+</html>

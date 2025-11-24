@@ -1,0 +1,857 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+var isInited = 0;
+var total = 0;
+var ScheduleListTotal = 30;
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+/*
+function BlockPeriodClick(cf)
+{
+	if(cf.checkboxNamehours.checked)
+	{
+		cf.starthour.disabled = true;
+		cf.startminute.disabled = true;
+		cf.endhour.disabled = true;
+		cf.endminute.disabled = true;
+		TimePeriodDisabled = true;
+	}
+	else
+	{
+		cf.starthour.disabled = false;
+		cf.startminute.disabled = false;
+		cf.endhour.disabled = false;
+		cf.endminute.disabled = false;
+		TimePeriodDisabled = false;
+	}
+	return;
+}
+*/
+
+/*
+function BlockAllClickCheck()
+{
+	var cf = document.forms[0];
+	if(cf.checkboxNameAll.checked)
+	{
+		cf.checkboxNameMon.checked = true;
+		cf.checkboxNameTue.checked = true;
+		cf.checkboxNameWed.checked = true;
+		cf.checkboxNameThu.checked = true;
+		cf.checkboxNameFri.checked = true;
+		cf.checkboxNameSat.checked = true;
+		cf.checkboxNameSun.checked = true;
+
+		cf.checkboxNameMon.disabled = true;
+		cf.checkboxNameTue.disabled = true;
+		cf.checkboxNameWed.disabled = true;
+		cf.checkboxNameThu.disabled = true;
+		cf.checkboxNameFri.disabled = true;
+		cf.checkboxNameSat.disabled = true;
+		cf.checkboxNameSun.disabled = true;
+	}
+	else
+	{
+		cf.checkboxNameMon.disabled = false;
+		cf.checkboxNameTue.disabled = false;
+		cf.checkboxNameWed.disabled = false;
+		cf.checkboxNameThu.disabled = false;
+		cf.checkboxNameFri.disabled = false;
+		cf.checkboxNameSat.disabled = false;
+		cf.checkboxNameSun.disabled = false;
+	}
+    BlockPeriodClick(cf);
+
+    if (cf.enable_apmode.value == "1") {
+		cf.checkboxNameAll.disabled = true;
+		cf.checkboxNameSun.disabled = true;
+		cf.checkboxNameMon.disabled = true;
+		cf.checkboxNameTue.disabled = true;
+		cf.checkboxNameWed.disabled = true;
+		cf.checkboxNameThu.disabled = true;
+		cf.checkboxNameFri.disabled = true;
+		cf.checkboxNameSat.disabled = true;
+
+        cf.checkboxNamehours.disabled = true;
+		cf.starthour.disabled = true;
+		cf.startminute.disabled = true;
+		cf.endhour.disabled = true;
+		cf.endminute.disabled = true;
+    }
+
+
+	return;
+}
+*/
+
+function init()
+{
+/*
+	var cf = document.forms[0];
+	var temp;
+	var old;
+	BIN=new Array(4);
+	cf.adjust.checked = false;
+
+	if (cf.schedule_daylightadjust.value == 1)
+		cf.adjust.checked = true;
+
+	if (cf.schedule_day.value == 127) //check everyday if all check except everyday
+	{
+		cf.checkboxNameAll.checked = true;
+    }
+
+	for(var i=0; i<8; i++)
+			BIN[i]=0;
+
+	if (cf.schedule_day.value > 1)
+	{
+		temp = cf.schedule_day.value;
+		for(var i=0; i<8; i++)
+		{
+			old = temp;
+			temp = Math.floor(temp/2);
+
+			if (temp >= 1)
+			{
+				if ((temp*2) != old)
+					BIN[7-i] = 1;
+				else
+					BIN[7-i] = 0;
+				if (temp == 1)
+				{
+					BIN[6-i] = temp;
+					i=7;
+				}
+			}
+			else
+				i=7;
+		}
+	}
+	else if (cf.schedule_day.value == 1)
+		BIN[7]=1;
+
+	if (BIN[0] == 1) //128
+		cf.checkboxNameAll.checked = true;
+	if (BIN[1] == 1) //64
+		cf.checkboxNameSun.checked = true;
+	if (BIN[2] == 1) //32
+		cf.checkboxNameMon.checked = true;
+	if (BIN[3] == 1) //16
+		cf.checkboxNameTue.checked = true;
+	if (BIN[4] == 1) //8
+		cf.checkboxNameWed.checked = true;
+	if (BIN[5] == 1) //4
+		cf.checkboxNameThu.checked = true;
+	if (BIN[6] == 1) //2
+		cf.checkboxNameFri.checked = true;
+	if (BIN[7] == 1) //1
+		cf.checkboxNameSat.checked = true;
+
+	if ((cf.schedule_starthour.value == 0) && (cf.schedule_startminute.value == 0) && (cf.schedule_endhour.value == 23) && (cf.schedule_endminute.value == 59))
+		cf.checkboxNamehours.checked = true;
+	else
+	{
+		cf.starthour.value = cf.schedule_starthour.value;
+		cf.startminute.value = cf.schedule_startminute.value;
+		cf.endhour.value = cf.schedule_endhour.value;
+		cf.endminute.value = cf.schedule_endminute.value;
+	}
+	if(cf.checkboxNamehours.checked == true)
+	{
+		cf.starthour.value = 0;
+		cf.startminute.value = 0;
+		cf.endhour.value = 24;
+		cf.endminute.value = 0;
+	}
+	BlockAllClickCheck();
+
+    isInited = 1;
+*/
+}
+
+/*
+function checkSchedule()
+{
+	var cf = document.forms[0];
+	var value = 0;
+
+    if (cf.adjust.checked)
+		cf.schedule_daylightadjust.value = 1;
+	else
+		cf.schedule_daylightadjust.value = 0;
+
+	if (cf.checkboxNamehours.checked)
+		cf.schedule_alldayenable.value = 1;
+	else
+		cf.schedule_alldayenable.value = 0;
+
+	if (cf.checkboxNameAll.checked)
+		value = 128;
+	if (cf.checkboxNameSun.checked)
+		value = value + 64;
+	if (cf.checkboxNameMon.checked)
+		value = value + 32;
+	if (cf.checkboxNameTue.checked)
+		value = value + 16;
+	if (cf.checkboxNameWed.checked)
+		value = value + 8;
+	if (cf.checkboxNameThu.checked)
+		value = value + 4;
+	if (cf.checkboxNameFri.checked)
+		value = value + 2;
+	if (cf.checkboxNameSat.checked)
+		value = value + 1;
+
+	cf.schedule_day.value = value;
+
+	if (!(cf.checkboxNamehours.checked))
+	{
+		if(isN: ***REDACTED***(cf.starthour,23) || isN: ***REDACTED***(cf.endhour,23)
+		  ||isN: ***REDACTED***(cf.startminute,59) || isN: ***REDACTED***(cf.endminute,59))
+		{
+			alert("Invalid time input.");
+			return false;
+		}
+		else
+		{
+			cf.starthour.value = parseInt(cf.starthour.value,10);
+			cf.endhour.value = parseInt(cf.endhour.value,10);
+			cf.startminute.value = parseInt(cf.startminute.value,10);
+			cf.endminute.value = parseInt(cf.endminute.value,10);
+		}
+
+    	if (cf.starthour.value == cf.endhour.value &&
+    	    cf.startminute.value == cf.endminute.value)
+    	{
+    		alert("Invalid time input.");
+    		return false;
+        }
+
+        if (cf.starthour.value == 24 && cf.startminute.value == 0)
+        {
+			alert("Invalid time input.");
+			return false;
+		}
+
+		if (cf.endhour.value == 24 && cf.endminute.value == 0)
+		{
+			// allow end time to be 24:00
+            if ((cf.starthour.value < 0) || (cf.starthour.value > 23) ||
+                (cf.startminute.value < 0) || (cf.startminute.value > 59))
+            {
+                alert("Invalid time input.");
+                return false;
+            }
+		}
+		else
+        if ((cf.starthour.value < 0) || (cf.starthour.value > 23) ||
+            (cf.endhour.value < 0) || (cf.endhour.value > 23) ||
+            (cf.startminute.value < 0) || (cf.startminute.value > 59) ||
+            (cf.endminute.value < 0) || (cf.endminute.value > 59))
+    	{
+    		alert("Invalid time input.");
+    		return false;
+    	}
+
+    	if ((!_isN: ***REDACTED***(cf.starthour.value)) ||
+    	    (!_isN: ***REDACTED***(cf.endhour.value)) ||
+    	    (!_isN: ***REDACTED***(cf.startminute.value)) ||
+    	    (!_isN: ***REDACTED***(cf.endminute.value)))
+    	{
+    		alert("Invalid time input.");
+    		return false;
+    	}
+
+    	if ((cf.starthour.value == '') || (cf.endhour.value == ''))
+    	{
+    		alert("Invalid time input.");
+    		return false;
+    	}
+
+    	if ((cf.starthour.value != '') && (cf.endhour.value != ''))
+    	{
+    		if (cf.startminute.value == '')
+    			cf.startminute.value = 0;
+    		if (cf.endminute.value == '')
+    			cf.endminute.value = 0;
+    	}
+	}
+	return true;
+}
+*/
+
+function CancelAction()
+{
+    var cf = document.forms[0];
+
+    cf.result.value="cancel";
+    return true;
+}
+
+/*
+function chSession(newsession)
+{
+    if(newsession == 2)
+        top.formframe.location.href = "FW_schedule_ppp2.htm";
+    else if(newsession == 1)
+        top.formframe.location.href = "FW_schedule.htm";
+}
+*/
+
+function schAction(index)
+{
+    var cf = document.forms[0];
+    var count = cf.policyCount.value;
+    cf.Add.value = "";
+    cf.Edit.value = "";
+    cf.Delete.value = "";
+    cf.Apply.value = "";
+    switch (index) {
+        case 1:
+            if (count == 20)
+            {
+                alert("The gateway can support 20 only schedule rules.");
+                return false;
+            }
+            cf.Add.value = "Add";
+            break;
+        case 2:
+            cf.Edit.value = "Edit";
+            break;
+        case 3:
+            cf.Delete.value = "Delete";
+            break;
+        default:
+            break;
+    }
+
+    // Terry 20111228, comment this line since it could cause twice submissions
+    // cf.submit();
+}
+
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+/*
+  Current Time (text)
+*/
+//  var tagValueList = "Wednesday, 01 Jan 2003 ***IPv6***";
+    var tagValueList = 'Sun Nov 23 ***IPv6*** 2025';
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /*  current time */
+    document.getElementById("cur_time").innerHTML = tagValues[0];
+}
+
+function InitSchTableTagValue()
+{
+/*
+  Schedule Name (text) | Days to Block - bitmap (Every Day, Sun, Mon, Tue, Wed, Thu, Fri, Sat) |
+  Start Hour (text) | Start Minute (text) | End Hour (text) | End Minute (text)
+*/
+    var tagValueList = '0|';
+/*
+    var tagValueList = "4" +
+        "|TestSchedule1|128|1|2|3|4" +
+        "|Test2|44|10|30|15|20" +
+        "|aabc|78|10|30|23|11" +
+        "|MySche|127|13|30|14|20";
+*/
+
+    return tagValueList.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+    cellsArray [0] = "<span class='thead'>" + (rowId +1) + "<\/span>";
+    cellsArray [1] = "<input type='radio' name='SelIdx' value='" + rowId + "' />";
+
+    // Terry 20120109, translate space characters to HTML code.
+    cellsArray [2] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 0]));
+
+    var cf = document.forms[0];
+    var schedule_day = parseInt(tags[firstCellIdx + 1])
+    var daysToBlockStr = "";
+	var temp;
+	var old;
+	BIN = new Array(4);
+    if (schedule_day == 127)
+    {
+        daysToBlockStr = "Every Day";
+    }
+    else
+    {
+    	for (var i = 0; i < 8; i++)
+        	BIN[i] = 0;
+
+	    if (schedule_day > 1)
+	    {
+	    	temp = schedule_day;
+	    	for (var i = 0; i < 8; i++)
+	    	{
+	    		old = temp;
+	    		temp = Math.floor(temp / 2);
+
+	    		if (temp >= 1)
+	    		{
+	    			if ((temp * 2) != old)
+	    				BIN[7 - i] = 1;
+	    			else
+	    				BIN[7 - i] = 0;
+	    			if (temp == 1)
+	    			{
+	    				BIN[6 - i] = temp;
+	    				i = 7;
+	    			}
+	    		}
+	    		else
+	    			i = 7;
+	    	}
+	    }
+	    else if (schedule_day == 1)
+	    	BIN[7] = 1;
+
+        if (BIN[0] == 1)
+        {
+            daysToBlockStr = "Every Day";
+        }
+        else
+        {
+            for (i = 1; i < 8; i++)
+            {
+                if (BIN[i] == 1)
+                {
+                    if (daysToBlockStr.length != 0)
+                    {
+                        daysToBlockStr += ", ";
+                    }
+                    switch (i)
+                    {
+                    case 1:
+                        daysToBlockStr += "Sun";
+                        break;
+                    case 2:
+                        daysToBlockStr += "Mon";
+                        break;
+                    case 3:
+                        daysToBlockStr += "Tue";
+                        break;
+                    case 4:
+                        daysToBlockStr += "Wed";
+                        break;
+                    case 5:
+                        daysToBlockStr += "Thu";
+                        break;
+                    case 6:
+                        daysToBlockStr += "Fri";
+                        break;
+                    case 7:
+                        daysToBlockStr += "Sat";
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    cellsArray [3] = daysToBlockStr;
+    if (tags[firstCellIdx + 2] == "00" &&
+        tags[firstCellIdx + 3] == "00" &&
+        tags[firstCellIdx + 4] == "24" &&
+        tags[firstCellIdx + 5] == "00")
+    {
+        cellsArray [4] = "All Day";
+    }
+    else
+    {
+        cellsArray [4] = tags[firstCellIdx + 2] + ":" + tags[firstCellIdx + 3] + " ~ " + tags[firstCellIdx + 4] + ":" + tags[firstCellIdx + 5];
+    }
+
+    return cellsArray;
+}
+
+function InitSchTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    total = tagValues[0];
+    drawTable('schTable', tagValues, onAddRowCB);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitSchTableUpdateView(InitSchTableTagValue());
+}
+function checkOverTotalNumber()
+{
+    if(total == ScheduleListTotal)
+    {
+        alert("Invalid Data. Schedule List is full.  Remove an entry before adding new entry.");
+        return true;
+    }
+    return false;
+}
+// Nick Implement ASP Tag display on GUI
+</script>
+</head>
+<!-- Terry 20110926, remove BlockAllClickCheck() -->
+<!-- <body  onload="BodyInit();BlockAllClickCheck();init();" class="page-body" > -->
+<body onload="BodyInit();init();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/Schedule?id=780557778'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Schedule
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <!-- Terry 20110926, Schedule doesnt need Apply -->
+                <!-- <tr align="left" valign="middle">
+                <td  style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                &nbsp;&nbsp;&nbsp;<button value="Apply"  onclick="if(!isInited) return false; buttonClick(this,'Apply');if(!checkSchedule()) return false;" type=submit name=action class="button-apply" > <span class="roundleft_apply" >Apply&nbsp;<span class="apply-icon">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="roundright_apply">&nbsp;&nbsp;&nbsp;</span></button>
+                &nbsp;&nbsp;&nbsp;<button value="Cancel" onclick="buttonClick(this,'Cancel');CancelAction()" type=submit name=action class="button-rule" ><span class="roundleft_button"><span class ="cancel-icon">&nbsp;&nbsp;&nbsp;&nbsp;Cancel</span></span><span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span></button>
+                </td>
+                </tr>
+                -->
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:410px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2">
+                                        <!-- <input checked type="radio" name=pppoesession value=session1 onClick="chSession(1);">Session 1
+                                        <input type="radio" name=pppoesession value=session2 onClick="chSession(2);">Session 2<br>
+                                        -->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- <tr>
+                                <td colspan="2"><b><a href="javascript:loadhelp('Schedule','blocksch')">Days to Block:</a></b></td></tr>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameAll onclick=BlockAllClickCheck(); type=checkbox value=checkboxValue>Every Day </TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameSun type=checkbox value=checkboxValue >Sunday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameMon type=checkbox value=checkboxValue>Monday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameTue type=checkbox value=checkboxValue>Tuesday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameWed type=checkbox value=checkboxValue>Wednesday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameThu type=checkbox value=checkboxValue>Thursday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameFri type=checkbox value=checkboxValue>Friday</TD></TR>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNameSat type=checkbox value=checkboxValue>Saturday</TD></TR>
+                                <tr><td colspan="2" style="height:12px" ><div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div></td></tr>
+                                <tr>
+                                <td colspan="2"><b><a href="javascript:loadhelp('Schedule','blocksch')">Time of day to block:</a></b>(use 24-hour clock)</td></tr>
+                                <TR>
+                                <TD colspan="2" >
+                                <INPUT name=checkboxNamehours onclick=BlockPeriodClick(this.form); type=checkbox value=checkboxValue> All Day</TD></TR>
+                                <TR>
+                                <TD width="50%">Start Blocking</TD>
+                                <TD width="50%">
+                                <INPUT class=num maxLength=2 name=starthour onfocus="if(TimePeriodDisabled) this.blur()" size=3>Hour
+                                <INPUT class=num maxLength=2 name=startminute onfocus="if(TimePeriodDisabled) this.blur()" size=3>Minute</TD></TR>
+                                <TR>
+                                <TD width="50%">End Blocking</TD>
+                                <TD>
+                                <INPUT class=num maxLength=2 name=endhour onfocus="if(TimePeriodDisabled) this.blur()" size=3>Hour
+                                <INPUT class=num maxLength=2 name=endminute onfocus="if(TimePeriodDisabled) this.blur()" size=3>Minute</TD></TR>
+                                <tr><td colspan="2" style="height:12px" ><div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div></td></tr>
+                                <tr>
+                                <td colspan="2"><a href="javascript:loadhelp('Schedule','timezone')"><b>Time Zone</b></a></td></tr>
+                                <tr>
+                                <td colspan="2">
+                                <SELECT name=time_zone size=1>
+                                <OPTION value=-12 >(GMT-12:00) Eniwetok,Kwajalein</OPTION>
+                                <OPTION value=-11 >(GMT-11:00) Midway Island, Samoa</OPTION>
+                                <OPTION value=-10 >(GMT-10:00) Hawaii</OPTION>
+                                <OPTION value=-9 >(GMT-09:00) Alaska</OPTION>
+                                <OPTION value=-8 selected>(GMT-08:00) Pacific Time (US & Canada); Tijuana</OPTION>
+                                <OPTION value=-7 >(GMT-07:00) Mountain Time (US & Canada)</OPTION>
+                                <OPTION value=-6 >(GMT-06:00) Central America, Central Time (US & Canada)</OPTION>
+                                <OPTION value=-5 >(GMT-05:00) Bogota, Lima, Quito, Eastern Time (US & Canada)</OPTION>
+                                <OPTION value=-4 >(GMT-04:00) Atlantic Time (Canada), Caracas, La Paz, Santiago</OPTION>
+                                <OPTION value=-35 >(GMT-03:30) Newfoundland</OPTION>
+                                <OPTION value=-3 >(GMT-03:00) Brasilia, Buenos Aires, Georgetown, Greenland</OPTION>
+                                <OPTION value=-2 >(GMT-02:00) Mid-Atlantic</OPTION>
+                                <OPTION value=-1 >(GMT-01:00) Azores, Cape Verde Is.</OPTION>
+                                <OPTION value=0 >(GMT) Greenwich Mean Time: Dublin, Edinburgh, Lisbon, London</OPTION>
+                                <OPTION value=1 >(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna</OPTION>
+                                <OPTION value=2 >(GMT+02:00) Athens, Beirut, Istanbul, Minsk</OPTION>
+                                <OPTION value=3 >(GMT+03:00) Baghdad, Kuwait, Nairobi, Riyadh</OPTION>
+                                <OPTION value=4 >(GMT+04:00) Abu Dhabi, Muscat, Baku, Tbilisi, Yerevan, Kabul</OPTION>
+                                <OPTION value=5 >(GMT+05:00) Ekaterinburg, Islamabad, Karachi, Tashkent</OPTION>
+                                <OPTION value=55 >(GMT+05:30) Chennai, Kolkata, Mumbai, New Delhi</OPTION>
+                                <OPTION value=6 >(GMT+06:00) Almaty, Novosibirsk, Astana, Dhaka, Sri Jayawardenepura, Rangoon</OPTION>
+                                <OPTION value=7 >(GMT+07:00) Bangkok, Jakarta, Hanoi, Krasn: ***REDACTED***</OPTION>
+                                <OPTION value=8 >(GMT+08:00) Beijing, Chongqing, Hong Kong, Urumqi</OPTION>
+                                <OPTION value=9 >(GMT+09:00) Tokyo, Osaka, Sapporo, Seoul, Yakutsk, Adelaide, Darwin</OPTION>
+                                <OPTION value=10 >(GMT+10:00) Brisbane, Canberra, Melbourne, Sydney</OPTION>
+                                <OPTION value=11 >(GMT+11:00) Magadan, Solomon Is., New Caledonia</OPTION>
+                                <OPTION value=12 >(GMT+12:00) Fiji, Kamchatka, Auckland, Wellington, Marshall Is.</OPTION>
+                                <OPTION value=13 >(GMT+13:00) Nukualofa</OPTION></SELECT></td></tr>
+                                <tr>
+                                <td colspan="2">
+                                <input type="checkbox" name="adjust" value="adjust">Automatically adjust for daylight savings time</td></tr>
+                                -->
+                                <tr>
+                                    <td colspan="2">
+                                        <b>
+                                            Schedule Table
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="2" cellspacing="0" width="100%" id="schTable" class="TableStyle">
+                                            <tbody>
+                                                <tr>
+                                                    <td style="width:3%;text-align:center">
+                                                        <span class="thead">
+                                                            &nbsp;
+                                                        </span>
+                                                    </td>
+                                                    <td style="width:3%;text-align:center">
+                                                        <span class="thead">
+                                                            #
+                                                        </span>
+                                                    </td>
+                                                    <td style="width:26%;text-align:center">
+                                                        <span class="thead">
+                                                            Schedule Name
+                                                        </span>
+                                                    </td>
+                                                    <td style="width:34%;text-align:center">
+                                                        <span class="thead">
+                                                            Days
+                                                        </span>
+                                                    </td>
+                                                    <td style="width:34%;text-align:center">
+                                                        <span class="thead">
+                                                            Time of day
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align:center">
+                                        <b>
+                                            Current Time: &nbsp;
+                                            <span class="ttext" id="cur_time">
+                                            </span>
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align:center;vertical-align:middle">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Add " name="schAdd" class="button-rule" onclick="buttonClick(this,' Add ');if(checkOverTotalNumber()) return false;schAction(1);">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Edit " name="schEdit" class="button-rule" onclick="buttonClick(this,' Edit ');schAction(2);">
+                                            <span class="roundleft_button">
+                                                <span class="edit-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Edit
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Delete" name="schDelete" class="button-rule" onclick="buttonClick(this,'Delete');schAction(3);">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Delete
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr style="text-align:center;vertical-align:middle">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="Schedule_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <!-- <INPUT name=schedule_day type=hidden value=" 127">
+            <INPUT name=schedule_alldayenable type=hidden>
+            <INPUT name=schedule_starthour type=hidden value= "0">
+            <INPUT name=schedule_startminute type=hidden value= "0">
+            <INPUT name=schedule_endhour type=hidden value= "24">
+            <INPUT name=schedule_endminute type=hidden value= "0">
+            <INPUT name=schedule_daylightadjust type=hidden value= "1">
+            -->
+            <INPUT name=result type=hidden value="apply">
+            <INPUT type="hidden" name="enable_apmode" value="0">
+            <input type="hidden" name="Add" value="">
+            <input type="hidden" name="Edit" value="">
+            <input type="hidden" name="Delete" value="">
+            <input type="hidden" name="Apply" value="Apply">
+            <input type="hidden" name="policyCount" value="0">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<link rel="stylesheet" href="form.css">
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<script type="text/javascript"><!--
+
+var wan_status = 0;
+
+    $(document).ready(function()
+    {
+        BodyInit();
+        if(wan_status == "1")
+        {
+            location.href='DocsisStatus.htm';
+        }
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+function BodyInit()
+{
+    wan_status = 1;
+}
+
+//--></script></head>
+<body onLoad="'MNU_menu.htm'" style="margin:0px;background-color:#e5e5e5">
+    <form id="target" name="msg" action="message.cgi?id=777334267" method="post" onSubmit="return false">
+        <input type="hidden" name="buttonHit">
+        <input type="hidden" name="buttonValue">
+        <table WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="4">
+            <tr>
+                <td align="left">
+                    <h1>
+                        Failure
+                    </h1>
+                </td>
+            </tr>
+        </table>
+        <table WIDTH="100%" BORDER="0" CELLSPACING="3" CELLPADDING="0">
+            <tr>
+                <td colspan="2" style="background-image: url('liteblue.gif'); height: 12px;background-repeat: repeat-x;">
+                    &nbsp;
+                </td>
+            </tr>
+        </table>
+        <table WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="4">
+            <tr>
+                <td align=center>
+                    <b style="color:#ff0000">
+                        Your modem is offline.
+                    </b>
+                </TD>
+            </TR>
+            <tr>
+                <td align=center>
+                    <b>
+                        Please check the RF connection.
+                    </b>
+                </TD>
+            </TR>
+        </table>
+        <table WIDTH="100%" BORDER="0" CELLSPACING="3" CELLPADDING="0">
+            <tr>
+                <td colspan="2" style="background-image: url('liteblue.gif'); height: 12px;background-repeat: repeat-x;">
+                    &nbsp;
+                </td>
+            </tr>
+        </table>
+        <table WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="4">
+            <TR>
+                <td align=center>
+                    Click <b>OK</b> to go back to the Dashboard screen....
+                </TD>
+            </TR>
+            <TR>
+                <td align=center>
+                    <a style="color:blue;TEXT-DECORATION :UNDERLINE" href="DocsisStatus.htm">Click <b>Here</b> to go to setting....</a>
+                </TD>
+            </TR>
+            <TR>
+                <TD align=center>
+                    &nbsp;&nbsp;&nbsp;
+                    <button TYPE="BUTTON" value="OK" NAME="OK" class="button-rule" onclick="buttonClick(this,'OK');location.href='DashBoard.htm'">
+                        <span class="roundleft_button">
+                            &nbsp;&nbsp; OK
+                        </span>
+                        <span class="roundright_button">
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                        </span>
+                    </button>
+                </TD>
+            </TR>
+        </TABLE>
+    </form>
+</BODY>
+</HTML>

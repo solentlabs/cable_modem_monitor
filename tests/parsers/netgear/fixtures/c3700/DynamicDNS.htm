@@ -1,0 +1,1535 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+
+var ntgr_noip_error_msg;
+var email_confirm = "";
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+
+        change_size();
+    }
+
+    function change_size()
+    {
+        //We don't have auto (width) resize, so hard code the width now.
+        var width = 650;
+        $('.help-frame-div').css("width", width-50);
+        $('#helpframe').css("width", width-50);
+        if(document.getElementById('helpframe')) {
+            try{
+                document.getElementById('helpframe').contentWindow.change_size_helpPage(width);
+            }catch(e){}
+        }
+    }
+
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+    function loadhelp2(fname,anchname)
+    {
+        var pane = window.frames["helpframe"].$('#content');
+        var imgSrc=document.getElementById('help-button');
+        pane.jScrollPane({showArrows:true});
+
+        $(".help-frame-div").hide();
+
+        if ((loadhelp2.arguments.length == 1 ) || (anchname == "" ))
+           window.frames["helpframe"].location.href=fname+"_h."+"htm";
+        else
+           window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+
+        pane.jScrollPane({showArrows:true});
+    }
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function ShowResult()
+{
+    openDataSubWin('DynamicDNSStatus.htm','alwaysRaised,dependent,resizable,scrollbars,width=450,height=150,left=200,top=200');
+}
+
+function checkData()
+{
+    var cf = document.forms[0];
+    var msg = "";
+    if(cf.sysDNSActive.checked)
+    {
+        msg+= checkBlank(cf.sysDNSHost, "Host Name");
+        msg+= checkBlank(cf.sysDNSUser, "User Name");
+        msg+= checkBlank(cf.sysDNSPassword, "Password");
+    }
+
+    if (cf.sysDNSHost.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("Host name can not be blank.");
+        return false;
+    }
+
+    if (cf.sysDNSUser.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("User name cannot be blank.");
+        return false;
+    }
+
+    if (cf.sysDNSPassword.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("Password cannot be blank.");
+        return false;
+    }
+
+    if (msg.length > 1)
+    {
+        alert(msg);
+        return false;
+    }
+    return true;
+}
+
+
+function statusChange(Index)
+{
+    var cf = document.forms[0];
+    var imgSrc=document.getElementById('help-button');
+
+    if(Index == 0)
+    {
+        document.getElementById("Netgear_register").style.display="block";
+        document.getElementById("registration_text").style.display="block";
+        document.getElementById("registration_button_text").style.display="block";
+        document.getElementById("Netgear_account").style.display="none";
+        document.getElementById("netgear_button").style.display="none";
+        document.getElementById("text_email_result_account_id").style.display="none";
+        document.getElementById("text_pass_result_account_id").style.display="none";
+        document.getElementById("account_error").style.display="none";
+        document.getElementById("Netgear_account_email_no").style.display="none";
+        document.getElementById("Netgear_account_confirm_no").style.display="none";
+        document.getElementById("text_pass_result_account_id").style.display="none";
+        document.getElementById("Netgear_img_account_host_no").style.display="none";
+        document.getElementById("text_host_result_account_id").style.display="none";
+
+        if(cf.sysDNSHost_Netgear.value == "" && cf.sysDNSEmail_Netgear.value == "" && cf.sysDNSPassword_Netgear.value == "")
+        {
+            grayout_button("NRegister");
+        }
+
+        imgSrc.src="img/helparrowdown-icon.gif";
+        loadhelp2('DynamicDNS_Netgear_no');
+    }
+    else
+    {
+        document.getElementById("Netgear_register").style.display="none";
+        document.getElementById("registration_text").style.display="none";
+        document.getElementById("registration_button_text").style.display="none";
+        document.getElementById("Netgear_account").style.display="block";
+        document.getElementById("netgear_button").style.display="block";
+        document.getElementById("Netgear_img").style.display="none";
+        document.getElementById("Netgear_img_no").style.display="none";
+        document.getElementById("text_email_result_id").style.display="none";
+        document.getElementById("text_pass_result_register_id").style.display="none";
+        document.getElementById("Netgear_register_email_no").style.display="none";
+        document.getElementById("Netgear_img_register_no").style.display="none";
+        document.getElementById("text_host_result_id").style.display="none";
+        document.getElementById("register_error").style.display="none";
+
+        cf.sysDNSHost_Netgear.value="";
+        cf.sysDNSEmail_Netgear.value="";
+        cf.sysDNSPassword_Netgear.value="";
+        cf.email_graycheck.value="-1";
+        cf.password_graycheck.value="-1";
+        cf.host_graycheck.value="-1";
+
+        imgSrc.src="img/helparrowdown-icon.gif";
+        loadhelp2('DynamicDNS_Netgear_yes');
+    }
+    ddns_active();
+}
+
+function account_check()
+{
+    var cf = document.forms[0];
+    var email=cf.sysDNSEmail_Netgear_account.value;
+    var msg = "";
+    emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+    if(cf.sysDNSActive.checked && cf.success_status.value != "0")
+    {
+        msg+= checkBlank(cf.sysDNSPassword_Netgear_account, "Password (6~32 characters)");
+        msg+= checkBlank(cf.sysDNSEmail_Netgear_account, "Email");
+        msg+= checkBlank(cf.sysDNSHost_Netgear_account, "Host Name");
+
+        if (msg.length > 1)
+        {
+            alert(msg);
+            return false;
+        }
+
+        if(email.search(emailRule) == -1)
+        {
+            document.getElementById("text_email_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_email_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_email_result_account_id").style.display="none";
+            document.getElementById("Netgear_account_email_no").style.display="none";
+        }
+
+        if (cf.sysDNSHost_Netgear_account.value.match( /[^a-zA-Z0-9\_\-]/ ))
+        {
+            document.getElementById("text_host_result_account_id").style.display="block";
+            document.getElementById("Netgear_img_account_host_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_host_result_account_id").style.display="none";
+            document.getElementById("Netgear_img_account_host_no").style.display="none";
+        }
+
+        if (cf.sysDNSPassword_Netgear_account.value.match( /[^\x20-\x7E]/ ))
+        {
+            alert("Your password must be at least 6 characters long and at most 32 characters long");
+            return false;
+        }
+
+        if(cf.sysDNSHost_Netgear_account.value.length > 114)
+        {
+            document.getElementById("text_host_result_account_id").style.display="block";
+            document.getElementById("Netgear_img_account_host_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_host_result_account_id").style.display="none";
+            document.getElementById("Netgear_img_account_host_no").style.display="none";
+        }
+
+        if(cf.sysDNSEmail_Netgear_account.value.length > 48)
+        {
+            document.getElementById("text_email_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_email_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_email_result_account_id").style.display="none";
+            document.getElementById("Netgear_account_email_no").style.display="none";
+        }
+
+        if(cf.sysDNSPassword_Netgear_account.value.length > 32 || cf.sysDNSPassword_Netgear_account.value.length < 6)
+        {
+            document.getElementById("text_pass_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_confirm_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_pass_result_account_id").style.display="none";
+            document.getElementById("Netgear_account_confirm_no").style.display="none";
+        }
+    }
+    return true;
+}
+
+function register_check()
+{
+    var cf = document.forms[0];
+    var password=***REDACTED***
+    var email=cf.sysDNSEmail_Netgear.value;
+    var msg = "";
+    emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+    msg+= checkBlank(cf.sysDNSPassword_Netgear, "Password (6~32 characters)");
+    msg+= checkBlank(cf.sysDNSEmail_Netgear, "Email");
+    msg+= checkBlank(cf.sysDNSHost_Netgear, "Host Name");
+
+    if (msg.length > 1)
+    {
+        alert(msg);
+        return false;
+    }
+
+    if(email.search(emailRule) == -1)
+    {
+        document.getElementById("text_email_result_id").style.display="block";
+        document.getElementById("Netgear_register_email_no").style.display="block";
+        return false;
+    }
+    else
+    {
+        document.getElementById("text_email_result_id").style.display="none";
+        document.getElementById("Netgear_register_email_no").style.display="none";
+    }
+
+    if (cf.sysDNSPassword_Netgear.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("Password cannot be blank.");
+        return false;
+    }
+    return true;
+}
+
+var respflag="0";
+function sendhostcheck()
+{
+    var cf = document.forms[0];
+    var hostname=cf.sysDNSHost_Netgear.value;
+
+    if(hostname != "")
+    {
+        if(cf.sysDNSHost_Netgear.value.length > 114 || cf.sysDNSHost_Netgear.value.match( /[^a-zA-Z0-9\_\-]/ ))
+        {
+            document.getElementById("Netgear_img_no").style.display="block";
+            document.getElementById("Netgear_img").style.display="none";
+            document.getElementById("text_host_result_id").style.display="block";
+            cf.host_graycheck.value  = "-1";
+        }
+        else
+        {
+            document.getElementById("text_host_result_id").style.display="none";
+            cf.host_graycheck.value = "0";
+
+            // Call local PHP file on the device, which handles encryption and sending response
+            if(respflag == "0")
+            {
+                respflag = "-1";
+                $.ajax({
+                    url: 'DynamicDNSHostCheck.htm',
+                    method: 'POST',
+                    data:
+                    {
+                        hostname: hostname
+                    },
+                    success: function(resp)
+                    {
+                        if(resp == "available" && cf.sysDNSHost_Netgear.value != "")
+                        {
+                            document.getElementById("Netgear_img").style.display="block";
+                            document.getElementById("Netgear_img_no").style.display="none";
+                            respflag = "0";
+                            if( hostname != cf.sysDNSHost_Netgear.value)
+                            sendhostcheck();
+                        }
+                        else if(resp == "unavailable" && cf.sysDNSHost_Netgear.value != "")
+                        {
+                            document.getElementById("Netgear_img").style.display="none";
+                            document.getElementById("Netgear_img_no").style.display="block";
+                            respflag = "0";
+                            if( hostname != cf.sysDNSHost_Netgear.value)
+                            {
+                                sendhostcheck();
+                            }
+                        }
+                        else
+                        {
+                            document.getElementById("Netgear_img_no").style.display="none";
+                            document.getElementById("Netgear_img").style.display="none";
+                            respflag = "0";
+                        }
+                    }
+                });
+            }
+        }
+    }
+    else
+    {
+        document.getElementById("Netgear_img_no").style.display="none";
+        document.getElementById("Netgear_img").style.display="none";
+        document.getElementById("text_host_result_id").style.display="none";
+        cf.host_graycheck.value = "-1";
+    }
+
+    if(cf.email_graycheck.value == "0" && cf.password_graycheck.value == "0" && cf.host_graycheck.value == "0")
+    {
+        ungrayout_button("NRegister");
+    }
+    else if(cf.email_graycheck.value == "-1" || cf.password_graycheck.value == "-1" || cf.host_graycheck.value == "-1")
+    {
+        grayout_button("NRegister");
+        return false;
+    }
+    return true;
+}
+
+function hostcheck_account()
+{
+    var cf = document.forms[0];
+    var host_account=cf.sysDNSHost_Netgear_account.value;
+
+    if(host_account != "")
+    {
+        if(cf.sysDNSHost_Netgear_account.value.length > 114 || cf.sysDNSHost_Netgear_account.value.match( /[^a-zA-Z0-9\_\-]/ ))
+        {
+            document.getElementById("text_host_result_account_id").style.display="block";
+            document.getElementById("Netgear_img_account_host_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_host_result_account_id").style.display="none";
+            document.getElementById("Netgear_img_account_host_no").style.display="none";
+        }
+    }
+    else
+    {
+        document.getElementById("text_host_result_account_id").style.display="none";
+        document.getElementById("Netgear_img_account_host_no").style.display="none";
+    }
+    return true;
+}
+
+function passwordcheck_press()
+{
+    var cf = document.forms[0];
+    var pwd=cf.sysDNSPassword_Netgear.value;
+
+    if(pwd != "")
+    {
+        if(cf.sysDNSPassword_Netgear.value.length >= 6)
+        {
+            if(cf.sysDNSPassword_Netgear.value.length > 32)
+            {
+                document.getElementById("Netgear_img_register_no").style.display="block";
+                document.getElementById("text_pass_result_register_id").style.display="block";
+                cf.password_graycheck.value = "-1";
+            }
+            else
+            {
+                document.getElementById("Netgear_img_register_no").style.display="none";
+                document.getElementById("text_pass_result_register_id").style.display="none";
+                cf.password_graycheck.value = "0";
+            }
+        }
+        else
+        {
+            document.getElementById("Netgear_img_register_no").style.display="none";
+            document.getElementById("text_pass_result_register_id").style.display="none";
+            cf.password_graycheck.value = "-1";
+        }
+    }
+    else
+    {
+        document.getElementById("Netgear_img_register_no").style.display="none";
+        document.getElementById("text_pass_result_register_id").style.display="none";
+        cf.password_graycheck.value = "-1";
+    }
+
+    if(cf.email_graycheck.value == "0" && cf.password_graycheck.value == "0" && cf.host_graycheck.value == "0")
+    {
+        ungrayout_button("NRegister");
+    }
+    else if(cf.email_graycheck.value == "-1" || cf.password_graycheck.value == "-1" || cf.host_graycheck.value == "-1")
+    {
+        grayout_button("NRegister");
+        return false;
+    }
+    return true;
+}
+
+function passwordcheck()
+{
+    var cf = document.forms[0];
+    var pwd=cf.sysDNSPassword_Netgear.value;
+
+    if(pwd != "")
+    {
+        if(cf.sysDNSPassword_Netgear.value.length > 32 || cf.sysDNSPassword_Netgear.value.length < 6)
+        {
+            document.getElementById("Netgear_img_register_no").style.display="block";
+            document.getElementById("text_pass_result_register_id").style.display="block";
+            cf.password_graycheck.value = "-1";
+        }
+        else
+        {
+            document.getElementById("Netgear_img_register_no").style.display="none";
+            document.getElementById("text_pass_result_register_id").style.display="none";
+            cf.password_graycheck.value = "0";
+        }
+    }
+    else
+    {
+        document.getElementById("Netgear_img_register_no").style.display="none";
+        document.getElementById("text_pass_result_register_id").style.display="none";
+        cf.password_graycheck.value = "-1";
+    }
+
+    if(cf.email_graycheck.value == "0" && cf.password_graycheck.value == "0" && cf.host_graycheck.value == "0")
+    {
+        ungrayout_button("NRegister");
+    }
+    else if(cf.email_graycheck.value == "-1" || cf.password_graycheck.value == "-1" || cf.host_graycheck.value == "-1")
+    {
+        grayout_button("NRegister");
+        return false;
+    }
+    return true;
+}
+
+function passwordcheck_account()
+{
+    var cf = document.forms[0];
+    var pwd_account=cf.sysDNSPassword_Netgear_account.value;
+
+    if(pwd_account != "")
+    {
+        if(cf.sysDNSPassword_Netgear_account.value.length > 32 || cf.sysDNSPassword_Netgear_account.value.length < 6)
+        {
+            document.getElementById("text_pass_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_confirm_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_pass_result_account_id").style.display="none";
+            document.getElementById("Netgear_account_confirm_no").style.display="none";
+        }
+    }
+    else
+    {
+        document.getElementById("text_pass_result_account_id").style.display="none";
+        document.getElementById("Netgear_account_confirm_no").style.display="none";
+    }
+    return true;
+}
+
+function formatcheck()
+{
+    var cf = document.forms[0];
+    var email=cf.sysDNSEmail_Netgear.value;
+    emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+
+    if(email != "")
+    {
+        if(cf.sysDNSEmail_Netgear.value.length > 48)
+        {
+            document.getElementById("text_email_result_id").style.display="block";
+            document.getElementById("Netgear_register_email_no").style.display="block";
+            cf.email_graycheck.value="-1";
+        }
+        else if(email.search(emailRule) == -1)
+        {
+            document.getElementById("text_email_result_id").style.display="block";
+            document.getElementById("Netgear_register_email_no").style.display="block";
+            cf.email_graycheck.value="-1";
+        }
+        else
+        {
+            document.getElementById("text_email_result_id").style.display="none";
+            document.getElementById("Netgear_register_email_no").style.display="none";
+            cf.email_graycheck.value="0";
+        }
+    }
+    else
+    {
+        document.getElementById("text_email_result_id").style.display="none";
+        document.getElementById("Netgear_register_email_no").style.display="none";
+        cf.email_graycheck.value="-1";
+    }
+
+    if(cf.email_graycheck.value == "0" && cf.password_graycheck.value == "0" && cf.host_graycheck.value == "0")
+    {
+        ungrayout_button("NRegister");
+    }
+    else if(cf.email_graycheck.value == "-1" || cf.password_graycheck.value == "-1" || cf.host_graycheck.value == "-1")
+    {
+        grayout_button("NRegister");
+        return false;
+    }
+    return true;
+}
+
+function formatcheck_account()
+{
+    var cf = document.forms[0];
+    var email_account=cf.sysDNSEmail_Netgear_account.value;
+    emailRule = /^\w+((-\w+)|(\.\w+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/;
+
+    if(email_account != "")
+    {
+        if(cf.sysDNSEmail_Netgear_account.value.length > 48)
+        {
+            document.getElementById("text_email_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_email_no").style.display="block";
+            return false;
+        }
+        else if(email_account.search(emailRule) == -1)
+        {
+            document.getElementById("text_email_result_account_id").style.display="block";
+            document.getElementById("Netgear_account_email_no").style.display="block";
+            return false;
+        }
+        else
+        {
+            document.getElementById("text_email_result_account_id").style.display="none";
+            document.getElementById("Netgear_account_email_no").style.display="none";
+        }
+    }
+    else
+    {
+        document.getElementById("text_email_result_account_id").style.display="none";
+        document.getElementById("Netgear_account_email_no").style.display="none";
+    }
+    return true;
+}
+
+function ddns_active()
+{
+    var cf =document.forms[0];
+    var currentProvider = cf.sysDNSProviderlist.value;
+
+    if(currentProvider == "NETGEAR")
+    {
+        if(cf.sysDNSActive.checked)
+        {
+            ungrayout_button("NReset");
+            if(cf.account[1].checked)
+            {
+                cf.sysDNSHost_Netgear.disabled = false;
+                cf.sysDNSEmail_Netgear.disabled = false;
+                cf.sysDNSPassword_Netgear.disabled = false;
+            }
+            else
+            {
+                cf.sysDNSHost_Netgear_account.disabled = false;
+                cf.sysDNSEmail_Netgear_account.disabled = false;
+                cf.sysDNSPassword_Netgear_account.disabled = false;
+            }
+            cf.account[0].disabled = false;
+            cf.account[1].disabled = false;
+            cf.sysDNSProviderlist.disabled = false;
+        }
+        else
+        {
+            grayout_button("NReset");
+            if(cf.account[1].checked)
+            {
+                cf.sysDNSHost_Netgear.disabled = true;
+                cf.sysDNSEmail_Netgear.disabled = true;
+                cf.sysDNSPassword_Netgear.disabled = true;
+                cf.sysDNSHost_Netgear.value = "";
+                cf.sysDNSEmail_Netgear.value = "";
+                cf.sysDNSPassword_Netgear.value = "";
+                grayout_button("NRegister");
+                document.getElementById("text_host_result_id").style.display="none";
+                document.getElementById("text_email_result_id").style.display="none";
+                document.getElementById("text_pass_result_register_id").style.display="none";
+                document.getElementById("register_error").style.display="none";
+                document.getElementById("Netgear_img").style.display="none";
+                document.getElementById("Netgear_img_no").style.display="none";
+                document.getElementById("Netgear_register_email_no").style.display="none";
+                document.getElementById("Netgear_img_register_no").style.display="none";
+                cf.email_graycheck.value="-1";
+                cf.password_graycheck.value="-1";
+                cf.host_graycheck.value="-1";
+            }
+            else
+            {
+                cf.sysDNSHost_Netgear_account.disabled = true;
+                cf.sysDNSEmail_Netgear_account.disabled = true;
+                cf.sysDNSPassword_Netgear_account.disabled = true;
+                document.getElementById("text_host_result_account_id").style.display="none";
+                document.getElementById("text_email_result_account_id").style.display="none";
+                document.getElementById("text_pass_result_account_id").style.display="none";
+                document.getElementById("Netgear_img_account_host_no").style.display="none";
+                document.getElementById("account_error").style.display="none";
+                document.getElementById("Netgear_account_email_no").style.display="none";
+                document.getElementById("Netgear_account_confirm_no").style.display="none";
+            }
+            cf.account[0].disabled = true;
+            cf.account[1].disabled = true;
+            cf.sysDNSProviderlist.disabled = true;
+        }
+    }
+    else
+    {
+        if(cf.sysDNSActive.checked)
+        {
+            cf.sysDNSHost.disabled = false;
+            cf.sysDNSUser.disabled = false;
+            cf.sysDNSPassword.disabled = false;
+            cf.sysDNSProviderlist.disabled = false;
+        }
+        else
+        {
+            cf.sysDNSHost.disabled = true;
+            cf.sysDNSUser.disabled = true;
+            cf.sysDNSPassword.disabled = true;
+            cf.sysDNSProviderlist.disabled = true;
+        }
+    }
+}
+
+function chgDns()
+{
+    var cf =document.forms[0];
+    var currentProvider = cf.sysDNSProviderlist.value;
+    var netgear_haveaccount = cf.haveAccount.value;
+    var imgSrc=document.getElementById('help-button');
+
+    if(currentProvider == "NETGEAR")
+    {
+        document.getElementById("common_button").style.display="none";
+        document.getElementById("common_specific").style.display="none";
+        document.getElementById("Netgear_noip").style.display="block";
+
+        if(cf.success_status.value != "0")
+        {
+            if(netgear_haveaccount == "1" || netgear_haveaccount == "0")
+            {
+                document.getElementById("Netgear_account_status").style.display="block";
+                cf.account[1].checked = true;
+                ddns_active();
+                document.getElementById("Netgear_register").style.display="block";
+                document.getElementById("registration_text").style.display="block";
+                document.getElementById("registration_button_text").style.display="block";
+                document.getElementById("Netgear_img").style.display="none";
+                document.getElementById("Netgear_img_no").style.display="none";
+                document.getElementById("text_email_result_id").style.display="none";
+                document.getElementById("Netgear_register_email_no").style.display="none";
+                document.getElementById("text_email_result_account_id").style.display="none";
+                document.getElementById("text_pass_result_account_id").style.display="none";
+                document.getElementById("account_error").style.display="none";
+                document.getElementById("Netgear_account_email_no").style.display="none";
+                document.getElementById("Netgear_img_register_no").style.display="none";
+                document.getElementById("text_host_result_id").style.display="none";
+                document.getElementById("Netgear_account_confirm_no").style.display="none";
+                document.getElementById("Netgear_img_account_host_no").style.display="none";
+                document.getElementById("text_host_result_account_id").style.display="none";
+                document.getElementById("text_pass_result_register_id").style.display="none";
+                document.getElementById("register_error").style.display="none";
+                grayout_button("NRegister");
+
+                imgSrc.src="img/helparrowdown-icon.gif";
+                loadhelp2('DynamicDNS_Netgear_no');
+
+                cf.sysDNSHost_Netgear.value="";
+                cf.sysDNSEmail_Netgear.value="";
+                cf.sysDNSPassword_Netgear.value="";
+                cf.email_graycheck.value="-1";
+                cf.password_graycheck.value="-1";
+                cf.host_graycheck.value="-1";
+            }
+        }
+        else
+        {
+            document.getElementById("Netgear_success_reset").style.display="block";
+            document.getElementById("netgear_button").style.display="block";
+            document.getElementById("Netgear_register").style.display="none";
+            document.getElementById("Netgear_account_status").style.display="none";
+            document.getElementById("Netgear_account").style.display="none";
+            $("#success_reset_hostname").html(cf.ntgr_hostname.value);
+            $("#success_reset_email").html(cf.ntgr_email.value);
+            ddns_active();
+        }
+    }
+    else
+    {
+        ddns_active();
+        var enableButton;
+        var inputusername = document.getElementsByName("sysDNSUser");
+        var inputpassword=***REDACTED***"sysDNSPassword");
+        inputusername[0].maxLength = 64;
+        inputpassword[0].maxLength = 64;
+        document.getElementById("common_specific").style.display="block";
+        document.getElementById("common_button").style.display="block";
+        document.getElementById("Netgear_account_status").style.display="none";
+        document.getElementById("Netgear_register").style.display="none";
+        document.getElementById("registration_text").style.display="none";
+        document.getElementById("registration_button_text").style.display="none";
+        document.getElementById("Netgear_account").style.display="none";
+        document.getElementById("netgear_button").style.display="none";
+        document.getElementById("Netgear_noip").style.display="none";
+        document.getElementById("Netgear_success_reset").style.display="none";
+
+        imgSrc.src="img/helparrowdown-icon.gif";
+        loadhelp2('DynamicDNS');
+    }
+}
+
+var press_cancel_flag="0";
+function press_cancel()
+{
+    press_cancel_flag = "1";
+}
+
+function loadSettings()
+{
+    var cf = document.forms[0];
+    var ddnsServer=cf.ddnsServer.value;
+    var ddnsEnable = cf.ddnsEnable.value;
+    var netgear_haveaccount = cf.haveAccount.value;
+    var hostname = cf.ntgr_hostname.value;
+    var email = cf.ntgr_email.value;
+    var pawd = cf.ntgr_password.value;
+    cf.sysDNSProviderlist.value = ddnsServer;
+
+    if (ddnsEnable == "1")
+    {
+        cf.sysDNSActive.checked = true;
+    }
+    else
+    {
+        cf.sysDNSActive.checked = false;
+    }
+
+    if (ddnsServer == "NETGEAR") //NETGEAR
+    {
+        document.getElementById("common_specific").style.display="none";
+        document.getElementById("common_button").style.display="none";
+        document.getElementById("Netgear_account_status").style.display="block";
+        document.getElementById("Netgear_noip").style.display="block";
+        document.getElementById("text_pass_result_register_id").style.display="none";
+        document.getElementById("Netgear_img_register_no").style.display="none";
+        document.getElementById("text_host_result_id").style.display="none";
+        document.getElementById("Netgear_img_account_host_no").style.display="none";
+        document.getElementById("text_host_result_account_id").style.display="none";
+
+        netgear_create_result="";
+        if(press_cancel_flag != "1" && cf.ntgr_confirmation_email.value == "1") //press cancel button not show confirm email
+        {
+            email_confirm = "Confirmation email is on its way!\n\nA confirmation email has been sent to the email\naddressyou provided. The confirmation email will\ninclude a link that you must click on to verify your\nemail address. Once your account is confirmed\nyou will be able to login and use our services.";
+        }
+        else
+        {
+            email_confirm="";
+            press_cancel_flag = "0";
+        }
+
+        if(cf.success_status.value != "0")
+        {
+            document.getElementById("Netgear_success_reset").style.display="none";
+
+            if(netgear_haveaccount == "1")
+            {
+                document.getElementById("text_email_result_account_id").style.display="none";
+                document.getElementById("Netgear_account_email_no").style.display="none";
+                document.getElementById("Netgear_account_confirm_no").style.display="none";
+                document.getElementById("text_pass_result_account_id").style.display="none";
+                cf.account[0].checked = true;
+                statusChange(1);
+                document.getElementById("account_error").style.display="block";
+                if(ntgr_noip_error_msg != "")
+                {
+                    $("#account_error_msg").html(ntgr_noip_error_msg);
+                }
+            }
+            else if(netgear_haveaccount == "0")
+            {
+                if(netgear_create_result != "-1")
+                {
+                    grayout_button("NRegister");
+                    cf.email_graycheck.value="-1";
+                    cf.password_graycheck.value="-1";
+                    cf.host_graycheck.value="-1";
+                }
+                else
+                {
+                    cf.sysDNSHost_Netgear.value = hostname;
+                    cf.sysDNSEmail_Netgear.value = email;
+                    cf.sysDNSPassword_Netgear.value = pawd;
+                    cf.email_graycheck.value="0";
+                    cf.password_graycheck.value="0";
+                    cf.host_graycheck.value="0";
+                    ungrayout_button("NRegister");
+                }
+
+                document.getElementById("text_email_result_id").style.display="none";
+                document.getElementById("Netgear_register_email_no").style.display="none";
+                document.getElementById("Netgear_img_register_no").style.display="none";
+                document.getElementById("text_pass_result_register_id").style.display="none";
+                cf.account[1].checked = true;
+                statusChange(0);
+                document.getElementById("register_error").style.display="block";
+                if(ntgr_noip_error_msg != "")
+                {
+                    $("#register_error_msg").html(ntgr_noip_error_msg);
+                }
+                document.getElementById("Netgear_img").style.display="none";
+                document.getElementById("Netgear_img_no").style.display="none";
+            }
+        }
+        else //reset
+        {
+            document.getElementById("Netgear_success_reset").style.display="block";
+            document.getElementById("netgear_button").style.display="block";
+            document.getElementById("Netgear_register").style.display="none";
+            document.getElementById("Netgear_account_status").style.display="none";
+            document.getElementById("Netgear_account").style.display="none";
+            document.getElementById("registration_text").style.display="none";
+            document.getElementById("registration_button_text").style.display="none";
+            $("#success_reset_hostname").html(hostname);
+            $("#success_reset_email").html(email);
+            ddns_active();
+        }
+    }
+    else
+    {
+        chgDns();
+        press_cancel_flag = "0";
+    }
+}
+
+function Check(caller)
+{
+    var cf = document.forms[0];
+    if(caller == 0)
+    {
+        cf.action.value = "apply";
+    }
+    else if(caller == 1)
+    {
+        cf.action.value = "apply_netgear";
+    }
+    else if(caller == 2)
+    {
+        cf.action.value = "registration_netgear";
+    }
+    else if(caller == 3)
+    {
+        cf.action.value = "reset_netgear";
+    }
+    return;
+}
+
+function checkEmail()
+{
+    if(email_confirm != "")
+    {
+        alert(email_confirm);
+    }
+}
+
+function InitProvidersTagValue()
+{
+    var tagValueList = 'NETGEAR|NoIP.com|www.DynDNS.org|DtDNS.com';
+
+    return tagValueList.split("|");
+}
+
+function InitTagValue()
+{
+/*
+  Use a Dynamic DNS Service (checkbox) | Host Name (text) | User Name (text) | Password (text)
+*/
+    //var tagValueList = "0|http://aa.bb.cc.dd|abc|bbb";
+    //var tagValueList = "1|http://ee.ff.gg.hh|cccc|dddd";
+    var tagValueList = "0|www.DynDNS.org||||-1|0|||||0|";
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Use a Dynamic DNS Service */
+    document.getElementsByName("ddnsEnable")[0].value = tagValues[0];
+
+    /* Dynamic DNS Server */
+    document.getElementsByName("ddnsServer")[0].value = tagValues[1];
+
+    /* Host Name */
+    document.getElementsByName("sysDNSHost")[0].value = piplineDecode(tagValues[2]);
+
+    /* User Name */
+    document.getElementsByName("sysDNSUser")[0].value = piplineDecode(tagValues[3]);
+
+    /* Password  */
+    document.getElementsByName("sysDNSPassword")[0].value = piplineDecode(tagValues[4]);
+
+    /* Success_Status */
+    document.getElementsByName("success_status")[0].value = tagValues[5];
+
+    /* have account */
+    document.getElementsByName("haveAccount")[0].value = tagValues[6];
+
+    if(tagValues[5] == 0)
+    {
+        //Success
+        /* ntgr hostname */
+        document.getElementsByName("ntgr_hostname")[0].value = tagValues[7];
+        /* ntgr email */
+        document.getElementsByName("ntgr_email")[0].value = tagValues[8];
+        /* ntgr password */
+        document.getElementsByName("ntgr_password")[0].value = tagValues[9];
+    }
+    else
+    {
+        //Fail
+        /* ntgr hostname */
+        document.getElementsByName("sysDNSHost_Netgear_account")[0].value = tagValues[7];
+        /* ntgr email */
+        document.getElementsByName("sysDNSEmail_Netgear_account")[0].value = tagValues[8];
+        /* ntgr password */
+        document.getElementsByName("sysDNSPassword_Netgear_account")[0].value = tagValues[9];
+    }
+
+    /* ntgr error message */
+    ntgr_noip_error_msg = piplineDecode(tagValues[10]);
+
+    /* ntgr confirmation email */
+    document.getElementsByName("ntgr_confirmation_email")[0].value = tagValues[11];
+}
+
+function BodyInit()
+{
+    if(navigator.userAgent.indexOf("MSIE 7.0") != -1)
+    {
+        changeContentSize();
+    }
+    document.getElementsByName("sysDNSProviderlist")[0].options.remove(document.getElementsByName("sysDNSProviderlist")[0].options[0]);
+    drawSelectOptions("sysDNSProviderlist", InitProvidersTagValue());
+    InitUpdateView(InitTagValue());
+}
+//-->
+</script>
+</head>
+<body onload="BodyInit();loadSettings();changeContentSize();checkEmail();" onResize="changeContentSize()" onUnload="closeWin(datSubWinVar);" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/DynamicDNS?id=842467026'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Dynamic DNS
+            </div>
+
+            <table border="0" class="subhead2-table">
+                <tr>
+            	      <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="width:623px;overflow:auto;scrolling:auto">
+                	          <table style="border-collapse:collapse;width:600px">
+                                <tr align="left" valign="middle">
+                                    <td id="common_button" style="padding-top:10px;padding-bottom:10px;display:none" align="center" colspan="2">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button value="Apply" onClick="buttonClick(this,'Apply');Check(0);return checkData()" type="SUBMIT" name="cfAlert_Apply" class="button-apply">
+                                            <span class="roundleft_apply">
+                                            Apply&nbsp;
+                                                <span class="apply-icon">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                </span>
+                                            </span>
+                                            <span class="roundright_apply">
+                                            &nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button value="Cancel" onClick="buttonClick(this,'Cancel');press_cancel();location.href='DynamicDNS.htm'" type="button" name="cancel" class="button-rule">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button onClick="buttonClick(this,'Show Status');ShowResult()" type="button" name="Button" value="Show Status" class="button-rule">
+                                            <span class="roundleft_button">
+                                            &nbsp;&nbsp; Show Status
+                                            </span>
+                                            <span class="roundright_button">
+                                            &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="display:block">
+                                        <table style="border-collapse:collapse;width:600px">
+                                            <tr align="left" valign="middle">
+                                                <td width="80%" style="padding-top:10px;padding-bottom:10px" align="center" colspan="2">
+                                                    <div id="netgear_button" style="display: none;">
+                                                        &nbsp;&nbsp;&nbsp;
+                                                        <button onClick="buttonClick(this,'Show Status');ShowResult()" type="button" name="Button" value="Show Status" class="button-rule">
+                                                            <span class="roundleft_button">
+                                                                &nbsp;&nbsp; Show Status
+                                                            </span>
+                                                            <span class="roundright_button">
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                        &nbsp;&nbsp;&nbsp;
+                                                        <button value="Cancel" onClick="buttonClick(this,'Cancel');press_cancel();location.href='DynamicDNS.htm'" type="button" name="cancel" class="button-rule">
+                                                            <span class="roundleft_button">
+                                                                <span class="cancel-icon">
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                                                </span>
+                                                            </span>
+                                                            <span class="roundright_button">
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                            &nbsp;&nbsp;&nbsp;
+                                                        <button value="Apply" onClick="buttonClick(this,'Apply');Check(1);return account_check()" type="SUBMIT" name="cfAlert_Apply" class="button-apply">
+                                                            <span class="roundleft_apply">
+                                                                Apply&nbsp;
+                                                                <span class="apply-icon">
+                                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                                </span>
+                                                            </span>
+                                                            <span class="roundright_apply">
+                                                                &nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td width="20%" align="center" style="padding-right:10px;">
+                    	                              <img id="Netgear_noip" src="img/DDNS_NoIplog.png" style="display: none;width:145px;height:56px">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div style="width:620px;overflow:auto;scrolling:auto">
+                                            <table style="border-collapse:collapse;width:600px">
+                                                <tr>
+                                                    <td colspan="2" style="height:12px">
+                                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                                            &nbsp;
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="checkbox" name="sysDNSActive" value="dnsEnable" onClick="ddns_active()">
+                                                        <a href="javascript:loadhelp('DynamicDNS','setup')"><b>Use a Dynamic DNS Service</b> </a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="height:12px">
+                                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                                            &nbsp;
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                                        <a href="javascript:loadhelp('DynamicDNS','provider')"><b>Service Provider</b></a>
+                                                    </td>
+                                                    <td style="text-align:right;widht:50%">
+                                                        <select name="sysDNSProviderlist" size="1" onchange="chgDns()">
+                                                            <option>
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <div id="common_specific" style="display: none;">
+                                                            <table cellpadding="0" cellspacing="3" width="100%">
+                                                                <tr>
+                                                                    <td style="white-space: nowrap;text-align:left;widht:50%">
+                                                                        Host Name
+                                                                    </td>
+                                                                    <td style="text-align:right;widht:50%">
+                                                                        <input type="text" name="sysDNSHost" value="" size="32" maxlength="255">
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td style="text-align:left;widht:50%">
+                                                                        User Name
+                                                                    </td>
+                                                                    <td style="text-align:right;widht:50%">
+                                                                        <input type="text" name="sysDNSUser" value="" size="32" maxlength="64">
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td style="text-align:left;widht:50%">
+                                                                        Password
+                                                                    </td>
+                                                                    <td style="text-align:right;widht:50%">
+                                                                        <input type="password" name="sysDNSPassword" value="" size="32" maxlength="64">
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div id="Netgear_account_status" style="display: none;">
+                                            <table style="border-collapse:collapse" cellpadding="0" cellspacing="3" width="100%">
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <b>Do you have a NETGEAR DDNS or a No-IP DDNS account?</b>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio"  name="account" value="yes" onClick="statusChange(1)">
+                                                        Yes
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio"  name="account" value="no" onClick="statusChange(0)">
+                                	                      No
+	                                                  </td>
+                                                </tr>
+	                                              <tr>
+                                                    <td height="12" colspan="2">
+                                                        <div style="background-image: url(&quot;liteblue.gif&quot;); width: 100%;background-repeat: repeat-x;">
+                                                            &nbsp;
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="Netgear_success_reset" style="display: none;">
+	                                          <table cellpadding="0" cellspacing="3" width="100%">
+                                                <tr>
+                                                    <td width="50%" align="left" nowrap>
+                                                        <b>The NETGEAR DDNS on this router is currently configured to:</b>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        <b>Host Name:</b>&nbsp;<span id="success_reset_hostname"></span>.mynetgear.com
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                    	<b>Email:</b>&nbsp<span id="success_reset_email"></span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        To change the settings, click
+                                                        <button value="reset" onClick="buttonClick(this,'reset');Check(3);" type="submit" name="NReset" id="NReset" class="button-rule" >
+                                                            <span class="roundleft_button">
+                                                                &nbsp;&nbsp;reset&nbsp;&nbsp;
+                                                            </span>
+                                                            <span class="roundright_button">
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                        to reset the settings first.
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td id="registration_text" style="display:none" width="50%" align="left" nowrap>
+                                        Please enter the following information for registration.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="Netgear_register" style="display: none;">
+                                            <table cellpadding="0" cellspacing="3" width="100%">
+                                                <tr>
+                                                    <td width="50%" align="left" nowrap>Host Name</td>
+                                                    <td width="50%" align="right"><input type="text" name="sysDNSHost_Netgear" size="16" maxlength="114"   onkeyup="return sendhostcheck()">.mynetgear.com</td><!---->
+                                                    <td width="50%" align="right" id="Netgear_img" style="display: none;"> <img  src="img/DDNS_Yes.png"></td>
+                                                    <td width="50%" align="right" id="Netgear_img_no" style="display: none;"> <img  src="img/DDNS_No.png"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right"></td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_host_result_id" style="display: none;text-align:right;color:#FF0000">The hostname is not valid. The characters allowed here are '0'~'9', 'a'~'z', 'A'~'Z', and hyphen '-'</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">Email</td>
+                                                    <td width="50%" align="right"><input type="text" name="sysDNSEmail_Netgear" size="30" maxlength="48" onblur="return formatcheck()"></td>
+		                                                <td width="50%" align="right" id="Netgear_register_email_no" style="display: none;"> <img src="img/DDNS_No.png"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right">
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_email_result_id" style="display: none;text-align:right;color:#FF0000">
+                                                            The email address is not valid
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        Password (6~32 characters)
+                                                    </td>
+                                                    <td width="50%" align="right"><input type="text" name="sysDNSPassword_Netgear" size="30" maxlength="32" onblur="return passwordcheck()" onkeyup="return passwordcheck_press()"></td><!--value = ""-->
+                                                    <td width="50%" align="right" id="Netgear_img_register_no" style="display: none;">
+                                                        <img src="img/DDNS_No.png">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right">
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_pass_result_register_id" style="display: none;text-align:right;color:#FF0000">
+                                                            Your password must be at least 6 characters long and at most 32 characters long
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        <div id="register_error" style="display: none;">
+                                                            <font id=register_error_msg color="#FF0000"></font>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td id="registration_button_text" width="50%" align="left" style="display: none;">
+                                        <table cellpadding="0" cellspacing="3" width="100%">
+                                            <tr>
+                                                <td align="left" width="50%">
+                                                    <button value="Register" onClick="buttonClick(this,'Register');Check(2);return register_check()" type="submit" name="NRegister" id="NRegister" class="button-rule" >
+                                                        <span class="roundleft_button">
+                                                            &nbsp;&nbsp;Register&nbsp;&nbsp;
+                                                        </span>
+                                                        <span class="roundright_button">
+                                                            &nbsp;&nbsp;&nbsp;&nbsp;
+                                                        </span>
+                                                    </button>
+                                                </td>
+                                                <td align="left" style="padding-left:3%" width="50%">
+                                                    By submitting this form I agree to the <a href="http://kb.netgear.com/app/answers/detail/a_id/23757" target="_blank" style="color: rgb(000,000,255);text-decoration:underline">terms of service</a> and that I will only create one free account.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="Netgear_account" style="display: none">
+                                            <table cellpadding="0" cellspacing="3" width="100%">
+                                                <tr>
+                                                    <td width="50%" align="left" nowrap>
+                                                        Host Name
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <input type="text" name="sysDNSHost_Netgear_account" value = "" size="16" maxlength="114" onblur="return hostcheck_account()">.mynetgear.com
+                                                    </td>
+                                                    <td width="50%" align="right" id="Netgear_img_account_host_no" style="display: none;">
+                                                        <img src="img/DDNS_No.png">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right">
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_host_result_account_id" style="display: none;text-align:right;color:#FF0000">
+                                                            The hostname is not valid. The characters allowed here are '0'~'9', 'a'~'z', 'A'~'Z', and hyphen '-'
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        Email
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <input type="text" name="sysDNSEmail_Netgear_account" value = "" size="30" maxlength="48" onblur="return formatcheck_account()">
+                                                    </td>
+                                                    <td width="50%" align="right" id="Netgear_account_email_no" style="display: none;">
+                                                        <img src="img/DDNS_No.png">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right">
+                                                    </td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_email_result_account_id" style="display: none;text-align:right;color:#FF0000">
+                                                            The email address is not valid
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        Password (6~32 characters)
+                                                    </td>
+                                                    <td width="50%" align="right"><input type="password" name="sysDNSPassword_Netgear_account" value = "" size="30" maxlength="32" onblur="return passwordcheck_account()"></td>
+                                                    <td width="50%" align="right" id="Netgear_account_confirm_no" style="display: none;">
+                                                        <img src="img/DDNS_No.png">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="right"></td>
+                                                    <td width="50%" align="right">
+                                                        <div id="text_pass_result_account_id" style="display: none;text-align:right;color:#FF0000">
+                                                            Your password must be at least 6 characters long and at most 32 characters long
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">
+                                                        <div id="account_error" style="display: none;">
+                                                            <font id="account_error_msg" color="#FF0000"></font>
+                                                        </div>
+                                                    </td>
+                                                    <td width="50%" align="right"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <br>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <br>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">Forget your password?&nbsp;<a href="https://www.noip.com/forgotPw.php?oem=ntgr" target="_blank" style="color: rgb(0,51,255);text-decoration:underline">click here</a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" align="left">To manage your DDNS account,&nbsp;<a href="https://www.noip.com/login/?oem=ntgr" target="_blank" style="color: rgb(0,51,255);text-decoration:underline">click here</a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td height="12" colspan="2">
+                                        <div style="background-image: url(&quot;liteblue.gif&quot;); width: 100%;background-repeat: repeat-x;">&nbsp;</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="DynamicDNS_h.htm" class="help-iframe" scrolling="no" name="helpframe" id="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="ddnsEnable" type="hidden" value="0">
+            <input type="hidden" name="ddnsServer" type="hidden">
+            <input type="hidden" name="action" value="init">
+            <input type="hidden" name="haveAccount" type="hidden">
+            <input type="hidden" name="host_graycheck" type="hidden">
+            <input type="hidden" name="email_graycheck" type="hidden" >
+            <input type="hidden" name="password_graycheck" type="hidden" >
+            <input type="hidden" name="success_status" type="hidden" >
+            <input type="hidden" name="ntgr_hostname" type="hidden" >
+            <input type="hidden" name="ntgr_email" type="hidden" >
+            <input type="hidden" name="ntgr_password" type="hidden" >
+            <input type="hidden" name="ntgr_confirmation_email" type="hidden" >
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

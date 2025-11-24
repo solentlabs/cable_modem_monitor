@@ -1,0 +1,344 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+
+
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+
+// Nick Implement ASP Tag display on GUI
+        BodyInit();
+// Nick Implement ASP Tag display on GUI
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function loadvalue()
+{
+	var cf=document.forms[0];
+
+	if(cf.media_server_onoff.value == "1")
+		cf.media_server.checked =true;
+	else
+		cf.media_server.checked =false;
+
+	//cf.media_server_name.value=upnp_media_name.replace(/: WNDR3700/g, "");
+	cf.media_server_name.value=cf.upnp_media_name.value;
+}
+
+function check_name()
+{
+	var cf=document.forms[0];
+	var media_name=cf.media_server_name.value;
+        //cf.upnp_media_name.value=media_name+": WNDR3700";
+}
+
+function check_media(form)
+{
+	if(form.media_server.checked)
+		form.media_server_onoff.value="1";
+	else
+		form.media_server_onoff.value="0";
+
+	if (   (form.media_server_name.value.match( /[\x22-\x22]/ )) // "
+        || (form.media_server_name.value.match( /[\x3C-\x3C]/ )) // <
+        || (form.media_server_name.value.match( /[\x3E-\x3E]/ )) // >
+        || (form.media_server_name.value.match( /[\x27-\x27]/ )) // '
+        || (form.media_server_name.value.match( /[\x7C-\x7C]/ )) // |
+        || (form.media_server_name.value.match( /[\x2F-\x2F]/ )) // /
+		|| (form.media_server_name.value.match( /[\x5B-\x5B]/ )) // [
+		|| (form.media_server_name.value.match( /[\x5C-\x5C]/ )) // \
+        || (form.media_server_name.value.match( /[\x5D-\x5D]/ )) // ]
+       )
+	{
+		form.media_server_name.focus();
+		alert( "Invalid Media Server Name.\n" );
+	}
+	else
+	{
+		form.submit();
+	}
+	//check_name();
+}
+
+function getkey(type, e)
+{
+	var keycode, event;
+
+	if (window.event)
+	{
+		event = window.event;
+		keycode = window.event.keyCode;
+	}
+	else if (e)
+	{
+		event = e;
+		keycode = e.which;
+	}
+	else return true;
+
+	if(event.ctrlKey && ( keycode==99 || keycode==118 || keycode==120) )
+		return true;
+
+    if(type == "mediaServerName")// not / * ? " <> \ : keycode==58 means :
+	{
+		if((keycode==47) || (keycode==42) || (keycode==63) || (keycode==34) || (keycode==60) || (keycode==62) || (keycode==92) || (keycode==93) || (keycode==124))
+		{
+			var keyascii = String.fromCharCode(keycode);
+			alert("You can not input ' " + keyascii + " ' as the readyDLNA media server name.");
+			return false;
+		}
+		else
+			return true;
+	}
+	else
+		return false;
+}
+
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+
+   //var tagValueList = "1|ShareDLNA|1";
+   var tagValueList = '1|ReadyDLNA|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+
+    // Media Server On/Off
+    document.getElementsByName("media_server_onoff")[0].value = tagValues[0];
+
+    // UPnP Media Name
+    document.getElementsByName("upnp_media_name")[0].value = tagValues[1];
+
+    // Content Scan
+    document.getElementsByName("scan")[0].checked = (tagValues[2] == 1)? true : false;
+
+    if( tagValues[1].indexOf(':') == -1)
+    {
+        document.getElementById("model_name").innerHTML = ":C3700-100NAS";
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+// Nick Implement ASP Tag display on GUI
+
+//-->
+</script>
+</head>
+
+<body onload="loadvalue();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/UPnPMedia?id=780557778'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Media Server (Settings)
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');check_media(document.forms[0])" type="button" name="Apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;" colspan=2>
+                                        <input type="checkbox" name="media_server" value="1" onClick="">
+                                        <a href="javascript:loadhelp('UPnPMedia','enable')"><b>Enable Media Server</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;">
+                                        <b>
+                                            Media Server Name
+                                        </b>
+                                        :
+                                    </td>
+                                    <td style="white-space:nowrap;text-align:left">
+                                        <input type="text" name="media_server_name" size="32" onBlur="check_name()" onKeyPress="ignorSingleQuotation(this);return getkey('mediaServerName', event)" onkeyup="ignorSingleQuotation(this);">
+                                        <a id='model_name'></a>
+                                        <!-- <input type="text" name="media_server_name" size="32" onBlur="check_name()"
+                                        onKeyPress="return getkey('mediaServerName', event)">: WNDR4500-->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;" colspan=2>
+                                        <a href="javascript:loadhelp('UPnPMedia','content_scan')"><b>Content Scan</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;" colspan=2>
+                                        <input type="radio" name="scan" value="0" onClick="" checked="checked">
+                                        Automatic (when new files added)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="UPnPMedia_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="media_server_onoff" value="1">
+            <input type="hidden" name="upnp_media_name" value="ReadyDLNA">
+            <a name="helpframe-anchor"></a>
+        </FORM>
+    </div>
+</BODY>
+</HTML>

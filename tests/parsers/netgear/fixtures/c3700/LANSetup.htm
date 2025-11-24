@@ -1,0 +1,990 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+var isSupportComHem =  false;
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+
+				linkName = fname+"_h." +"htm";
+
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=linkName;
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=linkName+"#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function chgSel(index)
+{
+ document.forms[0].select.value = index;
+ return true;
+}
+function checkData()
+{
+	var cf = document.forms[0];
+	var msg = "";
+
+	var wan_proto = cf.wan_proto.value;
+	var pptp_wan_ipaddr = cf.pptp_wan_ipaddr.value.split(".");
+	var l2tp_wan_ipaddr = cf.l2tp_wan_ipaddr.value.split(".");
+	var pppoe_wan_ipaddr = cf.pppoe_wan_ipaddr.value.split(".");
+    var dns_pri_ipaddr = cf.wan_dns1_pri.value.split(".");
+    var dns_sec_ipaddr = cf.wan_dns1_sec.value.split(".");
+
+	var wan_ipaddr = cf.wan_ipaddr.value.split(".");
+	var wan_netmask = cf.wan_netmask.value.split(".");
+	var w_ipaddr = (wan_ipaddr[0] << 24) | (wan_ipaddr[1] << 16) | (wan_ipaddr[2] << 8)| (wan_ipaddr[3]);
+	var w_netmask = (wan_netmask[0]<< 24) | (wan_netmask[1]<< 16) | (wan_netmask[2]<< 8)| (wan_netmask[3]);
+	var l_ipaddr = (cf.sysLANIPAddr1.value << 24) | (cf.sysLANIPAddr2.value << 16) | (cf.sysLANIPAddr3.value << 8)| (cf.sysLANIPAddr4.value);
+	var l_netmask = (cf.sysLANSubnetMask1.value<< 24) | (cf.sysLANSubnetMask2.value<< 16) | (cf.sysLANSubnetMask3.value<< 8)| (cf.sysLANSubnetMask4.value);
+	var lan_netaddr_min = (l_ipaddr & l_netmask) + 1;
+	var lan_netaddr_max = ((l_ipaddr & l_netmask) | (~l_netmask)) - 1;
+    var dns_pri_ipaddr2 = (dns_pri_ipaddr[0] << 24) | (dns_pri_ipaddr[1] << 16) | (dns_pri_ipaddr[2] << 8)| (dns_pri_ipaddr[3]);
+    var dns_sec_ipaddr2 = (dns_sec_ipaddr[0] << 24) | (dns_sec_ipaddr[1] << 16) | (dns_sec_ipaddr[2] << 8)| (dns_sec_ipaddr[3]);
+
+	if (cf.device_name.value == "")
+		msg+= "Device name can not be null.\n";
+
+	if (cf.device_name.value.match( /[^\x20-\x7E]/ ))
+	{
+		cf.device_name.focus();
+		msg+= "Invalid device name.\n";
+	}
+
+	if(checkIP(cf.sysLANSubnetMask1,cf.sysLANSubnetMask2,cf.sysLANSubnetMask3,cf.sysLANSubnetMask4,255)
+		||!isN: ***REDACTED***(cf.sysLANSubnetMask1, cf.sysLANSubnetMask2, cf.sysLANSubnetMask3, cf.sysLANSubnetMask4)
+		||(lan_netaddr_min > lan_netaddr_max))
+		msg+= "Invalid subnet mask. Please enter it again.\n";
+	if(checkIP(cf.sysLANIPAddr1,cf.sysLANIPAddr2,cf.sysLANIPAddr3,cf.sysLANIPAddr4,254)
+		||(parseInt(cf.sysLANIPAddr4.value,10)==0)||parseInt(cf.sysLANIPAddr1.value,10)>224
+		||(l_ipaddr < lan_netaddr_min)||(l_ipaddr > lan_netaddr_max))
+		msg+= "Invalid IP address. Please enter it again.";
+
+	var n1=parseInt(cf.sysPoolStartingAddr4.value,10);
+	var n2=parseInt(cf.sysPoolFinishAddr4.value,10);
+
+	if( isNaN(n1) || isNaN(n2)
+        || (n1<1||n1>254||n2<1||n2>254||n1>n2)
+        || ((n1 == n2) && (n1 == (l_ipaddr & 0xFF)))
+        || (n1 < (lan_netaddr_min & 0xFF)) || (n2 > (lan_netaddr_max & 0xFF))
+        || ((cf.sysPoolStartingAddr4.value & cf.sysLANSubnetMask4.value) != (cf.sysLANIPAddr4.value & cf.sysLANSubnetMask4.value))
+        || ((cf.sysPoolFinishAddr4.value & cf.sysLANSubnetMask4.value) != (cf.sysLANIPAddr4.value & cf.sysLANSubnetMask4.value)) )
+        msg+= "Invalid DHCP ending and starting IP addresses. Please enter them again.\n";
+	if (msg.length > 1)
+	{
+		alert(msg);
+		return false;
+	}
+	else
+	{
+		if ((w_ipaddr != 0) &&
+			(((l_netmask & w_netmask ) & l_ipaddr) == ((l_netmask & w_netmask ) & w_ipaddr)))
+		{
+			alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+			return false;
+		}
+
+		/*  if(0==0) */
+		/* checking whether DNS address as LAN address, no matter got automatically or not */
+        if (w_netmask != 0)
+		{
+                    if ((dns_pri_ipaddr2 != 0) &&  /* first DNS conflict check */
+                     (((l_netmask & w_netmask) & l_ipaddr) == ((l_netmask & w_netmask) & dns_pri_ipaddr2)))
+                    {
+                        alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+                        return false;
+		    }
+
+		    if ((dns_pri_ipaddr2 != 0) &&  /* first DNS conflict check */
+                       (((l_ipaddr & l_netmask) & w_netmask) == ((dns_pri_ipaddr2 & l_netmask) & w_netmask)))
+                    {
+                         alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+                         return false;
+		    }
+
+                    if ((dns_sec_ipaddr2 != 0) && /* second DNS conflict check */
+                     (((l_netmask & w_netmask) & l_ipaddr) == ((l_netmask & w_netmask) & dns_sec_ipaddr2)))
+                    {
+                        alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+                        return false;
+		    }
+
+		    if ((dns_sec_ipaddr2 != 0) &&  /* second DNS conflict check */
+                     (((l_ipaddr & l_netmask) & w_netmask) == ((dns_sec_ipaddr2 & l_netmask) & w_netmask)))
+                    {
+                        alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+                        return false;
+		    }
+
+		}
+
+		if (wan_proto == "pptp")
+		{
+			w_ipaddr = (pptp_wan_ipaddr[0] << 24) | (pptp_wan_ipaddr[1] << 16) | (pptp_wan_ipaddr[2] << 8)| (pptp_wan_ipaddr[3]);
+			w_netmask = l_netmask;
+		}
+		else if (wan_proto == "l2tp")
+		{
+		    w_ipaddr = (l2tp_wan_ipaddr[0] << 24) | (l2tp_wan_ipaddr[1] << 16) | (l2tp_wan_ipaddr[2] << 8)| (l2tp_wan_ipaddr[3]);
+			w_netmask = l_netmask;
+		}
+		else if (wan_proto == "pppoe")
+		{
+		    w_ipaddr = (pppoe_wan_ipaddr[0] << 24) | (pppoe_wan_ipaddr[1] << 16) | (pppoe_wan_ipaddr[2] << 8)| (pppoe_wan_ipaddr[3]);
+			w_netmask = l_netmask;
+		}
+
+		if ((w_ipaddr != 0) &&
+			(((l_netmask & w_netmask ) & l_ipaddr) == ((l_netmask & w_netmask ) & w_ipaddr)))
+		{
+			alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+			return false;
+		}
+
+		data = cf.pptp_serv_ipaddr.value.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+		data1 = cf.l2tp_serv_ipaddr.value.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+		if (data && (wan_proto == "pptp"))
+		{
+			pptp_serv_ipaddr = cf.pptp_serv_ipaddr.value.split(".");
+			w_ipaddr = (pptp_serv_ipaddr[0] << 24) | (pptp_serv_ipaddr[1] << 16) | (pptp_serv_ipaddr[2] << 8)| (pptp_serv_ipaddr[3]);
+			w_netmask = l_netmask;
+
+			if ((w_ipaddr != 0) &&
+				(((l_netmask & w_netmask ) & l_ipaddr) == ((l_netmask & w_netmask ) & w_ipaddr)))
+			{
+				alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+				return false;
+			}
+		}
+		if (data1 && (wan_proto == "l2tp"))
+		{
+			l2tp_serv_ipaddr = cf.l2tp_serv_ipaddr.value.split(".");
+			w_ipaddr = (l2tp_serv_ipaddr[0] << 24) | (l2tp_serv_ipaddr[1] << 16) | (l2tp_serv_ipaddr[2] << 8)| (l2tp_serv_ipaddr[3]);
+			w_netmask = l_netmask;
+
+			if ((w_ipaddr != 0) &&
+				(((l_netmask & w_netmask ) & l_ipaddr) == ((l_netmask & w_netmask ) & w_ipaddr)))
+			{
+				alert("The IP address conflicts with the WAN IP subnet. Please enter a different IP address.");
+				return false;
+			}
+		}
+	}
+	cf.sysLANIPAddr1.value = parseInt(cf.sysLANIPAddr1.value,10);
+	cf.sysLANIPAddr2.value = parseInt(cf.sysLANIPAddr2.value,10);
+	cf.sysLANIPAddr3.value = parseInt(cf.sysLANIPAddr3.value,10);
+	cf.sysLANIPAddr4.value = parseInt(cf.sysLANIPAddr4.value,10);
+	cf.sysLANSubnetMask1.value = parseInt(cf.sysLANSubnetMask1.value,10);
+	cf.sysLANSubnetMask2.value = parseInt(cf.sysLANSubnetMask2.value,10);
+	cf.sysLANSubnetMask3.value = parseInt(cf.sysLANSubnetMask3.value,10);
+	cf.sysLANSubnetMask4.value = parseInt(cf.sysLANSubnetMask4.value,10);
+	cf.sysPoolStartingAddr4.value = parseInt(cf.sysPoolStartingAddr4.value,10);
+	cf.sysPoolFinishAddr4.value = parseInt(cf.sysPoolFinishAddr4.value,10);
+	cf.lan_ipaddr.value = cf.sysLANIPAddr1.value+'.'+cf.sysLANIPAddr2.value+'.'+cf.sysLANIPAddr3.value+'.'+cf.sysLANIPAddr4.value;
+	cf.lan_netmask.value = cf.sysLANSubnetMask1.value+'.'+cf.sysLANSubnetMask2.value+'.'+cf.sysLANSubnetMask3.value+'.'+cf.sysLANSubnetMask4.value;
+	cf.dhcp_start.value = cf.sysLANIPAddr1.value+'.'+cf.sysLANIPAddr2.value+'.'+cf.sysLANIPAddr3.value+'.'+cf.sysPoolStartingAddr4.value;
+	cf.dhcp_end.value = cf.sysLANIPAddr1.value+'.'+cf.sysLANIPAddr2.value+'.'+cf.sysLANIPAddr3.value+'.'+cf.sysPoolFinishAddr4.value;
+	if(!isSupportComHem)
+	{
+	if (cf.dhcp_server.checked)
+    {
+        var old_start = cf.dhcp_start_old.value.split(".");
+        var old_end   = cf.dhcp_end_old.value.split(".");
+
+        cf.lan_proto.value = "dhcp";
+    }
+	else
+    {
+        cf.lan_proto.value = "static";
+        alert("Please change your computer IP address manually if LAN IP subnet will be changed.");
+    }
+  }
+    // Terry 20110829, Remote RIP related functions temporary.
+	// checkRip();
+	if((document.domain == document.getElementsByName("tmp_lan_ipaddr")[0].value) && (document.getElementsByName("tmp_lan_ipaddr")[0].value != cf.lan_ipaddr.value))
+	{
+	    alert("If you change IP Address successfully, the device will reboot and please release/renew your IP Address on your network adapter ....");
+	}
+
+	return true;
+}
+
+function loadSettings()
+{
+	var cf = document.forms[0];
+	var device_name = cf.device_name_tmp.value;
+	var lan_ipaddr = cf.lan_ipaddr.value.split(".");
+	var lan_netmask = cf.lan_netmask.value.split(".");
+	var dhcp_start = cf.dhcp_start.value.split(".");
+	var dhcp_end = cf.dhcp_end.value.split(".");
+	var lan_proto = cf.lan_proto.value;
+    // Terry 20110829, Remote RIP related functions temporary.
+	// var rip_enable = cf.rip_enable.value;
+	// var rip_multicast = cf.rip_multicast.value;
+	// var rip_version = cf.rip_version.value;
+
+	if (cf.dlna_autoip_en.value == "0" || cf.dlna_autoip_en.value == "")
+    {
+        //cf.dlna_autoip.checked = false;
+        cf.device_name.value = device_name;
+        cf.sysLANIPAddr1.value = lan_ipaddr[0];
+	    cf.sysLANIPAddr2.value = lan_ipaddr[1];
+	    cf.sysLANIPAddr3.value = lan_ipaddr[2];
+	    cf.sysLANIPAddr4.value = lan_ipaddr[3];
+	    cf.sysLANSubnetMask1.value = lan_netmask[0];
+	    cf.sysLANSubnetMask2.value = lan_netmask[1];
+	    cf.sysLANSubnetMask3.value = lan_netmask[2];
+	    cf.sysLANSubnetMask4.value = lan_netmask[3];
+
+		// Terry 20110809, Update content in InitUpdateView()
+		/*
+		cf.rip_direction.selectedIndex = 1 - 1;
+	    if (rip_enable == "0")
+	    	cf.sysRIPVersion.selectedIndex = 0;
+	    else
+	    if (rip_version == "1")
+	    	cf.sysRIPVersion.selectedIndex = 1;
+	    else
+	    if (rip_version == "2")
+	    {
+	    	if (rip_multicast == "0")
+	    		cf.sysRIPVersion.selectedIndex = 2;
+	    	else
+	    		cf.sysRIPVersion.selectedIndex = 3;
+	    }
+		*/
+		  if(!isSupportComHem)
+	    {
+	    if (lan_proto == "dhcp")
+	    	cf.dhcp_server.checked = true;
+	    else
+	    	cf.dhcp_server.checked = false;
+	    }
+	    cf.sysPoolStartingAddr1.value = dhcp_start[0];
+	    cf.sysPoolStartingAddr2.value = dhcp_start[1];
+	    cf.sysPoolStartingAddr3.value = dhcp_start[2];
+	    cf.sysPoolStartingAddr4.value = dhcp_start[3];
+	    cf.sysPoolFinishAddr1.value = dhcp_end[0];
+	    cf.sysPoolFinishAddr2.value = dhcp_end[1];
+	    cf.sysPoolFinishAddr3.value = dhcp_end[2];
+	    cf.sysPoolFinishAddr4.value = dhcp_end[3];
+
+	    if (cf.repeater.value == "1" || cf.repeater_an.value == "1") {
+	    	cf.rip_direction.disabled = true;
+	    	cf.sysRIPVersion.disabled = true;
+	    	if(!isSupportComHem)
+	    	    cf.dhcp_server.disabled = true;
+	    	cf.sysPoolStartingAddr1.disabled = true;
+	    	cf.sysPoolStartingAddr2.disabled = true;
+	    	cf.sysPoolStartingAddr3.disabled = true;
+	    	cf.sysPoolStartingAddr4.disabled = true;
+	    	cf.sysPoolFinishAddr1.disabled = true;
+	    	cf.sysPoolFinishAddr2.disabled = true;
+	    	cf.sysPoolFinishAddr3.disabled = true;
+	    	cf.sysPoolFinishAddr4.disabled = true;
+	    	cf.Add.disabled = true;
+	    	cf.Edit.disabled = true;
+	    	cf.Delete.disabled = true;
+	    }
+    }
+    else
+    {
+        //cf.dlna_autoip.checked = true;
+        cf.device_name.value = "";
+        cf.sysLANIPAddr1.value = lan_ipaddr_tmp[0];
+	    cf.sysLANIPAddr2.value = lan_ipaddr_tmp[1];
+	    cf.sysLANIPAddr3.value = lan_ipaddr_tmp[2];
+	    cf.sysLANIPAddr4.value = lan_ipaddr_tmp[3];
+	    cf.sysLANSubnetMask1.value = lan_netmask_tmp[0];
+	    cf.sysLANSubnetMask2.value = lan_netmask_tmp[1];
+	    cf.sysLANSubnetMask3.value = lan_netmask_tmp[2];
+	    cf.sysLANSubnetMask4.value = lan_netmask_tmp[3];
+
+	    cf.rip_direction.selectedIndex = 1 - 1;
+	    // Terry 20110829, Remote RIP related functions temporary.
+    	/*
+	    if (rip_enable_tmp == "0")
+	    	cf.sysRIPVersion.selectedIndex = 0;
+	    else
+	    if (rip_version == "1")
+	    	cf.sysRIPVersion.selectedIndex = 1;
+	    else
+	    if (rip_version == "2")
+	    {
+	    	if (rip_multicast == "0")
+	    		cf.sysRIPVersion.selectedIndex = 2;
+	    	else
+	    		cf.sysRIPVersion.selectedIndex = 3;
+	    }
+
+		*/
+		 if(!isSupportComHem)
+		 {
+	    if (lan_proto_tmp == "dhcp")
+	    	cf.dhcp_server.checked = true;
+	    else
+	    	cf.dhcp_server.checked = false;
+	   }
+	    cf.sysPoolStartingAddr1.value = dhcp_start[0];
+	    cf.sysPoolStartingAddr2.value = dhcp_start[1];
+	    cf.sysPoolStartingAddr3.value = dhcp_start[2];
+	    cf.sysPoolStartingAddr4.value = dhcp_start[3];
+	    cf.sysPoolFinishAddr1.value = dhcp_end[0];
+	    cf.sysPoolFinishAddr2.value = dhcp_end[1];
+	    cf.sysPoolFinishAddr3.value = dhcp_end[2];
+	    cf.sysPoolFinishAddr4.value = dhcp_end[3];
+
+	    cf.sysLANIPAddr1.disabled = true;
+	    cf.sysLANIPAddr2.disabled = true;
+	    cf.sysLANIPAddr3.disabled = true;
+	    cf.sysLANIPAddr4.disabled = true;
+	    cf.sysLANSubnetMask1.disabled = true;
+	    cf.sysLANSubnetMask2.disabled = true;
+	    cf.sysLANSubnetMask3.disabled = true;
+	    cf.sysLANSubnetMask4.disabled = true;
+	    cf.rip_direction.disabled = true;
+	    cf.sysRIPVersion.disabled = true;
+	    if(!isSupportComHem)
+	        cf.dhcp_server.disabled = true;
+	    cf.sysPoolStartingAddr1.disabled = true;
+	    cf.sysPoolStartingAddr2.disabled = true;
+	    cf.sysPoolStartingAddr3.disabled = true;
+	    cf.sysPoolStartingAddr4.disabled = true;
+	    cf.sysPoolFinishAddr1.disabled = true;
+	    cf.sysPoolFinishAddr2.disabled = true;
+	    cf.sysPoolFinishAddr3.disabled = true;
+	    cf.sysPoolFinishAddr4.disabled = true;
+	    cf.Add.disabled = true;
+	    cf.Edit.disabled = true;
+	    cf.Delete.disabled = true;
+	}
+}
+/*
+function DisableDHCPSetting()
+{
+    var cf = document.forms[0];
+    if(cf.dlna_autoip.checked)
+    {
+        cf.sysLANIPAddr1.disabled = true;
+	    cf.sysLANIPAddr2.disabled = true;
+	    cf.sysLANIPAddr3.disabled = true;
+	    cf.sysLANIPAddr4.disabled = true;
+	    cf.sysLANSubnetMask1.disabled = true;
+	    cf.sysLANSubnetMask2.disabled = true;
+	    cf.sysLANSubnetMask3.disabled = true;
+	    cf.sysLANSubnetMask4.disabled = true;
+        cf.rip_direction.disabled = true;
+		cf.sysRIPVersion.disabled = true;
+		cf.dhcp_server.disabled = true;
+		cf.sysPoolStartingAddr1.disabled = true;
+		cf.sysPoolStartingAddr2.disabled = true;
+		cf.sysPoolStartingAddr3.disabled = true;
+		cf.sysPoolStartingAddr4.disabled = true;
+		cf.sysPoolFinishAddr1.disabled = true;
+		cf.sysPoolFinishAddr2.disabled = true;
+		cf.sysPoolFinishAddr3.disabled = true;
+		cf.sysPoolFinishAddr4.disabled = true;
+		cf.Add.disabled = true;
+		cf.Edit.disabled = true;
+		cf.Delete.disabled = true;
+    }
+    else
+    {
+        cf.sysLANIPAddr1.disabled = false;
+	    cf.sysLANIPAddr2.disabled = false;
+	    cf.sysLANIPAddr3.disabled = false;
+	    cf.sysLANIPAddr4.disabled = false;
+	    cf.sysLANSubnetMask1.disabled = false;
+	    cf.sysLANSubnetMask2.disabled = false;
+	    cf.sysLANSubnetMask3.disabled = false;
+	    cf.sysLANSubnetMask4.disabled = false;
+        cf.rip_direction.disabled = false;
+		cf.sysRIPVersion.disabled = false;
+		cf.dhcp_server.disabled = false;
+		cf.sysPoolStartingAddr1.disabled = false;
+		cf.sysPoolStartingAddr2.disabled = false;
+		cf.sysPoolStartingAddr3.disabled = false;
+		cf.sysPoolStartingAddr4.disabled = false;
+		cf.sysPoolFinishAddr1.disabled = false;
+		cf.sysPoolFinishAddr2.disabled = false;
+		cf.sysPoolFinishAddr3.disabled = false;
+		cf.sysPoolFinishAddr4.disabled = false;
+		cf.Add.disabled = false;
+		cf.Edit.disabled = false;
+		cf.Delete.disabled = false;
+    }
+}
+*/
+
+// Terry 20110829, Remote RIP related functions temporary.
+/*
+function checkRip()
+{
+	var cf = document.forms[0];
+
+	if (cf.sysRIPVersion.selectedIndex == 0)
+	{
+		cf.rip_enable.value = "0";
+	}
+	else
+	if (cf.sysRIPVersion.selectedIndex == 1)
+	{
+		cf.rip_enable.value = "1";
+		cf.rip_version.value = "1";
+	}
+	else
+	if (cf.sysRIPVersion.selectedIndex == 2)
+	{
+		cf.rip_enable.value = "1";
+		cf.rip_version.value = "2";
+		cf.rip_multicast.value = "0";
+	}
+	else
+	if (cf.sysRIPVersion.selectedIndex == 3)
+	{
+		cf.rip_enable.value = "1";
+		cf.rip_version.value = "2";
+		cf.rip_multicast.value = "1";
+	}
+}
+*/
+
+function dhcp_update(index)
+{
+    var cf = document.forms[0];
+    switch (index) {
+        case 1:
+            cf.sysPoolStartingAddr1.value=cf.sysLANIPAddr1.value;
+            cf.sysPoolFinishAddr1.value=cf.sysLANIPAddr1.value;
+            break;
+        case 2:
+            cf.sysPoolStartingAddr2.value=cf.sysLANIPAddr2.value;
+            cf.sysPoolFinishAddr2.value=cf.sysLANIPAddr2.value;
+            break;
+        case 3:
+            cf.sysPoolStartingAddr3.value=cf.sysLANIPAddr3.value;
+            cf.sysPoolFinishAddr3.value=cf.sysLANIPAddr3.value;
+            break;
+        case 4:
+            cf.sysPoolStartingAddr3.value=cf.sysLANIPAddr3.value;
+            cf.sysPoolFinishAddr3.value=cf.sysLANIPAddr3.value;
+            break;
+    }
+}
+
+function InitTagValue()
+{
+/*
+  Device Name (checkbox) | IP Address (text) | IP Subnet Mask (text) | RIP Direction (select) |
+  RIP Version-rip_enable (select) | RIP Version-rip_multicast (select) | Use Gateway as DHCP Server (checkbox) |
+  Starting IP Address (text) | Ending IP Address (text)
+*/
+    //var tagValueList = "DevName|192.168.0.1|255.255.255.0|0|2|1|dhcp|***PRIVATE_IP***|***PRIVATE_IP***";
+    //var tagValueList = "DevName2|***PRIVATE_IP***|255.255.255.128|2|0|0|static|***PRIVATE_IP***|***PRIVATE_IP***";
+    var tagValueList = 'C3700-100NAS|192.168.0.1|255.255.255.0|2|0|0|dhcp|***PRIVATE_IP***|***PRIVATE_IP***|0';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Device Name */
+    document.getElementsByName("device_name")[0].value = piplineDecode(tagValues[0]);
+    document.getElementsByName("device_name_tmp")[0].value = piplineDecode(tagValues[0]);
+
+    /* IP Address */
+    document.getElementsByName("lan_ipaddr")[0].value = tagValues[1];
+    document.getElementsByName("tmp_lan_ipaddr")[0].value = tagValues[1];
+
+    /* IP Subnet Mask */
+    document.getElementsByName("lan_netmask")[0].value = tagValues[2];
+
+    // Terry 20110829, Remote RIP related functions temporary.
+    /* RIP Direction */
+    // document.getElementsByName("rip_direction")[0].value = parseInt(tagValues[3]) + 1;
+
+    /* RIP Version-rip_enable */
+    // document.getElementsByName("rip_enable")[0].value = tagValues[4];
+
+    /* RIP Version-rip_multicast */
+    // document.getElementsByName("rip_multicast")[0].value = tagValues[5];
+
+    /* Use Gateway as DHCP Server */
+    document.getElementsByName("lan_proto")[0].value = tagValues[6];
+
+    /* Starting IP Address */
+    document.getElementsByName("dhcp_start")[0].value = tagValues[7];
+    document.getElementsByName("dhcp_start_old")[0].value = tagValues[7];
+
+    /* Ending IP Address */
+    document.getElementsByName("dhcp_end")[0].value = tagValues[8];
+    document.getElementsByName("dhcp_end_old")[0].value = tagValues[8];
+
+    isSupportComHem = ((tagValues[9]== "1")?true:false);
+    if(isSupportComHem)
+    {
+        $('#dhcpTr').hide();
+    }
+    else
+    	  $('#dhcpTr2').hide();
+}
+
+/*
+  IP Address (text) | Device Name (text) | MAC Address (text)
+*/
+
+function InitAddrResTableTagValue()
+{
+    var tagValueList = '0|';
+/*
+    var tagValueList = "4" +
+        "|***PRIVATE_IP***|PC66|XX:XX:XX:XX:XX:XX" +
+        "|***PRIVATE_IP***|PC77|XX:XX:XX:XX:XX:XX" +
+        "|***PRIVATE_IP***|PC88|XX:XX:XX:XX:XX:XX" +
+        "|***PRIVATE_IP***|PC99|XX:XX:XX:XX:XX:XX";
+*/
+
+    return tagValueList.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+    cellsArray [0] = "<span class='thead'>" + (rowId +1) + "<\/span>";
+    cellsArray [1] = "<input type='radio' name='SelIdx' value='" + rowId + "' />";
+    cellsArray [2] = tags[firstCellIdx + 0];
+    cellsArray [3] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 1]));
+    cellsArray [4] = tags[firstCellIdx + 2];
+
+    return cellsArray;
+}
+
+function InitAddrResTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    drawTable('addrResTable', tagValues, onAddRowCB);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitAddrResTableUpdateView(InitAddrResTableTagValue());
+}
+</script>
+</head>
+<body onload="BodyInit();loadSettings();changeContentSize()" onResize="changeContentSize()"
+class="page-body">
+<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="frmLan" method="POST" action='/goform/LANSetup?id=900181843'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                LAN Setup
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');return checkData()" type="SUBMIT" name="action" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onClick="buttonClick(this,'Cancel');loadSettings();" type="BUTTON" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('LANSetup','device_name')"><b>Device Name</b></a>
+                                    </td>
+                                    <td style="width:60%;text-align:right">
+                                        <INPUT TYPE="text" MAXLENGTH="31" SIZE="24" NAME="device_name" value="">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <p>
+                                            <b>
+                                                <a href="javascript:loadhelp('LANSetup','tcp')">LAN TCP/IP Setup </a>
+                                            </b>
+                                        </p>
+                                    </td>
+                                </tr>
+                                <!--<tr>
+                                <td colspan="2" style="white-space: nowrap;"><input type="checkbox" name="dlna_autoip" value="dlna_autoip" onclick=DisableDHCPSetting();>Use Auto IP
+                                </td>
+                                </tr>-->
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        IP Address
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="sysLANIPAddr1" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)" onBlur="dhcp_update(1)">
+                                        .
+                                        <input type="text" name="sysLANIPAddr2" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)" onBlur="dhcp_update(2)">
+                                        .
+                                        <input type="text" name="sysLANIPAddr3" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)" onBlur="dhcp_update(3)">
+                                        .
+                                        <input type="text" name="sysLANIPAddr4" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)" onBlur="dhcp_update(4)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        IP Subnet Mask
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="sysLANSubnetMask1" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysLANSubnetMask2" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysLANSubnetMask3" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysLANSubnetMask4" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <!-- <tr>
+                                <td style="white-space: nowrap;">RIP Direction</td>
+                                <td align="right">
+                                <select name="rip_direction" size="1">
+                                <option value=1>Both</option>
+                                <option value=2>In Only</option>
+                                <option value=3>Out Only</option>
+                                </select></td>
+                                </tr>
+                                <tr>
+                                <td style="white-space: nowrap;">RIP Version</td>
+                                <td align="right">
+                                <select name="sysRIPVersion" size="1">
+                                <option>Disabled</option>
+                                <option>RIP_1</option>
+                                <option>RIP_2B</option>
+                                <option>RIP_2M</option>
+                                </select></td>
+                                </tr>
+                                -->
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="dhcpTr">
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <input type="checkbox" name="dhcp_server" value="dhcp_server">
+                                        <a href="javascript:loadhelp('LANSetup','dhcp')"><b> Use Gateway as DHCP Server</b> </a>
+                                    </td>
+                                </tr>
+                                <tr id="dhcpTr2">
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <p>
+                                            <b>
+                                                <a href="javascript:loadhelp('LANSetup','dhcp')">DHCP IP Pool </a>
+                                            </b>
+                                        </p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        Starting IP Address
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="sysPoolStartingAddr1" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolStartingAddr2" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolStartingAddr3" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolStartingAddr4" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        Ending IP Address
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="sysPoolFinishAddr1" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolFinishAddr2" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolFinishAddr3" class="num" size="4" maxlength="3" disabled="disabled" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="sysPoolFinishAddr4" class="num" size="4" maxlength="3" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <a href="javascript:loadhelp('LANSetup','reserved')"><b>Address Reservation</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="2" cellspacing="0" width="100%" id="addrResTable" class="TableStyle">
+                                            <tr>
+                                                <td style="white-space: nowrap;text-align:center;width:3%">
+                                                    <span class="thead">
+                                                        &nbsp;
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;width:3%">
+                                                    <span class="thead">
+                                                        #
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        IP Address
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        Device Name
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        MAC Address
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" align="center">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Add " name="Add" class="button-rule" onclick="buttonClick(this,' Add ');">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Edit " name="Edit" class="button-rule" onclick="buttonClick(this,' Edit ');">
+                                            <span class="roundleft_button">
+                                                <span class="edit-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Edit
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Delete" name="Delete" class="button-rule" onclick="buttonClick(this,'Delete');">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Delete
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        <input type="hidden" name="select" value="-1">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="LANSetup_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT name=device_name_tmp type=hidden value="">
+            <INPUT name=lan_ipaddr type=hidden value="">
+            <INPUT name=lan_netmask type=hidden value="255.255.255.0">
+            <INPUT name=rip_enable type=hidden value="0">
+            <INPUT name=rip_multicast type=hidden value="1">
+            <INPUT name=rip_version type=hidden value="2">
+            <INPUT name=lan_proto type=hidden value="dhcp">
+            <INPUT name=dhcp_start type=hidden value="">
+            <INPUT name=dhcp_end type=hidden value="">
+            <INPUT name=dhcp_start_old type=hidden value="">
+            <INPUT name=dhcp_end_old type=hidden value="">
+            <INPUT name=pptp_wan_ipaddr type=hidden value="...">
+            <INPUT name=l2tp_wan_ipaddr type=hidden value="...">
+            <INPUT name=pppoe_wan_ipaddr type=hidden value="">
+            <INPUT name=pptp_serv_ipaddr type=hidden value="">
+            <INPUT name=l2tp_serv_ipaddr type=hidden value="">
+            <INPUT name=wan_dns1_pri type=hidden value="">
+            <INPUT name=wan_dns1_sec type=hidden value="">
+            <INPUT name=wan_proto type=hidden value="dhcp">
+            <INPUT name=wan_ipaddr type=hidden value="0.0.0.0">
+            <INPUT name=wan_netmask type=hidden value="0.0.0.0">
+            <input type="hidden" name="repeater" value="0">
+            <input type="hidden" name="repeater_an" value="0">
+            <input type="hidden" name="dlna_autoip_en" value="0">
+            <INPUT name=tmp_lan_ipaddr type=hidden value="0.0.0.0">
+            <INPUT name=tmp_lan_netmask type=hidden value="0.0.0.0">
+            <INPUT name=tmp_lan_proto type=hidden value="null">
+            <INPUT name=tmp_rip_enable type=hidden value="null">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

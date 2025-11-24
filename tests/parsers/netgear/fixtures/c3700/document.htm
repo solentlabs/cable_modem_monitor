@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <META name="description" content='C3700-100NAS'>
+        <META http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <META http-equiv="Content-Style-Type" content="text/css">
+        <META http-equiv="Pragma" content="no-cache">
+        <META HTTP-equiv="Cache-Control" content="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+        <title>
+            NETGEAR Gateway C3700-100NAS
+        </title>
+        <link rel="stylesheet" href="css/table.css">
+        <link rel="stylesheet" href="css/scrollbar.css">
+        <link rel="stylesheet" href="css/button.css">
+        </script>
+        <script type="text/javascript">
+            function InitTagValue()
+            {
+                /*
+                description(text)|product page title(text)|product page url(text)|product page href target(text)|
+                */
+                //var tagValueList = 'Please contact your broadband supplier homepage.||http://downloadcenter.netgear.com/|_blank|';
+				var tagValueList = 'Please go to NETGEAR Documentation download support website:|http://downloadcenter.netgear.com/|http://downloadcenter.netgear.com/|_blank|';
+
+                return tagValueList.split("|");
+            }
+
+            function InitUpdateView(tagValues)
+            {
+                // description
+                document.getElementById("description").innerHTML = tagValues[0];
+
+                // product page
+                if(tagValues[1].length > 0)
+                {
+                    document.getElementById("product_page").style.display = "block";
+                    document.getElementById("product_page").innerHTML = tagValues[1];
+                    document.getElementById("product_page").href = tagValues[2];
+                    document.getElementById("product_page").target = tagValues[3];
+                }
+                else
+                {
+                    document.getElementById("product_page").style.display = "none";
+                }
+            }
+
+            function BodyInit()
+            {
+                InitUpdateView(InitTagValue());
+            }
+        </script>
+    </head>
+
+    <body class="page-body" onload="BodyInit();">
+        <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+        <div id="full-page-container">
+            <div class="subhead2">
+                Documentation
+            </div>
+            <table style="height:445px;border:1px solid #808080;text-align: center;font-size:20pt" class="subhead2-table">
+                <tr>
+                    <td>
+                        <span id="description">Please contact your broadband supplier homepage.</span><br>
+						<a id="product_page" style="color:blue;TEXT-DECORATION :UNDERLINE;display: none;" href="http://downloadcenter.netgear.com/" target="_blank">http://downloadcenter.netgear.com/</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,3356 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+//<![CDATA[
+var isSupportComHem = false;
+var isSupportYouSee = false;
+
+//hide script from old browsers
+
+var vRUSSIANFEDERATION ='RUSSIAN FEDERATION';
+
+//"--",Africa,Asia,Australia,Canada,Europe,Israel,Japan,Korea,Mexico,Middle East,South America,USA
+var initRegion;
+var changeMsg = "WARNING: Selecting the incorrect region may result in a violation of applicable law. \nDo you agree to act in accordance with these settings?";
+var notShown = true; // only shown region change message once
+var initialized = false;
+// "--",Africa,Asia,Australia,Canada,Europe,Israel,Japan,Korea,Mexico,Middle East,South America,USA
+//var StartChannel = new Array(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+//var FinishChannel = new Array(11,13,13,13,11,13,13, 13,13,11,13,13,11);
+// Nick 20111226, append Spain freq list
+// "--",Africa,Asia,Australia,Europe,Israel,Japan,Korea,Mexico,Middle East,South America,North America, Spain, France
+var StartChannel = new Array(0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+var FinishChannel = new Array(11,13,13,13,13,13,13,13,11,13,13,11,13,13,13,13,13);
+var countrylist = [["0","--"], ["1","ZA"], ["2","CN"], ["3","AU"], ["4","EU"], ["5","IL"], ["6","JP"], ["7","KR"], ["8","MX"],
+                            ["9",""], ["10",""], ["11","US"], ["12","ES"], ["13","FR"], ["14","SE"], ["15", "DK"], ["16", "BE"]];
+
+/*not use it currently
+var Band1Channel_20M = new Array (36,40,44,48);
+var Band2Channel_20M = new Array (52,56,60,64);
+var Band3Channel_20M = new Array (100,104,108,112,116,120,124,128,132,136,140);
+var Band4Channel_20M = new Array (149,153,157,161,165);
+var Band1Channel_40M = new Array (36,40,44,48);
+var Band2Channel_40M = new Array (52,56,60,64);
+var Band3Channel_40M = new Array (100,104,108,112,116,120,124,128,132,136,140);
+var Band4Channel_40M = new Array (149,153,157,161);
+*/
+var OpMode_BG_TEXT;
+var OpMode_5G_BG_TEXT;
+var OpMode_BG_VALUE;
+var OpMode_5G_BG_VALUE;
+var selected2=100,selected3="", ch_selected=100;
+
+var curr_region = "11"
+var curr_channel_an_value = "153";
+var curr_channel_an_index = 0;
+
+var chgCh_cnt = 0;
+
+var hiddenId = "";
+
+    var api;
+
+var isRunningWPS = false;
+var iswps2GEnable = false;
+var iswps5GEnable = false;
+
+var opt2GMode0={
+    "Up to 54 Mbps":"g and b",
+    "Up to 145 Mbps":"145Mbps",
+    "Up to 300 Mbps":"300Mbps"
+};
+var opt2GMode1={
+    "Up to 54 Mbps":"g and b",
+    "Up to 289 Mbps":"145Mbps",
+    "Up to 600 Mbps":"300Mbps"
+};
+var speedMode2G = "opt2GMode0";
+
+var opt11acMode = {
+    "Up to 54 Mbps":"g and b",
+    "Up to 289 Mbps":"145Mbps",
+    "Up to 600 Mbps":"300Mbps",
+    "Up to 1.3 Gbps":"600Mbps"
+};
+var opt11acMode2 = {
+    "Up to 54 Mbps":"g and b",
+    "Up to 145 Mbps":"145Mbps",
+    "Up to 300 Mbps":"300Mbps",
+    "Up to 867 Mbps":"600Mbps"
+};
+var opt11nMode={
+    "Up to 54 Mbps":"g and b",
+    "Up to 145 Mbps":"145Mbps",
+    "Up to 300 Mbps":"300Mbps"
+};
+var speedMode = "opt11acMode";
+var filter40M = ["140","165"];
+var filter80M = ["132","136","140","165"];
+var channelList5G = [];
+var show2GEnterpriseAlert = 1;
+var show5GEnterpriseAlert = 1;
+
+    $(document).ready(function()
+    {
+        BodyInit();
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+        $('.scroll-pane').each(function()
+        {
+/*
+            $(this).jScrollPane(
+            {
+                showArrows: $(this).is('.arrow')
+            });
+*/
+            var throttleTimeout;
+            api = $(this).data('jsp');
+            $('.scroll-pane').bind('change',function()
+            {
+                if ($.browser.msie)
+                {
+                     // IE fires multiple resize events while you are dragging the browser window which
+                     // causes it to crash if you try to update the scrollpane on every one. So we need
+                     // to throttle it to fire a maximum of once every 50 milliseconds...
+                     if (!throttleTimeout)
+                     {
+                         throttleTimeout = setTimeout(function()
+                         {
+//                             api.reinitialise();
+                             throttleTimeout = null;
+                         },0);
+                     }
+                }
+                else
+                {
+//                     api.reinitialise();
+                }
+            });
+
+        })
+    }); // document ready
+
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                var linkName = "";
+
+		  linkName = fname+"_h." +"htm";
+
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=linkName;
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=linkName+"#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function initScrn()
+{
+    var defaultKey;
+    var fm=document.forms[0];
+    var i;
+    var sec_type_2G = fm.security_type_2G.value;
+    var sec_type_5G = fm.security_type_5G.value;
+
+    OpMode_BG_TEXT=fm.opmode.options[0].text;
+    OpMode_BG_VALUE=fm.opmode.options[0].value;
+    OpMode_5G_BG_TEXT=fm.opmode_an.options[0].text;
+    OpMode_5G_BG_VALUE=fm.opmode_an.options[0].value;
+
+	if(fm.tempSetting.value == 1)
+	{
+		var temp_region = parseInt(fm.tempRegion.value);
+		if (fm.tempRegion.value == "")
+		{
+		    if (parseInt(fm.setRegion.value) == 12)
+			    fm.WRegion.selectedIndex=10;
+		    else if (parseInt(fm.setRegion.value) >= 10 && parseInt(fm.setRegion.value) <= 11)
+			    fm.WRegion.selectedIndex=parseInt(fm.setRegion.value)+1;
+		    else
+			    fm.WRegion.selectedIndex=parseInt(fm.setRegion.value);
+		}
+		else if (temp_region == 12)
+			fm.WRegion.selectedIndex=10;
+		else if (temp_region >= 10 && temp_region <= 11)
+			fm.WRegion.selectedIndex=temp_region+1;
+		else
+			fm.WRegion.selectedIndex=temp_region;
+	}
+
+    initRegion = fm.WRegion.selectedIndex;
+
+    setOpMode();
+    //setChannel();
+    displayWepRadio();
+    displayWpaRadio();
+    for (i=0; i< fm.w_channel.options.length; i++)
+    {
+        if (fm.w_channel.options[i].value == fm.initChannel.value)
+        {
+            fm.w_channel[i].selected = true;
+            break;
+        }
+    }
+    for (i=0; i< fm.w_channel_drv.options.length; i++)
+    {
+        if (fm.w_channel_drv.options[i].value == fm.initChannel.value)
+        {
+            fm.w_channel_drv[i].selected = true;
+            break;
+        }
+    }
+    for (i=0; i< fm.w_channel_an.options.length; i++)
+    {
+        if (fm.w_channel_an.options[i].value == fm.initChannel_an.value)
+        {
+            fm.w_channel_an[i].selected = true;
+            curr_channel_an_index = i;
+            curr_channel_an_value = fm.w_channel_an.options[i].value;
+            break;
+        }
+    }
+
+    for (i=0; i< fm.w_channel_an_drv.options.length; i++)
+    {
+        if (fm.w_channel_an_drv.options[i].value == fm.initChannel_an.value)
+        {
+            fm.w_channel_an_drv[i].selected = true;
+            curr_channel_an_index = i;
+            curr_channel_an_value = fm.w_channel_an_drv.options[i].value;
+            break;
+        }
+    }
+
+    if (sec_type_2G == "WEP")
+    {
+        fm.security_type[1].checked = true;
+        document.getElementById("wep_2G").style.display="block";
+        for (i=0; i<fm.authAlgm.length; i++)
+        {
+            if (fm.authAlgm[i].value == fm.initAuthType.value)
+            {
+                fm.authAlgm[i].selected = true;
+                break;
+            }
+        }
+
+        defaultKey=***REDACTED***
+        if ( defaultKey >= 0 && defaultKey <= 3)
+            document.forms[0].wep_key_no[defaultKey].checked = true;
+        else
+            document.forms[0].wep_key_no[0].checked = true;
+    }
+    else if(sec_type_2G == "WPA-PSK" || sec_type_2G == "WPA2-PSK" || sec_type_2G == "WPA-AUTO-PSK")
+    {
+        document.getElementById("wpa_2G").style.display="block";
+        if (sec_type_2G == "WPA-PSK")
+        {
+            fm.security_type[2].checked = true;
+        }
+        else if (sec_type_2G == "WPA2-PSK")
+        {
+            fm.security_type[3].checked = true;
+        }
+        else if (sec_type_2G == "WPA-AUTO-PSK")
+        {
+            fm.security_type[4].checked = true;
+        }
+    }
+    else if(sec_type_2G == "Enterprise")
+    {
+        fm.security_type[5].checked = true;
+        document.getElementById("wpa_enterprise_2G").style.display="block";
+    }
+    else
+    {
+        fm.security_type[0].checked = true;
+    }
+
+    if (fm.display_5G.value == "1")
+    {
+    if (sec_type_5G == "WEP")
+    {
+        fm.security_type_an[1].checked = true;
+        document.getElementById("wep_5G").style.display="block";
+        for (i=0; i<fm.authAlgm_an.length; i++)
+        {
+            if (fm.authAlgm_an[i].value == fm.initAuthType_an.value)
+            {
+                fm.authAlgm_an[i].selected = true;
+                break;
+            }
+        }
+
+        defaultKey=***REDACTED***
+        if ( defaultKey >= 0 && defaultKey <= 3)
+            document.forms[0].wep_key_no_an[defaultKey].checked = true;
+        else
+            document.forms[0].wep_key_no_an[0].checked = true;
+    }
+    else if(sec_type_5G == "WPA-PSK" || sec_type_5G == "WPA2-PSK" || sec_type_5G == "WPA-AUTO-PSK")
+    {
+        document.getElementById("wpa_5G").style.display="block";
+        if (sec_type_5G == "WPA-PSK")
+        {
+            fm.security_type_an[2].checked = true;
+        }
+        else if (sec_type_5G == "WPA2-PSK")
+        {
+            fm.security_type_an[3].checked = true;
+        }
+        else if (sec_type_5G == "WPA-AUTO-PSK")
+        {
+            fm.security_type_an[4].checked = true;
+        }
+    }
+    else if(sec_type_5G == "Enterprise")
+    {
+        fm.security_type_an[5].checked = true;
+        document.getElementById("wpa_enterprise_5G").style.display="block";
+    }
+    else
+    {
+        fm.security_type_an[0].checked = true;
+    }
+    }
+
+    initialized=true;
+
+}
+function chgCh(from)
+{
+    if ( from >= 2 )
+    {
+        var cf = document.forms[0];
+        /* Walk-around: chgCh() would be called twice (reason unknown),
+           only allow 1st call to be excuted on (WPA-PSK [TKIP] + WPA2-PSK [AES]).
+         */
+/*
+        if (cf.security_type[4].checked || cf.security_type_an[4].checked)
+        {
+            if (chgCh_cnt < 1)
+            {
+                chgCh_cnt++;
+            }
+            else
+            {
+                chgCh_cnt = 0;
+                return true;
+            }
+        }
+*/
+        cf.only_mode.value = "1";
+        setOpMode();
+        //setChannel();
+        if(from==2)
+            securityCheck(0);
+        else
+            securityCheck(1);
+        displayWepRadio();
+        displayWpaRadio();
+        //cf.submit();
+    }
+    else
+    {
+        setOpMode();
+        //setChannel();
+    }
+}
+
+function checkRegion()
+{
+    var cf = document.forms[0];
+    if(cf.WRegion.selectedIndex == 0)
+    {
+        cf.WRegion.focus();
+        return alertR("Please select the correct region for your location.");
+    }
+    if (notShown)
+        notShown = false;
+    else if(cf.WRegion.selectedIndex != initRegion && notShown)
+    {
+        if(!confirm(changeMsg))
+            return false;
+        else notShown = false;
+    }
+    return true;
+}
+
+function displayWepRadio()
+{
+    var cf = document.forms[0];
+	var currentMode = cf.opmode.selectedIndex;
+    var currentMode_an = cf.opmode_an.value;
+    //var sec_type_2G = cf.security_type_2G.value;
+    //var sec_type_5G = cf.security_type_5G.value;
+
+    if (currentMode == 0)//Up to 54Mbps
+    {
+        document.getElementById("wep_radio_2G").style.display="block";
+
+    }
+    else
+    {
+        document.getElementById("wep_radio_2G").style.display="none";
+    }
+
+    if (currentMode_an == "g and b")//Up to 54Mbps
+    {
+        document.getElementById("wep_radio_5G").style.display="block";
+    }
+    else
+    {
+        document.getElementById("wep_radio_5G").style.display="none";
+    }
+}
+
+
+function displayWpaRadio()
+{
+    var cf = document.forms[0];
+	var currentMode = cf.opmode.selectedIndex;
+    var currentMode_an = cf.opmode_an.value;
+    //var sec_type_2G = cf.security_type_2G.value;
+    //var sec_type_5G = cf.security_type_5G.value;
+
+    if (currentMode == 0)//Up to 54Mbps
+    {
+        document.getElementById("wpa_radio_2G").style.display="block";
+
+    }
+    else
+    {
+        document.getElementById("wpa_radio_2G").style.display="none";
+    }
+
+    if (currentMode_an == "g and b")//Up to 54Mbps
+    {
+        document.getElementById("wpa_radio_5G").style.display="block";
+    }
+    else
+    {
+        document.getElementById("wpa_radio_5G").style.display="none";
+    }
+}
+
+
+function setOpMode()
+{
+	var cf = document.forms[0];
+	var currentMode = cf.opmode.selectedIndex;
+    var currentMode_an = cf.opmode_an.value;
+
+    var sec_type_2G = cf.security_type_2G.value;
+    var sec_type_5G = cf.security_type_5G.value;
+
+    if (sec_type_2G == "WEP")
+    {
+    	cf.opmode.options.length = 1;
+    	cf.opmode.options[0].text = OpMode_BG_TEXT;
+    	cf.opmode.options[0].value = OpMode_BG_VALUE;
+    	//cf.opmode.selectedIndex = currentMode;
+    }
+    else
+    {
+        cf.opmode.options.length = 3;
+        display2GSpeedMode(eval(speedMode2G));
+        cf.opmode.selectedIndex = currentMode;
+    }
+
+    if (sec_type_5G == "WEP")
+    {
+    	cf.opmode_an.options.length = 1;
+    	cf.opmode_an.options[0].text = OpMode_5G_BG_TEXT;
+    	cf.opmode_an.options[0].value = OpMode_5G_BG_VALUE;
+    	//cf.opmode.selectedIndex = currentMode;
+    }
+    else
+    {
+        if(speedMode == "opt11acMode")
+            cf.opmode_an.options.length = opt11acMode.length;
+        else if(speedMode == "opt11acMode2")
+            cf.opmode_an.options.length = opt11acMode2.length;
+        else
+            cf.opmode_an.options.length = opt11nMode.length;
+        displaySpeedMode(eval(speedMode));
+        cf.opmode_an.value = currentMode_an;
+    }
+	return;
+}
+/* not use it currently
+function setChannel()
+{
+    var cf = document.forms[0];
+    var index = cf.WRegion.selectedIndex;
+    var chIndex = cf.w_channel.selectedIndex;
+    //var currentMode = cf.opmode.selectedIndex;
+    //var chIndex_an = cf.w_channel_an.selectedIndex;
+    //var currentMode_an = cf.opmode_an.selectedIndex;
+//  Nick assign currChVal_an to curr_channel_an_value
+//    var currChVal_an = "153";
+    var currChVal_an = curr_channel_an_value;
+//  Nick
+    var i=0, chMatch_an=0;
+    var b0=0, b1=0, b2=0, b3=0, b4=0;
+
+    if (curr_region != cf.WRegion.selectedIndex)
+    {
+        if (index == 1 || index == 5 || index == 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+        {
+            var sku_name = cf.fw_sku.value;
+            if (sku_name == "SKU_WW")
+            {
+                currChVal_an = 44;
+            }
+            else
+            {
+                currChVal_an = 153;
+            }
+        }
+        else
+        {
+            currChVal_an = 0;
+        }
+    }
+
+    if (FinishChannel[index]==14 && cf.opmode.selectedIndex!=0)
+        cf.w_channel.options.length = FinishChannel[index] - StartChannel[index];
+    else
+        cf.w_channel.options.length = FinishChannel[index] - StartChannel[index] + 2;
+
+    cf.w_channel.options[0].text = "Auto";
+    cf.w_channel.options[0].value = 0;
+    // Nick 20120420, always enable AUTO option.
+    if ((cf.auto_channel_5G.value == "1") && (index != 1 && index != 5 && index != 6))		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+    {
+        cf.w_channel_an.options[0].text = "Auto";
+        cf.w_channel_an.options[0].value = 0;
+        b0 = 1;
+    }
+
+    for (var i = StartChannel[index]; i <= FinishChannel[index]; i++) {
+        if (i==14 && cf.opmode.selectedIndex!=0)
+            continue;
+        cf.w_channel.options[i - StartChannel[index] + 1].value = i;
+        cf.w_channel.options[i - StartChannel[index] + 1].text = ((i < 10)? "0" + i : i);
+    }
+    cf.w_channel.selectedIndex = ((chIndex > -1) && (chIndex < cf.w_channel.options.length)) ? chIndex : 0 ;
+
+    if (cf.opmode_an.value == "300Mbps")	// 40MHz
+    {
+        cf.w_channel_an.options.length = 100;
+        if (index != 2)                     // No band 1, 2, 3 for China
+        {
+            for (b1=0; b1<Band1Channel_40M.length; b1++)
+            {
+                if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                {
+                    cf.w_channel_an.options[b0+b1].text = Band1Channel_40M[b1];
+                    cf.w_channel_an.options[b0+b1].value = Band1Channel_40M[b1];
+                }
+                else
+                {
+                    cf.w_channel_an.options[b1].text = Band1Channel_40M[b1];
+                    cf.w_channel_an.options[b1].value = Band1Channel_40M[b1];
+                }
+            }
+            if (cf.dfs_ch_enable.value == "1"
+                || (cf.dfs_ch_enable.value == "0" && cf.dfs_ch_enable_default.value == "OFF" && index != 11))
+            {
+                for (b2=0; b2<Band2Channel_40M.length; b2++)
+                {
+                    if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                    {
+                        cf.w_channel_an.options[b0+b1+b2].text = Band2Channel_40M[b2];
+                        cf.w_channel_an.options[b0+b1+b2].value = Band2Channel_40M[b2];
+                    }
+                    else
+                    {
+                        cf.w_channel_an.options[b1+b2].text = Band2Channel_40M[b2];
+                        cf.w_channel_an.options[b1+b2].value = Band2Channel_40M[b2];
+                    }
+                }
+                if(index!=10)
+                {
+                    for (b3=0; b3<Band3Channel_40M.length; b3++)
+                    {
+                        // Nick 20111226, remove channel 140 for (Spain, France) HT40 by BRCM chip limitation
+                        if ((index == 12 || index == 13 || index == 14 || index == 15 || index == 16 || index == 4)
+                            && (b3 == Band3Channel_40M.length-1))
+                        {
+                            continue;
+                        }
+                        if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                        {
+                            cf.w_channel_an.options[b0+b1+b2+b3].text = Band3Channel_40M[b3];
+                            cf.w_channel_an.options[b0+b1+b2+b3].value = Band3Channel_40M[b3];
+                        }
+                        else
+                        {
+                            cf.w_channel_an.options[b1+b2+b3].text = Band3Channel_40M[b3];
+                            cf.w_channel_an.options[b1+b2+b3].value = Band3Channel_40M[b3];
+                        }
+                    }
+                }
+            }
+        }
+        // Nick 20111226, No band 4 channels for Spain, France
+        if (index != 1 && index != 4 && index != 5 && index != 6 && index != 12 && index != 13 && index !=14 && index != 15 && index !=16)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+        {
+            for (b4=0; b4<Band4Channel_40M.length; b4++)
+            {
+                if(index!=11)
+                {
+                    cf.w_channel_an.options[b0+b1+b2+b3+b4].text = Band4Channel_40M[b4];
+                    cf.w_channel_an.options[b0+b1+b2+b3+b4].value = Band4Channel_40M[b4];
+                }
+                else
+                {
+                    cf.w_channel_an.options[b0+b1+b2+b4].text = Band4Channel_40M[b4];
+                    cf.w_channel_an.options[b0+b1+b2+b4].value = Band4Channel_40M[b4];
+                }
+            }
+        }
+        if (index == 1 || index == 5 || index == 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+            cf.w_channel_an.options.length = b1+b2+b3;
+        // Added by Antony 2011/03/01 The band of American is 1,2,4
+        else if (index == 11)
+            cf.w_channel_an.options.length = b0+b1+b2+b4;
+        // Added end Antony 2011/03/01
+        else
+            cf.w_channel_an.options.length = b0+b1+b2+b3+b4;
+        // Nick 20111226, remove channel 140 for (Spain, France) HT40 by BRCM chip limitation
+        if ( index == 12 || index == 13 || index == 14 || index == 15 || index == 16 || index == 4 )
+        {
+            cf.w_channel_an.options.length --;
+        }
+    }
+    else
+    {
+        cf.w_channel_an.options.length = 100;
+        if (index != 2)                      // No band 1, 2, 3 for China
+        {
+            for (b1=0; b1<Band1Channel_20M.length; b1++)
+            {
+                if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                {
+                    cf.w_channel_an.options[b0+b1].text = Band1Channel_20M[b1];
+                    cf.w_channel_an.options[b0+b1].value = Band1Channel_20M[b1];
+                }
+                else
+                {
+                    cf.w_channel_an.options[b1].text = Band1Channel_20M[b1];
+                    cf.w_channel_an.options[b1].value = Band1Channel_20M[b1];
+                }
+            }
+            if (cf.dfs_ch_enable.value == "1"
+                || (cf.dfs_ch_enable.value == "0" && cf.dfs_ch_enable_default.value == "OFF" && index != 11))
+            {
+                for (b2=0; b2<Band2Channel_20M.length; b2++)
+                {
+                    if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                    {
+                        cf.w_channel_an.options[b0+b1+b2].text = Band2Channel_20M[b2];
+                        cf.w_channel_an.options[b0+b1+b2].value = Band2Channel_20M[b2];
+                    }
+                    else
+                    {
+                        cf.w_channel_an.options[b1+b2].text = Band2Channel_20M[b2];
+                        cf.w_channel_an.options[b1+b2].value = Band2Channel_20M[b2];
+                    }
+                }
+                if(index!=11)
+                {
+                    for (b3=0; b3<Band3Channel_20M.length; b3++)
+                    {
+                        if (index != 1 && index != 5 && index != 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+                        {
+                            cf.w_channel_an.options[b0+b1+b2+b3].text = Band3Channel_20M[b3];
+                            cf.w_channel_an.options[b0+b1+b2+b3].value = Band3Channel_20M[b3];
+                        }
+                        else
+                        {
+                            cf.w_channel_an.options[b1+b2+b3].text = Band3Channel_20M[b3];
+                            cf.w_channel_an.options[b1+b2+b3].value = Band3Channel_20M[b3];
+                        }
+                    }
+                }
+            }
+        }
+        // Nick 20111226, No band 4 channels for Spain, France
+        if (index != 1 && index != 4 && index != 5 && index != 6 && index != 12 && index != 13 && index != 14 && index != 15 && index != 16)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+        {
+            for (b4=0; b4<Band4Channel_20M.length; b4++)
+            {
+                if(index!=11)
+                {
+                    cf.w_channel_an.options[b0+b1+b2+b3+b4].text = Band4Channel_20M[b4];
+                    cf.w_channel_an.options[b0+b1+b2+b3+b4].value = Band4Channel_20M[b4];
+                }
+                else
+                {
+                    cf.w_channel_an.options[b0+b1+b2+b4].text = Band4Channel_20M[b4];
+                    cf.w_channel_an.options[b0+b1+b2+b4].value = Band4Channel_20M[b4];
+                }
+            }
+        }
+        if (index == 1 || index == 5 || index == 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+            cf.w_channel_an.options.length = b1+b2+b3;
+        else if (index == 11)
+            cf.w_channel_an.options.length = b0+b1+b2+b4;
+        else
+            cf.w_channel_an.options.length = b0+b1+b2+b3+b4;
+    }
+
+    for (i=0; i<cf.w_channel_an.options.length; i++)
+    {
+        if (cf.w_channel_an.options[i].value == currChVal_an)
+        {
+            cf.w_channel_an[i].selected = true;
+            curr_channel_an_index = i;
+            curr_channel_an_value = cf.w_channel_an.options[i].value;
+            chMatch_an = 1;
+            break;
+        }
+    }
+
+    if (!chMatch_an)
+    {
+        if (index == 1 || index == 5 || index == 6)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+        {
+            var sku_name = cf.fw_sku.value;
+            var defaultChVal_an = 0;
+            if (sku_name == "SKU_WW")
+                defaultChVal_an = 44;
+            else
+                defaultChVal_an = 153;
+            for (i=0; i<cf.w_channel_an.options.length; i++)
+            {
+                if (cf.w_channel_an.options[i].value == defaultChVal_an)
+                {
+                    cf.w_channel_an[i].selected = true;
+                    curr_channel_an_index = i;
+                    curr_channel_an_value = cf.w_channel_an.options[i].value;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            cf.w_channel_an[0].selected = true;     //Auto
+            curr_channel_an_index = 0;
+            curr_channel_an_value = cf.w_channel_an.options[0].value;
+        }
+    }
+}
+*/
+function checkChannel()
+{
+    var cf = document.forms[0];
+    var index = cf.WRegion.selectedIndex;
+    var new_channel_an_index = cf.w_channel_an.selectedIndex;
+    var new_channel_an_value = cf.w_channel_an.options[new_channel_an_index].value;
+    var i = 0;
+
+    // Nick 20111226, No band 4 channels for Spain, France
+    if (index != 1 && index != 4 && index != 5 && index != 6 && index != 12 && index != 13 && index !=14 && index != 15 && index !=16)		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+    {
+        if ((curr_channel_an_index != new_channel_an_index) && (ch_selected == 100))
+        {
+            if ((curr_channel_an_value == "0") ||
+                (curr_channel_an_value == "149") || (curr_channel_an_value == "153") ||
+                (curr_channel_an_value == "157") || (curr_channel_an_value == "161") ||
+                (curr_channel_an_value == "165"))
+            {
+                if ((new_channel_an_value != "0") &&
+                    (new_channel_an_value != "149") && (new_channel_an_value != "153") &&
+                    (new_channel_an_value != "157") && (new_channel_an_value != "161") &&
+                    (new_channel_an_value != "165") )
+                {
+                    ch_selected = new_channel_an_value;
+                    if (!confirm("To get the best wireless performance, NETGEAR recommends that you set the gateway to a high channel number (between 149~161).\nAre you sure you want to continue?"))
+                    {
+                        cf.w_channel_an.selectedIndex = curr_channel_an_index;
+                        return false;
+                    }
+                }
+            }
+            curr_channel_an_index = new_channel_an_index;
+            curr_channel_an_value = cf.w_channel_an.options[new_channel_an_index].value;
+        }
+    }
+
+    return true;
+}
+
+function setKeys()
+{
+    var cf = document.forms[0];
+    cf.passphraseStr.disabled = false;
+    cf.KEY1.disabled = cf.KEY2.disabled = cf.KEY3.disabled = cf.KEY4.disabled = false;
+    cf.passphraseStr_an.disabled = false;
+    cf.KEY1_an.disabled = cf.KEY2_an.disabled = cf.KEY3_an.disabled = cf.KEY4_an.disabled = false;
+
+    if (cf.wepenc.selectedIndex == 0)
+    {
+        cf.keygen.disabled = false;
+        cf.passphraseStr.disabled = false;
+        keysize = 10;
+        cf.KEY1.size = cf.KEY2.size = cf.KEY3.size = cf.KEY4.size = keysize + 2 ; // extra for Mac
+        cf.KEY1Hidden.size = cf.KEY2Hidden.size = cf.KEY3Hidden.size = cf.KEY4Hidden.size = keysize + 2 ; // extra for Mac
+        if (cf.KEY1.value.length>10)
+            cf.KEY1.value = cf.KEY1.value.substring(0,10);
+        if (cf.KEY2.value.length>10)
+            cf.KEY2.value = cf.KEY2.value.substring(0,10);
+        if (cf.KEY3.value.length>10)
+            cf.KEY3.value = cf.KEY3.value.substring(0,10);
+        if (cf.KEY4.value.length>10)
+            cf.KEY4.value = cf.KEY4.value.substring(0,10);
+
+        if (cf.KEY1Hidden.value.length>10)
+            cf.KEY1Hidden.value = cf.KEY1Hidden.value.substring(0,10);
+        if (cf.KEY2Hidden.value.length>10)
+            cf.KEY2Hidden.value = cf.KEY2Hidden.value.substring(0,10);
+        if (cf.KEY3Hidden.value.length>10)
+            cf.KEY3Hidden.value = cf.KEY3Hidden.value.substring(0,10);
+        if (cf.KEY4Hidden.value.length>10)
+            cf.KEY4Hidden.value = cf.KEY4Hidden.value.substring(0,10);
+
+		cf.KEY1.maxLength = cf.KEY2.maxLength = cf.KEY3.maxLength = cf.KEY4.maxLength = keysize;
+		cf.KEY1Hidden.maxLength = cf.KEY2Hidden.maxLength = cf.KEY3Hidden.maxLength = cf.KEY4Hidden.maxLength = keysize;
+    }
+    else if(cf.wepenc.selectedIndex == 1)
+    {
+        cf.keygen.disabled = false;
+        cf.passphraseStr.disabled = false;
+        keysize = 26;
+        cf.KEY1.size = cf.KEY2.size = cf.KEY3.size = cf.KEY4.size = keysize + 2; // extra for Mac
+        cf.KEY1Hidden.size = cf.KEY2Hidden.size = cf.KEY3Hidden.size = cf.KEY4Hidden.size = keysize + 2 ; // extra for Mac
+        if (cf.KEY1.value.length>26)
+            cf.KEY1.value = cf.KEY1.value.substring(0,26);
+        if (cf.KEY2.value.length>26)
+            cf.KEY2.value = cf.KEY2.value.substring(0,26);
+        if (cf.KEY3.value.length>26)
+            cf.KEY3.value = cf.KEY3.value.substring(0,26);
+        if (cf.KEY4.value.length>26)
+            cf.KEY4.value = cf.KEY4.value.substring(0,26);
+
+        if (cf.KEY1Hidden.value.length>26)
+            cf.KEY1Hidden.value = cf.KEY1Hidden.value.substring(0,26);
+        if (cf.KEY2Hidden.value.length>26)
+            cf.KEY2Hidden.value = cf.KEY2Hidden.value.substring(0,26);
+        if (cf.KEY3Hidden.value.length>26)
+            cf.KEY3Hidden.value = cf.KEY3Hidden.value.substring(0,26);
+        if (cf.KEY4Hidden.value.length>26)
+            cf.KEY4Hidden.value = cf.KEY4Hidden.value.substring(0,26);
+
+		cf.KEY1.maxLength = cf.KEY2.maxLength = cf.KEY3.maxLength = cf.KEY4.maxLength = keysize;
+		cf.KEY1Hidden.maxLength = cf.KEY2Hidden.maxLength = cf.KEY3Hidden.maxLength = cf.KEY4Hidden.maxLength = keysize;
+    }
+    else if(cf.wepenc.selectedIndex == 2)
+    {
+        cf.keygen.disabled = true;
+        cf.passphraseStr.disabled = true;
+        keysize = 32;
+        cf.KEY1.size = cf.KEY2.size = cf.KEY3.size = cf.KEY4.size = keysize + 2; // extra for Mac
+        cf.KEY1Hidden.size = cf.KEY2Hidden.size = cf.KEY3Hidden.size = cf.KEY4Hidden.size = keysize + 2 ; // extra for Mac
+
+		cf.KEY1.maxLength = cf.KEY2.maxLength = cf.KEY3.maxLength = cf.KEY4.maxLength = keysize;
+		cf.KEY1Hidden.maxLength = cf.KEY2Hidden.maxLength = cf.KEY3Hidden.maxLength = cf.KEY4Hidden.maxLength = keysize;
+    }
+    if (cf.wepenc_an.selectedIndex == 0)
+    {
+        cf.Generate_an.disabled = false;
+        cf.passphraseStr_an.disabled = false;
+        keysize_an = 10;
+        cf.KEY1_an.size = cf.KEY2_an.size = cf.KEY3_an.size = cf.KEY4_an.size = keysize_an + 2 ; // extra for Mac
+        cf.KEY1Hidden_an.size = cf.KEY2Hidden_an.size = cf.KEY3Hidden_an.size = cf.KEY4Hidden_an.size = keysize_an + 2 ; // extra for Mac
+        if (cf.KEY1_an.value.length>10)
+            cf.KEY1_an.value = cf.KEY1_an.value.substring(0,10);
+        if (cf.KEY2_an.value.length>10)
+            cf.KEY2_an.value = cf.KEY2_an.value.substring(0,10);
+        if (cf.KEY3_an.value.length>10)
+            cf.KEY3_an.value = cf.KEY3_an.value.substring(0,10);
+        if (cf.KEY4_an.value.length>10)
+            cf.KEY4_an.value = cf.KEY4_an.value.substring(0,10);
+
+        if (cf.KEY1Hidden_an.value.length>10)
+            cf.KEY1Hidden_an.value = cf.KEY1Hidden_an.value.substring(0,10);
+        if (cf.KEY2Hidden_an.value.length>10)
+            cf.KEY2Hidden_an.value = cf.KEY2Hidden_an.value.substring(0,10);
+        if (cf.KEY3Hidden_an.value.length>10)
+            cf.KEY3Hidden_an.value = cf.KEY3Hidden_an.value.substring(0,10);
+        if (cf.KEY4Hidden_an.value.length>10)
+            cf.KEY4Hidden_an.value = cf.KEY4Hidden_an.value.substring(0,10);
+
+		cf.KEY1_an.maxLength = cf.KEY2_an.maxLength = cf.KEY3_an.maxLength = cf.KEY4_an.maxLength = keysize_an;
+		cf.KEY1Hidden_an.maxLength = cf.KEY2Hidden_an.maxLength = cf.KEY3Hidden_an.maxLength = cf.KEY4Hidden_an.maxLength = keysize_an;
+    }
+    else if(cf.wepenc_an.selectedIndex == 1)
+    {
+        cf.Generate_an.disabled = false;
+        cf.passphraseStr_an.disabled = false;
+        keysize_an = 26;
+        cf.KEY1_an.size = cf.KEY2_an.size = cf.KEY3_an.size = cf.KEY4_an.size = keysize_an + 2; // extra for Mac
+        cf.KEY1Hidden_an.size = cf.KEY2Hidden_an.size = cf.KEY3Hidden_an.size = cf.KEY4Hidden_an.size = keysize_an + 2 ; // extra for Mac
+        if (cf.KEY1_an.value.length>26)
+            cf.KEY1_an.value = cf.KEY1_an.value.substring(0,26);
+        if (cf.KEY2_an.value.length>26)
+            cf.KEY2_an.value = cf.KEY2_an.value.substring(0,26);
+        if (cf.KEY3_an.value.length>26)
+            cf.KEY3_an.value = cf.KEY3_an.value.substring(0,26);
+        if (cf.KEY4_an.value.length>26)
+            cf.KEY4_an.value = cf.KEY4_an.value.substring(0,26);
+
+        if (cf.KEY1Hidden_an.value.length>26)
+            cf.KEY1Hidden_an.value = cf.KEY1Hidden_an.value.substring(0,26);
+        if (cf.KEY2Hidden_an.value.length>26)
+            cf.KEY2Hidden_an.value = cf.KEY2Hidden_an.value.substring(0,26);
+        if (cf.KEY3Hidden_an.value.length>26)
+            cf.KEY3Hidden_an.value = cf.KEY3Hidden_an.value.substring(0,26);
+        if (cf.KEY4Hidden_an.value.length>26)
+            cf.KEY4Hidden_an.value = cf.KEY4Hidden_an.value.substring(0,26);
+
+		cf.KEY1_an.maxLength = cf.KEY2_an.maxLength = cf.KEY3_an.maxLength = cf.KEY4_an.maxLength = keysize_an;
+		cf.KEY1Hidden_an.maxLength = cf.KEY2Hidden_an.maxLength = cf.KEY3Hidden_an.maxLength = cf.KEY4Hidden_an.maxLength = keysize_an;
+    }
+    else if(cf.wepenc_an.selectedIndex == 2)
+    {
+        cf.Generate_an.disabled = true;
+        cf.passphraseStr_an.disabled = true;
+        keysize_an = 32;
+        cf.KEY1_an.size = cf.KEY2_an.size = cf.KEY3_an.size = cf.KEY4_an.size = keysize_an + 2; // extra for Mac
+        cf.KEY1Hidden_an.size = cf.KEY2Hidden_an.size = cf.KEY3Hidden_an.size = cf.KEY4Hidden_an.size = keysize_an + 2; // extra for Mac
+
+		cf.KEY1_an.maxLength = cf.KEY2_an.maxLength = cf.KEY3_an.maxLength = cf.KEY4_an.maxLength = keysize_an;
+		cf.KEY1Hidden_an.maxLength = cf.KEY2Hidden_an.maxLength = cf.KEY3Hidden_an.maxLength = cf.KEY4Hidden_an.maxLength = keysize_an;
+    }
+}
+
+function securityCheck(band)
+{
+    var cf = document.forms[0];
+    var warnMessage1 = "IMPORTANT\n" + "WPA-PSK [TKIP] ONLY operates at Up to 54Mbps (legacy G) mode, not N mode.\n" + "NETGEAR recommends that you use WPA2-PSK [AES] to get full N rate support.";
+    if (band == 0)
+    {
+        if(cf.security_type[0].checked)
+        {
+            //no thing to show
+            document.getElementById("wep_2G").style.display="none";
+            document.getElementById("wpa_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="none";
+            cf.security_type_2G.value="None";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type[1].checked)
+        {
+            document.getElementById("wep_2G").style.display="block";
+            document.getElementById("wpa_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="none";
+            cf.security_type_2G.value="WEP";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type[2].checked)
+        {
+            if (cf.opmode.selectedIndex != 0)
+            {
+                /* we add a redundant assignment here so that the
+                   following warning alert wouldn't appear twice */
+                cf.opmode.selectedIndex = 0;
+                alert(warnMessage1);
+                cf.opmode.selectedIndex = 0;
+                document.getElementById("wep_radio_2G").style.display="block";
+            }
+            document.getElementById("wpa_2G").style.display="block";
+            document.getElementById("wep_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="none";
+            cf.security_type_2G.value="WPA-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type[3].checked)
+        {
+            document.getElementById("wpa_2G").style.display="block";
+            document.getElementById("wep_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="none";
+            cf.security_type_2G.value="WPA2-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type[4].checked)
+        {
+            if ((cf.opmode.selectedIndex != 0) && (cf.opmode.selectedIndex!=selected2))
+            {
+                selected2=cf.opmode.selectedIndex;
+                alert(warnMessage1);
+            }
+            document.getElementById("wpa_2G").style.display="block";
+            document.getElementById("wep_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="none";
+// Nick 20111028, change value for chkData()
+//            cf.security_type_2G.value="AUTO-PSK";
+            cf.security_type_2G.value="WPA-AUTO-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type[5].checked)
+        {
+            if(show2GEnterpriseAlert)
+            {
+                alert('WPA/WPA2 Enterprise'+' does not work with WPS. WPS will be inaccessible. Do you want to continue?');
+                show2GEnterpriseAlert = 0;
+            }
+            document.getElementById("wpa_2G").style.display="none";
+            document.getElementById("wep_2G").style.display="none";
+            document.getElementById("wpa_enterprise_2G").style.display="block";
+            cf.security_type_2G.value="Enterprise";
+        }
+    }
+    else
+    {
+        if(cf.security_type_an[0].checked)
+        {
+            //no thing to show
+            document.getElementById("wep_5G").style.display="none";
+            document.getElementById("wpa_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="none";
+            cf.security_type_5G.value="None";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type_an[1].checked)
+        {
+            document.getElementById("wep_5G").style.display="block";
+            document.getElementById("wpa_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="none";
+            cf.security_type_5G.value="WEP";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type_an[2].checked)
+        {
+            if (cf.opmode_an.value != "g and b")
+            {
+                /* we add a redundant assignment here so that the
+                   following warning alert wouldn't appear twice */
+                cf.opmode_an.value = "g and b";
+                alert(warnMessage1);
+                //setChannel();
+                document.getElementById("wep_radio_5G").style.display="block";
+                cf.opmode_an.value = "g and b";
+            }
+            document.getElementById("wpa_5G").style.display="block";
+            document.getElementById("wep_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="none";
+            cf.security_type_5G.value="WPA-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type_an[3].checked)
+        {
+            document.getElementById("wpa_5G").style.display="block";
+            document.getElementById("wep_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="none";
+            cf.security_type_5G.value="WPA2-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type_an[4].checked)
+        {
+            if ((cf.opmode_an.value != "g and b") && (cf.opmode_an.value != selected3))
+            {
+                selected3=cf.opmode_an.value;
+                alert(warnMessage1);
+            }
+            document.getElementById("wpa_5G").style.display="block";
+            document.getElementById("wep_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="none";
+// Nick 20111028, change value for chkData()
+//            cf.security_type_5G.value="AUTO-PSK";
+            cf.security_type_5G.value="WPA-AUTO-PSK";
+            //document.forms[0].submit();
+        }
+        if(cf.security_type_an[5].checked)
+        {
+            if(show5GEnterpriseAlert && cf.security_type_5G.value != "Enterprise")
+            {
+                alert('WPA/WPA2 Enterprise'+' does not work with WPS. WPS will be inaccessible. Do you want to continue?');
+                show5GEnterpriseAlert = 0;
+            }
+            document.getElementById("wpa_5G").style.display="none";
+            document.getElementById("wep_5G").style.display="none";
+            document.getElementById("wpa_enterprise_5G").style.display="block";
+            cf.security_type_5G.value="Enterprise";
+        }
+    }
+    setOpMode();
+}
+
+function checkData()
+{
+    var cf = document.forms[0];
+    var msg_key64_type = "Invalid Key.\n\nKeys length should be 10 Hex (0~9 and A~F) chars." ;
+    var msg_key128_type = "Invalid Key.\n\nKeys length should be 26 Hex (0~9 and A~F) chars.";
+    var show_wep_or_wps_msg = false;
+    //Foxconn added start, Wins, 06/22/2011, @WPS v2.0
+    var wps_version = "2.0";
+    //Foxconn added end, Wins, 06/22/2011, @WPS v2.0
+    var index = cf.WRegion.selectedIndex;
+
+    var cf = document.forms[0];
+    var msg = ""; var blankFlag = false; var sizeOK = false; var i;
+    var len = (cf.wepenc.selectedIndex==0)?10:((cf.wepenc.selectedIndex==1)?26:32);
+    var len_an = (cf.wepenc_an.selectedIndex==0)?10:((cf.wepenc_an.selectedIndex==1)?26:32);
+
+    var needGrayOutWPS = 0;
+
+    // Nick 20120629, we don't need to modify region for disable country selection
+    //if(!checkRegion()) return false;
+
+    if(isRunningWPS)
+    {
+        alert("WPS process is in progress, please apply the changes later.");
+        return false;
+    }
+
+    //Eason, 20141111, allow user to set the same SSID.
+    /*
+    if(cf.ssid.value==cf.ssid_an.value)
+    {
+        if(!isSupportYouSee)
+        {
+            alert("2.4G and 5G have the same SSID");
+            return false;
+        }
+    }
+    */
+
+    if (cf.ssid.value == "")
+    {
+        alert("SSID cannot be blank.");
+        return false;
+    }
+
+    if (cf.ssid.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("Character is not allowed in SSID.");
+        return false;
+    }
+
+    if (cf.wds_enable.value == "1" && cf.w_channel[0].selected)
+    {
+        alert("The wireless repeating function cannot be used with Auto Channel.\nPlease change your channel settings before you enable the wireless repeating function.");
+        return false;
+    }
+
+    if ((cf.auto_channel_5G.value == "1") && (index != 1 && index != 5 && index != 6))		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+    {
+        if (cf.wds_enable_an.value == "1" && cf.w_channel_an[0].selected)
+        {
+            alert("The wireless repeating function cannot be used with Auto Channel.\nPlease change your channel settings before you enable the wireless repeating function.");
+            return false;
+        }
+    }
+
+    if (cf.ssid_an.value == "")
+    {
+        alert("SSID cannot be blank.");
+        return false;
+    }
+
+    if (cf.ssid_an.value.match( /[^\x20-\x7E]/ ))
+    {
+        alert("Character is not allowed in SSID.");
+        return false;
+    }
+
+    //Foxconn added start, Wins, 06/22/2011, @WPS v2.0
+    if (wps_version == "2.0")
+    {
+        if (cf.security_type_2G.value == "None" || cf.security_type_5G.value == "None")
+        {
+            if (!confirm("Security protection is going to be disabled. Wireless communication is not secured. Do you want to continue?"))
+            {
+                return false;
+            }
+        }
+    }
+    //Foxconn added end, Wins, 06/22/2011, @WPS v2.0
+
+    if (cf.security_type_2G.value == "WEP")
+    {
+        for (i = 1; i < 5; i++ )
+        {
+            msg = "";
+            blankFlag = ! (eval("(cf.wep_key_no[" + (i-1) + "].checked)")); // default key
+            if( (blankFlag) && (eval("(cf.KEY" + i + hiddenId + ".value.length == 0)")) )
+                continue;
+            sizeOK = (((eval("isHex(cf.KEY" + i + hiddenId +".value)")) && (eval("(cf.KEY" + i + hiddenId + ".value.length == len)"))) || (eval("(cf.KEY" + i + hiddenId + ".value.length == len/2)")));
+            if (!sizeOK)
+            {
+                msg += (len == 10)?msg_key64_type:msg_key128_type;
+                alertR(msg);
+                if (i==1)
+                    //cf.KEY1.focus();
+                    cf["KEY1"+hiddenId].focus();
+                else if (i==2)
+                    //cf.KEY2.focus();
+                    cf["KEY2"+hiddenId].focus();
+                else if (i==3)
+                    //cf.KEY3.focus();
+                    cf["KEY3"+hiddenId].focus();
+                else if (i==4)
+                    //cf.KEY4.focus();
+                    cf["KEY4"+hiddenId].focus();
+                return false;
+            }
+        }
+
+        if(hiddenId == "Hidden")
+        {
+            for(i = 1; i < 5; i++)
+                cf["KEY"+i].value = cf["KEY"+i+hiddenId].value;
+        }
+
+        if(!cf.ssid_bc.checked)
+        {
+            cf.ssid_bc.value = "";
+        }
+        if(cf.wep_key_no[0].checked == true)
+        {
+            cf.wep_key_no.value = "1";
+        }
+        else if(cf.wep_key_no[1].checked == true)
+        {
+            cf.wep_key_no.value = "2";
+        }
+        else if(cf.wep_key_no[2].checked == true)
+        {
+            cf.wep_key_no.value = "3";
+        }
+        else if(cf.wep_key_no[3].checked == true)
+        {
+            cf.wep_key_no.value = "4";
+        }
+    }
+
+    if (cf.security_type_5G.value == "WEP")
+    {
+        for (i = 1; i < 5; i++ )
+        {
+            msg = "";
+            blankFlag = ! (eval("(cf.wep_key_no_an[" + (i-1) + "].checked)")); // default key
+            if( (blankFlag) && (eval("(cf.KEY" + i + hiddenId + "_an" + ".value.length == 0)")) )
+                continue; // blank ok
+            sizeOK = (((eval("isHex(cf.KEY" + i + hiddenId +"_an" +".value)")) && (eval("(cf.KEY" + i + hiddenId +"_an" + ".value.length == len_an)"))) || (eval("(cf.KEY" + i + hiddenId +"_an" + ".value.length == len_an/2)")));
+            if (!sizeOK)
+            {
+                msg += (len_an == 10)?msg_key64_type:msg_key128_type;
+                alertR(msg);
+                if (i==1)
+                    //cf.KEY1_an.focus();
+                    cf["KEY1"+hiddenId+"_an"].focus();
+                else if (i==2)
+                    //cf.KEY2_an.focus();
+                    cf["KEY2"+hiddenId+"_an"].focus();
+                else if (i==3)
+                    //cf.KEY3_an.focus();
+                    cf["KEY3"+hiddenId+"_an"].focus();
+                else if (i==4)
+                    //cf.KEY4_an.focus();
+                    cf["KEY4"+hiddenId+"_an"].focus();
+                return false;
+            }
+        }
+
+        if(hiddenId == "Hidden")
+        {
+            for(i = 1; i < 5; i++)
+                cf["KEY"+i+"_an"].value = cf["KEY"+i+hiddenId+"_an"].value;
+        }
+
+        if(!cf.ssid_bc_an.checked)
+        {
+            cf.ssid_bc_an.value = "";
+        }
+        if(cf.wep_key_no_an[0].checked == true)
+        {
+            cf.wep_key_no_an.value = "1";
+        }
+        else if(cf.wep_key_no_an[1].checked == true)
+        {
+            cf.wep_key_no_an.value = "2";
+        }
+        else if(cf.wep_key_no_an[2].checked == true)
+        {
+            cf.wep_key_no_an.value = "3";
+        }
+        else if(cf.wep_key_no_an[3].checked == true)
+        {
+            cf.wep_key_no_an.value = "4";
+        }
+    }
+
+    if (cf.security_type_2G.value == "WPA-PSK" || cf.security_type_2G.value == "WPA2-PSK" || cf.security_type_2G.value == "WPA-AUTO-PSK")
+    {
+        if(hiddenId == "Hidden")
+        {
+            cf.passphrase.value = cf.passphraseHidden.value;
+            cf.passphrase_an.value = cf.passphraseHidden_an.value;
+        }
+        if(cf.passphrase.value.length < 8)
+        {
+            alert("A passphrase consists of either 8~63 ASCII characters or exactly 64 hex-digits. A hex digit is one of these characters: 0, 1, 2, ..., 8, 9, A, B, C, D, E, F.");
+            return false;
+        }
+        if(cf.passphrase.value.length > 63)
+        {
+            if ( isHex(cf.passphrase.value) == false)
+            {
+                alert("A passphrase consists of either 8~63 ASCII characters or exactly 64 hex-digits. A hex digit is one of these characters: 0, 1, 2, ..., 8, 9, A, B, C, D, E, F.");
+                cf.passphrase.value = "";
+                return false;
+            }
+        }
+
+        if (cf.passphrase.value.match( /[^\x20-\x7E]/ ))
+        {
+            alert("Character is not allowed in passphrase.");
+            cf.passphrase.focus();
+            return false;
+        }
+
+        if (cf.wds_enable.value == "1" && cf.w_channel[0].selected)
+        {
+            alert("The wireless repeating function cannot be used with Auto Channel.\nPlease change your channel settings before you enable the wireless repeating function.");
+            cf.w_channel.focus();
+            return false;
+        }
+
+        if(!cf.ssid_bc.checked)
+        {
+            cf.ssid_bc.value = "";
+        }
+        if("" == "checked")
+        {
+            cf.security_type.value = "WPA-PSK";
+        }
+        else if("" == "checked")
+        {
+            cf.security_type.value = "WPA2-PSK";
+        }
+        else if("" == "checked")
+        {
+            cf.security_type.value = "AUTO-PSK";
+        }
+
+
+    }
+
+    if (cf.security_type_5G.value == "WPA-PSK" || cf.security_type_5G.value == "WPA2-PSK" || cf.security_type_5G.value == "WPA-AUTO-PSK")
+    {
+        if(cf.passphrase_an.value.length < 8)
+        {
+            alert("A passphrase consists of either 8~63 ASCII characters or exactly 64 hex-digits. A hex digit is one of these characters: 0, 1, 2, ..., 8, 9, A, B, C, D, E, F.");
+            return false;
+        }
+        if(cf.passphrase_an.value.length > 63)
+        {
+            if ( isHex(cf.passphrase_an.value) == false)
+            {
+                alert("A passphrase consists of either 8~63 ASCII characters or exactly 64 hex-digits. A hex digit is one of these characters: 0, 1, 2, ..., 8, 9, A, B, C, D, E, F.");
+                cf.passphrase_an.value = "";
+                return false;
+            }
+        }
+
+        if (cf.passphrase_an.value.match( /[^\x20-\x7E]/ ))
+        {
+            alert("Character is not allowed in passphrase.");
+            cf.passphrase_an.focus();
+            return false;
+        }
+
+        if ((cf.auto_channel_5G.value == "1") && (index != 1 && index != 4 && index != 5 && index != 6))		// No band 4 channels for Africa, Europe, Israel, Japan; Canada & USA are represented as North America
+        {
+            if (cf.wds_enable_an.value == "1" && cf.w_channel_an[0].selected)
+            {
+                alert("The wireless repeating function cannot be used with Auto Channel.\nPlease change your channel settings before you enable the wireless repeating function.");
+                return false;
+            }
+        }
+
+        if(!cf.ssid_bc_an.checked)
+        {
+            cf.ssid_bc_an.value = "";
+        }
+        if("" == "checked")
+        {
+            cf.security_type_an.value = "WPA-PSK";
+        }
+        else if("" == "checked")
+        {
+            cf.security_type_an.value = "WPA2-PSK";
+        }
+        else if("" == "checked")
+        {
+            cf.security_type_an.value = "AUTO-PSK";
+        }
+
+
+
+    }
+
+    if( (!cf.ssid_bc.checked || (cf.security_type_2G.value == "WEP" && wps_version == "2.0") ||
+      (cf.security_type_2G.value == "WEP" && wps_version != "2.0" && cf.authAlgm.value.toLowerCase() == "sharedkey") || cf.security_type_2G.value == "WPA-PSK") &&
+      (!cf.ssid_bc_an.checked || (cf.security_type_5G.value == "WEP" && wps_version == "2.0") ||
+      (cf.security_type_5G.value == "WEP" && wps_version != "2.0" && cf.authAlgm_an.value.toLowerCase() == "sharedkey") || cf.security_type_5G.value == "WPA-PSK") ||
+      ((cf.security_type_2G.value == "Enterprise") && (cf.security_type_5G.value == "Enterprise")))
+    {
+        needGrayOutWPS = 1;
+    }
+
+    if(needGrayOutWPS)
+    {
+        var wps_confirm_msg = "";
+        if(!cf.ssid_bc.checked)
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "Disable SSID broadcasting";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "Disable SSID broadcasting";
+            }
+        }
+        if((cf.security_type_2G.value == "WEP" && wps_version == "2.0"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WEP security";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WEP security";
+            }
+        }
+        if((cf.security_type_2G.value == "WEP" && wps_version != "2.0" && cf.authAlgm.value.toLowerCase() == "sharedkey"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WEP security with shared key authentication";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WEP security with shared key authentication";
+            }
+        }
+        if(cf.security_type_2G.value == "WPA-PSK")
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WPA-PSK [TKIP] security";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WPA-PSK [TKIP] security";
+            }
+        }
+
+        if(!cf.ssid_bc_an.checked && cf.ssid_bc.checked)
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "Disable SSID broadcasting";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "Disable SSID broadcasting";
+            }
+        }
+        if((cf.security_type_5G.value == "WEP" && wps_version == "2.0") && !(cf.security_type_2G.value == "WEP" && wps_version == "2.0"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WEP security";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WEP security";
+            }
+        }
+        if((cf.security_type_5G.value == "WEP" && wps_version != "2.0" && cf.authAlgm_an.value.toLowerCase() == "sharedkey") &&
+           !(cf.security_type_2G.value == "WEP" && wps_version != "2.0" && cf.authAlgm.value.toLowerCase() == "sharedkey"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WEP security with shared key authentication";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WEP security with shared key authentication";
+            }
+        }
+        if((cf.security_type_5G.value == "WPA-PSK") && (cf.security_type_2G.value != "WPA-PSK"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WPA-PSK [TKIP] security";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WPA-PSK [TKIP] security";
+            }
+        }
+        if((cf.security_type_5G.value == "Enterprise") && (cf.security_type_2G.value == "Enterprise"))
+        {
+            if(wps_confirm_msg == "")
+            {
+                wps_confirm_msg += "WPA/WPA2 Enterprise";
+            }
+            else
+            {
+                wps_confirm_msg += ", " + "WPA/WPA2 Enterprise";
+            }
+        }
+        if(iswps2GEnable || iswps5GEnable)
+        {
+            if( !confirm(wps_confirm_msg + " does not work with WPS. WPS will be inaccessible. Do you want to continue?") )
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        var wps2G_confirm_msg = "";
+        var wps5G_confirm_msg = "";
+        if((!cf.ssid_bc.checked || (cf.security_type_2G.value == "WEP" && wps_version == "2.0") ||
+          (cf.security_type_2G.value == "WEP" && wps_version != "2.0" && cf.authAlgm.value.toLowerCase() == "sharedkey") || cf.security_type_2G.value == "WPA-PSK"))
+        {
+            if(!cf.ssid_bc.checked)
+            {
+                if(wps2G_confirm_msg == "")
+                {
+                    wps2G_confirm_msg += "Disable SSID broadcasting";
+                }
+                else
+                {
+                    wps2G_confirm_msg += ", " + "Disable SSID broadcasting";
+                }
+            }
+            if((cf.security_type_2G.value == "WEP" && wps_version == "2.0"))
+            {
+                if(wps2G_confirm_msg == "")
+                {
+                    wps2G_confirm_msg += "WEP security";
+                }
+                else
+                {
+                    wps2G_confirm_msg += ", " + "WEP security";
+                }
+            }
+            if((cf.security_type_2G.value == "WEP" && wps_version != "2.0" && cf.authAlgm.value.toLowerCase() == "sharedkey"))
+            {
+                if(wps2G_confirm_msg == "")
+                {
+                    wps2G_confirm_msg += "WEP security with shared key authentication";
+                }
+                else
+                {
+                    wps2G_confirm_msg += ", " + "WEP security with shared key authentication";
+                }
+            }
+            if(cf.security_type_2G.value == "WPA-PSK")
+            {
+                if(wps2G_confirm_msg == "")
+                {
+                    wps2G_confirm_msg += "WPA-PSK [TKIP] security";
+                }
+                else
+                {
+                    wps2G_confirm_msg += ", " + "WPA-PSK [TKIP] security";
+                }
+            }
+            if(iswps2GEnable)
+            {
+                if( !confirm(wps2G_confirm_msg + " does not work with WPS. 2.4G WPS will be inaccessible. Do you want to continue?") )
+                {
+                    return false;
+                }
+            }
+        }
+
+        if((!cf.ssid_bc_an.checked || (cf.security_type_5G.value == "WEP" && wps_version == "2.0") ||
+           (cf.security_type_5G.value == "WEP" && wps_version != "2.0" && cf.authAlgm_an.value.toLowerCase() == "sharedkey") || cf.security_type_5G.value == "WPA-PSK"))
+        {
+            if(!cf.ssid_bc_an.checked)
+            {
+                if(wps5G_confirm_msg == "")
+                {
+                    wps5G_confirm_msg += "Disable SSID broadcasting";
+                }
+                else
+                {
+                    wps5G_confirm_msg += ", " + "Disable SSID broadcasting";
+                }
+            }
+            if((cf.security_type_5G.value == "WEP" && wps_version == "2.0"))
+            {
+                if(wps5G_confirm_msg == "")
+                {
+                    wps5G_confirm_msg += "WEP security";
+                }
+                else
+                {
+                    wps5G_confirm_msg += ", " + "WEP security";
+                }
+            }
+            if((cf.security_type_5G.value == "WEP" && wps_version != "2.0" && cf.authAlgm_an.value.toLowerCase() == "sharedkey"))
+            {
+                if(wps5G_confirm_msg == "")
+                {
+                    wps5G_confirm_msg += "WEP security with shared key authentication";
+                }
+                else
+                {
+                    wps5G_confirm_msg += ", " + "WEP security with shared key authentication";
+                }
+            }
+            if(cf.security_type_5G.value == "WPA-PSK")
+            {
+                if(wps5G_confirm_msg == "")
+                {
+                    wps5G_confirm_msg += "WPA-PSK [TKIP] security";
+                }
+                else
+                {
+                    wps5G_confirm_msg += ", " + "WPA-PSK [TKIP] security";
+                }
+            }
+            if(iswps5GEnable)
+            {
+                if( !confirm(wps5G_confirm_msg + " does not work with WPS. 5G WPS will be inaccessible. Do you want to continue?") )
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+
+function showWpsAlert()
+{
+    var cf = document.forms[0];
+    if(cf.show_wps_alert.value == "1")
+        alert("WPS process is in progress, please apply the changes later.");
+}
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+/*
+  Enable SSID Broadcast (checkbox) | Enable Wireless Isolation (checkbox) | Name (SSID) (text) |
+  Region (select) | Channel (select) | Mode (select)
+  Security Options (combobox) | WPA-PSA (text) |
+  Wep Auth type (select) | Wep Encryption (select) | Wep key index (combobox) |
+  Wep key 1 (text) | Wep key 2 (text) | Wep key 3 (text) | Wep key 4 (text)  | wep passphrase
+*/
+/* 5G Enable SSID Broadcast | 5G Enable Wireless Isolation | 5G Name (SSID) | 5G Channel |5G Mode
+  5G Security Options (combobox) | 5G WPA-PSA (text) |
+  5G Wep Auth type (select) | 5G Wep Encryption (select) | 5G Wep key index (combobox) |
+  5G Wep key 1 (text) | 5G Wep key 2 (text) | 5G Wep key 3 (text) | 5G Wep key 4 (text) | 5G wep passphrase
+*/
+
+    var tagValueList = 'US|1|0|NETGEAR38|0|2|WPA2-PSK|happymango167|automatic|0|0|0000000000|0000000000|0000000000|0000000000||11|1|0|NETGEAR38-5G|153|2|WPA2-PSK|happymango167|automatic|0|0|0000000000|0000000000|0000000000|0000000000||153|1|United States|0|1|0|0|0|1|1|0|0|1|1|';
+/*
+    var tagValueList = "1|1|aaaaa|11|6|2|1|abcdefg|sharedkey|0|0|1234567890|0FE99CAF21|3858BE6E22|9876543210|12345678|"
+                            + "1|0|AAAA|44|2|1|abcdefg|sharedkey|0|0|1234567890|0FE99CAF21|3858BE6E22|9876543210|12345678";
+*/
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    var countrymapping = 0;
+
+    //Eason, 20150204, C7000TD#327 Retail: 54Mpbs Removal from 5GHz selection.
+    if(tagValues[44] == "0")
+    {
+        delete opt11acMode['Up to 54 Mbps'];
+        delete opt11acMode2['Up to 54 Mbps'];
+        delete opt11nMode['Up to 54 Mbps'];
+    }
+
+    for (i = 0 ; i < countrylist.length ; i++)
+    {
+        if (tagValues[0] == countrylist[i][1])
+        {
+            countrymapping = countrylist[i][0];
+            break;
+        }
+    }
+    for (i =0; i < tagValues.length; i++)
+    {
+        if (tagValues[i] == "RUSSIAN FEDERATION")
+            tagValues[i] = vRUSSIANFEDERATION;
+    }
+
+    /* Region */
+    document.getElementsByName("tempRegion")[0].value = countrymapping;
+    document.getElementsByName("setRegion")[0].value = countrymapping;
+    document.getElementsByName("WRegion")[0].selectedIndex = parseInt(countrymapping);
+    curr_region = parseInt(countrymapping);
+
+    /* Enable SSID Broadcast */
+    document.getElementsByName("ssid_bc")[0].checked = (tagValues[1] == 1)? true : false;
+
+    if(tagValues[35] == "1")//comhem support
+    {
+        /* Enable Wireless Router Radio */
+        document.getElementsByName("enable_wireless")[0].checked = (tagValues[2] == 1)? true : false;
+        $('input[name=enable_wireless]').show();
+        $('input[name=enable_isolation]').hide();
+        $('#enable_wireless').show();
+        $('#enable_isolation').hide();
+    }
+    else
+    {
+    /* Enable Wireless Isolation */
+    document.getElementsByName("enable_isolation")[0].checked = (tagValues[2] == 1)? true : false;
+        $('input[name=enable_wireless]').hide();
+        $('input[name=enable_isolation]').show();
+        $('#enable_wireless').hide();
+        $('#enable_isolation').show();
+    }
+
+    /* Name (SSID) */
+    document.getElementsByName("ssid")[0].value = piplineDecode(tagValues[3]);
+
+    /* Channel */
+    document.getElementsByName("initChannel")[0].value = tagValues[4];
+
+    /* 2.4G Mode */
+    if(tagValues[42] == "1")
+    {
+        display2GSpeedMode(opt2GMode1);
+        speedMode2G = "opt2GMode1";
+    }
+    else
+    {
+        display2GSpeedMode(opt2GMode0);
+        speedMode2G = "opt2GMode0";
+    }
+
+    /* Mode */
+    document.getElementsByName("opmode")[0].selectedIndex = tagValues[5];
+
+    /* Security Options */
+    document.getElementsByName("security_type_2G")[0].value = tagValues[6];
+    //SelectOption(tagValues[6]);
+    if(tagValues[6] == "Enterprise")
+    {
+        show2GEnterpriseAlert = 0;
+    }
+
+    /* WPA-PSA */
+    document.getElementsByName("passphrase")[0].value = piplineDecode(tagValues[7]);
+    document.getElementsByName("passphraseHidden")[0].value = piplineDecode(tagValues[7]);
+
+    /* Wep Auth type */
+    document.getElementsByName("initAuthType")[0].value = tagValues[8];
+
+    /* Wep Encryption */
+    document.getElementsByName("wepenc")[0].selectedIndex =  tagValues[9];
+
+    /* Wep key index */
+    document.getElementsByName("initDefaultKey")[0].value = tagValues[10];
+
+    /* Wep key 1 */
+    document.getElementsByName("KEY1")[0].value = tagValues[11];
+    document.getElementsByName("KEY1Hidden")[0].value = tagValues[11];
+
+    /* Wep key 2 */
+    document.getElementsByName("KEY2")[0].value = tagValues[12];
+    document.getElementsByName("KEY2Hidden")[0].value = tagValues[12];
+
+    /* Wep key 3 */
+    document.getElementsByName("KEY3")[0].value = tagValues[13];
+    document.getElementsByName("KEY3Hidden")[0].value = tagValues[13];
+
+    /* Wep key 4 */
+    document.getElementsByName("KEY4")[0].value = tagValues[14];
+    document.getElementsByName("KEY4Hidden")[0].value = tagValues[14];
+
+    /* Wep pass phrase */
+    if (!tagValues[15])
+        document.getElementsByName("passphraseStr")[0].value = tagValues[15];
+
+    $("#CurrentChannel").html(tagValues[16]);
+
+    /* 5G Enable SSID Broadcast */
+    document.getElementsByName("ssid_bc_an")[0].checked = (tagValues[17] == 1)? true : false;
+
+    if(tagValues[35] == "1")//comhem support
+    {
+        /* 5G Enable Wireless Router Radio */
+        document.getElementsByName("enable_wireless_an")[0].checked = (tagValues[18] == 1)? true : false;
+        $('input[name=enable_wireless_an]').show();
+        $('input[name=enable_isolation_an]').hide();
+        $('#enable_wireless_an').show();
+        $('#enable_isolation_an').hide();
+    }
+    else
+    {
+    /* 5G Enable Wireless Isolation */
+    document.getElementsByName("enable_isolation_an")[0].checked = (tagValues[18] == 1)? true : false;
+        $('input[name=enable_wireless_an]').hide();
+        $('input[name=enable_isolation_an]').show();
+        $('#enable_wireless_an').hide();
+        $('#enable_isolation_an').show();
+    }
+
+    /* 5G Name (SSID) */
+    document.getElementsByName("ssid_an")[0].value = piplineDecode(tagValues[19]);
+
+    /* 5G Channel */
+    document.getElementsByName("initChannel_an")[0].value = tagValues[20];
+    curr_channel_an_value = tagValues[20];
+
+    /* 5G Mode */
+    if(tagValues[39] == "1")
+    {
+        displaySpeedMode(opt11acMode);
+        speedMode = "opt11acMode";
+    }
+    else if(tagValues[39] == "2")
+    {
+        displaySpeedMode(opt11acMode2);
+        speedMode = "opt11acMode2";
+    }
+    else
+    {
+        displaySpeedMode(opt11nMode);
+        speedMode = "opt11nMode";
+    }
+    document.getElementsByName("opmode_an")[0].selectedIndex = tagValues[21];
+
+    /* 5G Security Options */
+    document.getElementsByName("security_type_5G")[0].value = tagValues[22];
+    if(tagValues[22] == "Enterprise")
+    {
+        show5GEnterpriseAlert = 0;
+    }
+
+    /* 5G WPA-PSA */
+    document.getElementsByName("passphrase_an")[0].value = piplineDecode(tagValues[23]);
+    document.getElementsByName("passphraseHidden_an")[0].value = piplineDecode(tagValues[23]);
+
+    /* 5G Wep Auth type */
+    document.getElementsByName("initAuthType_an")[0].value = tagValues[24];
+
+    /* 5G Wep Encryption */
+    document.getElementsByName("wepenc_an")[0].selectedIndex =  tagValues[25];
+
+    /* 5G Wep key index */
+    document.getElementsByName("initDefaultKey_an")[0].value = tagValues[26];
+
+    /* 5G Wep key 1 */
+    document.getElementsByName("KEY1_an")[0].value = tagValues[27];
+    document.getElementsByName("KEY1Hidden_an")[0].value = tagValues[27];
+
+    /* 5G Wep key 2 */
+    document.getElementsByName("KEY2_an")[0].value = tagValues[28];
+    document.getElementsByName("KEY2Hidden_an")[0].value = tagValues[28];
+
+    /* 5G Wep key 3 */
+    document.getElementsByName("KEY3_an")[0].value = tagValues[29];
+    document.getElementsByName("KEY3Hidden_an")[0].value = tagValues[29];
+
+    /* 5G Wep key 4 */
+    document.getElementsByName("KEY4_an")[0].value = tagValues[30];
+    document.getElementsByName("KEY4Hidden_an")[0].value = tagValues[30];
+
+    /* 5G Wep pass phrase */
+    if (!tagValues[31])
+        document.getElementsByName("passphraseStr_an")[0].value = tagValues[31];
+
+    $("#CurrentChannel_an").html(tagValues[32]);
+
+    // Support dual band
+    document.getElementsByName("display_5G")[0].value = tagValues[33];
+    if (tagValues[33] == "1")
+    {
+        $("#setting_5G").css ('display', 'block');
+
+    }
+    else
+    {
+        // avoid duplicate 2.4G and 5G ssid error checking
+        document.getElementsByName("ssid_an")[0].value  = "NO5G" ;
+    }
+
+    // Full name
+    document.getElementById("WRegion").disabled = false;
+    document.getElementsByName("WRegion")[0].options[document.getElementsByName("WRegion")[0].options.selectedIndex].text = tagValues[34];
+    document.getElementById("WRegion").disabled = true;
+
+    isSupportComHem = ((tagValues[35]== "1")?true:false);
+
+    //show or hide key
+    if(tagValues[36] == "1")//show
+    {
+        hiddenId = "";
+        for(var i=1; i < 5; i++)
+        {
+            $('input[name=KEY'+i+']').show();
+            $('input[name=KEY'+i+'Hidden]').hide();
+            $('input[name=KEY'+i+'_an]').show();
+            $('input[name=KEY'+i+'Hidden_an]').hide();
+        }
+        $('input[name=passphrase]').show();
+        $('input[name=passphrase_an_an]').show();
+        $('input[name=passphraseHidden]').hide();
+        $('input[name=passphraseHidden_an]').hide();
+    }
+    else
+    {
+        hiddenId = "Hidden";
+        for(var i=1; i < 5; i++)
+        {
+            $('input[name=KEY'+i+']').hide();
+            $('input[name=KEY'+i+'Hidden]').show();
+            $('input[name=KEY'+i+'_an]').hide();
+            $('input[name=KEY'+i+'Hidden_an]').show();
+        }
+        $('input[name=passphrase]').hide();
+        $('input[name=passphrase_an]').hide();
+        $('input[name=passphraseHidden]').show();
+        $('input[name=passphraseHidden_an]').show();
+    }
+
+    //Eason, 20150803, Mantis#15455: The wireless settings can be changed when WPS process is turned on by WPS hardware button.
+    //Wps Alert
+    document.getElementsByName("show_wps_alert")[0].value = tagValues[37];
+
+    isSupportYouSee = ((tagValues[38]== "1")?true:false);
+    if(isSupportYouSee)
+    {
+        $('input[name=enable_isolation]').hide();
+        $('#enable_isolation').hide();
+        $('input[name=enable_isolation_an]').hide();
+        $('#enable_isolation_an').hide();
+    }
+
+    if(tagValues[40] == "1")
+    {
+        iswps2GEnable = true;
+    }
+    else
+    {
+        iswps2GEnable = false;
+    }
+
+    if(tagValues[41] == "1")
+    {
+        iswps5GEnable = true;
+    }
+    else
+    {
+        iswps5GEnable = false;
+    }
+
+    if(tagValues[43] == "0")
+    {
+        $('input[name=enable_isolation]').hide();
+        $('#enable_isolation').hide();
+        $('input[name=enable_isolation_an]').hide();
+        $('#enable_isolation_an').hide();
+    }
+
+    //Eason, 20150812, Mantis#15239: The "WPS Wizard" and all the WPS configuration items on the Advanced Wireless Settings page don't gray out.
+    //WPS disabled
+    if(tagValues[45] == 0)
+    {
+        WPS_wizard_grayout();
+    }
+    else
+    {
+        WPS_wizard_ungrayout();
+    }
+}
+
+function display2GSpeedMode(optionAry)
+{
+    var ff=document.forms[0];
+    var index=0;
+    for(var i in optionAry)
+    {
+        var option = new Option(i, optionAry[i]);
+        ff.opmode.options[index]=option;
+        index++;
+    }
+}
+
+function displaySpeedMode(optionAry)
+{
+    var ff=document.forms[0];
+    var index=0;
+    for(var i in optionAry)
+    {
+        var option = new Option(i, optionAry[i]);
+        ff.opmode_an.options[index]=option;
+        index++;
+    }
+}
+
+function SelectOption(selectOption)
+{
+    document.getElementById("table_WPA1PSK").style.display = 'none';
+    document.getElementById("table_WPA2PSK").style.display = 'none';
+    document.getElementById("table_WPAWPA2PSK").style.display     = 'none';
+    document.getElementById("table_WPAPSK").style.display  = 'none';
+    document.getElementById("table_WEP1").style.display     = 'none';
+    document.getElementById("table_WEP2").style.display     = 'none';
+
+    document.getElementById("Line1").style.display  = 'none';
+    document.getElementById("Line2").style.display     = 'none';
+    document.getElementById("Line3").style.display     = 'none';
+
+    if (selectOption == 0)
+    {
+        document.getElementById("Line1").style.display     = 'block';
+    }
+    else if (selectOption == 1)
+    {
+        document.getElementById("table_WEP1").style.display     = 'block';
+        document.getElementById("table_WEP2").style.display     = 'block';
+        document.getElementById("Line1").style.display     = 'block';
+        document.getElementById("Line2").style.display     = 'block';
+        document.getElementById("Line3").style.display     = 'block';
+    }
+    else if (selectOption == 2)
+    {
+        document.getElementById("table_WPA1PSK").style.display = 'block';
+        document.getElementById("table_WPAPSK").style.display  = 'block';
+        document.getElementById("Line1").style.display = 'block';
+        document.getElementById("Line3").style.display  = 'block';
+    }
+    else if (selectOption == 3)
+    {
+        document.getElementById("table_WPA2PSK").style.display = 'block';
+        document.getElementById("table_WPAPSK").style.display  = 'block';
+        document.getElementById("Line1").style.display = 'block';
+        document.getElementById("Line3").style.display  = 'block';
+    }
+    else if (selectOption == 4)
+    {
+        document.getElementById("table_WPAWPA2PSK").style.display     = 'block';
+        document.getElementById("table_WPAPSK").style.display  = 'block';
+        document.getElementById("Line1").style.display = 'block';
+        document.getElementById("Line3").style.display  = 'block';
+    }
+}
+
+function InitTagChannel()
+{
+
+    var tagValueList = '1|2|3|4|5|6|7|8|9|10|11|';
+    return tagValueList.split("|");
+}
+
+function InitUpdateChannelView(tagValues)
+{
+    var cf = document.forms[0];
+
+    cf.w_channel_drv.options.length = tagValues.length;
+
+    cf.w_channel_drv.options[0].text = "Auto";
+    cf.w_channel_drv.options[0].value = 0;
+
+    for (var i = 0; i < tagValues.length-1; i++) {
+        cf.w_channel_drv.options[i+1].value = parseInt (tagValues[i]);
+        cf.w_channel_drv.options[i+1].text = ((parseInt(tagValues[i]) < 10)? "0" + tagValues[i] : tagValues[i]);
+    }
+}
+
+function InitTagChannel_an()
+{
+
+    var tagValueList = '***IPv6***:165:|***IPv6***:|';//all mode value
+    var list = tagValueList.split("|");
+    if(tagValueList.indexOf(":") >= 0)
+    {
+        for(var i=0; i< list.length;i++)
+        {
+            if(list[i] != "")
+            {
+                channelList5G[i]=list[i].split(":");
+            }
+        }
+    }
+    else
+    {
+        channelList5G = list;
+    }
+}
+
+function InitUpdateChannel_anView()
+{
+    tagValues = filterChannelNum();
+    var cf = document.forms[0];
+    var selectIndex = cf.w_channel_an_drv.selectedIndex;
+    var changeSelectedIndex = -1;
+    var Auto5gChannelSupport = 0;
+
+    if(Auto5gChannelSupport == 1)
+    {
+        for (var i = 0; i < tagValues.length-1; i++) {
+            if(cf.w_channel_an_drv.options[selectIndex].value == parseInt(tagValues[i],10))
+                changeSelectedIndex = i+1;
+        }
+        cf.w_channel_an_drv.options.length = tagValues.length;
+
+        cf.w_channel_an_drv.options[0].text = "Auto";
+        cf.w_channel_an_drv.options[0].value = 0;
+
+        for (var i = 0; i < tagValues.length-1; i++) {
+            cf.w_channel_an_drv.options[i+1].value = parseInt(tagValues[i],10);
+            cf.w_channel_an_drv.options[i+1].text = ((parseInt(tagValues[i],10) < 10)? "0" + tagValues[i] : tagValues[i]);
+        }
+    }
+    else
+    {
+        for (var i = 0; i < tagValues.length-1; i++) {
+            if(cf.w_channel_an_drv.options[selectIndex].value == parseInt(tagValues[i],10))
+                changeSelectedIndex = i;
+        }
+        cf.w_channel_an_drv.options.length = tagValues.length - 1;
+
+        for (var i = 0; i < tagValues.length-1; i++) {
+            cf.w_channel_an_drv.options[i].value = parseInt(tagValues[i],10);
+            cf.w_channel_an_drv.options[i].text = ((parseInt(tagValues[i],10) < 10)? "0" + tagValues[i] : tagValues[i]);
+        }
+    }
+
+    if(changeSelectedIndex == -1 && selectIndex != 0)
+    {
+        changeSelectedIndex = 0;
+        var Auto5gChannelSupport = 0;
+
+        if(Auto5gChannelSupport == 1)
+        {
+            alert("Channel is not supported. Force to change the channel to Auto.");
+        }
+        else
+        {
+            alert("Channel is not supported. Force to change the channel to first channel.");
+        }
+    }
+    else if(changeSelectedIndex == -1 && selectIndex == 0)
+    {
+        changeSelectedIndex = 0;
+    }
+    cf.w_channel_an_drv.selectedIndex = changeSelectedIndex;
+}
+
+function filterChannelNum()
+{
+    var filerChannel=[];
+
+    if($.isArray(channelList5G[0]))
+    {
+        if (document.forms[0].opmode_an.value == "300Mbps" && channelList5G[1])//40M
+            filerChannel = channelList5G[1];
+        else if(document.forms[0].opmode_an.value == "600Mbps" && channelList5G[2])//80M
+            filerChannel = channelList5G[2];
+        else//20M
+            filerChannel = channelList5G[0];
+    }
+    else
+    {
+        filerChannel = channelList5G;
+    }
+    return filerChannel;
+}
+
+function InitTagEnterprise()
+{
+    //var tagValueList = "1|2|600|***PRIVATE_IP***.24|1812|testing123|0|0|0.0.0.0|1812||"
+    var tagValueList = "1|1|0|0.0.0.0|1812||1|0|0.0.0.0|1812||";
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateEnterpriseView(tagValues)
+{
+    var cf = document.forms[0];
+
+    if(tagValues[0] != -1)
+    {
+        var ip;
+        cf.enterprise_encryptmode_2G.value = tagValues[1];
+        cf.group_key_update_interval_2G.value = tagValues[2];
+
+        ip = tagValues[3].split(".");
+        cf.radius_server_2G_1.value = ip[0];
+        cf.radius_server_2G_2.value = ip[1];
+        cf.radius_server_2G_3.value = ip[2];
+        cf.radius_server_2G_4.value = ip[3];
+
+        cf.radius_port_2G.value = tagValues[4];
+        cf.radius_key_2G.value = piplineDecode(tagValues[5]);
+
+        cf.enterprise_encryptmode_5G.value = tagValues[6];
+        cf.group_key_update_interval_5G.value = tagValues[7];
+
+        ip = tagValues[8].split(".");
+        cf.radius_server_5G_1.value = ip[0];
+        cf.radius_server_5G_2.value = ip[1];
+        cf.radius_server_5G_3.value = ip[2];
+        cf.radius_server_5G_4.value = ip[3];
+
+        cf.radius_port_5G.value = tagValues[9];
+        cf.radius_key_5G.value = piplineDecode(tagValues[10]);
+    }
+    else
+    {
+        $('#enterprise_radio').hide();
+        $('#enterprise_radio_an').hide();
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitUpdateChannelView(InitTagChannel());
+    InitTagChannel_an();
+    InitUpdateChannel_anView();
+    InitUpdateEnterpriseView(InitTagEnterprise());
+}
+
+// Nick Implement ASP Tag display on GUI
+
+//]]>
+</script>
+</head>
+<body onload="initScrn();setKeys();changeContentSize();showWpsAlert();" onResize="changeContentSize()" class="page-body">
+    <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" method="POST" action='/goform/WirelessSettings?id=842467026'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Wireless Setup
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onclick="buttonClick(this,'Apply');return checkData();" type="SUBMIT" name="Apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');" type="SUBMIT" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('WirelessSettings','region')"><b>Region Selection</b> </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space:nowrap;" colspan="2">
+                                        Region:
+                                        <!-- <select nowrap="nowrap" name="WRegion" size="1" onchange="chgCh(1)">
+                                        <option  value="0"> Select Region </option>
+                                        <option  value="1">Africa</option>
+                                        <option  value="2">Asia</option>
+                                        <option  value="3">Australia</option>
+                                        <option  value="5">Europe</option>
+                                        <option  value="6">Israel</option>
+                                        <option  value="7">Japan</option>
+                                        <option  value="8">Korea</option>
+                                        <option  value="9">Mexico</option>
+                                        <option  value="12">Middle East</option>
+                                        <option  value="10">South America</option>
+                                        <option  value="11">North America</option>
+                                        </select></td></tr>
+                                        -->
+                                        <select name="WRegion" size="1" onchange="chgCh(1)" disabled="disabled" id="WRegion">
+                                            <option value="0">
+                                                --- Select Region ---
+                                            </option>
+                                            <option value="1">
+                                                Africa
+                                            </option>
+                                            <option value="2">
+                                                Asia
+                                            </option>
+                                            <option value="3">
+                                                Australia
+                                            </option>
+                                            <option value="5">
+                                                Europe
+                                            </option>
+                                            <option value="6">
+                                                Israel
+                                            </option>
+                                            <option value="7">
+                                                Japan
+                                            </option>
+                                            <option value="8">
+                                                Korea
+                                            </option>
+                                            <option value="9">
+                                                Mexico
+                                            </option>
+                                            <option value="12">
+                                                Middle East
+                                            </option>
+                                            <option value="10">
+                                                South America
+                                            </option>
+                                            <option value="11">
+                                                United States
+                                            </option>
+                                            <option value="13">
+                                                Spain
+                                            </option>
+                                            <option value="14">
+                                                France
+                                            </option>
+                                            <option value="15">
+                                                Sweden
+                                            </option>
+                                            <option value="16">
+                                                Denmark
+                                            </option>
+                                            <option value="17">
+                                                Belgium
+                                            </option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="setting_2G" style="display: block;">
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2" style="background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','network')"><b>Wireless Network (2.4GHz b/g/n)</b> </a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <input type="checkbox" name="enable_wireless" value="enable_wireless" style="display:none">
+                                                        <span id="enable_wireless" style="display:none">
+                                                            Enable Wireless Gateway Radio
+                                                        </span>
+                                                        <input type="checkbox" name="enable_isolation" value="enable_isolation">
+                                                        <span id="enable_isolation">
+                                                            Enable Wireless Isolation
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <input type="checkbox" name="ssid_bc" value="ssid_24G_bc">
+                                                        Enable SSID Broadcast
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="width:50%;text-align:left">
+                                                        Name (SSID):
+                                                    </td>
+                                                    <td style="width:50%">
+                                                        <input type="text" name="ssid" size="20" maxlength="32">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Channel:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="w_channel" size=1 style="display:none">
+                                                            <option>
+                                                                Auto
+                                                            </option>
+                                                            <option>
+                                                                01
+                                                            </option>
+                                                            <option>
+                                                                02
+                                                            </option>
+                                                            <option>
+                                                                03
+                                                            </option>
+                                                            <option>
+                                                                04
+                                                            </option>
+                                                            <option>
+                                                                05
+                                                            </option>
+                                                            <option>
+                                                                06
+                                                            </option>
+                                                            <option>
+                                                                07
+                                                            </option>
+                                                            <option>
+                                                                08
+                                                            </option>
+                                                            <option>
+                                                                09
+                                                            </option>
+                                                            <option>
+                                                                10
+                                                            </option>
+                                                            <option>
+                                                                11
+                                                            </option>
+                                                            <option>
+                                                                12
+                                                            </option>
+                                                            <option>
+                                                                13
+                                                            </option>
+                                                            <option>
+                                                                14
+                                                            </option>
+                                                        </select>
+                                                        <select name="w_channel_drv" size=1>
+                                                            <option>
+                                                                Auto
+                                                            </option>
+                                                            <option>
+                                                                01
+                                                            </option>
+                                                            <option>
+                                                                02
+                                                            </option>
+                                                            <option>
+                                                                03
+                                                            </option>
+                                                            <option>
+                                                                04
+                                                            </option>
+                                                            <option>
+                                                                05
+                                                            </option>
+                                                            <option>
+                                                                06
+                                                            </option>
+                                                            <option>
+                                                                07
+                                                            </option>
+                                                            <option>
+                                                                08
+                                                            </option>
+                                                            <option>
+                                                                09
+                                                            </option>
+                                                            <option>
+                                                                10
+                                                            </option>
+                                                            <option>
+                                                                11
+                                                            </option>
+                                                            <option>
+                                                                12
+                                                            </option>
+                                                            <option>
+                                                                13
+                                                            </option>
+                                                            <option>
+                                                                14
+                                                            </option>
+                                                        </select>
+                                                        &nbsp;&nbsp;Current&nbsp;:&nbsp;
+                                                        <span id=CurrentChannel>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Mode:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="opmode" onchange="chgCh(2);">
+                                                            <option value="g and b">
+                                                                Up to 54 Mbps
+                                                            </option>
+                                                            <option value="145Mbps">
+                                                                Up to 145 Mbps
+                                                            </option>
+                                                            <option value="300Mbps">
+                                                                Up to 300 Mbps
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <!-- // Nick <td nowrap="nowrap"><select name="opmode" onchange="chgCh(2);"><option value="g and b" >Up to 54 Mbps</option><option value="145Mbps" >Up to 217 Mbps</option><option value="300Mbps" >Up to 450 Mbps</option></select></td></tr>
+                                                -->
+                                                <tr>
+                                                    <td colspan="2" style="background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','security')"><b>Security Options</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type" value="Disable" onClick="securityCheck(0);">
+                                                        None
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <div id="wep_radio_2G" style="display: block;">
+                                                            <input type="radio" name="security_type" value="WEP" onClick="securityCheck(0);">
+                                                            WEP
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <div id="wpa_radio_2G" style="display: block;">
+                                                            <input type="radio" name="security_type" value="WPA-PSK" onClick="securityCheck(0);">
+                                                            WPA-PSK [TKIP]
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type" value="WPA2-PSK" onClick="securityCheck(0);">
+                                                        WPA2-PSK [AES]
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type" value="AUTO-PSK" onClick="securityCheck(0);">
+                                                        WPA-PSK [TKIP] + WPA2-PSK [AES]
+                                                    </td>
+                                                </tr>
+                                                <tr id="enterprise_radio">
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type" value="WPA2-Enterprise" onClick="securityCheck(0);">
+                                                        WPA/WPA2 Enterprise
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wep_2G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','wep')"><b>Security Encryption (WEP)</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Authentication Type:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="authAlgm" size=1>
+                                                            <option value="automatic">
+                                                                Automatic
+                                                            </option>
+                                                            <option value="sharedkey">
+                                                                Shared Key
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Encryption Strength:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="wepenc" size=1 onchange="setKeys();">
+                                                            <option value="1">
+                                                                64-bit
+                                                            </option>
+                                                            <option value="2">
+                                                                128-bit
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','wepkey')"><b>Security Encryption (WEP) Key</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        Passphrase:
+                                                        <input type="text" name="passphraseStr" size="14" maxlength="32" value="">
+                                                        &nbsp; &nbsp;&nbsp;&nbsp;
+                                                        <button type="button" value="Generate" name="keygen" class="button-rule" onClick="buttonClick(this,'Generate');calcPassphrase(this.form)">
+                                                            <span class="roundleft_button">
+                                                                &nbsp;&nbsp; Generate
+                                                            </span>
+                                                            <span class="roundright_button">
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <table style="text-align:left" border="0" width="100%">
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 1:
+                                                                    <input type="radio" name="wep_key_no" value="1">
+                                                                    <input type="text" name="KEY1" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[0].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY1Hidden" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[0].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 2:
+                                                                    <input type="radio" name="wep_key_no" value="2">
+                                                                    <input type="text" name="KEY2" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[1].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY2Hidden" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[1].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 3:
+                                                                    <input type="radio" name="wep_key_no" value="3">
+                                                                    <input type="text" name="KEY3" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[2].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY3Hidden" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[2].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 4:
+                                                                    <input type="radio" name="wep_key_no" value="4">
+                                                                    <input type="text" name="KEY4" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[3].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY4Hidden" maxLength=32 size=34 value="" onkeydown="keyCheck(this)" onfocus="this.form.wep_key_no[3].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wpa_2G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Passphrase:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="passphrase" size=20 maxLength=64>
+                                                        <input type="password" name="passphraseHidden" size=20 maxLength=64 style="display:none">
+                                                        &nbsp;&nbsp;(8-63 characters or 64 hex digits)
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wpa_enterprise_2G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;">
+                                                    </td>
+                                                </tr>
+                                                <tr><td>&nbsp;&nbsp;WPA/WPA2-Enterprise</td></tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Encryption Mode:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select size="1" name="enterprise_encryptmode_2G">
+                                                            <option value="0">WPA2 [AES]</option>
+                                                            <option value="1">WPA [TKIP] + WPA2 [AES]</option>
+                                                            </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Group Key Update Interval:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="group_key_update_interval_2G" size=10 maxLength=5 value="0"> Seconds
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server IP Address:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_server_2G_1" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_2G_2" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_2G_3" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_2G_4" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server Port:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_port_2G" size=10 maxLength=5 value="1812">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server Shared Secret:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_key_2G" size=20 maxLength=130 value="">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="setting_5G" style="display: none;">
+                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','network')"><b>Wireless Network (5GHz a/n)</b> </a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <input type="checkbox" name="enable_wireless_an" value="enable_wireless_an" style="display:none">
+                                                        <span id="enable_wireless_an" style="display:none">
+                                                            Enable Wireless Gateway Radio
+                                                        </span>
+                                                        <input type="checkbox" name="enable_isolation_an" value="enable_isolation_an">
+                                                        <span id="enable_isolation_an">
+                                                            Enable Wireless Isolation
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <input type="checkbox" name="ssid_bc_an" value="ssid_5G_bc">
+                                                        Enable SSID Broadcast
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="width:50%;text-align:left">
+                                                        Name (SSID):
+                                                    </td>
+                                                    <td style="width:50%">
+                                                        <input type="text" name="ssid_an" size="20" maxlength="32">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Channel:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="w_channel_an" size=1 onClick="ch_selected = 100;" onChange="checkChannel();" style="display:none">
+                                                            <option>
+                                                                Auto
+                                                            </option>
+                                                            <option>
+                                                                01
+                                                            </option>
+                                                            <option>
+                                                                02
+                                                            </option>
+                                                            <option>
+                                                                03
+                                                            </option>
+                                                            <option>
+                                                                04
+                                                            </option>
+                                                            <option>
+                                                                05
+                                                            </option>
+                                                            <option>
+                                                                06
+                                                            </option>
+                                                            <option>
+                                                                07
+                                                            </option>
+                                                            <option>
+                                                                08
+                                                            </option>
+                                                            <option>
+                                                                09
+                                                            </option>
+                                                            <option>
+                                                                10
+                                                            </option>
+                                                            <option>
+                                                                11
+                                                            </option>
+                                                            <option>
+                                                                12
+                                                            </option>
+                                                            <option>
+                                                                13
+                                                            </option>
+                                                            <option>
+                                                                14
+                                                            </option>
+                                                        </select>
+                                                        <select name="w_channel_an_drv" size=1 onClick="ch_selected = 100;">
+                                                            <option>
+                                                                Auto
+                                                            </option>
+                                                            <option>
+                                                                01
+                                                            </option>
+                                                            <option>
+                                                                02
+                                                            </option>
+                                                            <option>
+                                                                03
+                                                            </option>
+                                                            <option>
+                                                                04
+                                                            </option>
+                                                            <option>
+                                                                05
+                                                            </option>
+                                                            <option>
+                                                                06
+                                                            </option>
+                                                            <option>
+                                                                07
+                                                            </option>
+                                                            <option>
+                                                                08
+                                                            </option>
+                                                            <option>
+                                                                09
+                                                            </option>
+                                                            <option>
+                                                                10
+                                                            </option>
+                                                            <option>
+                                                                11
+                                                            </option>
+                                                            <option>
+                                                                12
+                                                            </option>
+                                                            <option>
+                                                                13
+                                                            </option>
+                                                            <option>
+                                                                14
+                                                            </option>
+                                                        </select>
+                                                        &nbsp;&nbsp;Current&nbsp;:&nbsp;
+                                                        <span id=CurrentChannel_an>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Mode:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="opmode_an" onchange="chgCh(3);InitUpdateChannel_anView();">
+                                                            <option value="g and b">
+                                                                Up to 54 Mbps
+                                                            </option>
+                                                            <option value="145Mbps">
+                                                                Up to 217 Mbps
+                                                            </option>
+                                                            <option value="300Mbps">
+                                                                Up to 450 Mbps
+                                                            </option>
+                                                            <option value="600Mbps">
+                                                                Up to 1.3 Gbps
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','security')"><b>Security Options</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type_an" value="Disable" onClick="securityCheck(1);">
+                                                        None
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <div id="wep_radio_5G" style="display: block;">
+                                                            <input type="radio" name="security_type_an" value="WEP" onClick="securityCheck(1);">
+                                                            WEP
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <div id="wpa_radio_5G" style="display: block;">
+                                                            <input type="radio" name="security_type_an" value="WPA-PSK" onClick="securityCheck(1);">
+                                                            WPA-PSK [TKIP]
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type_an" value="WPA2-PSK" onClick="securityCheck(1);">
+                                                        WPA2-PSK [AES]
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type_an" value="AUTO-PSK" onClick="securityCheck(1);">
+                                                        WPA-PSK [TKIP] + WPA2-PSK [AES]
+                                                    </td>
+                                                </tr>
+                                                <tr id="enterprise_radio_an">
+                                                    <td colspan="2">
+                                                        <input type="radio" name="security_type_an" value="WPA2-Enterprise" onClick="securityCheck(1);">
+                                                        WPA/WPA2 Enterprise
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wep_5G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','wep')"><b>Security Encryption (WEP)</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Authentication Type:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="authAlgm_an" size=1>
+                                                            <option value="automatic">
+                                                                Automatic
+                                                            </option>
+                                                            <option value="sharedkey">
+                                                                Shared Key
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        Encryption Strength:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select name="wepenc_an" size=1 onchange="setKeys();">
+                                                            <option value="1">
+                                                                64-bit
+                                                            </option>
+                                                            <option value="2">
+                                                                128-bit
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <a href="javascript:loadhelp('WirelessSettings','wepkey')"><b>Security Encryption (WEP) Key</b></a>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        Passphrase:
+                                                        <input type="text" name="passphraseStr_an" size="14" maxlength="32" value="">
+                                                        &nbsp; &nbsp;&nbsp;&nbsp;
+                                                        <button type="button" value="Generate" name="Generate_an" class="button-rule" onClick="buttonClick(this,'Generate');calcPassphrase_an(this.form)">
+                                                            <span class="roundleft_button">
+                                                                &nbsp;&nbsp; Generate
+                                                            </span>
+                                                            <span class="roundright_button">
+                                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;" colspan="2">
+                                                        <table style="text-align:left" border="0" width="100%">
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 1:
+                                                                    <input type="radio" name="wep_key_no_an" value="1">
+                                                                    <input type="text" name="KEY1_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[0].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY1Hidden_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[0].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 2:
+                                                                    <input type="radio" name="wep_key_no_an" value="2">
+                                                                    <input type="text" name="KEY2_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[1].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY2Hidden_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[1].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 3:
+                                                                    <input type="radio" name="wep_key_no_an" value="3">
+                                                                    <input type="text" name="KEY3_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[2].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY3Hidden_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[2].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="white-space:nowrap;">
+                                                                    Key 4:
+                                                                    <input type="radio" name="wep_key_no_an" value="4">
+                                                                    <input type="text" name="KEY4_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[3].checked=true;" style="display:none">
+                                                                    <input type="password" name="KEY4Hidden_an" maxLength=32 size=34 value="" onkeydown="keyCheck_an(this)" onfocus="this.form.wep_key_no_an[3].checked=true;">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wpa_5G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Passphrase:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="passphrase_an" size=20 maxLength=64 value="">
+                                                        <input type="password" name="passphraseHidden_an" size=20 maxLength=64 value="" style="display:none">
+                                                        &nbsp;&nbsp;(8-63 characters or 64 hex digits)
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <div id="wpa_enterprise_5G" style="display: none;">
+                                            <table style="text-align:left" border="0" width="100%">
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;">
+                                                    </td>
+                                                </tr>
+                                                <tr><td>&nbsp;&nbsp;WPA/WPA2-Enterprise</td></tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Encryption Mode:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <select size="1" name="enterprise_encryptmode_5G">
+                                                            <option value="0">WPA2 [AES]</option>
+                                                            <option value="1">WPA [TKIP] + WPA2 [AES]</option>
+                                                            </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;Group Key Update Interval:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="group_key_update_interval_5G" size=10 maxLength=5 value="0"> Seconds
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server IP Address:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_server_5G_1" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_5G_2" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_5G_3" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                                        .
+                                                        <input type="text" name="radius_server_5G_4" size=3 maxLength=3 value="0" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server Port:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_port_5G" size=10 maxLength=5 value="1812">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="white-space:nowrap;">
+                                                        &nbsp;&nbsp;RADIUS server Shared Secret:
+                                                    </td>
+                                                    <td style="white-space:nowrap;">
+                                                        <input type="text" name="radius_key_5G" size=20 maxLength=130 value="">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="white-space:nowrap;background-image:url('liteblue.gif');height:12px;background-repeat: repeat-x;">
+                                                        &nbsp;
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="WirelessSettings_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="tempSetting" value="">
+            <input type="hidden" name="tempRegion" value="">
+            <input type="hidden" name="setRegion" value="">
+            <input type="hidden" name="wds_enable" value="0">
+            <input type="hidden" name="wds_enable_an" value="0">
+            <input type="hidden" name="only_mode" value="0">
+            <input type="hidden" name="show_wps_alert" value="0">
+            <input type="hidden" name="security_type_2G" value="None">
+            <input type="hidden" name="security_type_5G" value="None">
+            <input type="hidden" name="initChannel" value="0">
+            <input type="hidden" name="initAuthType" value="automatic">
+            <input type="hidden" name="initDefaultKey" value="0">
+            <input type="hidden" name="initChannel_an" value="">
+            <input type="hidden" name="initAuthType_an" value="automatic">
+            <input type="hidden" name="initDefaultKey_an" value="0">
+            <!-- Nick 20111116 display channal can be supported by BRCM-->
+            <!-- <input type="hidden" name="dfs_ch_enable" value="">  -->
+            <input type="hidden" name="dfs_ch_enable" value="1">
+            <input type="hidden" name="dfs_ch_enable_default" value="">
+            <input type="hidden" name="auto_channel_5G" value="1">
+            <!-- <input type="hidden" name="fw_sku" value="SKU_WW">
+            -->
+            <!-- Nick 20111215 Display 5G screen-->
+            <input type="hidden" name="display_5G" value="1">
+            <input type="hidden" name="fw_sku" value="SKU_NA">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

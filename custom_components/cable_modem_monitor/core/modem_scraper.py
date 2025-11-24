@@ -190,6 +190,72 @@ class ModemScraper:
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
 
+    def _fetch_parser_url_patterns(self) -> None:  # noqa: C901
+        """Fetch all URLs defined in the parser's url_patterns.
+
+        This ensures that all parser-defined URLs are captured, even if they're
+        not linked from the main pages. This is critical for modems like the
+        Netgear C3700 where DocsisStatus.htm is not linked but contains essential
+        channel data.
+        """
+        if not self.parser:
+            _LOGGER.debug("No parser available, skipping parser URL pattern fetch")
+            return
+
+        if not hasattr(self.parser, "url_patterns") or not self.parser.url_patterns:
+            _LOGGER.debug("Parser %s has no url_patterns defined", self.parser.name)
+            return
+
+        _LOGGER.info("Fetching all %d URL patterns from parser: %s", len(self.parser.url_patterns), self.parser.name)
+
+        for pattern in self.parser.url_patterns:
+            path = pattern.get("path", "")
+            if not path:
+                continue
+
+            url = f"{self.base_url}{path}"
+
+            # Skip if already captured (avoid duplicates)
+            from urllib.parse import urlparse, urlunparse
+
+            def normalize_url(url_str: str) -> str:
+                parsed = urlparse(url_str)
+                path_normalized = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+                return urlunparse((parsed.scheme, parsed.netloc, path_normalized, parsed.params, parsed.query, ""))
+
+            normalized_url = normalize_url(url)
+            if any(normalize_url(item["url"]) == normalized_url for item in self._captured_urls):
+                _LOGGER.debug("Skipping already captured URL: %s", url)
+                continue
+
+            try:
+                _LOGGER.debug("Fetching parser URL pattern: %s", url)
+
+                # Check if auth is required
+                auth = None
+                if (
+                    pattern.get("auth_required", False)
+                    and pattern.get("auth_method") == "basic"
+                    and self.username
+                    and self.password
+                ):
+                    auth = (self.username, self.password)
+                    _LOGGER.debug("Using basic auth for %s", url)
+
+                response = self.session.get(url, timeout=10, auth=auth)
+
+                if response.status_code == 200:
+                    self._capture_response(response, f"Parser URL pattern: {path}")
+                    _LOGGER.debug("Successfully captured: %s (%d bytes)", url, len(response.text))
+                else:
+                    _LOGGER.debug("Got status %d from parser URL: %s", response.status_code, url)
+
+            except Exception as e:
+                _LOGGER.debug("Failed to fetch parser URL %s: %s", url, e)
+                continue
+
+        _LOGGER.info("Finished fetching parser URL patterns. Total captured: %d pages", len(self._captured_urls))
+
     def _crawl_additional_pages(self, max_pages: int = 20) -> None:
         """Crawl additional pages by following links found in captured HTML.
 
@@ -683,8 +749,13 @@ class ModemScraper:
             data = self._parse_data(html)
             response = self._build_response(data)
 
-            # Crawl additional pages if in capture mode
+            # Capture additional pages if in capture mode
             if capture_raw and self._captured_urls:
+                # First, fetch all URLs defined in the parser's url_patterns
+                # This ensures we get critical pages like DocsisStatus.htm that may not be linked
+                self._fetch_parser_url_patterns()
+
+                # Then crawl for additional pages by following links
                 self._crawl_additional_pages()
 
             # Include captured HTML if requested

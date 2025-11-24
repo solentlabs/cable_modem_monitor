@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel=Stylesheet type="text/css" media=all href=form.css>
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+        var session = '?id=900181843';
+    });
+
+    function InitTagValue()
+    {
+        /*WPS status|Wireless status*/
+    	  /*var tagValueList = PBN|1*/
+        var tagValueList = '1||XX:XX:XX:XX:XX:XX|';
+
+        return tagValueList.split("|");
+    }
+
+    function checkWirelessState()
+    {
+        if(InitTagValue()[0] == "1")
+            location.href='AddWPSClient_PBN.htm';
+        else
+        	  alert("You can't use WPS after disabling wireless.");
+    }
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    /*
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+    */
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+//--></script></head>
+
+<body class="page-body" onload="changeContentSize()" onResize="changeContentSize()">
+    <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <div class="Section1">
+            <form id="target" method="Get" action="">
+                <input type="hidden" name="buttonHit">
+                <input type="hidden" name="buttonValue">
+                <div class="subhead2">
+                    <!--st1:place w:st="on"-->
+                    Add WPS Client
+                    <!--o:p></o:p-->
+                </div>
+                <table border=0 style="height:370px" class="subhead2-table">
+                    <tr>
+                        <td class="scrollpane-table-seperate-border" colspan="2">
+                            <div class="scroll-pane" style="height:410px;width:620px;overflow:auto;scrolling:auto">
+                                <table style="border-collapse:collapse;width:600px">
+                                    <tr>
+                                        <td colspan="2" style="height:12px">
+                                            <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                                &nbsp;
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            <p>
+                                                <b>
+                                                    New and easy way to connect to the wireless gateway using Wi-Fi Protected Setup (WPS)
+                                                </b>
+                                                <!--o:p></o:p-->
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            <br>
+                                            A wireless client has to support the WPS function if you want to use this wizard to add the client to your WPS-enabled wireless gateway.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            Please check the user manual and gift box of your wireless client to see whether it supports the WPS function.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            If your wireless client does not support the WPS function, you have to configure your wireless client manually so that it has the same SSID and wireless security settings as this gateway.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" style="height:12px">
+                                            <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                                &nbsp;
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan=2>
+                                            <p class="MsoNormal" style="text-align:center">
+                                                &nbsp;&nbsp;&nbsp;
+                                                <button TYPE="RESET" value='Next' NAME="submit" class="button-rule" onClick='buttonClick(this,"Next");checkWirelessState();'>
+                                                    <span class="roundleft_button">
+                                                        &nbsp;&nbsp; Next
+                                                    </span>
+                                                    <span class="roundright_button">
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    </span>
+                                                </button>
+                                                <!--o:p></o:p-->
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr style="align:center">
+                        <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                            <div class="help-frame-div">
+                                <iframe src="AddWPSClient_h.htm" class="help-iframe" style="overflow:hidden" name="helpframe" frameborder="0">
+                                </iframe>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <div class="subhead2-bottom">
+                    <span style="float:left;padding-left:10px;padding-top:5px">
+                        <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                    </span>
+                    <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                        Help Center
+                    </span>
+                    <span class="button-help-arrow">
+                        <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    </span>
+                    <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                        Show/Hide Help Center
+                    </span>
+                </div>
+                <p class="MsoNormal">
+                    <INPUT TYPE="hidden" NAME="totaltime" VALUE="0 Hrs">
+                    <INPUT TYPE="hidden" NAME="email_on" VALUE="0">
+                    <INPUT TYPE="hidden" NAME="email_on" VALUE="0">
+                    <INPUT TYPE="hidden" NAME="dayofmonth" VALUE="-1">
+                    <!--o:p></o:p-->
+                </p>
+                <!--a name="helpframe-anchor"></a-->
+            </form>
+        </div>
+    </div>
+</body>
+</html>

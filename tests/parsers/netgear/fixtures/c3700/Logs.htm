@@ -1,0 +1,571 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+var isSupportComHem =  false;
+<!--
+var isInited = 0;
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function init()
+{
+    var cf = document.forms[0];
+
+    if (typeof(cf.enable_log) != "undefined")
+    {
+        if(cf.log_enable.value == "1")
+           cf.enable_log.checked = true;
+        else if(cf.log_enable.value != "111")
+            cf.enable_log.checked = false;
+    }
+
+    //if (cf.log_filter.value & 1)
+        //cf.log_cat_1.checked = true;
+    if (cf.log_filter.value & 2)
+        cf.log_cat_2.checked = true;
+    if (cf.log_filter.value & 4)
+        cf.log_cat_3.checked = true;
+    if (cf.log_filter.value & 8)
+        cf.log_cat_4.checked = true;
+    if (cf.log_filter.value & 16)
+        cf.log_cat_5.checked = true;
+    if (cf.log_filter.value & 32)
+        cf.log_cat_6.checked = true;
+    //if (cf.log_filter.value & 64)
+    //    cf.log_cat_7.checked = true;
+    //if (cf.log_filter.value & 128)
+    //    cf.log_cat_8.checked = true;
+    if (cf.log_filter.value & 256)
+        cf.log_cat_9.checked = true;
+
+    isInited = 1;
+
+    return true;
+}
+
+function check_log_category()
+{
+    var cf = document.forms[0];
+    var value = 0;
+
+    //if (cf.log_cat_1.checked)
+        //value = value + 1;
+    if (cf.log_cat_2.checked)
+        value = value + 2;
+    if (cf.log_cat_3.checked)
+        value = value + 4;
+    if (cf.log_cat_4.checked)
+        value = value + 8;
+    if (cf.log_cat_5.checked)
+        value = value + 16;
+    if (cf.log_cat_6.checked)
+        value = value + 32;
+    //if (cf.log_cat_7.checked)
+    //    value = value + 64;
+    //if (cf.log_cat_8.checked)
+    //    value = value + 128;
+    if (cf.log_cat_9.checked)
+       value = value + 256;
+
+    cf.log_filter.value = value;
+
+    return true;
+}
+
+function is_email_on()
+{
+    var cf = document.forms[0];
+    if(cf.email_on.value == 0)
+    {
+        alert("If you want to send an e-mail notice, turn on e-mail notification on the E-mail screen.");
+        return false;
+    }
+    return true;
+}
+
+function clearLog()
+{
+    var cf = document.forms[0];
+    cf.log_clear.value=1;
+// nick no log_detail
+//    cf.log_detail.value="";
+    cf.log_send.value=0;
+}
+
+function SetEnableValue()
+{
+    var cf = document.forms[0];
+    if(cf.enable_log.checked == true)
+        cf.log_enable.value = "1";
+    if(cf.enable_log.checked == false)
+        cf.log_enable.value = "0";
+    cf.submit();
+}
+
+function refreshLog()
+{
+    var cf = document.forms[0];
+    cf.log_refresh.value=1;
+// nick no log_detail
+//    cf.log_detail.value="";
+    cf.log_send.value=0;
+}
+
+function sendLog()
+{
+    var cf = document.forms[0];
+/* nick no log_detail
+    if(cf.log_detail.value < 5)
+    {
+        alert("There is no log message to send.");
+        return false;
+    }
+    cf.log_detail.value=""
+*/
+    cf.log_send.value=1;
+    return true;
+}
+
+function InitTagValue()
+{
+/*
+	log filter (checkbox)
+*/
+    var tagValueList = '0|4095|Sun Nov 23 ***IPv6*** 2025|0|1|';
+//    var tagValueList = "63|Friday, Jan 01,2003 ***IPv6***|";
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Turn E-mail Notification */
+    document.getElementsByName("email_on")[0].value = tagValues[0];
+
+    /* log filter */
+    document.getElementsByName("log_filter")[0].value = tagValues[1];
+
+    /* current Time*/
+//	 document.getElementById("currentTime").innerHTML = tagValues[2];
+
+		isSupportComHem = ((tagValues[3]== "1")?true:false);
+		if(isSupportComHem)
+    {
+        document.getElementsByName("action_Send")[0].style.display="none";
+    }
+
+	if(tagValues[4] == "0")
+	{
+		$("#wifi_sche").hide();
+	}
+	else
+	{
+		$("#wifi_sche").show();
+	}
+}
+
+function InitTagLogsMsgView()
+{
+/*
+	log filter (checkbox)
+*/
+
+    var tagValueList = '256|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[admin login failure] from source ***PRIVATE_IP***|2|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[admin login failure] from source ***PRIVATE_IP***|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sun Nov 23 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|2|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DoS attack: Illegal Fragments] from 81.6.95.0, port 0|1|Sat Nov 22 ***IPv6*** 2025|37.138.178.126:0|81.6.95.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DoS attack: Illegal Fragments] from 81.6.95.0, port 0|2|Sat Nov 22 ***IPv6*** 2025|101.22.219.160:0|81.6.95.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DoS attack: Illegal Fragments] from 81.6.95.0, port 0|2|Sat Nov 22 ***IPv6*** 2025|193.184.31.137:0|81.6.95.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Sat Nov 22 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesReceived] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[UPnP set event: GetTotalBytesSent] from source ***PRIVATE_IP***|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|***PRIVATE_IP***:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|[DHCP IP: ***PRIVATE_IP***] to MAC address XX:XX:XX:XX:XX:XX|1|Fri Nov 21 ***IPv6*** 2025|0.0.0.0:0|0.0.0.0:0|';
+//    var tagValueList = "1|Attack!!|500|1:30|***PRIVATE_IP***|***PRIVATE_IP***.2";
+    return tagValueList.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+
+    var cell = newRow.insertCell(-1);
+    cell.align = "left";
+    cell.innerHTML = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 0]));
+
+
+    cell = newRow.insertCell(-1);
+    cell.align = "center";
+    cell.innerHTML = tags[firstCellIdx + 1];
+
+
+    cell = newRow.insertCell(-1);
+    cell.align = "center";
+    cell.innerHTML = tags[firstCellIdx + 2];
+
+    cell = newRow.insertCell(-1);
+    cell.align = "center";
+    cell.innerHTML = tags[firstCellIdx + 3];
+
+    cell = newRow.insertCell(-1);
+    cell.align = "center";
+    cell.innerHTML = tags[firstCellIdx + 4];
+
+    return cellsArray;
+}
+
+function InitUpdateLogsMsgView(tagValues)
+{
+    /* draw table and insert content value */
+    drawTable('LogMsg', tagValues, onAddRowCB);
+}
+
+function BodyInit()
+{
+    // Nick 20110929, disable checkbox
+
+    InitUpdateView(InitTagValue());
+    InitUpdateLogsMsgView(InitTagLogsMsgView());
+}
+
+//-->
+</script>
+</head>
+<body onload="BodyInit(); init(); changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" action='/goform/Logs?id=780557778' method="POST">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Logs
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onclick="if(!isInited) return false; buttonClick(this,'Apply');check_log_category();" type=submit name=action_apply class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');reset();BodyInit();init();" type=button name=action_cancel class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <!-- <tr><td colspan="2" style="height:12px" ><div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">&nbsp;</div></td></tr>
+                                <tr>
+                                <td colspan="2"><input type="checkbox" name="enable_log"  onclick="SetEnableValue();"><b>Turn logging on</b>
+                                </tr>
+                                -->
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- // Nick <tr>
+                                <td colspan="2" align="center">
+                                <table border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                <td colspan="2"><b>Current Time: Wednesday, Jan 01,2003 ***IPv6***</b>
+                                </td>
+                                </tr>
+                                -->
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="0" cellspacing="0" width="100%" id="LogMsg">
+                                            <tbody>
+                                                <tr>
+                                                    <td style="text-align:center;width:52%">
+                                                        <span class="thead">
+                                                            Description
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align:center;width:3%">
+                                                        <span class="thead">
+                                                            Count
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align:center;width:15%">
+                                                        <span class="thead">
+                                                            Last Occurrence
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align:center;width:15%">
+                                                        <span class="thead">
+                                                            Target
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align:center;width:15%">
+                                                        <span class="thead">
+                                                            Source
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- // Nick <TEXTAREA NAME="log_detail" class="smallfix" ROWS="15" cols="60" WRAP="vitural"
+                                READONLY>[Admin login] from source ***PRIVATE_IP***.10.
+                                [Admin login failure] from source ***PRIVATE_IP***.10.
+                                [Admin login failure] from source ***PRIVATE_IP***.10.
+                                [Admin login] from source ***PRIVATE_IP***.10.
+                                [Admin login failure] from source ***PRIVATE_IP***.10.
+                                [Admin login] from source ***PRIVATE_IP***.10.
+                                [Internet disconnected]
+                                [Initialized, firmware version: V1.0.0.42_1.0.11]
+                                </textarea></td>
+                                </tr>
+                                </table>
+                                </td>
+                                </tr>
+                                -->
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align:center;height:35px">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type=submit value="Refresh" name=action_Refresh class="button-rule" onClick="buttonClick(this,'Refresh');refreshLog()">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Refresh
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+                                        <button type=submit value="Clear Log" name=action_Clear class="button-rule" onClick="buttonClick(this,'Clear Log');clearLog()">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Clear Log
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+                                        <button type=submit value="Send Log" name=action_Send class="button-rule" onclick="buttonClick(this,'Send Log');if(!is_email_on()) return false; if(!sendLog()) return false;">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Send Log
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <b>
+                                            Include in Log
+                                        </b>
+                                    </td>
+                                </tr>
+                                <!--TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_1 type=checkbox value=checkboxValue>
+                                        Attempted access to allowed sites
+                                    </TD>
+                                </TR-->
+                                <TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_2 type=checkbox value=checkboxValue>
+                                        Attempted access to blocked sites and services
+                                    </TD>
+                                </TR>
+                                <TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_3 type=checkbox value=checkboxValue>
+                                        Connections to the Web-based interface of this Gateway
+                                    </TD>
+                                </TR>
+                                <TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_4 type=checkbox value=checkboxValue>
+                                        Gateway operation (startup, get time etc.)
+                                    </TD>
+                                </TR>
+                                <TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_5 type=checkbox value=checkboxValue>
+                                        Known DoS attacks and Port Scans
+                                    </TD>
+                                </TR>
+                                <TR>
+                                    <TD colspan="2">
+                                        <INPUT name=log_cat_6 type=checkbox value=checkboxValue>
+                                        Port Forwarding / Port Triggering
+                                    </TD>
+                                </TR>
+                                <!-- // Nick 20120302, not implemented yet <TR>
+                                <TD colspan="2" >
+                                <INPUT name=log_cat_7 type=checkbox value=checkboxValue>Wireless access</TD></TR>
+                                <TR>
+                                <TD colspan="2">
+                                <INPUT name=log_cat_8 type=checkbox value=checkboxValue>Automatic Internet connection reset</TD></TR>
+								-->
+								<TR id="wifi_sche" style="display:none">
+									<TD colspan="2">
+										<INPUT name=log_cat_9 type=checkbox value=checkboxValue>Turn off wireless signal by schedule
+									</TD>
+								</TR>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="Logs_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT name=email_on type=hidden value="0">
+            <INPUT name=log_refresh type=hidden value=0>
+            <INPUT name=log_send type=hidden value="0">
+            <INPUT name=log_clear type=hidden value=0>
+            <INPUT name=log_enable type=hidden value="111">
+            <INPUT name=log_filter type=hidden value="65535">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>
