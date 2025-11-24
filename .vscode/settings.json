@@ -31,7 +31,6 @@
 
   // Enable Python linting with Ruff (modern, fast linter)
   "python.linting.enabled": true,
-  "python.linting.flake8Enabled": false,
   "python.linting.lintOnSave": true,
   "python.linting.ruffEnabled": true,
   "python.linting.ruffArgs": [
@@ -178,5 +177,10 @@
   // Set default profiles
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.defaultProfile.linux": "bash",
-  "terminal.integrated.defaultProfile.osx": "zsh"
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "cSpell.words": [
+    "Docsis",
+    "hass",
+    "Netgear"
+  ]
 }

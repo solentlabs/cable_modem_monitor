@@ -1,9 +1,6 @@
 {
   "version": "2.0.0",
   "tasks": [
-    // ========================================
-    // Testing Tasks
-    // ========================================
     {
       "label": "Run All Tests",
       "type": "shell",
@@ -29,9 +26,6 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Code Quality Tasks
-    // ========================================
     {
       "label": "Lint Code",
       "type": "shell",
@@ -54,13 +48,26 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Home Assistant Development Tasks
-    // ========================================
+    {
+      "label": "Check Docker Status",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/dev/check-docker.py",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/dev/check-docker.py"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": [],
+      "detail": "Verify Docker is installed and running before executing Docker commands"
+    },
     {
       "label": "HA: Start (Fresh)",
       "type": "shell",
       "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -73,6 +80,7 @@
       "label": "HA: Start (Keep Data)",
       "type": "shell",
       "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -85,6 +93,7 @@
       "label": "HA: Restart (Reload Integration)",
       "type": "shell",
       "command": "docker restart ha-cable-modem-test && echo '✅ Home Assistant restarted - integration code reloaded'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -97,6 +106,7 @@
       "label": "HA: Stop",
       "type": "shell",
       "command": "docker compose -f docker-compose.test.yml down && echo '✅ Home Assistant stopped'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -109,6 +119,7 @@
       "label": "HA: View Logs",
       "type": "shell",
       "command": "docker logs -f ha-cable-modem-test",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -122,6 +133,7 @@
       "label": "HA: Clean All Data (Reset)",
       "type": "shell",
       "command": "docker compose -f docker-compose.test.yml down -v && rm -rf test-ha-config/* && echo '✅ All Home Assistant data cleaned'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -134,6 +146,7 @@
       "label": "HA: Check Integration Status",
       "type": "shell",
       "command": "docker exec ha-cable-modem-test bash -c 'echo \"=== Integration Files ===\"; ls -la /config/custom_components/cable_modem_monitor/ 2>&1 | head -10; echo \"\"; echo \"=== Recent Integration Logs ===\"; grep -i cable_modem /config/home-assistant.log 2>&1 | tail -10 || echo \"No logs found (HA may not have started yet)\"'",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -160,6 +173,7 @@
       "label": "HA: Diagnose Port 8123",
       "type": "shell",
       "command": "echo '=== Checking what is using port 8123 ===' && echo '' && echo 'Method 1: lsof' && sudo lsof -i :8123 2>/dev/null || echo 'No results from lsof' && echo '' && echo 'Method 2: netstat' && sudo netstat -tulpn 2>/dev/null | grep 8123 || echo 'No results from netstat' && echo '' && echo 'Method 3: ss' && sudo ss -tulpn 2>/dev/null | grep 8123 || echo 'No results from ss' && echo '' && echo '=== Docker containers ===' && docker ps -a && echo '' && echo '=== Docker networks ===' && docker network ls",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -169,13 +183,11 @@
       "problemMatcher": [],
       "detail": "Show detailed info about what's using port 8123"
     },
-    // ========================================
-    // Legacy Docker Tasks (for backwards compatibility)
-    // ========================================
     {
       "label": "Start Docker Dev Environment",
       "type": "shell",
       "command": "make docker-start",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -187,6 +199,7 @@
       "label": "Stop Docker Dev Environment",
       "type": "shell",
       "command": "make docker-stop",
+      "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -194,9 +207,6 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Validation Tasks (Before Commit/PR)
-    // ========================================
     {
       "label": "🚀 Quick Validation (Pre-commit)",
       "type": "shell",
@@ -281,11 +291,10 @@
       "type": "shell",
       "command": "./scripts/setup.sh",
       "windows": {
-        "command": "\"C:\\Program Files\\Git\\bin\\bash.exe\" ./scripts/setup.sh",
+        "command": ".\\scripts\\setup.ps1",
         "options": {
           "shell": {
-            "executable": "cmd.exe",
-            "args": ["/c"]
+            "executable": "powershell.exe"
           }
         }
       },

@@ -1,0 +1,19 @@
+Welcome to Cable Modem Monitor!
+
+Choose your development environment:
+
+Option 1: Local Python (Fastest)
+  A. Use VS Code Menu: Ctrl+Shift+P -> Tasks -> 'Setup Local Python Environment'
+  B. Or run from terminal: ./scripts/setup.sh (or .\scripts\setup.ps1 on Windows)
+  - Takes ~2 minutes
+  - Fastest test execution
+  - After setup, close and reopen this terminal
+
+Option 2: Dev Container (Zero Setup)
+  A. Use VS Code Menu: Ctrl+Shift+P -> 'Dev Containers: Reopen in Container'
+  B. VS Code may also show a pop-up notification suggesting this.
+  - Takes ~5 minutes first time
+  - All dependencies pre-installed
+  - Guaranteed consistency with CI
+
+See docs/GETTING_STARTED.md for detailed comparison

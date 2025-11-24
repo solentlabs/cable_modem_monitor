@@ -22,6 +22,7 @@ _PARSER_MODULE_MAP = {
     "Motorola MB7621": ("motorola", "mb7621", "MotorolaMB7621Parser"),
     "Motorola MB8611 (HNAP)": ("motorola", "mb8611_hnap", "MotorolaMB8611HnapParser"),
     "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),
+    "Netgear C3700": ("netgear", "c3700", "NetgearC3700Parser"),
     "Netgear CM600": ("netgear", "cm600", "NetgearCM600Parser"),
     "Technicolor TC4400": ("technicolor", "tc4400", "TechnicolorTC4400Parser"),
     "Technicolor XB7": ("technicolor", "xb7", "TechnicolorXB7Parser"),

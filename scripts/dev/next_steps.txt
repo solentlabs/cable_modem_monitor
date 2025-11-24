@@ -1,0 +1,22 @@
+Welcome back to Cable Modem Monitor!
+
+Your (.venv) environment is active.
+
+Next steps:
+  1. Run tests:
+     Use VS Code Task: Ctrl+Shift+P -> Tasks -> 'Run All Tests' (or 'Run Quick Tests')
+     Alternatively, run from terminal: pytest
+
+  2. Run code quality checks:
+     Use VS Code Task: Ctrl+Shift+P -> Tasks -> 'Lint Code' (or 'Format Code')
+     Alternatively, run from terminal: make lint / make format
+
+  3. Start the Home Assistant dev container:
+     Use VS Code Task: Ctrl+Shift+P -> Tasks -> 'Start Docker Dev Environment'
+     Alternatively, run from terminal: make docker-start
+     (Then open http://localhost:8123)
+
+  4. View all available tasks:
+     Ctrl+Shift+P -> Tasks -> 'Run Task'
+
+Happy coding!
