@@ -5,17 +5,7 @@
 set -e
 
 echo "📦 Installing Python dependencies..."
-pip install -r requirements-dev.txt
-
-echo "📦 Installing CodeQL dependencies..."
-codeql pack install ./cable-modem-monitor-ql
-
-echo "📦 Installing pre-commit..."
-pip install --break-system-packages pre-commit
-
-echo "📦 Installing pre-commit hooks..."
-pre-commit install
-
+pip install --root-user-action=ignore -r requirements-dev.txt
 
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then
@@ -26,6 +16,19 @@ if ! command -v codeql > /dev/null 2>&1; then
     ln -s /usr/local/codeql/codeql /usr/local/bin/codeql
     echo "✅ CodeQL CLI installed"
 fi
+
+if [ -d "./cable-modem-monitor-ql" ]; then
+    echo "📦 Installing CodeQL dependencies..."
+    codeql pack install ./cable-modem-monitor-ql
+else
+    echo "⚠️  CodeQL pack directory not found, skipping pack installation"
+fi
+
+echo "📦 Installing pre-commit..."
+pip install --root-user-action=ignore --break-system-packages pre-commit
+
+echo "📦 Installing pre-commit hooks..."
+pre-commit install
 
 echo ""
 echo "✅ Dev environment ready!"

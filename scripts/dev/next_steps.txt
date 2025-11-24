@@ -19,4 +19,4 @@ Next steps:
   4. View all available tasks:
      Ctrl+Shift+P -> Tasks -> 'Run Task'
 
-Happy coding! 🚀
+Happy coding!

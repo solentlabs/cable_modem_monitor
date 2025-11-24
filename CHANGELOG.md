@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Developer Experience
+- **Docker Status Checking** - Added cross-platform Docker check helper (`scripts/dev/check-docker.py`)
+  - Verifies Docker is installed and running before Docker operations
+  - Provides platform-specific error messages for Windows, macOS, and Linux
+  - Handles Unicode/ASCII fallback for Windows console compatibility
+  - Integrated into all Docker-related VS Code tasks as a dependency
+- **Dev Container Improvements** - Fixed post-create script execution order
+  - CodeQL CLI now installs before attempting to use it
+  - Added directory existence check before CodeQL pack installation
+  - Suppressed pip root user warnings in container environment
+- **Terminal Experience** - Enhanced welcome messages for new terminal sessions
+  - Added terminal clearing before displaying welcome message for cleaner UI
+  - Removed emoji from welcome text to fix Windows terminal encoding issues
+  - Cross-platform compatibility maintained for Linux, macOS, and Windows
+
 ### Planning
 - Future features and improvements
 - See GitHub issues and milestones for upcoming features

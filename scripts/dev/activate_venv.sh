@@ -8,6 +8,7 @@ ACTIVATE_SCRIPT="$VENV_PATH/bin/activate"
 if [ -f "$ACTIVATE_SCRIPT" ]; then
     # .venv exists, activate it and show "next steps" message
     source "$ACTIVATE_SCRIPT"
+    clear
     echo ""
     cat "${BASH_SOURCE%/*}/next_steps.txt"
     echo ""
