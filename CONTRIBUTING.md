@@ -840,11 +840,56 @@ Maintainers will handle releases following semantic versioning:
 - **Minor (0.1.0)**: New features, backward compatible
 - **Patch (0.0.1)**: Bug fixes, backward compatible
 
+***REMOVED******REMOVED******REMOVED*** Automated Release Script
+
+The project includes an automated release script that handles all version bumping and release creation:
+
+```bash
+***REMOVED*** Create a new release (will prompt for push confirmation)
+python scripts/release.py 3.5.1
+
+***REMOVED*** Test locally without pushing
+python scripts/release.py 3.5.1 --no-push
+
+***REMOVED*** Skip git hooks if needed
+python scripts/release.py 3.5.1 --skip-verify
+
+***REMOVED*** Skip changelog update (not recommended)
+python scripts/release.py 3.5.1 --skip-changelog
+```
+
+**What the script does:**
+1. Validates version format (must be X.Y.Z)
+2. Checks that git working directory is clean
+3. Updates version in:
+   - `custom_components/cable_modem_monitor/manifest.json`
+   - `custom_components/cable_modem_monitor/const.py`
+   - `tests/components/test_version_and_startup.py`
+4. Moves `[Unreleased]` section in `CHANGELOG.md` to new version with today's date
+5. Creates a git commit with all version changes
+6. Creates an annotated git tag (v3.5.1)
+7. Pushes commit and tag to remote
+8. Creates a GitHub release with notes from CHANGELOG.md
+
+**VS Code Task:**
+You can also run the release script from VS Code:
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+2. Type "Tasks: Run Task"
+3. Select "🚀 Create Release"
+4. Enter the version when prompted
+
+***REMOVED******REMOVED******REMOVED*** Manual Release Process (Legacy)
+
+If you need to create a release manually:
+
 Each release includes:
 - Version bump in `manifest.json` and `const.py`
+- Version update in `tests/components/test_version_and_startup.py`
 - Updated `CHANGELOG.md`
 - Git tag
 - GitHub Release with notes
+
+**Important:** Always update the version test when bumping versions to prevent test failures
 
 ***REMOVED******REMOVED*** Code of Conduct
 
