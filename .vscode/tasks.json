@@ -325,6 +325,30 @@
       },
       "problemMatcher": [],
       "detail": "Create .venv and install all dependencies (Option 1: Local Python)"
+    },
+    {
+      "label": "🚀 Create Release",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/scripts/release.py ${input:releaseVersion}",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/release.py ${input:releaseVersion}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Automate version bumping, tagging, and release creation"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Enter the version to release (e.g., 3.5.1)",
+      "default": ""
     }
   ]
 }
