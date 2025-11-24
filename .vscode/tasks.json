@@ -1,9 +1,6 @@
 {
   "version": "2.0.0",
   "tasks": [
-    // ========================================
-    // Testing Tasks
-    // ========================================
     {
       "label": "Run All Tests",
       "type": "shell",
@@ -29,9 +26,6 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Code Quality Tasks
-    // ========================================
     {
       "label": "Lint Code",
       "type": "shell",
@@ -54,9 +48,6 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Home Assistant Development Tasks
-    // ========================================
     {
       "label": "HA: Start (Fresh)",
       "type": "shell",
@@ -169,9 +160,6 @@
       "problemMatcher": [],
       "detail": "Show detailed info about what's using port 8123"
     },
-    // ========================================
-    // Legacy Docker Tasks (for backwards compatibility)
-    // ========================================
     {
       "label": "Start Docker Dev Environment",
       "type": "shell",
@@ -194,9 +182,6 @@
       },
       "problemMatcher": []
     },
-    // ========================================
-    // Validation Tasks (Before Commit/PR)
-    // ========================================
     {
       "label": "🚀 Quick Validation (Pre-commit)",
       "type": "shell",
@@ -281,11 +266,10 @@
       "type": "shell",
       "command": "./scripts/setup.sh",
       "windows": {
-        "command": "\"C:\\Program Files\\Git\\bin\\bash.exe\" ./scripts/setup.sh",
+        "command": ".\\scripts\\setup.ps1",
         "options": {
           "shell": {
-            "executable": "cmd.exe",
-            "args": ["/c"]
+            "executable": "powershell.exe"
           }
         }
       },
