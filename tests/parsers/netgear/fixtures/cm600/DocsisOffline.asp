@@ -6,7 +6,7 @@
 <META http-equiv="Content-Style-Type" content="text/css">
 <META http-equiv="Pragma" content="no-cache">
 <META HTTP-equiv="Cache-Control" content="no-cache">
-<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
 
 <link rel="stylesheet" href="form.css">
 <title>NETGEAR Gateway CM600</title>
