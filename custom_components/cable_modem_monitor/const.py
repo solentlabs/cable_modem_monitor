@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-VERSION = "3.5.0"
+VERSION = "3.5.1"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"

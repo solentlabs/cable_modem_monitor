@@ -6,7 +6,7 @@
 <META http-equiv="Content-Style-Type" content="text/css">
 <META http-equiv="Pragma" content="no-cache">
 <META HTTP-equiv="Cache-Control" content="no-cache">
-<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
 
 <title>NETGEAR Gateway CM600</title>
 <link rel="stylesheet" href="css/table.css">
@@ -373,29 +373,15 @@ function showCheckBox()
                                         Old Password
                                     </td>
                                     <td style="white-space:nowrap;text-align:right;width:50%">
-                                        <input type="password" name="NetgearOldPassword" size="18" maxlength="32" value=>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="white-space:nowrap;text-align:left;width:50%">
+                                        <input type="password" name="NetgearOldPassword" size="18" maxlength="32" value=***REDACTED***"white-space:nowrap;text-align:left;width:50%">
                                         Set Password
                                     </td>
                                     <td style="white-space:nowrap;text-align:right;width:50%">
-                                        <input type="password" name="NetgearPassword" size="18" maxlength="33" value=>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="white-space:nowrap;text-align:left;width:50%">
+                                        <input type="password" name="NetgearPassword" size="18" maxlength="33" value=***REDACTED***"white-space:nowrap;text-align:left;width:50%">
                                         Repeat New Password
                                     </td>
                                     <td style="white-space:nowrap;text-align:right;width:50%">
-                                        <input type="password" name="NetgearPasswordReEnter" size="18" maxlength="33" value=>
-                                    </td>
-                                </tr>
-                                <!-- <tr>
-                                -->
-                                <tr style='display:none'>
-                                    <td colspan="2">
+                                        <input type="password" name="NetgearPasswordReEnter" size="18" maxlength="33" value=***REDACTED***"2">
                                         <table>
                                             <tr>
                                                 <td style="width:10px">
@@ -514,7 +500,7 @@ function showCheckBox()
                     Show/Hide Help Center
                 </span>
             </div>
-            <input type="hidden" name="RetailSessionId" value="3d71cb5f994f99b97d58">
+            <input type="hidden" name="RetailSessionId" value="caecef59e6458c6ec6ba">
             <a name="helpframe-anchor"></a>
         </form>
     </div>

@@ -10,7 +10,7 @@
 <META http-equiv="Content-Style-Type" content="text/css">
 <META http-equiv="Pragma" content="no-cache">
 <META HTTP-equiv="Cache-Control" content="no-cache">
-<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
 
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 <!--
@@ -552,7 +552,7 @@ System Up Time | Current System Time
                 "|NETGEAR_24G|North American|Auto (1)|Up to 300Mbps|Off|On|Off" +
                 "|NETGEAR_5G|North American|Auto (1)|Up to 145Mbps|Off|On|Off" +
                 "|Guest1|Off|Guest1_5G|Off" +
-                "|Wednesday, 01 Jan 2003 16:01:11|Wednesday, 01 Jan 2003 16:01:11" +
+                "|Wednesday, 01 Jan 2003 ***IPv6***|Wednesday, 01 Jan 2003 ***IPv6***" +
                 "|Configured|UnConfigured" +
                 "|---|---|---|---|---|---" +
                 "|1|" ;
@@ -2047,7 +2047,7 @@ function ChangeResize()
         <input type="hidden" name="enable_apmode" value="0" />
         <input type="hidden" name="curlang" value="English" />
         <input type="hidden" name="RsAction" value=1>
-        <input type="hidden" name="RetailSessionId" value="3d71cb5f994f99b97d58">
+        <input type="hidden" name="RetailSessionId" value="caecef59e6458c6ec6ba">
     </form>
 </body>
 </html>
