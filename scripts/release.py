@@ -462,6 +462,69 @@ def update_all_files(repo_root: Path, version: str, skip_changelog: bool) -> Non
         sys.exit(1)
 
 
+def verify_version_consistency(repo_root: Path, version: str) -> bool:
+    """Verify that all version files have been updated correctly.
+
+    This prevents the CI error where tag version doesn't match manifest.json.
+    """
+    import json
+
+    print_info("Verifying version consistency across all files...")
+
+    all_correct = True
+
+    ***REMOVED*** Check manifest.json
+    manifest_path = repo_root / "custom_components" / "cable_modem_monitor" / "manifest.json"
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest = json.load(f)
+            manifest_version = manifest.get("version", "")
+            if manifest_version != version:
+                print_error(f"manifest.json version mismatch: expected {version}, got {manifest_version}")
+                all_correct = False
+            else:
+                print_success(f"manifest.json version correct: {version}")
+    except Exception as e:
+        print_error(f"Failed to read manifest.json: {e}")
+        all_correct = False
+
+    ***REMOVED*** Check const.py
+    const_path = repo_root / "custom_components" / "cable_modem_monitor" / "const.py"
+    try:
+        with open(const_path, encoding="utf-8") as f:
+            content = f.read()
+            if f'VERSION = "{version}"' not in content:
+                print_error(f"const.py version mismatch: expected VERSION = \"{version}\"")
+                all_correct = False
+            else:
+                print_success(f"const.py version correct: {version}")
+    except Exception as e:
+        print_error(f"Failed to read const.py: {e}")
+        all_correct = False
+
+    ***REMOVED*** Check test file
+    test_path = repo_root / "tests" / "components" / "test_version_and_startup.py"
+    try:
+        with open(test_path, encoding="utf-8") as f:
+            content = f.read()
+            if f'assert VERSION == "{version}"' not in content:
+                print_error(f"test_version_and_startup.py version mismatch: expected VERSION == \"{version}\"")
+                all_correct = False
+            else:
+                print_success(f"test_version_and_startup.py version correct: {version}")
+    except Exception as e:
+        print_error(f"Failed to read test_version_and_startup.py: {e}")
+        all_correct = False
+
+    if all_correct:
+        print_success("All version files are consistent!")
+        return True
+    else:
+        print_error("Version consistency check failed!")
+        print_error("This would cause CI to fail with: 'Tag version does not match manifest.json version'")
+        return False
+
+
 def perform_git_operations(version: str, skip_verify: bool, no_push: bool, repo_root: Path) -> None:
     """Perform git commit, tag, push, and release operations."""
     ***REMOVED*** Create commit
@@ -544,6 +607,10 @@ def main():
 
     ***REMOVED*** Update all version files
     update_all_files(repo_root, version, args.skip_changelog)
+
+    ***REMOVED*** Verify version consistency (prevents CI tag/manifest mismatch error)
+    if not verify_version_consistency(repo_root, version):
+        sys.exit(1)
 
     ***REMOVED*** Stage translations if it was updated
     with contextlib.suppress(subprocess.CalledProcessError):
