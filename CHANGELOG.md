@@ -26,6 +26,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Future features and improvements
 - See GitHub issues and milestones for upcoming features
 
+***REMOVED******REMOVED*** [3.5.1] - 2025-11-24
+
+***REMOVED******REMOVED******REMOVED*** Enhanced
+- **Netgear CM600 Parser Improvements** - Addressed user feedback from issue ***REMOVED***3 with comprehensive parser enhancements
+  - Channel data now correctly parses 24 downstream and 6 upstream channels from HTML tables instead of JavaScript dummy data
+  - Frequency, power, SNR, and error values now match the modem's web interface
+  - System information (hardware version, firmware version, uptime) now displays correctly instead of "unknown"
+  - Parser now fetches both DocsisStatus.asp (channel data) and RouterStatus.asp (system info) for complete data
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Modem Restart Support for CM600** - New `restart()` method enables modem reboot functionality
+  - Sends POST request to `/goform/RouterStatus` with `RsAction=2` parameter
+  - Integrated with existing Home Assistant button entity infrastructure
+  - Comprehensive test coverage (3 new restart tests)
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **CM600 Multi-Page Fetching** - Enhanced parser to fetch multiple pages for complete data
+  - DocsisStatus.asp for downstream/upstream channel data
+  - RouterStatus.asp for hardware version, firmware version, and system information
+  - Graceful fallback if page fetching fails
+
+***REMOVED******REMOVED******REMOVED*** DevContainer
+- **Port Forwarding Configuration** - Added explicit port forwarding for development environment
+  - Configured ports 8123 (Home Assistant) and 8300 (Home Assistant Internal)
+  - Enhanced port attributes with labels and auto-forward behavior
+
+***REMOVED******REMOVED******REMOVED*** Testing
+- Updated all CM600 tests to reflect real modem data (24 downstream, 6 upstream channels)
+- Added 3 new tests for modem restart functionality
+- All 495 tests passing
+- Code quality checks passing (ruff, black, mypy)
+
+***REMOVED******REMOVED******REMOVED*** Technical Details
+- **Files Modified**:
+  - `custom_components/cable_modem_monitor/parsers/netgear/cm600.py` - Complete rewrite of channel parsing (JavaScript → HTML tables), added restart() method
+  - `tests/parsers/netgear/test_cm600.py` - Updated expectations for 24 DS/6 US channels, added restart tests
+  - `.devcontainer/devcontainer.json` - Added forwardPorts configuration
+  - `custom_components/cable_modem_monitor/const.py` - Version bump to 3.5.1
+  - `custom_components/cable_modem_monitor/manifest.json` - Version bump to 3.5.1
+  - `tests/components/test_version_and_startup.py` - Updated version assertion to 3.5.1
+- **Related Issue**: Addresses user feedback in issue ***REMOVED***3 (user verification pending)
+
 ***REMOVED******REMOVED*** [3.4.1] - 2025-11-22
 
 ***REMOVED******REMOVED******REMOVED*** Enhanced

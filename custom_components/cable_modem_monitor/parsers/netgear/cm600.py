@@ -72,6 +72,34 @@ class NetgearCM600Parser(ModemParser):
         success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
         return success
 
+    def restart(self, session, base_url) -> bool:
+        """Restart the modem.
+
+        Args:
+            session: Requests session (already authenticated)
+            base_url: Base URL of the modem
+
+        Returns:
+            True if restart command sent successfully, False otherwise
+        """
+        try:
+            restart_url = f"{base_url}/goform/RouterStatus"
+            data = {"RsAction": "2"}
+
+            _LOGGER.info("CM600: Sending reboot command to %s", restart_url)
+            response = session.post(restart_url, data=data, timeout=10)
+
+            if response.status_code == 200:
+                _LOGGER.info("CM600: Reboot command sent successfully")
+                return True
+            else:
+                _LOGGER.warning("CM600: Reboot command failed with status %d", response.status_code)
+                return False
+
+        except Exception as e:
+            _LOGGER.error("CM600: Error sending reboot command: %s", e)
+            return False
+
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem.
 
@@ -85,6 +113,7 @@ class NetgearCM600Parser(ModemParser):
         """
         ***REMOVED*** CM600 requires fetching DocsisStatus.asp for channel data
         docsis_soup = soup  ***REMOVED*** Default to provided soup
+        router_soup = soup  ***REMOVED*** Default to provided soup for system info
 
         if session and base_url:
             try:
@@ -103,12 +132,33 @@ class NetgearCM600Parser(ModemParser):
             except Exception as e:
                 _LOGGER.warning("CM600: Error fetching DocsisStatus.asp: %s - using provided page", e)
 
+            ***REMOVED*** Also fetch RouterStatus.asp for hardware/firmware version
+            try:
+                _LOGGER.debug("CM600: Fetching RouterStatus.asp for system info")
+                router_url = f"{base_url}/RouterStatus.asp"
+                router_response = session.get(router_url, timeout=10)
+
+                if router_response.status_code == 200:
+                    router_soup = BeautifulSoup(router_response.text, "html.parser")
+                    _LOGGER.debug("CM600: Successfully fetched RouterStatus.asp (%d bytes)", len(router_response.text))
+                else:
+                    _LOGGER.warning(
+                        "CM600: Failed to fetch RouterStatus.asp, status %d - using provided page",
+                        router_response.status_code,
+                    )
+            except Exception as e:
+                _LOGGER.warning("CM600: Error fetching RouterStatus.asp: %s - using provided page", e)
+
         ***REMOVED*** Parse channel data from DocsisStatus.asp
         downstream_channels = self.parse_downstream(docsis_soup)
         upstream_channels = self.parse_upstream(docsis_soup)
 
-        ***REMOVED*** Parse system info from the main page (could be RouterStatus.asp or index.html)
-        system_info = self.parse_system_info(soup)
+        ***REMOVED*** Parse system info from DocsisStatus.asp (uptime) and RouterStatus.asp (hw/fw version)
+        system_info = self.parse_system_info(docsis_soup)
+
+        ***REMOVED*** Merge system info from RouterStatus.asp (hw/fw versions)
+        router_system_info = self._parse_router_system_info(router_soup)
+        system_info.update(router_system_info)
 
         return {
             "downstream": downstream_channels,
@@ -143,7 +193,8 @@ class NetgearCM600Parser(ModemParser):
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc:
             content = meta_desc.get("content", "")
-            if "CM600" in content:
+            ***REMOVED*** Ensure content is a string before checking
+            if isinstance(content, str) and "CM600" in content:
                 _LOGGER.info("Detected Netgear CM600 from meta description")
                 return True
 
@@ -157,10 +208,11 @@ class NetgearCM600Parser(ModemParser):
     def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:  ***REMOVED*** noqa: C901
         """Parse downstream channel data from DocsisStatus.asp.
 
-        The CM600 embeds channel data in JavaScript variables. The data format is:
-        - InitDsTableTagValue() function contains tagValueList
-        - Format: 'count|ch1_data|ch2_data|...'
-        - Each channel: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
+        The CM600 includes channel data in HTML table with id "dsTable".
+        Table structure:
+        - Row 1: Headers
+        - Rows 2+: Channel data with columns:
+          Channel | Lock Status | Modulation | Channel ID | Frequency | Power | SNR | Correctables | Uncorrectables
 
         Returns:
             List of downstream channel dictionaries
@@ -168,107 +220,72 @@ class NetgearCM600Parser(ModemParser):
         channels: list[dict] = []
 
         try:
-            regex_pattern = re.compile("InitDsTableTagValue")
-            _LOGGER.debug("CM600 Downstream: Compiled regex pattern: %s", regex_pattern)
-            all_scripts = soup.find_all("script")
-            _LOGGER.debug("CM600 Downstream: Found %d total script tags.", len(all_scripts))
+            ***REMOVED*** Find the downstream table
+            ds_table = soup.find("table", {"id": "dsTable"})
 
-            match = None  ***REMOVED*** Initialize match to None
-            for script in all_scripts:
-                if script.string and regex_pattern.search(script.string):
-                    _LOGGER.debug(
-                        "CM600 Downstream: Found script tag with InitDsTableTagValue. Script string length: %d",
-                        len(script.string),
-                    )
-                    ***REMOVED*** Extract the function body first, then get tagValueList from within it
-                    func_match = re.search(
-                        r"function InitDsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL
-                    )
-                    if func_match:
-                        func_body = func_match.group(1)
-                        ***REMOVED*** Remove block comments /* ... */ to avoid matching commented-out code
-                        func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
-                        ***REMOVED*** Now find tagValueList within this function (skip // commented lines)
-                        match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
-                        if match:
-                            _LOGGER.debug(
-                                "CM600 Downstream: tagValueList match found. Extracted value length: %d",
-                                len(match.group(1)),
-                            )
+            if not ds_table:
+                _LOGGER.warning("CM600 Downstream: Could not find dsTable")
+                return channels
 
-                            ***REMOVED*** Split by pipe delimiter
-                            values = match.group(1).split("|")
-                            break  ***REMOVED*** Found the data, stop searching
-                        else:
-                            _LOGGER.debug("CM600 Downstream: No tagValueList match found in function body.")
-                            continue
-                    else:
-                        _LOGGER.debug("CM600 Downstream: Could not extract function body.")
+            ***REMOVED*** Get all rows, skip the header row
+            rows = ds_table.find_all("tr")[1:]  ***REMOVED*** Skip header
+            _LOGGER.debug("CM600 Downstream: Found %d rows in dsTable", len(rows))
+
+            for row in rows:
+                try:
+                    cells = row.find_all("td")
+
+                    if len(cells) < 9:
+                        _LOGGER.debug("CM600 Downstream: Skipping row with %d cells (expected 9)", len(cells))
                         continue
 
-            if match is None:  ***REMOVED*** If no match was found after iterating all scripts
-                _LOGGER.debug(
-                    "CM600 Downstream: No script tag with InitDsTableTagValue found or no tagValueList extracted."
-                )
-                return channels  ***REMOVED*** Return empty list if no data found
+                    ***REMOVED*** Extract values from cells
+                    ***REMOVED*** cells[0] = Channel number
+                    ***REMOVED*** cells[1] = Lock Status
+                    ***REMOVED*** cells[2] = Modulation
+                    ***REMOVED*** cells[3] = Channel ID
+                    ***REMOVED*** cells[4] = Frequency
+                    ***REMOVED*** cells[5] = Power
+                    ***REMOVED*** cells[6] = SNR
+                    ***REMOVED*** cells[7] = Correctables
+                    ***REMOVED*** cells[8] = Uncorrectables
 
-            if len(values) < 10:  ***REMOVED*** Need at least count + 1 channel (9 fields)
-                _LOGGER.warning("Insufficient downstream data: %d values", len(values))
-                return channels  ***REMOVED*** Return empty list if insufficient data
+                    lock_status = cells[1].get_text(strip=True)
 
-            ***REMOVED*** First value is channel count
-            channel_count = int(values[0])
-            _LOGGER.debug("Found %d downstream channels", channel_count)
+                    ***REMOVED*** Skip unlocked channels
+                    if lock_status != "Locked":
+                        _LOGGER.debug("CM600 Downstream: Skipping unlocked channel")
+                        continue
 
-            ***REMOVED*** Each channel has 9 fields: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
-            fields_per_channel = 9
-            idx = 1  ***REMOVED*** Start after channel count
+                    ***REMOVED*** Extract and clean numeric values
+                    freq_str = cells[4].get_text(strip=True).replace(" Hz", "").replace("Hz", "").strip()
+                    power_str = cells[5].get_text(strip=True).replace(" dBmV", "").replace("dBmV", "").strip()
+                    snr_str = cells[6].get_text(strip=True).replace(" dB", "").replace("dB", "").strip()
 
-            for i in range(channel_count):
-                if idx + fields_per_channel > len(values):
-                    _LOGGER.warning("Incomplete data for downstream channel %d", i + 1)
-                    break
-
-                try:
-                    ***REMOVED*** Extract frequency value (remove " Hz" suffix if present)
-                    freq_str = values[idx + 4].replace(" Hz", "").strip()
                     freq = int(freq_str)
 
-                    ***REMOVED*** Extract lock status
-                    lock_status = values[idx + 1]  ***REMOVED*** "Locked" or "Not Locked"
-
-                    ***REMOVED*** Skip unlocked channels with 0 frequency (placeholder entries)
-                    ***REMOVED*** These are configured but not in use by the ISP
-                    if freq == 0 or lock_status != "Locked":
-                        _LOGGER.debug(
-                            "Skipping downstream channel %d: %s, freq=%d Hz",
-                            i + 1,
-                            lock_status,
-                            freq,
-                        )
-                        idx += fields_per_channel
+                    ***REMOVED*** Skip channels with 0 frequency (placeholder entries)
+                    if freq == 0:
+                        _LOGGER.debug("CM600 Downstream: Skipping channel with freq=0")
                         continue
 
                     channel = {
-                        "channel_id": values[idx + 3],  ***REMOVED*** Channel ID
-                        "frequency": freq,  ***REMOVED*** Frequency in Hz
-                        "power": float(values[idx + 5]),  ***REMOVED*** Power in dBmV
-                        "snr": float(values[idx + 6]),  ***REMOVED*** SNR in dB
-                        "modulation": values[idx + 2],  ***REMOVED*** Modulation (QAM256, etc.)
-                        "corrected": int(values[idx + 7]),  ***REMOVED*** Corrected errors
-                        "uncorrected": int(values[idx + 8]),  ***REMOVED*** Uncorrected errors
+                        "channel_id": cells[3].get_text(strip=True),
+                        "frequency": freq,
+                        "power": float(power_str),
+                        "snr": float(snr_str),
+                        "modulation": cells[2].get_text(strip=True),
+                        "corrected": int(cells[7].get_text(strip=True)),
+                        "uncorrected": int(cells[8].get_text(strip=True)),
                     }
 
                     channels.append(channel)
-                    idx += fields_per_channel
 
                 except (ValueError, IndexError) as e:
-                    _LOGGER.warning("Error parsing downstream channel %d: %s", i + 1, e)
-                    idx += fields_per_channel
+                    _LOGGER.warning("CM600 Downstream: Error parsing row: %s", e)
                     continue
 
             _LOGGER.info("Parsed %d downstream channels", len(channels))
-            ***REMOVED*** No break here, as we want to parse all channels
 
         except Exception as e:
             _LOGGER.error("Error parsing CM600 downstream channels: %s", e, exc_info=True)
@@ -278,10 +295,11 @@ class NetgearCM600Parser(ModemParser):
     def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:  ***REMOVED*** noqa: C901
         """Parse upstream channel data from DocsisStatus.asp.
 
-        The CM600 embeds channel data in JavaScript variables. The data format is:
-        - InitUsTableTagValue() function contains tagValueList
-        - Format: 'count|ch1_data|ch2_data|...'
-        - Each channel: num|lock|channel_type|id|symbol_rate|frequency|power
+        The CM600 includes channel data in HTML table with id "usTable".
+        Table structure:
+        - Row 1: Headers
+        - Rows 2+: Channel data with columns:
+          Channel | Lock Status | US Channel Type | Channel ID | Symbol Rate | Frequency | Power
 
         Returns:
             List of upstream channel dictionaries
@@ -289,128 +307,88 @@ class NetgearCM600Parser(ModemParser):
         channels: list[dict] = []
 
         try:
-            ***REMOVED*** Find the InitUsTableTagValue function with upstream data
-            regex_pattern = re.compile("InitUsTableTagValue")
-            _LOGGER.debug("CM600 Upstream: Compiled regex pattern: %s", regex_pattern)
-            all_scripts = soup.find_all("script")
-            _LOGGER.debug("CM600 Upstream: Found %d total script tags.", len(all_scripts))
+            ***REMOVED*** Find the upstream table
+            us_table = soup.find("table", {"id": "usTable"})
 
-            match = None  ***REMOVED*** Initialize match to None
-            for script in all_scripts:
-                if script.string and regex_pattern.search(script.string):
-                    _LOGGER.debug(
-                        "CM600 Upstream: Found script tag with InitUsTableTagValue. Script string length: %d",
-                        len(script.string),
-                    )
-                    ***REMOVED*** Extract the function body first, then get tagValueList from within it
-                    func_match = re.search(
-                        r"function InitUsTableTagValue\(\)[^{]*\{(.*?)\n\}", script.string, re.DOTALL
-                    )
-                    if func_match:
-                        func_body = func_match.group(1)
-                        ***REMOVED*** Remove block comments /* ... */ to avoid matching commented-out code
-                        func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
-                        ***REMOVED*** Now find tagValueList within this function (skip // commented lines)
-                        match = re.search(r"^\s+var tagValueList = [\"']([^\"']+)[\"']", func_body_clean, re.MULTILINE)
-                        if match:
-                            _LOGGER.debug(
-                                "CM600 Upstream: tagValueList match found. Extracted value length: %d",
-                                len(match.group(1)),
-                            )
+            if not us_table:
+                _LOGGER.warning("CM600 Upstream: Could not find usTable")
+                return channels
 
-                            ***REMOVED*** Split by pipe delimiter
-                            values = match.group(1).split("|")
-                            break  ***REMOVED*** Found the data, stop searching
-                        else:
-                            _LOGGER.debug("CM600 Upstream: No tagValueList match found in function body.")
-                            continue
-                    else:
-                        _LOGGER.debug("CM600 Upstream: Could not extract function body.")
+            ***REMOVED*** Get all rows, skip the header row
+            rows = us_table.find_all("tr")[1:]  ***REMOVED*** Skip header
+            _LOGGER.debug("CM600 Upstream: Found %d rows in usTable", len(rows))
+
+            for row in rows:
+                try:
+                    cells = row.find_all("td")
+
+                    if len(cells) < 7:
+                        _LOGGER.debug("CM600 Upstream: Skipping row with %d cells (expected 7)", len(cells))
                         continue
 
-            if match is None:  ***REMOVED*** If no match was found after iterating all scripts
-                _LOGGER.debug(
-                    "CM600 Upstream: No script tag with InitUsTableTagValue found or no tagValueList extracted."
-                )
-                return channels  ***REMOVED*** Return empty list if no data found
+                    ***REMOVED*** Extract values from cells
+                    ***REMOVED*** cells[0] = Channel number
+                    ***REMOVED*** cells[1] = Lock Status
+                    ***REMOVED*** cells[2] = US Channel Type
+                    ***REMOVED*** cells[3] = Channel ID
+                    ***REMOVED*** cells[4] = Symbol Rate
+                    ***REMOVED*** cells[5] = Frequency
+                    ***REMOVED*** cells[6] = Power
 
-            if len(values) < 8:  ***REMOVED*** Need at least count + 1 channel (7 fields)
-                _LOGGER.warning("Insufficient upstream data: %d values", len(values))
-                return channels  ***REMOVED*** Return empty list if insufficient data
+                    lock_status = cells[1].get_text(strip=True)
 
-            ***REMOVED*** First value is channel count
-            channel_count = int(values[0])
-            _LOGGER.debug("Found %d upstream channels", channel_count)
+                    ***REMOVED*** Skip unlocked channels
+                    if lock_status != "Locked":
+                        _LOGGER.debug("CM600 Upstream: Skipping unlocked channel")
+                        continue
 
-            ***REMOVED*** Each channel has 7 fields: num|lock|channel_type|id|symbol_rate|frequency|power
-            fields_per_channel = 7
-            idx = 1  ***REMOVED*** Start after channel count
+                    ***REMOVED*** Extract and clean numeric values
+                    freq_str = cells[5].get_text(strip=True).replace(" Hz", "").replace("Hz", "").strip()
+                    power_str = cells[6].get_text(strip=True).replace(" dBmV", "").replace("dBmV", "").strip()
 
-            for i in range(channel_count):
-                if idx + fields_per_channel > len(values):
-                    _LOGGER.warning("Incomplete data for upstream channel %d", i + 1)
-                    break
-
-                try:
-                    ***REMOVED*** Extract frequency value (remove " Hz" suffix if present)
-                    freq_str = values[idx + 5].replace(" Hz", "").strip()
                     freq = int(freq_str)
 
-                    ***REMOVED*** Extract lock status
-                    lock_status = values[idx + 1]  ***REMOVED*** "Locked" or "Not Locked"
-
-                    ***REMOVED*** Skip unlocked channels with 0 frequency (placeholder entries)
-                    ***REMOVED*** These are configured but not in use by the ISP
-                    if freq == 0 or lock_status != "Locked":
-                        _LOGGER.debug(
-                            "Skipping upstream channel %d: %s, freq=%d Hz",
-                            i + 1,
-                            lock_status,
-                            freq,
-                        )
-                        idx += fields_per_channel
+                    ***REMOVED*** Skip channels with 0 frequency (placeholder entries)
+                    if freq == 0:
+                        _LOGGER.debug("CM600 Upstream: Skipping channel with freq=0")
                         continue
 
                     channel = {
-                        "channel_id": values[idx + 3],  ***REMOVED*** Channel ID
-                        "frequency": freq,  ***REMOVED*** Frequency in Hz
-                        "power": float(values[idx + 6]),  ***REMOVED*** Power in dBmV
-                        "channel_type": values[idx + 2],  ***REMOVED*** Channel type (ATDMA, etc.)
+                        "channel_id": cells[3].get_text(strip=True),
+                        "frequency": freq,
+                        "power": float(power_str),
+                        "channel_type": cells[2].get_text(strip=True),
                     }
 
                     channels.append(channel)
-                    idx += fields_per_channel
 
                 except (ValueError, IndexError) as e:
-                    _LOGGER.warning("Error parsing upstream channel %d: %s", i + 1, e)
-                    idx += fields_per_channel
+                    _LOGGER.warning("CM600 Upstream: Error parsing row: %s", e)
                     continue
 
             _LOGGER.info("Parsed %d upstream channels", len(channels))
-            ***REMOVED*** No break here, as we want to parse all channels
 
         except Exception as e:
             _LOGGER.error("Error parsing CM600 upstream channels: %s", e, exc_info=True)
 
         return channels
 
-    def parse_system_info(self, soup: BeautifulSoup) -> dict:
-        """Parse system information from RouterStatus.asp or DashBoard.asp.
+    def _parse_router_system_info(self, soup: BeautifulSoup) -> dict:
+        """Parse system information from RouterStatus.asp.
 
         Extracts:
         - Hardware version
         - Firmware version
-        - Serial number
 
         Returns:
-            Dictionary with available system info
+            Dictionary with hardware/firmware version info
         """
         info = {}
 
         try:
             ***REMOVED*** Look for JavaScript variable tagValueList which contains system info
             ***REMOVED*** Format: tagValueList = 'hw_ver|fw_ver|serial|...'
-            script_tags = soup.find_all("script", text=re.compile("tagValueList"))
+            script_tags = soup.find_all("script", string=re.compile("tagValueList"))  ***REMOVED*** type: ignore[call-overload]
 
             for script in script_tags:
                 ***REMOVED*** Extract the tagValueList value
@@ -419,21 +397,64 @@ class NetgearCM600Parser(ModemParser):
                     ***REMOVED*** Split by pipe delimiter
                     values = match.group(1).split("|")
 
-                    if len(values) >= 3:
+                    if len(values) >= 2:
                         ***REMOVED*** Based on RouterStatus.asp structure:
                         ***REMOVED*** values[0] = Hardware Version
                         ***REMOVED*** values[1] = Firmware Version
-                        ***REMOVED*** values[2] = Serial Number
                         if values[0] and values[0] != "":
                             info["hardware_version"] = values[0]
                         if values[1] and values[1] != "":
                             info["software_version"] = values[1]
-                        ***REMOVED*** Skip serial number (already redacted in fixtures)
 
-                        _LOGGER.debug(f"Parsed CM600 system info: {info}")
+                        _LOGGER.debug(
+                            "Parsed CM600 system info from RouterStatus.asp: hw=%s, fw=%s", values[0], values[1]
+                        )
                         break
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing CM600 system info: {e}")
+            _LOGGER.error("Error parsing CM600 RouterStatus system info: %s", e)
+
+        return info
+
+    def parse_system_info(self, soup: BeautifulSoup) -> dict:
+        """Parse system information from DocsisStatus.asp.
+
+        Extracts:
+        - System uptime
+        - Current system time
+
+        Note: Hardware/firmware version should be parsed from RouterStatus.asp
+        using _parse_router_system_info()
+
+        Returns:
+            Dictionary with available system info
+        """
+        info = {}
+
+        try:
+            ***REMOVED*** Try to extract System Up Time from DocsisStatus.asp
+            ***REMOVED*** Format: <td id="SystemUpTime">...<b>System Up Time:</b> 0d 1h 23m 45s
+            uptime_tag = soup.find("td", {"id": "SystemUpTime"})
+            if uptime_tag:
+                uptime_text = uptime_tag.get_text(strip=True)
+                ***REMOVED*** Remove "System Up Time:" prefix
+                uptime = uptime_text.replace("System Up Time:", "").strip()
+                if uptime and uptime != "***IPv6***" and uptime != "Unknown" and uptime != "":
+                    info["system_uptime"] = uptime
+                    _LOGGER.debug("CM600: Parsed system uptime: %s", uptime)
+
+            ***REMOVED*** Try to extract Current System Time from DocsisStatus.asp
+            ***REMOVED*** Format: <td id="CurrentSystemTime">...<b>Current System Time:</b> Mon Nov 24 ... 2025
+            time_tag = soup.find("td", {"id": "CurrentSystemTime"})
+            if time_tag:
+                time_text = time_tag.get_text(strip=True)
+                ***REMOVED*** Remove "Current System Time:" prefix
+                current_time = time_text.replace("Current System Time:", "").strip()
+                if current_time and current_time != "***IPv6***" and current_time != "":
+                    info["current_time"] = current_time
+                    _LOGGER.debug("CM600: Parsed current time: %s", current_time)
+
+        except Exception as e:
+            _LOGGER.error("Error parsing CM600 system info: %s", e)
 
         return info
