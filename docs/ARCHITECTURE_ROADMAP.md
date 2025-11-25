@@ -166,6 +166,117 @@ We don't have physical access to users' modems. What works in tests may not work
 
 ---
 
+***REMOVED******REMOVED*** 🔧 Parser Infrastructure Improvements
+
+***REMOVED******REMOVED******REMOVED*** Completed: Auto-Discovery (v3.x)
+
+**Status:** ✅ Implemented
+
+Parsers are now **fully auto-discovered** at runtime. To add a new parser:
+
+1. Create file: `parsers/[manufacturer]/[model].py`
+2. Define class inheriting from `ModemParser`
+3. Set required attributes: `name`, `manufacturer`, `models`
+4. Implement: `can_parse()`, `login()`, `parse()`
+
+**No registry updates needed!** The discovery system automatically:
+- Finds parser classes in manufacturer subdirectories
+- Registers them for modem detection
+- Includes them in the config flow dropdown
+- Sorts by manufacturer, then name
+
+***REMOVED******REMOVED******REMOVED*** Future: Manufacturer Base Classes
+
+**Status:** 📋 Planned
+
+**Goal:** Reduce code duplication by extracting shared parsing logic into manufacturer-specific base classes.
+
+**Current State:**
+- ARRIS SB6141 and SB6190 share ~150 lines of transposed table parsing
+- Netgear CM600 and C3700 share ~200 lines of JavaScript regex parsing
+- Motorola MB7621 properly inherits from MotorolaGenericParser (good example)
+
+**Proposed Structure:**
+```
+ModemParser (abstract base)
+├── ArrisGenericParser (shared transposed table parsing)
+│   ├── ArrisSB6141Parser (just can_parse + metadata)
+│   └── ArrisSB6190Parser (just can_parse + metadata)
+├── NetgearGenericParser (shared JavaScript parsing)
+│   ├── NetgearCM600Parser
+│   └── NetgearC3700Parser
+└── MotorolaGenericParser (already exists)
+    └── MotorolaMB7621Parser (already works this way)
+```
+
+**Benefits:**
+- New parser = 50-100 lines (vs 300-500 currently)
+- Consistent behavior across models
+- Easier testing
+- Bug fixes apply to all models
+
+***REMOVED******REMOVED******REMOVED*** Future: Separate Fixtures Repository
+
+**Status:** 📋 Planned
+
+**Goal:** Create a separate repository (`cable_modem_fixtures`) to store HTML/JS fixtures from modems.
+
+**Benefits:**
+- Cleaner main repo (code vs test data separation)
+- Easier community contributions (users submit fixtures, not code)
+- Better privacy review process for user-submitted data
+- Fixtures can version independently (modem firmware changes)
+- Reusable by other projects
+
+**Proposed Structure:**
+```
+cable_modem_fixtures/
+├── modems/
+│   ├── arris/
+│   │   ├── sb6141/
+│   │   │   ├── manifest.json    ***REMOVED*** Firmware, capture date, contributor
+│   │   │   ├── signal.html
+│   │   │   └── README.md
+│   │   └── sb6190/
+│   ├── netgear/
+│   └── motorola/
+├── schemas/
+│   └── manifest.schema.json
+└── tools/
+    └── validate_fixtures.py
+```
+
+**Integration Options:**
+- Git submodule (locked to specific version)
+- Clone on setup (simple, always latest)
+- Optional dependency (tests skip if not present)
+
+***REMOVED******REMOVED******REMOVED*** Future: Auto-Healing Parser System
+
+**Status:** 📋 Vision
+
+**Goal:** Automatically detect and recover when modem firmware changes break parsers.
+
+**Concept:**
+1. Store "expected" fixture hashes for each parser
+2. Compare runtime HTML against known patterns
+3. Detect structural changes (new fields, renamed pages, etc.)
+4. Auto-capture diagnostics when mismatch detected
+5. Open GitHub issue with captured data and diff
+
+**Use Cases:**
+- Manufacturer pushes firmware update
+- ISP changes modem configuration
+- Regional variations in modem pages
+
+**Implementation Ideas:**
+- Hash comparison of page structure (not content)
+- Schema validation for parsed output
+- Confidence scoring for parse results
+- Automatic "needs attention" flagging
+
+---
+
 ***REMOVED******REMOVED*** 📈 Near-Term Priorities (v3.3.0 - v3.x.x)
 
 ***REMOVED******REMOVED******REMOVED*** High Priority

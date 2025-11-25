@@ -542,12 +542,12 @@ function InitTagValue()
 5G  Guest Network SSID (td) | Guest Network AP (td)
 System Up Time | Current System Time
 */
-    var tagValueList = '1.01B|V1.01.22|***SERIAL***|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|168.95.1.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|168.95.1.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
-//    var tagValueList = 'c312|V1.01.02|12af23|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|168.95.1.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|168.95.1.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
+    var tagValueList = '1.01B|V1.01.22|***SERIAL***|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|203.0.113.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|203.0.113.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
+//    var tagValueList = 'c312|V1.01.02|12af23|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|203.0.113.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|203.0.113.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
 /*
     var tagValueList = "v1.0|v0.1|12345678|None" +
-                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.13/24|***PRIVATE_IP***.254|168.95.1.1, 168.95.1.1|Enable" + 
-                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***/24|DHCPClient|***PRIVATE_IP***|168.95.1.1, 168.95.1.1" + 
+                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.13/24|***PRIVATE_IP***.254|203.0.113.1, 203.0.113.1|Enable" + 
+                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***/24|DHCPClient|***PRIVATE_IP***|203.0.113.1, 203.0.113.1" + 
                  "|XX:XX:XX:XX:XX:XX|192.168.1.1/24|On" + 
                 "|NETGEAR_24G|North American|Auto (1)|Up to 300Mbps|Off|On|Off" +
                 "|NETGEAR_5G|North American|Auto (1)|Up to 145Mbps|Off|On|Off" +

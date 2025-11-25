@@ -8,6 +8,7 @@ from unittest.mock import Mock
 import pytest
 from bs4 import BeautifulSoup
 
+from custom_components.cable_modem_monitor.parsers.motorola.generic import RESTART_WINDOW_SECONDS
 from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
 
@@ -169,3 +170,147 @@ class TestParsing:
         assert "system_info" in data
         assert data["system_info"]["software_version"] == "7621-5.7.1.5"
         assert data["system_info"]["system_uptime"] == "32 days 11h:58m:26s"
+
+
+class TestRestartDetection:
+    """Test restart detection and zero-value filtering.
+
+    These tests verify the base Motorola parsing behavior inherited from
+    MotorolaGenericParser. During the restart window (first 5 minutes after boot),
+    zero power/SNR values are filtered to None to avoid false readings.
+    """
+
+    def test_filters_zero_power_during_restart(self):
+        """Test that zero power values are filtered during restart window."""
+        html = """
+        <html><head><title>Motorola Cable Modem</title></head><body>
+        <table class="moto-table-content">
+            <tr><td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Lock Status</td>
+                <td class="moto-param-header-s">Modulation</td>
+                <td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Freq. (MHz)</td>
+                <td class="moto-param-header-s">Pwr (dBmV)</td>
+                <td class="moto-param-header-s">SNR (dB)</td>
+                <td class="moto-param-header-s">Corrected</td>
+                <td class="moto-param-header-s">Uncorrected</td></tr>
+            <tr><td>1</td><td>Locked</td><td>QAM256</td><td>135</td>
+                <td>567.0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+        </table>
+        <table class="moto-table-content">
+            <tr><td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+                <td class='moto-content-value'>0 days 00h:04m:30s</td></tr>
+        </table>
+        </body></html>
+        """
+
+        parser = MotorolaMB7621Parser()
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** During restart (< 5 min), zero power/SNR should be filtered to None
+        assert len(data["downstream"]) == 1
+        assert data["downstream"][0]["power"] is None  ***REMOVED*** Filtered out
+        assert data["downstream"][0]["snr"] is None  ***REMOVED*** Filtered out
+        assert data["system_info"]["system_uptime"] == "0 days 00h:04m:30s"
+
+    def test_preserves_nonzero_power_during_restart(self):
+        """Test that non-zero power values are preserved during restart window."""
+        html = """
+        <html><head><title>Motorola Cable Modem</title></head><body>
+        <table class="moto-table-content">
+            <tr><td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Lock Status</td>
+                <td class="moto-param-header-s">Modulation</td>
+                <td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Freq. (MHz)</td>
+                <td class="moto-param-header-s">Pwr (dBmV)</td>
+                <td class="moto-param-header-s">SNR (dB)</td>
+                <td class="moto-param-header-s">Corrected</td>
+                <td class="moto-param-header-s">Uncorrected</td></tr>
+            <tr><td>1</td><td>Locked</td><td>QAM256</td><td>135</td>
+                <td>567.0</td><td>3.5</td><td>38.2</td><td>0</td><td>0</td></tr>
+        </table>
+        <table class="moto-table-content">
+            <tr><td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+                <td class='moto-content-value'>0 days 00h:02m:15s</td></tr>
+        </table>
+        </body></html>
+        """
+
+        parser = MotorolaMB7621Parser()
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** During restart, non-zero values should be preserved
+        assert len(data["downstream"]) == 1
+        assert data["downstream"][0]["power"] == 3.5  ***REMOVED*** Preserved
+        assert data["downstream"][0]["snr"] == 38.2  ***REMOVED*** Preserved
+
+    def test_no_filtering_after_restart_window(self):
+        """Test that zero power values are NOT filtered after restart window."""
+        html = """
+        <html><head><title>Motorola Cable Modem</title></head><body>
+        <table class="moto-table-content">
+            <tr><td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Lock Status</td>
+                <td class="moto-param-header-s">Modulation</td>
+                <td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Freq. (MHz)</td>
+                <td class="moto-param-header-s">Pwr (dBmV)</td>
+                <td class="moto-param-header-s">SNR (dB)</td>
+                <td class="moto-param-header-s">Corrected</td>
+                <td class="moto-param-header-s">Uncorrected</td></tr>
+            <tr><td>1</td><td>Locked</td><td>QAM256</td><td>135</td>
+                <td>567.0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+        </table>
+        <table class="moto-table-content">
+            <tr><td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+                <td class='moto-content-value'>0 days 00h:06m:00s</td></tr>
+        </table>
+        </body></html>
+        """
+
+        parser = MotorolaMB7621Parser()
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** After restart window (>= 5 min), zero values should be kept
+        assert len(data["downstream"]) == 1
+        assert data["downstream"][0]["power"] == 0  ***REMOVED*** NOT filtered
+        assert data["downstream"][0]["snr"] == 0  ***REMOVED*** NOT filtered
+
+    def test_upstream_filtering_during_restart(self):
+        """Test that zero power values are filtered for upstream during restart."""
+        html = """
+        <html><head><title>Motorola Cable Modem</title></head><body>
+        <table class="moto-table-content">
+            <tr><td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Lock Status</td>
+                <td class="moto-param-header-s">US Channel Type</td>
+                <td class="moto-param-header-s">Channel ID</td>
+                <td class="moto-param-header-s">Symb. Rate (Ksym/sec)</td>
+                <td class="moto-param-header-s">Freq. (MHz)</td>
+                <td class="moto-param-header-s">Pwr (dBmV)</td></tr>
+            <tr><td>1</td><td>Locked</td><td>ATDMA</td><td>2</td>
+                <td>5120</td><td>36.0</td><td>0</td></tr>
+        </table>
+        <table class="moto-table-content">
+            <tr><td>&nbsp;&nbsp;&nbsp;System Up Time</td>
+                <td class='moto-content-value'>0 days 00h:01m:00s</td></tr>
+        </table>
+        </body></html>
+        """
+
+        parser = MotorolaMB7621Parser()
+        soup = BeautifulSoup(html, "html.parser")
+        data = parser.parse(soup)
+
+        ***REMOVED*** During restart, zero upstream power should be filtered
+        assert len(data["upstream"]) == 1
+        assert data["upstream"][0]["power"] is None  ***REMOVED*** Filtered out
+
+    def test_restart_window_constant(self):
+        """Test that the restart window constant is correctly defined."""
+        assert RESTART_WINDOW_SECONDS == 300
+        assert RESTART_WINDOW_SECONDS == 5 * 60  ***REMOVED*** 5 minutes

@@ -11,7 +11,7 @@ from custom_components.cable_modem_monitor.core.auth_config import RedirectFormA
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +40,15 @@ class TechnicolorXB7Parser(ModemParser):
     url_patterns = [
         {"path": "/network_setup.jst", "auth_method": "form", "auth_required": True},
     ]
+
+    ***REMOVED*** Capabilities - Technicolor XB7 provides full system info
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.LAST_BOOT_TIME,
+        ModemCapability.SOFTWARE_VERSION,
+    }
 
     def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """

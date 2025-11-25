@@ -57,6 +57,59 @@ def run_command(command, quiet=False):
         raise
 
 
+def is_privacy_safe_email(email: str) -> bool:
+    """Check if an email is a privacy-safe (noreply) address."""
+    if not email:
+        return False
+    email = email.lower()
+    return (
+        email.endswith("@users.noreply.github.com") or email == "noreply@anthropic.com" or email == "noreply@github.com"
+    )
+
+
+def configure_git_email_privacy():
+    """Check and configure git email for privacy protection."""
+    try:
+        current_email = run_command("git config user.email", quiet=True)
+    except Exception:
+        current_email = ""
+
+    if is_privacy_safe_email(current_email):
+        print_success(f"Git email is privacy-safe: {current_email}")
+        return
+
+    if current_email:
+        print_warning(f"Personal email detected: {current_email}")
+    else:
+        print_warning("No git email configured")
+
+    print("")
+    print("  To protect your privacy, this project recommends using GitHub's noreply email.")
+    print("  Personal emails in git history are permanently public.")
+    print("")
+    print("  Setup instructions:")
+    print("    1. Go to: https://github.com/settings/emails")
+    print("    2. Check 'Keep my email addresses private'")
+    print("    3. Copy your noreply email (e.g., 12345+user@users.noreply.github.com)")
+    print("")
+
+    ***REMOVED*** Try to prompt for email (works in interactive terminals)
+    try:
+        new_email = input("  Paste your GitHub noreply email (or press Enter to skip): ").strip()
+        if new_email:
+            if is_privacy_safe_email(new_email):
+                run_command(f'git config user.email "{new_email}"', quiet=True)
+                print_success(f"Git email configured: {new_email}")
+            else:
+                print_warning("That doesn't look like a noreply email, skipping")
+                print("  You can configure it later with: ./scripts/dev/setup-git-email.sh")
+        else:
+            print_warning("Skipped - you can configure later with: ./scripts/dev/setup-git-email.sh")
+    except (EOFError, KeyboardInterrupt):
+        ***REMOVED*** Non-interactive mode (CI, piped input, etc.)
+        print_warning("Non-interactive mode - configure later with: ./scripts/dev/setup-git-email.sh")
+
+
 ***REMOVED*** ========================================
 ***REMOVED*** Main Setup Logic
 ***REMOVED*** ========================================
@@ -221,7 +274,12 @@ def main():  ***REMOVED*** noqa: C901
         print("  Optional: Install Docker Desktop for containerized development")
     print("")
 
-    ***REMOVED*** 10. Check VS Code extensions
+    ***REMOVED*** 10. Configure git email privacy
+    print_step("Checking git email privacy...")
+    configure_git_email_privacy()
+    print("")
+
+    ***REMOVED*** 11. Check VS Code extensions (renumbered from 10)
     print_step("Checking VS Code...")
     if shutil.which("code"):
         try:
@@ -257,7 +315,7 @@ def main():  ***REMOVED*** noqa: C901
         print("  Optional: Install VS Code for better development experience")
     print("")
 
-    ***REMOVED*** 11. Run a quick test
+    ***REMOVED*** 12. Run a quick test
     print_step("Running quick test to verify setup...")
     try:
         run_command(f"{python_cmd} -m pytest tests/parsers/netgear/test_cm600.py::test_fixtures_exist -q", quiet=True)
@@ -266,7 +324,7 @@ def main():  ***REMOVED*** noqa: C901
         print_warning("Test execution had issues (may need additional setup)")
     print("")
 
-    ***REMOVED*** 12. Create .python-version file
+    ***REMOVED*** 13. Create .python-version file
     if not os.path.exists(".python-version"):
         print_step("Creating .python-version file...")
         with open(".python-version", "w") as f:
@@ -284,8 +342,9 @@ def main():  ***REMOVED*** noqa: C901
     print("What's installed:")
     print("  • Python virtual environment (.venv/)")
     print("  • All development dependencies")
-    print("  • Pre-commit hooks")
+    print("  • Pre-commit hooks (including email privacy check)")
     print("  • Code formatters and linters")
+    print("  • Git email privacy protection")
     print("")
     print("Next steps:")
     print("")

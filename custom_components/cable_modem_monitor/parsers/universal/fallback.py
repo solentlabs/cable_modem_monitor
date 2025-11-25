@@ -17,7 +17,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +46,9 @@ class UniversalFallbackParser(ModemParser):
     ***REMOVED*** Verification status
     verified = True  ***REMOVED*** Fallback parser is a diagnostic tool, always "works"
     verification_source = "Diagnostic tool for HTML capture - not a real parser"
+
+    ***REMOVED*** Capabilities - Fallback parser has no data capabilities (diagnostic mode only)
+    capabilities: set[ModemCapability] = set()
 
     ***REMOVED*** Use HTTP Basic Auth - most common authentication for cable modems
     ***REMOVED*** Will be skipped if no credentials provided

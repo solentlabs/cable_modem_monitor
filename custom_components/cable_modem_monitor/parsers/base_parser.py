@@ -3,12 +3,53 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.core.auth_config import AuthConfig
+
+
+class ModemCapability(str, Enum):
+    """Standardized capability names for modem parsers.
+
+    These are the common field names that parsers can declare support for.
+    The integration uses these to conditionally create entities.
+
+    System Information:
+        SYSTEM_UPTIME: Current uptime string (e.g., "7 days 00:00:01")
+        LAST_BOOT_TIME: Calculated boot timestamp (ISO format)
+        CURRENT_TIME: Current system time from modem
+        HARDWARE_VERSION: Hardware/board version
+        SOFTWARE_VERSION: Firmware/software version
+
+    Channel Data:
+        DOWNSTREAM_CHANNELS: DOCSIS 3.0 downstream channels
+        UPSTREAM_CHANNELS: DOCSIS 3.0 upstream channels
+        OFDM_DOWNSTREAM: DOCSIS 3.1 OFDM downstream channels
+        OFDM_UPSTREAM: DOCSIS 3.1 OFDM upstream channels
+
+    Actions:
+        RESTART: Modem can be restarted via the integration
+    """
+
+    ***REMOVED*** System information
+    SYSTEM_UPTIME = "system_uptime"
+    LAST_BOOT_TIME = "last_boot_time"
+    CURRENT_TIME = "current_time"
+    HARDWARE_VERSION = "hardware_version"
+    SOFTWARE_VERSION = "software_version"
+
+    ***REMOVED*** Channel data
+    DOWNSTREAM_CHANNELS = "downstream_channels"
+    UPSTREAM_CHANNELS = "upstream_channels"
+    OFDM_DOWNSTREAM = "ofdm_downstream"
+    OFDM_UPSTREAM = "ofdm_upstream"
+
+    ***REMOVED*** Actions
+    RESTART = "restart"
 
 
 class ModemParser(ABC):
@@ -42,6 +83,24 @@ class ModemParser(ABC):
     ***REMOVED*** Authentication configuration (new system - optional, for backward compatibility)
     ***REMOVED*** Parsers should define this as a class attribute
     auth_config: AuthConfig | None = None
+
+    ***REMOVED*** Capabilities declaration - what data this parser can provide
+    ***REMOVED*** Override in subclasses to declare supported capabilities
+    ***REMOVED*** Format: set of ModemCapability enum values
+    ***REMOVED*** Example: capabilities = {ModemCapability.DOWNSTREAM_CHANNELS, ModemCapability.SYSTEM_UPTIME}
+    capabilities: set[ModemCapability] = set()
+
+    @classmethod
+    def has_capability(cls, capability: ModemCapability) -> bool:
+        """Check if this parser supports a specific capability.
+
+        Args:
+            capability: The ModemCapability to check for
+
+        Returns:
+            True if the parser declares support for this capability
+        """
+        return capability in cls.capabilities
 
     @classmethod
     @abstractmethod

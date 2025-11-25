@@ -6,7 +6,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +28,15 @@ class MotorolaMB8611StaticParser(ModemParser):
         ***REMOVED*** MB8600 compatibility: Some MB8611 firmware may use older MB8600-style URLs
         {"path": "/MotoConnection.asp", "auth_method": "form", "auth_required": True},
     ]
+
+    ***REMOVED*** Capabilities - MB8611 static HTML parser
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.HARDWARE_VERSION,
+        ModemCapability.SOFTWARE_VERSION,
+    }
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

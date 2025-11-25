@@ -11,7 +11,7 @@ from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfi
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +46,15 @@ class MotorolaGenericParser(ModemParser):
         {"path": "/MotoConnection.asp", "auth_method": "form", "auth_required": True},
         {"path": "/MotoHome.asp", "auth_method": "form", "auth_required": True},
     ]
+
+    ***REMOVED*** Capabilities - Motorola generic parser
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.RESTART,
+    }
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

@@ -147,7 +147,7 @@ Basic Status and Settings
           <table class='moto-table-content' cellspacing='0' cellpadding='0'>
           <tr>
           <td class='moto-param-name'>&nbsp;&nbsp;&nbsp;MAC Address</td>
-          <td class='moto-param-value'>00:40:36:6d:55:45</td>
+          <td class='moto-param-value'>XX:XX:XX:XX:XX:XX</td>
           <td class='moto-param-action'></td>
           <td  class='moto-param-help'><a href='javascript:void(0);'  class='tooltip'><img src='motohelp.jpg'/><span>
           MAC Address:<br>The MAC Address (physical address) of your cable modem.</span></a>&nbsp;&nbsp;</td>

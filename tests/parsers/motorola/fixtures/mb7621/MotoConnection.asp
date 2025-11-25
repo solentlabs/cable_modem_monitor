@@ -609,7 +609,7 @@ else
 <td class='moto-param-title'>&nbsp;&nbsp;&nbsp;IPv4 DNS Servers</td>
 <td class='moto-param-value'><img src="mototitle.jpg"/></td>
 <td class='moto-param-action'><input type='button' class='moto-change-button' name='' value='Save' onClick='Apply(1)'>&nbsp;&nbsp;</td>
-<td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="motohelp.jpg"/><span>IPv4 DNS Servers:<br>Domain Name Servers (DNS Servers) translate web addresses such as www.motorola.com into IP Addresses such as 144.189.100.66. Most cable service providers will supply your cable modem with a list of DNS servers. If you prefer, you can supply your own, below.</span></a>&nbsp;&nbsp;</td>
+<td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="motohelp.jpg"/><span>IPv4 DNS Servers:<br>Domain Name Servers (DNS Servers) translate web addresses such as www.motorola.com into IP Addresses such as 203.0.113.1. Most cable service providers will supply your cable modem with a list of DNS servers. If you prefer, you can supply your own, below.</span></a>&nbsp;&nbsp;</td>
 </tr>
   </table>
 </td>

@@ -2,11 +2,13 @@
 
 ***REMOVED******REMOVED*** Project Details
 - **GitHub Repository**: https://github.com/kwschulz/cable_modem_monitor
-- **Current Version**: 3.3.1 (see `custom_components/cable_modem_monitor/manifest.json` or `const.py`)
 - **Type**: Home Assistant integration (installable via HACS)
-- **Test Count**: ~440+ pytest tests
-- **Test Coverage**: ~70% (exceeds 60% minimum requirement)
-- **Latest Release Notes**: See `CHANGELOG.md` for detailed version history
+
+**To get current values (AI tools should look these up dynamically):**
+- **Version**: `custom_components/cable_modem_monitor/manifest.json` → `version` field
+- **Test count**: Run `pytest tests/ --collect-only -q | tail -1`
+- **Supported modems**: Run `python scripts/dev/list-supported-modems.py` (or `--json` for machine-readable)
+- **Release history**: `CHANGELOG.md`
 
 ***REMOVED******REMOVED*** Adding Support for New Modems: The Fallback Parser Workflow
 
@@ -426,11 +428,56 @@ When encountering a modem with HNAP/SOAP indicators:
 
 ***REMOVED******REMOVED*** Development Workflow Rules
 
+***REMOVED******REMOVED******REMOVED*** Email Privacy Protection
+
+**IMPORTANT FOR AI TOOLS:** This repository protects contributor privacy by preventing personal email addresses in commits.
+
+**Rules:**
+1. All commits should use GitHub noreply emails (`*@users.noreply.github.com`)
+2. Personal emails (e.g., `@gmail.com`, `@yahoo.com`) should NOT be used
+3. If a contributor's personal email is detected, guide them to run: `./scripts/dev/setup-git-email.sh`
+
+**Allowed email patterns:**
+- `*@users.noreply.github.com` (GitHub noreply)
+- `noreply@anthropic.com` (Claude/AI commits)
+- `noreply@github.com` (GitHub service)
+
+**Setup for new contributors:**
+1. **Automatic:** Email privacy is configured during `./scripts/setup.sh` (initial environment setup)
+2. **Reconfigure:** VS Code task "🔒 Reconfigure Git Email Privacy" or `./scripts/dev/setup-git-email.sh`
+3. **Pre-commit hook:** Automatically checks on each commit
+
+**Why this matters:**
+- Git history is permanent and public
+- Personal emails can be harvested by spammers
+- This is especially important as the project grows
+
 ***REMOVED******REMOVED******REMOVED*** Before Pushing to GitHub
-1. Double-check all work thoroughly
-2. Run all tests locally and ensure they pass
-3. Ask for permission before pushing
-4. Consider creating a new release when pushing
+
+**IMPORTANT FOR AI TOOLS:** Always run these checks before committing/pushing:
+
+```bash
+***REMOVED*** 1. Code quality checks (must all pass)
+ruff check .                    ***REMOVED*** Linting
+black --check .                 ***REMOVED*** Formatting
+mypy . --config-file=mypy.ini   ***REMOVED*** Type checking
+
+***REMOVED*** 2. Check for PII in fixtures
+python scripts/check_fixture_pii.py
+
+***REMOVED*** 3. Run tests (requires Home Assistant environment - CI handles this)
+***REMOVED*** If homeassistant module is available:
+pytest tests/ -v --tb=short
+```
+
+**Checklist:**
+1. ✅ All quality checks pass (ruff, black, mypy)
+2. ✅ All tests pass
+3. ✅ PII check passes for fixtures
+4. ✅ CHANGELOG.md updated for new versions
+5. ✅ Version bumped in const.py and manifest.json (for releases)
+6. Ask for permission before pushing
+7. Consider creating a new release when pushing
 
 ***REMOVED******REMOVED******REMOVED*** Deploying to Home Assistant Test Server
 **IMPORTANT - Use these exact steps:**
@@ -469,11 +516,11 @@ The project supports **two development modes**:
 
 See `docs/GETTING_STARTED.md` for detailed comparison and setup instructions.
 
-***REMOVED******REMOVED******REMOVED*** Key Developer Tools (v3.3.1+)
-- **`fresh_start.py`** - Reset VS Code state to test onboarding (cross-platform)
-- **`ha-cleanup.sh`** - Auto-resolve port conflicts and stale containers
+***REMOVED******REMOVED******REMOVED*** Key Developer Tools
+- **`scripts/dev/fresh_start.py`** - Reset VS Code state to test onboarding (cross-platform)
+- **`scripts/dev/ha-cleanup.sh`** - Auto-resolve port conflicts and stale containers
 - **Terminal Auto-Activation** - Scripts automatically activate `.venv` with helpful messages
-- **VS Code Tasks** - 20+ tasks for common workflows (HA: Start, Run Tests, etc.)
+- **VS Code Tasks** - See `.vscode/tasks.json` for available tasks
 - **Port Conflict Resolution** - Automatic detection and cleanup of port 8123 issues
 
 ***REMOVED******REMOVED******REMOVED*** Home Assistant Testing Workflow
@@ -499,58 +546,14 @@ Ctrl+Shift+P → Tasks: Run Task → "HA: Diagnose Port 8123"
 
 See `CONTRIBUTING.md` for full development workflow.
 
-***REMOVED******REMOVED*** Recent Development History
+***REMOVED******REMOVED*** Version History & Roadmap
 
-***REMOVED******REMOVED******REMOVED*** v3.4.0 - In Development 🚧
-**Status:** Planning phase, features TBD
-**Target:** To be determined based on new features
+**Do not hardcode version info here.** Instead, reference these sources:
 
-See `CHANGELOG.md` [Unreleased] section for planned changes.
-
-***REMOVED******REMOVED******REMOVED*** v3.3.1 - Current Release ✅
-**Status:** Released (2025-11-20)
-**Key Changes:**
-- **Developer Experience Improvements** - Comprehensive dev environment overhaul
-  - Fresh start script for testing onboarding (cross-platform)
-  - Automatic port conflict resolution for Home Assistant
-  - Enhanced terminal auto-activation with helpful messages
-  - 20+ VS Code tasks for common workflows
-  - Fixed dev container volume mounting for Docker-in-Docker
-  - Comprehensive documentation cleanup (removed 16 obsolete files)
-  - Fixed venv naming bugs in test scripts
-- **Documentation** - Fixed 9 broken references, updated all script paths
-- **Scripts** - Removed 6 obsolete scripts (~570 lines of old code)
-
-***REMOVED******REMOVED******REMOVED*** v3.3.0 - Previous Release
-**Status:** Released (2024-11-18)
-**Key Features:**
-- **Netgear CM600 Support** - Full parser for CM600 modem
-- **Enhanced CodeQL Security** - 5 custom security queries + expanded query packs
-- **Core Module Testing** - 115 new tests for signal analyzer, health monitor, HNAP, auth
-- **Dev Container Environment** - Low-friction setup with Docker-in-Docker
-- **Parser Diagnostics** - Enhanced troubleshooting with detection history
-
-**Historical Versions:**
-- v3.0.0 - MB8611 parser, enhanced discovery & authentication
-- v2.6.0 - XB7 improvements, system info parsing
-- v2.5.0 - Parser plugin architecture, entity naming modes
-
-***REMOVED******REMOVED*** Community Action Items (From Forum Feedback)
-
-***REMOVED******REMOVED******REMOVED*** ✅ Completed
-1. **Entity Naming Improvement** - ✅ COMPLETE (4 naming modes)
-2. **Parser Architecture** - ✅ COMPLETE (plugin system with auto-discovery)
-3. **Last Boot Time Sensor** - ✅ COMPLETE (timestamp device class)
-4. **Fixed nested table parsing for Motorola modems** - ✅ COMPLETE
-5. **Fixed Home Assistant deprecation warnings** - ✅ COMPLETE
-6. **Increased default polling interval to 10 minutes** - ✅ COMPLETE
-
-***REMOVED******REMOVED******REMOVED*** Medium Priority (Future)
-- **Technicolor XB7 Support** - Waiting for HTML samples (easy to add now with parser template)
-- **Smart Polling Feature** - Foundation complete, integration pending
-- **Additional Modem Support** - Community contributions welcome
+- **Current version**: `custom_components/cable_modem_monitor/manifest.json`
+- **Release history**: `CHANGELOG.md`
+- **Upcoming changes**: `CHANGELOG.md` → `[Unreleased]` section
+- **Open issues/roadmap**: https://github.com/kwschulz/cable_modem_monitor/issues
 
 ---
-*Last Updated: 2025-11-20 (v3.3.1, preparing for v3.4.0)*
-*For detailed changes, see `CHANGELOG.md`*
-*For version info, see `custom_components/cable_modem_monitor/manifest.json`*
+*This file contains stable guidance for AI tools. Version-specific details belong in CHANGELOG.md.*

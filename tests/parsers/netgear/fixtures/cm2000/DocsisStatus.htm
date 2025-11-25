@@ -1,0 +1,82 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<META name="description" content="CM2000">
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Modem CM2000</title>
+
+<script language="javascript" type="text/javascript">
+
+function InitTagValue()
+{
+/*
+  Acquire Downstream Channel (text) | Acquire Downstream Channel Comment (text) |
+  Connectivity State (text) | Connectivity State Comment (text) |
+  Boot State (text) | Boot State Comment (text) |
+  Configuration File (text) | Configuration File Comment (text) |
+  Security (text) | Security Comment (text) |
+  Current System Time (text) | Startup Freq | DS Partial | US Partial |
+  System Up Time (text) | OFDM DS Count | OFDM US Count
+*/
+    var tagValueList = '579000000|Locked|OK|Operational|OK|Operational|&nbsp;|&nbsp;|Enabled|BPI+|Tue Nov 25 12:48:02 2025|0|0|0|7 days 00:00:01|3|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUsTableTagValue()
+{
+/*
+  Channel (text) | Lock Status (text) | US Channel Type (text) | Channel ID (text) | Symbol Rate (text) | Frequency (text) | Power (text)
+*/
+    var tagValueList = '8|1|Locked|ATDMA|2|5120 Ksym/sec|22800000 Hz|38.0 dBmV|2|Locked|ATDMA|3|5120 Ksym/sec|29200000 Hz|38.0 dBmV|3|Locked|ATDMA|1|5120 Ksym/sec|16300000 Hz|38.0 dBmV|4|Locked|ATDMA|4|5120 Ksym/sec|35600000 Hz|37.8 dBmV|5|Not Locked|Unknown|0|0|0|0.0|6|Not Locked|Unknown|0|0|0|0.0|7|Not Locked|Unknown|0|0|0|0.0|8|Not Locked|Unknown|0|0|0|0.0|';
+
+    return tagValueList.split("|");
+}
+
+function InitDsTableTagValue()
+{
+/*
+  Channel (text) | Lock Status (text) | Modulation (text) | Channel ID (text) | Frequency (text) | Power (text) | SNR (text) | Correctables (text) | Uncorrectables (text)
+*/
+    var tagValueList = '32|1|Locked|QAM256|17|579000000 Hz|7.8|41.4|80|418|2|Locked|QAM256|14|561000000 Hz|7.8|41.4|75|429|3|Locked|QAM256|15|567000000 Hz|7.8|41.5|95|402|4|Locked|QAM256|16|573000000 Hz|7.7|41.5|78|418|5|Locked|QAM256|18|585000000 Hz|7.8|41.4|90|412|6|Locked|QAM256|19|591000000 Hz|7.7|41.4|97|399|7|Locked|QAM256|20|597000000 Hz|7.6|41.2|70|428|8|Locked|QAM256|21|603000000 Hz|7.6|41.2|82|429|9|Locked|QAM256|22|609000000 Hz|7.6|41.2|81|424|10|Locked|QAM256|23|615000000 Hz|7.7|41.1|96|410|11|Locked|QAM256|24|621000000 Hz|7.8|41.3|83|425|12|Locked|QAM256|25|627000000 Hz|7.9|41.3|89|416|13|Locked|QAM256|26|633000000 Hz|7.9|41.2|90|413|14|Locked|QAM256|27|639000000 Hz|8.1|41.3|80|429|15|Locked|QAM256|28|645000000 Hz|8.2|41.4|99|407|16|Locked|QAM256|29|651000000 Hz|8.2|41.4|86|421|17|Locked|QAM256|30|657000000 Hz|8.1|41.3|82|419|18|Locked|QAM256|31|663000000 Hz|8.2|41.3|100|412|19|Locked|QAM256|32|669000000 Hz|8.1|41.2|93|407|20|Locked|QAM256|34|675000000 Hz|8.1|40.8|97|410|21|Locked|QAM256|35|681000000 Hz|8.2|41.3|76|434|22|Locked|QAM256|36|687000000 Hz|8.2|41.3|105|399|23|Locked|QAM256|37|693000000 Hz|8.3|41.3|89|418|24|Locked|QAM256|38|699000000 Hz|8.6|41.3|70|440|25|Locked|QAM256|39|705000000 Hz|8.7|41.3|113|394|26|Locked|QAM256|40|711000000 Hz|8.7|41.2|80|428|27|Locked|QAM256|41|717000000 Hz|8.9|41.3|97|407|28|Locked|QAM256|42|723000000 Hz|8.8|41.1|99|411|29|Locked|QAM256|43|729000000 Hz|8.9|41|98|405|30|Locked|QAM256|44|735000000 Hz|9|41|92|411|31|Locked|QAM256|45|741000000 Hz|9.2|41.2|80|423|32|Not Locked|Unknown|0|0 Hz|0.0|0.0|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function InitOfdmDsTableTagValue()
+{
+/*
+  Channel | Lock Status | Subcarriers | Channel ID | Frequency | Power | SNR | Active Subcarriers | Corrected | Uncorrected | Unerrored
+*/
+    var tagValueList = '2|1|Locked|0 ,1 ,2 ,3|33|762000000 Hz|9.88 dBmV|40.9 dB|1108 ~ 2987|21516153083|20103157996|70|2|Not Locked|0|0|0 Hz|0 dBmV|0 dB|0 ~ 4095|0|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function InitOfdmUsTableTagValue()
+{
+/*
+  Channel | Lock Status | Channel ID | Frequency | Power
+*/
+    var tagValueList = '2|1|Not Locked|0|0|0 Hz|0 dBmV|2|Not Locked|0|0|0 Hz|0 dBmV';
+
+    return tagValueList.split("|");
+}
+
+function InitProvRateTableTagValue()
+{
+    var tagValueList = '1|Honor MDD|IPv6 only|';
+    return tagValueList.split("|");
+}
+
+</script>
+</head>
+<body>
+<!-- Fixture for CM2000 DocsisStatus.htm - extracted from user submission Issue ***REMOVED***38 -->
+</body>
+</html>

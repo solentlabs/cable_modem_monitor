@@ -10,7 +10,7 @@ from custom_components.cable_modem_monitor.core.auth_config import NoAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +34,12 @@ class ArrisSB6141Parser(ModemParser):
     url_patterns = [
         {"path": "/cmSignalData.htm", "auth_method": "none", "auth_required": False},
     ]
+
+    ***REMOVED*** Capabilities - ARRIS SB6141 (no system info available)
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+    }
 
     def login(self, session, base_url, username, password) -> bool:
         """ARRIS modems do not have a login page."""

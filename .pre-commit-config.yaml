@@ -74,6 +74,14 @@ repos:
   ***REMOVED*** Local hooks
   - repo: local
     hooks:
+      - id: check-commit-email
+        name: Check for personal email in git config
+        entry: scripts/dev/check-commit-email.sh
+        language: script
+        always_run: true
+        pass_filenames: false
+        stages: [commit]
+
       - id: codeql-test
         name: Run CodeQL Tests
         entry: scripts/dev/test-codeql.sh

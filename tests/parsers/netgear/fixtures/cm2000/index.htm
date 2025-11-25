@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>NETGEAR Modem CM2000</title>
+<META name="description" content="CM2000">
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:00 GMT">
+
+<script src="jquery.js"></script>
+<script src="script/script.js"></script>
+<link rel="stylesheet" type="text/css" href="css/mainpage.css">
+<link rel="stylesheet" type="text/css" href="css/tabs.css">
+<link rel="stylesheet" type="text/css" href="css/button.css">
+<link rel="stylesheet" type="text/css" href="css/menu.css">
+<link rel="shortcut icon" href="favicon.ico">
+<script type="text/javascript">
+
+function get_browser()
+{
+   if((navigator.userAgent.indexOf("iPad") != -1) ||
+     (navigator.userAgent.indexOf("iPhone") != -1) ||
+     (navigator.userAgent.indexOf("iPod") != -1))
+        return "iOS";
+    else if(navigator.userAgent.indexOf("Mac OS X") != -1)
+        return "MAC";
+    else if(navigator.userAgent.indexOf("Android") != -1)
+        return "Android";
+    else if(navigator.userAgent.indexOf("Navigator") != -1)
+        return "Netscape";
+    else if (!(false || !!document.documentMode) && !!window.StyleMedia)
+        return "Edge";
+    else if(false || !!document.documentMode)
+        return "IE";
+    else if(!!window.chrome && !!window.chrome.loadTimes)
+        return "Chrome";
+    else if(typeof InstallTrigger !== 'undefined')
+        return "Firefox";
+    else if(/Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor))
+        return "Safari";
+    else if(navigator.userAgent.indexOf("Camino") != -1)
+        return "Camino";
+     else if(navigator.userAgent.indexOf("Gecko/index.html") != -1)
+        return "Gecko";
+    else if(navigator.userAgent.indexOf("Opera") != -1)
+        return "Opera";
+    else
+        return "";
+}
+
+$(window).load(function() {
+    var isIE = navigator.userAgent.search("MSIE") > -1;
+    var isFirefox = navigator.userAgent.search("Firefox") > -1;
+    var isOpera = navigator.userAgent.search("Opera") > -1;
+    var isSafari = navigator.userAgent.search("Safari") > -1;
+
+    var isIE8=navigator.appVersion.indexOf("MSIE 8") > -1;
+    var form=document.forms[0];
+
+    change_size();
+});
+
+$(document).ready(function(){
+    BodyInit();
+    document.getElementById("password").focus();
+});
+
+function change_size()
+{
+}
+
+function InitTagValue()
+{
+    var tagValueList = '0';
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+</script>
+
+<script>
+function myFunction() {
+    var x = document.getElementById("Demo");
+    if (x.className.indexOf("w3-show") == -1) {
+        x.className += " w3-show";
+    } else {
+        x.className = x.className.replace(" w3-show", "");
+    }
+}
+</script>
+<link href="css/custom.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body style="padding:0;margin:0;overflow:none" onload="change_size();" onResize="change_size();">
+  <table width="100%" CELLPADDING="0" CELLSPACING="0" style="padding:0;margin:0;" id="all">
+    <tr width="100%">
+      <td style="width:100%;height:100%">
+      <div id="main_screen">
+        <table style="height:100px;width:100%;margin:0;padding:0" CELLPADDING="0" CELLSPACING="0" class="newtopframe">
+          <tr>
+            <td style="padding-left:20px">
+              <img style="position:relative;width: 216px" src="img/NightHawk.png" >
+              <br><span id="ModuleName" style="position: relative; right: 0px;"><b>My Modem:</b> Nighthawk CM2000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </td>
+            <td style="text-align:right;padding-right:25px">
+              <ul class="tnb-right">
+                  <li>
+                      <div class="w3-dropdown-click">
+                          <a onclick="myFunction()"><img src="img/tnb-ico1.png" alt=""></a>
+                          <div id="Demo" class="w3-dropdown-content w3-bar-block tnb-submenu-bg">
+                            <div id="search">
+                                <input type="text" id="search_text" name="search" value="Enter Search Item" onkeypress="detectEnter('num',event);" onFocus="this.select();" >
+                                <input id="search_button" class="search_button" type="button" name="dosearch" value="GO" onClick="do_search();">
+                            </div>
+                          </div>
+                      </div>
+                  </li>
+                  <li><a href="javascript:;"><img src="img/tnb-ico2.png" alt=""></a>
+                      <div class="tnb-submenu">
+                        <a target="_blank" href="http://downloadcenter.netgear.com/">Documentation</a>
+                        <a target="_blank" href="http://support.netgear.com/">Online Support</a>
+                        <a target="_blank" href="http://support.netgear.com/app/answers/detail/a_id/12923">Gateway FAQ</a>
+                        <a target="_blank" href="OpenSourceLicense.html">Open Source</a>
+                      </div>
+                  </li>
+              </ul>
+              <br><br style='line-height:8px'>
+            </td>
+          </tr>
+        </table>
+         <div class="header-bar"></div>
+          <table CELLPADDING="0" CELLSPACING="0" style="height:100%;width:100%;margin:0;padding:0">
+                <td style="width=50%" align="middle">
+                    <table style="font-size:170%">
+                        <form id="target" name="loginform" method="POST" action="/goform/Login?id=1234567890">
+                            <th colspan="2" align="center">Please enter password to login</tr>
+                            <tr><td align="right">Username: </td><td>admin</td>
+                            <input type="hidden" id="name" name="loginName" value="admin">
+                            </tr>
+                            <tr></tr><tr></tr>
+                            <tr><td align="right">Password: </td>
+                            <td><input type="password" id="password" name="loginPassword"></td>
+                            </tr><tr>
+                            </tr><tr></tr>
+                            <tr><td></td><td align="right">
+                            <input type="submit" value="Login" id="login" style="font-size:100%" />
+                            </td></tr>
+                        </form>
+                    </table>
+                </td>
+                <td>
+                    <img src="img/CM2000.jpg">
+                </td>
+          </table>
+        </div> <!--  id=main_screen-->
+      </div>
+      </td>
+    </tr>
+  </table>
+
+<!-- This JavaScript activates those tabs -->
+<div id="diablePage" style="display:none;z-index:1;position: absolute;"></div>
+</body>
+</html>

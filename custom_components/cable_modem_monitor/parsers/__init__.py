@@ -1,4 +1,22 @@
-"""Parser plugin discovery and registration system."""
+"""Parser plugin discovery and registration system.
+
+Parser Auto-Discovery
+--------------------
+Parsers are automatically discovered at runtime. To add a new parser:
+
+1. Create a file: parsers/[manufacturer]/[model].py
+2. Define a class that inherits from ModemParser (or a manufacturer base class)
+3. Set the required class attributes: name, manufacturer, models
+4. Implement: can_parse(), login(), parse()
+
+That's it! No need to update any registry or mapping files.
+
+The discovery system will automatically:
+- Find your parser class
+- Register it for modem detection
+- Include it in the parser dropdown
+- Sort it appropriately (by manufacturer, then name)
+"""
 
 from __future__ import annotations
 
@@ -14,27 +32,16 @@ _LOGGER = logging.getLogger(__name__)
 ***REMOVED*** Global cache for discovered parsers to avoid repeated filesystem scans
 _PARSER_CACHE: list[type[ModemParser]] | None = None
 
-***REMOVED*** Mapping of parser names to their module paths for direct loading
-_PARSER_MODULE_MAP = {
-    "ARRIS SB6141": ("arris", "sb6141", "ARRISSb6141Parser"),
-    "ARRIS SB6190": ("arris", "sb6190", "ArrisSB6190Parser"),
-    "Motorola MB Series (Generic)": ("motorola", "generic", "MotorolaGenericParser"),
-    "Motorola MB7621": ("motorola", "mb7621", "MotorolaMB7621Parser"),
-    "Motorola MB8611 (HNAP)": ("motorola", "mb8611_hnap", "MotorolaMB8611HnapParser"),
-    "Motorola MB8611 (Static)": ("motorola", "mb8611_static", "MotorolaMB8611StaticParser"),
-    "Netgear C3700": ("netgear", "c3700", "NetgearC3700Parser"),
-    "Netgear CM600": ("netgear", "cm600", "NetgearCM600Parser"),
-    "Technicolor TC4400": ("technicolor", "tc4400", "TechnicolorTC4400Parser"),
-    "Technicolor XB7": ("technicolor", "xb7", "TechnicolorXB7Parser"),
-    "Unknown Modem (Fallback Mode)": ("universal", "fallback", "UniversalFallbackParser"),
-}
+***REMOVED*** Cache for parser name lookups (built from discovery, not hardcoded)
+_PARSER_NAME_CACHE: dict[str, type[ModemParser]] | None = None
 
 
 def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
     """
-    Load a specific parser by name without scanning all parsers.
+    Load a specific parser by name.
 
-    This is much faster than get_parsers() when you know which parser you need.
+    Uses the discovery cache for fast lookups. If the cache is empty,
+    triggers discovery first.
 
     Args:
         parser_name: The name of the parser (e.g., "Motorola MB8611 (Static)")
@@ -42,46 +49,25 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
     Returns:
         Parser class if found, None otherwise
     """
+    global _PARSER_NAME_CACHE
+
     _LOGGER.debug("Attempting to get parser by name: %s", parser_name)
-    if parser_name not in _PARSER_MODULE_MAP:
-        _LOGGER.warning("Parser '%s' not found in known parsers map", parser_name)
-        return None
 
-    manufacturer, module_name, class_name = _PARSER_MODULE_MAP[parser_name]
-    _LOGGER.debug(
-        "Found parser details in map: manufacturer=%s, module=%s, class=%s",
-        manufacturer,
-        module_name,
-        class_name,
-    )
+    ***REMOVED*** Build the name cache if not already built
+    if _PARSER_NAME_CACHE is None:
+        _LOGGER.debug("Building parser name cache from discovery")
+        _PARSER_NAME_CACHE = {}
+        for cls in get_parsers():
+            _PARSER_NAME_CACHE[cls.name] = cls
 
-    try:
-        ***REMOVED*** Import only the specific parser module
-        full_module_name = f".{manufacturer}.{module_name}"
-        _LOGGER.debug("Loading specific parser module: %s", full_module_name)
-        module = importlib.import_module(full_module_name, package=__name__)
-        _LOGGER.debug("Successfully imported module: %s", full_module_name)
+    ***REMOVED*** Look up in cache
+    parser_cls = _PARSER_NAME_CACHE.get(parser_name)
+    if parser_cls:
+        _LOGGER.debug("Found parser '%s' in cache", parser_name)
+        return parser_cls
 
-        ***REMOVED*** Get the parser class
-        parser_class = getattr(module, class_name, None)
-        if parser_class:
-            _LOGGER.debug("Found class '%s' in module '%s'", class_name, full_module_name)
-            if issubclass(parser_class, ModemParser):
-                _LOGGER.info("Loaded parser: %s (skipped discovery - direct load)", parser_name)
-                return parser_class  ***REMOVED*** type: ignore[no-any-return]
-            else:
-                _LOGGER.error(
-                    "Class '%s' found in module '%s' is not a subclass of ModemParser",
-                    class_name,
-                    full_module_name,
-                )
-        else:
-            _LOGGER.error("Parser class %s not found in module %s", class_name, full_module_name)
-        return None
-
-    except Exception as e:
-        _LOGGER.error("Failed to load parser %s: %s", parser_name, e, exc_info=True)
-        return None
+    _LOGGER.warning("Parser '%s' not found in discovered parsers", parser_name)
+    return None
 
 
 def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:  ***REMOVED*** noqa: C901
@@ -96,11 +82,16 @@ def get_parsers(use_cache: bool = True) -> list[type[ModemParser]]:  ***REMOVED*
         List of all discovered parser classes
     """
     global _PARSER_CACHE
+    global _PARSER_NAME_CACHE
 
     ***REMOVED*** Return cached parsers if available
     if use_cache and _PARSER_CACHE is not None:
         _LOGGER.debug("Returning %d cached parsers (skipped discovery)", len(_PARSER_CACHE))
         return _PARSER_CACHE
+
+    ***REMOVED*** Clear name cache when re-discovering (ensures consistency)
+    if not use_cache:
+        _PARSER_NAME_CACHE = None
 
     parsers = []
     package_dir = os.path.dirname(__file__)

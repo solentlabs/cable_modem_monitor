@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.7.0] - 2025-11-25
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Parser Capabilities System** - Standardized capability declarations across all parsers
+  - New `ModemCapability` enum defines standard capabilities (uptime, channels, restart, etc.)
+  - Each parser declares supported features via `capabilities` class attribute
+  - Enables conditional entity creation based on modem capabilities
+  - `has_capability()` class method for runtime capability checking
+
+- **Netgear CM2000 Parser** - New parser for DOCSIS 3.1 cable modem
+  - Full support for downstream/upstream channel parsing
+  - System information extraction (model, firmware, uptime)
+  - Comprehensive test suite with fixtures
+  - Fixture README documenting data structure
+
+- **PII Protection System** - Comprehensive safeguards for fixture data
+  - Enhanced `html_helper.py` with `sanitize_html()` and `check_for_pii()` functions
+  - New `scripts/check_fixture_pii.py` for CI validation of fixture files
+  - Detects MAC addresses, public IPs, emails, IPv6 addresses
+  - Smart false positive handling (timestamps, version numbers, sanitized placeholders)
+  - RFC 5737 TEST-NET addresses used as safe IP placeholders
+
+- **Fixture README Documentation** - All fixture directories now have README.md files
+  - MB7621, MB8611 (static/HNAP), CM600, CM2000, TC4400, XB7
+  - Documents data structure, source, and sanitization status
+
+- **Developer Tooling**
+  - `scripts/dev/list-supported-modems.py` - List all supported modem models
+  - `scripts/dev/setup-git-email.sh` - Configure Git email for contributions
+  - `.github/workflows/check-commit-email.yml` - Verify commit attribution
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **CM600 Restart Improvements**
+  - Added response logging for restart command debugging
+  - Handle connection drop as expected success during reboot
+
+- **Test Consolidation**
+  - Removed redundant `tests/parsers/motorola/fixtures/generic/` directory
+  - Deleted `test_generic.py`, moved restart detection tests to `test_mb7621.py`
+  - All Motorola MB-series tests now consolidated in appropriate model-specific files
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Fixture PII Sanitization** - Sanitized all existing fixture files
+  - MAC addresses replaced with `XX:XX:XX:XX:XX:XX`
+  - Public IPs replaced with RFC 5737 TEST-NET addresses (203.0.113.x)
+  - Serial numbers redacted in README files
+
+***REMOVED******REMOVED*** [3.6.0] - 2025-11-25
+
 ***REMOVED******REMOVED******REMOVED*** Added
 - **Parser Verification Status System** - New transparency framework for modem parser reliability
   - All parsers now include `verified` boolean flag and `verification_source` documentation

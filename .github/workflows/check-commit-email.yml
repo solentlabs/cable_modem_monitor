@@ -1,0 +1,128 @@
+name: Check Commit Email Privacy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-email:
+    name: Check for Personal Emails
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check commit author emails
+        id: check-emails
+        run: |
+          ***REMOVED*** Get commits in this PR
+          git fetch origin ${{ github.base_ref }}
+
+          ***REMOVED*** Allowed email patterns
+          ALLOWED_PATTERNS=(
+            "@users.noreply.github.com$"
+            "^noreply@anthropic.com$"
+            "^noreply@github.com$"
+            "^.*\[bot\]@users.noreply.github.com$"
+          )
+
+          ***REMOVED*** Check each commit
+          FOUND_PERSONAL=0
+          PERSONAL_EMAILS=""
+
+          for commit in $(git rev-list origin/${{ github.base_ref }}..HEAD); do
+            EMAIL=$(git log -1 --format='%ae' $commit)
+            AUTHOR=$(git log -1 --format='%an' $commit)
+            SHORT=$(git rev-parse --short $commit)
+
+            ALLOWED=0
+            for pattern in "${ALLOWED_PATTERNS[@]}"; do
+              if echo "$EMAIL" | grep -qE "$pattern"; then
+                ALLOWED=1
+                break
+              fi
+            done
+
+            if [ $ALLOWED -eq 0 ]; then
+              FOUND_PERSONAL=1
+              PERSONAL_EMAILS="${PERSONAL_EMAILS}\n- \`${SHORT}\` by ${AUTHOR} <${EMAIL}>"
+            fi
+          done
+
+          if [ $FOUND_PERSONAL -eq 1 ]; then
+            echo "found_personal=true" >> $GITHUB_OUTPUT
+            echo "emails<<EOF" >> $GITHUB_OUTPUT
+            echo -e "$PERSONAL_EMAILS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo ""
+            echo "⚠️  Personal email(s) detected in commits (informational only)"
+            echo "    This check does NOT block the PR - it's just a friendly reminder."
+          else
+            echo "found_personal=false" >> $GITHUB_OUTPUT
+            echo "✅ All commit emails are privacy-safe!"
+          fi
+
+      - name: Comment on PR (informational)
+        if: steps.check-emails.outputs.found_personal == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Check if we already commented on this PR to avoid spam
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.body.includes('Personal Email Detected in Commits') &&
+              comment.user.type === 'Bot'
+            );
+
+            if (botComment) {
+              console.log('Already commented on this PR, skipping');
+              return;
+            }
+
+            const message = `***REMOVED******REMOVED*** :information_source: Personal Email Detected in Commits
+
+            > **Note:** This is an informational check only. It does **not** block your PR.
+
+            One or more commits in this PR contain personal email addresses:
+            ${{ steps.check-emails.outputs.emails }}
+
+            ***REMOVED******REMOVED******REMOVED*** Why This Matters
+            Personal emails in git history are **permanently public** and can be harvested by spammers.
+
+            ***REMOVED******REMOVED******REMOVED*** How to Fix (Optional but Recommended)
+
+            1. **Configure GitHub email privacy:**
+               - Go to [GitHub Email Settings](https://github.com/settings/emails)
+               - Check "Keep my email addresses private"
+               - Copy your noreply address (e.g., \`ID+username@users.noreply.github.com\`)
+
+            2. **For this repo, run the setup script:**
+               \`\`\`bash
+               ./scripts/dev/setup-git-email.sh
+               \`\`\`
+
+            3. **Or use VS Code task:** "🔒 Setup Git Email Privacy"
+
+            ***REMOVED******REMOVED******REMOVED*** For Future Commits
+            Once configured, all your future commits will use the privacy-safe email automatically.
+
+            ---
+            *This check helps protect contributor privacy. Feel free to merge if you're okay with the email being public.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

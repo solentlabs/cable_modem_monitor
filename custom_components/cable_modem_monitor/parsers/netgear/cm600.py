@@ -13,6 +13,10 @@ Key pages:
 
 Authentication: HTTP Basic Auth
 
+Known limitations:
+- System uptime/last boot time: Not exposed by firmware (fields are empty in web API)
+- Restart: Connection drops immediately on success (handled as expected behavior)
+
 Related: Issue ***REMOVED***3 (Netgear CM600 - Login Doesn't Work)
 """
 
@@ -28,7 +32,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +53,15 @@ class NetgearCM600Parser(ModemParser):
     auth_config = BasicAuthConfig(
         strategy=AuthStrategyType.BASIC_HTTP,
     )
+
+    ***REMOVED*** Capabilities - CM600 firmware does NOT expose uptime/boot time
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.HARDWARE_VERSION,
+        ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.RESTART,
+    }
 
     ***REMOVED*** URL patterns to try for modem data
     url_patterns = [
@@ -88,6 +101,10 @@ class NetgearCM600Parser(ModemParser):
         Returns:
             True if restart command sent successfully, False otherwise
         """
+        from http.client import RemoteDisconnected
+
+        from requests.exceptions import ChunkedEncodingError, ConnectionError
+
         try:
             restart_url = f"{base_url}/goform/RouterStatus"
             data = {"RsAction": "2"}
@@ -95,13 +112,25 @@ class NetgearCM600Parser(ModemParser):
             _LOGGER.info("CM600: Sending reboot command to %s", restart_url)
             response = session.post(restart_url, data=data, timeout=10)
 
+            ***REMOVED*** Log the response for debugging
+            _LOGGER.info(
+                "CM600: Reboot response - status=%d, length=%d bytes",
+                response.status_code,
+                len(response.text) if response.text else 0,
+            )
+            _LOGGER.debug("CM600: Reboot response body: %s", response.text[:500] if response.text else "(empty)")
+
             if response.status_code == 200:
-                _LOGGER.info("CM600: Reboot command sent successfully")
+                _LOGGER.info("CM600: Reboot command accepted by modem")
                 return True
             else:
                 _LOGGER.warning("CM600: Reboot command failed with status %d", response.status_code)
                 return False
 
+        except (RemoteDisconnected, ConnectionError, ChunkedEncodingError) as e:
+            ***REMOVED*** Connection dropped = modem is rebooting (success!)
+            _LOGGER.info("CM600: Modem rebooting (connection dropped as expected): %s", type(e).__name__)
+            return True
         except Exception as e:
             _LOGGER.error("CM600: Error sending reboot command: %s", e)
             return False

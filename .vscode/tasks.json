@@ -287,6 +287,22 @@
       "detail": "Reset VS Code state to test new developer experience (testing only)"
     },
     {
+      "label": "🔒 Reconfigure Git Email Privacy",
+      "type": "shell",
+      "command": "./scripts/dev/setup-git-email.sh",
+      "windows": {
+        "command": "bash ./scripts/dev/setup-git-email.sh"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Reconfigure git email (automatically done during initial setup)"
+    },
+    {
       "label": "⚙️ Setup Local Python Environment",
       "type": "shell",
       "command": "./scripts/setup.sh",

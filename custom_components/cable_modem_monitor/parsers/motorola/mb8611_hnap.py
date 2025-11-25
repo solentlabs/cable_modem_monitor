@@ -12,7 +12,7 @@ from custom_components.cable_modem_monitor.core.authentication import AuthStrate
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
 from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +42,13 @@ class MotorolaMB8611HnapParser(ModemParser):
         {"path": "/HNAP1/", "auth_method": "hnap", "auth_required": True},
         {"path": "/MotoStatusConnection.html", "auth_method": "hnap", "auth_required": True},
     ]
+
+    ***REMOVED*** Capabilities - MB8611 HNAP parser
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+    }
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

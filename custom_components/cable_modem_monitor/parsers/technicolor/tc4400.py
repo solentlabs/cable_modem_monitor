@@ -10,7 +10,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,15 @@ class TechnicolorTC4400Parser(ModemParser):
     url_patterns = [
         {"path": "/cmconnectionstatus.html", "auth_method": "basic", "auth_required": True},
     ]
+
+    ***REMOVED*** Capabilities - Technicolor TC4400
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.HARDWARE_VERSION,
+        ModemCapability.SOFTWARE_VERSION,
+    }
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

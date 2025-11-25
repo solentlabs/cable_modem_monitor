@@ -4,6 +4,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
+from ..base_parser import ModemCapability
 from .generic import MotorolaGenericParser
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,6 +21,15 @@ class MotorolaMB7621Parser(MotorolaGenericParser):
     ***REMOVED*** Verification status
     verified = True
     verification_source = "kwschulz (maintainer's personal modem)"
+
+    ***REMOVED*** Capabilities - inherits from generic, explicitly declared for clarity
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.RESTART,
+    }
 
     ***REMOVED*** MB7621 uses same URL patterns as generic, but we want to check
     ***REMOVED*** the software info page first to detect MB7621-specific strings

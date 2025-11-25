@@ -64,7 +64,7 @@ Software
   </tr>
   <tr>
   <td>&nbsp;&nbsp;&nbsp;Cable Modem MAC Address</td>
-  <td class='moto-content-value'>00:40:36:6d:55:45</td>
+  <td class='moto-content-value'>XX:XX:XX:XX:XX:XX</td>
   <td class='moto-param-help'><a href='javascript:void(0);'  class="tooltip"><img src="motohelp.jpg"/><span>Cable Modem MAC Address:<br>The MAC Address (physical address) of your cable modem's cable connection.</span></a>&nbsp;&nbsp;</td>
   </tr>
   <tr>

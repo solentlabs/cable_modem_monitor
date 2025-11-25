@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 
-from ..base_parser import ModemParser
+from ..base_parser import ModemCapability, ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +51,14 @@ class NetgearC3700Parser(ModemParser):
     auth_config = BasicAuthConfig(
         strategy=AuthStrategyType.BASIC_HTTP,
     )
+
+    ***REMOVED*** Capabilities - C3700 provides channel data and version info
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+        ModemCapability.HARDWARE_VERSION,
+        ModemCapability.SOFTWARE_VERSION,
+    }
 
     ***REMOVED*** URL patterns to try for modem data
     url_patterns = [

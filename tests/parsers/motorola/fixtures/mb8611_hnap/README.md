@@ -6,7 +6,7 @@
 - Model: Motorola MB8611 (DOCSIS 3.1)
 - Hardware Version: V1.0
 - Software Version: 8611-19.2.18
-- Serial: 2251-MB8611-30-1526
+- Serial: ***REDACTED***
 - Protocol: HTTPS (port 443) with self-signed certificate
 
 ***REMOVED******REMOVED*** Files

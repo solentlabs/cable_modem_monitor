@@ -373,6 +373,7 @@ class TestRestart:
         mock_session = Mock()
         mock_response = Mock()
         mock_response.status_code = 200
+        mock_response.text = ""  ***REMOVED*** Must be set for len() in logging
         mock_session.post.return_value = mock_response
 
         base_url = "http://192.168.100.1"
