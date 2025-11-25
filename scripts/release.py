@@ -494,7 +494,7 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
         with open(const_path, encoding="utf-8") as f:
             content = f.read()
             if f'VERSION = "{version}"' not in content:
-                print_error(f"const.py version mismatch: expected VERSION = \"{version}\"")
+                print_error(f'const.py version mismatch: expected VERSION = "{version}"')
                 all_correct = False
             else:
                 print_success(f"const.py version correct: {version}")
@@ -508,7 +508,7 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
         with open(test_path, encoding="utf-8") as f:
             content = f.read()
             if f'assert VERSION == "{version}"' not in content:
-                print_error(f"test_version_and_startup.py version mismatch: expected VERSION == \"{version}\"")
+                print_error(f'test_version_and_startup.py version mismatch: expected VERSION == "{version}"')
                 all_correct = False
             else:
                 print_success(f"test_version_and_startup.py version correct: {version}")
