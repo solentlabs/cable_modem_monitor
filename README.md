@@ -98,29 +98,70 @@ Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CON
 
 This integration relies on community contributions for modem support. Compatibility varies based on firmware versions and ISP customizations.
 
-***REMOVED******REMOVED******REMOVED*** ✅ Confirmed Working
-These models have test coverage and confirmed working by users:
+***REMOVED******REMOVED******REMOVED*** ✅ Verified Working
+These models have been confirmed working with real hardware:
 
-- **ARRIS SB6141** - Full support
-- **Motorola MB7621** - Full support
-- **Technicolor XB7 (CGM4331COM)** - Full support (system info enhancements complete)
+| Model | Verification | Features |
+|-------|-------------|----------|
+| **Arris SB6141** | Community verified ([forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant)) | Full channel data, system info |
+| **Motorola MB7621** | Maintainer verified | Full channel data, system info, restart |
+| **Netgear C3700** | Maintainer verified | Full channel data, system info (combo modem/router) |
+| **Netgear CM600** | User verified ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3)) | 24 DS / 6 US channels, system info, restart |
 
-***REMOVED******REMOVED******REMOVED*** 🔧 Recently Fixed / Updated
-- **Motorola MB8611** - Full support with dual-format HNAP (JSON + XML/SOAP) - Fixed in v3.4.0
-- **Netgear CM600** - Full support with HTTP Basic Auth - Fixed in v3.4.0
+***REMOVED******REMOVED******REMOVED*** ⚠️ Unverified Parsers
+These parsers exist but need user confirmation:
 
-***REMOVED******REMOVED******REMOVED*** 🔄 Under Investigation
-Parsers exist but have known limitations:
+| Model | Status | Notes |
+|-------|--------|-------|
+| **Arris SB6190** | Needs testing | Parser based on SB6141, no user reports yet |
+| **Technicolor XB7 (CGM4331COM)** | Needs testing | Parser exists, needs user verification |
+| **Technicolor TC4400** | Needs testing | See [Issue ***REMOVED***1](https://github.com/kwschulz/cable_modem_monitor/issues/1) |
+| **Motorola Generic** | Needs testing | May work with other Motorola DOCSIS 3.x modems |
 
-- **Technicolor TC4400** - Parser exists, investigating entity availability issues ([Issue ***REMOVED***1](https://github.com/kwschulz/cable_modem_monitor/issues/1))
+***REMOVED******REMOVED******REMOVED*** ❌ Known Issues
+These parsers have confirmed problems:
 
-***REMOVED******REMOVED******REMOVED*** 📋 Requested Models
-Community members have requested support for these models:
+| Model | Issue | Status |
+|-------|-------|--------|
+| **Motorola MB8611 (HNAP)** | HNAP authentication broken | See [Issues ***REMOVED***4, ***REMOVED***6](https://github.com/kwschulz/cable_modem_monitor/issues/4) - SSL cert and protocol issues |
+| **Motorola MB8611 (Static)** | Static HTML fallback untested | No user confirmation, limited features |
 
-- **Arris/CommScope S33** - HTML samples provided, parser development in progress ([Issue ***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32))
+**Note**: Unverified parsers will be marked as such in the UI during setup.
 
-***REMOVED******REMOVED******REMOVED*** ℹ️ Motorola Generic Parser
-A generic Motorola parser may work with other Motorola DOCSIS 3.x modems that use standard HTML pages (not HNAP/SOAP). Try "auto" detection during setup.
+***REMOVED******REMOVED******REMOVED*** 🔄 On Hold
+- **Arris/CommScope S33** - Uses HNAP protocol with authentication challenges. Development on hold pending HNAP improvements ([Issue ***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32))
+
+***REMOVED******REMOVED******REMOVED*** 🆕 Fallback Mode
+If your modem isn't listed, you can still install the integration! It will enter **Fallback Mode** which:
+- Allows installation to succeed
+- Enables the "Capture HTML" diagnostics button
+- Lets you provide HTML samples to help add support for your modem
+- See [How to Help Add Support](***REMOVED***how-to-help-add-support-for-your-modem) below
+
+***REMOVED******REMOVED*** 📝 Help Verify Modem Support
+
+**Did you successfully install with a modem marked with an asterisk (*)?** Please help verify it!
+
+Your feedback helps other users know which parsers are reliable and well-tested.
+
+***REMOVED******REMOVED******REMOVED*** Quick Verification (2 minutes)
+
+**[→ Report Working Modem](https://github.com/kwschulz/cable_modem_monitor/issues/new?template=modem_verification.yml)**
+
+Just fill out the simple form with:
+- ✅ Your modem model and firmware version
+- ✅ Which features are working (channels, restart, etc.)
+- ✅ Optional: Attach diagnostics file for validation
+
+**What happens next?**
+- Maintainer reviews your report
+- Modem gets moved to "✅ Verified Working" section
+- Asterisk (*) removed in next release
+- Other users benefit from your confirmation!
+
+**No GitHub account?** You can also report in [Home Assistant Community Forums](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant/817820).
+
+---
 
 ***REMOVED******REMOVED*** How to Help Add Support for Your Modem
 

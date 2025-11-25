@@ -104,6 +104,44 @@ def test_parser_system_info(cm600_router_status_html):
     assert system_info["hardware_version"] == "1.01B"
 
 
+def test_calculate_boot_time():
+    """Test boot time calculation from uptime string."""
+    from datetime import datetime, timedelta
+
+    parser = NetgearCM600Parser()
+
+    ***REMOVED*** Test with typical uptime format: "0d 1h 23m 45s"
+    boot_time_str = parser._calculate_boot_time("0d 1h 23m 45s")
+    assert boot_time_str is not None
+
+    ***REMOVED*** Parse the ISO formatted boot time
+    boot_time = datetime.fromisoformat(boot_time_str)
+    ***REMOVED*** Boot time should be in the past
+    assert boot_time < datetime.now()
+
+    ***REMOVED*** Calculate expected boot time (within 1 second tolerance)
+    expected_uptime = timedelta(days=0, hours=1, minutes=23, seconds=45)
+    expected_boot = datetime.now() - expected_uptime
+    ***REMOVED*** Allow 2 second tolerance for test execution time
+    assert abs((boot_time - expected_boot).total_seconds()) < 2
+
+    ***REMOVED*** Test with longer uptime
+    boot_time_str = parser._calculate_boot_time("5d 12h 30m 15s")
+    assert boot_time_str is not None
+    boot_time = datetime.fromisoformat(boot_time_str)
+    expected_uptime = timedelta(days=5, hours=12, minutes=30, seconds=15)
+    expected_boot = datetime.now() - expected_uptime
+    assert abs((boot_time - expected_boot).total_seconds()) < 2
+
+    ***REMOVED*** Test with invalid uptime string
+    boot_time_str = parser._calculate_boot_time("invalid")
+    assert boot_time_str is None
+
+    ***REMOVED*** Test with empty string
+    boot_time_str = parser._calculate_boot_time("")
+    assert boot_time_str is None
+
+
 def test_parsing_downstream(cm600_docsis_status_html):
     """Test parsing of Netgear CM600 downstream data."""
     parser = NetgearCM600Parser()

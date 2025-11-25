@@ -20,11 +20,13 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
 
 from ..base_parser import ModemParser
 
@@ -38,6 +40,10 @@ class NetgearCM600Parser(ModemParser):
     manufacturer = "Netgear"
     models = ["CM600"]
     priority = 50  ***REMOVED*** Standard priority
+
+    ***REMOVED*** Verification status
+    verified = True
+    verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/3 (@chairstacker)"
 
     ***REMOVED*** CM600 uses HTTP Basic Auth
     auth_config = BasicAuthConfig(
@@ -416,6 +422,32 @@ class NetgearCM600Parser(ModemParser):
 
         return info
 
+    def _calculate_boot_time(self, uptime_str: str) -> str | None:
+        """
+        Calculate boot time from uptime string.
+
+        Args:
+            uptime_str: Uptime string like "0d 1h 23m 45s"
+
+        Returns:
+            ISO format datetime string of boot time or None if parsing fails
+        """
+        try:
+            ***REMOVED*** Parse uptime string to seconds
+            uptime_seconds = parse_uptime_to_seconds(uptime_str)
+            if uptime_seconds is None:
+                return None
+
+            ***REMOVED*** Calculate boot time: current time - uptime
+            uptime_delta = timedelta(seconds=uptime_seconds)
+            boot_time = datetime.now() - uptime_delta
+
+            return boot_time.isoformat()
+
+        except Exception as e:
+            _LOGGER.error("Error calculating boot time from '%s': %s", uptime_str, e)
+            return None
+
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from DocsisStatus.asp.
 
@@ -442,6 +474,12 @@ class NetgearCM600Parser(ModemParser):
                 if uptime and uptime != "***IPv6***" and uptime != "Unknown" and uptime != "":
                     info["system_uptime"] = uptime
                     _LOGGER.debug("CM600: Parsed system uptime: %s", uptime)
+
+                    ***REMOVED*** Calculate and add last boot time
+                    boot_time = self._calculate_boot_time(uptime)
+                    if boot_time:
+                        info["last_boot_time"] = boot_time
+                        _LOGGER.debug("CM600: Calculated last boot time: %s", boot_time)
 
             ***REMOVED*** Try to extract Current System Time from DocsisStatus.asp
             ***REMOVED*** Format: <td id="CurrentSystemTime">...<b>Current System Time:</b> Mon Nov 24 ... 2025

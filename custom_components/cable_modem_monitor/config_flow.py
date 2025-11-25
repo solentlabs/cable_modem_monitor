@@ -34,6 +34,21 @@ from .parsers import get_parsers
 _LOGGER = logging.getLogger(__name__)
 
 
+def _get_parser_display_name(parser_class) -> str:
+    """Get display name for parser with verification status.
+
+    Args:
+        parser_class: Parser class to get name for
+
+    Returns:
+        Display name with " *" suffix if not verified
+    """
+    name: str = str(parser_class.name)
+    if not parser_class.verified:
+        name += " *"
+    return name
+
+
 def _validate_host_format(host: str) -> str:
     """Validate and extract hostname from host string.
 
@@ -99,8 +114,10 @@ def _select_parser_for_validation(
     """
     if modem_choice and modem_choice != "auto":
         ***REMOVED*** User explicitly selected a parser
+        ***REMOVED*** Strip " *" suffix if present for matching
+        choice_clean = modem_choice.rstrip(" *")
         for parser_class in all_parsers:
-            if parser_class.name == modem_choice:
+            if parser_class.name == choice_clean:
                 _LOGGER.info("User selected parser: %s", parser_class.name)
                 return parser_class(), None
         return None, None
@@ -374,7 +391,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             return (p.manufacturer, p.name)
 
         sorted_parsers = sorted(parsers, key=sort_key)
-        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
+        modem_choices = ["auto"] + [_get_parser_display_name(p) for p in sorted_parsers]
 
         if user_input is not None:
             ***REMOVED*** Store user input and start validation with progress
@@ -397,7 +414,14 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             }
         )
 
-        return self.async_show_form(step_id="user", data_schema=data_schema, errors={})
+        return self.async_show_form(
+            step_id="user",
+            data_schema=data_schema,
+            errors={},
+            description_placeholders={
+                "note": "Models marked with * are unverified or have known issues. Use 'auto' for automatic detection."
+            },
+        )
 
     async def async_step_validate(  ***REMOVED*** noqa: C901
         self, user_input: dict[str, Any] | None = None
@@ -523,7 +547,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             return (p.manufacturer, p.name)
 
         sorted_parsers = sorted(parsers, key=sort_key)
-        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
+        modem_choices = ["auto"] + [_get_parser_display_name(p) for p in sorted_parsers]
 
         from homeassistant.helpers import selector
 
@@ -651,7 +675,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return (p.manufacturer, p.name)
 
         sorted_parsers = sorted(parsers, key=sort_key)
-        modem_choices = ["auto"] + [p.name for p in sorted_parsers]
+        modem_choices = ["auto"] + [_get_parser_display_name(p) for p in sorted_parsers]
 
         if user_input is not None:
             ***REMOVED*** Preserve existing credentials if not provided

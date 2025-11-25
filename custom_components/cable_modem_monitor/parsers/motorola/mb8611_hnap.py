@@ -25,6 +25,10 @@ class MotorolaMB8611HnapParser(ModemParser):
     models = ["MB8611", "MB8612"]
     priority = 101  ***REMOVED*** Higher priority for the API-based method
 
+    ***REMOVED*** Verification status
+    verified = False  ***REMOVED*** HNAP authentication broken
+    verification_source = "Issues ***REMOVED***4, ***REMOVED***6 - HNAP authentication has SSL and protocol issues"
+
     ***REMOVED*** HNAP authentication configuration
     auth_config = HNAPAuthConfig(
         strategy=AuthStrategyType.HNAP_SESSION,

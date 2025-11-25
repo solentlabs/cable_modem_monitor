@@ -8,6 +8,161 @@
 - **Test Coverage**: ~70% (exceeds 60% minimum requirement)
 - **Latest Release Notes**: See `CHANGELOG.md` for detailed version history
 
+***REMOVED******REMOVED*** Adding Support for New Modems: The Fallback Parser Workflow
+
+**IMPORTANT:** This is the primary workflow for adding support for new, unsupported modem models. Read this section first when working on modem support issues.
+
+***REMOVED******REMOVED******REMOVED*** Overview
+The integration uses a **fallback parser** system that allows installation even when a specific modem parser doesn't exist. This puts users in a position to capture comprehensive diagnostics that developers need to build proper parsers.
+
+***REMOVED******REMOVED******REMOVED*** The Workflow
+
+1. **User installs with Unknown Modem (Fallback Mode)**
+   - Integration detects no specific parser matches
+   - Falls back to `UniversalFallbackParser` (priority 1, always matches)
+   - Installation succeeds with limited functionality (ping/HTTP latency only)
+   - User sees helpful message guiding them to capture HTML
+
+2. **User presses "Capture HTML" button in Home Assistant**
+   - System captures HTML from all URLs the parser tries
+   - Crawls discovered links automatically
+   - Captures authentication flows (Basic Auth, HNAP/SOAP, form-based)
+   - Sanitizes sensitive data (MACs, serials, passwords, IPs)
+   - Data stored in memory for 5 minutes
+
+3. **User downloads diagnostics within 5 minutes**
+   - Downloads JSON file from Home Assistant diagnostics
+   - Contains: modem HTML pages, authentication details, response headers
+   - File posted to GitHub issue requesting modem support
+
+4. **Developer analyzes diagnostics and identifies authentication method**
+   - **Critical step:** Determine authentication type (Basic Auth, HNAP/SOAP, form-based, none)
+   - Check HTML for clues: SOAP/HNAP references, login forms, etc.
+   - **Authentication is usually the blocker** - if we can authenticate, next capture gets everything
+
+5. **Developer creates parser or adds auth support**
+   - Option A: Create minimal parser with proper authentication
+   - Option B: Add auth method support to fallback parser
+   - Goal: Enable user to capture status pages after successful authentication
+
+6. **User captures again with proper authentication**
+   - Integration now authenticates successfully
+   - All protected pages (status, connection info, etc.) are accessible
+   - Diagnostics capture includes ALL modem data needed for full parser
+   - Likely captures more data than needed - patterns emerge across modems
+
+7. **Developer builds complete parser from captured HTML**
+   - Parse channel data, frequencies, power levels, SNR, errors
+   - Parse system info (firmware, uptime, etc.)
+   - Write tests using captured HTML as fixtures
+   - Submit PR with parser + tests
+
+***REMOVED******REMOVED******REMOVED*** Key Files for This Workflow
+
+- **Fallback Parser:** `custom_components/cable_modem_monitor/parsers/universal/fallback.py`
+  - Always accepts any modem (can_parse returns True)
+  - Tries Basic Auth by default (most common)
+  - Returns minimal data to allow installation
+  - Guides user to capture HTML
+
+- **HTML Crawler:** `custom_components/cable_modem_monitor/lib/html_crawler.py`
+  - Generates seed URLs to try (/, /index.html, /status.html, etc.)
+  - Extracts links from HTML (`<a href>`)
+  - Discovers additional pages automatically
+
+- **Diagnostics Capture:** `custom_components/cable_modem_monitor/core/modem_scraper.py`
+  - `_fetch_parser_url_patterns()`: Fetches all parser-defined URLs
+  - `_crawl_additional_pages()`: Follows links to discover more pages
+  - Captures raw HTML, sanitizes sensitive data
+  - Stored in diagnostics JSON with timestamps
+
+***REMOVED******REMOVED******REMOVED*** Common Authentication Methods
+
+1. **No Auth** (e.g., Arris SB6141, SB6190)
+   - Status pages are public
+   - Fallback parser works immediately
+
+2. **HTTP Basic Auth** (e.g., Technicolor TC4400, Netgear C3700)
+   - Standard HTTP authentication
+   - Fallback parser supports this by default
+   - Works if user provides credentials
+
+3. **HNAP/SOAP** (e.g., Motorola MB8611, possibly Arris S33)
+   - SOAP-based protocol with session management
+   - Requires specialized authentication flow
+   - Look for `HNAP`, `SOAP`, `purenetworks.com/HNAP1` in HTML
+   - See `parsers/motorola/mb8611_hnap.py` for example
+   - Uses `HNAPAuthConfig` and `HNAPRequestBuilder`
+
+4. **Form-Based Login** (e.g., some Motorola models)
+   - HTML form POST to login page
+   - Creates session cookie
+   - See `parsers/motorola/mb7621.py` for example
+
+***REMOVED******REMOVED******REMOVED*** How to Identify Authentication Method
+
+**Check the diagnostics HTML for clues:**
+
+```python
+***REMOVED*** HNAP/SOAP indicators:
+- References to "./js/SOAP/SOAPAction.js"
+- "HNAP" or "purenetworks.com/HNAP1" in HTML/scripts
+- Login.html with JavaScript-based authentication
+
+***REMOVED*** Form-based indicators:
+- <form> tag with action="/login" or similar
+- Input fields for username/password
+- POST to login endpoint
+
+***REMOVED*** Basic Auth indicators:
+- 401 Unauthorized response
+- WWW-Authenticate header in response
+- Browser shows authentication dialog
+
+***REMOVED*** No Auth indicators:
+- Status pages return 200 OK without credentials
+- No login page or authentication required
+```
+
+***REMOVED******REMOVED******REMOVED*** Pattern Recognition for Future Automation
+
+As we support more modems, we're collecting data on:
+- Common authentication patterns by manufacturer
+- Standard URL patterns (/status.html, /DocsisStatus.htm, etc.)
+- HTML table structures for channel data
+- JavaScript-based data storage patterns
+
+**Goal:** Eventually auto-detect authentication and maybe even auto-generate parsers for common patterns.
+
+***REMOVED******REMOVED******REMOVED*** Troubleshooting: "Why didn't diagnostics capture my modem's status page?"
+
+Common reasons:
+1. **Wrong authentication method** - Most common issue
+   - Fallback uses Basic Auth, but modem needs HNAP/SOAP or form-based
+   - Solution: Identify auth method, add support
+
+2. **Non-standard URL path** - Less common
+   - Status page at `/Cmconnectionstatus.html` instead of `/status.html`
+   - Not linked from main page (no `<a href>` to discover)
+   - Solution: Parser defines `url_patterns` with correct paths
+
+3. **JavaScript-only navigation** - Rare
+   - Links created dynamically by JavaScript
+   - Crawler can't discover them
+   - Solution: Manual URL analysis, add to `url_patterns`
+
+4. **Session/authentication timeout** - Rare
+   - Authentication succeeded but session expired
+   - Solution: Check session management in auth flow
+
+***REMOVED******REMOVED******REMOVED*** Related Documentation
+
+- `custom_components/cable_modem_monitor/parsers/universal/fallback.py` - Fallback parser implementation
+- `CONTRIBUTING.md` lines 218-382 - Guide for adding new modem parsers
+- `custom_components/cable_modem_monitor/parsers/parser_template.py` - Template for new parsers
+- `custom_components/cable_modem_monitor/core/authentication.py` - Authentication strategies
+- `custom_components/cable_modem_monitor/core/auth_config.py` - Auth configuration classes
+
 ***REMOVED******REMOVED*** Community & Feedback
 - **Forum Post**: https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant
 - **Status**: Active community feedback, several users testing and providing feedback
@@ -175,6 +330,99 @@ def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
 **Locations:**
 - `custom_components/cable_modem_monitor/core/modem_scraper.py:193-257, 756`
 - `custom_components/cable_modem_monitor/parsers/netgear/c3700.py:90-121`
+
+***REMOVED******REMOVED******REMOVED*** HNAP/SOAP Authentication Challenges (Issues ***REMOVED***4, ***REMOVED***6)
+
+**IMPORTANT:** HNAP (Home Network Administration Protocol) authentication has proven unreliable in practice across multiple modems. **Prefer HTML-based parsing whenever possible.**
+
+**Affected Modems:**
+- Motorola MB8611 (DOCSIS 3.1)
+- Arris/CommScope S33 (likely HNAP-based)
+- Any modem using SOAP-based authentication
+
+**Problem 1: SSL Certificate Verification Failures (Issue ***REMOVED***6)**
+
+Many modems use self-signed SSL certificates that fail Python's SSL verification:
+
+```
+SSLError: HTTPSConnectionPool(host='192.168.100.1', port=443): Max retries exceeded...
+self-signed certificate
+```
+
+**Root Cause:**
+- Modem web interfaces use HTTPS with self-signed certificates
+- Python `requests` library enforces SSL certificate validation by default
+- Connection fails before authentication can even begin
+- All parser connection attempts fail at the SSL layer
+
+**Workaround Applied:**
+- Integration now disables SSL verification for local network connections
+- Accepts self-signed certificates from private IP addresses (RFC1918)
+- See: `custom_components/cable_modem_monitor/core/modem_scraper.py` - `verify=False` parameter
+
+**Problem 2: HNAP Protocol Complexity (Issue ***REMOVED***4)**
+
+HNAP uses SOAP-based XML/JSON API instead of static HTML:
+
+**Challenges:**
+1. **Protocol Complexity**
+   - Requires SOAP calls to `/HNAP1/` endpoint
+   - Actions like `GetMotoStatusDownstreamChannelInfo`, `GetMotoStatusUpstreamChannelInfo`
+   - Session management with authentication tokens
+   - More complex than simple HTML parsing
+
+2. **User Data Capture Difficulty**
+   - Users struggle to capture SOAP requests via browser DevTools
+   - HAR exports contain sensitive data
+   - Requires technical knowledge to extract correctly
+   - Many users unable to provide needed data
+
+3. **Authentication Flow**
+   - Multi-step HNAP login process
+   - Session tokens and SOAP headers
+   - More failure points than Basic Auth
+   - Harder to debug when it fails
+
+**Current Status:**
+- ✅ MB8611 HNAP parser implemented (`parsers/motorola/mb8611_hnap.py`)
+- ✅ HNAP authentication support exists (`HNAPAuthConfig`, `HNAPSessionAuthStrategy`)
+- ⚠️ **Still unreliable in practice** - SSL issues, session timeouts, user capture difficulty
+- ✅ Fixtures captured for MB8611 in `tests/parsers/motorola/fixtures/mb8611_hnap/`
+
+**Best Practice for New Modems:**
+
+When encountering a modem with HNAP/SOAP indicators:
+
+1. **First, try to get static HTML:**
+   - Ask user to manually save the status page HTML (right-click → Save Page As)
+   - Check if the page contains channel data in JavaScript variables
+   - Many HNAP modems also have static HTML pages with data embedded
+
+2. **Check for alternative URLs:**
+   - Some modems have both HNAP API and static HTML pages
+   - Try different URL patterns before implementing HNAP
+
+3. **Only implement HNAP if absolutely necessary:**
+   - If no static HTML pages exist
+   - If user can successfully capture HNAP responses
+   - If you have working test fixtures to validate against
+
+4. **Document extensively:**
+   - HNAP parsers need more documentation
+   - Include troubleshooting steps for SSL issues
+   - Provide clear user guidance
+
+**Related Files:**
+- `custom_components/cable_modem_monitor/parsers/motorola/mb8611_hnap.py` - Working HNAP parser example
+- `custom_components/cable_modem_monitor/core/authentication.py` - `HNAPSessionAuthStrategy`
+- `custom_components/cable_modem_monitor/core/auth_config.py` - `HNAPAuthConfig`
+- `custom_components/cable_modem_monitor/core/hnap_builder.py` - HNAP request builder
+- `tests/parsers/motorola/fixtures/mb8611_hnap/README.md` - MB8611 HNAP fixtures documentation
+
+**Related Issues:**
+- Issue ***REMOVED***4: MB8611 HNAP implementation (SOAP complexity, data capture challenges)
+- Issue ***REMOVED***6: MB8611 SSL certificate verification failures
+- Issue ***REMOVED***32: Arris S33 (likely HNAP, using HTML samples instead)
 
 ***REMOVED******REMOVED*** Development Workflow Rules
 
