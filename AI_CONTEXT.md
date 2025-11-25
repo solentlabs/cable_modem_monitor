@@ -452,6 +452,34 @@ When encountering a modem with HNAP/SOAP indicators:
 - Personal emails can be harvested by spammers
 - This is especially important as the project grows
 
+***REMOVED******REMOVED******REMOVED*** Creating Releases
+
+**CRITICAL: Always use the release script. NEVER manually create tags.**
+
+```bash
+***REMOVED*** Full release (recommended)
+python scripts/release.py 3.7.0
+
+***REMOVED*** Test locally without pushing
+python scripts/release.py 3.7.0 --no-push
+```
+
+The release script automatically:
+1. Validates version format
+2. Runs all tests
+3. Runs code quality checks (ruff, black, mypy)
+4. Updates ALL version locations (manifest.json, const.py, test file)
+5. Updates CHANGELOG.md
+6. Creates commit and tag
+7. Pushes to remote
+
+**DO NOT:**
+- Manually run `git tag`
+- Manually edit version files
+- Skip running tests before tagging
+
+**Why this matters:** Manual releases have failed repeatedly due to forgotten version files, missing tests, and workflow issues. The script prevents all of these.
+
 ***REMOVED******REMOVED******REMOVED*** Before Pushing to GitHub
 
 **IMPORTANT FOR AI TOOLS:** Always run these checks before committing/pushing:
