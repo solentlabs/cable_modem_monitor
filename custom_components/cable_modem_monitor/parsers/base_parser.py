@@ -24,6 +24,12 @@ class ModemParser(ABC):
     # Default is 50 for backward compatibility
     priority: int = 50
 
+    # Verification status - defaults to False until confirmed by real user
+    # Set to True only after verification by maintainer or user report
+    verified: bool = False
+    # Optional: Link to issue, forum post, or commit confirming verification
+    verification_source: str | None = None
+
     # URL patterns this parser can handle
     # Each pattern is a dict with 'path' and optionally 'auth_required'
     # auth_required: boolean (default True) - if False, can try without auth

@@ -43,6 +43,10 @@ class UniversalFallbackParser(ModemParser):
     models = ["Unknown"]
     priority = 1  # LOWEST priority - only used as last resort
 
+    # Verification status
+    verified = True  # Fallback parser is a diagnostic tool, always "works"
+    verification_source = "Diagnostic tool for HTML capture - not a real parser"
+
     # Use HTTP Basic Auth - most common authentication for cable modems
     # Will be skipped if no credentials provided
     auth_config = BasicAuthConfig(

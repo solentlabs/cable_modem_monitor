@@ -3,15 +3,18 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
-        "description": "Enter your cable modem's IP address and credentials. The IP is typically 192.168.100.1 for Motorola modems. Leave username/password blank if your modem doesn't require authentication.",
+        "description": "Configure your cable modem connection.",
         "data": {
-          "host": "Modem IP Address (e.g., 192.168.100.1)",
-          "username": "Username (optional, typically 'admin')",
-          "password": "Password (optional, stored securely)",
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password",
           "modem_choice": "Modem Model"
         },
         "data_description": {
-          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it"
+          "host": "Typically 192.168.100.1 for most cable modems",
+          "username": "Optional, typically 'admin' (leave blank if not required)",
+          "password": "Optional, stored securely (leave blank if not required)",
+          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it. Models marked with * are unverified or have known issues."
         }
       }
     },
@@ -34,7 +37,7 @@
     "step": {
       "init": {
         "title": "Cable Modem Monitor Settings",
-        "description": "Configure your cable modem connection and monitoring preferences.\n\nDetected Modem: {detected_modem} ({detected_manufacturer})\nLast Detection: {last_detection}\n\nCurrent Host: {current_host}\nCurrent Username: {current_username}\n\nLeave username/password blank if your modem doesn't require authentication. Leave password blank to keep existing password.",
+        "description": "Detected Modem: {detected_modem} ({detected_manufacturer})\nLast Detection: {last_detection}",
         "data": {
           "host": "Modem IP Address",
           "username": "Username (optional)",
@@ -46,7 +49,7 @@
           "host": "The IP address of your cable modem (typically 192.168.100.1 for Motorola modems)",
           "username": "Username for modem web interface (leave blank if not required)",
           "password": "Password for modem web interface (leave blank to keep existing password, or if not required)",
-          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it. Change this if auto-detection isn't working correctly.",
+          "modem_choice": "Select your modem model, or choose 'auto' to automatically detect it. Change this if auto-detection isn't working correctly. Models marked with * are unverified or have known issues.",
           "scan_interval": "How often to poll the modem for data (60-1800 seconds). Default: 600 seconds (10 minutes). Lower values increase network traffic and may strain older modems."
         }
       }

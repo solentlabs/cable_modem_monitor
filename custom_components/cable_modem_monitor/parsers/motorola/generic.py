@@ -28,6 +28,10 @@ class MotorolaGenericParser(ModemParser):
     models = ["MB7420", "MB8600", "MB8611"]
     priority = 50  # Generic fallback parser, try after model-specific parsers
 
+    # Verification status
+    verified = False  # No confirmed user reports for generic parser
+    verification_source: str | None = None  # Needs user verification
+
     # New authentication configuration (declarative)
     # Motorola modems try both plain and Base64-encoded passwords
     auth_config = FormAuthConfig(

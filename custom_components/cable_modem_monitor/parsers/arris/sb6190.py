@@ -23,6 +23,10 @@ class ArrisSB6190Parser(ModemParser):
     manufacturer = "ARRIS"
     models = ["SB6190"]
 
+    # Verification status
+    verified = False  # No user reports confirming this works
+    verification_source = None  # No confirmation found
+
     # New authentication configuration (declarative)
     auth_config = NoAuthConfig(strategy=AuthStrategyType.NO_AUTH)
 

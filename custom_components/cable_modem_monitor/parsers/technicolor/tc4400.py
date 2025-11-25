@@ -26,6 +26,10 @@ class TechnicolorTC4400Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["TC4400"]
 
+    # Verification status
+    verified = False  # No confirmed user reports
+    verification_source = None  # Check Issue #1 for status
+
     # New authentication configuration (declarative)
     auth_config = BasicAuthConfig(strategy=AuthStrategyType.BASIC_HTTP)
 

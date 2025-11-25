@@ -22,6 +22,12 @@ class ArrisSB6141Parser(ModemParser):
     manufacturer = "ARRIS"
     models = ["SB6141"]
 
+    # Verification status
+    verified = True  # Confirmed by @captain-coredump (vreihen) in v2.0.0
+    verification_source = (
+        "https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant"
+    )
+
     # New authentication configuration (declarative)
     auth_config = NoAuthConfig(strategy=AuthStrategyType.NO_AUTH)
 

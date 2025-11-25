@@ -17,6 +17,10 @@ class MotorolaMB7621Parser(MotorolaGenericParser):
     models = ["MB7621"]
     priority = 100  # Model-specific parser, try before generic
 
+    # Verification status
+    verified = True
+    verification_source = "kwschulz (maintainer's personal modem)"
+
     # MB7621 uses same URL patterns as generic, but we want to check
     # the software info page first to detect MB7621-specific strings
     url_patterns = [
