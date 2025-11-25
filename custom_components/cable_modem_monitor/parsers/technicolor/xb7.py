@@ -23,6 +23,10 @@ class TechnicolorXB7Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["XB7", "CGM4331COM"]
 
+    # Verification status
+    verified = False  # No confirmed user reports
+    verification_source = None  # Needs user verification
+
     # New authentication configuration (declarative)
     auth_config = RedirectFormAuthConfig(
         strategy=AuthStrategyType.REDIRECT_FORM,

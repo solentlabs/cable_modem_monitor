@@ -43,6 +43,10 @@ class NetgearC3700Parser(ModemParser):
     models = ["C3700", "C3700-100NAS"]
     priority = 50  # Standard priority
 
+    # Verification status
+    verified = True
+    verification_source = "kwschulz (personal verification)"
+
     # C3700 uses HTTP Basic Auth
     auth_config = BasicAuthConfig(
         strategy=AuthStrategyType.BASIC_HTTP,

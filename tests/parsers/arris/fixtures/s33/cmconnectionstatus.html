@@ -1,0 +1,189 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Status</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="./css/styles.css" />
+<link rel="stylesheet" type="text/css" href="./css/styles_layout.css" />
+<link rel="stylesheet" type="text/css" href="./css/styles_images.css" />
+<script type="text/javascript" charset="utf-8" src="./js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/initialJS.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/main.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/connectionstatus.js"></script>
+</head>
+<body>
+<div class="translucent" id="translucent" ></div> 
+<div class="register_notice" id="register_notice" ></div>
+
+<div>
+    <div id="binnacleWrapper1" class="binnacleItems_hide binnacleItems_0">
+        <div id="binnacleWrapper2" class="binnacleItems_hide binnacleItems_0">
+            <div id="binnacleWrapperLeft"><img src="./image/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+            <div id="binnacleWrapperRight"><img src="./image/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+            <div id="binnacleWrapperMiddle">
+                <div id="binnacleInnards">
+                    <div id="binnacleIndicatorWrap"></div>
+                    <div id="binnacleModelName"><span id="StatusSoftwareModelName"></span></div>
+                </div>
+            </div>
+            <!-- end binnacleWrapper1/2 -->
+        </div>
+    </div>
+
+<div id="pageheaderA">
+     <div id="modalUnderlayBlack" class="modalUnderlayBlack modalDisplayBlack"></div>
+	 <div id="modalUnderlayWhite" class="modalUnderlayWhite modalDisplayWhite"></div>
+	 <div id="modalFloaterMessage" class="modalDisplayBlack modalDisplayWhite"></div>
+	 <div id="modalContainerMessage" class="modalDisplayBlack modalDisplayWhite">
+	    <div id="modalContainerMessageTitle"><span class="modalContainerMessageTitleText" id="modalContainerMessageTitleText">Confirm Settings</span></div>
+		<div id="modalContainerMessageAlert" class="vertCenterWrap1">
+		    <div class="vertCenterWrap2">
+			  <div class="vertCenterWrap3">
+			    <div class="modalContainerMessageAlertText" id="modalContainerMessageAlertText"></div>
+			    <div class="modalContainerMessageAlertText" id="modalContainerMessageAlertTextPrompt"><strong>Do you want to continue?</strong></div>
+				<div class="modalContainerMessageAlertButtons">
+				  <input type="button" class="modalButton" id="modalButtonYes" value="Disable and Continue">
+				  <input type="button" class="modalButton" id="modalButtonNo" value="Cancel">
+				</div>
+			  </div>
+			</div>
+		</div>
+		<div id="modalContainerMessageAlertImage"><img src="./image/px1_Ux.png" alt="" class="wizardFrameSpriteImage_12"></div>
+	 </div>
+	 <div id="pw1">
+		     <div id="hg1">
+			   <div id="hg2">
+			     <div id="hg3">
+				   <div id="hg4">
+				     <div id="hg5">
+						   <div id="logo"><a href="http://www.arris.com"><img src="./image/px1_Ux.png" alt="ARRIS Logo" title="ARRIS Logo" class="logo"></a></div>
+					 </div></div></div></div></div></div>
+</div>
+
+<!--gap--><div id="tmtg"><div class="gap1"><div class="gap2"></div></div></div>
+
+                <div id="tmg1"><div id="tmg2"><div id="tmg3"><div id="tmg4">
+                     <div id="topMenu"></div>
+                <!-- end divs for tmg -->
+                </div></div></div></div>
+
+                <!--gap--><div id="tmbg"><div class="gap1"><div class="gap2"></div></div></div>
+
+                <div id="bg1"><div id="bg2"><div id="bg3">
+	<div class="container">
+		<div class="subHeader">
+			<div class="subHeadcontent">Connection</div>
+		</div>
+
+	<div class="SBCText">
+		<p>We recommend using our Mobile Application - <strong>SURFboard Central</strong> - for better experience configuring and accessing new features customized for your device.</p>
+	</div>
+	<div class="spacer20"></div>
+
+	<div class="breadcrumbs"> 
+    	<a href="cmconnectionstatus.html">Status</a>Connection </div>
+
+	<div class="content">
+       	<div class="introText">
+    		<p>The status listed show the connection state of the cable modem. They are used by your service provider to evaluate the operation of the cable modem.</p>
+    	</div>	
+			<center>
+			<table class="simpleTable">
+			<tr>
+            	<th colspan="3">Startup Procedure</strong></th>
+            </tr>
+			<tr >
+            	<td width="44%" ><strong><u>Procedure</u></strong></td>
+        		<td width="31%" ><strong><u>Status</u></strong></td>
+                <td width="25%" ><strong><u>Comment</u></strong></td>
+			</tr>
+			<tr>
+            	<td>Acquire Downstream Channel</td>
+    			<td ><span id="CustomerConnDSFreq"></span></td>
+    			<td><span id="CustomerConnDSComment"></span></td>
+			</tr>
+			<tr>
+            	<td>Connectivity State</td>
+    			<td><span id="CustomerConnConnectivityStatus"></span></td>
+    			<td><span id="CustomerConnConnectivityComment"></span></td>
+			</tr>
+          
+			<tr>
+            	<td>Boot State</td>
+			<td><span id="CustomerConnBootStatus"></span></td>
+    			<td><span id="CustomerConnBootComment"></span></td>
+			</tr>
+            
+                        <tr>
+            	<td >Configuration File</td>
+			<td><span id="CustomerConnConfigurationFileStatus"></span></td>			  
+    			<td><span id="CustomerConnConfigurationFileComment"></span></td>
+			</tr>
+			<tr>
+            	<td >Security</td>
+			<td><span id="CustomerConnSecurityStatus"></span></td>
+    			<td><span id="CustomerConnSecurityComment"></span></td>
+			</tr>
+             
+			<tr>
+            	<td >DOCSIS Network Access Enabled</td>				                      
+				<td><span id="CustomerConnNetworkAccess"></span></td>
+                                <td></td>
+			</tr>
+		</table>
+        </center>
+        
+        <br clear="all" class="clearfloat">
+		<div class="spacer30"></div>
+
+<center>
+   <table class='simpleTable' id='CustomerConnDownstreamChannel'>
+
+</table><br><br>
+
+</center>
+        
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<center>
+   <table class='simpleTable' id='CustomerConnUpstreamChannel'>
+   
+</table><br><br>
+
+</center>
+
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<p id="systime" align="center"><strong>Current System Time:</strong><span id="CustomerConnSystemUpTime"></span></p>
+
+</div>
+
+<br clear="all" class="clearfloat">
+<div class="spacer40"></div>
+
+<!-- end .container --></div> 
+
+<!-- Footer and Sitemap -->
+<!-- end divs for bc -->
+</div></div></div></div>	
+<!--gap--><div id="bmtg"><div class="gap1"><div class="gap2"></div></div></div>
+   
+<center><div id="siteMapBottom"></div></center>
+<div id="footer">
+  <div id="bmg1"><div id="bmg2"><div id="bmg3"><div id="bmg4">
+    <br clear="all" class="clearfloat"></div></div></div></div>
+  <div id="bmbg"><div class="gap1"><div class="gap2">
+  </div></div></div>
+  <div id="fg1"><div id="fg2"><div id="fg3"><div id="fg4"><div id="fg5">
+  <div id="logo_bottom"><a href="http://www.arris.com"><img src="./image/px1_Ux.png" alt="ARRIS" title="ARRIS" class="logo_bottom"></a></div>
+  <div id="copyright"></div></div></div></div></div></div>
+  <div id="fgbl1"><div id="fgbl2"><div id="fgbl3"><img src="./image/px1_Ux.png" alt="" title="" class="fgbl3"></div></div></div>
+</div>
+
+</div>
+</body>
+</html>

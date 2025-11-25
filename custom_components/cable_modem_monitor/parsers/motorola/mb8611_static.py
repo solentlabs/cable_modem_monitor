@@ -19,6 +19,10 @@ class MotorolaMB8611StaticParser(ModemParser):
     models = ["MB8611", "MB8612"]
     priority = 100  # Try after HNAP parser, before generic
 
+    # Verification status
+    verified = False  # Static fallback parser - no user confirmation
+    verification_source = "Untested fallback parser with limited features"
+
     url_patterns = [
         {"path": "/MotoStatusConnection.html", "auth_method": "none", "auth_required": False},
         # MB8600 compatibility: Some MB8611 firmware may use older MB8600-style URLs
