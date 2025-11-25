@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED******REMOVED*** Added
+- **Parser Verification Status System** - New transparency framework for modem parser reliability
+  - All parsers now include `verified` boolean flag and `verification_source` documentation
+  - Base parser defaults to `verified = False`, requiring explicit verification for each model
+  - Verification sources tracked: maintainer testing, community reports, or unverified status
+  - New `VERIFICATION_STATUS.md` document provides comprehensive parser status overview
+- **UI Verification Indicators** - Users can now see which modems are verified during setup
+  - Unverified parsers marked with asterisk (*) in modem selection dropdown
+  - Field description explains: "Models marked with * are unverified or have known issues"
+  - Applies to both initial setup and settings configuration
+  - Helps users make informed decisions about parser selection
+- **Enhanced Config Flow Translations** - Improved UI text consistency and clarity
+  - All form fields now have consistent `data_description` help text
+  - Clean field labels with helpful descriptions below each field
+  - Translations system synchronized (strings.json → translations/en.json)
+  - Fixed spacing inconsistencies between form fields
+- **User Feedback System** - Streamlined path for users to report working unverified modems
+  - New GitHub issue template (`modem_verification.yml`) with guided fields
+  - Dedicated README section "Help Verify Modem Support" with clear call-to-action
+  - Pre-filled form makes reporting take only 2 minutes
+  - Alternative reporting path via Home Assistant Community Forums for non-GitHub users
+  - Significantly reduced friction for community verification reports
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **README Modem Support Tables** - Reorganized for transparency and accuracy
+  - ✅ Verified Working: Only 4 confirmed models (Arris SB6141, Motorola MB7621, Netgear C3700, Netgear CM600)
+  - ⚠️ Unverified Parsers: Parsers needing user confirmation
+  - ❌ Known Issues: New section for broken parsers (MB8611 HNAP/Static moved here)
+  - Clear verification sources cited for each working model
+- **Motorola MB8611 Status** - Correctly documented as non-working
+  - Removed from "Verified Working" list (was incorrectly listed)
+  - Added to "Known Issues" section with specific problems documented
+  - HNAP variant: SSL certificate and protocol issues (Issues ***REMOVED***4, ***REMOVED***6)
+  - Static variant: Untested with limited features
+- **Release Script Enhancements** - Comprehensive pre-deployment validation added
+  - Now runs full test suite before release
+  - Executes code quality checks matching CI exactly (ruff, black, mypy on entire repo)
+  - Verifies translations/en.json matches strings.json
+  - Auto-updates translations if out of sync
+  - Stages translation file changes in commit
+  - Added `--skip-tests` and `--skip-quality` flags for flexibility
+  - Prevents CI failures by running identical checks locally before push
+
 ***REMOVED******REMOVED******REMOVED*** Developer Experience
 - **Docker Status Checking** - Added cross-platform Docker check helper (`scripts/dev/check-docker.py`)
   - Verifies Docker is installed and running before Docker operations
@@ -21,6 +64,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added terminal clearing before displaying welcome message for cleaner UI
   - Removed emoji from welcome text to fix Windows terminal encoding issues
   - Cross-platform compatibility maintained for Linux, macOS, and Windows
+
+***REMOVED******REMOVED******REMOVED*** Technical Details
+- **Files Modified**:
+  - `custom_components/cable_modem_monitor/config_flow.py` - Added `_get_parser_display_name()` helper, updated dropdown generation
+  - `custom_components/cable_modem_monitor/strings.json` - Restructured with consistent field descriptions
+  - `custom_components/cable_modem_monitor/translations/en.json` - Synchronized with strings.json
+  - `custom_components/cable_modem_monitor/parsers/base_parser.py` - Set default `verified = False`
+  - All parser files - Added verification status and sources
+  - `README.md` - Reorganized modem support tables, updated MB8611 status
+  - `VERIFICATION_STATUS.md` - New comprehensive verification status document
+  - `scripts/release.py` - Added test, quality, and translation validation steps
 
 ***REMOVED******REMOVED******REMOVED*** Planning
 - Future features and improvements

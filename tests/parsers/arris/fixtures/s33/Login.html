@@ -1,0 +1,192 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Login</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="./css/styles.css" />
+<link rel="stylesheet" type="text/css" href="./css/styles_layout.css" />
+<link rel="stylesheet" type="text/css" href="./css/styles_images.css" />
+<script type="text/javascript" charset="utf-8" src="./js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/jquery.selectbox.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/Login.js?V=M2"></script>
+<script type="text/javascript" charset="utf-8" src="./js/SOAP/SOAPAction.js?V=M2"></script>
+<script type="text/javascript" charset="utf-8" src="./js/jquery.qrcode.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="./js/initialJS.js"></script>
+</head>
+<body id="loginBody" name="loginBody">
+
+<div class="translucent" id="translucent"></div> 
+<div class="device_status" id="device_status">
+  <div class="device_status_head">&nbsp;&nbsp;&nbsp;<span id="StatusSoftwareModelName"></span> Device Status</div>
+
+      <table cellpadding="0" cellspacing="5" border="0" width="100%" id='logintb'>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>Firmware Version</td>
+          <td><input id='FirmwareVersion' type='text' value='' size='16' disabled></td>
+        </tr>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>Internet Connection</td>
+          <td><input id='InternetConnection' type='text' value='' size='16' disabled></td>
+        </tr>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>Downstream Frequency</td>
+          <td><input id='DownstreamFrequency' type='text' value='' size='16' disabled></td>
+        </tr>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>Downstream Signal Power</td>
+          <td><input id='DownstreamSignalPower' type='text' value='' size='16' disabled></td>
+        </tr>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>Downstream Signal SNR</td>
+          <td><input id='DownstreamSignalSnr' type='text' value='' size='16' disabled></td>
+        </tr>
+        <tr><td colspan="3">&nbsp;</td></tr>
+        <tr>
+	  <td width="15px">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td align="right"><input id='close_status' type='button' value='Close'>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+        </tr>
+      </table>
+</div>
+
+<div>
+	  <!-- Header Area Begin -->
+<div class="header">  
+    <div id="binnacleWrapper1" class="binnacleItems_hide">
+                <div id="binnacleWrapper2" class="binnacleItems_hide">
+                    <div id="binnacleWrapperLeft"><img src="./image/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                    <div id="binnacleWrapperRight"><img src="./image/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                    <div id="binnacleWrapperMiddle">
+                        <div id="binnacleInnards">                            
+							<div id="binnacleIndicatorWrap"></div>
+                            <div id="binnacleModelName"><span id="StatusSoftwareModelName2"></span></div>
+                        </div>
+                    </div>
+                <!-- end binnacleWrapper1/2 -->
+				</div>
+			</div>
+    <div id="pw1">
+   
+		<div id="hg1"><div id="hg2"><div id="hg3"><div id="hg4"><div id="hg5">
+		
+            <div id="logo"><a href="http://www.arris.com"><img src="./image/px1_Ux.png" alt="ARRIS Logo" title="ARRIS Logo" class="logo"></a></div>
+		<!-- end divs for hg -->
+		</div></div></div></div></div>
+		
+		<!--gap--><div id="tmtg"><div class="gap1"><div class="gap2"></div></div></div>
+
+		<div id="bg1"><div id="bg2"><div id="bg3">
+<!-- END pageheaderA.htm ADDITIONS -->
+<!-- END pageheaderA.htm -->
+<!-- ARRIS MENU Start-->
+<div id="topMenu">
+</div>
+<!-- ARRIS MENU End -->
+
+<!-- START pageheaderB.htm -->
+
+<!-- START pageheaderB.htm ADDITIONS -->
+		<!-- end divs for tmg -->
+
+		
+		
+<!-- END pageheaderB.htm ADDITIONS -->
+
+<!-- END pageheaderB.htm -->
+	<!-- End Header -->
+
+	<div class="container">
+		<div class="subHeader">
+			<div class="subHeadcontent">Login</div>
+		</div>
+
+	<div class="SBCText">
+		<p>We recommend using our Mobile Application - <strong>SURFboard Central</strong> - for better experience configuring and accessing new features customized for your device.</p>
+	</div>
+	<div class="spacer20"></div>
+
+	<div class="content">
+       	<div class="introText">
+    		<p>The default user name is 'admin'.</p>
+    	</div>
+    </div>
+
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<form id="login_form" method="post" action="***REMOVED******REMOVED***">
+	<table class="simpleTable">
+		<tr>
+			<td><strong>Username</strong></td>
+			<td><input type="text" id="loginUsername" name="username" size="32" autocomplete="off"></td>
+		</tr>
+		<tr>
+			<td><strong>Password</strong></td>
+			<td id = "textOrPsw">
+				<div id="s33-oldpassword" class="password-wrap">
+				<div class="password-input" id='loginPasswordinput'>
+				<input type="password" name="old_password" id="loginWAP" size="15" maxlength="15" value="" class="bui-input" autocomplete="off" >
+				</div>	
+				<i class="bt-showpwd off" id='bt-showpwd'></i><i id='tiploginpwd'></i>
+				</div>			
+			</td>
+		</tr>
+              <tr>
+                      <td>&nbsp;</td><td>&nbsp;</td>
+              </tr>
+              <tr>
+                      <td>
+                              <input type="button" id="login" value="Apply">
+                      </td>
+                      <td><input type="button" id="DeviceStatus" value="Device Status"></td>
+              </tr>
+	</table>
+	
+	<br clear="all" class="clearfloat">
+	<div class="spacer30"></div>
+
+</form>	
+
+
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<br clear="all" class="clearfloat">
+<div class="spacer40"></div>
+
+<!-- end .container --></div> 
+
+<!-- START footer.htm ADDITIONS -->
+		<!-- end divs for bc -->
+		</div></div></div></div>
+		
+		<!--gap--><div id="bmtg"><div class="gap1"><div class="gap2"></div></div></div>
+		
+		<div id="fg1"><div id="fg2"><div id="fg3"><div id="fg4"><div id="fg5">
+			
+			<div id="logo_bottom"><a href="http://www.arris.com"><img src="./image/px1_Ux.png" alt="ARRIS" title="ARRIS" class="logo_bottom"></a></div>
+
+			<div id="copyright">
+			</div>
+
+		</div></div></div></div></div>
+		
+		
+		<div id="fgbl1"><div id="fgbl2"><div id="fgbl3"><img src="./image/px1_Ux.png" alt="" title="" class="fgbl3"></div></div></div>
+
+    
+    <!-- end divs for pw -->
+    </div>
+
+<!-- END footer.htm ADDITIONS -->
+</div>
+
+</body>
+</html>

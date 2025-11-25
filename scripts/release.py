@@ -1,27 +1,34 @@
 ***REMOVED***!/usr/bin/env python3
 """Release automation script for Cable Modem Monitor.
 
-This script automates the release process by:
+This script automates the complete release process by:
 1. Validating the version format
-2. Updating version in all required files:
+2. Checking git working directory is clean
+3. Running tests (pytest)
+4. Running code quality checks (ruff, black, mypy)
+5. Verifying translations/en.json matches strings.json
+6. Updating version in all required files:
    - custom_components/cable_modem_monitor/manifest.json
    - custom_components/cable_modem_monitor/const.py
    - tests/components/test_version_and_startup.py
-3. Updating CHANGELOG.md
-4. Creating a git commit
-5. Creating an annotated git tag
-6. Pushing to remote
-7. Creating a GitHub release
+7. Updating CHANGELOG.md
+8. Creating a git commit with all changes
+9. Creating an annotated git tag
+10. Pushing to remote (optional)
+11. Creating a GitHub release (optional)
 
 Usage:
-    python scripts/release.py 3.5.1
-    python scripts/release.py 3.5.1 --no-push  ***REMOVED*** Don't push to remote
-    python scripts/release.py 3.5.1 --skip-changelog  ***REMOVED*** Don't update changelog
+    python scripts/release.py 3.5.2                    ***REMOVED*** Full release
+    python scripts/release.py 3.5.2 --no-push          ***REMOVED*** Test locally without pushing
+    python scripts/release.py 3.5.2 --skip-tests       ***REMOVED*** Skip tests (not recommended)
+    python scripts/release.py 3.5.2 --skip-quality     ***REMOVED*** Skip code quality checks
+    python scripts/release.py 3.5.2 --skip-changelog   ***REMOVED*** Don't update changelog
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import subprocess
@@ -319,6 +326,100 @@ def create_github_release(version: str, repo_root: Path) -> bool:
         return False
 
 
+def run_tests(repo_root: Path) -> bool:
+    """Run the full test suite."""
+    try:
+        print_info("Running tests...")
+        subprocess.run(
+            [str(repo_root / ".venv" / "bin" / "python"), "-m", "pytest", "-v"],
+            cwd=repo_root,
+            check=True,
+        )
+        print_success("All tests passed")
+        return True
+    except subprocess.CalledProcessError:
+        print_error("Tests failed! Fix issues before releasing.")
+        return False
+
+
+def run_code_quality_checks(repo_root: Path) -> bool:
+    """Run code quality checks (ruff, black, mypy).
+
+    Matches CI configuration exactly to catch issues before push.
+    """
+    try:
+        venv_python = str(repo_root / ".venv" / "bin" / "python")
+
+        ***REMOVED*** Run ruff - check entire repo (matches CI)
+        print_info("Running ruff on entire repository...")
+        subprocess.run(
+            [venv_python, "-m", "ruff", "check", "."],
+            cwd=repo_root,
+            check=True,
+        )
+        print_success("Ruff checks passed")
+
+        ***REMOVED*** Run black - check entire repo (matches CI)
+        print_info("Running black on entire repository...")
+        subprocess.run(
+            [venv_python, "-m", "black", "--check", "."],
+            cwd=repo_root,
+            check=True,
+        )
+        print_success("Black formatting checks passed")
+
+        ***REMOVED*** Run mypy - check entire repo with config (matches CI)
+        print_info("Running mypy with config file...")
+        subprocess.run(
+            [venv_python, "-m", "mypy", ".", "--config-file=mypy.ini"],
+            cwd=repo_root,
+            check=True,
+        )
+        print_success("Mypy type checks passed")
+
+        return True
+    except subprocess.CalledProcessError:
+        print_error("Code quality checks failed!")
+        return False
+
+
+def verify_translations(repo_root: Path) -> bool:
+    """Verify translations/en.json matches strings.json."""
+    try:
+        strings_path = repo_root / "custom_components" / "cable_modem_monitor" / "strings.json"
+        translations_path = repo_root / "custom_components" / "cable_modem_monitor" / "translations" / "en.json"
+
+        ***REMOVED*** Read both files
+        with open(strings_path, encoding="utf-8") as f:
+            strings_content = json.load(f)
+
+        if not translations_path.exists():
+            print_warning("translations/en.json not found, creating from strings.json...")
+            translations_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(translations_path, "w", encoding="utf-8") as f:
+                json.dump(strings_content, f, indent=2)
+                f.write("\n")
+            print_success("Created translations/en.json")
+            return True
+
+        with open(translations_path, encoding="utf-8") as f:
+            translations_content = json.load(f)
+
+        if strings_content != translations_content:
+            print_warning("translations/en.json differs from strings.json, updating...")
+            with open(translations_path, "w", encoding="utf-8") as f:
+                json.dump(strings_content, f, indent=2)
+                f.write("\n")
+            print_success("Updated translations/en.json")
+        else:
+            print_success("translations/en.json matches strings.json")
+
+        return True
+    except Exception as e:
+        print_error(f"Failed to verify translations: {e}")
+        return False
+
+
 def validate_release_preconditions(version: str, repo_root: Path) -> None:
     """Validate all preconditions for creating a release."""
     ***REMOVED*** Validate version format
@@ -400,6 +501,16 @@ def main():
         action="store_true",
         help="Skip git hooks (--no-verify)",
     )
+    parser.add_argument(
+        "--skip-tests",
+        action="store_true",
+        help="Skip running tests (not recommended)",
+    )
+    parser.add_argument(
+        "--skip-quality",
+        action="store_true",
+        help="Skip code quality checks (not recommended)",
+    )
 
     args = parser.parse_args()
     version = args.version
@@ -413,8 +524,33 @@ def main():
     ***REMOVED*** Validate preconditions
     validate_release_preconditions(version, repo_root)
 
+    ***REMOVED*** Run tests
+    if not args.skip_tests:
+        if not run_tests(repo_root):
+            sys.exit(1)
+    else:
+        print_warning("Skipping tests (--skip-tests)")
+
+    ***REMOVED*** Run code quality checks
+    if not args.skip_quality:
+        if not run_code_quality_checks(repo_root):
+            sys.exit(1)
+    else:
+        print_warning("Skipping code quality checks (--skip-quality)")
+
+    ***REMOVED*** Verify translations
+    if not verify_translations(repo_root):
+        sys.exit(1)
+
     ***REMOVED*** Update all version files
     update_all_files(repo_root, version, args.skip_changelog)
+
+    ***REMOVED*** Stage translations if it was updated
+    with contextlib.suppress(subprocess.CalledProcessError):
+        subprocess.run(
+            ["git", "add", "custom_components/cable_modem_monitor/translations/en.json"],
+            check=False,  ***REMOVED*** Don't fail if file doesn't exist
+        )
 
     ***REMOVED*** Perform git operations
     perform_git_operations(version, args.skip_verify, args.no_push, repo_root)

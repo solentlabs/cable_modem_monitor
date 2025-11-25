@@ -1,0 +1,121 @@
+name: ✅ Verify Working Modem
+description: Report that an unverified modem parser is working for you
+title: "[Verification] Modem Model Name"
+labels: ["verification", "modem-support", "community-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ***REMOVED******REMOVED*** Thank you for helping verify modem support! 🎉
+
+        If you successfully installed Cable Modem Monitor with a modem marked with an asterisk (*) during setup, please help verify it works!
+
+        Your feedback helps other users with the same modem know it's reliable.
+
+  - type: input
+    id: modem_model
+    attributes:
+      label: Modem Model
+      description: What modem model are you using? (e.g., "Arris SB6190", "Motorola MB8600")
+      placeholder: "e.g., Arris SB6190"
+    validations:
+      required: true
+
+  - type: input
+    id: firmware_version
+    attributes:
+      label: Firmware Version
+      description: What firmware version is your modem running? (Check your modem's web interface)
+      placeholder: "e.g., SB_KOMODO-1.0.7.26-180214-NOSH"
+    validations:
+      required: false
+
+  - type: input
+    id: isp
+    attributes:
+      label: Internet Service Provider (ISP)
+      description: Which ISP are you using? (Optional but helpful for compatibility tracking)
+      placeholder: "e.g., Comcast/Xfinity, Spectrum, Cox"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: features_working
+    attributes:
+      label: What Features Are Working?
+      description: Check all that apply
+      options:
+        - label: "Downstream channel data (frequency, power, SNR, errors)"
+        - label: "Upstream channel data (frequency, power)"
+        - label: "System information (firmware version, uptime)"
+        - label: "Modem restart functionality"
+        - label: "All channel counts are correct"
+
+  - type: textarea
+    id: channel_counts
+    attributes:
+      label: Channel Counts
+      description: How many downstream and upstream channels does your modem have?
+      placeholder: "e.g., 32 downstream, 8 upstream"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: parser_selected
+    attributes:
+      label: How Was Parser Selected?
+      description: Did you manually select the parser or was it auto-detected?
+      options:
+        - Auto-detected
+        - Manually selected from dropdown
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: issues_found
+    attributes:
+      label: Any Issues or Limitations?
+      description: Are there any features that don't work or data that's incorrect?
+      placeholder: "e.g., Restart button doesn't work, Upstream power values are all 0"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: diagnostics_attached
+    attributes:
+      label: Diagnostics File
+      description: Have you attached a diagnostics file? (Settings → Devices & Services → Cable Modem Monitor → Device → Download Diagnostics)
+      options:
+        - label: "I have attached a diagnostics file to this issue"
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful?
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ***REMOVED******REMOVED******REMOVED*** How to Download Diagnostics (Recommended)
+
+        Attaching a diagnostics file helps us verify the data structure:
+
+        1. Go to **Settings → Devices & Services → Cable Modem Monitor**
+        2. Click your modem device
+        3. Click **Download Diagnostics**
+        4. Attach the file to this issue
+
+        The diagnostics file includes your modem data but **automatically sanitizes** sensitive information (MAC addresses, serial numbers, IPs).
+
+        ***REMOVED******REMOVED******REMOVED*** What Happens Next?
+
+        - A maintainer will review your report
+        - If verified, your modem will be moved to "✅ Verified Working" in the README
+        - The asterisk (*) will be removed in a future release
+        - Other users will know this parser is reliable!
