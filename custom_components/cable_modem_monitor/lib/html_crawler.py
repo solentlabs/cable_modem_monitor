@@ -108,6 +108,10 @@ def extract_links_from_html(html: str, base_url: str) -> set[str]:
         for link_tag in soup.find_all("a", href=True):
             href = link_tag["href"]
 
+            ***REMOVED*** Ensure href is a string (BeautifulSoup can return list for multi-value attrs)
+            if not isinstance(href, str):
+                continue
+
             ***REMOVED*** Skip anchors, javascript, mailto, etc.
             if href.startswith(("***REMOVED***", "javascript:", "mailto:")):
                 continue

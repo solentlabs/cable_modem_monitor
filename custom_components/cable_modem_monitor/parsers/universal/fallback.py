@@ -211,9 +211,16 @@ class UniversalFallbackParser(ModemParser):
         ***REMOVED*** Try meta tags
         meta_tags = soup.find_all("meta", attrs={"name": True, "content": True})
         for meta in meta_tags:
-            name = meta.get("name", "").lower()
+            name_attr = meta.get("name", "")
+            ***REMOVED*** Ensure name is a string (BeautifulSoup can return list for multi-value attrs)
+            if not isinstance(name_attr, str):
+                continue
+            name = name_attr.lower()
             if "model" in name or "product" in name:
-                content = meta.get("content", "").strip()
+                content_attr = meta.get("content", "")
+                if not isinstance(content_attr, str):
+                    continue
+                content = content_attr.strip()
                 if content:
                     _LOGGER.debug(f"Found model in meta tag: {content}")
                     return str(content)

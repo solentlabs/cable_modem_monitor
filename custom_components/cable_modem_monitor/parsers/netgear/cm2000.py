@@ -502,7 +502,10 @@ class NetgearCM2000Parser(ModemParser):
 
         try:
             ***REMOVED*** Try to extract from JavaScript InitTagValue function
-            script_tags = soup.find_all("script", string=re.compile("InitTagValue"))
+            ***REMOVED*** Filter script tags manually to satisfy mypy (find_all with both name and string has typing issues)
+            script_tags = [
+                tag for tag in soup.find_all("script") if tag.string and re.search("InitTagValue", tag.string)
+            ]
 
             for script in script_tags:
                 if not script.string:

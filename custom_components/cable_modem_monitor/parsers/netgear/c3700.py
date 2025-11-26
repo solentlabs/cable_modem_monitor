@@ -159,7 +159,8 @@ class NetgearC3700Parser(ModemParser):
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc:
             content = meta_desc.get("content", "")
-            if "C3700" in content:
+            ***REMOVED*** Ensure content is a string (BeautifulSoup can return list for multi-value attrs)
+            if isinstance(content, str) and "C3700" in content:
                 _LOGGER.info("Detected Netgear C3700 from meta description")
                 return True
 
