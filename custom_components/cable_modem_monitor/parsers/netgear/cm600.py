@@ -13,8 +13,12 @@ Key pages:
 
 Authentication: HTTP Basic Auth
 
+System info:
+- Uptime: Available from DocsisStatus.asp in HH:MM:SS format (e.g., "1308:19:22")
+- Last boot time: Calculated from uptime
+- Hardware/firmware version: Available from RouterStatus.asp
+
 Known limitations:
-- System uptime/last boot time: Not exposed by firmware (fields are empty in web API)
 - Restart: Connection drops immediately on success (handled as expected behavior)
 
 Related: Issue ***REMOVED***3 (Netgear CM600 - Login Doesn't Work)
@@ -54,12 +58,14 @@ class NetgearCM600Parser(ModemParser):
         strategy=AuthStrategyType.BASIC_HTTP,
     )
 
-    ***REMOVED*** Capabilities - CM600 firmware does NOT expose uptime/boot time
+    ***REMOVED*** Capabilities
     capabilities = {
         ModemCapability.DOWNSTREAM_CHANNELS,
         ModemCapability.UPSTREAM_CHANNELS,
         ModemCapability.HARDWARE_VERSION,
         ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.LAST_BOOT_TIME,
         ModemCapability.RESTART,
     }
 

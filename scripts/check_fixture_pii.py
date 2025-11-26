@@ -80,6 +80,16 @@ def is_timestamp(text: str) -> bool:
     return bool(re.match(r"^\d{2}:\d{2}(:\d{2})?:?$", text))
 
 
+def is_uptime_format(text: str) -> bool:
+    """Check if text looks like an uptime in HH:MM:SS or HHHH:MM:SS format.
+
+    Some modems (e.g., Netgear CM600) report uptime as hours:minutes:seconds
+    where hours can be 1-5+ digits (e.g., "1308:19:22" = 1308 hours uptime).
+    """
+    ***REMOVED*** Match H+:MM:SS where hours is 1+ digits (can exceed 24 for long uptimes)
+    return bool(re.match(r"^\d+:\d{1,2}:\d{1,2}$", text))
+
+
 def is_sanitized_ipv6(text: str) -> bool:
     """Check if text is a sanitized IPv6 placeholder (aaaa:bbbb:cccc:dddd format)."""
     ***REMOVED*** Sanitized IPv6 uses only letters a-f, no real digits
@@ -117,6 +127,10 @@ def check_for_pii(content: str, filename: str = "") -> list[dict]:
             if pattern_name == "ipv6" and is_timestamp(matched_text):
                 continue
 
+            ***REMOVED*** Skip uptime formats that look like IPv6 (e.g., 1308:19:22)
+            if pattern_name == "ipv6" and is_uptime_format(matched_text):
+                continue
+
             ***REMOVED*** Skip sanitized IPv6 placeholders (e.g., aaaa:bbbb:cccc:dddd)
             if pattern_name == "ipv6" and is_sanitized_ipv6(matched_text):
                 continue
@@ -145,7 +159,7 @@ def get_fixture_files() -> list[Path]:
     fixtures_root = project_root / "tests" / "parsers"
     patterns = ["**/*.html", "**/*.htm", "**/*.asp", "**/*.jst"]
 
-    files = []
+    files: list[Path] = []
     for pattern in patterns:
         files.extend(fixtures_root.glob(pattern))
 

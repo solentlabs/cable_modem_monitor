@@ -27,8 +27,11 @@ def parse_uptime_to_seconds(uptime_str: str | None) -> int | None:
     """Parse uptime string to total seconds.
 
     Args:
-        uptime_str: Uptime string like "2 days 5 hours" or "0 days 08h:37m:20s",
-                   or None for unknown/missing uptime
+        uptime_str: Uptime string in various formats:
+                   - "2 days 5 hours" or "0 days 08h:37m:20s"
+                   - "47d 12h 34m 56s"
+                   - "1308:19:22" (hours:minutes:seconds - CM600 format)
+                   - None for unknown/missing uptime
 
     Returns:
         Total seconds or None if parsing fails
@@ -38,6 +41,15 @@ def parse_uptime_to_seconds(uptime_str: str | None) -> int | None:
 
     try:
         total_seconds = 0
+
+        ***REMOVED*** Check for HH:MM:SS or HHHH:MM:SS format (e.g., "1308:19:22")
+        ***REMOVED*** This format is hours:minutes:seconds with no unit suffixes
+        hms_match = re.match(r"^(\d+):(\d{1,2}):(\d{1,2})$", uptime_str.strip())
+        if hms_match:
+            hours = int(hms_match.group(1))
+            minutes = int(hms_match.group(2))
+            seconds = int(hms_match.group(3))
+            return hours * 3600 + minutes * 60 + seconds
 
         ***REMOVED*** Parse days (handles "2 days" or "2d")
         days_match = re.search(r"(\d+)\s*(?:days?|d)", uptime_str, re.IGNORECASE)

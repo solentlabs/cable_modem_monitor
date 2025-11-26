@@ -1,20 +1,14 @@
 """Tests for the Netgear CM600 parser.
 
-NOTE: Parser implementation pending DocsisStatus.asp HTML capture.
-The CM600 uses /DocsisStatus.asp for DOCSIS channel data, which was
-not captured in initial diagnostics due to a bug (now fixed).
-
-Current fixtures available:
+Fixtures available:
 - DashBoard.asp: Dashboard page
 - DocsisOffline.asp: Offline error page
+- DocsisStatus.asp: DOCSIS channel data (downstream/upstream/uptime)
 - EventLog.asp: Event log page
 - GPL_rev1.htm: GPL license
 - index.html: Main page
-- RouterStatus.asp: Router/wireless status
+- RouterStatus.asp: Router/wireless status (hardware/firmware version)
 - SetPassword.asp: Password change page
-
-Missing fixture needed for parser:
-- DocsisStatus.asp: DOCSIS channel data (downstream/upstream)
 
 Related: Issue ***REMOVED***3 (Netgear CM600 - Login Doesn't Work)
 """
@@ -87,6 +81,47 @@ def test_parser_detection(cm600_index_html):
     assert NetgearCM600Parser.can_parse(soup, "http://192.168.100.1/", cm600_index_html)
 
 
+def test_parser_detection_via_meta_description():
+    """Test CM600 detection via meta description tag."""
+    html = """
+    <html>
+    <head>
+        <meta name="description" content="CM600 Cable Modem">
+        <title>Some Other Title</title>
+    </head>
+    <body></body>
+    </html>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    assert NetgearCM600Parser.can_parse(soup, "http://192.168.100.1/", html)
+
+
+def test_parser_detection_via_page_content():
+    """Test CM600 detection via page content."""
+    html = """
+    <html>
+    <head><title>Gateway</title></head>
+    <body>
+        <p>Welcome to your NETGEAR CM600 Cable Modem</p>
+    </body>
+    </html>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    assert NetgearCM600Parser.can_parse(soup, "http://192.168.100.1/", html)
+
+
+def test_parser_detection_negative():
+    """Test that parser correctly rejects non-CM600 modems."""
+    html = """
+    <html>
+    <head><title>Some Other Modem</title></head>
+    <body><p>Not a CM600</p></body>
+    </html>
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    assert not NetgearCM600Parser.can_parse(soup, "http://192.168.100.1/", html)
+
+
 def test_parser_system_info(cm600_router_status_html):
     """Test parsing of Netgear CM600 system info from RouterStatus.asp."""
     parser = NetgearCM600Parser()
@@ -102,6 +137,31 @@ def test_parser_system_info(cm600_router_status_html):
     ***REMOVED*** Check hardware version
     assert "hardware_version" in system_info
     assert system_info["hardware_version"] == "1.01B"
+
+
+def test_parser_uptime_from_docsis_status(cm600_docsis_status_html):
+    """Test parsing of uptime and last boot time from DocsisStatus.asp."""
+    parser = NetgearCM600Parser()
+    soup = BeautifulSoup(cm600_docsis_status_html, "html.parser")
+
+    ***REMOVED*** Parse system info from DocsisStatus.asp
+    system_info = parser.parse_system_info(soup)
+
+    ***REMOVED*** Check uptime is parsed (CM600 uses HH:MM:SS format like "1308:19:22")
+    assert "system_uptime" in system_info
+    assert system_info["system_uptime"] == "1308:19:22"
+
+    ***REMOVED*** Check last boot time is calculated
+    assert "last_boot_time" in system_info
+    ***REMOVED*** Boot time should be an ISO formatted datetime string
+    from datetime import datetime
+
+    boot_time = datetime.fromisoformat(system_info["last_boot_time"])
+    assert boot_time < datetime.now()
+
+    ***REMOVED*** Check current time is parsed
+    assert "current_time" in system_info
+    assert "Tue Oct 28" in system_info["current_time"]
 
 
 def test_calculate_boot_time():
@@ -133,6 +193,23 @@ def test_calculate_boot_time():
     expected_boot = datetime.now() - expected_uptime
     assert abs((boot_time - expected_boot).total_seconds()) < 2
 
+    ***REMOVED*** Test with CM600 HH:MM:SS format (e.g., "1308:19:22" = 1308 hours)
+    boot_time_str = parser._calculate_boot_time("1308:19:22")
+    assert boot_time_str is not None
+    boot_time = datetime.fromisoformat(boot_time_str)
+    ***REMOVED*** 1308 hours = 54.5 days
+    expected_uptime = timedelta(hours=1308, minutes=19, seconds=22)
+    expected_boot = datetime.now() - expected_uptime
+    assert abs((boot_time - expected_boot).total_seconds()) < 2
+
+    ***REMOVED*** Test with shorter HH:MM:SS format
+    boot_time_str = parser._calculate_boot_time("24:30:15")
+    assert boot_time_str is not None
+    boot_time = datetime.fromisoformat(boot_time_str)
+    expected_uptime = timedelta(hours=24, minutes=30, seconds=15)
+    expected_boot = datetime.now() - expected_uptime
+    assert abs((boot_time - expected_boot).total_seconds()) < 2
+
     ***REMOVED*** Test with invalid uptime string
     boot_time_str = parser._calculate_boot_time("invalid")
     assert boot_time_str is None
@@ -140,6 +217,86 @@ def test_calculate_boot_time():
     ***REMOVED*** Test with empty string
     boot_time_str = parser._calculate_boot_time("")
     assert boot_time_str is None
+
+
+def test_parse_with_session_fetches_pages(cm600_docsis_status_html, cm600_router_status_html):
+    """Test that parse() fetches additional pages when session is provided."""
+    from unittest.mock import Mock
+
+    parser = NetgearCM600Parser()
+
+    ***REMOVED*** Create mock session that returns our fixture data
+    mock_session = Mock()
+
+    ***REMOVED*** Mock responses for DocsisStatus.asp and RouterStatus.asp
+    docsis_response = Mock()
+    docsis_response.status_code = 200
+    docsis_response.text = cm600_docsis_status_html
+
+    router_response = Mock()
+    router_response.status_code = 200
+    router_response.text = cm600_router_status_html
+
+    def mock_get(url, **kwargs):
+        if "DocsisStatus" in url:
+            return docsis_response
+        elif "RouterStatus" in url:
+            return router_response
+        return Mock(status_code=404)
+
+    mock_session.get.side_effect = mock_get
+
+    ***REMOVED*** Parse with an empty initial soup - should fetch real data
+    empty_soup = BeautifulSoup("<html></html>", "html.parser")
+    data = parser.parse(empty_soup, session=mock_session, base_url="http://192.168.100.1")
+
+    ***REMOVED*** Verify pages were fetched
+    assert mock_session.get.call_count == 2
+
+    ***REMOVED*** Verify data was parsed from fetched pages
+    assert len(data["downstream"]) == 24
+    assert len(data["upstream"]) == 6
+    assert "system_uptime" in data["system_info"]
+
+
+def test_parse_with_session_handles_fetch_failures(cm600_docsis_status_html):
+    """Test that parse() gracefully handles page fetch failures."""
+    from unittest.mock import Mock
+
+    parser = NetgearCM600Parser()
+
+    ***REMOVED*** Create mock session that returns errors
+    mock_session = Mock()
+    error_response = Mock()
+    error_response.status_code = 500
+    mock_session.get.return_value = error_response
+
+    ***REMOVED*** Parse with fixture data as initial soup - should use it as fallback
+    soup = BeautifulSoup(cm600_docsis_status_html, "html.parser")
+    data = parser.parse(soup, session=mock_session, base_url="http://192.168.100.1")
+
+    ***REMOVED*** Should still work using the provided soup as fallback
+    assert len(data["downstream"]) == 24
+    assert len(data["upstream"]) == 6
+
+
+def test_parse_with_session_handles_exceptions():
+    """Test that parse() handles network exceptions gracefully."""
+    from unittest.mock import Mock
+
+    parser = NetgearCM600Parser()
+
+    ***REMOVED*** Create mock session that raises exceptions
+    mock_session = Mock()
+    mock_session.get.side_effect = Exception("Network error")
+
+    ***REMOVED*** Parse with minimal soup
+    soup = BeautifulSoup("<html></html>", "html.parser")
+    data = parser.parse(soup, session=mock_session, base_url="http://192.168.100.1")
+
+    ***REMOVED*** Should return empty data without crashing
+    assert data["downstream"] == []
+    assert data["upstream"] == []
 
 
 def test_parsing_downstream(cm600_docsis_status_html):
@@ -401,6 +558,51 @@ class TestRestart:
 
         assert success is False
 
+    def test_restart_handles_connection_drop(self):
+        """Test that restart succeeds when connection drops (modem rebooting)."""
+        from http.client import RemoteDisconnected
+        from unittest.mock import Mock
+
+        parser = NetgearCM600Parser()
+        mock_session = Mock()
+        mock_session.post.side_effect = RemoteDisconnected("Connection dropped")
+
+        base_url = "http://192.168.100.1"
+        success = parser.restart(mock_session, base_url)
+
+        ***REMOVED*** Connection drop = modem is rebooting = success
+        assert success is True
+
+    def test_restart_handles_connection_error(self):
+        """Test that restart succeeds on ConnectionError (modem rebooting)."""
+        from unittest.mock import Mock
+
+        from requests.exceptions import ConnectionError
+
+        parser = NetgearCM600Parser()
+        mock_session = Mock()
+        mock_session.post.side_effect = ConnectionError("Connection refused")
+
+        base_url = "http://192.168.100.1"
+        success = parser.restart(mock_session, base_url)
+
+        ***REMOVED*** ConnectionError during restart = modem is rebooting = success
+        assert success is True
+
+    def test_restart_handles_generic_exception(self):
+        """Test that restart fails on unexpected exceptions."""
+        from unittest.mock import Mock
+
+        parser = NetgearCM600Parser()
+        mock_session = Mock()
+        mock_session.post.side_effect = ValueError("Unexpected error")
+
+        base_url = "http://192.168.100.1"
+        success = parser.restart(mock_session, base_url)
+
+        ***REMOVED*** Generic exception = failure
+        assert success is False
+
 
 class TestMetadata:
     """Test parser metadata."""
@@ -424,3 +626,20 @@ class TestMetadata:
         """Test parser priority."""
         parser = NetgearCM600Parser()
         assert parser.priority == 50  ***REMOVED*** Standard priority
+
+    def test_capabilities(self):
+        """Test parser capabilities include uptime and last boot time."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        parser = NetgearCM600Parser()
+
+        ***REMOVED*** Verify uptime capabilities are declared
+        assert ModemCapability.SYSTEM_UPTIME in parser.capabilities
+        assert ModemCapability.LAST_BOOT_TIME in parser.capabilities
+
+        ***REMOVED*** Verify other expected capabilities
+        assert ModemCapability.DOWNSTREAM_CHANNELS in parser.capabilities
+        assert ModemCapability.UPSTREAM_CHANNELS in parser.capabilities
+        assert ModemCapability.HARDWARE_VERSION in parser.capabilities
+        assert ModemCapability.SOFTWARE_VERSION in parser.capabilities
+        assert ModemCapability.RESTART in parser.capabilities
