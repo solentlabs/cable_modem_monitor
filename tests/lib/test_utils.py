@@ -98,3 +98,22 @@ class TestParseUptime:
         """Test parsing None uptime."""
         result = parse_uptime_to_seconds(None)
         assert result is None
+
+    def test_hms_format(self):
+        """Test parsing HH:MM:SS format (e.g., CM600)."""
+        ***REMOVED*** 1308:19:22 = 1308 hours, 19 minutes, 22 seconds
+        result = parse_uptime_to_seconds("1308:19:22")
+        expected = (1308 * 3600) + (19 * 60) + 22
+        assert result == expected
+
+    def test_hms_format_short(self):
+        """Test parsing shorter HH:MM:SS format."""
+        result = parse_uptime_to_seconds("24:30:15")
+        expected = (24 * 3600) + (30 * 60) + 15
+        assert result == expected
+
+    def test_hms_format_single_digits(self):
+        """Test parsing H:M:S format with single digits."""
+        result = parse_uptime_to_seconds("1:2:3")
+        expected = (1 * 3600) + (2 * 60) + 3
+        assert result == expected

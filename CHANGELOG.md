@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.7.1] - 2025-11-25
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **CM600 Uptime Support** - System uptime and last boot time now available
+  - Parses HH:MM:SS uptime format (e.g., "1308:19:22" = 1308 hours)
+  - Calculates last boot time from uptime
+  - Added `SYSTEM_UPTIME` and `LAST_BOOT_TIME` capabilities
+  - Confirmed working by user @chairstacker (Issue ***REMOVED***3)
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Uptime Parser Enhancement** - `parse_uptime_to_seconds()` now handles HH:MM:SS format
+  - Supports hours exceeding 24 (long uptimes like "1308:19:22")
+  - Backwards compatible with existing formats ("5d 12h 30m 15s")
+
+- **PII Checker Improvement** - Recognizes uptime format as false positive
+  - Prevents HH:MM:SS uptime strings from being flagged as IPv6 addresses
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **CM600 Documentation** - Corrected docstring that incorrectly stated uptime was unavailable
+- **CM600 Test Fixture** - Updated with realistic uptime data instead of scrubbed placeholder
+
+***REMOVED******REMOVED******REMOVED*** Testing
+- Improved cm600.py coverage: 75% → 90%
+- Improved utils.py coverage: 65% → 85%
+- Added 12 new tests for multi-page parsing, restart scenarios, detection methods
+
 ***REMOVED******REMOVED*** [3.7.0] - 2025-11-25
 
 ***REMOVED******REMOVED******REMOVED*** Added

@@ -45,7 +45,7 @@ var vNotLockedl = "Not Locked";
 var vUnknown = "Unknown";
 
     $(document).ready(function()
-    {	
+    {
 //        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
         $("***REMOVED***target").submit(function() {
             buttonFilter();
@@ -67,7 +67,7 @@ var vUnknown = "Unknown";
         if(imgSrc.src.search("up")>=0)
         {
             $(".help-frame-div").show();
-            if(navigator.userAgent.match(/Android/i) || navigator.userAgent.match(/iPhone/i) || 
+            if(navigator.userAgent.match(/Android/i) || navigator.userAgent.match(/iPhone/i) ||
                navigator.userAgent.match(/iPad/i) || navigator.userAgent.match(/iPod/i)){
                 if (navigator.userAgent.search("Safari") > -1) {
                     window.frames["helpframe"].$('***REMOVED***content').jScrollPane({showArrows:true});
@@ -118,7 +118,7 @@ var vUnknown = "Unknown";
                 }
     }
 
-   
+
 /*
 function loadhelp(fname,anchname)
 {
@@ -201,9 +201,9 @@ function InitUsTableTagValue()
 */
 /*
     var tagValueList = "4" +
-        "|1|Not Locked|Unknown|0|0|0|0.0" + 
-        "|2|Not Locked|Unknown|0|0|0|0.0" + 
-        "|3|Not Locked|Unknown|0|0|0|0.0" + 
+        "|1|Not Locked|Unknown|0|0|0|0.0" +
+        "|2|Not Locked|Unknown|0|0|0|0.0" +
+        "|3|Not Locked|Unknown|0|0|0|0.0" +
         "|4|Not Locked|Unknown|0|0|0|0.0";
 */
     var tagValueList = '4|1|Locked|ATDMA|1|2560|13400000 Hz|50|2|Locked|ATDMA|2|2560|16700000 Hz|50|3|Locked|ATDMA|3|2560|20000000 Hz|49|4|Locked|ATDMA|4|2560|23300000 Hz|48.3|';
@@ -250,13 +250,13 @@ function InitDsTableTagValue()
 */
 /*
     var tagValueList = "8" +
-        "|1|Locked|Unknown|0|809500000|-61.6|0.0|11|0" + 
-        "|2|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
-        "|3|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
-        "|4|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
-        "|5|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
-        "|6|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
-        "|7|Not Locked|Unknown|0|0|0.0|0.0|0|0" + 
+        "|1|Locked|Unknown|0|809500000|-61.6|0.0|11|0" +
+        "|2|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|3|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|4|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|5|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|6|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|7|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
         "|8|Not Locked|Unknown|0|0|0.0|0.0|0|0";
 */
     var tagValueList = '8|1|Locked|QAM256|1|141000000 Hz|-5|41.9|0|0|2|Locked|QAM256|2|147000000 Hz|-4.7|43.6|0|0|3|Locked|QAM256|3|153000000 Hz|-4.7|44.2|0|0|4|Locked|QAM256|4|159000000 Hz|-4.6|44.4|0|0|5|Locked|QAM256|5|165000000 Hz|-5|43.9|0|0|6|Locked|QAM256|6|171000000 Hz|-5.7|43.1|0|0|7|Locked|QAM256|7|177000000 Hz|-7.1|42.2|0|0|8|Locked|QAM256|8|183000000 Hz|-7.2|42.4|0|0|';
@@ -267,7 +267,7 @@ function InitDsTableTagValue()
 function InitProvRateTableTagValue()
 {
 /*
-  Is Genie (text) | DS Provisioned Rate (text) | US Provisioned Rate (text) 
+  Is Genie (text) | DS Provisioned Rate (text) | US Provisioned Rate (text)
 */
     //var tagValueList = "1|100000000|0|";
     var tagValueList = '0|0|0|';
@@ -278,7 +278,7 @@ function InitProvRateTableTagValue()
 function InitCmIpProvModeTag()
 {
 /*
-  Is Retail (bool) | IP Provisioning Mode (text) | MIB Value (text) 
+  Is Retail (bool) | IP Provisioning Mode (text) | MIB Value (text)
 */
     //var tagValueList = "1|Honor MDD|honorMdd(4)|"
     var tagValueList = '1|Honor MDD|honorMdd(4)|';
@@ -365,19 +365,19 @@ function formatProvisionedRate(bps)
 	var mbps;
 	var kbps;
 	var formatted_str;
-	
+
 	if(bps <= 0)
 	{
 		return "undetermined";
 	}
-	
+
 	gbps = bps >> 30;
 	remain = bps - (gbps << 30);
 	mbps = remain >> 20;
 	remain = remain - (mbps << 20);
 	kbps = remain >> 10;
 	remain = remain - (kbps << 10);
-	
+
 	if(gbps > 0)
 	{
 		formatted_str = gbps + " Gbps";
@@ -394,10 +394,10 @@ function formatProvisionedRate(bps)
 	{
 		formatted_str = bps + " bps";
 	}
-	
-	
+
+
 	formatted_str += " (" + bps + ")";
-	
+
 	return formatted_str;
 }
 
@@ -764,7 +764,7 @@ function checkData()
                                         <b>
                                             Current System Time:
                                         </b>
-                                        Mon Nov 24 ***IPv6*** 2025
+                                        Tue Oct 28 18:10:01 2025
 
                                         <br>
                                     </td>
@@ -774,7 +774,7 @@ function checkData()
                                         <b>
                                             System Up Time:
                                         </b>
-                                        ***IPv6***
+                                        1308:19:22
                                         <br>
                                     </td>
                                 </tr>
