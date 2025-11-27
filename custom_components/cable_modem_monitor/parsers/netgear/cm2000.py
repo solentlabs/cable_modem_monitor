@@ -52,7 +52,7 @@ class NetgearCM2000Parser(ModemParser):
     priority = 50  # Standard priority
 
     # Verification status
-    verified = True
+    verified = False  # Authentication issues - see Issue #38
     verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/38 (@m4dh4tt3r-88)"
 
     # CM2000 uses form-based authentication
@@ -84,7 +84,12 @@ class NetgearCM2000Parser(ModemParser):
     ]
 
     def login(self, session, base_url, username, password) -> bool:
-        """Perform login using form-based authentication.
+        """Perform login using form-based authentication with dynamic form ID.
+
+        The CM2000 login form includes a dynamic ID parameter in the form action:
+            <form action="/goform/Login?id=XXXXXXXXXX">
+
+        This ID must be extracted from the login page and included in the POST.
 
         Args:
             session: Requests session
@@ -95,11 +100,97 @@ class NetgearCM2000Parser(ModemParser):
         Returns:
             True if login successful
         """
-        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
+        if not username or not password:
+            _LOGGER.debug("CM2000: No credentials provided, skipping login")
+            return True
 
-        auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-        success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
-        return success
+        try:
+            # Step 1: Extract login URL from the login page
+            login_url = self._extract_login_url(session, base_url)
+            if login_url is None:
+                return False
+
+            # Step 2: Submit login form
+            if not self._submit_login_form(session, login_url, username, password):
+                return False
+
+            # Step 3: Verify login success
+            return self._verify_login_success(session, base_url)
+
+        except Exception as e:
+            _LOGGER.error("CM2000: Login exception: %s", e, exc_info=True)
+            return False
+
+    def _extract_login_url(self, session, base_url: str) -> str | None:
+        """Extract the login URL with dynamic ID from the login page."""
+        _LOGGER.debug("CM2000: Fetching login page to extract form action")
+        login_page_response = session.get(f"{base_url}/", timeout=10)
+
+        if login_page_response.status_code != 200:
+            _LOGGER.warning("CM2000: Failed to fetch login page, status %d", login_page_response.status_code)
+            return None
+
+        login_soup = BeautifulSoup(login_page_response.text, "html.parser")
+        form = login_soup.find("form", {"name": "loginform"})
+
+        if not form:
+            form = login_soup.find("form", {"id": "target"})
+
+        if not form:
+            _LOGGER.warning("CM2000: Could not find login form on page")
+            return f"{base_url}/goform/Login"
+
+        form_action = str(form.get("action", "/goform/Login"))
+        if form_action.startswith("/"):
+            login_url = f"{base_url}{form_action}"
+        elif form_action.startswith("http"):
+            login_url = form_action
+        else:
+            login_url = f"{base_url}/{form_action}"
+
+        _LOGGER.debug("CM2000: Extracted login URL: %s", login_url)
+        return login_url
+
+    def _submit_login_form(self, session, login_url: str, username: str, password: str) -> bool:
+        """Submit the login form with credentials."""
+        login_data = {
+            self.auth_config.username_field: username,
+            self.auth_config.password_field: password,
+        }
+
+        _LOGGER.debug("CM2000: Submitting login to %s", login_url)
+        login_response = session.post(
+            login_url, data=login_data, timeout=10, allow_redirects=True, verify=session.verify
+        )
+
+        if login_response.status_code != 200:
+            _LOGGER.warning("CM2000: Login POST failed with status %d", login_response.status_code)
+            return False
+
+        return True
+
+    def _verify_login_success(self, session, base_url: str) -> bool:
+        """Verify login by checking if DocsisStatus.htm is accessible with channel data."""
+        _LOGGER.debug("CM2000: Verifying login by fetching DocsisStatus.htm")
+        verify_response = session.get(f"{base_url}/DocsisStatus.htm", timeout=10)
+
+        if verify_response.status_code != 200:
+            _LOGGER.warning("CM2000: DocsisStatus.htm returned status %d", verify_response.status_code)
+            return False
+
+        # Check if we got redirected back to login page
+        if "redirect()" in verify_response.text and "Login.htm" in verify_response.text:
+            _LOGGER.warning("CM2000: Login failed - got redirected to login page")
+            return False
+
+        # Check if we got actual channel data
+        if "InitDsTableTagValue" in verify_response.text or "InitUsTableTagValue" in verify_response.text:
+            _LOGGER.info("CM2000: Login successful - DocsisStatus.htm contains channel data")
+            return True
+
+        # If we got a 200 but no channel data, login might have worked
+        _LOGGER.warning("CM2000: DocsisStatus.htm accessible but no channel data found")
+        return True
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem.

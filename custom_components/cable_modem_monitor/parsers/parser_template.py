@@ -19,20 +19,31 @@ STEP-BY-STEP GUIDE:
    - Check for unique page title, CSS classes, or URL patterns
    - Return True if this is your modem, False otherwise
 
-4. IMPLEMENT parse_downstream()
+4. IMPLEMENT login()
+   - Set up authentication (basic auth, form auth, HNAP, or none)
+   - Return True if login successful or not needed
+
+5. IMPLEMENT parse() - REQUIRED
+   - Main method that returns ALL modem data
+   - Returns dict with: downstream, upstream, system_info
+   - Can use helper methods to organize code (see steps 6-8)
+
+6. IMPLEMENT _parse_downstream() (HELPER METHOD - OPTIONAL)
    - Extract downstream channel data from HTML
    - Return list of dicts with: channel_id, frequency, power, snr
-   - Include corrected/uncorrected if available
+   - Called from main parse() method
 
-5. IMPLEMENT parse_upstream()
+7. IMPLEMENT _parse_upstream() (HELPER METHOD - OPTIONAL)
    - Extract upstream channel data from HTML
    - Return list of dicts with: channel_id, frequency, power
+   - Called from main parse() method
 
-6. IMPLEMENT parse_system_info() (OPTIONAL)
+8. IMPLEMENT _parse_system_info() (HELPER METHOD - OPTIONAL)
    - Extract modem info like software_version, system_uptime
    - Return dict with available info
+   - Called from main parse() method
 
-7. TEST YOUR PARSER
+9. TEST YOUR PARSER
    - Place modem HTML in tests/fixtures/your_modem.html
    - Run: pytest tests/test_modem_scraper.py -v
    - Verify all channels parsed correctly
@@ -44,7 +55,10 @@ STEP-BY-STEP GUIDE:
 
 EXAMPLE USAGE:
 ==============
-See motorola_mb.py or arris_sb6141.py for real-world examples.
+See these parsers for real-world examples:
+- Simple (single page): custom_components/cable_modem_monitor/parsers/arris/sb6141.py
+- Complex (multi-page): custom_components/cable_modem_monitor/parsers/netgear/cm600.py
+- With authentication: custom_components/cable_modem_monitor/parsers/motorola/generic.py
 """
 
 from __future__ import annotations
@@ -116,9 +130,99 @@ class YourModemParser(ModemParser):
         return "your_modem_page.html" in url.lower()
 
     # =========================================================================
-    # STEP 4: IMPLEMENT DOWNSTREAM CHANNEL PARSING
+    # STEP 4: IMPLEMENT login() METHOD
     # =========================================================================
-    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+    def login(self, session, base_url, username, password) -> bool:
+        """Perform authentication if required.
+
+        Args:
+            session: Requests session
+            base_url: Modem base URL (e.g., "http://192.168.100.1")
+            username: Username for authentication
+            password: Password for authentication
+
+        Returns:
+            True if login successful or not required
+
+        Common patterns:
+        - No auth: return True
+        - HTTP Basic Auth: Use AuthFactory.get_strategy(AuthStrategyType.BASIC_HTTP)
+        - Form auth: Use AuthFactory.get_strategy(AuthStrategyType.FORM)
+        - HNAP: Use AuthFactory.get_strategy(AuthStrategyType.HNAP)
+
+        Example (HTTP Basic Auth):
+            from custom_components.cable_modem_monitor.core.authentication import AuthFactory
+            auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
+            success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
+            return success
+
+        Example (No auth):
+            return True  # No authentication needed
+        """
+        # TODO: Implement your login logic
+        # For no authentication:
+        return True
+
+    # =========================================================================
+    # STEP 5: IMPLEMENT parse() METHOD - REQUIRED
+    # =========================================================================
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+        """Parse all data from the modem.
+
+        This is the MAIN method that must be implemented. It should return ALL
+        modem data in a standardized format.
+
+        Args:
+            soup: BeautifulSoup object of the main page
+            session: Optional requests.Session for fetching additional pages
+            base_url: Optional base URL of modem (e.g., "http://192.168.100.1")
+
+        Returns:
+            Dictionary with ALL parsed data:
+            {
+                "downstream": [...],  # List of downstream channel dicts
+                "upstream": [...],    # List of upstream channel dicts
+                "system_info": {...}  # Dict with system information
+            }
+
+        Tips:
+        - Use helper methods (_parse_downstream, etc.) to organize code
+        - If modem needs multiple pages, use session.get() to fetch them
+        - Handle errors gracefully - return empty lists/dicts on failure
+        - Log helpful debug/warning messages
+        """
+        # TODO: Implement your parsing logic
+
+        # Option 1: Parse everything inline (simple modems)
+        downstream: list[dict] = []
+        upstream: list[dict] = []
+        system_info: dict[str, str] = {}
+
+        # ... your parsing code here ...
+
+        # Option 2: Use helper methods (recommended for complex modems)
+        # downstream = self._parse_downstream(soup)
+        # upstream = self._parse_upstream(soup)
+        # system_info = self._parse_system_info(soup)
+
+        # Option 3: Multi-page parsing (if modem data is on multiple pages)
+        # if session and base_url:
+        #     # Fetch additional page
+        #     response = session.get(f"{base_url}/channel_status.html", timeout=10)
+        #     if response.status_code == 200:
+        #         channel_soup = BeautifulSoup(response.text, "html.parser")
+        #         downstream = self._parse_downstream(channel_soup)
+
+        return {
+            "downstream": downstream,
+            "upstream": upstream,
+            "system_info": system_info,
+        }
+
+    # =========================================================================
+    # STEP 6: HELPER METHOD - DOWNSTREAM PARSING (OPTIONAL)
+    # =========================================================================
+    def _parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse downstream channel data.
 
         Returns:
@@ -190,9 +294,9 @@ class YourModemParser(ModemParser):
         return channels
 
     # =========================================================================
-    # STEP 5: IMPLEMENT UPSTREAM CHANNEL PARSING
+    # STEP 7: HELPER METHOD - UPSTREAM PARSING (OPTIONAL)
     # =========================================================================
-    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+    def _parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse upstream channel data.
 
         Returns:
@@ -249,9 +353,9 @@ class YourModemParser(ModemParser):
         return channels
 
     # =========================================================================
-    # STEP 6: IMPLEMENT SYSTEM INFO PARSING (OPTIONAL)
+    # STEP 8: HELPER METHOD - SYSTEM INFO PARSING (OPTIONAL)
     # =========================================================================
-    def parse_system_info(self, soup: BeautifulSoup) -> dict:
+    def _parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information.
 
         Returns:
@@ -299,25 +403,25 @@ class YourModemParser(ModemParser):
 # =============================================================================
 # TESTING CHECKLIST
 # =============================================================================
-"""
-Before submitting your parser, verify:
-
-□ can_parse() returns True ONLY for your modem
-□ can_parse() returns False for other modems
-□ parse_downstream() returns valid channel data
-□ parse_upstream() returns valid channel data
-□ All channel IDs are present
-□ Frequencies are in Hz (not MHz)
-□ Power levels are reasonable (-15 to +15 dBmV typical)
-□ SNR values are reasonable (30-45 dB typical)
-□ Empty/missing data handled gracefully
-□ Logs helpful debug/warning messages
-□ No exceptions on valid HTML
-□ Works with your modem's actual HTML
-
-To test:
-1. Save your modem's HTML: curl http://192.168.100.1 > tests/fixtures/your_modem.html
-2. Run tests: pytest tests/test_modem_scraper.py -v
-3. Check logs for warnings/errors
-4. Verify channel counts and values look correct
-"""
+# Before submitting your parser, verify:
+#
+# □ can_parse() returns True ONLY for your modem
+# □ can_parse() returns False for other modems
+# □ login() authenticates successfully (or returns True if no auth needed)
+# □ parse() returns dict with "downstream", "upstream", "system_info" keys
+# □ parse() downstream list contains valid channel data
+# □ parse() upstream list contains valid channel data
+# □ All channel IDs are present
+# □ Frequencies are in Hz (not MHz)
+# □ Power levels are reasonable (-15 to +15 dBmV typical)
+# □ SNR values are reasonable (30-45 dB typical)
+# □ Empty/missing data handled gracefully
+# □ Logs helpful debug/warning messages
+# □ No exceptions on valid HTML
+# □ Works with your modem's actual HTML
+#
+# To test:
+# 1. Save your modem's HTML: curl http://192.168.100.1 > tests/fixtures/your_modem.html
+# 2. Run tests: pytest tests/test_modem_scraper.py -v
+# 3. Check logs for warnings/errors
+# 4. Verify channel counts and values look correct

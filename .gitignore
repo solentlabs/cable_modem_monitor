@@ -92,3 +92,6 @@ db-*/
 
 # -----------------------------
 # Miscellaneous
+
+# HAR capture artifacts
+captures/

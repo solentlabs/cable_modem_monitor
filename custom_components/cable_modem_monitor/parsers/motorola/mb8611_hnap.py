@@ -8,7 +8,7 @@ import logging
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
 from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
 
@@ -86,8 +86,6 @@ class MotorolaMB8611HnapParser(ModemParser):
 
         # Fall back to XML/SOAP-based HNAP login
         _LOGGER.debug("MB8611: JSON login failed, trying XML/SOAP-based HNAP login")
-        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         success, response = auth_strategy.login(session, base_url, username, password, self.auth_config)
 

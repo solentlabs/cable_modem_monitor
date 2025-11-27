@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.2] - 2025-11-26
+
+### Added
+- **C3700 Uptime Support** - System uptime and last boot time now available
+  - Parses uptime from RouterStatus.htm tagValues[33] (e.g., "5 days 12:34:56")
+  - Calculates last boot time from uptime
+  - Added `SYSTEM_UPTIME` and `LAST_BOOT_TIME` capabilities
+
+- **C3700 Restart Support** - Remote modem restart capability
+  - Extracts session ID from form action for proper authentication
+  - POSTs to `/goform/RouterStatus?id=<session>` with `buttonSelect=2`
+  - Handles connection drop during reboot as expected success
+
+- **Cross-Platform HA Startup** - New `ha-start.py` script
+  - Port availability checking before startup
+  - Clear error messages for common issues
+  - Works in both local and devcontainer environments
+
+- **DevContainer Detection** - capture_modem.py improvements
+  - Auto-detects devcontainer environment
+  - Prompts for HTTP Basic Auth credentials when needed
+
+### Fixed
+- **IPv6 Sanitizer** - No longer incorrectly matches time formats
+  - Times like "12:34:56" were being converted to `***IPv6***`
+  - Now uses callback to only replace strings containing hex letters (a-f)
+
+- **Docker Port Conflict** - Removed port 8300 mapping from docker-compose.test.yml
+  - Conflicted with VS Code devcontainer default port
+
+- **Test Mock Paths** - Fixed 6 tests broken by import reorganization
+  - Updated mock patch paths for AuthFactory in multiple test files
+
 ## [3.7.1] - 2025-11-25
 
 ### Added

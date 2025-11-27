@@ -66,26 +66,34 @@
     {
       "label": "HA: Start (Fresh)",
       "type": "shell",
-      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started fresh at http://localhost:8123'",
+      "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py --fresh",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/dev/ha-start.py --fresh"
+      },
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
-        "showReuseMessage": false
+        "showReuseMessage": false,
+        "clear": true
       },
       "problemMatcher": []
     },
     {
       "label": "HA: Start (Keep Data)",
       "type": "shell",
-      "command": "bash scripts/dev/ha-cleanup.sh && docker compose -f docker-compose.test.yml up -d && echo '✅ Home Assistant started at http://localhost:8123'",
+      "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py",
+      "windows": {
+        "command": "python ${workspaceFolder}/scripts/dev/ha-start.py"
+      },
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
-        "showReuseMessage": false
+        "showReuseMessage": false,
+        "clear": true
       },
       "problemMatcher": []
     },
@@ -357,6 +365,22 @@
       },
       "problemMatcher": [],
       "detail": "Automate version bumping, tagging, and release creation"
+    },
+    {
+      "label": "📹 Capture Modem Traffic",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python ${workspaceFolder}/scripts/capture_modem.py --ip ${input:modemIP}",
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python ${workspaceFolder}\\scripts\\capture_modem.py --ip ${input:modemIP}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Launch browser to capture modem traffic for parser development (run locally, not in devcontainer)"
     }
   ],
   "inputs": [
@@ -365,6 +389,12 @@
       "type": "promptString",
       "description": "Enter the version to release (e.g., 3.5.1)",
       "default": ""
+    },
+    {
+      "id": "modemIP",
+      "type": "promptString",
+      "description": "Enter modem IP address",
+      "default": "192.168.100.1"
     }
   ]
 }

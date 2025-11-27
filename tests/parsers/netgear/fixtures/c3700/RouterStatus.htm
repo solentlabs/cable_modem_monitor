@@ -1,0 +1,2117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+
+<head>
+
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 ***IPv6*** GMT">
+
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<!--
+<meta http-equiv="refresh" content="3">
+-->
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+<script type="text/javascript">
+
+var DisableFixedDNS = false;
+var DisableFixedMAC = false;
+var MacAddress;
+var DodDisable = false;
+var DodIndex = 1;
+
+    $(document).ready(function()
+    {
+        var form=document.forms[0];
+        var gui_region = form.curlang.value;
+
+        // Nick put bodyInit in here!!
+        BodyInit();
+
+        $('#INT_setup').click(function(ev){
+            parent.loadPage2("BasicSettingsBottom.htm");
+        });
+
+        /*
+        // Chuck 20141001 I will set this later if need,
+        // because we won't link this to WirelessSettings in bridge mode with generic gui.
+        $('#wireless_setup').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+
+        $('#wireless_setup_5G').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+        */
+
+        $('#guest_setup1').click(function(ev){
+            parent.loadPage2("GuestNetwork.htm");
+        });
+
+        $('#guest_setup2').click(function(ev){
+            parent.loadPage2("GuestNetwork.htm");
+        });
+
+        $('#guest_setup_5G').click(function(ev){
+            parent.loadPage2("GuestNetwork.htm");
+        });
+
+        $('#LAN_setup').click(function(ev){
+            /* foxconn, khfan, remove, 2014/09/24
+               Defect # 126
+               C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+             */
+            // parent.loadPage2("");
+        });
+
+// Nick 20111114
+        $('#Moblile_setup').click(function(ev){
+            /* foxconn, khfan, remove, 2014/09/24
+               Defect # 126
+               C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+             */
+            // parent.loadPage2("");
+        });
+
+        $('.basic-text-menu').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-menu-pr");
+             }else{
+                 $(this).removeClass("basic-text-menu-pr");
+             }
+        });
+        $('.basic-text-subTitle').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-subTitle-pr");
+             }else{
+                 $(this).removeClass("basic-text-subTitle-pr");
+             }
+        });
+        $('.basic-text-content').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-content-pr");
+             }else{
+                 $(this).removeClass("basic-text-content-pr");
+             }
+        });
+        $('.box-header-text').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("box-header-text-pr");
+             }else{
+                 $(this).removeClass("box-header-text-pr");
+             }
+        });
+        /* checking long string */
+        if(trim($('.header-text1').text()).length>=36 | trim($('.header-text2').text()).length>=36){
+               $('#box-header-table1').addClass("box-header-table-large");
+               $('#box-header-table2').addClass("box-header-table-large");
+               $('#box-header-table1').removeClass("box-header-table");
+               $('#box-header-table2').removeClass("box-header-table");
+        }
+
+/* Nick override
+        if($('.header-text3').text().length>=36 | $('.header-text4').text().length>=36){
+               $('#box-header-table3').addClass("box-header-table-large");
+               $('#box-header-table4').addClass("box-header-table-large");
+               $('#box-header-table3').removeClass("box-header-table");
+               $('#box-header-table4').removeClass("box-header-table");
+        }
+*/
+        if(trim($('.header-text3').text()).length>=36 | trim($('.header-text41').text()).length>=36 | $('.header-text42').text().length>=36){
+               $('#box-header-table3').addClass("box-header-table-large");
+               $('#box-header-table41').addClass("box-header-table-large");
+               $('#box-header-table42').addClass("box-header-table-large");
+               $('#box-header-table3').removeClass("box-header-table");
+               $('#box-header-table41').removeClass("box-header-table");
+               $('#box-header-table42').removeClass("box-header-table");
+        }
+        if(trim($('.header-text5').text()).length>=36 | trim($('.header-text6').text()).length>=36){
+               $('#box-header-table5').addClass("box-header-table-large");
+               $('#box-header-table6').addClass("box-header-table-large");
+               $('#box-header-table5').removeClass("box-header-table");
+               $('#box-header-table6').removeClass("box-header-table");
+        }
+// Nick 20111115
+        if(trim($('.header-text7').text()).length>=36){
+               $('#box-header-table7').addClass("box-header-table-large");
+               $('#box-header-table7').removeClass("box-header-table");
+        }
+
+/* Terry 20111018, Workaround to fix buttons can't work in IE6/IE7 */
+              if (navigator.appVersion.indexOf("MSIE") != -1 && parseFloat(navigator.appVersion.split("MSIE")[1]) < 8) {
+                        document.getElementById('page-table1').style.filter="";
+                        document.getElementById('page-table2').style.filter="";
+              }
+
+              //$('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+    });
+
+    function trim(value)
+    {
+        var ptntrim = /(^\s*)|(\s*$)/g;
+        return value.replace(ptntrim,"");
+    }
+
+    function setHelpIframeVisible(){
+        $('.bas-help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("down")>=0)
+        {
+            $(".bas-help-frame-div").show();
+            imgSrc.src="img/helparrowup-icon.gif";
+        }
+        else
+        {
+            $(".bas-help-frame-div").hide();
+            imgSrc.src="img/helparrowdown-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+
+    function loadhelp(fname,anchname)
+    {
+        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+            $('#page').attr("src",fname+"_h."+"htm");
+        else
+            $('#page').attr("src",fname+"_h."+"htm#"  + anchname);
+    }
+
+
+
+function adjustPageLayout()
+{
+    //adjustButtonSize();
+    //Eason, 20141106, resize the tables' heigh when zoom in/out.
+    $('#page-table1').css("height",0);
+    $('#page-table2').css("height",0);
+    $('#page-table3').css("height",0);
+    $('#page-table41').css("height",0);
+    $('#page-table42').css("height",0);
+    $('#page-table5').css("height",0);
+    $('#page-table6').css("height",0);
+        var table_height1 = $('#page-table1')[0].clientHeight+"px";
+        var table_height2 = $('#page-table2')[0].clientHeight+"px";
+        var table_height3 = $('#page-table3')[0].clientHeight+"px";
+// Nick        var table_height4 = $('#page-table4')[0].clientHeight+"px";
+        var table_height41 = $('#page-table41')[0].clientHeight+"px";
+        var table_height42 = $('#page-table42')[0].clientHeight+"px";
+        var table_height5 = $('#page-table5')[0].clientHeight+"px";
+        var table_height6 = $('#page-table6')[0].clientHeight+"px";
+
+        if($('#page-table1')[0].clientHeight >=  $('#page-table2')[0].clientHeight)
+            $('#page-table2').css("height",table_height1);
+        else
+            $('#page-table1').css("height",table_height2);
+
+/*
+        if($('#page-table3')[0].clientHeight >=  $('#page-table4')[0].clientHeight)
+            $('#page-table4').css("height",table_height3);
+        else
+            $('#page-table3').css("height",table_height4);
+*/
+        if($('#page-table3')[0].clientHeight >=  $('#page-table41')[0].clientHeight)
+            $('#page-table41').css("height",table_height3);
+        else
+            $('#page-table3').css("height",table_height41);
+
+        if($('#page-table3')[0].clientHeight >=  $('#page-table42')[0].clientHeight)
+            $('#page-table42').css("height",table_height3);
+        else
+            $('#page-table3').css("height",table_height42);
+
+        if($('#page-table5')[0].clientHeight >=  $('#page-table6')[0].clientHeight)
+            $('#page-table6').css("height",table_height5);
+        else
+            $('#page-table5').css("height",table_height6);
+}
+
+function adjustButtonSize()
+{
+    if($('#reboot')[0].scrollHeight > 15 ||
+        $('#statistics')[0].scrollHeight > 15 ||
+        $('#status')[0].scrollHeight > 15)
+    {
+        $($('#reboot')[0].parentNode).addClass('page-table-button-large');
+        $($('#reboot')[0].parentNode).removeClass('page-table-button');
+        $($('#statistics')[0].parentNode).addClass('page-table-button-large');
+        $($('#statistics')[0].parentNode).removeClass('page-table-button');
+        $($('#status')[0].parentNode).addClass('page-table-button-large');
+        $($('#status')[0].parentNode).removeClass('page-table-button');
+    }
+    else
+    {
+        $($('#reboot')[0].parentNode).removeClass('page-table-button-large');
+        $($('#reboot')[0].parentNode).addClass('page-table-button');
+        $($('#statistics')[0].parentNode).removeClass('page-table-button-large');
+        $($('#statistics')[0].parentNode).addClass('page-table-button');
+        $($('#status')[0].parentNode).removeClass('page-table-button-large');
+        $($('#status')[0].parentNode).addClass('page-table-button');
+    }
+}
+
+function advButtonClick(index){
+
+    if(index==0) // Show Statistics
+        openStatisticsWindow();
+    else if(index==1)
+    {
+          openStatusWindow();
+    // document.forms[0].buttonSelect.value="1";
+    }
+    else if(index==2)
+    {
+        if(confirm("Rebooting the gateway will disrupt active traffic on the network. Are you sure?"))
+        {
+            document.forms[0].buttonSelect.value="2";
+            document.forms[0].submit(document.forms[0]);
+        }
+    }
+    else if(index==3)
+    {
+        if(confirm("Loading the factory default settings will erase all the current settings. Are you sure?"))
+        {
+            document.forms[0].buttonSelect.value="3";
+            document.forms[0].submit(document.forms[0]);
+        }
+    }
+    // Nick 20110927
+}
+
+function openStatWindow() {
+    window.open(this.form.stat_page.value, '','height=350,status=yes');
+    return ture;
+}
+
+
+function openStatusWindow()
+{
+    var conn = document.forms[0].wantype.value;
+
+    // Chuck 20140902 fix mantis#12486
+    if(isUnsupportedMobileBrowser())
+    {
+        if (conn == "dhcp")
+        {
+            top.$.blockUI({
+                message: '<iframe width="400px" height="550px" src="ConnectionStatusDhcp.htm"></iframe>',
+                css: {width: '100%', height: '0px', top: '0px', left: '0px', border: '0px', backgroundColor: 'transparent'},
+                onOverlayClick: closeIframe
+            });
+        }
+        else if (conn == "pppoe")
+        {
+            top.$.blockUI({
+                message: '<iframe width="400px" height="450px" src="ConnectionStatusDhcp.htm"></iframe>',
+                css: {width: '100%', height: '0px', top: '0px', left: '0px', border: '0px', backgroundColor: 'transparent'},
+                onOverlayClick: closeIframe
+            });
+        }
+        else
+        {
+            top.$.blockUI({
+                message: '<iframe width="400px" height="350px" src="ConnectionStatusDhcp.htm"></iframe>',
+                css: {width: '100%', height: '0px', top: '0px', left: '0px', border: '0px', backgroundColor: 'transparent'},
+                onOverlayClick: closeIframe
+            });
+        }
+    }
+    else
+    {
+        var winoptions;
+        if (conn == "dhcp")
+        //if (conn == "dhcp" || conn == "pppoe")
+                winoptions = "width=400,height=460,status=yes,resizable=yes";
+        else if (conn == "pppoe")
+        {
+            /*
+            if ("0" == "1")
+                    winoptions = "width=400,height=600,status=yes,resizable=yes";
+            else
+            */
+                        winoptions = "width=400,height=360,status=yes,resizable=yes";
+        }
+        else
+                winoptions = "width=400,height=260,status=yes,resizable=yes";
+
+
+        openDataSubWin('ConnectionStatusDhcp.htm',winoptions);
+        showDisablePage(parent.document.getElementById("diablePage"),datSubWinVar,parent.document.body.offsetWidth,parent.document.body.offsetHeight);
+        // Chuck 20140902 fix mantis#12486
+        // Chuck 20150203 Fix TD#328: C7000-100NAS: User Interface -- GUI is stuck when closing "connection status" page quickly.
+        //if(!isOnBeforeUnloadSupported())
+        {
+            detectPoppedWindowStatus();
+        }
+    }
+}
+
+// Chuck 20140902 fix mantis#12486
+// We will use polling instead of onBeforeUnload in following browsers
+// PC: Opera with Presto,
+// iPad: Safari,
+// iPhone: Opera
+// Android Pad: Opera, Chrome(restoring delayed about 3 secs?), Firefox
+// Android Phone:
+function isOnBeforeUnloadSupported()
+{
+    if(navigator.userAgent.indexOf("Presto") > -1
+        || navigator.userAgent.indexOf("iPad") > -1
+        || navigator.userAgent.indexOf("iPhone") > -1
+        || navigator.userAgent.indexOf("Android") > -1
+        )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+// Chuck 20140902 fix mantis#12486
+// Because the following browser can't handle the window opened by itself, we will use BlockUI instead of polling or onBeforeUnload to prevent user clicking the GUI when a statistic/connection status window is opening.
+// PC:
+// iPad: Opera Mini,
+// iPhone:
+// Android Pad: Dolphin Mini, UC, Safari, Native
+// Android Phone:
+function isUnsupportedMobileBrowser()
+{
+    /* Examples:
+     * iPad-Safari: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile/11D201 Safari/9537.53
+     * iPad-Opera: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) OPiOS/8.0.2.80660 Mobile/11D201 Safari/9537.53
+     * iPad-Chrome: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) CriOS/36.0.1985.57 Mobile/11D201 Safari/9537.53 (000514)
+     * Android-Native: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30
+     * Android-Opera: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.138 Safari/537.36 OPR/22.0.1485.81203
+     * Android-Chrome: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1958.135 Safari/537.36
+     * PC-IE: Mozilla/5.0 (Windows NT 6.1; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.3; .NET4.0C; .NET4.0E; rv:11.0) like Gecko
+     * PC-Opera: Opera/9.80 (Windows NT 6.1; U; zh-tw) Presto/2.10.289 Version/12.00
+     * PC-Chrome: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.102 Safari/537.36
+     */
+    var firstSupportedWebKit = "AppleWebKit/535";
+    if(navigator.userAgent.indexOf("iPad") == -1
+        && navigator.userAgent.indexOf("iPhone") == -1
+        && navigator.userAgent.indexOf("Android") == -1
+        )
+    {
+        // Is PC browser.
+        return false;
+    }
+    else if(navigator.userAgent.indexOf("OPiOS") > -1)
+    {
+        // Although the AppleWebKit version of Opera on iOS is greater than 534, but it still can't handle the opened window.
+        return true;
+    }
+    else if(navigator.userAgent.indexOf("AppleWebKit/") > -1
+        && navigator.userAgent.substring(navigator.userAgent.indexOf("AppleWebKit/")) < firstSupportedWebKit)
+    {
+        // The browser using the lower version (<=534) of AppleWebKit can't handle the window opened by itself.
+        return true;
+    }
+
+    return false;
+}
+
+// Chuck 20140902 fix mantis#12486
+var intervalId;
+function detectPoppedWindowStatus()
+{
+    intervalId = setInterval(reloadPage, 200);
+}
+
+function openStatisticsWindow()
+{
+    var conn = document.forms[0].wantype.value;
+    var form=document.forms[0];
+    // Terry 20111017, Fix IE6/IE7/IE8 can't find curlang error
+    var gui_region = document.getElementsByName("curlang")[0];
+    //var gui_region = form.curlang.value;
+
+    // Chuck 20140902 fix mantis#12486
+    if(isUnsupportedMobileBrowser())
+    {
+        top.$.blockUI({
+            message: '<iframe width="100%" height="450px" src="Statistic.htm"></iframe>',
+            css: {width: '100%', height: '0px', top: '0px', left: '0px', border: '0px', backgroundColor: 'transparent'},
+            onOverlayClick: closeIframe
+        });
+    }
+    else
+    {
+        var winoptions;
+        if(gui_region=="German"){
+           winoptions = "width=1024,height=360,status=yes,resizable=yes";
+           openDataSubWin('Statistic.htm',winoptions);
+           showDisablePage(parent.document.getElementById("diablePage"),datSubWinVar,parent.document.body.offsetWidth,parent.document.body.offsetHeight);
+        }else{
+           winoptions = "width=780,height=360,status=yes,resizable=yes";
+           openDataSubWin('Statistic.htm',winoptions);
+           showDisablePage(parent.document.getElementById("diablePage"),datSubWinVar,parent.document.body.offsetWidth,parent.document.body.offsetHeight);
+        }
+        // Chuck 20140902 fix mantis#12486
+        // Chuck 20150203 Fix TD#328: C7000-100NAS: User Interface -- GUI is stuck when closing "connection status" page quickly.
+        //if(!isOnBeforeUnloadSupported())
+        {
+            detectPoppedWindowStatus();
+        }
+    }
+}
+
+function setTimer()
+{
+    setTimeout(reloadPage,300);
+}
+function reloadPage()
+{
+    if(datSubWinVar.closed)
+    {
+        window.location.reload();
+        parent.document.getElementById("diablePage").style.display = "none";
+        // Chuck 20140902 fix mantis#12486
+        // Chuck 20150203 Fix TD#328: C7000-100NAS: User Interface -- GUI is stuck when closing "connection status" page quickly.
+        //if(!isOnBeforeUnloadSupported())
+        {
+            clearInterval(intervalId);
+        }
+    }
+}
+
+// Chuck 20140902 fix mantis#12486
+function closeIframe()
+{
+    top.$.unblockUI();
+    window.location.reload();
+}
+
+// Chuck 20141106 change the way of determining whether to change the button size
+function modifyBtnCss()
+{
+    var arr = ["reboot_btn", "status_btn", "statistics_btn", "reset_btn"];
+
+    jQuery.each(arr, function(i, val){
+        var len = parent.calculate_string_pixel($("#" + val).children().html());
+        var txt = trim($("#" + val).children().html());
+        if(len > 125)
+        {
+            $("#" + val).addClass('page-table-button-large');
+            $("#" + val).removeClass('page-table-button');
+            $("#" + val).children().css("word-break", "break-all");
+        }
+        else
+        {
+            $("#" + val).removeClass('page-table-button-large');
+            $("#" + val).addClass('page-table-button');
+            $("#" + val).children().css("word-break", "keep-all");
+        }
+
+        return true;
+    });
+}
+function loadSettings()
+{
+    var cf=document.forms[0];
+
+    adjustPageLayout();
+     parent.$('#page2').css("visibility","visible");
+    parent.$('#page_contain2').removeClass('main-page-contain-loading');
+    modifyBtnCss();
+/*
+    if (cf.enable_apmode.value == 1)
+    {
+
+        var statusButton;
+        cf.Status.disabled = 'true';
+        statusButton=document.getElementsByName("Status");
+        //statusButton.outerHTML='<button type="submit" disabled="disabled" value="Safely Remove USB Device" name="Remove" class="button-grey" onClick="buttonClick(this,\'Safely Remove USB Device\');return remove_disk();"><span class="roundleft_grey">&nbsp;&nbsp; Safely Remove USB Device<\/span><span class="roundright_grey">&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>';
+        statusButton.outerHTML='<button type="button" disabled="disabled" class="button-grey" style="float:left" onClick="advButtonClick(1);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();" name="Status">Connection Status<\/button>';
+        //removeButton[0].style.cursor='default';
+    }
+*/
+}
+
+function InitTagValue()
+{
+/*
+  Hardware Version (td) | Firmware Version (td) | CableModem Serial Number (td) |
+  CM certificate | Cable MAC Address | Cable IP Mask | Cable Gateway | Cable DNS | Network Access |
+  Internet Mac address (td) | Internet IP Mask (td) | DHCP (td) | Internet Gateway |Internet Domain Name Server (td) |
+  LAN Mac address (td) | LAN IP Mask (td) | LAN DHCP (td)
+2.4G  Wireless SSID (td) | Wireless Region (td) | Wireless Channel (td) | Wireless Mode (td) | Wireless AP (td) | Wireless Broadcast Name (td) | Wireless Isolation (td)
+5G    Wireless SSID (td) | Wireless Region (td) | Wireless Channel (td) | Wireless Mode (td) | Wireless AP (td) | Wireless Broadcast Name (td) | Wireless Isolation (td)
+2.4G  Guest Network SSID (td) | Guest Network AP (td)
+5G  Guest Network SSID (td) | Guest Network AP (td)
+System Up Time | Current System Time
+*/
+    var tagValueList = 'C279T00-01|V2.02.18|3KX25776A1D4B|1|XX:XX:XX:XX:XX:XX|---.---.---.---/-|---.---.---.---|---.---.---.---, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|***PUBLIC_IP*** /255.255.224.0, <br>***IPv6*** /128|DHCP Client|***PUBLIC_IP***|***PUBLIC_IP***, ***PUBLIC_IP***, <br>***IPv6***, ***IPv6***|XX:XX:XX:XX:XX:XX|192.168.0.1/24|On|NETGEAR38|United States|Auto (6 (P) + 2 (S)) |Up to 300 Mbps|On|On|NETGEAR38-5G|United States|149 (S)+153 (P)|Up to 300 Mbps|On|On|---|Off|---|Off|26 days ***IPv6***|Wed Nov 26 ***IPv6*** 2025|Configured|Configured|---|---|---|---|security|security|none|none|1|0|---|---|---|---|---|---|---|---|0|1|1|0|1|';
+/*
+    var tagValueList = "v1.0|v0.1|12345678|None" +
+                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.13/24|***PRIVATE_IP***.254|***PUBLIC_IP***, ***PUBLIC_IP***|Enable" +
+                "|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***/24|DHCPClient|***PRIVATE_IP***|***PUBLIC_IP***, ***PUBLIC_IP***" +
+                 "|XX:XX:XX:XX:XX:XX|192.168.1.1/24|On" +
+                "|NETGEAR_24G|North American|Auto (1)|Up to 300Mbps|Off|On|Off" +
+                "|NETGEAR_5G|North American|Auto (1)|Up to 145Mbps|Off|On|Off" +
+                "|Guest1|Off|Guest1_5G|Off" +
+                "|Wednesday, 01 Jan 2003 ***IPv6***|Wednesday, 01 Jan 2003 ***IPv6***" +
+                "|Configured|UnConfigured" +
+                "|---|---|---|---|---|---" +
+                "|1|" ;
+*/
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Hardware Version */
+    document.getElementById("HardwareVersion").innerHTML = tagValues[0];
+
+    /* Firmware Version */
+    document.getElementById("FirmwareVersion").innerHTML = tagValues[1];
+
+    /* CableModem Serial Number */
+    document.getElementById("CableModemSerialNumber").innerHTML = tagValues[2];
+
+    /* CM certificate */
+    if (tagValues[3] == '1')
+        document.getElementById("CMcertificate").innerHTML = 'Installed';
+    else
+        document.getElementById("CMcertificate").innerHTML = 'Not Installed';
+
+
+    /* GUI Version */
+//    document.getElementById("GUIVersion").innerHTML = tagValues[2];
+
+    // Cable MAC Address
+    document.getElementById("CableMACAddress").innerHTML = tagValues[4];
+
+    // Cable IP Mask
+//    document.getElementById("CableIPMask").innerHTML = tagValues[5];
+
+    /* Cable Gateway */
+//    document.getElementById("CableGateway").innerHTML = tagValues[6];
+
+    /* Cable DNS */
+//    document.getElementById("CableDNS").innerHTML = tagValues[7];
+
+    /* Network Access */
+//    document.getElementById("NetworkAccess").innerHTML = tagValues[8];
+
+
+    /* Internet Mac address */
+    document.getElementById("InternetMAC").innerHTML = tagValues[9];
+
+    /* Internet IP */
+    document.getElementById("InternetIPMASK").innerHTML = tagValues[10];
+    if(tagValues[10] == "&nbsp;")
+    {
+       document.getElementById("interIPMask").style.display = "none";
+       document.getElementById("interIPMaskLine").style.display = "none";
+    }
+
+    /* Internet DHCP */
+    document.getElementById("InternetDHCP").innerHTML = tagValues[11];
+
+    /* Internet Gateway */
+    if ((tagValues[12] == "0.0.0.0") || (tagValues[12] == "---.---.---.---") || tagValues[8] == "Denied")
+    {
+        $("#Internet").attr("src", "img/error-icon.gif");
+    }
+    else
+    {
+        $("#Internet").attr("src", "img/good-icon.gif");
+    }
+
+    document.getElementById("InternetGateway").innerHTML = tagValues[12];
+
+    /* Internet DNS */
+    if((tagValues[10] == "---.---.---.---") && (tagValues[12] == "---.---.---.---"))
+    {
+        document.getElementById("InternetDNS").innerHTML = "---.---.---.---";
+    }
+    else
+    {
+        document.getElementById("InternetDNS").innerHTML = tagValues[13];
+    }
+
+    /* LAN Mac address */
+    document.getElementById("LANMAC").innerHTML = tagValues[14];
+
+    /* LAN IP */
+    document.getElementById("LANIPMASK").innerHTML = tagValues[15];
+
+    /* LAN DHCP */
+    document.getElementById("LANDHCP").innerHTML = tagValues[16];
+
+    /* LAN IP Subnet mask */
+//    document.getElementById("LANIPSubnet").innerHTML = tagValues[11];
+
+    /* Wireless SSID */
+    document.getElementById("WirelessName").innerHTML = piplineDecode(tagValues[17]);
+
+    /* Wireless Region */
+    document.getElementById("WirelessRegion").innerHTML = tagValues[18];
+
+    /* Wireless Channel */
+    document.getElementById("WirelessChannel").innerHTML = tagValues[19];
+
+    /* Wireless Mode */
+    document.getElementById("WirelessMode").innerHTML = tagValues[20];
+
+    /* Wireless AP */
+    document.getElementById("WirelessAP").innerHTML = tagValues[21];
+
+    /* Wireless Broadcast Name */
+    document.getElementById("WirelessBroadcastName").innerHTML = tagValues[22];
+
+    /* Wireless SSID */
+    document.getElementById("WirelessName_an").innerHTML = piplineDecode(tagValues[23]);
+
+    /* Wireless Region */
+    document.getElementById("WirelessRegion_an").innerHTML = tagValues[24];
+
+    /* Wireless Channel */
+    document.getElementById("WirelessChannel_an").innerHTML = tagValues[25];
+
+    /* Wireless Mode */
+    document.getElementById("WirelessMode_an").innerHTML = tagValues[26];
+
+    /* Wireless AP */
+    document.getElementById("WirelessAP_an").innerHTML = tagValues[27];
+
+    /* Wireless Broadcast Name */
+    document.getElementById("WirelessBroadcastName_an").innerHTML = tagValues[28];
+
+    /* 2.4G SSID */
+    document.getElementById("GuestNetworkName1").innerHTML = piplineDecode(tagValues[29]);
+    $('#GuestNetworkName1_B').html(piplineDecode(tagValues[29]));
+
+    /* 2.4G Wireless AP */
+    document.getElementById("GuestNetworkAP1").innerHTML = tagValues[30];
+    $('#GuestNetworkAP1_B').html(tagValues[30]);
+
+    /* 5G SSID */
+    document.getElementById("GuestNetworkName1_an").innerHTML = piplineDecode(tagValues[31]);
+
+    /* 5G Wireless AP */
+    document.getElementById("GuestNetworkAP1_an").innerHTML = tagValues[32];
+
+    /* System Up Time */
+//    document.getElementById("SystemUpTime").innerHTML = tagValues[33];
+
+    /* Current System Time */
+//    document.getElementById("CurrentSystemTime").innerHTML = tagValues[34];
+
+    /* 2.4G WPS configured mode */
+    document.getElementById("WPSMode").innerHTML = tagValues[35];
+
+    /* 5G WPS configured mode */
+    document.getElementById("WPSMode_an").innerHTML = tagValues[36];
+
+    /* 2.4G Guest1 Broadcast */
+    document.getElementById("GuestNetworkBroadcast1").innerHTML = tagValues[37];
+    $('#GuestNetworkBroadcast1_B').html(tagValues[37]);
+
+    /* 2.4G Guest1 Allow Guest */
+    document.getElementById("GuestNetworkAllow1").innerHTML = tagValues[38];
+    $('#GuestNetworkAllow1_B').html(tagValues[38]);
+
+    /* 5G Guest1 Broadcast */
+    document.getElementById("GuestNetworkBroadcast1_an").innerHTML = tagValues[39];
+
+    /* 5G Guest1 Allow Guest */
+    document.getElementById("GuestNetworkAllow1_an").innerHTML = tagValues[40];
+
+
+    // 2.4G
+    if (tagValues[21] == "Off")
+    {
+        $("#WiFi24G").attr("src", "img/error-icon.gif");
+    }
+    else
+    {
+        if (tagValues[41] == "none")
+        {
+            $("#WiFi24G").attr("src", "img/warning-icon.gif");
+        }
+        else
+        {
+            $("#WiFi24G").attr("src", "img/good-icon.gif");
+        }
+    }
+
+    // 5G
+    if (tagValues[27] == "Off")
+    {
+        $("#WiFi5G").attr("src", "img/error-icon.gif");
+    }
+    else
+    {
+        if (tagValues[42] == "none")
+        {
+            $("#WiFi5G").attr("src", "img/warning-icon.gif");
+        }
+        else
+        {
+            $("#WiFi5G").attr("src", "img/good-icon.gif");
+        }
+    }
+
+    // 2.4G WiFi Guest
+    if (tagValues[30] == "Off" || tagValues[21] == "Off")
+    {
+        $("#WiFi24GGDual").attr("src", "img/error-icon.gif");
+        $("#WiFi24GG").attr("src", "img/error-icon.gif");
+    }
+    else
+    {
+        if (tagValues[43] == "none")
+        {
+            $("#WiFi24GGDual").attr("src", "img/warning-icon.gif");
+            $("#WiFi24GG").attr("src", "img/warning-icon.gif");
+        }
+        else
+        {
+            $("#WiFi24GGDual").attr("src", "img/good-icon.gif");
+            $("#WiFi24GG").attr("src", "img/good-icon.gif");
+        }
+    }
+
+    // 5G WiFi Guest
+    if (tagValues[32] == "Off" || tagValues[27] == "Off")
+    {
+        $("#WiFi5GG").attr("src", "img/error-icon.gif");
+    }
+    else
+    {
+        if (tagValues[44] == "none")
+        {
+            $("#WiFi5GG").attr("src", "img/warning-icon.gif");
+        }
+        else
+        {
+            $("#WiFi5GG").attr("src", "img/good-icon.gif");
+        }
+    }
+
+
+    // Support dual band
+    if (tagValues[45] == '1')
+    {
+        $("#setting_5G1").css ('display', 'none');
+        $("#setting_5G2").css ('display', 'block');
+        $("#setting_5G3").css ('display', 'block');
+        // COMHEM supported
+        if (tagValues[55] == "1")
+        {
+            $("#setting_5G1").css ('display', 'none');  // Guest 2.4G
+            $("#setting_5G2").css ('display', 'block');  // WiFi 5G
+            $("#setting_5G3").css ('display', 'none');  // Guest 5G
+        }
+    }
+    else
+    {
+        $("#setting_5G1").css ('display', 'block');
+        $("#setting_5G2").css ('display', 'none');
+        $("#setting_5G3").css ('display', 'none');
+
+        // COMHEM supported
+        if (tagValues[55] == "1")
+        {
+            $("#setting_5G1").css ('display', 'none');  // Guest 2.4G
+            $("#setting_5G2").css ('display', 'none');  // WiFi 5G
+            $("#setting_5G3").css ('display', 'none');  // Guest 5G
+        }
+    }
+
+    // Rg/Bridge Mode
+    if (tagValues[56] == "0") // is bridge mode
+    {
+        // Bridge mode
+        $("#internetPort").css ('display', 'none');  // Internet Port box
+        // Is not ComHem supported
+        // Chuck 20141001 show wireless column in bridge mode with generic gui
+        if (tagValues[58] == "0" && tagValues[59] == "0")
+        {
+            $("#setting_Wifi24G").css ('display', 'none');  // WiFi 2.4G part
+            $("#setting_5G3").css ('display', 'none');  // WiFi 5G part
+        }
+
+        //Eason, 20130121, bridge mode do not show LAN information
+        $('#LANMAC').html("--:--:--:--:--:--");
+        $('#LANIPMASK').html("---.---.---.---");
+        $('#LANDHCP').html("Off");
+
+        // Chuck 20160901 MAC address of LAN port can't display in bridge mode
+        $("#LANPort-table").hide();
+    }
+
+    if(tagValues[56] == "1") // is router mode
+    {
+        $('#wireless_setup').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+
+        $('#wireless_setup_5G').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+    }
+    else // is bridge mode
+    {
+        if(tagValues[59] == "0")
+        {
+            $('#wireless_setup').click(function(ev){
+                parent.loadPage2("WirelessSettings.htm");
+            });
+
+            $('#wireless_setup_5G').click(function(ev){
+                parent.loadPage2("WirelessSettings.htm");
+            });
+        }
+        else
+        {
+            // Chuck 20141001 do not link wireless column to WirelessSettings in bridge mode with generic gui
+        }
+    }
+
+
+    if (tagValues[46] == '1')
+    {
+        $("#setting_Mobile").css ('display', 'block');
+    }
+    else
+    {
+        $("#setting_Mobile").css ('display', 'none');
+    }
+
+    if (tagValues[46] == "1")
+    {
+        $("#Attached3G").attr("src", "img/good-icon.gif");
+    }
+    else
+    {
+        $("#Attached3G").attr("src", "img/error-icon.gif");
+    }
+
+    $('#ModemIdentity').html(tagValues[47]);
+    $('#ModemSWVersion').html(tagValues[48]);
+    $('#ModemDriverVersion').html(tagValues[49]);
+    $('#ModemStatus').html(tagValues[50]);
+    $('#ModemIMSI').html(tagValues[51]);
+    $('#ModemIMEI').html(tagValues[52]);
+    $('#ModemOperator').html(tagValues[53]);
+    $('#ModemNetworkMode').html(tagValues[54]);
+
+    // Chuck 20141001 Do not show guest network column in bridge mode with generic gui
+    if (tagValues[57] == "0" || (tagValues[56] == "0" && tagValues[59] == "1"))
+    {// is admin access or is bridge mode and generic gui
+        $("#setting_5G1").hide();  // Guest 2.4G
+        $("#setting_5G3").hide();  // Guest 5G
+    }
+
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    hiddenWifi('0');
+    initBridgeView('0');
+}
+
+function initBridgeView(statusTag)
+{
+    if(statusTag == "1")
+    {
+        $("#LANPort-table").hide();
+    }
+}
+function hiddenWifi(statusTag)
+{
+    if(statusTag == "1")
+    {
+        $("#setting_Wifi24G").hide();
+        $("#setting_5G3").hide();
+    }
+}
+function ChangeResize()
+{
+    if(navigator.userAgent.indexOf("MSIE") != -1){
+        $(parent.document).find('#page2').height(parseInt(parent.document.getElementById("page_contain2").clientHeight));
+    }
+    $(".scroll-pane").css("height",document.documentElement.clientHeight+"px");
+    if( !navigator.userAgent.match(/Android/i)
+       && !navigator.userAgent.match(/webOS/i)
+       && !navigator.userAgent.match(/iPhone/i)
+       && !navigator.userAgent.match(/iPad/i)
+       && !navigator.userAgent.match(/iPod/i)
+       && !navigator.userAgent.match(/BlackBerry/i)
+       && !navigator.userAgent.match(/Windows Phone/i)
+    ){
+        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+    }
+    $(".scroll-pane").css("width","670px");
+    $(".jspContainer").css("width","670px");
+    $(".jspPane").css("width","670px");
+}
+
+//Eason, 20141106, resize the tables' high when zoom in/out.
+function change_zoom()
+{
+    var windowWidth = parent.window.innerWidth;
+    setInterval(function(){
+        if (parent.window.innerWidth == windowWidth) return;
+        windowWidth = parent.window.innerWidth;
+        adjustPageLayout();
+    }, 200);
+}
+
+</script>
+
+
+</head>
+
+<body onload="ChangeResize();change_zoom();loadSettings();" onResize="ChangeResize();modifyBtnCss();" bgcolor="#E5E5E5" style="width:640px;margin:0px;padding:0px">
+    <form action='/goform/RouterStatus?id=239640653' method="post">
+        <div id="scroll-pane" class="scroll-pane" style="height:420px;width:670px;overflow:auto;scrolling:auto">
+            <table>
+                <tr>
+                    <td>
+                        <div style="float:left;width:635px;positive:relative;border:0px;padding-left:3px;margin:0px">
+                            <div id="cableInformation" style="float:left;width:310px;positive:relative;border:0px;margin-top;0px">
+                                <div id="box-header-table1" class="box-header-table">
+                                    <table>
+                                        <tr class="box-header">
+                                            <td style="width:17px">
+                                                <img alt="" src="img/good-icon.gif" style="padding-left:10px;padding-top:3px" />
+                                            </td>
+                                            <td class="box-header-text header-text1">
+                                                Cable Information
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                    <tr align="left" valign="bottom">
+                                        <td>
+                                            <table id="page-table1" class="page-table" style="width:300px;background-color:#FFFFFF;height:150px">
+                                                <tr style="height:6px;background-color:#FFFFFF">
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                    </td>
+                                                </tr>
+                                                <tr><td colspan="2"><table id="Modem-table" cellspacing="0" width="100%">
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu" style="width:25%">
+                                                        Hardware Version
+                                                    </td>
+                                                    <td class="basic-text-content" style="width:75%" id="HardwareVersion">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        Firmware Version
+                                                    </td>
+                                                    <td class="basic-text-content" id="FirmwareVersion">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <!-- <tr class="basic-text">
+                                                <td class="basic-text-menu" >GUI Language Version</td>
+                                                <td class="basic-text-content" id="HardwareVersion"> V1.0.0.40_2.1.15.6</td>
+                                                </tr>
+                                                -->
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        Cable Modem Serial Number
+                                                    </td>
+                                                    <td class="basic-text-content" id="CableModemSerialNumber">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        CM Certificate
+                                                    </td>
+                                                    <td class="basic-text-content" id="CMcertificate">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        CM MAC
+                                                    </td>
+                                                    <td class="basic-text-content" id="CableMACAddress">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                </table></td></tr>
+                                                <tr><td colspan="2"><table id="LANPort-table" cellspacing="0" width="100%">
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-subTitle">
+                                                        LAN Port
+                                                    </td>
+                                                    <td class="basic-text-content">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        MAC Address
+                                                    </td>
+                                                    <td class="basic-text-content" id="LANMAC">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        IP Address/Mask
+                                                    </td>
+                                                    <td class="basic-text-content" id="LANIPMASK">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        DHCP
+                                                    </td>
+                                                    <td class="basic-text-content" id="LANDHCP">
+                                                    </td>
+                                                </tr>
+                                                </table></td></tr>
+                                                <!-- <tr class="basic-text">
+                                                <td class="basic-text-menu" >Last Checked for Upgrade</td>
+                                                <td class="basic-text-content" >3/31/2010 14:55</td>
+                                                </tr>
+                                                -->
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text" style="align:center">
+                                                    <td class="basic-table-seperate-border" align="center" style="height:20px;background-color:#FFFFFF;padding-top:5px;width:50%">
+                                                        <button id="reset_btn" type="button" class="page-table-button" style="float:center; height: auto; background-image: none; display: block; position: relative;" onClick="advButtonClick(3);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                            <div style="width:125px; word-break:break-all;display: inline-block;">
+                                                                Factory reset
+                                                            </div>
+                                                            <img src="img/page-table-button.gif" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;" />
+                                                            <div id="reset" style="position: absolute; top: 0; left: 0; width:125px; word-break: break-all; display: inline-block; margin-left: 7px;">
+                                                                Factory reset
+                                                            </div>
+                                                        </button>
+                                                    </td>
+                                                    <td class="basic-table-seperate-border" align="center" style="height:20px;background-color:#FFFFFF;padding-top:5px;width:50%">
+                                                        <button id="reboot_btn" type="button" class="page-table-button" style="float:center; height: auto; background-image: none; display: block; position: relative;" onClick="advButtonClick(2);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                            <div style="width: 125px; word-break: break-all; display: inline-block;">
+                                                                Reboot
+                                                            </div>
+                                                            <img src="img/page-table-button.gif" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;" />
+                                                            <div id="reboot" style="position: absolute; top: 0; left: 0; width: 125px; word-break: break-all; display: inline-block; margin-left: 7px;">
+                                                                Reboot
+                                                            </div>
+                                                        </button>
+                                                        <!-- Nick 20110927 <button type="button" class="page-table-button" style="float:left"
+                                                        onClick="advButtonClick(2);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();"><span id="reboot">Reboot</span></button>
+                                                        <button type="button" class="page-table-button" style="float:left" onClick="advButtonClick(3);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();"><span id="Docsis">Docsis Status</span></button>
+                                                        -->
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div class="page-table-bottom-2">
+                                </div>
+                            </div>
+                            <div id='internetPort' style="float:left;width:310px;posision:relative;margin-left:5px">
+                                <div id="box-header-table2" class="box-header-table">
+                                    <table>
+                                        <tr class="box-header">
+                                            <td style="width:20px">
+                                                <img alt="" id='Internet' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                            </td>
+                                            <td class="box-header-text header-text2" style="cursor:pointer;" id="INT_setup">
+                                                Internet Port
+                                            </td>
+                                            <!-- <td class="box-header-text header-text2" style="cursor:pointer;" id="LAN_setup">LAN Port</td>
+                                            -->
+                                        </tr>
+                                    </table>
+                                </div>
+                                <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                    <tr align="left" valign="bottom">
+                                        <td>
+                                            <table id="page-table2" class="page-table" style="width:300px;background-color:#FFFFFF;">
+                                                <tr style="height:6px;background-color:#FFFFFF">
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu" style="width:25%">
+                                                        MAC Address
+                                                    </td>
+                                                    <td class="basic-text-content" style="width:75%" id="InternetMAC">
+                                                    </td>
+                                                    <!-- <td class="basic-text-content" width="75%">XX:XX:XX:XX:XX:XX</td>
+                                                    -->
+                                                </tr>
+                                                <!-- <tr>
+                                                <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                <td class="basic-text-menu" >DHCP </td>
+                                                <td class="basic-text-content" >On </td>
+                                                </tr>
+                                                -->
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr id="interIPMask" class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        IP Address/Mask
+                                                    </td>
+                                                    <td class="basic-text-content" id="InternetIPMASK" style="word-break:break-all;">
+                                                    </td>
+                                                    <!-- <td class="basic-text-content">0.0.0.0</td>
+                                                    -->
+                                                </tr>
+                                                <tr id="interIPMaskLine">
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        Connection
+                                                    </td>
+                                                    <td class="basic-text-content" id="InternetDHCP">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr id="interGateway" class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        Default Gateway
+                                                    </td>
+                                                    <td class="basic-text-content" id="InternetGateway">
+                                                    </td>
+                                                    <!-- <td class="basic-text-content">0.0.0.0</td>
+                                                    -->
+                                                </tr>
+                                                <!-- <tr>
+                                                <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                <td class="basic-text-menu" >Gateway IP Address </td>
+                                                <td class="basic-text-content" >0.0.0.0 </td>
+                                                </tr>
+                                                -->
+                                                <tr id="interGatewayLine">
+                                                    <td colspan="2" class="basic-table-seperate-border">
+                                                        <div class="basic-table-seperate">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text">
+                                                    <td class="basic-text-menu">
+                                                        Domain Name Server
+                                                    </td>
+                                                    <td class="basic-text-content" id="InternetDNS" style="word-break:break-all;">
+                                                        <br>
+                                                    </td>
+                                                    <!-- <td class="basic-text-content"><br></td>
+                                                    -->
+                                                </tr>
+                                                <!-- Nick 20110930 -->
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <!-- Nick 20110930 -->
+                                                <tr>
+                                                    <td class="basic-text-menu-bottom">
+                                                        &nbsp;
+                                                    </td>
+                                                    <td class="basic-text-content-bottom">
+                                                    </td>
+                                                </tr>
+                                                <tr class="basic-text" style="align:center">
+                                                    <td class="basic-table-seperate-border" align="center" style="height:20px;background-color:#FFFFFF;padding-top:5px;width:50%">
+                                                        <button id="statistics_btn" type="button" class="page-table-button" style="float:left; height: auto; background-image: none; display: block; position: relative;" onClick="advButtonClick(0);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                            <div style="width: 125px; word-break: break-all; display: inline-block;">
+                                                                Show Statistics
+                                                            </div>
+                                                            <img src="img/page-table-button.gif" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;" />
+                                                            <div id="statistics" style="position: absolute; top: 0; left: 0; width:125px; word-break: break-all; display: inline-block; margin-left: 7px;">
+                                                                Show Statistics
+                                                            </div>
+                                                        </button>
+                                                      </td>
+                                                      <td class="basic-table-seperate-border" align="center" style="height:20px;background-color:#FFFFFF;padding-top:5px;width:50%">
+                                                        <button id="status_btn" type="button" class="page-table-button" style="float:left; height: auto; background-image: none; display: block; position: relative;" onClick="advButtonClick(1);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();" id="ConnStatus" name="ConnStatus">
+                                                            <div style="width: 125px; word-break: break-all; display: inline-block;">
+                                                                Connection Status
+                                                            </div>
+                                                            <img src="img/page-table-button.gif" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;" />
+                                                            <div id="status" style="position: absolute; top: 0; left: 0; width: 125px; word-break: break-all;display: inline-block; margin-left: 7px;">
+                                                                Connection Status
+                                                            </div>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <input type="hidden" style="float:left;height:0px">
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div class="page-table-bottom-2">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height:2px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="adv-home-table-seperate">
+                        </div>
+                        <div class="adv-home-table-seperate-2">
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height:2px">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table id='setting_Wifi24G' style='display:block'>
+                            <tr>
+                                <td>
+                                    <div style="float:left;width:635px;positive:relative;top:0px;padding-left:3px;">
+                                        <div style="float:left;width:310px;positive:relative;top:0px">
+                                            <div id="box-header-table3" class="box-header-table">
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='WiFi24G' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text header-text3" style="cursor:pointer;" id="wireless_setup">
+                                                            Wireless Settings (2.4GHz)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <table id="page-table3" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Name (SSID)
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessName">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Region
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessRegion">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Channel
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessChannel">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Mode
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessMode">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wireless AP
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessAP">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Broadcast Name
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessBroadcastName">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wi-Fi Protected Setup
+                                                                </td>
+                                                                <td class="basic-text-content" id="WPSMode">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                        <!-- Nick -->
+                                        <div id='setting_5G2' style="float:left;width:310px;positive:relative;margin-left:5px;display:none">
+                                            <!-- Nick -->
+                                            <!-- Nick -->
+                                            <div id="box-header-table41" class="box-header-table">
+                                                <!-- Nick -->
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='WiFi5G' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text  header-text4" style="cursor:pointer;" id="wireless_setup_5G">
+                                                            Wireless Settings (5GHz)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <!-- <table id="page-table4" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                        -->
+                                                        <table id="page-table41" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Name (SSID)
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessName_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Region
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessRegion_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Channel
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessChannel_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Mode
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessMode_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wireless AP
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessAP_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Broadcast Name
+                                                                </td>
+                                                                <td class="basic-text-content" id="WirelessBroadcastName_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wi-Fi Protected Setup
+                                                                </td>
+                                                                <td class="basic-text-content" id="WPSMode_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                        <div id='setting_5G1' style="float:left;width:310px;positive:relative;margin-left:5px">
+                                            <div id="box-header-table42" class="box-header-table">
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='WiFi24GG' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text  header-text4" style="cursor:pointer;" id="guest_setup1">
+                                                            Guest Network (2.4 GHz)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <!-- Nick <table id="page-table4" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                        -->
+                                                        <table id="page-table42" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Name (SSID)
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkName1">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wireless AP
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAP1">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Broadcast Name
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkBroadcast1">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Allow guest to access My Local Network
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAllow1">
+                                                                </td>
+                                                            </tr>
+                                                            <!-- Nick 20110930 -->
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                            <!-- Nick 20110930 -->
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="adv-home-table-seperate">
+                                    </div>
+                                    <div class="adv-home-table-seperate-2">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table id='setting_5G3' style='display:none'>
+                            <tr>
+                                <td>
+                                    <div style="float:left;width:635px;positive:relative;top:0px;padding-left:3px;">
+                                        <div style="float:left;width:310px;positive:relative;top:0px">
+                                            <div id="box-header-table5" class="box-header-table">
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='WiFi24GGDual' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text  header-text5" style="cursor:pointer;" id="guest_setup2">
+                                                            Guest Network (2.4 GHz)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <table id="page-table5" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Name (SSID)
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkName1_B">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wireless AP
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAP1_B">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Broadcast Name
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkBroadcast1_B">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Allow guest to access My Local Network
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAllow1_B">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                        <div style="float:left;width:310px;positive:relative;margin-left:5px">
+                                            <div id="box-header-table6" class="box-header-table">
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='WiFi5GG' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text  header-text6" style="cursor:pointer;" id="guest_setup_5G">
+                                                            Guest Network (5 GHz)
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <table id="page-table6" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Name (SSID)
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkName1_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Wireless AP
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAP1_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Broadcast Name
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkBroadcast1_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Allow guest to access My Local Network
+                                                                </td>
+                                                                <td class="basic-text-content" id="GuestNetworkAllow1_an">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="basic-text-menu-bottom">
+                                                                    &nbsp;
+                                                                </td>
+                                                                <td class="basic-text-content-bottom">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="adv-home-table-seperate">
+                                    </div>
+                                    <div class="adv-home-table-seperate-2">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table id='setting_Mobile' style='display:none'>
+                            <tr>
+                                <td>
+                                    <div style="float:left;width:635px;positive:relative;top:0px;padding-left:3px;">
+                                        <div style="float:left;width:310px;positive:relative;top:0px">
+                                            <div id="box-header-table7" class="box-header-table">
+                                                <table>
+                                                    <tr class="box-header">
+                                                        <td style="width:17px">
+                                                            <img alt="" id='Attached3G' src="img/warning-icon.gif" style="padding-left:10px;padding-top:3px"/>
+                                                        </td>
+                                                        <td class="box-header-text  header-text" style="cursor:pointer;" id="Moblile_setup">
+                                                            Mobile broadband
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                            <table style="width:305px;background-color:#FFFFFF;margin-left:5px;border-collapse:collapse;border-right:3px solid #D0D0D0">
+                                                <tr align="left" valign="bottom">
+                                                    <td>
+                                                        <table id="page-table7" class="page-table" style="background-color:#FFFFFF;width:300px;height:150px">
+                                                            <tr style="height:6px;background-color:#FFFFFF">
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Modem Identity
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemIdentity">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Modem SW version
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemSWVersion">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Modem driver version
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemDriverVersion">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Modem Status
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemStatus">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    IMSI
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemIMSI">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    IMEI
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemIMEI">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Operator
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemOperator">
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="2" class="basic-table-seperate-border">
+                                                                    <div class="basic-table-seperate">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="basic-text">
+                                                                <td class="basic-text-menu">
+                                                                    Network mode
+                                                                </td>
+                                                                <td class="basic-text-content" id="ModemNetworkMode">
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <div class="page-table-bottom-2">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="adv-home-table-seperate">
+                                    </div>
+                                    <div class="adv-home-table-seperate-2">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height:2px">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <input type="hidden" value="1" name="buttonSelect" />
+        <input type="hidden" name="wantype" value="dhcp" />
+        <input type="hidden" name="enable_apmode" value="0" />
+        <input type="hidden" name="curlang" value="English" />
+    </form>
+</body>
+</html>

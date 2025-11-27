@@ -7,8 +7,8 @@ import logging
 from bs4 import BeautifulSoup, Tag
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
-from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
+from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number, parse_uptime_to_seconds
 
 from ..base_parser import ModemCapability, ModemParser
 
@@ -71,8 +71,6 @@ class TechnicolorTC4400Parser(ModemParser):
         Note: This method now delegates to the new authentication system.
         It is maintained for backward compatibility.
         """
-        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
         return success
@@ -94,8 +92,6 @@ class TechnicolorTC4400Parser(ModemParser):
         """
         Parse downstream channel data from Technicolor TC4400.
         """
-        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
-
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
@@ -154,8 +150,6 @@ class TechnicolorTC4400Parser(ModemParser):
         """
         Parse upstream channel data from Technicolor TC4400.
         """
-        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
-
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(

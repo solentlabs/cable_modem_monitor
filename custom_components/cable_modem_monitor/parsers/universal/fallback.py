@@ -14,7 +14,7 @@ import logging
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
 from ..base_parser import ModemCapability, ModemParser
@@ -117,8 +117,6 @@ class UniversalFallbackParser(ModemParser):
         )
 
         try:
-            from custom_components.cable_modem_monitor.core.authentication import AuthFactory
-
             auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
             success, html = auth_strategy.login(session, base_url, username, password, self.auth_config)
 

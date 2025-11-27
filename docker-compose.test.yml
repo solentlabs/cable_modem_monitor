@@ -3,8 +3,8 @@ services:
     container_name: ha-cable-modem-test
     image: ghcr.io/home-assistant/home-assistant:stable
     ports:
-      - "8123:8123"      # Home Assistant web interface
-      - "8300:8300"      # Home Assistant internal
+      - "8123:8123" # Home Assistant web interface
+      # Note: Port 8300 removed - conflicts with VS Code devcontainer
     volumes:
       # Mount a temporary config directory
       # Use HOST_WORKSPACE_FOLDER (set by dev container) or fall back to PWD (local dev)

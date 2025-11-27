@@ -107,9 +107,9 @@ class TestCM2000Metadata:
         assert "CM2000" in NetgearCM2000Parser.models
 
     def test_parser_verified_status(self):
-        """Test parser is marked as verified."""
-        # Verified via GitHub issue #38 by @m4dh4tt3r-88
-        assert NetgearCM2000Parser.verified is True
+        """Test parser verified status reflects authentication issues."""
+        # Currently False due to authentication issues - see Issue #38
+        assert NetgearCM2000Parser.verified is False
 
     def test_auth_config(self):
         """Test authentication configuration is set correctly."""
@@ -176,6 +176,92 @@ class TestCM2000Parsing:
         # assert len(downstream) > 0
         # assert all("channel_id" in ch for ch in downstream)
         # assert all("frequency" in ch for ch in downstream)
+
+
+class TestCM2000Login:
+    """Tests for CM2000 login functionality."""
+
+    def test_login_extracts_dynamic_form_id(self, requests_mock, cm2000_index_html):
+        """Test that login extracts the dynamic form ID from login page."""
+        import re
+
+        parser = NetgearCM2000Parser()
+        import requests
+
+        session = requests.Session()
+        session.verify = False
+        base_url = "https://192.168.100.1"
+
+        # Mock the login page with dynamic form ID
+        requests_mock.get(f"{base_url}/", text=cm2000_index_html)
+
+        # Mock the login POST using a regex pattern to match any /goform/Login URL
+        requests_mock.register_uri(
+            "POST",
+            re.compile(r".*/goform/Login.*"),
+            text="<html><body>Logged in</body></html>",
+        )
+
+        # Mock DocsisStatus.htm with channel data to verify success
+        docsis_html = """
+        <html><script>
+        function InitDsTableTagValue() { var tagValueList = '1|1|Locked|QAM256|1|500000000 Hz|5.0|40.0|0|0|'; }
+        function InitUsTableTagValue() { var tagValueList = '1|1|Locked|ATDMA|1|5120 Ksym/sec|20000000 Hz|38.0 dBmV|'; }
+        </script></html>
+        """
+        requests_mock.get(f"{base_url}/DocsisStatus.htm", text=docsis_html)
+
+        result = parser.login(session, base_url, "admin", "password123")
+
+        assert result is True
+        # Verify the login POST was made (check request history)
+        assert any("/goform/Login" in str(req.url) for req in requests_mock.request_history if req.method == "POST")
+
+    def test_login_fails_when_redirected_to_login(self, requests_mock, cm2000_index_html):
+        """Test that login fails if DocsisStatus.htm redirects to login page."""
+        import re
+
+        parser = NetgearCM2000Parser()
+        import requests
+
+        session = requests.Session()
+        session.verify = False
+        base_url = "https://192.168.100.1"
+
+        # Mock the login page
+        requests_mock.get(f"{base_url}/", text=cm2000_index_html)
+        requests_mock.register_uri(
+            "POST",
+            re.compile(r".*/goform/Login.*"),
+            text="<html><body>Logged in</body></html>",
+        )
+
+        # Mock DocsisStatus.htm returning login redirect (auth failed)
+        login_redirect_html = """
+        <html><script>
+        function redirect(){top.location.href="/Login.htm";}
+        </script><body onLoad="redirect()"></body></html>
+        """
+        requests_mock.get(f"{base_url}/DocsisStatus.htm", text=login_redirect_html)
+
+        result = parser.login(session, base_url, "admin", "wrongpassword")
+
+        assert result is False
+
+    def test_login_skipped_without_credentials(self):
+        """Test that login is skipped when no credentials provided."""
+        parser = NetgearCM2000Parser()
+        import requests
+
+        session = requests.Session()
+        base_url = "https://192.168.100.1"
+
+        # Should return True (no auth needed) when no credentials
+        result = parser.login(session, base_url, None, None)
+        assert result is True
+
+        result = parser.login(session, base_url, "", "")
+        assert result is True
 
 
 class TestCM2000Fixtures:

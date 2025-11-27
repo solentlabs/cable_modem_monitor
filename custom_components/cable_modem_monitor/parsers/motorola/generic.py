@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
-from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number, parse_uptime_to_seconds
 
 from ..base_parser import ModemCapability, ModemParser
 
@@ -247,8 +247,6 @@ class MotorolaGenericParser(ModemParser):
 
     def _parse_downstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """Parse downstream channel data from Motorola MB modem."""
-        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
-
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
@@ -285,8 +283,6 @@ class MotorolaGenericParser(ModemParser):
 
     def _parse_upstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """Parse upstream channel data from Motorola MB modem."""
-        from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
-
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
