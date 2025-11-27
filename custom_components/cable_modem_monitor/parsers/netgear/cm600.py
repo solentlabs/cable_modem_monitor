@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
 
 from ..base_parser import ModemCapability, ModemParser
@@ -91,8 +91,6 @@ class NetgearCM600Parser(ModemParser):
             True if login successful or not required
         """
         ***REMOVED*** CM600 uses HTTP Basic Auth - use AuthFactory to set it up
-        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
         return success

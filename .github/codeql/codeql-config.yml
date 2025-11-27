@@ -13,11 +13,10 @@ paths-ignore:
   - "scripts/**"
   - "docs/**"
   - "tests/parsers/**/fixtures/**"
+  - "cable-modem-monitor-ql/**" ***REMOVED*** Exclude development/testing query directory
 
-***REMOVED*** Custom queries specific to this integration
-queries:
-  - name: Cable Modem Security Queries
-    uses: ./.github/codeql/queries/cable-modem-security.qls
+***REMOVED*** Custom queries are loaded via workflow queries parameter
+***REMOVED*** See .github/workflows/codeql.yml line 43
 
 ***REMOVED*** Query filters to reduce false positives
 query-filters:

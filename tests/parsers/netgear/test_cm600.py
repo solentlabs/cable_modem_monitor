@@ -393,8 +393,8 @@ class TestAuthentication:
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
-        ***REMOVED*** Mock AuthFactory
-        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
+        ***REMOVED*** Mock AuthFactory where it's imported, not where it's defined
+        auth_path = "custom_components.cable_modem_monitor.parsers.netgear.cm600.AuthFactory"
         with patch(auth_path) as mock_factory:
             mock_strategy = Mock()
             mock_strategy.login.return_value = (True, None)

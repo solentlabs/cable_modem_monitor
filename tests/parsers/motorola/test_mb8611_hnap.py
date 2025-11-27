@@ -121,8 +121,8 @@ class TestAuthentication:
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
-        ***REMOVED*** Mock AuthFactory at its actual import location
-        auth_path = "custom_components.cable_modem_monitor" ".core.authentication.AuthFactory"
+        ***REMOVED*** Mock AuthFactory where it's imported, not where it's defined
+        auth_path = "custom_components.cable_modem_monitor.parsers.motorola.mb8611_hnap.AuthFactory"
         with patch(auth_path) as mock_factory:
             mock_strategy = Mock()
             mock_strategy.login.return_value = (True, "Login successful")
@@ -479,8 +479,12 @@ class TestJsonHnapSupport:
         base_url = "https://192.168.100.1"
 
         ***REMOVED*** Mock JSON login failure, XML/SOAP login success
-        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
-        with patch.object(HNAPJsonRequestBuilder, "login", return_value=(False, "")), patch(auth_path) as mock_factory:
+        ***REMOVED*** Patch where imports are used, not where they're defined
+        json_builder_path = "custom_components.cable_modem_monitor.parsers.motorola.mb8611_hnap.HNAPJsonRequestBuilder"
+        auth_path = "custom_components.cable_modem_monitor.parsers.motorola.mb8611_hnap.AuthFactory"
+        with patch(json_builder_path) as mock_json_builder, patch(auth_path) as mock_factory:
+            ***REMOVED*** mock_json_builder is the class, .return_value is the instance created by ()
+            mock_json_builder.return_value.login.return_value = (False, "")
             mock_strategy = Mock()
             mock_strategy.login.return_value = (True, "XML Login OK")
             mock_factory.get_strategy.return_value = mock_strategy

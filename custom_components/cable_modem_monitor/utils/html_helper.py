@@ -72,7 +72,21 @@ def sanitize_html(html: str) -> str:
     )
 
     ***REMOVED*** 6. IPv6 Addresses (full and compressed)
-    html = re.sub(r"\b([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}\b", "***IPv6***", html, flags=re.IGNORECASE)
+    ***REMOVED*** Only match if it contains at least one hex letter (a-f) to avoid matching
+    ***REMOVED*** time formats like "12:34:56" which only contain digits
+    def replace_ipv6(match: re.Match[str]) -> str:
+        text: str = match.group(0)
+        ***REMOVED*** Only replace if it contains at least one hex letter
+        if re.search(r"[a-f]", text, re.IGNORECASE):
+            return "***IPv6***"
+        return text
+
+    html = re.sub(
+        r"\b([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}\b",
+        replace_ipv6,
+        html,
+        flags=re.IGNORECASE,
+    )
 
     ***REMOVED*** 7. Passwords/Passphrases in HTML forms or text
     html = re.sub(
@@ -174,6 +188,11 @@ def check_for_pii(content: str, filename: str = "") -> list[dict]:
 
             ***REMOVED*** Skip if it's an allowlisted placeholder
             if matched_text in PII_ALLOWLIST:
+                continue
+
+            ***REMOVED*** For IPv6 pattern, skip if it doesn't contain hex letters (a-f)
+            ***REMOVED*** This avoids flagging time formats like "12:34:56"
+            if pattern_name == "ipv6" and not re.search(r"[a-f]", matched_text, re.IGNORECASE):
                 continue
 
             ***REMOVED*** Find line number

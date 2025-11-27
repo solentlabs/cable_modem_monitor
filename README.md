@@ -2,16 +2,21 @@
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Actions](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml)
+[![CodeQL](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/codeql.yml/badge.svg)](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/codeql.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/kwschulz/cable_modem_monitor)](https://github.com/kwschulz/cable_modem_monitor/releases)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
+[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/HAR_CAPTURE_GUIDE.md)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
+![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
+
+*Monitor your cable modem's signal quality, errors, and connection health in real-time*
+
 > **⭐ If you find this integration useful, please star this repo!**
 > It helps others discover the project and shows that the integration is actively used.
-
-![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
 
 ***REMOVED******REMOVED*** Quick Links
 - [**Installation Guide**](***REMOVED***installation)
@@ -75,10 +80,42 @@ Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CON
 
 ---
 
+***REMOVED******REMOVED*** At a Glance
+
+**What it monitors:**
+- 📊 **Signal Quality**: Power levels, SNR, frequency for every channel
+- ⚠️ **Error Tracking**: Corrected & uncorrected errors per channel
+- 🔌 **Connection Health**: Status, uptime, and last boot time
+- 💓 **Modem Health**: Real-time ping and HTTP latency monitoring
+- 📈 **Trends**: Full historical data for analysis and graphing
+
+**What it does:**
+- 🔄 **Remote Control**: Restart your modem from Home Assistant
+- 🤖 **Automation Ready**: Trigger actions on signal degradation or errors
+- 🔐 **Privacy First**: All local processing, automatic PII sanitization
+- 🛡️ **Security Focused**: CodeQL scanned with 6 custom security queries
+- 🔌 **Plug & Play**: Easy UI configuration, no YAML editing needed
+
+***REMOVED******REMOVED******REMOVED*** See It In Action
+
+Track your cable modem's health with comprehensive dashboards and real-time monitoring:
+
+![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
+*Complete dashboard showing connection status, signal quality, and error tracking*
+
+![Downstream Power Levels](images/downstream-power-levels.png)
+*Real-time power level monitoring across all downstream channels*
+
+![Signal-to-Noise Ratio](images/signal-to-noise-ratio.png)
+*SNR tracking helps identify signal quality issues before they cause problems*
+
+---
+
 ***REMOVED******REMOVED*** Features
 
+***REMOVED******REMOVED******REMOVED*** Monitoring & Data Collection
 - **Easy Setup**: Configure via Home Assistant UI - no YAML editing required
-- **Comprehensive Monitoring**: Tracks downstream and upstream channels
+- **Comprehensive Channel Monitoring**: Tracks all downstream and upstream channels
 - **Per-Channel Metrics**:
   - Power levels (dBmV)
   - Signal-to-Noise Ratio (SNR in dB)
@@ -87,12 +124,29 @@ Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CON
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
 - **Connection Status**: Monitor modem online/offline state
 - **System Information**: Software version, uptime, channel counts, and last boot time
-- **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
-- **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
+- **Health Monitoring**: Real-time modem health checks with:
+  - Ping latency monitoring
+  - HTTP response time tracking
+  - Automatic health status assessment
+  - Circuit breaker pattern for reliability
+
+***REMOVED******REMOVED******REMOVED*** Control & Automation
 - **Modem Control**: Restart your modem directly from Home Assistant
+- **Automation-Friendly**: Last boot time sensor with timestamp device class for reboot detection
+- **Consistent Entity Naming**: All entities use `cable_modem_` prefix for predictability
 - **Historical Data**: All metrics are stored for trend analysis
 - **Dashboard Ready**: Create graphs and alerts based on signal quality
+
+***REMOVED******REMOVED******REMOVED*** Privacy & Security
+- **Privacy First**: All data stays local, automatic PII sanitization
+- **Security Scanned**: CodeQL security analysis with 6 custom security queries
+- **Secure Storage**: Credentials stored in Home Assistant's encrypted storage
+- **Safe Diagnostics**: HAR capture tools with automatic credential removal
+
+***REMOVED******REMOVED******REMOVED*** Developer Friendly
 - **Extensible**: Plugin architecture makes adding new modem models easy
+- **Well Tested**: 440+ test cases with comprehensive coverage
+- **Type Safe**: Full type hints and mypy validation
 
 ***REMOVED******REMOVED*** Supported Modems
 
@@ -106,7 +160,7 @@ These models have been confirmed working with real hardware:
 | **Arris SB6141** | Community verified ([forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant)) | Full channel data, system info |
 | **Motorola MB7621** | Maintainer verified | Full channel data, system info, restart |
 | **Netgear C3700** | Maintainer verified | Full channel data, system info (combo modem/router) |
-| **Netgear CM600** | User verified ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3)) | 24 DS / 6 US channels, system info, restart |
+| **Netgear CM600** | User verified ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3)) | 24 DS / 8 US channels, system info, restart |
 
 ***REMOVED******REMOVED******REMOVED*** ⚠️ Unverified Parsers
 These parsers exist but need user confirmation:
@@ -123,6 +177,8 @@ These parsers have confirmed problems:
 
 | Model | Issue | Status |
 |-------|-------|--------|
+| **Netgear CM2000** | Authentication not working | See [Issue ***REMOVED***38](https://github.com/kwschulz/cable_modem_monitor/issues/38) - Basic auth insufficient, CM600 parser works as workaround |
+| **Motorola MB8600** | HNAP authentication broken | See [Issue ***REMOVED***40](https://github.com/kwschulz/cable_modem_monitor/issues/40) - Newer firmware uses HNAP_AUTH header, 3-strike login lockout |
 | **Motorola MB8611 (HNAP)** | HNAP authentication broken | See [Issues ***REMOVED***4, ***REMOVED***6](https://github.com/kwschulz/cable_modem_monitor/issues/4) - SSL cert and protocol issues |
 | **Motorola MB8611 (Static)** | Static HTML fallback untested | No user confirmation, limited features |
 
@@ -176,9 +232,41 @@ If your modem isn't fully supported or you'd like to help expand compatibility:
 
 The diagnostics file automatically captures all the HTML pages we need to build a parser for your modem!
 
-***REMOVED******REMOVED******REMOVED*** Manual Way: Capture HTML (If needed)
+***REMOVED******REMOVED******REMOVED*** Advanced Way: HAR Capture (Best for Authentication Issues)
 
-If the built-in diagnostics don't work for some reason:
+**⭐ Recommended for authentication/login problems** (HNAP, form-based auth, etc.)
+
+HAR (HTTP Archive) files capture the **complete HTTP conversation** with your modem, including:
+- Full authentication flow (login sequence, cookies, headers)
+- Session management and redirects
+- All requests and responses
+
+This is **much more useful** than HTML alone when debugging authentication issues.
+
+**Two Methods:**
+
+1. **Automated Script (Easiest)** - One command, fully automated:
+   ```bash
+   pip install playwright
+   playwright install chromium
+   python scripts/capture_modem.py
+   ```
+
+2. **Browser DevTools (Manual)** - Use your browser's Network tab to save HAR
+
+**📖 See the [HAR Capture Guide](./docs/HAR_CAPTURE_GUIDE.md)** for complete step-by-step instructions with screenshots.
+
+**Privacy:** HAR files are automatically sanitized to remove passwords and sensitive data before sharing.
+
+**When to use HAR:**
+- ✅ Your modem requires login and authentication isn't working
+- ✅ HNAP-based modems (Motorola MB8600/MB8611, Arris S33)
+- ✅ Form-based authentication issues
+- ✅ Complex login flows with redirects
+
+***REMOVED******REMOVED******REMOVED*** Manual Way: HTML Capture (Simple Cases)
+
+For modems with **no authentication** or when login works but parsing fails:
 
 1. **Capture HTML Samples**: Provide us with the HTML source from your modem's status pages
    - See the [HTML Capture Guide](./docs/HTML_CAPTURE_GUIDE.md) for detailed instructions
@@ -260,6 +348,12 @@ After installation, you can configure additional settings:
 
 All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification.
 
+**Entity Naming Pattern:**
+- System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_connection_status`)
+- Channel sensors: `sensor.cable_modem_{direction}_ch_{number}_{metric}`
+  - Example: `sensor.cable_modem_ds_ch_1_power` (downstream channel 1 power)
+  - Example: `sensor.cable_modem_us_ch_3_frequency` (upstream channel 3 frequency)
+
 ***REMOVED******REMOVED******REMOVED*** Connection Status
 - `sensor.cable_modem_connection_status`: Overall connection state (online/offline)
 
@@ -269,6 +363,11 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
 - `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
 - `sensor.cable_modem_downstream_channel_count`: Number of active downstream channels
 - `sensor.cable_modem_upstream_channel_count`: Number of active upstream channels
+
+***REMOVED******REMOVED******REMOVED*** Health Monitoring
+- `sensor.cable_modem_health_status`: Overall modem health (healthy/degraded/offline)
+- `sensor.cable_modem_ping_latency`: Ping response time in milliseconds
+- `sensor.cable_modem_http_latency`: HTTP response time in milliseconds
 
 ***REMOVED******REMOVED******REMOVED*** Summary Sensors
 - `sensor.cable_modem_total_corrected_errors`: Total corrected errors across all downstream channels
@@ -319,35 +418,10 @@ Replace `X` with the channel number (1-8 depending on your modem):
 
 ***REMOVED******REMOVED*** Example Dashboard
 
-Here's an example of a simple, clean dashboard showing all key modem health metrics:
+Create a comprehensive dashboard to monitor your modem health. This example shows all 24 downstream channels (typical for DOCSIS 3.0 modems), upstream channels, and error tracking:
 
-![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
-
-***REMOVED******REMOVED******REMOVED*** Example Graphs
-
-Track your signal quality over time with history graphs:
-
-![Downstream Power Levels](images/downstream-power-levels.png)
-
-*Downstream power levels across all channels - ideal range is -7 to +7 dBmV*
-
-![Signal-to-Noise Ratio](images/signal-to-noise-ratio.png)
-
-*Signal-to-Noise Ratio for all channels - higher is better, aim for above 40 dB*
-
-![Upstream Power Levels](images/upstream_power_levels.png)
-
-*Upstream power levels - ideal range is 35-50 dBmV*
-
-![Upstream Frequency](images/upstream_frequency.png)
-
-*Upstream frequency - should be stable*
-
-![Corrected Errors](images/corrected_errors.png)
-
-*Corrected and uncorrected errors - watch for sudden increases in uncorrected errors*
-
-Create a comprehensive dashboard to monitor your modem health. This example shows all 24 downstream channels (typical for Motorola MB7621), 5 upstream channels, and error tracking:
+<details>
+<summary><b>Click to expand full dashboard YAML</b></summary>
 
 ```yaml
 type: vertical-stack
@@ -519,6 +593,8 @@ cards:
       - sensor.cable_modem_total_uncorrected_errors
 ```
 
+</details>
+
 **Note**: This dashboard example includes all 24 downstream channels. If your modem has fewer channels (e.g., 16 or 8), simply remove the extra channel entries. If you have more channels, add them by following the same pattern with entity_ids like `sensor.cable_modem_ds_ch_X_power` where X is the channel number.
 
 ***REMOVED******REMOVED******REMOVED*** Last Boot Time Display Options
@@ -565,6 +641,9 @@ content: >
 *Shows: "Last Reboot: 2025-09-25 00:38"*
 
 ***REMOVED******REMOVED*** Automation Examples
+
+<details>
+<summary><b>Click to expand automation examples</b></summary>
 
 ***REMOVED******REMOVED******REMOVED*** Alert on High Uncorrected Errors
 
@@ -637,9 +716,11 @@ automation:
           entity_id: button.cable_modem_restart_modem
 ```
 
+</details>
+
 ***REMOVED******REMOVED*** Troubleshooting
 
-> **📖 For detailed troubleshooting help, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+> **📖 For detailed troubleshooting help, see [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)**
 >
 > Covers: entity ID cleanup, upstream sensors not appearing, duplicate entities, migration issues, and more.
 
@@ -686,10 +767,32 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 
 ***REMOVED******REMOVED*** Privacy & Security
 
-- All data stays local - no cloud services involved
-- Only reads data from your modem (no configuration changes)
-- Supports authentication for modems that require login
-- Credentials are stored securely in Home Assistant's encrypted storage
+***REMOVED******REMOVED******REMOVED*** Privacy Protection
+- **100% Local**: All data stays on your Home Assistant instance - no cloud services
+- **Read-Only**: Only reads data from your modem (never modifies configuration)
+- **PII Sanitization**: Automatic removal of sensitive data from diagnostics
+  - IP addresses, MAC addresses, serial numbers automatically redacted
+  - Safe to share diagnostic files for support
+- **Secure Credentials**: Stored in Home Assistant's encrypted storage
+
+***REMOVED******REMOVED******REMOVED*** Security Features
+- **CodeQL Scanning**: Automated security analysis on every commit
+  - 100+ standard security queries (OWASP Top 10, CWE coverage)
+  - 6 custom security queries specific to cable modem integration:
+    - HTTP requests without timeouts
+    - Command injection prevention
+    - XML External Entity (XXE) protection
+    - Hardcoded credential detection
+    - SSL/TLS misconfiguration checks
+    - Path traversal prevention
+- **Security Documentation**: See [CodeQL Overview](./docs/CODEQL_OVERVIEW.md) for details
+- **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
+
+***REMOVED******REMOVED******REMOVED*** Authentication Support
+- HTTP Basic Authentication
+- Form-based authentication
+- HNAP/SOAP authentication
+- No authentication (for open modems)
 
 ***REMOVED******REMOVED*** License
 
@@ -702,6 +805,15 @@ MIT License - see LICENSE file for details
 
 ***REMOVED******REMOVED*** Resources
 
+***REMOVED******REMOVED******REMOVED*** Project Documentation
+- [Changelog](./CHANGELOG.md) - Complete version history and release notes
+- [Verification Status](./VERIFICATION_STATUS.md) - Verified modem compatibility list
+- [Contributing Guide](./CONTRIBUTING.md) - How to contribute code or add modem support
+- [CodeQL Security Overview](./docs/CODEQL_OVERVIEW.md) - Security scanning details
+- [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [HAR Capture Guide](./docs/HAR_CAPTURE_GUIDE.md) - Help add support for your modem
+
+***REMOVED******REMOVED******REMOVED*** External Resources
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
 - [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
 

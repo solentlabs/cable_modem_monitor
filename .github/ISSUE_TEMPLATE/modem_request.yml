@@ -66,7 +66,8 @@ body:
       label: How are you providing data?
       description: Choose the method you're using to share modem data
       options:
-        - "Built-in Diagnostics (Recommended) - Download Diagnostics from HA"
+        - "HAR Capture (Best for auth issues) - Used capture script"
+        - "Built-in Diagnostics - Download Diagnostics from HA"
         - "Manual HTML Capture - Captured HTML files manually"
         - "Haven't captured yet - Need instructions"
     validations:
@@ -79,7 +80,19 @@ body:
 
         ***REMOVED******REMOVED*** 📥 Providing Modem Data
 
-        ***REMOVED******REMOVED******REMOVED*** ✅ Method 1: Built-in Diagnostics (EASIEST - Recommended)
+        ***REMOVED******REMOVED******REMOVED*** 🎯 Method 1: HAR Capture (BEST for authentication issues)
+
+        **Use this if your modem requires login** - captures the full auth flow:
+
+        ```bash
+        python scripts/capture_modem.py
+        ```
+
+        Or in VS Code: **Ctrl+Shift+P** → **Tasks: Run Task** → **📹 Capture Modem Traffic**
+
+        See [HAR Capture Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/HAR_CAPTURE_GUIDE.md) for details.
+
+        ***REMOVED******REMOVED******REMOVED*** ✅ Method 2: Built-in Diagnostics (If integration is installed)
 
         If you already have the integration installed (even if it doesn't fully work):
 
@@ -88,20 +101,14 @@ body:
         3. Click **Download Diagnostics** (three dots menu)
         4. Attach the downloaded `.json` file to this issue
 
-        The diagnostics file automatically captures all HTML pages we need!
+        ***REMOVED******REMOVED******REMOVED*** 📋 Method 3: Manual HTML Capture (Fallback)
 
-        ***REMOVED******REMOVED******REMOVED*** 📋 Method 2: Manual HTML Capture (If diagnostics don't work)
+        If other methods don't work:
 
-        If the integration can't be installed or diagnostics don't work:
-
-        1. Open your modem's web interface in a browser (e.g., http://192.168.100.1)
-        2. Navigate to the signal/status pages (usually something like "Connection Status", "Signal Status", or "DOCSIS Status")
-        3. For **each page that shows signal data**:
-           - Right-click → View Page Source (or press Ctrl+U)
-           - Save the HTML (File → Save As → choose "Web Page, HTML Only")
-        4. Attach all saved HTML files to this issue
-
-        See [HTML Capture Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/HTML_CAPTURE_GUIDE.md) for detailed instructions.
+        1. Open your modem's web interface in a browser
+        2. Navigate to the signal/status pages
+        3. Right-click → View Page Source (Ctrl+U)
+        4. Save and attach all HTML files
 
   - type: textarea
     id: files-attached

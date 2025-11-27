@@ -10,6 +10,38 @@ Thank you for your interest in contributing! This document provides guidelines f
 - 🧪 Add support for additional modem models
 - 🔧 Submit bug fixes or enhancements
 
+---
+
+***REMOVED******REMOVED*** 📡 Help Us Add Your Modem
+
+**Don't see your modem supported?** You can help us add it by capturing data from your modem's web interface.
+
+***REMOVED******REMOVED******REMOVED*** Quick Capture (Recommended)
+
+The easiest way to capture modem data, especially for modems with login:
+
+```bash
+***REMOVED*** One-time setup
+pip install playwright && playwright install chromium
+
+***REMOVED*** Capture (opens browser, you log in, close when done)
+python scripts/capture_modem.py
+```
+
+Or in VS Code: **Ctrl+Shift+P** → **Tasks: Run Task** → **📹 Capture Modem Traffic**
+
+The script automatically:
+- Records all network traffic while you navigate
+- Removes fonts, images, and duplicates (10MB → ~20KB)
+- Sanitizes passwords and personal info
+- Compresses the output
+
+**Then:** [Open a modem request issue](https://github.com/kwschulz/cable_modem_monitor/issues/new?template=modem_request.yml) and attach the `.sanitized.har.gz` file.
+
+See [HAR Capture Guide](./docs/HAR_CAPTURE_GUIDE.md) for detailed instructions and alternative methods.
+
+---
+
 ***REMOVED******REMOVED*** Development Workflow
 
 You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).

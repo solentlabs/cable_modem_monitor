@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol

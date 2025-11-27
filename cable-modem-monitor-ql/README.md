@@ -1,10 +1,19 @@
-***REMOVED*** CodeQL Custom Queries
+***REMOVED*** CodeQL Query Development and Testing
 
-This directory contains custom CodeQL queries for security and quality analysis of the Cable Modem Monitor codebase.
+⚠️ **This directory is for developing and testing NEW CodeQL queries.**
 
-***REMOVED******REMOVED*** Queries
+**For production queries that run in CI/CD, see:** `.github/codeql/queries/`
+
+This directory provides a sandbox environment for:
+- Experimenting with new CodeQL query ideas
+- Testing queries with sample code before promoting to production
+- Learning CodeQL query syntax with working examples
+
+***REMOVED******REMOVED*** Status
 
 ***REMOVED******REMOVED******REMOVED*** `no_timeout.ql`
+✅ **PROMOTED TO PRODUCTION** - Moved to `.github/codeql/queries/requests-no-timeout.ql`
+
 Detects `requests.get()` calls without timeout parameters, which can lead to indefinite hangs and potential security issues.
 
 **Severity**: Warning

@@ -24,11 +24,13 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
+from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
 
 from ..base_parser import ModemCapability, ModemParser
 
@@ -52,12 +54,15 @@ class NetgearC3700Parser(ModemParser):
         strategy=AuthStrategyType.BASIC_HTTP,
     )
 
-    ***REMOVED*** Capabilities - C3700 provides channel data and version info
+    ***REMOVED*** Capabilities - C3700 provides channel data, version info, uptime, and restart
     capabilities = {
         ModemCapability.DOWNSTREAM_CHANNELS,
         ModemCapability.UPSTREAM_CHANNELS,
         ModemCapability.HARDWARE_VERSION,
         ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.LAST_BOOT_TIME,
+        ModemCapability.RESTART,
     }
 
     ***REMOVED*** URL patterns to try for modem data
@@ -82,11 +87,87 @@ class NetgearC3700Parser(ModemParser):
             True if login successful or not required
         """
         ***REMOVED*** C3700 uses HTTP Basic Auth - use AuthFactory to set it up
-        from custom_components.cable_modem_monitor.core.authentication import AuthFactory
-
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
         success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
         return success
+
+    def restart(self, session, base_url) -> bool:
+        """Restart the modem.
+
+        The C3700 uses a form POST to /goform/RouterStatus with buttonSelect=2.
+        The form action includes a session ID parameter that must be extracted
+        from the RouterStatus.htm page first.
+
+        Args:
+            session: Requests session (already authenticated)
+            base_url: Base URL of the modem
+
+        Returns:
+            True if restart command sent successfully, False otherwise
+        """
+        from http.client import RemoteDisconnected
+
+        from requests.exceptions import ChunkedEncodingError, ConnectionError
+
+        try:
+            ***REMOVED*** Step 1: Fetch RouterStatus.htm to get the form action with session ID
+            status_url = f"{base_url}/RouterStatus.htm"
+            _LOGGER.debug("C3700: Fetching RouterStatus.htm to get form action")
+            status_response = session.get(status_url, timeout=10)
+
+            if status_response.status_code != 200:
+                _LOGGER.error("C3700: Failed to fetch RouterStatus.htm: %d", status_response.status_code)
+                return False
+
+            ***REMOVED*** Step 2: Parse the form action to extract the id parameter
+            ***REMOVED*** Format: <form action='/goform/RouterStatus?id=239640653' method="post">
+            form_match = re.search(
+                r"<form[^>]*action=['\"]([^'\"]*RouterStatus[^'\"]*)['\"]",
+                status_response.text,
+                re.IGNORECASE,
+            )
+
+            if form_match:
+                form_action = form_match.group(1)
+                ***REMOVED*** Build the full restart URL
+                if form_action.startswith("/"):
+                    restart_url = f"{base_url}{form_action}"
+                else:
+                    restart_url = f"{base_url}/{form_action}"
+                _LOGGER.debug("C3700: Found form action: %s", form_action)
+            else:
+                ***REMOVED*** Fallback to default URL without session ID
+                restart_url = f"{base_url}/goform/RouterStatus"
+                _LOGGER.warning("C3700: Could not find form action, using default URL")
+
+            ***REMOVED*** Step 3: POST the reboot command
+            data = {"buttonSelect": "2"}
+
+            _LOGGER.info("C3700: Sending reboot command to %s", restart_url)
+            response = session.post(restart_url, data=data, timeout=10)
+
+            ***REMOVED*** Log the response for debugging
+            _LOGGER.info(
+                "C3700: Reboot response - status=%d, length=%d bytes",
+                response.status_code,
+                len(response.text) if response.text else 0,
+            )
+            _LOGGER.debug("C3700: Reboot response body: %s", response.text[:500] if response.text else "(empty)")
+
+            if response.status_code == 200:
+                _LOGGER.info("C3700: Reboot command accepted by modem")
+                return True
+            else:
+                _LOGGER.warning("C3700: Reboot command failed with status %d", response.status_code)
+                return False
+
+        except (RemoteDisconnected, ConnectionError, ChunkedEncodingError) as e:
+            ***REMOVED*** Connection dropped = modem is rebooting (success!)
+            _LOGGER.info("C3700: Modem rebooting (connection dropped as expected): %s", type(e).__name__)
+            return True
+        except Exception as e:
+            _LOGGER.error("C3700: Error sending reboot command: %s", e)
+            return False
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem.
@@ -99,10 +180,12 @@ class NetgearC3700Parser(ModemParser):
         Returns:
             Dictionary with downstream, upstream, and system_info
         """
-        ***REMOVED*** C3700 requires fetching DocsisStatus.htm for channel data
+        ***REMOVED*** C3700 requires fetching specific pages for different data
         docsis_soup = soup  ***REMOVED*** Default to provided soup
+        router_soup = soup  ***REMOVED*** Default to provided soup
 
         if session and base_url:
+            ***REMOVED*** Fetch DocsisStatus.htm for channel data
             try:
                 _LOGGER.debug("C3700: Fetching DocsisStatus.htm for channel data")
                 docsis_url = f"{base_url}/DocsisStatus.htm"
@@ -119,12 +202,29 @@ class NetgearC3700Parser(ModemParser):
             except Exception as e:
                 _LOGGER.warning("C3700: Error fetching DocsisStatus.htm: %s - using provided page", e)
 
+            ***REMOVED*** Fetch RouterStatus.htm for system info (hardware/firmware versions)
+            try:
+                _LOGGER.debug("C3700: Fetching RouterStatus.htm for system info")
+                router_url = f"{base_url}/RouterStatus.htm"
+                router_response = session.get(router_url, timeout=10)
+
+                if router_response.status_code == 200:
+                    router_soup = BeautifulSoup(router_response.text, "html.parser")
+                    _LOGGER.debug("C3700: Successfully fetched RouterStatus.htm (%d bytes)", len(router_response.text))
+                else:
+                    _LOGGER.warning(
+                        "C3700: Failed to fetch RouterStatus.htm, status %d - using provided page",
+                        router_response.status_code,
+                    )
+            except Exception as e:
+                _LOGGER.warning("C3700: Error fetching RouterStatus.htm: %s - using provided page", e)
+
         ***REMOVED*** Parse channel data from DocsisStatus.htm
         downstream_channels = self.parse_downstream(docsis_soup)
         upstream_channels = self.parse_upstream(docsis_soup)
 
-        ***REMOVED*** Parse system info from the main page (could be RouterStatus.htm or index.htm)
-        system_info = self.parse_system_info(soup)
+        ***REMOVED*** Parse system info from RouterStatus.htm
+        system_info = self.parse_system_info(router_soup)
 
         return {
             "downstream": downstream_channels,
@@ -411,13 +511,14 @@ class NetgearC3700Parser(ModemParser):
 
         return channels
 
-    def parse_system_info(self, soup: BeautifulSoup) -> dict:
+    def parse_system_info(self, soup: BeautifulSoup) -> dict:  ***REMOVED*** noqa: C901
         """Parse system information from RouterStatus.htm or DashBoard.htm.
 
         Extracts:
         - Hardware version
         - Firmware version
-        - Serial number
+        - System uptime
+        - Last boot time (calculated from uptime)
 
         Returns:
             Dictionary with available system info
@@ -426,7 +527,7 @@ class NetgearC3700Parser(ModemParser):
 
         try:
             ***REMOVED*** Look for JavaScript variable tagValueList which contains system info
-            ***REMOVED*** Format: tagValueList = 'hw_ver|fw_ver|serial|...'
+            ***REMOVED*** Format: tagValueList = 'hw_ver|fw_ver|serial|...|uptime|current_time|...'
             script_tags = soup.find_all("script", text=re.compile("tagValueList"))
 
             for script in script_tags:
@@ -445,12 +546,54 @@ class NetgearC3700Parser(ModemParser):
                             info["hardware_version"] = values[0]
                         if values[1] and values[1] != "":
                             info["software_version"] = values[1]
-                        ***REMOVED*** Skip serial number (already redacted in fixtures)
+                        ***REMOVED*** Skip serial number (PII)
 
-                        _LOGGER.debug(f"Parsed C3700 system info: {info}")
-                        break
+                    ***REMOVED*** Extract uptime from values[33] if available
+                    ***REMOVED*** Format: "26 days 12:34:56" or similar
+                    if len(values) > 33 and values[33]:
+                        uptime = values[33].strip()
+                        if uptime and uptime != "---" and "***" not in uptime:
+                            info["system_uptime"] = uptime
+                            _LOGGER.debug("C3700: Parsed system uptime: %s", uptime)
+
+                            ***REMOVED*** Calculate and add last boot time
+                            boot_time = self._calculate_boot_time(uptime)
+                            if boot_time:
+                                info["last_boot_time"] = boot_time
+                                _LOGGER.debug("C3700: Calculated last boot time: %s", boot_time)
+                        elif uptime and "***" not in uptime:
+                            ***REMOVED*** Still store even if it's just days without time
+                            info["system_uptime"] = uptime
+                            _LOGGER.debug("C3700: Parsed system uptime (partial): %s", uptime)
+
+                    _LOGGER.debug(f"Parsed C3700 system info: {info}")
+                    break
 
         except Exception as e:
             _LOGGER.error(f"Error parsing C3700 system info: {e}")
 
         return info
+
+    def _calculate_boot_time(self, uptime_str: str) -> str | None:
+        """Calculate boot time from uptime string.
+
+        Args:
+            uptime_str: Uptime string like "26 days 12:34:56" or "0 days 1h 23m 45s"
+
+        Returns:
+            ISO format datetime string of boot time or None if parsing fails
+        """
+        try:
+            ***REMOVED*** Parse uptime string to seconds
+            uptime_seconds = parse_uptime_to_seconds(uptime_str)
+            if uptime_seconds is None:
+                return None
+
+            ***REMOVED*** Calculate boot time: current time - uptime
+            uptime_delta = timedelta(seconds=uptime_seconds)
+            boot_time = datetime.now() - uptime_delta
+
+            return boot_time.isoformat()
+        except Exception as e:
+            _LOGGER.debug("C3700: Could not calculate boot time from '%s': %s", uptime_str, e)
+            return None

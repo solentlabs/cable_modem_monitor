@@ -7,7 +7,7 @@ on:
     branches: ["main"]
   schedule:
     ***REMOVED*** Run CodeQL every Monday at 9:00 AM UTC
-    - cron: '0 9 * * 1'
+    - cron: "0 9 * * 1"
 
 jobs:
   analyze:
@@ -26,33 +26,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['python']
+        language: ["python"]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
-      with:
-        languages: ${{ matrix.language }}
-        ***REMOVED*** Specify CodeQL query suites
-        ***REMOVED*** security-extended: Includes all security queries (high + medium precision)
-        ***REMOVED*** security-and-quality: Adds code quality checks
-        queries: security-extended,security-and-quality
-        ***REMOVED*** Use custom configuration to exclude intentional design decisions
-        config-file: .github/codeql/codeql-config.yml
-        ***REMOVED*** Enable debug mode for troubleshooting (can be disabled in production)
-        debug: false
-        ***REMOVED*** Setup Python dependencies for better analysis
-        setup-python-dependencies: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          ***REMOVED*** Specify CodeQL query suites
+          ***REMOVED*** security-extended: Includes all security queries (high + medium precision)
+          ***REMOVED*** security-and-quality: Adds code quality checks
+          ***REMOVED*** Note: Custom queries removed due to CodeQL API compatibility issues
+          queries: security-extended,security-and-quality
+          ***REMOVED*** Use custom configuration to exclude intentional design decisions
+          config-file: .github/codeql/codeql-config.yml
+          ***REMOVED*** Enable debug mode for troubleshooting (can be disabled in production)
+          debug: false
 
-    ***REMOVED*** Autobuild attempts to build any compiled languages (C/C++, C***REMOVED***, Go, Java, or Swift).
-    ***REMOVED*** For Python, this step is not strictly necessary but included for completeness
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v4
+      ***REMOVED*** Autobuild attempts to build any compiled languages (C/C++, C***REMOVED***, Go, Java, or Swift).
+      ***REMOVED*** For Python, this step is not strictly necessary but included for completeness
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{matrix.language}}"

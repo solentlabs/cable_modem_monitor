@@ -68,6 +68,19 @@ def c3700_docsis_status_html():
         return f.read()
 
 
+@pytest.fixture
+def c3700_router_status_html():
+    """Load C3700 RouterStatus.htm fixture.
+
+    Contains system info (hardware/firmware versions).
+    """
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "c3700", "RouterStatus.htm")
+    if not os.path.exists(fixture_path):
+        pytest.skip("RouterStatus.htm fixture not yet available")
+    with open(fixture_path) as f:
+        return f.read()
+
+
 def test_parser_detection(c3700_index_html):
     """Test that the Netgear C3700 parser detects the modem."""
     soup = BeautifulSoup(c3700_index_html, "html.parser")
@@ -172,34 +185,54 @@ def test_parsing_upstream(c3700_docsis_status_html):
     assert "channel_type" in first_us
 
 
-def test_multi_page_parsing_with_session(c3700_index_html, c3700_docsis_status_html):
-    """Test that parser fetches DocsisStatus.htm when session and base_url are provided.
+def test_multi_page_parsing_with_session(c3700_index_html, c3700_docsis_status_html, c3700_router_status_html):
+    """Test that parser fetches DocsisStatus.htm and RouterStatus.htm when session and base_url are provided.
 
     This tests the multi-page parsing fix where the parser should fetch
-    DocsisStatus.htm to get channel data, even when initially given a different page.
+    DocsisStatus.htm to get channel data and RouterStatus.htm for system info,
+    even when initially given a different page.
     """
-    from unittest.mock import Mock
+    from unittest.mock import Mock, call
 
     parser = NetgearC3700Parser()
 
-    ***REMOVED*** Create mock session that returns DocsisStatus.htm when requested
+    ***REMOVED*** Create mock session that returns appropriate pages when requested
     mock_session = Mock()
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.text = c3700_docsis_status_html
-    mock_session.get.return_value = mock_response
+
+    def mock_get(url, timeout=10):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        if "DocsisStatus.htm" in url:
+            mock_response.text = c3700_docsis_status_html
+        elif "RouterStatus.htm" in url:
+            mock_response.text = c3700_router_status_html
+        else:
+            mock_response.text = c3700_index_html
+        return mock_response
+
+    mock_session.get.side_effect = mock_get
 
     ***REMOVED*** Parse with index.htm soup but provide session and base_url
-    ***REMOVED*** Parser should fetch DocsisStatus.htm and extract channel data
+    ***REMOVED*** Parser should fetch DocsisStatus.htm and RouterStatus.htm
     index_soup = BeautifulSoup(c3700_index_html, "html.parser")
     data = parser.parse(index_soup, session=mock_session, base_url="http://192.168.100.1")
 
-    ***REMOVED*** Verify DocsisStatus.htm was requested
-    mock_session.get.assert_called_once_with("http://192.168.100.1/DocsisStatus.htm", timeout=10)
+    ***REMOVED*** Verify both pages were requested
+    expected_calls = [
+        call("http://192.168.100.1/DocsisStatus.htm", timeout=10),
+        call("http://192.168.100.1/RouterStatus.htm", timeout=10),
+    ]
+    mock_session.get.assert_has_calls(expected_calls, any_order=False)
+    assert mock_session.get.call_count == 2
 
-    ***REMOVED*** Verify channel data was parsed from DocsisStatus.htm (not from index.htm)
+    ***REMOVED*** Verify channel data was parsed from DocsisStatus.htm
     assert len(data["downstream"]) > 0
     assert len(data["upstream"]) > 0
+
+    ***REMOVED*** Verify system info was parsed from RouterStatus.htm
+    assert "system_info" in data
+    assert data["system_info"].get("hardware_version") is not None
+    assert data["system_info"].get("software_version") is not None
 
 
 def test_multi_page_parsing_fallback_on_error(c3700_index_html):
@@ -286,8 +319,8 @@ class TestAuthentication:
         mock_session = Mock()
         base_url = "http://192.168.100.1"
 
-        ***REMOVED*** Mock AuthFactory
-        auth_path = "custom_components.cable_modem_monitor.core.authentication.AuthFactory"
+        ***REMOVED*** Mock AuthFactory - patch where it's imported, not where it's defined
+        auth_path = "custom_components.cable_modem_monitor.parsers.netgear.c3700.AuthFactory"
         with patch(auth_path) as mock_factory:
             mock_strategy = Mock()
             mock_strategy.login.return_value = (True, None)
@@ -366,3 +399,210 @@ class TestMetadata:
         """Test parser priority."""
         parser = NetgearC3700Parser()
         assert parser.priority == 50  ***REMOVED*** Standard priority
+
+    def test_capabilities_include_uptime_and_restart(self):
+        """Test that parser capabilities include uptime and restart."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        parser = NetgearC3700Parser()
+        assert ModemCapability.SYSTEM_UPTIME in parser.capabilities
+        assert ModemCapability.LAST_BOOT_TIME in parser.capabilities
+        assert ModemCapability.RESTART in parser.capabilities
+
+
+class TestRestart:
+    """Test modem restart functionality."""
+
+    def test_restart_extracts_session_id_and_sends_request(self):
+        """Test that restart fetches RouterStatus.htm, extracts form action, and POSTs."""
+        from unittest.mock import Mock
+
+        parser = NetgearC3700Parser()
+        mock_session = Mock()
+
+        ***REMOVED*** Mock GET response with form action containing session ID
+        mock_get_response = Mock()
+        mock_get_response.status_code = 200
+        mock_get_response.text = """
+        <html><body>
+        <form action='/goform/RouterStatus?id=123456789' method="post">
+        </form>
+        </body></html>
+        """
+
+        ***REMOVED*** Mock POST response
+        mock_post_response = Mock()
+        mock_post_response.status_code = 200
+        mock_post_response.text = ""
+
+        mock_session.get.return_value = mock_get_response
+        mock_session.post.return_value = mock_post_response
+
+        result = parser.restart(mock_session, "http://192.168.100.1")
+
+        assert result is True
+        ***REMOVED*** Should fetch RouterStatus.htm first
+        mock_session.get.assert_called_once_with(
+            "http://192.168.100.1/RouterStatus.htm",
+            timeout=10,
+        )
+        ***REMOVED*** Should POST to URL with session ID
+        mock_session.post.assert_called_once_with(
+            "http://192.168.100.1/goform/RouterStatus?id=123456789",
+            data={"buttonSelect": "2"},
+            timeout=10,
+        )
+
+    def test_restart_falls_back_without_form_action(self):
+        """Test that restart falls back to default URL if form action not found."""
+        from unittest.mock import Mock
+
+        parser = NetgearC3700Parser()
+        mock_session = Mock()
+
+        ***REMOVED*** Mock GET response without form action
+        mock_get_response = Mock()
+        mock_get_response.status_code = 200
+        mock_get_response.text = "<html><body>No form here</body></html>"
+
+        ***REMOVED*** Mock POST response
+        mock_post_response = Mock()
+        mock_post_response.status_code = 200
+        mock_post_response.text = ""
+
+        mock_session.get.return_value = mock_get_response
+        mock_session.post.return_value = mock_post_response
+
+        result = parser.restart(mock_session, "http://192.168.100.1")
+
+        assert result is True
+        ***REMOVED*** Should fall back to default URL
+        mock_session.post.assert_called_once_with(
+            "http://192.168.100.1/goform/RouterStatus",
+            data={"buttonSelect": "2"},
+            timeout=10,
+        )
+
+    def test_restart_returns_true_on_connection_drop(self):
+        """Test that restart returns True when connection drops (modem rebooting)."""
+        from http.client import RemoteDisconnected
+        from unittest.mock import Mock
+
+        parser = NetgearC3700Parser()
+        mock_session = Mock()
+
+        ***REMOVED*** Mock successful GET
+        mock_get_response = Mock()
+        mock_get_response.status_code = 200
+        mock_get_response.text = "<form action='/goform/RouterStatus?id=123'>"
+        mock_session.get.return_value = mock_get_response
+
+        ***REMOVED*** Mock POST that drops connection (modem rebooting)
+        mock_session.post.side_effect = RemoteDisconnected("Connection dropped")
+
+        result = parser.restart(mock_session, "http://192.168.100.1")
+
+        assert result is True
+
+    def test_restart_returns_false_on_error_status(self):
+        """Test that restart returns False on non-200 POST status."""
+        from unittest.mock import Mock
+
+        parser = NetgearC3700Parser()
+        mock_session = Mock()
+
+        ***REMOVED*** Mock successful GET
+        mock_get_response = Mock()
+        mock_get_response.status_code = 200
+        mock_get_response.text = "<form action='/goform/RouterStatus?id=123'>"
+        mock_session.get.return_value = mock_get_response
+
+        ***REMOVED*** Mock failed POST
+        mock_post_response = Mock()
+        mock_post_response.status_code = 403
+        mock_post_response.text = "Forbidden"
+        mock_session.post.return_value = mock_post_response
+
+        result = parser.restart(mock_session, "http://192.168.100.1")
+
+        assert result is False
+
+    def test_restart_returns_false_if_status_page_fails(self):
+        """Test that restart returns False if RouterStatus.htm fetch fails."""
+        from unittest.mock import Mock
+
+        parser = NetgearC3700Parser()
+        mock_session = Mock()
+
+        ***REMOVED*** Mock failed GET
+        mock_get_response = Mock()
+        mock_get_response.status_code = 401
+        mock_session.get.return_value = mock_get_response
+
+        result = parser.restart(mock_session, "http://192.168.100.1")
+
+        assert result is False
+        ***REMOVED*** Should not attempt POST if GET failed
+        mock_session.post.assert_not_called()
+
+
+class TestUptimeParsing:
+    """Test uptime parsing functionality."""
+
+    def test_parse_uptime_from_system_info(self, c3700_router_status_html):
+        """Test parsing uptime from RouterStatus.htm."""
+        parser = NetgearC3700Parser()
+        soup = BeautifulSoup(c3700_router_status_html, "html.parser")
+        system_info = parser.parse_system_info(soup)
+
+        ***REMOVED*** The fixture has "26 days ***IPv6***" which contains sanitized data
+        ***REMOVED*** Since *** is in the uptime, it should NOT be parsed
+        ***REMOVED*** This test documents the expected behavior with sanitized data
+        assert "hardware_version" in system_info
+        assert "software_version" in system_info
+
+    def test_parse_uptime_with_real_data(self):
+        """Test parsing uptime when data is not sanitized."""
+        parser = NetgearC3700Parser()
+        ***REMOVED*** Create HTML with unsanitized uptime data (tagValues[33] = uptime)
+        tag_values = (
+            "C279T00-01|V2.02.18|serial|1|mac1|ip1|gw1|dns1|Allowed|mac2|ip2|"
+            "dhcp|ip3|dns2|mac3|ip4|On|ssid1|region1|ch1|speed1|on1|on2|ssid2|"
+            "region2|ch2|speed2|on3|on4|guest1|off1|guest2|off2|"
+            "5 days 12:34:56|Wed Nov 26 2025|conf1|conf2"
+        )
+        html = f"""
+        <script>
+        var tagValueList = '{tag_values}';
+        </script>
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        system_info = parser.parse_system_info(soup)
+
+        assert system_info.get("system_uptime") == "5 days 12:34:56"
+        assert "last_boot_time" in system_info  ***REMOVED*** Should have calculated boot time
+
+    def test_calculate_boot_time(self):
+        """Test boot time calculation from uptime string."""
+        from datetime import datetime, timedelta
+
+        parser = NetgearC3700Parser()
+
+        ***REMOVED*** Test with "2 days" uptime
+        boot_time = parser._calculate_boot_time("2 days")
+        assert boot_time is not None
+
+        ***REMOVED*** Parse the ISO format and verify it's approximately 2 days ago
+        boot_datetime = datetime.fromisoformat(boot_time)
+        expected_boot = datetime.now() - timedelta(days=2)
+
+        ***REMOVED*** Allow 1 minute tolerance for test execution time
+        assert abs((boot_datetime - expected_boot).total_seconds()) < 60
+
+    def test_calculate_boot_time_with_invalid_string(self):
+        """Test boot time calculation returns None for invalid input."""
+        parser = NetgearC3700Parser()
+
+        result = parser._calculate_boot_time("invalid uptime string")
+
+        assert result is None
