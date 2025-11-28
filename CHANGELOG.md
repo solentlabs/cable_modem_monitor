@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.0] - 2025-11-28
+
 ### Added
 - **Netgear CM2000 Parser** - Full support for DOCSIS 3.1 cable modem (Issue #38)
   - Downstream and upstream channel parsing
