@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CM2000 Software Version** - Parse firmware version from index.htm InitTagValue() (Issue #38)
+- **CM2000 Restart Support** - Remote modem restart via RouterStatus.htm buttonSelect=2 (Issue #38)
+- **SB8200 Fixtures** - Test fixtures for future ARRIS SB8200 parser (Issue #42)
+  - Full HTML capture with 32 downstream + 3 upstream channels
+  - No authentication required (public status page)
+- **MB8600 Fixtures** - Test fixtures for future Motorola MB8600 parser (Issue #40)
+  - Login page with HNAP JavaScript references
+  - Implementation guide for HNAP authentication
+
+### Changed
+- **CM2000 Fixtures** - Updated all 12 fixture pages from latest diagnostics
+- **Issue Templates** - Rewritten to prioritize Fallback Mode + Capture HTML workflow
+  - Added PII warnings for manual HTML capture
+  - Improved auth details field to discourage password sharing
+
+### Fixed
+- **CM2000 Version Regex** - Fixed regex matching commented lines in InitTagValue()
+
 ## [3.8.0] - 2025-11-28
 
 ### Added

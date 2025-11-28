@@ -1,4 +1,4 @@
-name: 🖧 New Modem Support Request
+name: New Modem Support Request
 description: Request support for a cable modem model not currently supported
 title: "[Modem Request] "
 labels: ["enhancement", "new modem"]
@@ -9,6 +9,8 @@ body:
         ## Request Support for a New Modem
 
         Thank you for helping expand modem support! This template will guide you through providing the information needed to add support for your modem.
+
+        **The easiest way:** Install the integration with your modem's IP address. Even if your modem isn't supported, it will enter **Fallback Mode** which lets you capture data safely.
 
   - type: input
     id: modem-model
@@ -53,10 +55,13 @@ body:
     id: auth-details
     attributes:
       label: Authentication Details (if required)
-      description: If authentication is required, what are the default credentials? (Usually printed on modem label)
+      description: |
+        If authentication is required, what type of login does your modem use?
+        DO NOT share your actual password - just describe the login type.
       placeholder: |
-        Username: admin
-        Password: (check modem label)
+        Login type: Form-based login page / HTTP Basic Auth popup / Other
+        Default username: admin (check modem label)
+        Notes: Login page at /login.html
     validations:
       required: false
 
@@ -66,9 +71,9 @@ body:
       label: How are you providing data?
       description: Choose the method you're using to share modem data
       options:
-        - "HAR Capture (Best for auth issues) - Used capture script"
-        - "Built-in Diagnostics - Download Diagnostics from HA"
-        - "Manual HTML Capture - Captured HTML files manually"
+        - "Fallback Mode + Capture HTML (Recommended) - Used built-in capture button"
+        - "HAR Capture - Used playwright script (for auth issues)"
+        - "Built-in Diagnostics - Downloaded diagnostics JSON from HA"
         - "Haven't captured yet - Need instructions"
     validations:
       required: true
@@ -78,49 +83,87 @@ body:
       value: |
         ---
 
-        ## 📥 Providing Modem Data
+        ## 📥 How to Provide Modem Data
 
-        ### 🎯 Method 1: HAR Capture (BEST for authentication issues)
+        ### ✅ Method 1: Fallback Mode + Capture HTML (RECOMMENDED)
 
-        **Use this if your modem requires login** - captures the full auth flow:
+        **This is the easiest and safest method** - works even if your modem isn't supported yet!
+
+        1. **Install the integration** via HACS or manually
+        2. **Add your modem** (Settings → Devices & Services → Add Integration → Cable Modem Monitor)
+        3. Enter your modem's IP address (e.g., `192.168.100.1`)
+        4. If your modem isn't recognized, the integration enters **Fallback Mode** automatically
+        5. **Click the "Capture HTML" button** on your modem device
+        6. **Download Diagnostics** (three dots menu → Download Diagnostics)
+        7. **Attach the JSON file** to this issue
+
+        **Why this method is best:**
+        - ✅ Automatic PII sanitization (MAC addresses, serial numbers, IPs removed)
+        - ✅ Captures all relevant pages automatically
+        - ✅ Safe to share publicly
+        - ✅ No developer tools needed
+
+        ---
+
+        ### 🔐 Method 2: HAR Capture (For Authentication Issues)
+
+        **Use this only if** your modem requires login AND Fallback Mode can't reach the status pages.
+
+        HAR capture records the full authentication flow, which helps us understand login requirements.
 
         ```bash
+        # Clone the repo first
+        git clone https://github.com/kwschulz/cable_modem_monitor.git
+        cd cable_modem_monitor
+
+        # Install playwright and run capture
+        pip install playwright
+        playwright install chromium
         python scripts/capture_modem.py
         ```
 
-        Or in VS Code: **Ctrl+Shift+P** → **Tasks: Run Task** → **📹 Capture Modem Traffic**
+        The script **automatically sanitizes** passwords and sensitive data before saving.
 
-        See [HAR Capture Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/HAR_CAPTURE_GUIDE.md) for details.
+        See [HAR Capture Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/HAR_CAPTURE_GUIDE.md) for detailed instructions.
 
-        ### ✅ Method 2: Built-in Diagnostics (If integration is installed)
+        ---
 
-        If you already have the integration installed (even if it doesn't fully work):
+        ### ⚠️ Method 3: Manual HTML Capture (Last Resort)
 
-        1. Go to **Settings → Devices & Services → Cable Modem Monitor**
-        2. Click on your **modem device**
-        3. Click **Download Diagnostics** (three dots menu)
-        4. Attach the downloaded `.json` file to this issue
+        **Only use this if Methods 1 and 2 don't work for your situation.**
 
-        ### 📋 Method 3: Manual HTML Capture (Fallback)
+        > **🛑 PII WARNING:** Manually captured HTML often contains sensitive information!
+        >
+        > Before sharing, you MUST manually review and remove:
+        > - MAC addresses (format: `AA:BB:CC:DD:EE:FF`)
+        > - Serial numbers
+        > - Account IDs
+        > - IP addresses (except common modem IPs like 192.168.100.1)
+        > - Any passwords or session tokens
+        >
+        > **We strongly recommend Method 1 instead**, which handles sanitization automatically.
 
-        If other methods don't work:
-
+        If you must capture manually:
         1. Open your modem's web interface in a browser
-        2. Navigate to the signal/status pages
+        2. Navigate to signal/status pages
         3. Right-click → View Page Source (Ctrl+U)
-        4. Save and attach all HTML files
+        4. **Review for PII before saving**
+        5. Save and attach HTML files
 
   - type: textarea
     id: files-attached
     attributes:
       label: Files Attached
-      description: List the files you're attaching (drag and drop below)
+      description: List the files you're attaching (drag and drop files below this form)
       placeholder: |
-        - diagnostics_cable_modem_monitor_xyz.json
-        OR
-        - signal_status.html
-        - connection_info.html
-        - docsis_overview.html
+        Preferred:
+        - diagnostics_cable_modem_monitor_xyz.json (from Fallback Mode)
+
+        Or:
+        - modem_capture.har (from HAR capture script)
+
+        Last resort (ensure PII is removed!):
+        - status_page.html
     validations:
       required: false
 
@@ -128,10 +171,11 @@ body:
     id: additional-info
     attributes:
       label: Additional Information
-      description: Any other details that might help? (ISP, firmware version, special requirements, etc.)
+      description: Any other details that might help? (ISP, firmware version, URL patterns you discovered, etc.)
       placeholder: |
         - ISP: Comcast/Xfinity
         - Firmware version: 1.0.0.15
+        - Status page URL: http://192.168.100.1/cmconnectionstatus.html
         - Notes: Modem uses HNAP protocol
     validations:
       required: false
@@ -142,8 +186,8 @@ body:
       label: Checklist
       description: Please confirm the following
       options:
-        - label: I have attached diagnostic data or HTML files from my modem
-          required: false
+        - label: I have used Fallback Mode + Capture HTML, OR sanitized my files to remove PII
+          required: true
         - label: I understand this may take time as it requires developing a custom parser
           required: true
         - label: I'm willing to test the parser once it's developed
@@ -158,4 +202,4 @@ body:
 
         Your contribution helps everyone with the same modem model. Once the parser is developed, we'll ask you to test it and provide feedback.
 
-        **Note:** Parser development is community-driven and happens as time allows. The more information you provide, the easier it is to add support!
+        **Tip:** If you want to help test development branches, see the [Testing on HA guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TESTING_ON_HA.md).

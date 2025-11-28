@@ -1,0 +1,178 @@
+
+<html id="html">
+<head>
+<meta name="viewport" content="width=1200">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Pragma" content="No-cache" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Expires" content="-1" />
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<link rel="shortcut icon"  href="image/mobile_motologin.png" />
+<link rel="stylesheet" type="text/css" href="css/moto.css" />
+<title>MB8600</title>
+<script type="text/javascript" charset="utf-8" src="js/localization/zh-cn.js?V=M2"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.selectbox-0.2_new.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/Login.js?V=M2"></script>
+<script type="text/javascript" charset="utf-8" src="js/SOAP/SOAPAction.js?V=M2"></script>
+<script type="text/javascript" charset="utf-8" src="js/jquery.qrcode.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/initialJS.js"></script>
+
+<script language="javascript">
+
+var HNAP = new HNAP_XML();
+
+var UserNameFlag = 0;
+var PasswordFlag = 0;
+var loginNum = 0;
+
+function onFocusUsername()
+{
+	document.getElementById('loginUsername').className = "moto-username-input-active";
+	document.getElementById('loginUsername').value = "";
+}
+
+function onBlurUsername()
+{
+	if(window.document.frmLogin.loginUsername.value == "")
+	{
+		window.document.frmLogin.loginUsername.className = "moto-username-input";
+		window.document.frmLogin.loginUsername.value = "Username";
+	}
+	else
+	{
+		UserNameFlag = 1;
+	}
+}
+
+function onFocusPassword()
+{
+	window.document.frmLogin.loginText.style.display = 'none';
+	window.document.frmLogin.loginPassword.style.display = '';
+	window.document.frmLogin.loginPassword.focus();
+}
+
+function onBlurPassword()
+{
+	if(window.document.frmLogin.loginPassword.value == "")
+	{
+		window.document.frmLogin.loginPassword.style.display = 'none';
+		window.document.frmLogin.loginText.style.display = '';
+	}
+	else
+	{
+		PasswordFlag = 1;
+	}
+
+}
+
+$(document).ready( function() {
+		document.getElementById("moto-note").innerHTML = "&nbsp;";
+});
+
+function OnClickLogin()
+	{
+		var Login_Password=***REDACTED***"loginPassword").value;
+		var Login_Username = document.getElementById("loginUsername").value;
+		var Login_Captcha = "";
+
+		document.getElementById("LoginApply").disabled = true;
+		document.getElementById("moto-note").innerHTML = "&nbsp;";
+
+		loginNum++;
+		doLogin(Login_Username,Login_Password,Login_Captcha)
+		.done(function(){
+		    loginNum = 0;
+			var problem_goto_page = $.cookie('problem_page');
+			if (typeof(problem_goto_page) != "undefined") {
+				$.removeCookie('problem_page');
+				window.location.href = problem_goto_page;
+				return;
+			}
+
+			var redirect_url = $.cookie("RedirectUrl");
+			if((redirect_url == null) || (redirect_url.indexOf("Login.html") > 0) || (redirect_url.indexOf("html") < 0))
+			{
+				window.location.href = "/MotoHome.html";	
+			}
+			else								
+			{	
+				window.location.href = redirect_url;		
+			}
+		})
+		.fail(function(state){
+			document.getElementById("LoginApply").disabled = false;
+			if (state == "AUTH_FAIL")
+				document.getElementById("moto-note").innerHTML = ("Login is temporarily disabled for 5 minutes because of too many failed attempts.");
+			else{
+				document.getElementById("moto-note").innerHTML = (loginNum > 3?"Login is temporarily disabled for 5 minutes because of too many failed attempts.":"Please enter a valid username and password.");
+			}
+		});		
+	}
+
+function detect_KeyValue(e)
+{
+	var key=***REDACTED*** ? e.keyCode : e.which;
+	if (key=***REDACTED*** 13)  
+	{
+		document.getElementById("LoginApply").click();
+	}
+}
+</script>
+</head>
+
+<body>
+
+
+<form action="/cgi-bin/moto/goform/MotoLogin" method="POST" name="frmLogin">
+
+<div id="moto-login">
+
+<div id="moto-login-log">
+<img src="/image/motologin.jpg" width='80px' height='80px' />
+</div>
+
+<div id="moto-login-welcome">
+<span class="moto-login-welcome-text">Welcome to Your<br>Motorola Cable Modem</span>
+</div>
+
+<div id="moto-username">
+<input class="moto-username-input" type="text" id="loginUsername" name="loginUsername" onfocus='onFocusUsername()' onblur='onBlurUsername()' value="Username" onkeydown="detect_KeyValue(event);">
+</div>
+
+<div id="moto-password">
+<input type="hidden">
+<input class="moto-password-input" type="text" id="loginText" name="loginText" onfocus='onFocusPassword();' value="Password" onpaste='return false' oncontextmenu='return false' oncopy='return false' oncut='return false'>
+<input type="hidden">
+<input class="moto-password-input-active" type="password" id="loginPassword" name="loginPassword" onblur='onBlurPassword();' value="" style="display:none" onkeydown="detect_KeyValue(event);" onpaste='return false' oncontextmenu='return false' oncopy='return false' oncut='return false'>
+</div>
+
+<div>
+<span id="moto-note" class="moto-note-text"></span>
+</div>
+
+<div id="moto-button">
+<input class="moto-login-button" type="button" id="LoginApply" name="LoginApply" value="Login" onclick="OnClickLogin();"></input>
+</div>
+
+<div id="moto-note">
+<span class="moto-note-text">You can find your username and password on your cable modem's bottom label.</span>
+</div>
+
+<div id="moto-copyright">
+<span class="moto-copyright-text">&copy; MTRLC LLC 2020. All rights reserved.<br>MOTOROLA and the Stylized M Logo are trademarks or registered trademarks of Motorola Trademark Holdings, LLC and are used under license.</span>
+</div>
+
+</div>
+</form>
+
+
+</body>
+</html>
+
+
+
+
+
+
+

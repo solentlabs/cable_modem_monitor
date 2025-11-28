@@ -17,6 +17,7 @@ tests/parsers/**/fixtures/**/*.asp linguist-vendored
 tests/parsers/**/fixtures/**/*.js linguist-vendored
 tests/parsers/**/fixtures/**/*.json linguist-vendored
 tests/parsers/**/fixtures/**/*.xml linguist-vendored
+tests/parsers/**/fixtures/**/*.jst linguist-vendored
 
 # HAR captures are also vendored data
 captures/** linguist-vendored

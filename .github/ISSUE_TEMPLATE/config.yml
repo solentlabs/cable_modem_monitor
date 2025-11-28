@@ -6,6 +6,9 @@ contact_links:
   - name: Troubleshooting Guide
     url: https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md
     about: Check common issues and solutions
+  - name: Testing on Home Assistant
+    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TESTING_ON_HA.md
+    about: How to deploy a development branch to your HA instance for testing
   - name: Contributing Guide
     url: https://github.com/kwschulz/cable_modem_monitor/blob/main/CONTRIBUTING.md
     about: Learn how to contribute to the project

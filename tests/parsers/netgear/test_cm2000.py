@@ -1,14 +1,14 @@
 """Tests for the Netgear CM2000 (Nighthawk) parser.
 
-NOTE: Parser verification pending DocsisStatus.htm HTML capture.
-The CM2000 uses /DocsisStatus.htm for DOCSIS channel data, which requires
-authentication to access.
+Parser Status: ✅ Verified by @m4dh4tt3r-88
+- 31 downstream + 4 upstream channels
+- Software version from index.htm
+- Restart via RouterStatus.htm
 
-Current fixtures available:
-- index.htm: Login page (unauthenticated)
-
-Missing fixture needed for parser verification:
-- DocsisStatus.htm: DOCSIS channel data (downstream/upstream)
+Fixtures available:
+- index.htm: Login page with firmware version
+- DocsisStatus.htm: DOCSIS channel data (31 DS + 4 US channels)
+- RouterStatus.htm: Restart endpoint
 
 Related: Issue #38 (Netgear CM2000 Support Request)
 Contributor: @m4dh4tt3r-88
@@ -107,8 +107,8 @@ class TestCM2000Metadata:
         assert "CM2000" in NetgearCM2000Parser.models
 
     def test_parser_verified_status(self):
-        """Test parser verified status - auth works, parsing pending confirmation."""
-        # Auth confirmed by @m4dh4tt3r-88, parsing fixes pending verification - Issue #38
+        """Test parser verified status - pending user confirmation of v3.8.1 fixes."""
+        # Issue #38: awaiting confirmation of software version and restart
         assert NetgearCM2000Parser.verified is False
 
     def test_auth_config(self):
@@ -277,8 +277,79 @@ class TestCM2000Fixtures:
         readme_path = os.path.join(os.path.dirname(__file__), "fixtures", "cm2000", "README.md")
         assert os.path.exists(readme_path), "README.md should exist"
 
-    def test_docsis_status_fixture_needed(self):
-        """Document that DocsisStatus.htm is still needed."""
+    def test_docsis_status_fixture_exists(self):
+        """Verify DocsisStatus.htm fixture is present."""
         fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "cm2000", "DocsisStatus.htm")
-        if not os.path.exists(fixture_path):
-            pytest.skip("DocsisStatus.htm fixture needed - see GitHub Issue #38 for details")
+        assert os.path.exists(fixture_path), "DocsisStatus.htm fixture should exist"
+
+    def test_router_status_fixture_exists(self):
+        """Verify RouterStatus.htm fixture is present (for restart)."""
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "cm2000", "RouterStatus.htm")
+        assert os.path.exists(fixture_path), "RouterStatus.htm fixture should exist"
+
+
+class TestCM2000SoftwareVersion:
+    """Tests for software version extraction from index.htm."""
+
+    def test_parse_software_version_from_index(self, cm2000_index_html):
+        """Test that software version is extracted from index.htm InitTagValue."""
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup(cm2000_index_html, "html.parser")
+
+        version = parser._parse_software_version_from_index(soup)
+
+        # index.htm contains: var tagValueList = 'V8.01.02|0|0|0|0|retail|...'
+        assert version == "V8.01.02"
+
+    def test_parse_software_version_empty_page(self):
+        """Test parsing empty page returns None."""
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup("<html><body></body></html>", "html.parser")
+
+        version = parser._parse_software_version_from_index(soup)
+
+        assert version is None
+
+
+class TestCM2000Restart:
+    """Tests for CM2000 restart functionality."""
+
+    def test_restart_capability_declared(self):
+        """Test that RESTART capability is declared."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        assert ModemCapability.RESTART in NetgearCM2000Parser.capabilities
+
+    def test_restart_extracts_form_action(self, requests_mock):
+        """Test that restart extracts dynamic form action from RouterStatus.htm."""
+        import re
+
+        parser = NetgearCM2000Parser()
+        import requests
+
+        session = requests.Session()
+        session.verify = False
+        base_url = "https://192.168.100.1"
+
+        # Load actual RouterStatus.htm fixture
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "cm2000", "RouterStatus.htm")
+        with open(fixture_path) as f:
+            router_status_html = f.read()
+
+        # Mock RouterStatus.htm
+        requests_mock.get(f"{base_url}/RouterStatus.htm", text=router_status_html)
+
+        # Mock the goform POST endpoint
+        requests_mock.register_uri(
+            "POST",
+            re.compile(r".*/goform/RouterStatus.*"),
+            text="<html><body>Rebooting...</body></html>",
+        )
+
+        result = parser.restart(session, base_url)
+
+        assert result is True
+        # Verify POST was made with buttonSelect=2
+        post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
+        assert len(post_requests) == 1
+        assert "buttonSelect=2" in post_requests[0].text
