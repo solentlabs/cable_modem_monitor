@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ***REMOVED******REMOVED*** [Unreleased]
 
 ***REMOVED******REMOVED******REMOVED*** Added
+- **Netgear CM2000 Parser** - Full support for DOCSIS 3.1 cable modem (Issue ***REMOVED***38)
+  - Downstream and upstream channel parsing
+  - System information extraction
+  - Comprehensive test suite with fixtures
+  - Credit: Community contribution
+
 - **Parser Metadata System** - All parsers now expose device information
   - Added `release_date`, `docsis_version`, `fixtures_path` to base parser
   - Added `verified` status and `verification_source` for transparency
@@ -21,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ⚠️ UNVERIFIED - awaiting real hardware confirmation
 
 - **HNAP JSON Builder Tests** - 535 lines of comprehensive test coverage
+
+- **Fixture Index Generator** - Auto-generates fixture directory index
+  - `scripts/generate_fixture_index.py` creates README.md for fixture directories
+  - Documents available test fixtures for each modem model
+
+- **Deployment Script** - Automated deployment to Home Assistant instances
+  - `scripts/deploy_updates.sh` supports local, SSH, and Docker deployment
+  - Interactive mode guides users through deployment options
+  - New `docs/TESTING_ON_HA.md` guide for manual deployment
 
 ***REMOVED******REMOVED******REMOVED*** Changed
 - **MB8611 Fixture Consolidation** - Merged mb8611_hnap and mb8611_static into single mb8611 directory
