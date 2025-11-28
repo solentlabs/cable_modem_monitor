@@ -240,12 +240,19 @@ pytest tests/ -v
 
 ### 5. Deploy for Manual Testing (Optional)
 
-You can deploy your changes to a local Home Assistant instance for manual testing using the provided script.
+You can deploy your changes to a real Home Assistant instance for manual testing.
 
 ```bash
-# Edit scripts/deploy_updates.sh with your settings first
+# Interactive mode - guides you through deployment options
 ./scripts/deploy_updates.sh
+
+# Or specify directly:
+./scripts/deploy_updates.sh --local ~/homeassistant/config
+./scripts/deploy_updates.sh --ssh root@192.168.1.100
+./scripts/deploy_updates.sh --docker homeassistant --restart
 ```
+
+See [Testing on HA](./docs/TESTING_ON_HA.md) for detailed instructions and troubleshooting.
 
 ## Adding Support for New Modem Models
 
