@@ -1,7 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
+
 <head>
-<title>NETGEAR Modem CM2000</title>
+
 <META name="description" content="CM2000">
 <META http-equiv="Content-Type" content="text/html; charset=utf-8">
 <META http-equiv="Content-Style-Type" content="text/css">
@@ -9,196 +10,1226 @@
 <META HTTP-equiv="Cache-Control" content="no-cache">
 <META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
 
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<!--
+<meta http-equiv="refresh" content="3">
+-->
+<title>NETGEAR Modem CM2000</title>
+<link rel="stylesheet" href="css/table_noh.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
 <script src="jquery.js"></script>
+
+<script src="script/jquery.mousewheel.js"></script>
+<script src="script/jquery.jscrollpane.min.js"></script>
+
 <script src="script/script.js"></script>
-<link rel="stylesheet" type="text/css" href="css/mainpage.css">
-<link rel="stylesheet" type="text/css" href="css/tabs.css">
-<link rel="stylesheet" type="text/css" href="css/button.css">
-<link rel="stylesheet" type="text/css" href="css/menu.css">
-<link rel="shortcut icon" href="favicon.ico">
-<script type="text/javascript">
+<link rel="stylesheet" href="form.css">
+<STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style>
 
-function get_browser()
+<script language="javascript" type="text/javascript" src="func.js"></script>
+<script language="javascript" type="text/javascript" src="msg.js"></script>
+<script language="javascript" type="text/javascript" src="utility.js"></script>
+<script language="javascript" type="text/javascript" src="browser.js"></script>
+
+<script language="javascript" type="text/javascript" src="md5.js"></script>
+<script language="javascript" type="text/javascript" src="wep.js"></script>
+<script language="javascript" type="text/javascript">
+<!--
+var DisableFixedDNS = false;
+var DisableFixedMAC = false;
+var MacAddress;
+var DodDisable = false;
+var DodIndex = 1;
+
+    $(document).ready(function()
+    {
+        var form=document.forms[1];
+        var gui_region = form.curlang.value;
+
+        BodyInit();
+        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+
+        $('***REMOVED***INT_setup').click(function(ev){
+            parent.loadPage2("BasicSettingsBottom.htm");
+        });
+
+        $('***REMOVED***LAN_setup').click(function(ev){
+            parent.loadPage2("WLG_ap_dual_band.htm");
+        });
+
+        $('.basic-text-menu').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-menu-pr");
+             }else{
+                 $(this).removeClass("basic-text-menu-pr");
+             }
+        });
+        $('.basic-text-subTitle').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-subTitle-pr");
+             }else{
+                 $(this).removeClass("basic-text-subTitle-pr");
+             }
+        });
+        $('.basic-text-content').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("basic-text-content-pr");
+             }else{
+                 $(this).removeClass("basic-text-content-pr");
+             }
+        });
+        $('.box-header-text').each(function(){
+             if(gui_region=="Chinese"){
+                 $(this).addClass("box-header-text-pr");
+             }else{
+                 $(this).removeClass("box-header-text-pr");
+             }
+        });
+        /* checking long string */
+        if($('.header-text1').text().length>=36 | $('.header-text2').text().length>=36){
+               $('***REMOVED***box-header-table1').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table2').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table1').removeClass("box-header-table");
+               $('***REMOVED***box-header-table2').removeClass("box-header-table");
+        }
+
+        if($('.header-text3').text().length>=36 | $('.header-text4').text().length>=36){
+               $('***REMOVED***box-header-table3').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table4').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table3').removeClass("box-header-table");
+               $('***REMOVED***box-header-table4').removeClass("box-header-table");
+        }
+        if($('.header-text5').text().length>=36 | $('.header-text6').text().length>=36){
+               $('***REMOVED***box-header-table5').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table6').addClass("box-header-table-large");
+               $('***REMOVED***box-header-table5').removeClass("box-header-table");
+               $('***REMOVED***box-header-table6').removeClass("box-header-table");
+        }
+    });
+
+    function setHelpIframeVisible(){
+        $('.bas-help-frame-div').css("visibility","visible");
+    }
+
+    function showHelpIframe() {
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("down")>=0)
+        {
+            $(".bas-help-frame-div").show();
+            imgSrc.src="img/helparrowup-icon.png";
+        }
+        else
+        {
+            $(".bas-help-frame-div").hide();
+            imgSrc.src="img/helparrowdown-icon.png";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+
+    function loadhelp(fname,anchname)
+    {
+        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+            $('***REMOVED***page').attr("src",fname+"_h.htm");
+        else
+            $('***REMOVED***page').attr("src",fname+"_h.htm***REMOVED***"  + anchname);
+    }
+
+function adjustPageLayout()
 {
-    //var isApple = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
-   if((navigator.userAgent.indexOf("iPad") != -1) ||
-     (navigator.userAgent.indexOf("iPhone") != -1) ||
-     (navigator.userAgent.indexOf("iPod") != -1))
-        return "iOS";
-    else if(navigator.userAgent.indexOf("Mac OS X") != -1)
-        return "MAC";
-    else if(navigator.userAgent.indexOf("Android") != -1)
-        return "Android";
-    else if(navigator.userAgent.indexOf("Navigator") != -1)
-        return "Netscape";
-    else if (!(false || !!document.documentMode) && !!window.StyleMedia)
-        return "Edge";
-    //else if(navigator.userAgent.indexOf("MSIE") != -1)
-    else if(false || !!document.documentMode)
-        return "IE";
-    //else if(navigator.userAgent.indexOf("Chrome") != -1)
-    else if(!!window.chrome && !!window.chrome.loadTimes)
-        return "Chrome";//bug 21975:spec1.9-p228,[usb] the real links are different for different browsers
-    //else if(navigator.userAgent.indexOf("Firefox") != -1)
-    else if(typeof InstallTrigger !== 'undefined')
-        return "Firefox";
-    //else if((navigator.userAgent.indexOf("Safari") != -1 ))
-    else if(/Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor))
-        return "Safari";
-    else if(navigator.userAgent.indexOf("Camino") != -1)
-        return "Camino";
-     else if(navigator.userAgent.indexOf("Gecko/index.html") != -1)
-        return "Gecko";
-    else if(navigator.userAgent.indexOf("Opera") != -1)
-        return "Opera";
-    else
-        return "";
+    adjustButtonSize();
+        var table_height1 = $('***REMOVED***page-table1')[0].clientHeight+"px";
+        var table_height2 = $('***REMOVED***page-table2')[0].clientHeight+"px";
+        var table_height3 = $('***REMOVED***page-table3')[0].clientHeight+"px";
+        var table_height4 = $('***REMOVED***page-table4')[0].clientHeight+"px";
+        var table_height5 = $('***REMOVED***page-table5')[0].clientHeight+"px";
+        var table_height6 = $('***REMOVED***page-table6')[0].clientHeight+"px";
+
+        /*if($('***REMOVED***page-table1')[0].clientHeight >=  $('***REMOVED***page-table2')[0].clientHeight)
+            $('***REMOVED***page-table2').css("height",table_height1);
+        else
+            $('***REMOVED***page-table1').css("height",table_height2);
+
+        if($('***REMOVED***page-table3')[0].clientHeight >=  $('***REMOVED***page-table4')[0].clientHeight)
+            $('***REMOVED***page-table4').css("height",table_height3);
+        else
+            $('***REMOVED***page-table3').css("height",table_height4);
+        if($('***REMOVED***page-table5')[0].clientHeight >=  $('***REMOVED***page-table6')[0].clientHeight)
+            $('***REMOVED***page-table6').css("height",table_height5);
+        else
+            $('***REMOVED***page-table5').css("height",table_height6);*/
 }
 
-$(window).load(function() {
-    //alert("1");
-    var isIE = navigator.userAgent.search("MSIE") > -1;
-    var isFirefox = navigator.userAgent.search("Firefox") > -1;
-    var isOpera = navigator.userAgent.search("Opera") > -1;
-    var isSafari = navigator.userAgent.search("Safari") > -1;
-
-    var isIE8=navigator.appVersion.indexOf("MSIE 8") > -1;
-    var form=document.forms[0];
-
-    change_size();
-});
-
-$(document).ready(function(){
-//alert("2*");
-    BodyInit();
-    document.getElementById("password").focus();
-});
-
-function change_size()
-{    //alert("17");
-    //setLanglistPosition();
-    //setFooterClass();
-    //subpage_resize();
+function adjustButtonSize()
+{
+    if($($('***REMOVED***reboot')[0].parentNode)[0].scrollHeight > 25 ||
+        $($('***REMOVED***statistics')[0].parentNode)[0].scrollHeight > 25 ||
+        $($('***REMOVED***status')[0].parentNode)[0].scrollHeight > 25)
+    {
+        //$($('***REMOVED***reboot')[0].parentNode).addClass('page-table-button-large-left');
+        //$($('***REMOVED***reboot')[0].parentNode).removeClass('page-table-button-left');
+        //$($('***REMOVED***statistics')[0].parentNode).addClass('page-table-button-large-right');
+        //$($('***REMOVED***statistics')[0].parentNode).removeClass('page-table-button-right');
+        //$($('***REMOVED***status')[0].parentNode).addClass('page-table-button-large-right');
+        //$($('***REMOVED***status')[0].parentNode).removeClass('page-table-button-right');
+    }
 }
 
-/*  0: Firemware Version
-    1: Guest Network Supported
-    2: MultiLang Supported
-    3: Rg/Bridge Mode
-    4: Voice Supported
-    5: MSO Supported
-    6: USB Hidden
-    7: WPS Wizard grayout
-    8: ETHER WAN Supported
-    9: ETHER WAN Enabled
-    10: Traffic Meter Supported
-    11: WiFi Schedule Supported
-    12: Access Control Supported
-    13: New Firmware
-    14: TimeZone
-    15: TimeZoneConfigured
-    16: IsLanAccess
+function advButtonClick(index){
+
+    if(index==0) // Show Statistics
+        openStatisticsWindow();
+    else if(index==1)
+    {
+          openStatusWindow();
+    // document.forms[0].buttonSelect.value="1";
+    }
+    else if(index==2)
+    {
+        if(confirm("Rebooting the router will disrupt active traffic on the network. Are you sure?"))
+        {
+            document.forms[0].buttonSelect.value="2";
+            document.forms[0].submit(document.forms[0]);
+        }
+    }
+    else if(index==3)
+    {
+        if(confirm("Loading the factory default settings will erase all the current settings. Are you sure?"))
+        {
+            document.forms[0].buttonSelect.value="3";
+            document.forms[0].submit(document.forms[0]);
+        }
+    }
+}
+
+function openStatWindow() {
+    window.open(this.form.stat_page.value, '','height=350,status=yes');
+    return ture;
+}
+
+function openStatusWindow()
+{
+    var conn = document.forms[0].wantype.value;
+    var winoptions;
+    if (conn == "dhcp")
+    //if (conn == "dhcp" || conn == "pppoe")
+        winoptions = "width=480,height=540,status=yes,resizable=yes";
+/*
+    else if (conn == "pppoe" || conn == "pppoa")
 */
+
+    else if (conn == "pppoe")
+    {
+        /*
+        if ("0" == "1")
+            winoptions = "width=400,height=600,status=yes,resizable=yes";
+        else
+        */
+        winoptions = "width=500,height=360,status=yes,resizable=yes";
+    }
+    else
+        winoptions = "width=400,height=260,status=yes,resizable=yes";
+    openDataSubWin('',winoptions);
+}
+
+function openStatisticsWindow()
+{
+    var conn = document.forms[0].wantype.value;
+    var form=document.forms[1];
+    var gui_region = form.curlang.value;
+    var winoptions;
+    if(gui_region=="German"){
+       winoptions = "width=1024,height=360,status=yes,resizable=yes";
+       openDataSubWin('',winoptions);
+    }else{
+       winoptions = "width=780,height=600,status=yes,resizable=yes";
+       openDataSubWin('',winoptions);
+    }
+}
+
+function loadSettings()
+{
+    var cf=document.forms[0];
+
+    adjustPageLayout();
+     parent.$('***REMOVED***page2').css("visibility","visible");
+    parent.$('***REMOVED***page_contain2').removeClass('main-page-contain-loading');
+}
+
 function InitTagValue()
 {
-    var tagValueList = '0';
-//    var tagValueList = "v0.1";
+/*
+  Hardware Version (td) | Firmware Version (td) | CableModem Serial Number (td) |
+  CM certificate | Cable MAC Address | Cable IP Mask | Cable Gateway | Cable DNS | Network Access |
+  Internet Mac address (td) | Internet IP Mask (td) | DHCP (td) | Internet Gateway |Internet Domain Name Server (td) |
+  LAN Mac address (td) | LAN IP Mask (td) | LAN DHCP (td)
+2.4G  Wireless SSID (td) | Wireless Region (td) | Wireless Channel (td) | Wireless Mode (td) | Wireless AP (td) | Wireless Broadcast Name (td) | Wireless Isolation (td)
+5G    Wireless SSID (td) | Wireless Region (td) | Wireless Channel (td) | Wireless Mode (td) | Wireless AP (td) | Wireless Broadcast Name (td) | Wireless Isolation (td)
+2.4G  Guest Network SSID (td) | Guest Network AP (td)
+5G  Guest Network SSID (td) | Guest Network AP (td)
+System Up Time | Current System Time
+*/
+    var tagValueList = '1.01|V8.01.02|***SERIAL***|1|XX:XX:XX:XX:XX:XX|---.---.---.---/-|---.---.---.---|::, ::, ::|Allowed|XX:XX:XX:XX:XX:XX|0.0.0.0/255.255.255.0|Fixed IP|0.0.0.0|***PUBLIC_IP***, ***PUBLIC_IP***|XX:XX:XX:XX:XX:XX|0.0.0.0/24|Off|||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|0|';
+
     return tagValueList.split("|");
 }
 
 function InitUpdateView(tagValues)
 {
+    /* Hardware Version */
+    document.getElementById("HardwareVersion").innerHTML = tagValues[0];
+
+    /* Firmware Version */
+    document.getElementById("FirmwareVersion").innerHTML = tagValues[1];
+
+    /* Cable Firmware Version */
+    document.getElementById("CableFirmwareVersion").innerHTML = tagValues[1];
+
+    /* CableModem Serial Number */
+    document.getElementById("CableModemSerialNumber").innerHTML = tagValues[2];
+
+    /* CM certificate */
+    if (tagValues[3] == '1')
+        document.getElementById("CMcertificate").innerHTML = 'Installed';
+    else
+        document.getElementById("CMcertificate").innerHTML = 'Not Installed';
+
+    /* GUI Version */
+//    document.getElementById("GUIVersion").innerHTML = tagValues[2];
+
+    // Cable MAC Address
+    document.getElementById("CableMACAddress").innerHTML = tagValues[4];
+
+    // Cable IP Mask
+//    document.getElementById("CableIPMask").innerHTML = tagValues[5];
+
+    /* Cable Gateway */
+//    document.getElementById("CableGateway").innerHTML = tagValues[6];
+
+    /* Cable DNS */
+//    document.getElementById("CableDNS").innerHTML = tagValues[7];
+
+    /* Network Access */
+//    document.getElementById("NetworkAccess").innerHTML = tagValues[8];
+
+
+    /* Internet Mac address */
+    document.getElementById("InternetMAC").innerHTML = tagValues[9];
+
+    /* Internet IP */
+    document.getElementById("InternetIP").innerHTML = tagValues[10];
+    /*if(tagValues[10] == "&nbsp;")
+    {
+       document.getElementById("interIPMask").style.display = "none";
+       document.getElementById("interIPMaskLine").style.display = "none";
+    }*/
+
+    /* Internet DHCP */
+    document.getElementById("InternetDHCP").innerHTML = tagValues[11];
+
+    /* Internet MASK */
+    document.getElementById("InternetMASK").innerHTML = tagValues[10];
+
+    /* Internet Gateway */
+    if ((tagValues[12] == "0.0.0.0") || (tagValues[12] == "---.---.---.---") || tagValues[8] == "Denied")
+    {
+        $("***REMOVED***Internet").addClass("img_status_warning_custom");
+    }
+    else
+    {
+        $("***REMOVED***Internet").addClass("img_status_good custom_icon");
+    }
+
+    //document.getElementById("InternetGateway").innerHTML = tagValues[12];
+
+    /* Internet DNS */
+    if((tagValues[10] == "---.---.---.---") && (tagValues[12] == "---.---.---.---"))
+    {
+        document.getElementById("InternetDNS").innerHTML = "---.---.---.---";
+    }
+    else
+    {
+        document.getElementById("InternetDNS").innerHTML = tagValues[13];
+    }
+
+    /* LAN Mac address */
+    document.getElementById("LANMAC").innerHTML = tagValues[14];
+
+    /* LAN IP */
+    document.getElementById("LANIPMASK").innerHTML = tagValues[15];
+
+    /* LAN DHCP */
+    document.getElementById("LANDHCP").innerHTML = tagValues[16];
+
+    /* LAN IP Subnet mask */
+//    document.getElementById("LANIPSubnet").innerHTML = tagValues[11];
+
+    /* Wireless SSID */
+    document.getElementById("WirelessName").innerHTML = piplineDecode(tagValues[17]);
+
+    /* Wireless Region */
+    document.getElementById("WirelessRegion").innerHTML = tagValues[18];
+
+    /* Wireless Channel */
+    document.getElementById("WirelessChannel").innerHTML = tagValues[19];
+
+    /* Wireless Mode */
+    document.getElementById("WirelessMode").innerHTML = tagValues[20];
+
+    /* Wireless AP */
+    document.getElementById("WirelessAP").innerHTML = tagValues[21];
+
+    /* Wireless Broadcast Name */
+    document.getElementById("WirelessBroadcastName").innerHTML = tagValues[22];
+
+    /* Wireless SSID */
+    document.getElementById("WirelessName_an").innerHTML = piplineDecode(tagValues[23]);
+
+    /* Wireless Region */
+    document.getElementById("WirelessRegion_an").innerHTML = tagValues[24];
+
+    /* Wireless Channel */
+    document.getElementById("WirelessChannel_an").innerHTML = tagValues[25];
+
+    /* Wireless Mode */
+    document.getElementById("WirelessMode_an").innerHTML = tagValues[26];
+
+    /* Wireless AP */
+    document.getElementById("WirelessAP_an").innerHTML = tagValues[27];
+
+    /* Wireless Broadcast Name */
+    document.getElementById("WirelessBroadcastName_an").innerHTML = tagValues[28];
+
+    /* 2.4G SSID */
+    document.getElementById("GuestNetworkName1").innerHTML = piplineDecode(tagValues[29]);
+    $('***REMOVED***GuestNetworkName1_B').html(piplineDecode(tagValues[29]));
+
+    /* 2.4G Wireless AP */
+    document.getElementById("GuestNetworkAP1").innerHTML = tagValues[30];
+    $('***REMOVED***GuestNetworkAP1_B').html(tagValues[30]);
+
+    /* 5G SSID */
+    document.getElementById("GuestNetworkName1_an").innerHTML = piplineDecode(tagValues[31]);
+
+    /* 5G Wireless AP */
+    document.getElementById("GuestNetworkAP1_an").innerHTML = tagValues[32];
+
+    /* System Up Time */
+//    document.getElementById("SystemUpTime").innerHTML = tagValues[33];
+
+    /* Current System Time */
+//    document.getElementById("CurrentSystemTime").innerHTML = tagValues[34];
+
+    /* 2.4G WPS configured mode */
+    document.getElementById("WPSMode").innerHTML = tagValues[35];
+
+    /* 5G WPS configured mode */
+    document.getElementById("WPSMode_an").innerHTML = tagValues[36];
+
+    /* 2.4G Guest1 Broadcast */
+    document.getElementById("GuestNetworkBroadcast1").innerHTML = tagValues[37];
+    $('***REMOVED***GuestNetworkBroadcast1_B').html(tagValues[37]);
+
+    /* 2.4G Guest1 Allow Guest */
+    document.getElementById("GuestNetworkAllow1").innerHTML = tagValues[38];
+    $('***REMOVED***GuestNetworkAllow1_B').html(tagValues[38]);
+
+    /* 5G Guest1 Broadcast */
+    document.getElementById("GuestNetworkBroadcast1_an").innerHTML = tagValues[39];
+
+    /* 5G Guest1 Allow Guest */
+    document.getElementById("GuestNetworkAllow1_an").innerHTML = tagValues[40];
+
+
+    // 2.4G
+    if (tagValues[21] == "Off")
+    {
+        $("***REMOVED***WiFi24G").addClass("img_status_error_red custom_icon");
+    }
+    else
+    {
+        if (tagValues[41] == "None")
+        {
+            $("***REMOVED***WiFi24G").addClass("img_status_warning_custom");
+        }
+        else
+        {
+            $("***REMOVED***WiFi24G").addClass("img_status_good custom_icon");
+        }
+    }
+
+    // 5G
+    if (tagValues[27] == "Off")
+    {
+        $("***REMOVED***WiFi5G").addClass("img_status_error_red custom_icon");
+    }
+    else
+    {
+        if (tagValues[42] == "None")
+        {
+            $("***REMOVED***WiFi5G").addClass("img_status_warning_custom");
+        }
+        else
+        {
+            $("***REMOVED***WiFi5G").addClass("img_status_good custom_icon");
+        }
+    }
+
+    // 2.4G WiFi Guest
+    if (tagValues[30] == "Off" || tagValues[21] == "Off")
+    {
+        $("***REMOVED***WiFi24GG").addClass("img_status_error_red custom_icon");
+    }
+    else
+    {
+        if (tagValues[43] == "None")
+        {
+            $("***REMOVED***WiFi24GG").addClass("img_status_warning_custom");
+        }
+        else
+        {
+            $("***REMOVED***WiFi24GG").addClass("img_status_good custom_icon");
+        }
+    }
+
+    // 5G WiFi Guest
+    if (tagValues[32] == "Off" || tagValues[27] == "Off")
+    {
+        $("***REMOVED***WiFi5GG").addClass("img_status_error_red custom_icon");
+    }
+    else
+    {
+        if (tagValues[44] == "None")
+        {
+            $("***REMOVED***WiFi5GG").addClass("img_status_warning_custom");
+        }
+        else
+        {
+            $("***REMOVED***WiFi5GG").addClass("img_status_good custom_icon");
+        }
+    }
+
+
+    // Support dual band
+    if (tagValues[45] == '1')
+    {
+        $("***REMOVED***setting_main_5G").show();
+        $("***REMOVED***setting_guest_5G").show();
+    }
+    else
+    {
+        $("***REMOVED***setting_main_5G").hide();
+        $("***REMOVED***setting_guest_5G").hide();
+    }
+
+    // Rg/Bridge Mode
+    if (tagValues[56] == "0") // is bridge mode
+    {
+        // Bridge mode
+        $("***REMOVED***internetPort").css ('display', 'none');  // Internet Port box
+
+        //Eason, 20130121, bridge mode do not show LAN information
+        $('***REMOVED***LANMAC').html("--:--:--:--:--:--");
+        $('***REMOVED***LANIPMASK').html("---.---.---.---");
+        $('***REMOVED***LANDHCP').html("Off");
+    }
+
+    if(tagValues[56] == "1") // is router mode
+    {
+        $('***REMOVED***wireless_setup').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+
+        $('***REMOVED***wireless_setup_5G').click(function(ev){
+            parent.loadPage2("WirelessSettings.htm");
+        });
+
+        $('***REMOVED***guest_setup').click(function(ev){
+            parent.loadPage2("");
+        });
+
+        $('***REMOVED***guest_setup_5G').click(function(ev){
+            parent.loadPage2("");
+        });
+    }
+    else // is bridge mode
+    {
+       // Chuck 20141001 do not link wireless column to WirelessSettings in bridge mode with
+    }
+
+    $('***REMOVED***ModemIdentity').html(tagValues[47]);
+    $('***REMOVED***ModemSWVersion').html(tagValues[48]);
+    $('***REMOVED***ModemDriverVersion').html(tagValues[49]);
+    $('***REMOVED***ModemStatus').html(tagValues[50]);
+    $('***REMOVED***ModemIMSI').html(tagValues[51]);
+    $('***REMOVED***ModemIMEI').html(tagValues[52]);
+    $('***REMOVED***ModemOperator').html(tagValues[53]);
+    $('***REMOVED***ModemNetworkMode').html(tagValues[54]);
+
+    if(tagValues["BandSteering"] == "true")
+    {
+        $("***REMOVED***page-table4").show();
+        $("***REMOVED***page-table4-1").hide();
+        document.getElementById("WirelessChannel_an_bs").innerHTML = tagValues["WirelessChannel_an"];
+        document.getElementById("WirelessMode_an_bs").innerHTML = tagValues["WirelessMode_an"];
+    }
 }
 
 function BodyInit()
 {
-    //Not support multi language
     InitUpdateView(InitTagValue());
+    hiddenWifi('1');
+    initBridgeView('1');
 }
-</script>
 
-<script>
-function myFunction() {
-    var x = document.getElementById("Demo");
-    if (x.className.indexOf("w3-show") == -1) {
-        x.className += " w3-show";
-    } else {
-        x.className = x.className.replace(" w3-show", "");
+function initBridgeView(statusTag)
+{
+    if(statusTag == "1")
+    {
+        $("***REMOVED***RouterRev-table").hide();
+        $("***REMOVED***RouterRev-seperate").hide();
+        $("***REMOVED***LANPort-table").hide();
     }
 }
+function hiddenWifi(statusTag)
+{
+    if(statusTag == "1")
+    {
+        $("***REMOVED***setting_main_wifi").hide();
+        $("***REMOVED***setting_main_wifi_line").hide();
+        $("***REMOVED***setting_guest_wifi").hide();
+        $("***REMOVED***setting_guest_wifi_line").hide();
+    }
+}
+
+//-->
 </script>
 <link href="css/custom.css" rel="stylesheet" type="text/css">
 
 </head>
 
-<body style="padding:0;margin:0;overflow:none" onload="change_size();" onResize="change_size();">
-  <table width="100%" CELLPADDING="0" CELLSPACING="0" style="padding:0;margin:0;" id="all">
-    <tr width="100%">
-      <td style="width:100%;height:100%">
-      <div id="main_screen">
-        <table style="height:100px;width:100%;margin:0;padding:0" CELLPADDING="0" CELLSPACING="0" class="newtopframe">
-          <tr>
-            <td style="padding-left:20px">
-              <img style="position:relative;width: 216px" src="img/NightHawk.png" >
-              <br><span id="ModuleName" style="position: relative; right: 0px;"><b>My Modem:</b> Nighthawk CM2000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            </td>
-            <td style="text-align:right;padding-right:25px">
-              <ul class="tnb-right">
-                  <li>
-                      <div class="w3-dropdown-click">
-                          <a onclick="myFunction()"><img src="img/tnb-ico1.png" alt=""></a>
-                          <div id="Demo" class="w3-dropdown-content w3-bar-block tnb-submenu-bg">
-                            <div id="search">
-                                <input type="text" id="search_text" name="search" value="Enter Search Item" onkeypress="detectEnter('num',event);" onFocus="this.select();" >
-                                <input id="search_button" class="search_button" type="button" name="dosearch" value="GO" onClick="do_search();">
-                            </div>
-                          </div>
-                      </div>
-                  </li>
-                  <li><a href="javascript:;"><img src="img/tnb-ico2.png" alt=""></a>
-                      <div class="tnb-submenu">
-                        <a target="_blank" href="http://downloadcenter.netgear.com/">Documentation</a>
-                        <a target="_blank" href="http://support.netgear.com/">Online Support</a>
-                        <a target="_blank" href="http://support.netgear.com/app/answers/detail/a_id/12923">Gateway FAQ</a>
-                        <a target="_blank" href="OpenSourceLicense.html">Open Source</a>
-                      </div>
-                  </li>
-              </ul>
-              <br><br style='line-height:8px'>
-            </td>
-          </tr>
-        </table>
-         <div class="header-bar"></div>
-          <table CELLPADDING="0" CELLSPACING="0" style="height:100%;width:100%;margin:0;padding:0">
-                <td style="width=50%" align="middle">
-                    <table style="font-size:170%">
-                        <form id="target" name="loginform" method="POST" action="/goform/Login?id=1166443824">
-                            <th colspan="2" align="center">Please enter password to login</tr>
-                            <tr><td align="right">Username: </td><td>admin</td>
-                            <input type="hidden" id="name" name="loginName" value="admin">
-                            </tr>
-                            <tr></tr><tr></tr>
-                            <tr><td align="right">Password: </td>
-                            <td><input type="password" id="password" name="loginPassword"></td>
-                            </tr><tr>
-                            </tr><tr></tr>
-                            <tr><td></td><td align="right">
-                            <input type="submit" value="Login" id="login" style="font-size:100%" />
-                            </td></tr>
-                        </form>
-                    </table>
-                </td>
+<body onload="change_size_ADVPage();loadSettings();" bgcolor="***REMOVED***FFFFFF" class="body_custom_class" onResize="change_size_ADVPage();">
+    <form action="/goform/RouterStatus?id=896951128" method="post" onsubmit="return false;">
+    <div id="scroll-pane" class="scroll-pane">
+        <table>
+            <tr>
                 <td>
-                    <img src="img/CM2000.jpg">
-                </td>
-          </table>
-        </div> <!--  id=main_screen-->
-      </div>
-      </td>
-    </tr>
-  </table>
+                    <div class="advanced_section_details">
+                        <div class="adv_box_field">
+                            <div id="box-header-table1" class="box-header-table-custom">
+                            <table>
+                              <tr class="box-header">
+                                <td class="icon-css">
+                                  <div class="img_status_good custom_icon"></div>
+                                </td>
+                                <td class="box-header-text header-text1 curser_class">Cable Information</td>
+                              </tr>
+                            </table>
+                            </div>
+                            <div class="table_height scroll-class">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table1" class="page-table">
 
-<!-- This JavaScript sn: ***REDACTED*** activates those tabs -->
-<div id="diablePage" style="display:none;z-index:1;position: absolute;"></div>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" width="25%" >Hardware Version</td>
+                                            <td class="basic-text-content" width="75%" id="HardwareVersion">  </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text" id="RouterRev-table">
+                                            <td class="basic-text-menu" >Firmware Version</td>
+                                            <td class="basic-text-content" id="FirmwareVersion"> </td>
+                                        </tr>
+                                        <tr id="RouterRev-seperate">
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Cable Firmware Version</td>
+                                            <td class="basic-text-content" id="CableFirmwareVersion"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Cable Modem Serial Number</td>
+                                            <td class="basic-text-content"  id="CableModemSerialNumber"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >CM Certificate</td>
+                                            <td class="basic-text-content"  id="CMcertificate"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >CM MAC</td>
+                                            <td class="basic-text-content"  id="CableMACAddress"> </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr><td colspan="2"><table id="LANPort-table" cellspacing="0" width="100%">
+                                        <tr class="basic-text">
+                                            <td class="basic-text-subTitle" >LAN Port</td>
+                                            <td class="basic-text-content" > </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >MAC Address </td>
+                                            <td class="basic-text-content" id="LANMAC"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >IP Address </td>
+                                            <td class="basic-text-content" id="LANIPMASK"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >DHCP </td>
+                                            <td class="basic-text-content" id="LANDHCP"> </td>
+                                        </tr>
+
+                                        <!--
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Last Checked for Upgrade</td>
+                                            <td class="basic-text-content" >3/31/2010 14:55</td>
+                                        </tr>
+                                        -->
+                                        <!--
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Operation Mode</td>
+                                            <td class="basic-text-content" >Non AP</td>
+                                        </tr>
+                                        -->
+                                        </table></td></tr>
+                                        <tr >
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+                                        <!--<tr class="basic-text" style="align:center">
+                                            <td colspan="2" class="basic-table-seperate-border" style="background-color:***REMOVED***FFFFFF;">
+                                            <table >
+                                            <tr>
+                                            <td width="25%"></td>
+                                            <td  width="50%" class="page-table-button-left" align="center" onClick="advButtonClick(2);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                <span id="reboot">Reboot</span>
+                                            </td>
+                                            <td width="25%"></td>
+                                            </tr>
+                                            </table>
+                                            </td>
+                                        </tr>-->
+                                    </table>
+                                </td></tr>
+                            </table>
+                            </div>
+                            <div class="action-zone">
+                                <button name="reset" id="reset" class="border_btn page-table-button-large-right" onClick="advButtonClick(3);">Factory Reset</button>
+                                <button name="reboot" id="reboot" class="purple_button page-table-button-large-right" onClick="advButtonClick(2);">Reboot</button>
+                            </div>
+
+                        </div>
+
+                        <div class="adv_box_field" id='internetPort'>
+
+                            <div id="box-header-table2" class="box-header-table-custom">
+                            <table>
+
+                                <tr class="box-header">
+                                    <td class="width_20">
+                                        <div id='Internet' class=""></div>
+                                    </td>
+
+                                    <td class="box-header-text header-text2 curser_class" id="INT_setup">Internet Port</td>
+
+                                    <!--
+                                    <td class="box-header-text header-text2" style="cursor:pointer;" id="LAN_setup">LAN Port</td>
+                                    -->
+                                </tr>
+                            </table>
+                            </div>
+
+                        <div class="table_height-1 table-overflow">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table2" class="page-table">
+
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" width="25%" >MAC Address </td>
+
+                                            <td class="basic-text-content" width="75%" id="InternetMAC"></td>
+
+                                            <!--
+                                            <td class="basic-text-content" width="75%">XX:XX:XX:XX:XX:XX</td>
+                                            -->
+                                        </tr>
+                                        <!--
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >DHCP </td>
+                                            <td class="basic-text-content" >On </td>
+                                        </tr>
+                                        -->
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >IP Address </td>
+
+                                            <td class="basic-text-content" id="InternetIP"></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Connection </td>
+                                            <td class="basic-text-content" id="InternetDHCP"></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Mask </td>
+
+                                            <td class="basic-text-content" id="InternetMASK"></td>
+                                        </tr>
+                                        <!--<tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >IP Subnet Mask </td>
+
+                                            <td class="basic-text-content" >255.255.0.0</td>
+                                        </tr>-->
+                                        <!--
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Gateway IP Address </td>
+                                            <td class="basic-text-content" >0.0.0.0 </td>
+                                        </tr>
+                                        -->
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Domain Name Server </td>
+
+                                            <td class="basic-text-content" id="InternetDNS"></td>
+
+                                            <!--
+                                            <td class="basic-text-content" >0.0.0.0<br><br></td>
+                                            -->
+                                        </tr>
+                                        <!--<tr>
+                                            <td colspan="2" class="basic-table-seperate-border">
+                                                <div class="basic-table-seperate"></div>
+                                            </td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >WAN Preference </td>
+                                            <td class="basic-text-content" >Internet Port (1Gbps) </td>
+                                        </tr>-->
+
+
+                                        <tr >
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+                                        <!--<tr class="basic-text" style="align:center;">
+                                            <td colspan="2" class="basic-table-seperate-border" style="background-color:***REMOVED***FFFFFF;">
+                                            <table ><tr>
+                                             <td colspan="1" class="page-table-button-right" align="center"   onClick="advButtonClick(0);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                 <span id="statistics">Show Statistics</span>
+                                            </td>
+                                             <td colspan="1" class="page-table-button-right" align="center"  onClick="advButtonClick(1);" onMouseOver="changeCursorPointer();" onMouseOut="changeCursorDefault();">
+                                                 <span id="status" name="Status">Connection Status</span>
+                                            </td>
+                                            </tr>
+                                            </table></td>
+                                        </tr>-->
+                                    </table>
+                                    <input type="hidden"></input>
+                                </td></tr>
+                            </table></div>
+                            <div class="action-zone">
+                                <button type="button" name="show_sta" id="statistics" onClick="advButtonClick(0);" class="border_btn page-table-button-large-right">Show Statistics</button>
+                                <button type="button" name="Status" id="status" onClick="advButtonClick(1);" class="purple_button page-table-button-large-right">Connection Status</button>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+            <tr id="setting_main_wifi_line">
+                <td><div class="adv-home-table-seperate adv-home-table-seperate-custom"></div><div class="adv-home-table-seperate-2"></div></td>
+            </tr>
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+            <tr id="setting_main_wifi">
+                <td>
+                    <div class="advanced_section_details">
+
+                        <div class="adv_box_field">
+                            <div id="box-header-table3" class="box-header-table box-header-table-custom">
+                            <table>
+
+                                <tr class="box-header">
+                                    <td class="icon-css">
+                                        <div id='WiFi24G' class=""></div>
+                                    </td>
+                                    <td class="box-header-text header-text3 curser_class" id="wireless_setup">Wireless Settings (2.4GHz)</td>
+                                </tr>
+                            </table>
+                            </div>
+
+                        <div class="table_height_23 table-overflow">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table3" class="page-table">
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Name (SSID)</td>
+                                            <td class="basic-text-content" id="WirelessName">  </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Region</td>
+                                            <td class="basic-text-content" id="WirelessRegion"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Channel</td>
+                                            <td class="basic-text-content" id="WirelessChannel"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Mode</td>
+                                            <td class="basic-text-content" id="WirelessMode"> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wireless AP</td>
+                                            <td class="basic-text-content" id="WirelessAP"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Broadcast Name</td>
+                                            <td class="basic-text-content" id="WirelessBroadcastName"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wi-Fi Protected Setup</td>
+                                            <td class="basic-text-content" id="WPSMode"></td>
+                                        </tr>
+                                        <tr >
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+                                    </table>
+                                </td></tr>
+                            </table>
+                        </div>
+                        </div>
+
+                        <div id="setting_main_5G" class="adv_box_field">
+                            <div id="box-header-table4" class="box-header-table box-header-table-custom">
+                            <table>
+
+                                <tr class="box-header">
+                                    <td class="icon-css">
+                                        <div id='WiFi5G' class=""></div>
+                                    </td>
+                                    <td class="box-header-text  header-text4 curser_class" id="wireless_setup_5G">Wireless Settings (5GHz)</td>
+                                </tr>
+                            </table>
+                            </div>
+
+                        <div class="table_height_23 table-overflow">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table4" class="page-table" style="display:none">
+
+                                        <tr style="height:6px;background-color:***REMOVED***FFFFFF">
+                                            <td colspan="2" class="basic-table-seperate-border"></td>
+                                        </tr>
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Smart Connect</td>
+                                            <td class="basic-text-content" >ENABLED</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Channel</td>
+                                            <td class="basic-text-content" id="WirelessChannel_an_bs"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Mode</td>
+                                            <td class="basic-text-content" id="WirelessMode_an_bs"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+
+                                    </table>
+                                    <table id="page-table4-1" class="page-table">
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Name (SSID)</td>
+                                            <td class="basic-text-content" id="WirelessName_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Region</td>
+                                            <td class="basic-text-content" id="WirelessRegion_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Channel</td>
+                                            <td class="basic-text-content" id="WirelessChannel_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Mode</td>
+                                            <td class="basic-text-content" id="WirelessMode_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wireless AP</td>
+                                            <td class="basic-text-content" id="WirelessAP_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Broadcast Name</td>
+                                            <td class="basic-text-content" id="WirelessBroadcastName_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wi-Fi Protected Setup</td>
+                                            <td class="basic-text-content" id="WPSMode_an"></td>
+                                        </tr>
+                                                        <tr >
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+                                    </table>
+                                </td></tr>
+                            </table>
+                        </div>
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+            <tr id="setting_guest_wifi_line">
+                <td><div class="adv-home-table-seperate adv-home-table-seperate-custom"></div><div class="adv-home-table-seperate-2"></div></td>
+            </tr>
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+            <tr id="setting_guest_wifi">
+                <td>
+                    <div class="advanced_section_details">
+
+                        <div class="adv_box_field">
+                            <div id="box-header-table5" class="box-header-table advanced_section_details box-header-table-custom">
+                            <table>
+
+                                <tr class="box-header">
+                                    <td class="icon-css">
+                                        <div id='WiFi24GG' class=""></div>
+                                    </td>
+                                    <td class="box-header-text  header-text5 curser_class" id="guest_setup">Guest Network (2.4 GHz)</td>
+                                </tr>
+                            </table>
+                            </div>
+
+                        <div class="table_height_23 scroll-class">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table5" class="page-table">
+
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Name (SSID)</td>
+                                            <td class="basic-text-content" id="GuestNetworkName1"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wireless AP</td>
+                                            <td class="basic-text-content" id="GuestNetworkAP1"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Broadcast Name</td>
+                                            <td class="basic-text-content" id="GuestNetworkBroadcast1"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Allow guests to see each other and access my local network</td>
+                                            <td class="basic-text-content" id="GuestNetworkAllow1"></td>
+                                        </tr>
+                                        <tr >
+                                            <td class="basic-text-menu-bottom">&nbsp;</td>
+                                            <td class="basic-text-content-bottom"></td>
+                                        </tr>
+                                    </table>
+                                </td></tr>
+                            </table>
+                        </div>
+
+                        </div>
+
+                        <div id="setting_guest_5G" class="adv_box_field">
+
+                            <div id="box-header-table6" class="box-header-table box-header-table-custom">
+                            <table>
+
+                                <tr class="box-header">
+                                    <td class="icon-css">
+                                        <div id='WiFi5GG' class=""></div>
+                                    </td>
+                                    <td class="box-header-text  header-text6 curser_class" id="guest_setup_5G">Guest Network (5 GHz)</td>
+                                </tr>
+                            </table>
+                            </div>
+
+                        <div class="table_height_23">
+                            <table class="adv_table_details_custom">
+                                <tr align="left" valign="bottom"><td>
+                                    <table id="page-table6" class="page-table">
+
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Name (SSID)</td>
+                                            <td class="basic-text-content" id="GuestNetworkName1_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Wireless AP</td>
+                                            <td class="basic-text-content" id="GuestNetworkAP1_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Broadcast Name</td>
+                                            <td class="basic-text-content" id="GuestNetworkBroadcast1_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="basic-table-seperate-border"><div class="basic-table-seperate"></div></td>
+                                        </tr>
+
+                                        <tr class="basic-text">
+                                            <td class="basic-text-menu" >Allow guests to see each other and access my local network</td>
+                                            <td class="basic-text-content" id="GuestNetworkAllow1_an"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="basic-text-menu" >&nbsp;</td>
+                                            <td class="basic-text-content" ></td>
+                                        </tr>
+
+                                    </table>
+                                </td></tr>
+                            </table>
+                        </div>
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+            <!--<tr>
+                <td><div class="adv-home-table-seperate"></div><div class="adv-home-table-seperate-2"></div></td>
+            </tr>-->
+            <tr>
+                <td class="height_2"></td>
+            </tr>
+
+        </table>
+        </div>
+        <input type="hidden" value="1" name="buttonSelect"/>
+<!--
+    <input type="hidden" name="wantype" value="dhcp">
+-->
+
+        <input type="hidden" name="wantype" value="dhcp">
+
+        <input type="hidden" name="enable_apmode" value="0">
+    </form>
+    <form>
+        <input type="hidden" name="curlang" value="English">
+    </form>
 </body>
 </html>

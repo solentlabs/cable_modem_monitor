@@ -51,8 +51,8 @@ class NetgearCM2000Parser(ModemParser):
     models = ["CM2000"]
     priority = 50  ***REMOVED*** Standard priority
 
-    ***REMOVED*** Verification status - auth confirmed, parsing fixes pending user verification
-    verified = False  ***REMOVED*** Auth works, parsing fixes need user confirmation - Issue ***REMOVED***38
+    ***REMOVED*** Verification status - awaiting user confirmation of v3.8.1 fixes
+    verified = False  ***REMOVED*** Pending user confirmation of software version and restart - Issue ***REMOVED***38
     verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/38 (@m4dh4tt3r-88)"
 
     ***REMOVED*** Device metadata
@@ -69,7 +69,7 @@ class NetgearCM2000Parser(ModemParser):
         success_indicator="DocsisStatus",  ***REMOVED*** Redirect or page content after login
     )
 
-    ***REMOVED*** Capabilities - CM2000 provides full system info including uptime
+    ***REMOVED*** Capabilities - CM2000 provides full system info including uptime and restart
     capabilities = {
         ModemCapability.DOWNSTREAM_CHANNELS,
         ModemCapability.UPSTREAM_CHANNELS,
@@ -79,6 +79,7 @@ class NetgearCM2000Parser(ModemParser):
         ModemCapability.LAST_BOOT_TIME,
         ModemCapability.CURRENT_TIME,
         ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.RESTART,
     }
 
     ***REMOVED*** URL patterns to try for modem data
@@ -238,8 +239,22 @@ class NetgearCM2000Parser(ModemParser):
         downstream_channels = self.parse_downstream(docsis_soup)
         upstream_channels = self.parse_upstream(docsis_soup)
 
-        ***REMOVED*** Parse system info
+        ***REMOVED*** Parse system info from DocsisStatus.htm (uptime, current time)
         system_info = self.parse_system_info(docsis_soup)
+
+        ***REMOVED*** Fetch index.htm for software version (it's not in DocsisStatus.htm)
+        if session and base_url:
+            try:
+                _LOGGER.debug("CM2000: Fetching index.htm for software version")
+                index_response = session.get(f"{base_url}/index.htm", timeout=10)
+                if index_response.status_code == 200:
+                    index_soup = BeautifulSoup(index_response.text, "html.parser")
+                    sw_version = self._parse_software_version_from_index(index_soup)
+                    if sw_version:
+                        system_info["software_version"] = sw_version
+                        _LOGGER.debug("CM2000: Parsed software version: %s", sw_version)
+            except Exception as e:
+                _LOGGER.debug("CM2000: Error fetching index.htm for version: %s", e)
 
         return {
             "downstream": downstream_channels,
@@ -687,3 +702,101 @@ class NetgearCM2000Parser(ModemParser):
         except Exception as e:
             _LOGGER.error("Error calculating boot time from '%s': %s", uptime_str, e)
             return None
+
+    def _parse_software_version_from_index(self, soup: BeautifulSoup) -> str | None:
+        """Parse software version from index.htm.
+
+        The CM2000 stores firmware version in index.htm's InitTagValue() function:
+            function InitTagValue() {
+                var tagValueList = 'V8.01.02|0|0|0|0|retail|...';
+                return tagValueList.split("|");
+            }
+
+        Index 0 contains the firmware version (e.g., "V8.01.02").
+
+        Args:
+            soup: BeautifulSoup object of index.htm
+
+        Returns:
+            Firmware version string or None if not found
+        """
+        try:
+            ***REMOVED*** Find script containing InitTagValue
+            for script in soup.find_all("script"):
+                if not script.string or "InitTagValue" not in script.string:
+                    continue
+
+                ***REMOVED*** Extract tagValueList from the function (first non-commented assignment)
+                ***REMOVED*** Look for lines that start with whitespace then "var tagValueList"
+                ***REMOVED*** Skip lines that start with "//" (comments)
+                match = re.search(
+                    r"function InitTagValue\(\)[^{]*\{[^}]*?^\s+var tagValueList = ['\"]([^'\"]+)['\"]",
+                    script.string,
+                    re.DOTALL | re.MULTILINE,
+                )
+                if match:
+                    values = match.group(1).split("|")
+                    if values and values[0]:
+                        version = values[0].strip()
+                        if version and version != "&nbsp;":
+                            _LOGGER.debug("CM2000: Found firmware version in index.htm: %s", version)
+                            return version
+
+        except Exception as e:
+            _LOGGER.debug("CM2000: Error parsing software version from index.htm: %s", e)
+
+        return None
+
+    def restart(self, session, base_url: str) -> bool:
+        """Restart the modem.
+
+        The CM2000 restart is done via RouterStatus.htm:
+        1. Fetch RouterStatus.htm to get the dynamic form action URL
+        2. POST to /goform/RouterStatus?id=XXXXX with buttonSelect=2
+
+        Args:
+            session: Authenticated requests session
+            base_url: Modem base URL
+
+        Returns:
+            True if restart command was sent successfully
+        """
+        try:
+            ***REMOVED*** Step 1: Fetch RouterStatus.htm to get the form action with dynamic ID
+            _LOGGER.debug("CM2000: Fetching RouterStatus.htm for restart")
+            status_response = session.get(f"{base_url}/RouterStatus.htm", timeout=10)
+
+            if status_response.status_code != 200:
+                _LOGGER.error("CM2000: Failed to fetch RouterStatus.htm, status %d", status_response.status_code)
+                return False
+
+            ***REMOVED*** Step 2: Extract form action URL with dynamic ID
+            soup = BeautifulSoup(status_response.text, "html.parser")
+            form = soup.find("form", {"action": re.compile(r"/goform/RouterStatus")})
+
+            if not form:
+                _LOGGER.error("CM2000: Could not find RouterStatus form")
+                return False
+
+            form_action = str(form.get("action", ""))
+            if form_action.startswith("/"):
+                restart_url = f"{base_url}{form_action}"
+            else:
+                restart_url = f"{base_url}/goform/RouterStatus"
+
+            _LOGGER.debug("CM2000: Restart URL: %s", restart_url)
+
+            ***REMOVED*** Step 3: POST with buttonSelect=2 to trigger reboot
+            restart_data = {"buttonSelect": "2"}
+            restart_response = session.post(restart_url, data=restart_data, timeout=10)
+
+            if restart_response.status_code == 200:
+                _LOGGER.info("CM2000: Restart command sent successfully")
+                return True
+            else:
+                _LOGGER.error("CM2000: Restart failed with status %d", restart_response.status_code)
+                return False
+
+        except Exception as e:
+            _LOGGER.error("CM2000: Error during restart: %s", e)
+            return False

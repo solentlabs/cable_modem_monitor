@@ -105,14 +105,20 @@ Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CON
 
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
-![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
-*Complete dashboard showing connection status, signal quality, and error tracking*
+<p align="center">
+  <img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="100%"><br>
+  <em>Complete dashboard showing connection status, signal quality, and error tracking</em>
+</p>
 
-![Downstream Power Levels](images/downstream-power-levels.png)
-*Real-time power level monitoring across all downstream channels*
+<p align="center">
+  <img src="images/downstream-power-levels.png" alt="Downstream Power Levels" width="100%"><br>
+  <em>Real-time power level monitoring across all downstream channels</em>
+</p>
 
-![Signal-to-Noise Ratio](images/signal-to-noise-ratio.png)
-*SNR tracking helps identify signal quality issues before they cause problems*
+<p align="center">
+  <img src="images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio" width="100%"><br>
+  <em>SNR tracking helps identify signal quality issues before they cause problems</em>
+</p>
 
 ---
 
@@ -173,6 +179,8 @@ These parsers exist but need user confirmation:
 | Model | Status | Notes |
 |-------|--------|-------|
 | **Arris SB6190** | Needs testing | Parser based on SB6141, no user reports yet |
+| **Motorola MB8611** | Needs testing | HNAP auth added in v3.8.0, awaiting verification ([Issue ***REMOVED***6](https://github.com/kwschulz/cable_modem_monitor/issues/6)) |
+| **Netgear CM2000** | Needs testing | Parser added in v3.8.0, awaiting verification ([Issue ***REMOVED***38](https://github.com/kwschulz/cable_modem_monitor/issues/38)) |
 | **Technicolor XB7 (CGM4331COM)** | Needs testing | Parser exists, needs user verification |
 | **Technicolor TC4400** | Needs testing | See [Issue ***REMOVED***1](https://github.com/kwschulz/cable_modem_monitor/issues/1) |
 | **Motorola Generic** | Needs testing | May work with other Motorola DOCSIS 3.x modems |
@@ -182,10 +190,7 @@ These parsers have confirmed problems:
 
 | Model | Issue | Status |
 |-------|-------|--------|
-| **Netgear CM2000** | Authentication not working | See [Issue ***REMOVED***38](https://github.com/kwschulz/cable_modem_monitor/issues/38) - Basic auth insufficient, CM600 parser works as workaround |
 | **Motorola MB8600** | HNAP authentication broken | See [Issue ***REMOVED***40](https://github.com/kwschulz/cable_modem_monitor/issues/40) - Newer firmware uses HNAP_AUTH header, 3-strike login lockout |
-| **Motorola MB8611 (HNAP)** | HNAP authentication broken | See [Issues ***REMOVED***4, ***REMOVED***6](https://github.com/kwschulz/cable_modem_monitor/issues/4) - SSL cert and protocol issues |
-| **Motorola MB8611 (Static)** | Static HTML fallback untested | No user confirmation, limited features |
 
 **Note**: Unverified parsers will be marked as such in the UI during setup.
 

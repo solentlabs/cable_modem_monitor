@@ -14,7 +14,7 @@
 | **Max Speed** | 2.5 Gbps downstream |
 | **Firmware Tested** | V8.01.02 |
 | **Hardware Version** | 1.01 |
-| **Parser Status** | Pending verification |
+| **Parser Status** | ⏳ Pending v3.8.1 verification |
 | **Captured By** | @m4dh4tt3r-88 |
 | **Capture Date** | November 2025 |
 
@@ -37,13 +37,14 @@ All files extracted from diagnostics.json with original modem filenames:
 
 | File | Size | Description |
 |------|------|-------------|
-| index.htm | 73 KB | Login/main page |
+| index.htm | 73 KB | Login/main page, contains firmware version |
+| index_https.htm | 73 KB | HTTPS version of index.htm |
 | DocsisStatus.htm | 64 KB | DOCSIS channel data (primary parsing target) |
+| RouterStatus.htm | 59 KB | Router status, **reboot endpoint** |
+| SetPassword.htm | 27 KB | Password change page |
 | eventLog.htm | 20 KB | Event/system log |
 | DocsisOffline.htm | 6 KB | Offline status page |
 | WebServiceManagement.htm | 7 KB | Web service settings |
-| RouterStatus.htm | 8 KB | Router status info |
-| SetPassword.htm | 8 KB | Password change page |
 | Logout.htm | 1 KB | Logout page |
 | DashBoard.htm | 362 B | Dashboard redirect |
 | root.htm | 362 B | Root redirect |
@@ -51,7 +52,44 @@ All files extracted from diagnostics.json with original modem filenames:
 
 ***REMOVED******REMOVED*** Data Available
 
-Unlike the CM600, the CM2000 **does provide** uptime and system time!
+Unlike the CM600, the CM2000 **does provide** uptime, system time, and firmware version!
+
+***REMOVED******REMOVED******REMOVED*** Software Version (index.htm)
+
+Firmware version is in `index.htm`, not `DocsisStatus.htm`:
+
+```javascript
+function InitTagValue()
+{
+    var tagValueList = 'V8.01.02|0|0|0|0|retail|0|0|0|0|0|0|0|0|0|';
+    return tagValueList.split("|");
+}
+```
+
+| Index | Field | Example Value |
+|-------|-------|---------------|
+| 0 | Firmware Version | `V8.01.02` |
+| 5 | Build Type | `retail` |
+
+***REMOVED******REMOVED******REMOVED*** Reboot Endpoint (RouterStatus.htm)
+
+Reboot is available via `RouterStatus.htm`:
+
+```javascript
+// Confirm dialog
+if(confirm("Rebooting the router will disrupt active traffic on the network. Are you sure?"))
+{
+    document.forms[0].buttonSelect.value="2";
+    document.forms[0].submit(document.forms[0]);
+}
+```
+
+| Action | buttonSelect Value | Form Action |
+|--------|-------------------|-------------|
+| Reboot | `2` | `POST /goform/RouterStatus?id=DYNAMIC_ID` |
+| Factory Reset | `3` | `POST /goform/RouterStatus?id=DYNAMIC_ID` |
+
+**Note**: The form action URL includes a dynamic ID that must be extracted from the page.
 
 ***REMOVED******REMOVED******REMOVED*** InitTagValue() - System Status
 | Index | Field | Example Value |
@@ -122,8 +160,14 @@ Unlike the CM600, the CM2000 **does provide** uptime and system time!
 - **Original Issue**: [***REMOVED***38 - Netgear CM2000 Support Request](https://github.com/kwschulz/cable_modem_monitor/issues/38)
 - **Contributor**: @m4dh4tt3r-88
 - **Fixtures Captured**: November 2025
-- **Parser Status**: ⏳ Auth confirmed, parsing fix pending verification
-- **Known Fixes**: Upstream power parsing now strips " dBmV" suffix
+- **Parser Status**: ⏳ Pending v3.8.1 verification
+- **Working (confirmed)**:
+  - ✅ 31 downstream + 4 upstream channels
+  - ✅ Uptime and boot time
+  - ✅ Upstream power parsing (strips " dBmV" suffix)
+- **Added in v3.8.1 (pending confirmation)**:
+  - ⏳ Software version from index.htm
+  - ⏳ Restart via RouterStatus.htm
 
 ***REMOVED******REMOVED*** Comparison with CM600
 
