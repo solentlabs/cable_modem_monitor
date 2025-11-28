@@ -2,14 +2,23 @@
 
 Complete HTML capture from a Netgear C3700-100NAS cable modem/router.
 
-***REMOVED******REMOVED*** Device Information
+***REMOVED******REMOVED*** Modem Information
 
-- **Model**: C3700-100NAS
-- **Type**: DOCSIS 3.0 Cable Modem/Router Combo
-- **Firmware Version**: V1.0.0.42_1.0.11
-- **Hardware Version**: V2.02.18
-- **Channel Bonding**: 24x8 (24 downstream, 8 upstream)
-- **Authentication**: HTTP Basic Auth
+| Property | Value |
+|----------|-------|
+| **Model** | C3700-100NAS |
+| **Manufacturer** | Netgear |
+| **Type** | DOCSIS 3.0 Cable Modem/Router Combo |
+| **DOCSIS Version** | 3.0 |
+| **Release Year** | 2016 |
+| **EOL Year** | 2022 |
+| **ISPs** | Comcast, Cox, Spectrum |
+| **Channel Bonding** | 24x8 (24 downstream, 8 upstream) |
+| **Firmware Tested** | V1.0.0.42_1.0.11 |
+| **Hardware Version** | V2.02.18 |
+| **Authentication** | HTTP Basic Auth |
+| **Captured By** | @kwschulz |
+| **Capture Date** | November 2025 |
 
 ***REMOVED******REMOVED*** Capture Details
 

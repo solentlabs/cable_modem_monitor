@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content="CM2000">
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+
+<title>NETGEAR Modem CM2000</title>
+<link rel="stylesheet" href="css/table_noh.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script src="jquery.js"></script>
+<script src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style>
+<script language="javascript" type="text/javascript" src="func.js"></script>
+<script language="javascript" type="text/javascript" src="msg.js"></script>
+<script language="javascript" type="text/javascript" src="utility.js"></script>
+<script language="javascript" type="text/javascript" src="browser.js"></script>
+<script language="javascript" type="text/javascript" src="md5.js"></script>
+<script language="javascript" type="text/javascript" src="wep.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!-- hide script from old browsers
+$(document).ready(function()
+{
+    $("***REMOVED***target").submit(function() {
+        buttonFilter();
+    });
+
+});
+
+function setHelpIframeVisible(){
+    $('.help-frame-div').css("visibility","visible");
+}
+
+function showHelpIframe() {
+    var imgSrc=document.getElementById('help-button');
+
+    if(imgSrc.src.search("up")>=0)
+    {
+        $(".help-frame-div").show();
+        window.frames["helpframe"].$('***REMOVED***content').jScrollPane({showArrows:true});
+        imgSrc.src="img/helparrowdown-icon.png";
+    }
+    else
+    {
+        $(".help-frame-div").hide();
+        imgSrc.src="img/helparrowup-icon.png";
+        setTimeout(setHelpIframeVisible,500);
+    }
+    if((navigator.appName.indexOf("Internet Explorer")==-1) ||
+       (navigator.appVersion.indexOf("MSIE 9")==-1))
+         change_size();
+}
+
+function loadhelp(fname,anchname)
+{
+    var pane = window.frames["helpframe"].$('***REMOVED***content');
+    var imgSrc=document.getElementById('help-button');
+    if(imgSrc.src.search("up")<0)
+    {
+        $(".help-frame-div").show();
+        pane.jScrollPane({showArrows:true});
+        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+        {
+            window.frames["helpframe"].location.href=fname+"_h.htm";
+            $(".help-frame-div").show();
+        }
+        else
+        {
+            window.frames["helpframe"].location.href=fname+"_h.htm***REMOVED***" + anchname;
+            $(".help-frame-div").show();
+        }
+        $(".help-frame-div").show();
+        pane.jScrollPane({showArrows:true});
+    }
+}
+
+function resize()
+{
+    if(get_browser()=="Chrome")
+        $(".scroll-pane").css("margin-top","-17px");
+}
+
+function checkData()
+{
+    return true;
+}
+
+function InitTagValue()
+{
+    var tagValueList = '0|';
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    var cf = document.forms[0];
+    cf.local_https_enable.value = tagValues[0];
+
+    if (cf.local_https_enable.value == 1)
+		cf.local_https_check.checked = true;
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+//-->
+</script>
+<link href="css/custom.css" rel="stylesheet" type="text/css">
+</head>
+<body  onload="change_size();BodyInit();resize();" class="page-body"  onResize="change_size();resize();" >
+    <img class="cover-image" src="img/cover-image_noh.gif">
+    <!--<img class="body-image" src="img/subhead2-background_noh.jpg">-->
+    <div id="full-page-container">
+        <form id="target"  name="formname" method="POST" action="/goform/WebServiceManagement?id=1166443824">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <input type="hidden" name="local_https_enable" value="">
+            <img class="subtop-image" src="img/subhead2-top_noh.gif">
+            <div class="subhead2">Web Service Management</div>
+            <table border="0"    style="height:370px"  class="subhead2-table main_bas">
+
+            <tr align="left" valign="middle">
+                <td colspan="2" class="table-seperate-border">
+                <div class="fix_button">
+                    <button value="Cancel" onclick="buttonClick(this,'Cancel');location.href='WebServiceManagement.htm'" type="button" name="Cancel" class="button-cancel cancel_bt" >Cancel</button>
+                    <button value="Apply"  onclick="buttonClick(this,'Apply');return checkData();" type="submit" name="Apply" class="button-apply apply_bt" >Apply</button>
+                </div>
+                </td>
+            </tr>
+
+            <tr><td class="scrollpane-table-seperate-border scroll_container" colspan="2"><div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                <table style="border-collapse:collapse;width:97%">
+                    <tr><td nowrap colspan="2" style="font-weight:bold">Local Management:</td></tr>
+                    <tr><td colspan="2" height="12" ><div style="background-image:url('seprator.gif');width:100%;background-repeat:repeat-x;">&nbsp;</div></td></tr>
+                    <tr><td nowrap colspan="2">
+                        <label class="checkbox-container">
+                            <input type="checkbox"  name="local_https_check" value="local_https_mg"><a href="javascript:loadhelp('WebServiceManagement','fhttps')" tabindex="-1"><b>Force to use HTTPS</b></a>
+                            <span class="checkbox-checkmark"></span>
+                        </label>
+                    </td></tr>
+                </table>
+            </div></td></tr>
+            <tr valign="middle" align="center"><td class="table-seperate-border" colspan="2" style="padding-left:0px"><div class="help-frame-div" > <iframe id="helpframe"  src="WebServiceManagement_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0" onload="showHelpIframe();"></iframe> </div> </td> </tr>
+        </table>
+
+        <!--<img class="subfooter-image" src="img/subhead2-bottom.gif">-->
+        <div class="subhead2-bottom" >
+            <span class="help_ico"><img src="img/help-icon.png" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();"></span>
+            <span class="subhead2-text help_center_text" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Help Center </span>
+            <span class="button-help-arrow">
+              <img src="img/helparrowdown-icon.png" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();" ></span>
+            <span class="subhead2-text help_right_text" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Show/Hide Help Center </span>
+        </div>
+</form>
+</div>
+</body>
+</html>

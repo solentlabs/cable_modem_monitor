@@ -6,11 +6,18 @@
 
 ***REMOVED******REMOVED*** Modem Information
 
-- **Manufacturer:** Arris (originally Motorola SURFboard)
-- **Model:** SB6141
-- **DOCSIS:** 3.0
-- **Channels:** 8 downstream / 4 upstream
-- **Status:** Confirmed working in production
+| Property | Value |
+|----------|-------|
+| **Model** | SB6141 |
+| **Manufacturer** | Arris (originally Motorola SURFboard) |
+| **DOCSIS Version** | 3.0 |
+| **Release Year** | 2011 |
+| **EOL Year** | 2019 |
+| **ISPs** | Comcast, Cox, TWC |
+| **Channels** | 8 downstream / 4 upstream |
+| **Parser Status** | Verified |
+| **Captured By** | @captain-coredump |
+| **Capture Date** | October 2025 |
 
 ***REMOVED******REMOVED*** User Verification
 

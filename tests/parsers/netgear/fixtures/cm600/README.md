@@ -10,10 +10,14 @@
 | **DOCSIS Version** | 3.0 |
 | **Channel Bonding** | 24x8 (24 downstream, 8 upstream) |
 | **Max Speed** | 960 Mbps downstream |
-| **Release Year** | ~2015-2016 |
-| **Status** | End of Life (EOL) |
+| **Release Year** | 2016 |
+| **EOL Year** | 2023 |
+| **ISPs** | Comcast, Cox, Spectrum, TWC |
 | **Firmware Tested** | V1.01.22 |
 | **Hardware Version** | 1.01B |
+| **Parser Status** | Verified |
+| **Captured By** | @chairstacker |
+| **Capture Date** | November 2025 |
 
 ***REMOVED******REMOVED*** Links
 

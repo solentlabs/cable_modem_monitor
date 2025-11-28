@@ -8,7 +8,11 @@
 | **Manufacturer** | Technicolor |
 | **Type** | Cable Modem + Router (Gateway) |
 | **DOCSIS Version** | 3.1 |
-| **ISPs** | Rogers (Canada), Comcast (USA) |
+| **Release Year** | 2021 |
+| **ISPs** | Rogers, Comcast, Xfinity |
+| **Parser Status** | Verified |
+| **Captured By** | @kwschulz |
+| **Capture Date** | Development |
 
 ***REMOVED******REMOVED*** Links
 

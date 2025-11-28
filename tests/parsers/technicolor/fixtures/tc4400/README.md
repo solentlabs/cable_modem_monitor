@@ -8,8 +8,13 @@
 | **Manufacturer** | Technicolor |
 | **Type** | Cable Modem (standalone) |
 | **DOCSIS Version** | 3.1 |
+| **Release Year** | 2018 |
+| **ISPs** | Comcast, Cox, Spectrum |
 | **Hardware Version** | TC4400 Rev:3.6.0 |
 | **Firmware Tested** | 70.12.42-190604 |
+| **Parser Status** | Verified |
+| **Captured By** | @kwschulz |
+| **Capture Date** | Development |
 
 ***REMOVED******REMOVED*** Links
 

@@ -1,0 +1,233 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<META name="description" content="CM2000">
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Modem CM2000</title>
+<link rel="stylesheet" href="css/table_noh.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script src="jquery.js"></script>
+<script src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style>
+<script language="javascript" type="text/javascript" src="func.js"></script>
+<script language="javascript" type="text/javascript" src="msg.js"></script>
+<script language="javascript" type="text/javascript" src="utility.js"></script>
+<script language="javascript" type="text/javascript" src="browser.js"></script>
+<script language="javascript" type="text/javascript" src="md5.js"></script>
+<script language="javascript" type="text/javascript" src="wep.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!-- hide script from old browsers
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("***REMOVED***target").submit(function() {
+            buttonFilter();
+        });
+        $("***REMOVED***target").bind("keypress", function(e) {
+              if (e.keyCode == 13) {
+                 return false;
+              }
+           });
+    });
+
+function resize()
+{
+    if(get_browser()=="Chrome")
+        $(".scroll-pane").css("margin-top","-17px");
+}
+
+function fresh()
+{
+    window.location.href="eventLog.htm";
+}
+
+function convertPriorityString(priority)
+{
+    var str="";
+    switch (priority)
+    {
+    case "1":
+        str = "Emergency";
+        break;
+    case "2":
+        str = "Alert";
+        break;
+    case "3":
+        str = "Critical";
+        break;
+    case "4":
+        str = "Error";
+        break;
+    case "5":
+        str = "Warning";
+        break;
+    case "6":
+        str = "Notice";
+        break;
+    case "7":
+        str = "Information";
+        break;
+    case "8":
+        str = "Debug";
+        break;
+    }
+
+    str += " (" + priority + ") ";
+    return str;
+}
+
+function setHelpIframeVisible(){
+    $('.help-frame-div').css("visibility","visible");
+}
+
+function showHelpIframe() {
+    var imgSrc=document.getElementById('help-button');
+
+    if(imgSrc.src.search("up")>=0)
+    {
+        $(".help-frame-div").show();
+        imgSrc.src="img/helparrowdown-icon.png";
+    }
+    else
+    {
+        $(".help-frame-div").hide();
+        imgSrc.src="img/helparrowup-icon.png";
+        setTimeout(setHelpIframeVisible,500);
+    }
+    if((navigator.appName.indexOf("Internet Explorer")==-1) ||
+       (navigator.appVersion.indexOf("MSIE 9")==-1))
+         change_size();
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    newRow.id="row_rules"
+    var cellsArray = new Array(); // No Used
+
+    var cellA = newRow.insertCell(-1);
+    cellA.align = "center";
+    //Eason, 201311118 Mantis ***REMOVED***10123 remove ".0".
+    cellA.innerHTML = tags[firstCellIdx];
+
+    var cellB = newRow.insertCell(-1);
+    cellB.align = "center";
+    cellB.innerHTML = convertPriorityString(tags[firstCellIdx + 1]);
+
+    var cellC = newRow.insertCell(-1);
+    cellC.align = "left";
+    cellC.innerHTML = tags[firstCellIdx + 2];
+
+    return cellsArray;
+}
+
+function InitTagValue()
+{
+    var xmlFormat = "<docsDevEventTable><tr><docsDevEvTime>Thu Nov 27 00:37:48 2025<\/docsDevEvTime><docsDevEvLevel>Warning (5)<\/docsDevEvLevel><docsDevEvText>TEK Invalid - Invalid Key Sequence Number;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Wed Nov 26 11:36:00 2025<\/docsDevEvTime><docsDevEvLevel>Notice (6)<\/docsDevEvLevel><docsDevEvText>CM-STATUS message sent. Event Type Code: 24; Chan ID: 33; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: 3.;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Wed Nov 26 11:34:02 2025<\/docsDevEvTime><docsDevEvLevel>Notice (6)<\/docsDevEvLevel><docsDevEvText>CM-STATUS message sent. Event Type Code: 16; Chan ID: 33; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: 3.;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Sat Nov 22 13:52:38 2025<\/docsDevEvTime><docsDevEvLevel>Warning (5)<\/docsDevEvLevel><docsDevEvText>TEK Invalid - Invalid Key Sequence Number;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Tue Nov 18 12:48:48 2025<\/docsDevEvTime><docsDevEvLevel>Notice (6)<\/docsDevEvLevel><docsDevEvText>DS profile assignment change. DS Chan ID: 32; Previous Profile: ; New Profile: 1 2 3.;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Tue Nov 18 12:48:42 2025<\/docsDevEvTime><docsDevEvLevel>Notice (6)<\/docsDevEvLevel><docsDevEvText>TLV-11 - unrecognized OID;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Notice (6)<\/docsDevEvLevel><docsDevEvText>Honoring MDD; IP provisioning mode = IPv6<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Sun Jul 13 17:48:39 2025<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>Started Unicast Maintenance Ranging - No Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Mon Mar 03 10:37:57 2025<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Mon Mar 03 10:36:54 2025<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>Started Unicast Maintenance Ranging - No Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Mon Feb 24 06:33:15 2025<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>Started Unicast Maintenance Ranging - No Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Thu Jan 23 14:59:28 2025<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>Started Unicast Maintenance Ranging - No Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Fri Dec 06 12:19:21 2024<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Loss of Sync;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Failed to acquire QAM/QPSK symbol timing;;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Fri Dec 06 12:13:39 2024<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>Resetting the cable modem due to docsDevResetNow<\/docsDevEvText><\/tr><tr><docsDevEvTime>Fri Dec 06 12:08:54 2024<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>SYNC Timing Synchronization failure - Loss of Sync;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><tr><docsDevEvTime>Time Not Established<\/docsDevEvTime><docsDevEvLevel>Critical (3)<\/docsDevEvLevel><docsDevEvText>No Ranging Response received - T3 time-out;CM-MAC=XX:XX:XX:XX:XX:XX;CMTS-MAC=XX:XX:XX:XX:XX:XX;CM-QOS=1.1;CM-VER=3.1;<\/docsDevEvText><\/tr><\/docsDevEventTable>";
+    return xmlFormat;
+}
+
+function BodyInit()
+{
+    drawTableFromXML('EventLogTable', InitTagValue(), onAddRowCB);
+    adjust_row_color();
+}
+
+function adjust_row_color()
+{
+    for(i=0 ; i<$('tr[id=row_rules]').length ; i++)
+    {
+        $('tr[id=row_rules]')[i].style.backgroundColor = "white";
+    }
+}
+
+function advButtonClick(index)
+{
+   if(index==1)
+    {
+        if(confirm("This file is only for NETGEAR analysis. Are you sure?"))
+        {
+            window.location.href = "downloadDebugLog.htm";
+        }
+    }
+}
+//-->
+</script>
+<link href="css/custom.css" rel="stylesheet" type="text/css">
+</head>
+<body onload="change_size();BodyInit();resize()" class="page-body" onResize="change_size();resize();" >
+    <img class="cover-image" src="img/cover-image_noh.gif">
+    <!--<img class="body-image" src="img/subhead2-background_noh.jpg">-->
+    <div id="full-page-container">
+        <form id="target"  name="formname" method="POST" action="/goform/eventLog?id=1166443824">
+            <input type="hidden" name="buttonHit"><input type="hidden" name="buttonValue">
+            <img class="subtop-image" src="img/subhead2-top_noh.gif">
+            <div class="subhead2">Event Log</div>
+            <table border="0"    style="height:370px"  class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td colspan="2" class="table-seperate-border">
+                     </td>
+                </tr>
+                <tr><td class="scrollpane-table-seperate-border scroll_container" colspan="2"><div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                <table style="border-collapse:collapse;width:97%">
+                    <tr>
+                        <td colspan="2" align="center">
+                        <button type="submit" value="Clear Log" id="clear" name="docsDevEvControl.0" class="button-sty1" onClick="buttonClick(this,'1');">Clear Log</button>
+                        <button type="button" value="Refresh" id="refresh" name="refresh" class="button-sty1"  onClick="buttonClick(this,'Refresh');fresh();">Refresh</button>
+                        <button type="button" value="Export" id="export" name="export" class="button-sty1"  onClick="advButtonClick(1);">Export</button>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><div style="background-image:url('seprator.gif');width:100%;background-repeat:repeat-x;">&nbsp;</div></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <table border="1" cellpadding="0" cellspacing="0" width="100%" id="EventLogTable" class="tbWhite">
+                                <tr>
+                                    <td style="text-align:center;width:25%">
+                                        <span class="thead">
+                                            Time
+                                        </span>
+                                    </td>
+                                    <td style="text-align:center;width:15%">
+                                        <span class="thead">
+                                            Priority
+                                        </span>
+                                    </td>
+                                    <td style="text-align:center;width:60%">
+                                        <span class="thead">
+                                            Description
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table></div></td></tr>
+                <tr valign="middle" align="center"><td class="table-seperate-border" colspan="2" style="padding-left:0px"><div class="help-frame-div" > <iframe id="helpframe"  src="EventLog_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0" onload="showHelpIframe();"></iframe> </div> </td> </tr>
+            </table>
+            <!--<img class="subfooter-image" src="img/subhead2-bottom.gif">-->
+            <div class="subhead2-bottom" >
+                <span class="help_ico"><img src="img/help-icon.png" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();"></span>
+                <span class="subhead2-text help_center_text" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Help Center </span>
+                <span class="button-help-arrow">
+                  <img src="img/helparrowdown-icon.png" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();" ></span>
+                <span class="subhead2-text help_right_text" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();"> Show/Hide Help Center </span>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

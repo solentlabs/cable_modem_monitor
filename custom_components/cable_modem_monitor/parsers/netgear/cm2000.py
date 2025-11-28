@@ -51,8 +51,8 @@ class NetgearCM2000Parser(ModemParser):
     models = ["CM2000"]
     priority = 50  ***REMOVED*** Standard priority
 
-    ***REMOVED*** Verification status
-    verified = False  ***REMOVED*** Authentication issues - see Issue ***REMOVED***38
+    ***REMOVED*** Verification status - auth confirmed, parsing fixes pending user verification
+    verified = False  ***REMOVED*** Auth works, parsing fixes need user confirmation - Issue ***REMOVED***38
     verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/38 (@m4dh4tt3r-88)"
 
     ***REMOVED*** Device metadata
@@ -517,10 +517,11 @@ class NetgearCM2000Parser(ModemParser):
                                 idx += fields_per_channel
                                 continue
 
+                            power_str = values[idx + 6].replace(" dBmV", "").strip()
                             channel = {
                                 "channel_id": values[idx + 3],
                                 "frequency": freq,
-                                "power": float(values[idx + 6]),
+                                "power": float(power_str),
                                 "channel_type": values[idx + 2],
                             }
                             channels.append(channel)

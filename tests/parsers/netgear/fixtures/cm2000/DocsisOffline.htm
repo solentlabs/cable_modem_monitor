@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content="CM2000">
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+
+<title>NETGEAR Modem CM2000</title>
+<link rel="stylesheet" href="css/table_noh.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script src="jquery.js"></script>
+<script src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<STYLE TYPE="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style>
+<script language="javascript" type="text/javascript" src="func.js"></script>
+<script language="javascript" type="text/javascript" src="msg.js"></script>
+<script language="javascript" type="text/javascript" src="utility.js"></script>
+<script language="javascript" type="text/javascript" src="browser.js"></script>
+<script language="javascript" type="text/javascript" src="md5.js"></script>
+<script language="javascript" type="text/javascript" src="wep.js"></script>
+
+<script language="javascript" type="text/javascript">
+<!-- hide script from old browsers
+var wan_status = 0;
+    $(document).ready(function()
+    {
+        BodyInit();
+        if(wan_status == "1")
+        {
+            location.href='DocsisStatus.htm';
+        }
+        $("***REMOVED***target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+function loadSettings()
+{
+    var cf = document.forms[0];
+}
+function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+function showHelpIframe() {
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            window.frames["helpframe"].$('***REMOVED***content').jScrollPane({showArrows:true});
+            imgSrc.src="img/helparrowdown-icon.png";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.png";
+            setTimeout(setHelpIframeVisible,500);
+        }
+        if((navigator.appName.indexOf("Internet Explorer")==-1) ||
+           (navigator.appVersion.indexOf("MSIE 9")==-1))
+             change_size();
+
+    }
+function loadhelp(fname,anchname)
+    {
+        var pane = window.frames["helpframe"].$('***REMOVED***content');
+        var imgSrc=document.getElementById('help-button');
+        if(imgSrc.src.search("up")<0)
+        {
+            $(".help-frame-div").show();
+            pane.jScrollPane({showArrows:true});
+            if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+            {
+                window.frames["helpframe"].location.href=fname+"_h.htm";
+                $(".help-frame-div").show();
+            }
+            else
+            {
+                window.frames["helpframe"].location.href=fname+"_h.htm***REMOVED***" + anchname;
+                $(".help-frame-div").show();
+            }
+            $(".help-frame-div").show();
+            pane.jScrollPane({showArrows:true});
+        }
+    }
+
+    function resize() {
+        if(get_browser()=="Chrome")
+            $(".scroll-pane").css("margin-top","-17px");
+    }
+
+function BodyInit()
+{
+    wan_status = 1;
+}
+
+//-->
+</script>
+<link href="css/custom.css" rel="stylesheet" type="text/css">
+</head>
+<body  onload="change_size();loadSettings();resize();" class="page-body"  onResize="change_size();resize();" >
+    <img class="cover-image" src="img/cover-image_noh.gif">
+    <!--<img class="body-image" src="img/subhead2-background_noh.jpg">-->
+    <div id="full-page-container">
+        <form id="target"  name="formname" method="POST" action="portTrunking.cgi">
+            <input type="hidden" name="buttonHit"><input type="hidden" name="buttonValue">
+            <img class="subtop-image" src="img/subhead2-top_noh.gif">
+            <div class="subhead2">Failure</div>
+            <table border="0"    style="height:370px"  class="subhead2-table">
+                <tr><td class="scrollpane-table-seperate-border scroll_container" colspan="2"><div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                <table style="width:97%;border-spacing: 0px 10px;">
+
+                <tr><td colspan="2" height="12" class="pb-15" ><div style="background-image:url('seprator.gif');width:100%;background-repeat:repeat-x;">&nbsp;</div></td></tr>
+                <tr>
+                    <td align="center">
+                        <b style="font-weight:bold; color:***REMOVED***ff0000">
+                            Your modem is offline.
+                        </b>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <b style="font-weight:bold">
+                            Please check the RF connection.
+                        </b>
+                    </td>
+                </tr>
+                <tr><td colspan="2" height="12" class="pb-15" ><div style="background-image:url('seprator.gif');width:100%;background-repeat:repeat-x;">&nbsp;</div></td></tr>
+                <tr>
+                    <td align="center">
+                        Click <b style="font-weight:bold">OK</b> to go back to the Dashboard screen....
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <a style="color:blue;TEXT-DECORATION :UNDERLINE" href="DocsisStatus.htm">Click <b>Here</b> to go to setting....</a>
+                    </td>
+                </tr>
+                <tr>
+                    <TD align="center">
+                        <button type="button" id="ok" value="OK" name="OK" class="button-sty1" onclick="buttonClick(this,'OK');location.href='DashBoard.htm'">OK</button>
+                    </TD>
+                </tr>
+                </table></div></td></tr>
+            </table>
+        </form>
+    </div>
+</body>
+</html>

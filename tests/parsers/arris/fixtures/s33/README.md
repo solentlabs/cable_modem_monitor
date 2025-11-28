@@ -2,12 +2,17 @@
 
 ***REMOVED******REMOVED*** Modem Information
 
-- **Manufacturer:** Arris/CommScope
-- **Model:** S33
-- **Firmware:** TB01.03.001.10_012022_212.S3
-- **ISP:** Comcast (user-reported)
-- **Related Issue:** [***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32)
-- **User:** gmogoody
+| Property | Value |
+|----------|-------|
+| **Model** | S33 |
+| **Manufacturer** | Arris/CommScope |
+| **DOCSIS Version** | 3.1 |
+| **Release Year** | 2019 |
+| **ISPs** | Comcast, Xfinity, Cox, Spectrum |
+| **Firmware** | TB01.03.001.10_012022_212.S3 |
+| **Related Issue** | [***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32) |
+| **Captured By** | @gmogoody |
+| **Capture Date** | November 2025 |
 
 ***REMOVED******REMOVED*** Known URLs
 

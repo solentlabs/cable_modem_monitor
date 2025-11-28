@@ -6,11 +6,18 @@
 
 ***REMOVED******REMOVED*** Modem Information
 
-- **Manufacturer:** Arris (Motorola SURFboard)
-- **Model:** SB6190
-- **DOCSIS:** 3.0
-- **Channels:** Up to 32 downstream / 8 upstream
-- **Status:** Parser implemented but not confirmed with real users
+| Property | Value |
+|----------|-------|
+| **Model** | SB6190 |
+| **Manufacturer** | Arris (Motorola SURFboard) |
+| **DOCSIS Version** | 3.0 |
+| **Release Year** | 2014 |
+| **EOL Year** | 2023 |
+| **ISPs** | Comcast, Cox, Spectrum, TWC |
+| **Channels** | Up to 32 downstream / 8 upstream |
+| **Parser Status** | Unverified |
+| **Captured By** | @sfennell |
+| **Capture Date** | November 2025 |
 
 ***REMOVED******REMOVED*** Implementation History
 

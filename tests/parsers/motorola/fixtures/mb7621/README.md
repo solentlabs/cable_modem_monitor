@@ -8,10 +8,15 @@
 | **Manufacturer** | Motorola |
 | **Type** | Cable Modem (standalone, no router) |
 | **DOCSIS Version** | 3.0 |
+| **Release Year** | 2015 |
+| **ISPs** | Comcast, Cox, Spectrum, TWC |
 | **Channel Bonding** | 24x8 (24 downstream, 8 upstream) |
 | **Max Speed** | 1 Gbps downstream |
 | **Firmware Tested** | 7621-5.7.1.5 |
 | **Hardware Version** | V1.0 |
+| **Parser Status** | Verified |
+| **Captured By** | @kwschulz |
+| **Capture Date** | Development |
 
 ***REMOVED******REMOVED*** Links
 

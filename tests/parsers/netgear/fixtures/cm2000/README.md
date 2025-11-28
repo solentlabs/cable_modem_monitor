@@ -8,10 +8,15 @@
 | **Manufacturer** | Netgear |
 | **Type** | Cable Modem (standalone, no router) |
 | **DOCSIS Version** | 3.1 |
+| **Release Year** | 2020 |
+| **ISPs** | Comcast, Xfinity, Cox, Spectrum |
 | **Channel Bonding** | 32x8 (DOCSIS 3.0) + OFDM (DOCSIS 3.1) |
 | **Max Speed** | 2.5 Gbps downstream |
 | **Firmware Tested** | V8.01.02 |
 | **Hardware Version** | 1.01 |
+| **Parser Status** | Pending verification |
+| **Captured By** | @m4dh4tt3r-88 |
+| **Capture Date** | November 2025 |
 
 ***REMOVED******REMOVED*** Links
 
@@ -28,10 +33,21 @@
 
 ***REMOVED******REMOVED*** Fixture Files
 
-| File | Status | Description |
-|------|--------|-------------|
-| index.htm | ✓ Available | Login page (unauthenticated) |
-| DocsisStatus.htm | ✓ Available | DOCSIS channel data (authenticated) |
+All files extracted from diagnostics.json with original modem filenames:
+
+| File | Size | Description |
+|------|------|-------------|
+| index.htm | 73 KB | Login/main page |
+| DocsisStatus.htm | 64 KB | DOCSIS channel data (primary parsing target) |
+| eventLog.htm | 20 KB | Event/system log |
+| DocsisOffline.htm | 6 KB | Offline status page |
+| WebServiceManagement.htm | 7 KB | Web service settings |
+| RouterStatus.htm | 8 KB | Router status info |
+| SetPassword.htm | 8 KB | Password change page |
+| Logout.htm | 1 KB | Logout page |
+| DashBoard.htm | 362 B | Dashboard redirect |
+| root.htm | 362 B | Root redirect |
+| OpenSourceLicense.html | 78 KB | Open source licenses |
 
 ***REMOVED******REMOVED*** Data Available
 
@@ -106,7 +122,8 @@ Unlike the CM600, the CM2000 **does provide** uptime and system time!
 - **Original Issue**: [***REMOVED***38 - Netgear CM2000 Support Request](https://github.com/kwschulz/cable_modem_monitor/issues/38)
 - **Contributor**: @m4dh4tt3r-88
 - **Fixtures Captured**: November 2025
-- **Parser Status**: ✓ Verified
+- **Parser Status**: ⏳ Auth confirmed, parsing fix pending verification
+- **Known Fixes**: Upstream power parsing now strips " dBmV" suffix
 
 ***REMOVED******REMOVED*** Comparison with CM600
 

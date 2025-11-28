@@ -107,8 +107,8 @@ class TestCM2000Metadata:
         assert "CM2000" in NetgearCM2000Parser.models
 
     def test_parser_verified_status(self):
-        """Test parser verified status reflects authentication issues."""
-        ***REMOVED*** Currently False due to authentication issues - see Issue ***REMOVED***38
+        """Test parser verified status - auth works, parsing pending confirmation."""
+        ***REMOVED*** Auth confirmed by @m4dh4tt3r-88, parsing fixes pending verification - Issue ***REMOVED***38
         assert NetgearCM2000Parser.verified is False
 
     def test_auth_config(self):

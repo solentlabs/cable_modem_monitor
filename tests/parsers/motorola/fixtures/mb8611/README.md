@@ -1,15 +1,19 @@
 ***REMOVED*** Motorola MB8611 Test Fixtures
 
-**Captured:** October 2025 by @dlindnegm (Issue ***REMOVED***4)
-**Firmware:** 8611-19.2.18
+***REMOVED******REMOVED*** Modem Information
 
-> Parser verification status is defined in `mb8611.py` - do not duplicate here.
-
-***REMOVED******REMOVED*** Modem Info
-
-- **Model:** Motorola MB8611 (DOCSIS 3.1)
-- **Channels:** 32 DS / 8 US + 2 OFDM
-- **Protocol:** HNAP (HTTPS with self-signed certificate)
+| Property | Value |
+|----------|-------|
+| **Model** | MB8611 |
+| **Manufacturer** | Motorola |
+| **DOCSIS Version** | 3.1 |
+| **Release Year** | 2020 |
+| **ISPs** | Comcast, Xfinity, Cox, Spectrum |
+| **Channels** | 32 DS / 8 US + 2 OFDM |
+| **Protocol** | HNAP (HTTPS with self-signed certificate) |
+| **Firmware Tested** | 8611-19.2.18 |
+| **Captured By** | @dlindnegm |
+| **Capture Date** | October 2025 |
 
 ***REMOVED******REMOVED*** Files
 
