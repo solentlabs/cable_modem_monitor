@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.1] - 2025-11-28
+
 ### Added
 - **CM2000 Software Version** - Parse firmware version from index.htm InitTagValue() (Issue #38)
 - **CM2000 Restart Support** - Remote modem restart via RouterStatus.htm buttonSelect=2 (Issue #38)
