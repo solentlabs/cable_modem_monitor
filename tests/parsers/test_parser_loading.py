@@ -47,6 +47,7 @@ class TestParserCaching:
         # Check for known parsers
         assert "ARRIS SB6141" in parser_names
         assert "ARRIS SB6190" in parser_names
+        assert "ARRIS SB8200" in parser_names
         assert "Motorola MB Series (Generic)" in parser_names
         assert "Motorola MB7621" in parser_names
         assert "Motorola MB8611 (HNAP)" in parser_names
@@ -103,6 +104,16 @@ class TestGetParserByName:
         assert issubclass(parser_class, ModemParser)
         assert parser_class.name == "ARRIS SB6190"
         assert parser_class.manufacturer == "ARRIS"
+
+    def test_arris_sb8200(self):
+        """Test loading ARRIS SB8200 parser by name."""
+        parser_class = get_parser_by_name("ARRIS SB8200")
+        assert parser_class is not None
+        assert issubclass(parser_class, ModemParser)
+        assert parser_class.name == "ARRIS SB8200"
+        assert parser_class.manufacturer == "ARRIS"
+        # SB8200 is verified (Issue #42)
+        assert parser_class.verified is True
 
     def test_invalid(self):
         """Test that invalid parser name returns None."""

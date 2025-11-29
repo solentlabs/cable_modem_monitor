@@ -34,6 +34,12 @@ class MotorolaMB8611HnapParser(ModemParser):
     docsis_version = "3.1"
     fixtures_path = "tests/parsers/motorola/fixtures/mb8611"
 
+    def __init__(self):
+        """Initialize the parser with instance-level state."""
+        super().__init__()
+        # Store the JSON builder instance to preserve private_key across login/parse calls
+        self._json_builder: HNAPJsonRequestBuilder | None = None
+
     # HNAP authentication configuration
     auth_config = HNAPAuthConfig(
         strategy=AuthStrategyType.HNAP_SESSION,
@@ -76,18 +82,22 @@ class MotorolaMB8611HnapParser(ModemParser):
         New code should use auth_config with AuthFactory instead.
         """
         # Try JSON-based HNAP login first
-        json_builder = HNAPJsonRequestBuilder(
+        # Store the builder instance so the private_key persists for subsequent parse() calls
+        self._json_builder = HNAPJsonRequestBuilder(
             endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
         )
 
         _LOGGER.debug("MB8611: Attempting JSON-based HNAP login")
         success: bool
         response: str | None
-        success, response = json_builder.login(session, base_url, username, password)
+        success, response = self._json_builder.login(session, base_url, username, password)
 
         if success:
             _LOGGER.info("MB8611: JSON HNAP login successful")
             return (True, response)
+
+        # JSON login failed - clear the builder so parse() doesn't try to use it
+        self._json_builder = None
 
         # Fall back to XML/SOAP-based HNAP login
         _LOGGER.debug("MB8611: JSON login failed, trying XML/SOAP-based HNAP login")
@@ -188,10 +198,16 @@ class MotorolaMB8611HnapParser(ModemParser):
         """Parse modem data using JSON-based HNAP requests."""
         _LOGGER.debug("MB8611: Attempting JSON-based HNAP communication")
 
-        # Build JSON HNAP request builder
-        builder = HNAPJsonRequestBuilder(
-            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
-        )
+        # Reuse the builder from login() to preserve the private_key for authenticated requests
+        # If login() wasn't called (e.g., session reuse), create a new builder
+        if self._json_builder is not None:
+            builder = self._json_builder
+            _LOGGER.debug("MB8611: Reusing JSON builder from login (private_key preserved)")
+        else:
+            builder = HNAPJsonRequestBuilder(
+                endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
+            )
+            _LOGGER.warning("MB8611: No stored JSON builder - creating new one (may lack auth)")
 
         # Make batched HNAP request for all data
         hnap_actions = [
