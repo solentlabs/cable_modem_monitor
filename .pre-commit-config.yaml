@@ -95,3 +95,11 @@ repos:
         always_run: true
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: regenerate-fixtures-index
+        name: Regenerate FIXTURES.md index
+        entry: .venv/bin/python scripts/generate_fixture_index.py
+        language: script
+        files: ^tests/parsers/.*/fixtures/.*/README\.md$
+        pass_filenames: false
+        stages: [pre-commit]
