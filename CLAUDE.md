@@ -1,16 +1,17 @@
-- 1 is ok, just make sure it doesn't break anything. #2 I don't understand, please visualize for me. #3 CodeQL is supposed to be part of the CI/CD process, but it has been problematic to get working consistently. Don't touch, but do explore in more details for recomendations. #4 this is key becuase some docs are out of date. Need to double check and verify before making changes
+# Claude Rules
 
-## RELEASE CHECKLIST - VERIFY ALL BEFORE SAYING "READY"
+**Read `AI_CONTEXT.md` for project context, workflows, and development guidance.**
 
-**STOP. Before claiming a PR is "ready to merge" or "release ready", verify ALL of these:**
+## Release Checklist - Verify ALL Before Saying "Ready"
 
-1. [ ] Run `scripts/release.py <version>` to bump versions - it updates:
-   - `manifest.json`
-   - `const.py`
-   - `tests/components/test_version_and_startup.py`
-2. [ ] `CHANGELOG.md` has entry for this version with correct date
+1. [ ] Run `scripts/release.py <version>` to bump versions
+2. [ ] `CHANGELOG.md` has entry for this version
 3. [ ] CI checks are passing
 
 **NEVER manually edit version numbers. ALWAYS use `scripts/release.py`.**
 
-**Do NOT say "ready" or "high confidence" until you have explicitly checked each item above.**
+## PR and Issue Rules
+
+**NEVER use "Closes #X", "Fixes #X", or similar auto-close keywords.**
+- Users should close their own tickets after confirming fixes work
+- Use "Related to #X" or "Addresses #X" instead

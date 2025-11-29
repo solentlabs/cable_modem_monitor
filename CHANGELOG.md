@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Diagnostics Timestamp** - Log entries now show collection time instead of `0`
+- **Mypy Type Error** - Added type annotation in html_crawler.py for BeautifulSoup rel attribute
 
 ## [3.8.2] - 2025-11-28
 

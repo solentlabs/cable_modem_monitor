@@ -269,9 +269,10 @@ def extract_all_resources_from_html(html: str, base_url: str) -> dict[str, set[s
         # 2. Extract CSS files: <link rel="stylesheet" href="...">
         for link in soup.find_all("link", href=True):
             href = link.get("href", "")
-            rel = link.get("rel", [])
+            rel: list[str] | str | None = link.get("rel") or []
             # Check if it's a stylesheet or ends with .css
-            is_css = "stylesheet" in rel or (isinstance(href, str) and href.endswith(".css"))
+            rel_list = rel if isinstance(rel, list) else [rel] if rel else []
+            is_css = "stylesheet" in rel_list or (isinstance(href, str) and href.endswith(".css"))
             if isinstance(href, str) and href and is_css:
                 absolute = make_absolute(href)
                 if is_same_host(absolute):
