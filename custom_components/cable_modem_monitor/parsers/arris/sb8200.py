@@ -56,9 +56,9 @@ class ArrisSB8200Parser(ModemParser):
         ModemCapability.CURRENT_TIME,
     }
 
-    def login(self, session, base_url, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """ARRIS SB8200 does not require authentication."""
-        return True
+        return (True, None)
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""

@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 import statistics
 from datetime import datetime, timedelta
 from typing import Any
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class SignalQualityAnalyzer:

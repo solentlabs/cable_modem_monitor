@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-VERSION = "3.8.2"
+VERSION = "3.8.3"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"
@@ -43,3 +43,13 @@ CONF_LAST_DETECTION = "last_detection"  # Timestamp of last detection
 DEFAULT_SCAN_INTERVAL = 600  # 10 minutes - balanced default for network monitoring
 MIN_SCAN_INTERVAL = 60  # 1 minute - minimum to avoid device strain
 MAX_SCAN_INTERVAL = 1800  # 30 minutes - maximum useful interval
+
+# HTTP request timeouts (seconds)
+# Used throughout parsers and core modules for consistent behavior
+DEFAULT_TIMEOUT = 10  # Standard timeout for modem requests
+QUICK_TIMEOUT = 5  # For link crawling and secondary requests
+DISCOVERY_TIMEOUT = 3  # For initial modem discovery probes
+
+# Host validation - characters that could enable command injection
+# Used by both config_flow and health_monitor for input validation
+INVALID_HOST_CHARS = [";", "&", "|", "$", "`", "\n", "\r", "\t", " ", "<", ">", "(", ")", "{", "}", "\\"]
