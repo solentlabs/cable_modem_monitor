@@ -2,6 +2,51 @@
 
 This directory contains the CodeQL security scanning configuration for the Cable Modem Monitor project.
 
+***REMOVED******REMOVED*** What is CodeQL?
+
+**CodeQL is GitHub's code analysis engine that finds security vulnerabilities automatically.**
+
+***REMOVED******REMOVED******REMOVED*** How it works
+
+```
+Your Code → CodeQL Database → Queries → Security Alerts
+```
+
+1. **Build a database**: CodeQL parses your code into a queryable database (like SQL for code)
+2. **Run queries**: Security queries ask questions like "Is there user input flowing into a SQL query without sanitization?"
+3. **Report findings**: Matches appear as alerts in GitHub's Security tab
+
+***REMOVED******REMOVED******REMOVED*** How is it different from Ruff/linters?
+
+| Tool | What it checks | How it works |
+|------|----------------|--------------|
+| **Ruff** | Style, syntax, simple bugs | Pattern matching on single files |
+| **mypy** | Type correctness | Type inference across files |
+| **CodeQL** | Security vulnerabilities | Data flow analysis across entire codebase |
+
+**Example**: Ruff can catch `except:` (too broad). CodeQL can trace that user input from a web form flows through 5 functions into an `eval()` call - a real security vulnerability that no linter can detect.
+
+***REMOVED******REMOVED******REMOVED*** Why we use it
+
+Cable modem integrations handle:
+- Network requests to devices
+- User credentials
+- HTML parsing from untrusted sources
+- File operations
+
+CodeQL catches issues like:
+- SQL/command injection
+- Credentials in logs
+- Missing timeouts on requests
+- Unsafe SSL configurations
+- Path traversal vulnerabilities
+
+***REMOVED******REMOVED******REMOVED*** The tradeoff
+
+CodeQL is thorough but has false positives. That's why `codeql-config.yml` has exclusions for patterns that are intentional in our context (like `verify=False` for cable modem self-signed certs).
+
+---
+
 ***REMOVED******REMOVED*** Directory Structure
 
 ```

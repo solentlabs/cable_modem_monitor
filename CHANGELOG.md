@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.8.3] - 2025-11-29
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Comprehensive HTML Capture** - Discovers all modem resources for fixture database (Issue ***REMOVED***42)
+  - Parses JavaScript files for URL patterns (menu configs, AJAX endpoints)
+  - Extracts jQuery `.load()` fragments (header/footer templates)
+  - Iterative discovery: fetches JS → finds more URLs → repeats
+  - 2x improvement in captured data across all modems
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Capture Data Format** - Renamed `html` to `content` field to support JS, CSS, JSON responses
+- **Login Method Standardization** - All parsers now return `tuple[bool, str | None]` consistently
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **Diagnostics Timestamp** - Log entries now show collection time instead of `0`
+
 ***REMOVED******REMOVED*** [3.8.2] - 2025-11-28
 
 ***REMOVED******REMOVED*** [3.8.1] - 2025-11-28

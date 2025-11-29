@@ -27,7 +27,8 @@ class TestModemScraper:
         """Test the scraper with a mock parser."""
         ***REMOVED*** Create a mock instance for the detected parser
         mock_parser_instance = mocker.Mock(spec=ModemParser)
-        mock_parser_instance.login.return_value = True
+        ***REMOVED*** login() now returns tuple[bool, str | None]
+        mock_parser_instance.login.return_value = (True, None)
         mock_parser_instance.parse.return_value = {
             "cable_modem_downstream": [],
             "cable_modem_upstream": [],

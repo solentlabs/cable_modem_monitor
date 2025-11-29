@@ -89,7 +89,7 @@ class NetgearCM2000Parser(ModemParser):
         {"path": "/DocsisStatus.htm", "auth_method": "form", "auth_required": True},
     ]
 
-    def login(self, session, base_url, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """Perform login using form-based authentication with dynamic form ID.
 
         The CM2000 login form includes a dynamic ID parameter in the form action:
@@ -104,28 +104,29 @@ class NetgearCM2000Parser(ModemParser):
             password: Password for authentication
 
         Returns:
-            True if login successful
+            tuple[bool, str | None]: (success, authenticated_html)
         """
         if not username or not password:
             _LOGGER.debug("CM2000: No credentials provided, skipping login")
-            return True
+            return (True, None)
 
         try:
             ***REMOVED*** Step 1: Extract login URL from the login page
             login_url = self._extract_login_url(session, base_url)
             if login_url is None:
-                return False
+                return (False, None)
 
             ***REMOVED*** Step 2: Submit login form
             if not self._submit_login_form(session, login_url, username, password):
-                return False
+                return (False, None)
 
             ***REMOVED*** Step 3: Verify login success
-            return self._verify_login_success(session, base_url)
+            success = self._verify_login_success(session, base_url)
+            return (success, None)
 
         except Exception as e:
             _LOGGER.error("CM2000: Login exception: %s", e, exc_info=True)
-            return False
+            return (False, None)
 
     def _extract_login_url(self, session, base_url: str) -> str | None:
         """Extract the login URL with dynamic ID from the login page."""

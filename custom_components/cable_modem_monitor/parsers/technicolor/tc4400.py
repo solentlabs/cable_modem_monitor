@@ -69,16 +69,15 @@ class TechnicolorTC4400Parser(ModemParser):
 
         return result
 
-    def login(self, session, base_url, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """
         Log in to the modem using Basic HTTP Authentication.
 
-        Note: This method now delegates to the new authentication system.
-        It is maintained for backward compatibility.
+        Returns:
+            tuple[bool, str | None]: (success, authenticated_html)
         """
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-        success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
-        return success
+        return auth_strategy.login(session, base_url, username, password, self.auth_config)
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""

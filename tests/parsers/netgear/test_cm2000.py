@@ -211,9 +211,9 @@ class TestCM2000Login:
         """
         requests_mock.get(f"{base_url}/DocsisStatus.htm", text=docsis_html)
 
-        result = parser.login(session, base_url, "admin", "password123")
+        success, html = parser.login(session, base_url, "admin", "password123")
 
-        assert result is True
+        assert success is True
         ***REMOVED*** Verify the login POST was made (check request history)
         assert any("/goform/Login" in str(req.url) for req in requests_mock.request_history if req.method == "POST")
 
@@ -244,9 +244,9 @@ class TestCM2000Login:
         """
         requests_mock.get(f"{base_url}/DocsisStatus.htm", text=login_redirect_html)
 
-        result = parser.login(session, base_url, "admin", "wrongpassword")
+        success, html = parser.login(session, base_url, "admin", "wrongpassword")
 
-        assert result is False
+        assert success is False
 
     def test_login_skipped_without_credentials(self):
         """Test that login is skipped when no credentials provided."""
@@ -256,12 +256,12 @@ class TestCM2000Login:
         session = requests.Session()
         base_url = "https://192.168.100.1"
 
-        ***REMOVED*** Should return True (no auth needed) when no credentials
-        result = parser.login(session, base_url, None, None)
-        assert result is True
+        ***REMOVED*** Should return (True, None) when no credentials
+        success, html = parser.login(session, base_url, None, None)
+        assert success is True
 
-        result = parser.login(session, base_url, "", "")
-        assert result is True
+        success, html = parser.login(session, base_url, "", "")
+        assert success is True
 
 
 class TestCM2000Fixtures:

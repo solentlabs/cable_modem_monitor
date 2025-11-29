@@ -108,9 +108,9 @@ class TestAuthentication:
         session = Mock()
 
         ***REMOVED*** Test with credentials - should set session.auth
-        result = parser.login(session, "http://192.168.0.1", "admin", "password")
+        success, html = parser.login(session, "http://192.168.0.1", "admin", "password")
 
-        assert result is True
+        assert success is True
         assert session.auth == ("admin", "password")
 
     def test_login_without_credentials(self):
@@ -119,18 +119,18 @@ class TestAuthentication:
         session = Mock()
 
         ***REMOVED*** Test without username
-        result = parser.login(session, "http://192.168.0.1", "", "password")
-        assert result is True
+        success, html = parser.login(session, "http://192.168.0.1", "", "password")
+        assert success is True
 
         ***REMOVED*** Test without password
         session2 = Mock()
-        result = parser.login(session2, "http://192.168.0.1", "admin", "")
-        assert result is True
+        success, html = parser.login(session2, "http://192.168.0.1", "admin", "")
+        assert success is True
 
         ***REMOVED*** Test without both
         session3 = Mock()
-        result = parser.login(session3, "http://192.168.0.1", "", "")
-        assert result is True
+        success, html = parser.login(session3, "http://192.168.0.1", "", "")
+        assert success is True
 
     def test_login_signature(self):
         """Test that login method accepts all required parameters including base_url.
@@ -142,8 +142,8 @@ class TestAuthentication:
         session = Mock()
 
         ***REMOVED*** This should not raise TypeError - all 4 parameters should be accepted
-        result = parser.login(session, "http://192.168.0.1", "admin", "password")
-        assert result is True
+        success, html = parser.login(session, "http://192.168.0.1", "admin", "password")
+        assert success is True
 
         ***REMOVED*** Verify the signature matches what ModemScraper.login() calls
         ***REMOVED*** ModemScraper calls: parser.login(session, base_url, username, password)

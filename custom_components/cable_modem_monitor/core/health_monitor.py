@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import ssl
 import time
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
 import aiohttp
+
+from ..utils.host_validation import is_valid_host
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -308,39 +309,8 @@ class ModemHealthMonitor:
         }
 
     def _is_valid_host(self, host: str) -> bool:
-        """
-        Validate hostname or IP address to prevent command injection.
-
-        Args:
-            host: Hostname or IP address to validate
-
-        Returns:
-            bool: True if host is valid
-        """
-        if not host or len(host) > 253:  ***REMOVED*** Max domain name length
-            return False
-
-        ***REMOVED*** Allow IPv4, IPv6, and hostnames
-        ***REMOVED*** Block shell metacharacters and whitespace
-        invalid_chars = [";", "&", "|", "$", "`", "\n", "\r", "\t", " ", "<", ">", "(", ")", "{", "}"]
-        if any(char in host for char in invalid_chars):
-            return False
-
-        ***REMOVED*** Basic pattern validation for IP or hostname
-        ***REMOVED*** IPv4: x.x.x.x where x is 0-255
-        ***REMOVED*** IPv6: valid hex groups with colons
-        ***REMOVED*** Hostname: alphanumeric with dots and hyphens
-        ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
-        ipv6_pattern = r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$"
-        hostname_pattern = (
-            r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?" r"(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
-        )
-
-        return (
-            re.match(ipv4_pattern, host) is not None
-            or re.match(ipv6_pattern, host) is not None
-            or re.match(hostname_pattern, host) is not None
-        )
+        """Validate hostname or IP address to prevent command injection."""
+        return is_valid_host(host)
 
     def _is_valid_url(self, url: str) -> bool:
         """

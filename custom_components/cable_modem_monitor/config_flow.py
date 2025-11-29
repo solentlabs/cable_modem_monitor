@@ -30,6 +30,7 @@ from .const import (
 from .core.discovery_helpers import ParserNotFoundError
 from .core.modem_scraper import ModemScraper
 from .parsers import get_parsers
+from .utils.host_validation import extract_hostname as _validate_host_format
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,54 +48,6 @@ def _get_parser_display_name(parser_class) -> str:
     if not parser_class.verified:
         name += " *"
     return name
-
-
-def _validate_host_format(host: str) -> str:
-    """Validate and extract hostname from host string.
-
-    Returns the cleaned hostname.
-    Raises ValueError if validation fails.
-    """
-    import re
-    from urllib.parse import urlparse
-
-    if not host:
-        raise ValueError("Host cannot be empty")
-
-    host_clean = host.strip()
-
-    ***REMOVED*** Extract hostname from URL if provided
-    if host_clean.startswith(("http://", "https://")):
-        try:
-            parsed = urlparse(host_clean)
-            if parsed.scheme not in ["http", "https"]:
-                raise ValueError("Only HTTP and HTTPS protocols are allowed")
-            if not parsed.netloc:
-                raise ValueError("Invalid URL format")
-            hostname = parsed.hostname or parsed.netloc.split(":")[0]
-        except Exception as err:
-            raise ValueError(f"Invalid URL format: {err}") from err
-    else:
-        hostname = host_clean
-
-    ***REMOVED*** Security: Block shell metacharacters
-    invalid_chars = [";", "&", "|", "$", "`", "\n", "\r", "\t", "<", ">", "(", ")", "{", "}", "\\"]
-    if any(char in hostname for char in invalid_chars):
-        raise ValueError("Invalid characters in host address")
-
-    ***REMOVED*** Validate format: IPv4, IPv6, or valid hostname
-    patterns = {
-        "ipv4": r"^(\d{1,3}\.){3}\d{1,3}$",
-        "ipv6": r"^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$",
-        "hostname": (
-            r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?" r"(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
-        ),
-    }
-
-    if not any(re.match(pattern, hostname) for pattern in patterns.values()):
-        raise ValueError("Invalid host format. Must be a valid IP address or hostname")
-
-    return hostname
 
 
 def _select_parser_for_validation(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -115,7 +116,8 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                 sanitized_message = _sanitize_log_message(message)
                                 recent_logs.append(
                                     {
-                                        "timestamp": 0,  ***REMOVED*** system_log doesn't store timestamp in this format
+                                        ***REMOVED*** Collection time (original timestamp unavailable)
+                                        "timestamp": time.time(),
                                         "level": "ERROR",  ***REMOVED*** system_log only stores errors/warnings
                                         "logger": str(logger_name).replace(
                                             "custom_components.cable_modem_monitor.", ""
@@ -377,14 +379,14 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
         try:
             expires_at = datetime.fromisoformat(capture.get("ttl_expires", ""))
             if datetime.now() < expires_at:
-                ***REMOVED*** Sanitize HTML in each captured URL
+                ***REMOVED*** Sanitize content in each captured URL (HTML, JS, CSS, etc.)
                 sanitized_urls = []
                 for url_data in capture.get("urls", []):
                     sanitized_url = url_data.copy()
-                    if "html" in sanitized_url:
-                        sanitized_url["html"] = sanitize_html(sanitized_url["html"])
-                        ***REMOVED*** Add size info for sanitized HTML
-                        sanitized_url["sanitized_size_bytes"] = len(sanitized_url["html"])
+                    if "content" in sanitized_url:
+                        sanitized_url["content"] = sanitize_html(sanitized_url["content"])
+                        ***REMOVED*** Add size info for sanitized content
+                        sanitized_url["sanitized_size_bytes"] = len(sanitized_url["content"])
                     sanitized_urls.append(sanitized_url)
 
                 diagnostics["raw_html_capture"] = {

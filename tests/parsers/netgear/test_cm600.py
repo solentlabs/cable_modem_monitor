@@ -400,7 +400,7 @@ class TestAuthentication:
             mock_strategy.login.return_value = (True, None)
             mock_factory.get_strategy.return_value = mock_strategy
 
-            success = parser.login(mock_session, base_url, "admin", "password")
+            success, html = parser.login(mock_session, base_url, "admin", "password")
 
             assert success is True
             mock_strategy.login.assert_called_once_with(mock_session, base_url, "admin", "password", parser.auth_config)
@@ -420,7 +420,7 @@ class TestAuthentication:
             mock_strategy.login.return_value = (True, None)  ***REMOVED*** Skip login, return success
             mock_factory.get_strategy.return_value = mock_strategy
 
-            success = parser.login(mock_session, base_url, None, None)
+            success, html = parser.login(mock_session, base_url, None, None)
 
             assert success is True
 

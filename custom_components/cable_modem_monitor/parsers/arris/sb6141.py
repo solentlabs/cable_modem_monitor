@@ -47,9 +47,9 @@ class ArrisSB6141Parser(ModemParser):
         ModemCapability.UPSTREAM_CHANNELS,
     }
 
-    def login(self, session, base_url, username, password) -> bool:
-        """ARRIS modems do not have a login page."""
-        return True
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
+        """ARRIS modems do not require authentication."""
+        return (True, None)
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem."""

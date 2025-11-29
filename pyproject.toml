@@ -53,8 +53,10 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
-    "E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N"
+    "E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N",
 ]  ***REMOVED*** Enable key rule categories: style, complexity, import sorting, modern syntax
+***REMOVED*** Note: F841 (unused variables) is already included via "F" (Pyflakes)
+***REMOVED*** Note: ERA (commented-out code) disabled - too aggressive, flags format docs like "***REMOVED*** cells[0] = Channel"
 
 ignore = [
     "B008",   ***REMOVED*** Allow function calls in default args (common in HA)

@@ -315,7 +315,7 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
                 "status_code": 200,
                 "content_type": "text/html",
                 "size_bytes": 12450,
-                "html": """
+                "content": """
                 <html>
                     <tr><td>MAC</td><td>AA:BB:CC:DD:EE:FF</td></tr>
                     <tr><td>Power</td><td>7.0 dBmV</td></tr>
@@ -335,7 +335,7 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
     assert diagnostics["raw_html_capture"]["trigger"] == "manual"
 
     ***REMOVED*** Verify sanitization occurred
-    captured_html = diagnostics["raw_html_capture"]["urls"][0]["html"]
+    captured_html = diagnostics["raw_html_capture"]["urls"][0]["content"]
     assert "AA:BB:CC:DD:EE:FF" not in captured_html  ***REMOVED*** MAC removed
     assert "XX:XX:XX:XX:XX:XX" in captured_html  ***REMOVED*** MAC sanitized
     assert "ABC123XYZ" not in captured_html  ***REMOVED*** Serial removed
@@ -361,7 +361,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "status_code": 200,
                 "content_type": "text/html",
                 "size_bytes": 5432,
-                "html": "<html><form action='/login'>Username: <input name='user'></form></html>",
+                "content": "<html><form action='/login'>Username: <input name='user'></form></html>",
                 "parser": "Motorola MB8611",
                 "description": "Login/Auth page",
             },
@@ -371,7 +371,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "status_code": 302,
                 "content_type": "text/html",
                 "size_bytes": 150,
-                "html": "<html><body>Redirecting...</body></html>",
+                "content": "<html><body>Redirecting...</body></html>",
                 "parser": "Motorola MB8611",
                 "description": "Login/Auth page",
             },
@@ -381,7 +381,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "status_code": 200,
                 "content_type": "text/html",
                 "size_bytes": 12450,
-                "html": """
+                "content": """
                 <html>
                     <tr><td>MAC</td><td>AA:BB:CC:DD:EE:FF</td></tr>
                     <tr><td>Power</td><td>7.0 dBmV</td></tr>
@@ -396,7 +396,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "status_code": 200,
                 "content_type": "text/html",
                 "size_bytes": 3200,
-                "html": "<html><tr><td>Software Version</td><td>3.0.1</td></tr></html>",
+                "content": "<html><tr><td>Software Version</td><td>3.0.1</td></tr></html>",
                 "parser": "Motorola MB8611",
                 "description": "Software info page",
             },
@@ -406,7 +406,7 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
                 "status_code": 200,
                 "content_type": "text/html",
                 "size_bytes": 8900,
-                "html": "<html><tr><td>Event</td><td>Connection established</td></tr></html>",
+                "content": "<html><tr><td>Event</td><td>Connection established</td></tr></html>",
                 "parser": "Motorola MB8611",
                 "description": "Event log page",
             },
@@ -435,11 +435,11 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
 
     ***REMOVED*** Verify sanitization occurred across all pages
     for url_data in urls:
-        html = url_data.get("html", "")
-        if "AA:BB:CC:DD:EE:FF" in mock_coordinator.data["_raw_html_capture"]["urls"][urls.index(url_data)]["html"]:
+        content = url_data.get("content", "")
+        if "AA:BB:CC:DD:EE:FF" in mock_coordinator.data["_raw_html_capture"]["urls"][urls.index(url_data)]["content"]:
             ***REMOVED*** Original MAC should be removed, replacement should be present
-            assert "AA:BB:CC:DD:EE:FF" not in html
-            assert "XX:XX:XX:XX:XX:XX" in html
+            assert "AA:BB:CC:DD:EE:FF" not in content
+            assert "XX:XX:XX:XX:XX:XX" in content
 
 
 @pytest.mark.asyncio
@@ -457,7 +457,7 @@ async def test_diagnostics_excludes_expired_html_capture(mock_config_entry, mock
         "urls": [
             {
                 "url": "https://192.168.100.1/MotoConnection.asp",
-                "html": "<html>test</html>",
+                "content": "<html>test</html>",
             }
         ],
     }

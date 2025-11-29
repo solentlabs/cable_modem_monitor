@@ -83,7 +83,7 @@ class NetgearCM600Parser(ModemParser):
         {"path": "/RouterStatus.asp", "auth_method": "basic", "auth_required": True},
     ]
 
-    def login(self, session, base_url, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """Perform login using HTTP Basic Auth.
 
         Args:
@@ -93,12 +93,11 @@ class NetgearCM600Parser(ModemParser):
             password: Password for authentication
 
         Returns:
-            True if login successful or not required
+            tuple[bool, str | None]: (success, authenticated_html)
         """
         ***REMOVED*** CM600 uses HTTP Basic Auth - use AuthFactory to set it up
         auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-        success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
-        return success
+        return auth_strategy.login(session, base_url, username, password, self.auth_config)
 
     def restart(self, session, base_url) -> bool:
         """Restart the modem.

@@ -1,304 +1,166 @@
-***REMOVED*** Linting Guide for Cable Modem Monitor
+***REMOVED*** Linting Guide
 
-This guide explains the comprehensive linting setup for the Cable Modem Monitor project.
-
-***REMOVED******REMOVED*** Overview
-
-The project uses multiple linting tools to ensure code quality, consistency, and maintainability:
-
-- **Ruff** - Primary linter (fast, comprehensive)
-- **Black** - Code formatter
-- **mypy** - Type checker
-- **Bandit** - Security linter
-- **Semgrep** - Security scanner
+This guide covers all linting tools for code quality and security.
 
 ***REMOVED******REMOVED*** Quick Start
 
 ```bash
-***REMOVED*** Run all code quality checks
-make check
+***REMOVED*** Run all checks (what CI runs)
+pre-commit run --all-files
 
-***REMOVED*** Auto-fix linting issues
-make lint-fix
-
-***REMOVED*** Format code
-make format
-
-***REMOVED*** Fix import sorting
-make fix-imports
-
-***REMOVED*** Run comprehensive linting (includes security)
-make lint-all
+***REMOVED*** Or individually
+.venv/bin/ruff check .           ***REMOVED*** Linting
+.venv/bin/black --check .        ***REMOVED*** Formatting
+.venv/bin/mypy .                 ***REMOVED*** Type checking
 ```
 
-***REMOVED******REMOVED*** Ruff Configuration
+***REMOVED******REMOVED*** Tools Overview
 
-Ruff is the primary linter and checks for:
+| Tool | Purpose | Runs In |
+|------|---------|---------|
+| **Ruff** | Linting, import sorting | Pre-commit, CI |
+| **Black** | Code formatting | Pre-commit, CI |
+| **mypy** | Type checking | Pre-commit, CI |
+| **CodeQL** | Security analysis | CI only (GitHub) |
+| **Bandit** | Python security | Optional local |
+| **Semgrep** | Security patterns | Optional local |
 
-***REMOVED******REMOVED******REMOVED*** Enabled Rule Categories
+---
 
-- **E** - pycodestyle errors (PEP 8 violations)
+***REMOVED******REMOVED*** Part 1: Code Quality
+
+***REMOVED******REMOVED******REMOVED*** Ruff Configuration
+
+Primary linter - fast, comprehensive. Config in `pyproject.toml`.
+
+**Enabled rules:**
+- **E/W** - PEP 8 style
 - **F** - Pyflakes (unused imports, undefined names)
-- **W** - pycodestyle warnings
-- **C90** - McCabe complexity (cyclomatic complexity)
-- **I** - isort (import sorting)
-- **UP** - pyupgrade (modernize Python syntax)
-- **B** - flake8-bugbear (common bugs and design problems)
-- **SIM** - flake8-simplify (code simplifications)
-- **TID** - flake8-tidy-imports (import organization)
-- **N** - pep8-naming (naming conventions)
+- **C90** - Complexity (max 10)
+- **I** - Import sorting
+- **UP** - Modernize syntax
+- **B** - Bugbear (common bugs)
+- **SIM** - Simplifications
+- **TID** - Tidy imports
+- **N** - Naming conventions
 
-***REMOVED******REMOVED******REMOVED*** Configuration Files
+**Ignored rules:**
+- `B008` - Function calls in defaults (common in HA)
+- `B904` - Bare `raise` for re-raising
+- `SIM108` - Forced ternary
+- `TID252` - Relative imports
 
-- **`.ruff.toml`** - Primary configuration (preferred)
-- **`pyproject.toml`** - Fallback configuration
+***REMOVED******REMOVED******REMOVED*** Black Configuration
 
-***REMOVED******REMOVED******REMOVED*** Key Settings
+Formatter - 120 char lines, Python 3.12 target.
 
-```toml
-line-length = 120
-target-version = "py311"
-max-complexity = 10
+***REMOVED******REMOVED******REMOVED*** mypy Configuration
+
+Type checker - config in `pyproject.toml`. Warns on return any, allows gradual typing.
+
+***REMOVED******REMOVED******REMOVED*** Common Fixes
+
+```bash
+***REMOVED*** Auto-fix linting
+.venv/bin/ruff check --fix .
+
+***REMOVED*** Auto-fix imports
+.venv/bin/ruff check --fix --select I .
+
+***REMOVED*** Auto-format
+.venv/bin/black .
 ```
 
-***REMOVED******REMOVED******REMOVED*** Ignored Rules
+***REMOVED******REMOVED******REMOVED*** Disabling Rules
 
-Some rules are intentionally ignored for project-specific reasons:
+```python
+***REMOVED*** Disable one line
+result = complex_function()  ***REMOVED*** noqa: C901
 
-- `E501` - Line too long (handled by Black)
-- `B008` - Function calls in argument defaults (common in Home Assistant)
-- `B904` - Allow `raise` without specifying exception (useful for re-raising)
-- `SIM108` - Use ternary operator (can reduce readability)
-- `TID252` - Relative imports (not applicable for package structure)
-- `UP007` - Use `X | Y` for type annotations (we use Optional for compatibility)
-
-***REMOVED******REMOVED******REMOVED*** Per-File Ignores
-
-- **`__init__.py`** - Allows unused imports (F401)
-- **`tests/**/*.py`** - Allows assert statements (B011)
-- **`scripts/**/*.py`** - Allows print statements (T201)
-
-***REMOVED******REMOVED******REMOVED*** Import Sorting
-
-Ruff automatically sorts imports according to:
-
-1. Standard library imports
-2. Third-party imports
-3. First-party imports (custom_components.cable_modem_monitor)
-4. Local imports
-
-Configuration:
-```toml
-[lint.isort]
-known-first-party = ["custom_components.cable_modem_monitor"]
-split-on-trailing-comma = true
-force-wrap-aliases = true
-combine-as-imports = true
+***REMOVED*** Disable in pyproject.toml per-file
+[tool.ruff.lint.per-file-ignores]
+"path/to/file.py" = ["E501"]
 ```
 
-***REMOVED******REMOVED*** Black Configuration
+---
 
-Black handles code formatting:
+***REMOVED******REMOVED*** Part 2: Security Linting
 
-- Line length: 120 characters
-- Target version: Python 3.11
-- Excludes test HTML files
+***REMOVED******REMOVED******REMOVED*** CodeQL (Primary - CI)
 
-***REMOVED******REMOVED*** mypy Configuration
+Runs automatically on push/PR via GitHub Actions. See `.github/codeql/README.md` for details.
 
-Type checking with mypy:
+Results: GitHub → Security tab → Code scanning alerts
 
-- Python version: 3.11
-- Warns on return any
-- Allows untyped definitions (gradual typing)
-- Ignores missing imports for third-party libraries
+***REMOVED******REMOVED******REMOVED*** Bandit (Optional - Local)
 
-Configuration file: `mypy.ini`
+Python security linter.
+
+```bash
+pip install bandit
+bandit -r custom_components/
+```
+
+**Catches:** Hardcoded secrets, SQL injection, shell injection, weak crypto, SSL issues.
+
+***REMOVED******REMOVED******REMOVED*** Semgrep (Optional - Local)
+
+Multi-language security scanner.
+
+```bash
+pip install semgrep
+semgrep --config=auto custom_components/
+```
+
+**Catches:** SSL verification disabled, command injection, sensitive data in logs.
+
+***REMOVED******REMOVED******REMOVED*** Common Security Fixes
+
+| Issue | Bad | Good |
+|-------|-----|------|
+| SSL disabled | `verify=False` | `verify=True` (or justified comment) |
+| Shell injection | `shell=True` | Use list: `["cmd", arg]` |
+| Logging secrets | `f"user {name}"` | `"user %s", name` |
+| Broad except | `except Exception` | `except (ValueError, TypeError)` |
+
+***REMOVED******REMOVED******REMOVED*** Suppressing Security Warnings
+
+```python
+***REMOVED*** Bandit
+password = get_password()  ***REMOVED*** nosec B105
+
+***REMOVED*** Semgrep (in .semgrep.yml)
+paths:
+  exclude:
+    - tests/
+```
+
+---
 
 ***REMOVED******REMOVED*** Pre-commit Hooks
 
-Pre-commit hooks automatically run linting before each commit:
+All checks run automatically before commit:
 
 ```bash
-***REMOVED*** Install pre-commit
+***REMOVED*** Install (one-time)
 pip install pre-commit
-
-***REMOVED*** Install hooks
 pre-commit install
 
-***REMOVED*** Run manually on all files
+***REMOVED*** Run manually
 pre-commit run --all-files
 ```
 
-Hooks configured:
-- Black (formatting)
-- Ruff (linting and import sorting)
-- mypy (type checking)
-- General file checks (trailing whitespace, YAML, JSON, etc.)
-- Python-specific checks (debug statements, AST validation, etc.)
-
 ***REMOVED******REMOVED*** VS Code Integration
 
-The project includes VS Code settings for automatic linting:
-
-- Ruff extension enabled
-- Auto-fix on save
-- Import organization on save
+Settings in `.vscode/settings.json`:
+- Ruff enabled, auto-fix on save
+- Black format on save
 - mypy type checking
-- Black formatting
-
-See `.vscode/settings.json` for configuration.
-
-***REMOVED******REMOVED*** CI/CD Integration
-
-GitHub Actions automatically runs linting on:
-
-- Pull requests
-- Pushes to main branch
-- Manual workflow dispatch
-
-Checks include:
-- Ruff linting
-- Import sorting verification
-- Black formatting check
-- mypy type checking
-
-See `.github/workflows/tests.yml` for configuration.
-
-***REMOVED******REMOVED*** Common Issues and Fixes
-
-***REMOVED******REMOVED******REMOVED*** Import Sorting
-
-```bash
-***REMOVED*** Auto-fix import sorting
-ruff check --fix --select I custom_components/cable_modem_monitor/
-
-***REMOVED*** Or use Make
-make fix-imports
-```
-
-***REMOVED******REMOVED******REMOVED*** Unused Imports
-
-```bash
-***REMOVED*** Auto-remove unused imports
-ruff check --fix --select F401 custom_components/cable_modem_monitor/
-```
-
-***REMOVED******REMOVED******REMOVED*** Code Simplification
-
-Ruff can suggest simplifications. Review and apply:
-
-```bash
-***REMOVED*** Check for simplifications
-ruff check --select SIM custom_components/cable_modem_monitor/
-
-***REMOVED*** Auto-fix (review changes!)
-ruff check --fix --select SIM custom_components/cable_modem_monitor/
-```
-
-***REMOVED******REMOVED******REMOVED*** Type Annotations
-
-mypy will catch type errors. Common fixes:
-
-```python
-***REMOVED*** Add type hints
-def function(param: str) -> int:
-    return len(param)
-
-***REMOVED*** Use Optional for nullable types
-from typing import Optional
-
-def function(param: Optional[str] = None) -> Optional[int]:
-    if param is None:
-        return None
-    return len(param)
-```
-
-***REMOVED******REMOVED******REMOVED*** Complexity Warnings
-
-If you see complexity warnings (C90), consider:
-
-1. Breaking large functions into smaller ones
-2. Extracting complex logic into separate functions
-3. Using early returns to reduce nesting
-
-***REMOVED******REMOVED*** Disabling Rules
-
-***REMOVED******REMOVED******REMOVED*** Inline Disabling
-
-```python
-***REMOVED*** Disable specific rule for one line
-result = complex_function()  ***REMOVED*** noqa: C901
-
-***REMOVED*** Disable all rules for one line
-result = complex_function()  ***REMOVED*** noqa
-```
-
-***REMOVED******REMOVED******REMOVED*** Per-File Disabling
-
-Add to `.ruff.toml`:
-
-```toml
-[lint.per-file-ignores]
-"path/to/file.py" = ["E501", "F401"]
-```
-
-***REMOVED******REMOVED******REMOVED*** Global Disabling
-
-Add to `.ruff.toml`:
-
-```toml
-[lint]
-ignore = ["E501", "F401"]
-```
-
-***REMOVED******REMOVED*** Best Practices
-
-1. **Run linting before committing** - Use pre-commit hooks or `make check`
-2. **Auto-fix when possible** - Use `make lint-fix` to automatically fix issues
-3. **Review auto-fixes** - Always review changes before committing
-4. **Fix type errors** - Address mypy errors for better code quality
-5. **Keep complexity low** - Break down complex functions
-6. **Follow naming conventions** - Use PEP 8 naming conventions
-7. **Sort imports** - Keep imports organized and sorted
-8. **Document exceptions** - Add comments when disabling rules
 
 ***REMOVED******REMOVED*** Resources
 
-- [Ruff Documentation](https://docs.astral.sh/ruff/)
-- [Black Documentation](https://black.readthedocs.io/)
-- [mypy Documentation](https://mypy.readthedocs.io/)
-- [PEP 8 Style Guide](https://pep8.org/)
-- [Security Linting Guide](./SECURITY_LINTING.md)
-
-***REMOVED******REMOVED*** Troubleshooting
-
-***REMOVED******REMOVED******REMOVED*** Ruff not found
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-***REMOVED******REMOVED******REMOVED*** Pre-commit hooks not running
-
-```bash
-pre-commit install
-```
-
-***REMOVED******REMOVED******REMOVED*** VS Code not showing linting errors
-
-1. Install Ruff extension
-2. Reload VS Code window
-3. Check Python interpreter is selected
-4. Verify `.ruff.toml` is in project root
-
-***REMOVED******REMOVED******REMOVED*** Too many errors
-
-Start with auto-fix:
-
-```bash
-make lint-fix
-make format
-```
-
-Then address remaining issues manually.
+- [Ruff](https://docs.astral.sh/ruff/)
+- [Black](https://black.readthedocs.io/)
+- [mypy](https://mypy.readthedocs.io/)
+- [Bandit](https://bandit.readthedocs.io/)
+- [CodeQL](.github/codeql/README.md)

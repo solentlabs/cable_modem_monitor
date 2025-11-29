@@ -132,7 +132,7 @@ class YourModemParser(ModemParser):
     ***REMOVED*** =========================================================================
     ***REMOVED*** STEP 4: IMPLEMENT login() METHOD
     ***REMOVED*** =========================================================================
-    def login(self, session, base_url, username, password) -> bool:
+    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
         """Perform authentication if required.
 
         Args:
@@ -142,10 +142,12 @@ class YourModemParser(ModemParser):
             password: Password for authentication
 
         Returns:
-            True if login successful or not required
+            tuple[bool, str | None]: (success, authenticated_html)
+                - success: True if login succeeded or no login required
+                - authenticated_html: HTML from login response, or None
 
         Common patterns:
-        - No auth: return True
+        - No auth: return (True, None)
         - HTTP Basic Auth: Use AuthFactory.get_strategy(AuthStrategyType.BASIC_HTTP)
         - Form auth: Use AuthFactory.get_strategy(AuthStrategyType.FORM)
         - HNAP: Use AuthFactory.get_strategy(AuthStrategyType.HNAP)
@@ -153,15 +155,14 @@ class YourModemParser(ModemParser):
         Example (HTTP Basic Auth):
             from custom_components.cable_modem_monitor.core.authentication import AuthFactory
             auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-            success, _ = auth_strategy.login(session, base_url, username, password, self.auth_config)
-            return success
+            return auth_strategy.login(session, base_url, username, password, self.auth_config)
 
         Example (No auth):
-            return True  ***REMOVED*** No authentication needed
+            return (True, None)  ***REMOVED*** No authentication needed
         """
         ***REMOVED*** TODO: Implement your login logic
         ***REMOVED*** For no authentication:
-        return True
+        return (True, None)
 
     ***REMOVED*** =========================================================================
     ***REMOVED*** STEP 5: IMPLEMENT parse() METHOD - REQUIRED

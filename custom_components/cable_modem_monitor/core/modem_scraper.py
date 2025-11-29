@@ -179,7 +179,7 @@ class ModemScraper:
                     "status_code": response.status_code,
                     "content_type": response.headers.get("Content-Type", "unknown"),
                     "size_bytes": len(response.text) if hasattr(response, "text") else 0,
-                    "html": response.text if hasattr(response, "text") else "",
+                    "content": response.text if hasattr(response, "text") else "",
                     "parser": parser_name,
                     "description": description,
                 }
@@ -256,82 +256,146 @@ class ModemScraper:
 
         _LOGGER.info("Finished fetching parser URL patterns. Total captured: %d pages", len(self._captured_urls))
 
-    def _crawl_additional_pages(self, max_pages: int = 20) -> None:
-        """Crawl additional pages by following links found in captured HTML.
+    def _crawl_additional_pages(self, max_pages: int = 50) -> None:  ***REMOVED*** noqa: C901
+        """Comprehensive crawl to capture ALL modem resources.
 
-        This enhances HTML capture by automatically discovering and fetching
-        additional modem pages that might contain useful information for
-        parser development.
+        Modern cable modem UIs use JavaScript to dynamically build navigation.
+        Simple <a href> extraction misses most pages. This method:
 
-        Uses the reusable html_crawler utility for link discovery.
+        1. Extracts JS/CSS/fragment references from HTML
+        2. Fetches JS files and parses them for URL patterns (menu configs, etc.)
+        3. Fetches discovered HTML pages and fragments
+        4. Repeats until no new resources are found
+
+        This builds a comprehensive fixture database for parser development.
 
         Args:
-            max_pages: Maximum number of additional pages to crawl (default 20)
+            max_pages: Maximum total resources to capture (default 50)
         """
         from custom_components.cable_modem_monitor.lib.html_crawler import (
-            discover_links_from_pages,
-            get_new_links_to_crawl,
+            RESOURCE_TYPE_API,
+            RESOURCE_TYPE_CSS,
+            RESOURCE_TYPE_FRAGMENT,
+            RESOURCE_TYPE_HTML,
+            RESOURCE_TYPE_JS,
+            discover_all_resources,
             normalize_url,
         )
 
         if not self._captured_urls:
             return
 
-        _LOGGER.info("Starting link crawl to discover additional pages (max %d pages)", max_pages)
+        _LOGGER.info("Starting comprehensive resource capture (max %d resources)", max_pages)
 
-        ***REMOVED*** Get already captured URLs (normalized)
+        ***REMOVED*** Track what we've already captured (normalized URLs)
         captured_url_set = {normalize_url(item["url"]) for item in self._captured_urls}
-        _LOGGER.debug("Already captured %d unique pages (normalized)", len(captured_url_set))
+        total_fetched = 0
+        iteration = 0
+        max_iterations = 5  ***REMOVED*** Prevent infinite loops
 
-        ***REMOVED*** Discover all links from captured pages using utility
-        discovered_links = discover_links_from_pages(self._captured_urls, self.base_url)
+        while iteration < max_iterations and total_fetched < max_pages:
+            iteration += 1
+            _LOGGER.info("Discovery iteration %d (captured so far: %d)", iteration, len(captured_url_set))
 
-        ***REMOVED*** Get new links to crawl (not already captured)
-        links_to_try = get_new_links_to_crawl(discovered_links, captured_url_set, max_pages)
+            ***REMOVED*** Discover all resources from currently captured pages
+            resources = discover_all_resources(self._captured_urls, self.base_url)
 
-        if not links_to_try:
-            _LOGGER.info("No new links discovered to crawl")
-            return
+            ***REMOVED*** Collect all URLs to try, prioritized by type
+            ***REMOVED*** Priority: JS first (contains menu configs), then fragments, then HTML, then CSS
+            urls_to_try: list[tuple[str, str]] = []
 
-        _LOGGER.info("Found %d new links to crawl", len(links_to_try))
+            for url in resources[RESOURCE_TYPE_JS]:
+                if normalize_url(url) not in captured_url_set:
+                    urls_to_try.append((url, "javascript"))
 
-        ***REMOVED*** Crawl discovered links
-        pages_crawled = 0
-        for link_url in links_to_try:
-            try:
-                _LOGGER.debug("Crawling additional page: %s", link_url)
-                response = self.session.get(link_url, timeout=5)
+            for url in resources[RESOURCE_TYPE_FRAGMENT]:
+                if normalize_url(url) not in captured_url_set:
+                    urls_to_try.append((url, "fragment"))
 
-                if response.status_code == 200:
-                    self._capture_response(response, "Link crawl")
-                    pages_crawled += 1
-                    _LOGGER.debug("Successfully captured: %s (%d bytes)", link_url, len(response.text))
-                else:
-                    _LOGGER.debug("Got status %d from: %s", response.status_code, link_url)
+            for url in resources[RESOURCE_TYPE_HTML]:
+                if normalize_url(url) not in captured_url_set:
+                    urls_to_try.append((url, "html"))
 
-            except Exception as e:
-                _LOGGER.debug("Failed to fetch %s: %s", link_url, e)
-                continue
+            for url in resources[RESOURCE_TYPE_CSS]:
+                if normalize_url(url) not in captured_url_set:
+                    urls_to_try.append((url, "stylesheet"))
 
+            ***REMOVED*** Also try API endpoints (best effort)
+            for url in resources[RESOURCE_TYPE_API]:
+                if normalize_url(url) not in captured_url_set:
+                    urls_to_try.append((url, "api"))
+
+            if not urls_to_try:
+                _LOGGER.info("No new resources discovered in iteration %d", iteration)
+                break
+
+            _LOGGER.info("Found %d new resources to fetch in iteration %d", len(urls_to_try), iteration)
+
+            ***REMOVED*** Fetch discovered resources
+            fetched_this_iteration = 0
+            for url, resource_type in urls_to_try:
+                if total_fetched >= max_pages:
+                    _LOGGER.info("Reached max_pages limit (%d)", max_pages)
+                    break
+
+                try:
+                    _LOGGER.debug("Fetching %s: %s", resource_type, url)
+                    response = self.session.get(url, timeout=10)
+
+                    if response.status_code == 200:
+                        ***REMOVED*** Capture with resource type info
+                        description = f"Comprehensive crawl: {resource_type}"
+                        self._capture_response(response, description)
+                        captured_url_set.add(normalize_url(url))
+                        total_fetched += 1
+                        fetched_this_iteration += 1
+                        _LOGGER.debug(
+                            "Captured %s (%d bytes): %s",
+                            resource_type,
+                            len(response.text),
+                            url,
+                        )
+                    else:
+                        _LOGGER.debug("Got status %d from %s: %s", response.status_code, resource_type, url)
+
+                except Exception as e:
+                    _LOGGER.debug("Failed to fetch %s %s: %s", resource_type, url, e)
+                    continue
+
+            _LOGGER.info(
+                "Iteration %d complete: fetched %d new resources",
+                iteration,
+                fetched_this_iteration,
+            )
+
+            ***REMOVED*** If we didn't fetch anything new, stop
+            if fetched_this_iteration == 0:
+                break
+
+        ***REMOVED*** Final summary
         total_captured = len(self._captured_urls)
-        _LOGGER.info("Link crawl complete: captured %d additional pages (total: %d)", pages_crawled, total_captured)
+        _LOGGER.info(
+            "Comprehensive capture complete: %d total resources captured in %d iterations",
+            total_captured,
+            iteration,
+        )
 
-    def _login(self) -> bool | tuple[bool, str | None]:
+    def _login(self) -> tuple[bool, str | None]:
         """
         Log in to the modem web interface.
 
         Returns:
-            bool: True if login successful (old style)
-            tuple[bool, str | None]: (success, html) where html is authenticated page content
-                                     or None if no credentials provided or login failed (new style)
+            tuple[bool, str | None]: (success, authenticated_html)
+                - success: True if login succeeded or no login required
+                - authenticated_html: HTML from login response, or None
         """
         if not self.username or not self.password:
             _LOGGER.debug("No credentials provided, skipping login")
-            return True
+            return (True, None)
 
         if not self.parser:
             _LOGGER.error("No parser detected, cannot log in")
-            return False
+            return (False, None)
 
         return self.parser.login(self.session, self.base_url, self.username, self.password)
 
@@ -816,24 +880,18 @@ class ModemScraper:
         Returns:
             HTML string (possibly updated from login) or None if login failed
         """
-        login_result = self._login()
+        success, authenticated_html = self._login()
 
-        if isinstance(login_result, tuple):
-            success, authenticated_html = login_result
-            if not success:
-                _LOGGER.error("Failed to log in to modem")
-                return None
-            ***REMOVED*** Use the authenticated HTML from login if available
-            if authenticated_html:
-                _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(authenticated_html))
-                return authenticated_html
-            return html
-        else:
-            ***REMOVED*** Old-style boolean return for parsers that don't return HTML
-            if not login_result:
-                _LOGGER.error("Failed to log in to modem")
-                return None
-            return html
+        if not success:
+            _LOGGER.error("Failed to log in to modem")
+            return None
+
+        ***REMOVED*** Use authenticated HTML from login if available, otherwise use original
+        if authenticated_html:
+            _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(authenticated_html))
+            return authenticated_html
+
+        return html
 
     def _build_response(self, data: dict) -> dict:
         """Build response dictionary from parsed data."""
