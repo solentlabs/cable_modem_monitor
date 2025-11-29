@@ -590,7 +590,7 @@ async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
                     "method": "GET",
                     "status_code": 200,
                     "size_bytes": 12450,
-                    "html": "<html>test</html>",
+                    "content": "<html>test</html>",
                     "parser": "Motorola MB8611",
                 }
             ],
