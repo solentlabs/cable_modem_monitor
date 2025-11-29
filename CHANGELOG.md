@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [3.8.3] - 2025-11-29
 
+***REMOVED******REMOVED*** [3.8.3] - 2025-11-29
+
 ***REMOVED******REMOVED******REMOVED*** Added
 - **Comprehensive HTML Capture** - Discovers all modem resources for fixture database (Issue ***REMOVED***42)
   - Parses JavaScript files for URL patterns (menu configs, AJAX endpoints)
