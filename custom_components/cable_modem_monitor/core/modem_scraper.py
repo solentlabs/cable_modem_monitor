@@ -316,22 +316,22 @@ class ModemScraper:
         total_captured = len(self._captured_urls)
         _LOGGER.info("Link crawl complete: captured %d additional pages (total: %d)", pages_crawled, total_captured)
 
-    def _login(self) -> bool | tuple[bool, str | None]:
+    def _login(self) -> tuple[bool, str | None]:
         """
         Log in to the modem web interface.
 
         Returns:
-            bool: True if login successful (old style)
-            tuple[bool, str | None]: (success, html) where html is authenticated page content
-                                     or None if no credentials provided or login failed (new style)
+            tuple[bool, str | None]: (success, authenticated_html)
+                - success: True if login succeeded or no login required
+                - authenticated_html: HTML from login response, or None
         """
         if not self.username or not self.password:
             _LOGGER.debug("No credentials provided, skipping login")
-            return True
+            return (True, None)
 
         if not self.parser:
             _LOGGER.error("No parser detected, cannot log in")
-            return False
+            return (False, None)
 
         return self.parser.login(self.session, self.base_url, self.username, self.password)
 
@@ -816,24 +816,18 @@ class ModemScraper:
         Returns:
             HTML string (possibly updated from login) or None if login failed
         """
-        login_result = self._login()
+        success, authenticated_html = self._login()
 
-        if isinstance(login_result, tuple):
-            success, authenticated_html = login_result
-            if not success:
-                _LOGGER.error("Failed to log in to modem")
-                return None
-            # Use the authenticated HTML from login if available
-            if authenticated_html:
-                _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(authenticated_html))
-                return authenticated_html
-            return html
-        else:
-            # Old-style boolean return for parsers that don't return HTML
-            if not login_result:
-                _LOGGER.error("Failed to log in to modem")
-                return None
-            return html
+        if not success:
+            _LOGGER.error("Failed to log in to modem")
+            return None
+
+        # Use authenticated HTML from login if available, otherwise use original
+        if authenticated_html:
+            _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(authenticated_html))
+            return authenticated_html
+
+        return html
 
     def _build_response(self, data: dict) -> dict:
         """Build response dictionary from parsed data."""

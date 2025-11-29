@@ -190,10 +190,10 @@ class TestSB8200Login:
     """Test login behavior."""
 
     def test_login_always_succeeds(self):
-        """Test that login always returns True (no auth required)."""
+        """Test that login always returns (True, None) (no auth required)."""
         parser = ArrisSB8200Parser()
         result = parser.login(None, "http://192.168.100.1", None, None)
-        assert result is True
+        assert result == (True, None)
 
 
 class TestSB8200AlternativeFixture:
