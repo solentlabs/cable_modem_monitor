@@ -26,6 +26,14 @@ def sb8200_alt_html():
         return f.read()
 
 
+@pytest.fixture
+def sb8200_product_info_html():
+    """Load SB8200 product info page (cmswinfo.html)."""
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "sb8200", "cmswinfo.html")
+    with open(fixture_path) as f:
+        return f.read()
+
+
 class TestSB8200ParserDetection:
     """Test parser detection logic."""
 
@@ -70,6 +78,15 @@ class TestSB8200ParserCapabilities:
     def test_no_restart_capability(self):
         """Test that restart is NOT supported."""
         assert not ArrisSB8200Parser.has_capability(ModemCapability.RESTART)
+
+    def test_has_uptime_capability(self):
+        """Test uptime capability (from cmswinfo.html)."""
+        assert ArrisSB8200Parser.has_capability(ModemCapability.SYSTEM_UPTIME)
+
+    def test_has_version_capabilities(self):
+        """Test hardware/software version capabilities."""
+        assert ArrisSB8200Parser.has_capability(ModemCapability.SOFTWARE_VERSION)
+        assert ArrisSB8200Parser.has_capability(ModemCapability.HARDWARE_VERSION)
 
 
 class TestSB8200DownstreamParsing:
@@ -216,3 +233,78 @@ class TestSB8200AlternativeFixture:
 
         assert "upstream" in data
         assert len(data["upstream"]) == 3
+
+
+class TestSB8200ProductInfoParsing:
+    """Test product info parsing from cmswinfo.html."""
+
+    def test_parse_uptime(self, sb8200_product_info_html):
+        """Test uptime parsing from product info page."""
+        parser = ArrisSB8200Parser()
+        soup = BeautifulSoup(sb8200_product_info_html, "html.parser")
+        info = parser._parse_product_info(soup)
+
+        assert "uptime" in info
+        # "8 days 01h:16m:13s.00" = 8*86400 + 1*3600 + 16*60 + 13 = 695773 seconds
+        assert info["uptime"] == 695773
+
+    def test_parse_hardware_version(self, sb8200_product_info_html):
+        """Test hardware version parsing."""
+        parser = ArrisSB8200Parser()
+        soup = BeautifulSoup(sb8200_product_info_html, "html.parser")
+        info = parser._parse_product_info(soup)
+
+        assert "hardware_version" in info
+        assert info["hardware_version"] == "6"
+
+    def test_parse_software_version(self, sb8200_product_info_html):
+        """Test software version parsing."""
+        parser = ArrisSB8200Parser()
+        soup = BeautifulSoup(sb8200_product_info_html, "html.parser")
+        info = parser._parse_product_info(soup)
+
+        assert "software_version" in info
+        assert "AB01.01.009" in info["software_version"]
+
+    def test_parse_docsis_version(self, sb8200_product_info_html):
+        """Test DOCSIS version parsing."""
+        parser = ArrisSB8200Parser()
+        soup = BeautifulSoup(sb8200_product_info_html, "html.parser")
+        info = parser._parse_product_info(soup)
+
+        assert "docsis_version" in info
+        assert info["docsis_version"] == "Docsis 3.1"
+
+
+class TestSB8200UptimeParsing:
+    """Test uptime string parsing."""
+
+    def test_parse_uptime_with_days(self):
+        """Test parsing uptime with days."""
+        parser = ArrisSB8200Parser()
+        result = parser._parse_uptime("8 days 01h:16m:13s.00")
+        assert result == 695773  # 8*86400 + 1*3600 + 16*60 + 13
+
+    def test_parse_uptime_one_day(self):
+        """Test parsing uptime with singular 'day'."""
+        parser = ArrisSB8200Parser()
+        result = parser._parse_uptime("1 day 00h:00m:00s.00")
+        assert result == 86400
+
+    def test_parse_uptime_no_days(self):
+        """Test parsing uptime without days prefix."""
+        parser = ArrisSB8200Parser()
+        result = parser._parse_uptime("12h:30m:45s")
+        assert result == 45045  # 12*3600 + 30*60 + 45
+
+    def test_parse_uptime_invalid(self):
+        """Test parsing invalid uptime returns None."""
+        parser = ArrisSB8200Parser()
+        result = parser._parse_uptime("invalid format")
+        assert result is None
+
+    def test_parse_uptime_empty(self):
+        """Test parsing empty string returns None."""
+        parser = ArrisSB8200Parser()
+        result = parser._parse_uptime("")
+        assert result is None

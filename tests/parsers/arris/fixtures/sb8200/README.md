@@ -12,26 +12,63 @@
 | **ISPs** | Comcast, Xfinity, Cox, Spectrum, and most major ISPs |
 | **Max Speed** | 2 Gbps downstream (with LAG) |
 | **Related Issue** | [#42](https://github.com/kwschulz/cable_modem_monitor/issues/42) |
-| **Captured By** | @Hak5CaydenS |
+| **Contributor** | @undotcom |
 | **Capture Date** | November 2025 |
-| **Parser Status** | Pending parser development |
+| **Parser Status** | Verified |
 
 ## Known URLs
 
-- **Base URL:** `http://192.168.100.1`
-- **Status Page:** `/cmconnectionstatus.html` (captured, no auth required)
-- **Product Info:** `/cmswinfo.html`
-- **Event Log:** `/cmeventlog.html`
-- **Addresses:** `/cmaddress.html`
-- **Configuration:** `/cmconfiguration.html`
-- **Advanced:** `/lagcfg.html`
-- **Help:** `/cmstatushelp.html`
+Complete page inventory from `main_arris.js` menu structure:
+
+| Page | URL | Status | Purpose |
+|------|-----|--------|---------|
+| STATUS | `/cmconnectionstatus.html` | ✅ Captured | Channel data, startup status |
+| PRODUCT INFO | `/cmswinfo.html` | ✅ Captured | Uptime, versions, serial |
+| EVENT LOG | `/cmeventlog.html` | ❌ Not captured | System event log |
+| ADDRESSES | `/cmaddress.html` | ✅ Captured | MAC/IP addresses |
+| CONFIGURATION | `/cmconfiguration.html` | ✅ Captured | DOCSIS config file info |
+| ADVANCED | `/lagcfg.html` | ✅ Captured | Link aggregation settings |
+| HELP | `/cmstatushelp.html` | ✅ Captured | Status page documentation |
+
+**Base URL:** `http://192.168.100.1`
 
 ## Authentication
 
 **Type:** None required
 
 The SB8200 status pages are publicly accessible without authentication. This is the simplest case for parser implementation.
+
+## Reboot Capability
+
+**Status:** Present but ISP-locked (disabled button)
+
+The SB8200 firmware includes reboot functionality in `cmconfiguration.html`:
+
+```html
+<form method="post" name="Configuration">
+  <input type="hidden" name="Rebooting" value="">
+  <input type="submit" value="Reboot" disabled onClick="resetReq();">
+</form>
+```
+
+```javascript
+function resetReq() {
+  var agree = window.confirm('Are you sure you want to reset the modem?');
+  if (agree == true) {
+    window.document.configuration.Rebooting.value = 1;
+  }
+}
+```
+
+**Mechanism:** POST to `/cmconfiguration.html` with `Rebooting=1`
+
+The button has `disabled` attribute in this capture (Spectrum ISP). This is a **client-side restriction only** - the server endpoint still exists. A direct POST request might work:
+
+```python
+session.post("http://192.168.100.1/cmconfiguration.html", data={"Rebooting": "1"})
+```
+
+**Testing needed:** The modem may accept the POST (UI-only restriction) or reject it (DOCSIS config blocks server-side). Worth testing on a real device.
 
 ## Available Fixtures
 
@@ -49,6 +86,32 @@ The SB8200 status pages are publicly accessible without authentication. This is 
 - 32 downstream bonded channels in HTML table
 - 3 upstream bonded channels in HTML table
 - Current system time
+
+### cmswinfo.html
+
+- **Source:** Issue #42 Fallback capture by @undotcom
+- **Status Code:** 200 OK
+- **Size:** 4 KB
+- **Content:** Product information page with system status
+- **Authentication:** None required (public page)
+
+**Key Content:**
+- Hardware/Software version information
+- Serial number and MAC address (redacted)
+- DOCSIS specification version
+- **System uptime** (format: "8 days 01h:16m:13s.00")
+
+### Extended Files
+
+Reference files not used by parser but useful for documentation:
+
+| File | Size | Content |
+|------|------|---------|
+| `extended/cmaddress.html` | 4 KB | MAC addresses, IP configuration |
+| `extended/cmconfiguration.html` | 6 KB | DOCSIS config file details |
+| `extended/cmstatushelp.html` | 5 KB | Help documentation |
+| `extended/lagcfg.html` | 5 KB | Link aggregation (LAG) settings |
+| `extended/main_arris.js` | 15 KB | **Menu structure, page URLs** |
 
 ## Data Structure
 

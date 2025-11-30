@@ -133,6 +133,7 @@ class ModemScraper:
         self.parser_name = parser_name  # For Tier 2: load cached parser by name
         self.last_successful_url = ""
         self._captured_urls: list[dict[str, Any]] = []  # For HTML capture feature
+        self._failed_urls: list[dict[str, Any]] = []  # Track failed fetches for diagnostics
         self._capture_enabled: bool = False  # Flag to enable HTML capture
 
     def _capture_response(self, response: requests.Response, description: str = "") -> None:
@@ -189,6 +190,40 @@ class ModemScraper:
             _LOGGER.warning(
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
+
+    def _record_failed_url(
+        self,
+        url: str,
+        reason: str,
+        status_code: int | None = None,
+        exception_type: str | None = None,
+        resource_type: str = "unknown",
+    ) -> None:
+        """Record a failed URL fetch for diagnostics.
+
+        Args:
+            url: The URL that failed to fetch
+            reason: Human-readable reason for failure
+            status_code: HTTP status code if available
+            exception_type: Exception class name if applicable
+            resource_type: Type of resource (html, javascript, etc.)
+        """
+        if not self._capture_enabled:
+            return
+
+        from datetime import datetime
+
+        self._failed_urls.append(
+            {
+                "url": url,
+                "reason": reason,
+                "status_code": status_code,
+                "exception_type": exception_type,
+                "resource_type": resource_type,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+        _LOGGER.debug("Recorded failed URL: %s - %s", url, reason)
 
     def _fetch_parser_url_patterns(self) -> None:  # noqa: C901
         """Fetch all URLs defined in the parser's url_patterns.
@@ -249,9 +284,21 @@ class ModemScraper:
                     _LOGGER.debug("Successfully captured: %s (%d bytes)", url, len(response.text))
                 else:
                     _LOGGER.debug("Got status %d from parser URL: %s", response.status_code, url)
+                    self._record_failed_url(
+                        url=url,
+                        reason=f"HTTP {response.status_code}",
+                        status_code=response.status_code,
+                        resource_type="parser_pattern",
+                    )
 
             except Exception as e:
                 _LOGGER.debug("Failed to fetch parser URL %s: %s", url, e)
+                self._record_failed_url(
+                    url=url,
+                    reason=str(e),
+                    exception_type=type(e).__name__,
+                    resource_type="parser_pattern",
+                )
                 continue
 
         _LOGGER.info("Finished fetching parser URL patterns. Total captured: %d pages", len(self._captured_urls))
@@ -357,9 +404,21 @@ class ModemScraper:
                         )
                     else:
                         _LOGGER.debug("Got status %d from %s: %s", response.status_code, resource_type, url)
+                        self._record_failed_url(
+                            url=url,
+                            reason=f"HTTP {response.status_code}",
+                            status_code=response.status_code,
+                            resource_type=resource_type,
+                        )
 
                 except Exception as e:
                     _LOGGER.debug("Failed to fetch %s %s: %s", resource_type, url, e)
+                    self._record_failed_url(
+                        url=url,
+                        reason=str(e),
+                        exception_type=type(e).__name__,
+                        resource_type=resource_type,
+                    )
                     continue
 
             _LOGGER.info(
@@ -781,6 +840,7 @@ class ModemScraper:
         """
         # Clear previous captures and enable capture mode
         self._captured_urls = []
+        self._failed_urls = []
         self._capture_enabled = capture_raw
 
         # Replace session with capturing session if capture is enabled
@@ -831,8 +891,13 @@ class ModemScraper:
                     "trigger": "manual",
                     "ttl_expires": (datetime.now() + timedelta(minutes=5)).isoformat(),
                     "urls": self._captured_urls,
+                    "failed_urls": self._failed_urls,  # Include failed fetches for diagnostics
                 }
-                _LOGGER.info("Captured %d HTML pages for diagnostics", len(self._captured_urls))
+                _LOGGER.info(
+                    "Captured %d HTML pages for diagnostics (%d URLs failed)",
+                    len(self._captured_urls),
+                    len(self._failed_urls),
+                )
 
             return response
 
