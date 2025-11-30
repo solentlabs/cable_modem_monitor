@@ -28,46 +28,47 @@ Complete HTML capture from a Netgear C3700-100NAS cable modem/router.
 - **Total Pages**: 22 HTML pages (including DocsisStatus.htm)
 - **Source**: Home Assistant diagnostics data
 
-## Available Fixtures
+## Directory Structure
 
-### Core Pages
-- `root.html` - Root page (401 unauthorized redirect)
-- `index.htm` - Main page with navigation menu (80KB)
-- `DashBoard.htm` - Dashboard overview (54KB)
-- `Diagnostics.htm` - Network diagnostics tools (40KB)
+```
+c3700/
+├── DocsisStatus.htm      # Core - channel data (parser essential)
+├── RouterStatus.htm      # Core - system info (parser essential)
+├── index.htm             # Core - detection/navigation
+├── DashBoard.htm         # Core - overview
+├── DocsisOffline.htm     # Core - offline state
+├── root.html             # Core - auth redirect
+├── README.md
+└── extended/             # Reference pages (not used by parser)
+    ├── WirelessSettings.htm
+    ├── GuestNetwork.htm
+    └── ... (17 files)
+```
 
-### DOCSIS/Modem Pages
-- `DocsisOffline.htm` - Offline error page (displayed when modem has no cable connection)
-- `DocsisStatus.htm` - **✅ DOCSIS channel data** (40KB - REQUIRED for channel parsing)
+## Core Fixtures (Root)
 
-### Router/WiFi Pages
-- `WirelessSettings.htm` - WiFi configuration (161KB - largest page)
-- `GuestNetwork.htm` - Guest network settings (111KB)
-- `LANSetup.htm` - LAN configuration (46KB)
-- `WANSetup.htm` - WAN setup (34KB)
-- `RouterStatus.htm` - Router status (if available)
+These files are used by the parser for detection, data extraction, and state handling:
 
-### Security/Access Control
-- `AccessControl.htm` - Access control rules (52KB)
-- `BlockSites.htm` - Site blocking configuration (26KB)
+| File | Size | Purpose |
+|------|------|---------|
+| `DocsisStatus.htm` | 40KB | **Channel data** - downstream/upstream parsing |
+| `RouterStatus.htm` | 123KB | **System info** - HW/SW versions, uptime |
+| `index.htm` | 78KB | Detection, navigation menu |
+| `DashBoard.htm` | 54KB | Overview, connection status |
+| `DocsisOffline.htm` | 4KB | Offline state handling |
+| `root.html` | 0.4KB | Auth redirect (401) |
 
-### Advanced Features
-- `UPnP.htm` - UPnP settings (18KB)
-- `UPnPMedia.htm` - UPnP media server (13KB)
-- `DynamicDNS.htm` - DDNS configuration (76KB)
-- `SpeedTest.htm` - Built-in speed test (15KB)
+## Extended Fixtures (`extended/`)
 
-### Logs & Monitoring
-- `Logs.htm` - System logs (52KB)
-- `eventLog.htm` - Event log viewer (28KB)
+Reference pages for future features. Not used by parser but useful for documentation:
 
-### Management
-- `BackupSettings.htm` - Backup/restore settings (13KB)
-- `Schedule.htm` - Scheduling features (35KB)
-- `document.htm` - Documentation/help (3KB)
-
-### WiFi Setup
-- `AddWPSClient_TOP.htm` - WPS client setup (11KB)
+| Category | Files |
+|----------|-------|
+| **Wireless** | WirelessSettings.htm (161KB), GuestNetwork.htm (112KB), AddWPSClient_TOP.htm |
+| **Router** | LANSetup.htm, WANSetup.htm, UPnP.htm, UPnPMedia.htm, DynamicDNS.htm |
+| **Security** | AccessControl.htm, BlockSites.htm, Schedule.htm |
+| **Logs** | Logs.htm, eventLog.htm, Diagnostics.htm |
+| **Other** | BackupSettings.htm, SpeedTest.htm, document.htm |
 
 ## Channel Data Format
 
@@ -236,20 +237,6 @@ def test_full_integration_with_mock(c3700_mock_server):
     data = scraper.get_modem_data()
     assert data["downstream_channel_count"] == 8
 ```
-
-## Future Enhancements
-
-### Short Term
-- [x] ~~Capture `DocsisStatus.htm` for channel data~~ ✅ COMPLETED
-- [x] ~~Update tests to validate channel parsing~~ ✅ COMPLETED
-- [x] ~~Document actual channel data format~~ ✅ COMPLETED
-
-### Long Term
-- [ ] Implement mock HTTP server using fixtures
-- [ ] Add state simulation (online/offline/degraded)
-- [ ] Create integration tests using mock server
-- [ ] Document variations in channel data (different ISPs, configurations)
-- [ ] Add RouterStatus.htm parsing for additional metrics
 
 ## Related Files
 

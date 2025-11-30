@@ -30,16 +30,35 @@
 - **Password Field**: `loginPassword`
 - **Default IP**: `192.168.100.1`
 
-## Fixture Files
+## Directory Structure
+
+```
+mb7621/
+├── Login.html          # Core - authentication
+├── MotoHome.asp        # Core - dashboard/detection
+├── MotoConnection.asp  # Core - channel data
+├── MotoSwInfo.asp      # Core - software info
+├── MotoSecurity.asp    # Core - restart functionality (used by tests)
+├── README.md
+└── extended/
+    └── MotoSnmpLog.asp   # Event logs
+```
+
+## Core Fixtures
 
 | File | Description | Key Data |
 |------|-------------|----------|
-| `login.html` | Login page | Authentication form |
+| `Login.html` | Login page | Authentication form |
 | `MotoHome.asp` | Home/Dashboard | Basic status overview |
 | `MotoConnection.asp` | DOCSIS channel data | DS/US channels, frequencies, power, SNR |
 | `MotoSwInfo.asp` | Software information | Hardware/firmware version, serial number |
-| `MotoSecurity.asp` | Security settings | Certificate status |
-| `MotoSnmpLog.asp` | Event logs | Log entries |
+| `MotoSecurity.asp` | Security/restart page | Restart functionality |
+
+## Extended Fixtures (`extended/`)
+
+| File | Description |
+|------|-------------|
+| `MotoSnmpLog.asp` | Event logs |
 
 ## Data Available
 
