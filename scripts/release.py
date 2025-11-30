@@ -552,18 +552,26 @@ def perform_git_operations(version: str, skip_verify: bool, no_push: bool, repo_
     if not create_commit(version, skip_verify):
         sys.exit(1)
 
+    # Only create tag and push if --no-push is not set
+    # With branch protection, use --no-push for PR workflow, then tag manually after merge
+    if no_push:
+        print_info("Skipping tag creation (--no-push). After PR merges, run:")
+        print_info("  git checkout main && git pull")
+        print_info(f"  git tag -a v{version} -m 'Release v{version}'")
+        print_info(f"  git push origin v{version}")
+        return
+
     # Create tag
     if not create_tag(version):
         sys.exit(1)
 
-    # Push if requested
-    if not no_push:
-        if not push_changes(version, skip_verify):
-            sys.exit(1)
+    # Push commit and tag
+    if not push_changes(version, skip_verify):
+        sys.exit(1)
 
-        # Create GitHub release
-        if not create_github_release(version, repo_root):
-            print_warning("Release created but GitHub release failed")
+    # Create GitHub release
+    if not create_github_release(version, repo_root):
+        print_warning("Release created but GitHub release failed")
 
 
 def main():
@@ -573,7 +581,7 @@ def main():
     parser.add_argument(
         "--no-push",
         action="store_true",
-        help="Don't push to remote (for testing)",
+        help="Don't create tag or push (for PR workflow with branch protection)",
     )
     parser.add_argument(
         "--skip-changelog",
@@ -644,13 +652,10 @@ def main():
     perform_git_operations(version, args.skip_verify, args.no_push, repo_root)
 
     # Success message
-    print_success(f"\n🎉 Release {version} complete!")
-
     if args.no_push:
-        print_info("\nChanges not pushed (--no-push). To push:")
-        print_info("  git push origin main")
-        print_info(f"  git push origin v{version}")
-        print_info(f"  gh release create v{version}")
+        print_success(f"\n🎉 Version {version} prepared! Create PR, then tag after merge.")
+    else:
+        print_success(f"\n🎉 Release {version} complete!")
 
 
 if __name__ == "__main__":
