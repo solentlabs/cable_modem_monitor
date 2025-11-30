@@ -1,13 +1,15 @@
 """Tests for the Netgear CM600 parser.
 
-Fixtures available:
+Core fixtures (parser-essential):
 - DashBoard.asp: Dashboard page
 - DocsisOffline.asp: Offline error page
 - DocsisStatus.asp: DOCSIS channel data (downstream/upstream/uptime)
-- EventLog.asp: Event log page
-- GPL_rev1.htm: GPL license
 - index.html: Main page
 - RouterStatus.asp: Router/wireless status (hardware/firmware version)
+
+Extended fixtures (in extended/):
+- EventLog.asp: Event log page
+- GPL_rev1.htm: GPL license
 - SetPassword.asp: Password change page
 
 Related: Issue ***REMOVED***3 (Netgear CM600 - Login Doesn't Work)
@@ -58,21 +60,31 @@ def cm600_docsis_status_html():
 def test_fixtures_exist():
     """Verify all captured CM600 fixtures are present."""
     fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures", "cm600")
+    extended_dir = os.path.join(fixtures_dir, "extended")
 
-    expected_files = [
+    ***REMOVED*** Core files used by parser (at root)
+    core_files = [
         "DashBoard.asp",
         "DocsisOffline.asp",
         "DocsisStatus.asp",
-        "EventLog.asp",
-        "GPL_rev1.htm",
         "index.html",
         "RouterStatus.asp",
+    ]
+
+    ***REMOVED*** Extended files for reference (in extended/)
+    extended_files = [
+        "EventLog.asp",
+        "GPL_rev1.htm",
         "SetPassword.asp",
     ]
 
-    for filename in expected_files:
+    for filename in core_files:
         filepath = os.path.join(fixtures_dir, filename)
-        assert os.path.exists(filepath), f"Missing fixture: {filename}"
+        assert os.path.exists(filepath), f"Missing core fixture: {filename}"
+
+    for filename in extended_files:
+        filepath = os.path.join(extended_dir, filename)
+        assert os.path.exists(filepath), f"Missing extended fixture: {filename}"
 
 
 def test_parser_detection(cm600_index_html):

@@ -30,16 +30,35 @@
 - **Password Field**: `loginPassword`
 - **Default IP**: `192.168.100.1`
 
-***REMOVED******REMOVED*** Fixture Files
+***REMOVED******REMOVED*** Directory Structure
+
+```
+mb7621/
+├── Login.html          ***REMOVED*** Core - authentication
+├── MotoHome.asp        ***REMOVED*** Core - dashboard/detection
+├── MotoConnection.asp  ***REMOVED*** Core - channel data
+├── MotoSwInfo.asp      ***REMOVED*** Core - software info
+├── MotoSecurity.asp    ***REMOVED*** Core - restart functionality (used by tests)
+├── README.md
+└── extended/
+    └── MotoSnmpLog.asp   ***REMOVED*** Event logs
+```
+
+***REMOVED******REMOVED*** Core Fixtures
 
 | File | Description | Key Data |
 |------|-------------|----------|
-| `login.html` | Login page | Authentication form |
+| `Login.html` | Login page | Authentication form |
 | `MotoHome.asp` | Home/Dashboard | Basic status overview |
 | `MotoConnection.asp` | DOCSIS channel data | DS/US channels, frequencies, power, SNR |
 | `MotoSwInfo.asp` | Software information | Hardware/firmware version, serial number |
-| `MotoSecurity.asp` | Security settings | Certificate status |
-| `MotoSnmpLog.asp` | Event logs | Log entries |
+| `MotoSecurity.asp` | Security/restart page | Restart functionality |
+
+***REMOVED******REMOVED*** Extended Fixtures (`extended/`)
+
+| File | Description |
+|------|-------------|
+| `MotoSnmpLog.asp` | Event logs |
 
 ***REMOVED******REMOVED*** Data Available
 

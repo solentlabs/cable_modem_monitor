@@ -31,24 +31,47 @@
 - **Password Field**: `loginPassword`
 - **Default URL**: `http://192.168.100.1/`
 
-***REMOVED******REMOVED*** Fixture Files
+***REMOVED******REMOVED*** Directory Structure
 
-All files extracted from diagnostics.json with original modem filenames:
+```
+cm2000/
+├── DocsisStatus.htm      ***REMOVED*** Core - channel data
+├── RouterStatus.htm      ***REMOVED*** Core - system info, reboot
+├── DashBoard.htm         ***REMOVED*** Core - dashboard redirect
+├── DocsisOffline.htm     ***REMOVED*** Core - offline state
+├── index.htm             ***REMOVED*** Core - login, firmware version
+├── index_https.htm       ***REMOVED*** Core - HTTPS detection
+├── root.htm              ***REMOVED*** Core - root redirect
+├── README.md
+└── extended/             ***REMOVED*** Reference files
+    ├── eventLog.htm
+    ├── Logout.htm
+    ├── OpenSourceLicense.html
+    ├── SetPassword.htm
+    └── WebServiceManagement.htm
+```
+
+***REMOVED******REMOVED*** Core Fixtures
 
 | File | Size | Description |
 |------|------|-------------|
-| index.htm | 73 KB | Login/main page, contains firmware version |
-| index_https.htm | 73 KB | HTTPS version of index.htm |
-| DocsisStatus.htm | 64 KB | DOCSIS channel data (primary parsing target) |
-| RouterStatus.htm | 59 KB | Router status, **reboot endpoint** |
-| SetPassword.htm | 27 KB | Password change page |
-| eventLog.htm | 20 KB | Event/system log |
-| DocsisOffline.htm | 6 KB | Offline status page |
-| WebServiceManagement.htm | 7 KB | Web service settings |
-| Logout.htm | 1 KB | Logout page |
-| DashBoard.htm | 362 B | Dashboard redirect |
-| root.htm | 362 B | Root redirect |
-| OpenSourceLicense.html | 78 KB | Open source licenses |
+| `DocsisStatus.htm` | 64 KB | DOCSIS channel data (primary parsing target) |
+| `RouterStatus.htm` | 59 KB | Router status, **reboot endpoint** |
+| `index.htm` | 73 KB | Login/main page, contains firmware version |
+| `index_https.htm` | 73 KB | HTTPS version of index.htm |
+| `DashBoard.htm` | 362 B | Dashboard redirect |
+| `DocsisOffline.htm` | 6 KB | Offline status page |
+| `root.htm` | 362 B | Root redirect |
+
+***REMOVED******REMOVED*** Extended Fixtures (`extended/`)
+
+| File | Size | Description |
+|------|------|-------------|
+| `eventLog.htm` | 20 KB | Event/system log |
+| `SetPassword.htm` | 27 KB | Password change page |
+| `WebServiceManagement.htm` | 7 KB | Web service settings |
+| `Logout.htm` | 1 KB | Logout page |
+| `OpenSourceLicense.html` | 78 KB | Open source licenses |
 
 ***REMOVED******REMOVED*** Data Available
 

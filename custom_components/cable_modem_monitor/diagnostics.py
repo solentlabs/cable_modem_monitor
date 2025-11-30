@@ -163,7 +163,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             _LOGGER.debug("Log file not found at %s", log_file)
             return [
                 {
-                    "timestamp": 0,
+                    "timestamp": time.time(),
                     "level": "INFO",
                     "logger": "diagnostics",
                     "message": (
@@ -229,7 +229,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
     ***REMOVED*** If we couldn't get logs, return a note
     return [
         {
-            "timestamp": 0,
+            "timestamp": time.time(),
             "level": "INFO",
             "logger": "diagnostics",
             "message": (

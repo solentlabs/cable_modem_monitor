@@ -34,18 +34,39 @@
 - **Default Password**: `password`
 - **Default IP**: `192.168.100.1`
 
-***REMOVED******REMOVED*** Fixture Files
+***REMOVED******REMOVED*** Directory Structure
+
+```
+cm600/
+├── DocsisStatus.asp      ***REMOVED*** Core - channel data
+├── RouterStatus.asp      ***REMOVED*** Core - system info
+├── DashBoard.asp         ***REMOVED*** Core - overview
+├── DocsisOffline.asp     ***REMOVED*** Core - offline state
+├── index.html            ***REMOVED*** Core - detection
+├── README.md
+└── extended/             ***REMOVED*** Reference files
+    ├── EventLog.asp
+    ├── GPL_rev1.htm
+    └── SetPassword.asp
+```
+
+***REMOVED******REMOVED*** Core Fixtures
 
 | File | Description | Key Data |
 |------|-------------|----------|
-| `index.html` | Main frameset page | Firmware version, device type |
 | `DocsisStatus.asp` | DOCSIS channel data | DS/US channels, frequencies, power, SNR |
 | `RouterStatus.asp` | System information | Hardware/firmware version, network config |
 | `DashBoard.asp` | Connection overview | Internet status, device counts |
-| `EventLog.asp` | Event logs | Log entries (table structure only) |
 | `DocsisOffline.asp` | Offline error page | Error display template |
-| `SetPassword.asp` | Password change page | Form structure only |
-| `GPL_rev1.htm` | GPL license | License text (no data) |
+| `index.html` | Main frameset page | Firmware version, device type |
+
+***REMOVED******REMOVED*** Extended Fixtures (`extended/`)
+
+| File | Description |
+|------|-------------|
+| `EventLog.asp` | Event logs (table structure only) |
+| `SetPassword.asp` | Password change page (form structure only) |
+| `GPL_rev1.htm` | GPL license (no data) |
 
 ***REMOVED******REMOVED*** Known Firmware Limitations
 

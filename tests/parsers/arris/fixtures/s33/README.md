@@ -39,7 +39,18 @@
 - SSL certificate verification issues with self-signed certificates common
 - Status page not accessible without proper HNAP authentication
 
-***REMOVED******REMOVED*** Available Fixtures
+***REMOVED******REMOVED*** Directory Structure
+
+```
+s33/
+├── Login.html              ***REMOVED*** Core - authentication page
+├── cmconnectionstatus.html ***REMOVED*** Core - channel data
+├── README.md
+└── extended/
+    └── connectionstatus.js ***REMOVED*** JS file (reference only)
+```
+
+***REMOVED******REMOVED*** Core Fixtures
 
 ***REMOVED******REMOVED******REMOVED*** Login.html
 - **Source:** Diagnostics capture from fallback parser
