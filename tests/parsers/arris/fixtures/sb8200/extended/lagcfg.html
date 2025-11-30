@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced </title>
+
+<script src="jquery-1.7.1.min.js"></script>
+<script src="json2.js"></script>
+<script src="main_arris.js"></script>
+
+<script>
+$(document).ready(function(){
+	$("#htmlheader").load("htmlheader.htm");
+});
+
+function btnApplySave() {
+   var loc = 'lagcfg.cgi?';
+
+     if ( document.getElementById('chklag11').checked == true)
+        loc += 'enblLag=1';
+     else
+        loc += 'enblLag=0';
+   loc += '&sessionKey=***REDACTED***';
+   var code = 'location="' + loc + '"';
+   eval(code);
+}
+
+
+var enblLag = '0';
+function frmLoad() {
+      if (enblLag == '1')
+         document.getElementById('chklag11').checked = true;
+      else 
+         document.getElementById('chklag11').checked = false;
+}
+
+function Apply_LAGChange() {
+  var boxVal = document.getElementById('chklag11').checked; 
+  if ( boxVal == true )
+  {
+     if ( enblLag == '1' )
+     {
+        alert("Link Aggregation is already enabled");
+     }
+     else
+     {
+        retval = confirm('Enabling the Link Aggregation requires a modem reboot to take effect. Are you sure you want to change it?');
+	if ( retval == true )
+	{
+	   document.getElementById('chklag11').checked = true;
+           btnApplySave();
+	}
+     }
+  }
+  else if ( boxVal == false)
+  {
+     if( enblLag == '1' )
+     {
+        retval = confirm('Disabling the Link Aggregation requires a modem reboot to take effect. Are you sure you want to change it?');
+	if( retval == true )
+	{
+          document.getElementById('chklag11').checked = false;
+          btnApplySave();
+	}
+     }
+     else
+     {
+        alert('Link Aggregation is already disbled');
+     }
+  }
+}
+
+</script>
+<div id="htmlheader"></div>
+</head>
+<body onLoad='frmLoad()'>
+ <!-- Header Area Begin -->
+<div class="header">
+
+<script>
+$(document).ready(function(){
+	$("#pageheaderA").load("pageheaderA.htm");       
+});
+</script>
+
+         <div id="binnacleWrapper1" class="binnacleItems_hide" style="display:none;">
+            <div id="binnacleWrapper2" class="binnacleItems_hide" style="display:none;">
+                <div id="binnacleWrapperLeft"><img src="px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                <div id="binnacleWrapperRight"><img src="px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                <div id="binnacleWrapperMiddle">
+                    <div id="binnacleInnards">
+                            <div id="binnacleIndicatorWrap"></div>
+                    <div id="binnacleModelName"><span id="thisModelNumberIs">SB8200</span></div>
+                    </div>
+                </div>
+            <!-- end binnacleWrapper1/2 -->
+            </div>
+        </div>
+
+<div id="pageheaderA"></div>
+
+<!--gap--><div id="tmtg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>
+
+                <div id="tmg1"><div id="tmg2"><div id="tmg3"><div id="tmg4"><div id="tmg5"><div id="tmg6">
+
+<div id="topMenu"></div>
+
+<!-- START pageheaderB.htm ADDITIONS -->
+                <!-- end divs for tmg -->
+                </div></div></div></div></div></div>
+
+                <!--gap--><div id="tmbg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>
+
+                <div id="bg1"><div id="bg2"><div id="bg3"><div id="bg4">
+<!-- END pageheaderB.htm ADDITIONS -->
+
+</div> <!-- End Header -->
+
+	<div class="container">
+		<div class="subHeader">
+        	<div class="subHeadcontent">Link Aggregation Configuration</div>
+        </div>
+        
+	<div class="breadcrumbs"> 
+    	<a href="lagcfg.html">Status</a>Link Aggregation Configuration
+    </div>
+
+	<div class="content">
+		<div class="introText">
+        <p>NOTE: Ethernet Link Aggregation applies to various methods of combining (aggregating) multiple network connections in parallel in order to increase throughput beyond what a single connection could sustain, and to provide redundancy in case one of the links should fail.<br><br>
+		</p>
+        </div>
+
+      <tr>
+		  <td valign="center" align="middle" colspan="2" width="30" height="30">
+			 <input type='checkbox' name='chkLag' id='chklag11'></td>
+		  <td colspan="2">
+		  Enable LAG</td>
+      </tr>
+      <center>
+          <input type='button' onClick='Apply_LAGChange()' value='Apply/Save'>
+      </center>         
+
+</div><!-- end Content Area -->
+
+<br clear="all" class="clearfloat">
+<div class="spacer40"></div>
+
+	</div> <!-- end container -->
+
+<!-- Footer and Sitemap -->
+<!-- end divs for bc -->
+</div></div></div></div>	
+<!--gap--><div id="bmtg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>
+
+<center><div id="siteMapBottom"></div></center>
+<script>
+$(document).ready(function(){
+        $("#footer").load("footer.htm");
+});
+</script>
+<div id="footer"></div>
+
+<!-- Insert 
+<script>
+function ClearLog()
+{
+	window.document.RgEventLog.Sn: ***REDACTED***.value = 1;
+}
+</script>
+ End Scripts -->
+
+</body>
+</html>
+
+

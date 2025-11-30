@@ -52,7 +52,7 @@ When reorganizing fixtures, use `git mv` (not delete + add) to preserve file his
 | Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 2 | ❓ Unknown |
 | Arris (originally Motorola SURFboard) | [SB6141](arris/fixtures/sb6141/README.md) | 3.0 | Comcast, Cox, TWC | 1 | ✅ Verified |
 | Arris (Motorola SURFboard) | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 1 | ❓ Unverified |
-| ARRIS | [SB8200](arris/fixtures/sb8200/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 2 | ⏳ Pending |
+| ARRIS | [SB8200](arris/fixtures/sb8200/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 3 | ✅ Verified |
 | Motorola | [MB7621](motorola/fixtures/mb7621/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 5 | ✅ Verified |
 | Motorola (MTRLC LLC) | [MB8600](motorola/fixtures/mb8600/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 1 | ⏳ Pending |
 | Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 6 | ❓ Unknown |

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -45,6 +46,7 @@ class ArrisSB8200Parser(ModemParser):
     url_patterns = [
         {"path": "/", "auth_method": "none", "auth_required": False},
         {"path": "/cmconnectionstatus.html", "auth_method": "none", "auth_required": False},
+        {"path": "/cmswinfo.html", "auth_method": "none", "auth_required": False},
     ]
 
     # Capabilities - SB8200 has DOCSIS 3.1 OFDM channels
@@ -54,6 +56,9 @@ class ArrisSB8200Parser(ModemParser):
         ModemCapability.OFDM_DOWNSTREAM,
         ModemCapability.OFDM_UPSTREAM,
         ModemCapability.CURRENT_TIME,
+        ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.HARDWARE_VERSION,
     }
 
     def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
@@ -65,6 +70,17 @@ class ArrisSB8200Parser(ModemParser):
         downstream_channels = self._parse_downstream(soup)
         upstream_channels = self._parse_upstream(soup)
         system_info = self._parse_system_info(soup)
+
+        # Fetch product info page for uptime and version info
+        if session and base_url:
+            try:
+                response = session.get(f"{base_url}/cmswinfo.html", timeout=10)
+                if response.status_code == 200:
+                    info_soup = BeautifulSoup(response.text, "html.parser")
+                    product_info = self._parse_product_info(info_soup)
+                    system_info.update(product_info)
+            except Exception as e:
+                _LOGGER.debug("Failed to fetch cmswinfo.html: %s", e)
 
         return {
             "downstream": downstream_channels,
@@ -252,3 +268,69 @@ class ArrisSB8200Parser(ModemParser):
             break
 
         return system_info
+
+    def _parse_product_info(self, soup: BeautifulSoup) -> dict:
+        """Parse product info from cmswinfo.html page.
+
+        Extracts uptime, hardware version, and software version.
+        """
+        info: dict[str, Any] = {}
+
+        tables = soup.find_all("table", class_="simpleTable")
+        for table in tables:
+            rows = table.find_all("tr")
+            for row in rows:
+                cells = row.find_all("td")
+                if len(cells) >= 2:
+                    label = cells[0].get_text(strip=True)
+                    value = cells[1].get_text(strip=True)
+
+                    if "Up Time" in label:
+                        uptime_seconds = self._parse_uptime(value)
+                        if uptime_seconds is not None:
+                            info["uptime"] = uptime_seconds
+                            _LOGGER.debug("Parsed SB8200 uptime: %s seconds", uptime_seconds)
+
+                    elif "Hardware Version" in label:
+                        info["hardware_version"] = value
+
+                    elif "Software Version" in label:
+                        info["software_version"] = value
+
+                    elif "Standard Specification" in label:
+                        info["docsis_version"] = value
+
+        return info
+
+    def _parse_uptime(self, uptime_str: str) -> int | None:
+        """Parse uptime string to seconds.
+
+        Format: "8 days 01h:16m:13s.00"
+        """
+        try:
+            # Match pattern: X days HHh:MMm:SSs.XX
+            match = re.match(
+                r"(\d+)\s*days?\s+(\d+)h:(\d+)m:(\d+)s",
+                uptime_str,
+                re.IGNORECASE,
+            )
+            if match:
+                days = int(match.group(1))
+                hours = int(match.group(2))
+                minutes = int(match.group(3))
+                seconds = int(match.group(4))
+                return days * 86400 + hours * 3600 + minutes * 60 + seconds
+
+            # Try simpler format without days: HHh:MMm:SSs
+            match = re.match(r"(\d+)h:(\d+)m:(\d+)s", uptime_str, re.IGNORECASE)
+            if match:
+                hours = int(match.group(1))
+                minutes = int(match.group(2))
+                seconds = int(match.group(3))
+                return hours * 3600 + minutes * 60 + seconds
+
+            _LOGGER.debug("Could not parse uptime format: %s", uptime_str)
+            return None
+        except (ValueError, AttributeError) as e:
+            _LOGGER.debug("Error parsing uptime '%s': %s", uptime_str, e)
+            return None
