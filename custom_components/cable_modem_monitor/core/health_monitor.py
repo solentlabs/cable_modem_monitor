@@ -188,7 +188,7 @@ class ModemHealthMonitor:
                 "ping", "-c", "1", "-W", "2", host, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
 
-            stdout, stderr = await proc.communicate()
+            await proc.communicate()  ***REMOVED*** Wait for process to complete
             latency_ms = (time.time() - start_time) * 1000
 
             ***REMOVED*** Check return code (0 = success)
