@@ -1,0 +1,11 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2020
+end_of_life: null # null = still current
+docsis_version: "3.1"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+source: https://investor.netgear.com/releases/press-release-details/2020/Netgear-Introduces-Industry-first-2.5Gbps-DOCSIS-3.1-Cable-Modems-to-Deliver-Top-Internet-Speeds-to-the-Home/default.aspx

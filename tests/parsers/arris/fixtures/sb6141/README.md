@@ -1,5 +1,19 @@
 # Arris SB6141 Modem Fixtures
 
+
+<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->
+## Quick Facts
+
+| Spec | Value |
+|------|-------|
+| **DOCSIS** | 3.0 |
+| **Released** | 2011 |
+| **Status** | EOL 2019 |
+| **ISPs** | Comcast, Cox, Spectrum, TWC, Mediacom |
+| **Parser** | ✅ Verified |
+
+<!-- END AUTO-GENERATED -->
+
 ## Verification Status
 
 ✅ **VERIFIED** - Confirmed working by real user

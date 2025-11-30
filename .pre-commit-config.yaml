@@ -26,6 +26,7 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
+          - types-PyYAML
           - pytest-socket
         files: \.py$
 
@@ -97,9 +98,9 @@ repos:
         stages: [pre-commit]
 
       - id: regenerate-fixtures-index
-        name: Regenerate FIXTURES.md index
+        name: Regenerate FIXTURES.md and README Quick Facts
         entry: .venv/bin/python scripts/generate_fixture_index.py
         language: script
-        files: ^tests/parsers/.*/fixtures/.*/README\.md$
+        files: ^tests/parsers/.*/fixtures/.*/(README\.md|metadata\.yaml)$
         pass_filenames: false
         stages: [pre-commit]

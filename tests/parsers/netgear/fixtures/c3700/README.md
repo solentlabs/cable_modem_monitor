@@ -1,5 +1,19 @@
 # Netgear C3700-100NAS Test Fixtures
 
+
+<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->
+## Quick Facts
+
+| Spec | Value |
+|------|-------|
+| **DOCSIS** | 3.0 |
+| **Released** | 2014 |
+| **Status** | EOL 2022 |
+| **ISPs** | Comcast, Cox, Spectrum |
+| **Parser** | ✅ Verified |
+
+<!-- END AUTO-GENERATED -->
+
 Complete HTML capture from a Netgear C3700-100NAS cable modem/router.
 
 ## Modem Information

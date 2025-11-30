@@ -1,0 +1,11 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2014
+end_of_life: 2022
+docsis_version: "3.0"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+source: https://www.netgear.com/home/wifi/modem-routers/c3700/

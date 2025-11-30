@@ -1,0 +1,10 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2020
+end_of_life: null # null = still current
+docsis_version: "3.1"
+isps:
+  - Comcast
+notes: ISP-provided gateway only (not retail). Xfinity XB7 branding.
+source: https://www.lightreading.com/cable-video/comcast-tests-25-gig-gateway/d/d-id/756190

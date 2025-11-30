@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
-"""Generate a fixture index from all modem README files.
+"""Generate a fixture index from multiple sources.
 
-Scans tests/parsers/*/fixtures/*/README.md and creates a summary table.
-Can be run manually or as part of a pre-commit hook.
+Data sources (in priority order):
+1. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps
+2. Parser classes - verified status, manufacturer
+3. README.md - model name, contributor (fallback only)
+
+This separation allows:
+- Contributors to focus on parser code, not research
+- Maintainers to backfill metadata independently
+- No merge conflicts (each modem has its own files)
 
 Usage:
     python scripts/generate_fixture_index.py
@@ -13,62 +20,323 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
+from urllib.parse import quote
+
+import yaml
+
+# ISP display order (for consistent sorting)
+ISP_ORDER = [
+    "comcast",
+    "xfinity",
+    "cox",
+    "spectrum",
+    "twc",
+    "time warner",
+    "verizon",
+    "at&t",
+    "frontier",
+    "optimum",
+    "altice",
+    "mediacom",
+    "suddenlink",
+    "wow",
+    "rcn",
+    "cableone",
+    "rogers",
+    "shaw",
+    "videotron",  # Canadian ISPs
+]
+
+# ISP brand colors for Shields.io badges (muted tones)
+# Format: name -> (abbreviation, full_name, hex_color_muted)
+ISP_COLORS: dict[str, tuple[str, str, str]] = {
+    "comcast": ("COM", "Comcast", "5588aa"),
+    "xfinity": ("XFI", "Xfinity", "aa7788"),
+    "cox": ("COX", "Cox Communications", "cc9966"),
+    "spectrum": ("SPEC", "Spectrum (Charter)", "6699aa"),
+    "twc": ("TWC", "Time Warner Cable", "7799aa"),
+    "time warner": ("TWC", "Time Warner Cable", "7799aa"),
+    "rogers": ("ROG", "Rogers Communications", "aa6666"),
+    "at&t": ("ATT", "AT&T", "6699bb"),
+    "verizon": ("VZN", "Verizon", "aa7777"),
+    "optimum": ("OPT", "Optimum (Altice)", "6699aa"),
+    "altice": ("ALT", "Altice USA", "bbaa66"),
+    "mediacom": ("MED", "Mediacom", "557799"),
+    "suddenlink": ("SUD", "Suddenlink", "6699aa"),
+    "wow": ("WOW", "WOW! Internet", "cc9966"),
+    "rcn": ("RCN", "RCN Corporation", "556688"),
+    "frontier": ("FTR", "Frontier Communications", "aa6666"),
+    "cableone": ("C1", "Cable One", "7788aa"),
+    "shaw": ("SHAW", "Shaw Communications", "668899"),
+    "videotron": ("VID", "Vidéotron", "779988"),
+}
 
 
-def extract_readme_info(readme_path: Path, base_dir: Path) -> dict[str, str | int | bool | None]:
-    """Extract key information from a fixture README.md."""
+def isp_to_badge(isp_name: str) -> str:
+    """Convert an ISP name to a Shields.io badge with abbreviation and tooltip."""
+    isp_lower = isp_name.lower().strip()
+
+    for key, (abbrev, full_name, color) in ISP_COLORS.items():
+        if key in isp_lower:
+            badge_text = quote(abbrev, safe="")
+            url = f"https://img.shields.io/badge/-{badge_text}-{color}?style=flat-square"
+            # Markdown image with title attribute for tooltip
+            return f'![{abbrev}]({url} "{full_name}")'
+
+    # Fallback: generic gray badge for unknown ISPs (use first 4 chars as abbrev)
+    abbrev = isp_name.strip()[:4].upper()
+    badge_text = quote(abbrev, safe="")
+    url = f"https://img.shields.io/badge/-{badge_text}-gray?style=flat-square"
+    return f'![{abbrev}]({url} "{isp_name}")'
+
+
+def _is_duplicate_isp(matched_key: str, seen_keys: set[str]) -> bool:
+    """Check if ISP is a duplicate (including Comcast/Xfinity equivalence)."""
+    if matched_key in seen_keys:
+        return True
+    # Comcast and Xfinity are same company
+    return matched_key in ("comcast", "xfinity") and ("comcast" in seen_keys or "xfinity" in seen_keys)
+
+
+def _get_isp_sort_order(matched_key: str) -> int:
+    """Get sort order for ISP, with unknown ISPs sorted last."""
+    try:
+        return ISP_ORDER.index(matched_key)
+    except ValueError:
+        return 999
+
+
+def isps_to_badges(isps: list[str] | str) -> str:
+    """Convert ISP list to badges, sorted consistently."""
+    if not isps:
+        return ""
+
+    # Handle both list (from YAML) and string (legacy)
+    if isinstance(isps, str):
+        isps = [isp.strip() for isp in isps.split(",") if isp.strip()]
+
+    # Filter out generic phrases
+    skip_phrases = ["and most major", "most major", "and others", "etc"]
+    isps = [isp for isp in isps if not any(phrase in isp.lower() for phrase in skip_phrases)]
+
+    # Match ISPs to keys and deduplicate
+    matched_isps: list[tuple[int, str, str]] = []  # (sort_order, key, original_name)
+    seen_keys: set[str] = set()
+
+    for isp in isps:
+        isp_lower = isp.lower()
+        matched_key = next((key for key in ISP_COLORS if key in isp_lower), None)
+
+        if matched_key:
+            if _is_duplicate_isp(matched_key, seen_keys):
+                continue
+            seen_keys.add(matched_key)
+            order = _get_isp_sort_order(matched_key)
+            matched_isps.append((order, matched_key, isp))
+        else:
+            # Unknown ISP - add at end
+            matched_isps.append((999, isp_lower, isp))
+
+    # Sort by order and generate badges
+    matched_isps.sort(key=lambda x: x[0])
+    return " ".join(isp_to_badge(isp) for _, _, isp in matched_isps)
+
+
+# Add project root to path so we can import parsers
+script_dir = Path(__file__).parent
+repo_root = script_dir.parent
+sys.path.insert(0, str(repo_root))
+
+
+def load_parser_metadata() -> dict[str, dict]:
+    """Load verified status from parser classes.
+
+    Returns:
+        Dict mapping fixtures_path to parser metadata (verified, manufacturer)
+    """
+    from custom_components.cable_modem_monitor.parsers import get_parsers
+
+    parser_map = {}
+    for parser_class in get_parsers():
+        if parser_class.fixtures_path:
+            fixtures_path = parser_class.fixtures_path.rstrip("/")
+            parser_map[fixtures_path] = {
+                "name": parser_class.name,
+                "manufacturer": parser_class.manufacturer,
+                "verified": parser_class.verified,
+            }
+    return parser_map
+
+
+def load_fixture_metadata(fixture_dir: Path) -> dict:
+    """Load metadata from metadata.yaml file.
+
+    Args:
+        fixture_dir: Path to fixture directory
+
+    Returns:
+        Dict with release_date, end_of_life, docsis_version, isps
+    """
+    metadata_file = fixture_dir / "metadata.yaml"
+    if metadata_file.exists():
+        with open(metadata_file) as f:
+            return yaml.safe_load(f) or {}
+    return {}
+
+
+# Markers for auto-generated README section
+README_START_MARKER = "<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->"
+README_END_MARKER = "<!-- END AUTO-GENERATED -->"
+
+
+def generate_quick_facts(metadata: dict, parser_info: dict | None) -> str:
+    """Generate Quick Facts markdown table from metadata.
+
+    Args:
+        metadata: Dict from metadata.yaml
+        parser_info: Dict from parser class (verified, manufacturer)
+
+    Returns:
+        Markdown string with Quick Facts table
+    """
+    lines = [
+        README_START_MARKER,
+        "## Quick Facts",
+        "",
+        "| Spec | Value |",
+        "|------|-------|",
+    ]
+
+    if metadata.get("docsis_version"):
+        lines.append(f"| **DOCSIS** | {metadata['docsis_version']} |")
+
+    if metadata.get("release_date"):
+        lines.append(f"| **Released** | {metadata['release_date']} |")
+
+    eol = metadata.get("end_of_life")
+    lines.append(f"| **Status** | {'EOL ' + str(eol) if eol else 'Current'} |")
+
+    if metadata.get("isps"):
+        isps = metadata["isps"]
+        if isinstance(isps, list):
+            isps = ", ".join(isps)
+        lines.append(f"| **ISPs** | {isps} |")
+
+    if parser_info:
+        verified = parser_info.get("verified", False)
+        status = "✅ Verified" if verified else "⏳ Pending"
+        lines.append(f"| **Parser** | {status} |")
+
+    lines.append("")
+    lines.append(README_END_MARKER)
+
+    return "\n".join(lines)
+
+
+def update_readme_quick_facts(fixture_dir: Path, metadata: dict, parser_info: dict | None) -> bool:
+    """Update README.md with auto-generated Quick Facts section.
+
+    Args:
+        fixture_dir: Path to fixture directory
+        metadata: Dict from metadata.yaml
+        parser_info: Dict from parser class
+
+    Returns:
+        True if README was updated, False otherwise
+    """
+    readme_path = fixture_dir / "README.md"
+    if not readme_path.exists():
+        return False
+
     content = readme_path.read_text()
+    quick_facts = generate_quick_facts(metadata, parser_info)
+
+    # Check if markers exist
+    if README_START_MARKER in content and README_END_MARKER in content:
+        # Replace existing section
+        pattern = re.compile(re.escape(README_START_MARKER) + r".*?" + re.escape(README_END_MARKER), re.DOTALL)
+        new_content = pattern.sub(quick_facts, content)
+    else:
+        # Insert after first heading (# Title)
+        match = re.match(r"(#[^\n]+\n+)", content)
+        if match:
+            new_content = match.group(1) + "\n" + quick_facts + "\n\n" + content[match.end() :]
+        else:
+            # No heading found, prepend
+            new_content = quick_facts + "\n\n" + content
+
+    if new_content != content:
+        readme_path.write_text(new_content)
+        return True
+    return False
+
+
+def extract_fixture_info(
+    fixture_dir: Path, base_dir: Path, parser_map: dict[str, dict]
+) -> dict[str, str | int | bool | None]:
+    """Extract modem info from metadata.yaml, parser, and README.
+
+    Priority:
+    1. metadata.yaml - release_date, end_of_life, docsis_version, isps
+    2. Parser - verified, manufacturer
+    3. README.md - model name (fallback)
+    """
+    fixture_path_from_repo = str(fixture_dir.relative_to(base_dir.parent.parent))
 
     info: dict[str, str | int | bool | None] = {
-        "path": str(readme_path.parent.relative_to(base_dir)),
-        "model": readme_path.parent.name.upper(),
-        "manufacturer": readme_path.parent.parent.parent.name.capitalize(),
+        "path": str(fixture_dir.relative_to(base_dir)),
+        "model": fixture_dir.name.upper(),
+        "manufacturer": fixture_dir.parent.parent.name.capitalize(),
     }
 
-    # Extract from table format: | **Property** | Value |
-    patterns = {
-        "model": r"\*\*Model\*\*\s*\|\s*([^|]+)",
-        "manufacturer": r"\*\*Manufacturer\*\*\s*\|\s*([^|]+)",
-        "docsis": r"\*\*DOCSIS Version\*\*\s*\|\s*([^|]+)",
-        "status": r"\*\*Parser Status\*\*\s*\|\s*([^|]+)",
-        "contributor": r"\*\*Contributor\*\*\s*\|\s*(@[^\s\n|]+)",
-        "issue": r"\[#(\d+)[^\]]*\]",
-        "release_year": r"\*\*Release Year\*\*\s*\|\s*~?(\d{4})",
-        "eol_year": r"\*\*EOL Year\*\*\s*\|\s*~?(\d{4})",
-        "isps": r"\*\*(?:ISPs?|Networks?|Supported Networks?)\*\*\s*\|\s*([^|]+)",
-    }
+    # 1. Load from metadata.yaml (source of truth for research data)
+    metadata = load_fixture_metadata(fixture_dir)
+    if metadata:
+        if metadata.get("release_date"):
+            info["release_year"] = str(metadata["release_date"])[:4]
+        if metadata.get("end_of_life"):
+            info["eol_year"] = str(metadata["end_of_life"])[:4]
+        if metadata.get("docsis_version"):
+            info["docsis"] = metadata["docsis_version"]
+        if metadata.get("isps"):
+            info["isps"] = metadata["isps"]  # Keep as list
 
-    for key, pattern in patterns.items():
-        match = re.search(pattern, content, re.IGNORECASE)
-        if match:
-            info[key] = match.group(1).strip()
+    # 2. Load from parser (source of truth for code-related data)
+    parser_meta = parser_map.get(fixture_path_from_repo)
+    if parser_meta:
+        info["manufacturer"] = parser_meta.get("manufacturer") or info["manufacturer"]
+        info["verified"] = parser_meta.get("verified", False)
 
-    # Count all fixture files except README.md and diagnostics.json
-    exclude_files = {"README.md", "diagnostics.json"}
-    fixture_files = [f for f in readme_path.parent.iterdir() if f.is_file() and f.name not in exclude_files]
+    # 3. Fallback to README.md for model name
+    readme_path = fixture_dir / "README.md"
+    if readme_path.exists():
+        content = readme_path.read_text()
+        model_match = re.search(r"\*\*Model\*\*\s*\|\s*([^|]+)", content, re.IGNORECASE)
+        if model_match:
+            info["model"] = model_match.group(1).strip()
+
+    # Count fixture files
+    exclude_files = {"README.md", "diagnostics.json", "metadata.yaml"}
+    fixture_files = [f for f in fixture_dir.iterdir() if f.is_file() and f.name not in exclude_files]
     info["file_count"] = len(fixture_files)
-
-    # Check for diagnostics.json
-    info["has_diagnostics"] = (readme_path.parent / "diagnostics.json").exists()
 
     return info
 
 
-def generate_timeline(modems: list[dict[str, str | int | bool | None]]) -> list[str]:
+def generate_timeline(modems: list[dict]) -> list[str]:
     """Generate ASCII timeline from modem data."""
     current_year = 2025
-    base_year = 2010  # Timeline starts here
+    base_year = 2010
     bar_width = 20
 
-    # Filter modems with release year and sort by release year, then name
     dated_modems = [m for m in modems if m.get("release_year")]
     dated_modems.sort(key=lambda m: (int(str(m.get("release_year", 9999))), str(m.get("model", ""))))
 
     if not dated_modems:
-        return ["_No release date information available in fixture READMEs._"]
+        return ["_No release date information available._"]
 
-    # Split by DOCSIS version
     docsis_30 = [m for m in dated_modems if str(m.get("docsis", "")).startswith("3.0")]
     docsis_31 = [m for m in dated_modems if str(m.get("docsis", "")).startswith("3.1")]
     other = [m for m in dated_modems if m not in docsis_30 and m not in docsis_31]
@@ -80,27 +348,22 @@ def generate_timeline(modems: list[dict[str, str | int | bool | None]]) -> list[
         eol = m.get("eol_year")
         end_year = int(str(eol)) if eol else current_year
 
-        # Calculate bar position on timeline
         total_span = current_year - base_year
         start_pos = int(((release - base_year) / total_span) * bar_width)
         end_pos = int(((end_year - base_year) / total_span) * bar_width)
         start_pos = max(0, min(start_pos, bar_width))
         end_pos = max(start_pos + 1, min(end_pos, bar_width))
 
-        # Build bar: ░ before release, █ during active, ░ after EOL
         bar = "░" * start_pos + "█" * (end_pos - start_pos) + "░" * (bar_width - end_pos)
 
-        # Calculate years active
         years_active = end_year - release
         status = f"EOL {eol}" if eol else "Current"
         prefix = "└──" if is_last else "├──"
 
-        # Extract short manufacturer name (first word only)
         mfr_full = str(m.get("manufacturer", ""))
         mfr = mfr_full.split()[0] if mfr_full else ""
         mfr = mfr.rstrip(",")[:11]
 
-        # Extract short model name (before parentheses or slash)
         model_full = str(m.get("model", ""))
         model = model_full.split("(")[0].split("/")[0].strip()[:10]
 
@@ -131,22 +394,46 @@ def generate_timeline(modems: list[dict[str, str | int | bool | None]]) -> list[
     return lines
 
 
-def generate_index(output_path: Path | None = None) -> str:
-    """Generate the fixture index markdown."""
-    # Find repo root (where tests/ lives)
-    script_dir = Path(__file__).parent
-    repo_root = script_dir.parent
+def generate_index(output_path: Path | None = None, update_readmes: bool = True) -> str:
+    """Generate the fixture index markdown and optionally update READMEs.
+
+    Args:
+        output_path: Path to write FIXTURES.md (None for no write)
+        update_readmes: If True, update Quick Facts in each README.md
+    """
     parsers_dir = repo_root / "tests" / "parsers"
 
-    modems = []
-    for readme in sorted(parsers_dir.glob("*/fixtures/*/README.md")):
-        modems.append(extract_readme_info(readme, parsers_dir))
+    # Load parser metadata (for verified status)
+    parser_map = load_parser_metadata()
 
-    # Generate markdown
+    modems = []
+    readmes_updated = 0
+
+    for fixture_dir in sorted(parsers_dir.glob("*/fixtures/*/")):
+        if (fixture_dir / "README.md").exists():
+            # Get fixture path for parser lookup
+            fixture_path_from_repo = str(fixture_dir.relative_to(repo_root))
+            parser_info = parser_map.get(fixture_path_from_repo)
+
+            # Load metadata and update README
+            metadata = load_fixture_metadata(fixture_dir)
+            if update_readmes and metadata and update_readme_quick_facts(fixture_dir, metadata, parser_info):
+                readmes_updated += 1
+
+            modems.append(extract_fixture_info(fixture_dir, parsers_dir, parser_map))
+
+    if update_readmes and readmes_updated > 0:
+        print(f"Updated {readmes_updated} README files with Quick Facts")
+
     lines = [
         "# Modem Fixture Library",
         "",
-        "Auto-generated index of all modem fixtures with README documentation.",
+        "Auto-generated index of modem fixtures.",
+        "",
+        "**Data Sources:**",
+        "- `metadata.yaml` - Release dates, EOL, DOCSIS version, ISPs",
+        "- Parser classes - Verified status, manufacturer",
+        "- `README.md` - Model name, contributor notes",
         "",
         f"**Total Modems:** {len(modems)}",
         "",
@@ -156,40 +443,13 @@ def generate_index(output_path: Path | None = None) -> str:
         "",
         "```",
         "{model}/",
-        "├── [Core files at root]     # Parser-essential files",
-        "│   ├── DocsisStatus.htm     # Channel data (required)",
-        "│   ├── RouterStatus.htm     # System info",
-        "│   ├── index.htm            # Detection/navigation",
-        "│   └── ...                  # Other parser-used files",
-        "├── README.md                # Documentation (required)",
+        "├── metadata.yaml            # Modem specs (can be backfilled)",
+        "├── README.md                # Human-friendly notes",
+        "├── DocsisStatus.htm         # Channel data (required)",
+        "├── RouterStatus.htm         # System info",
+        "├── index.htm                # Detection/navigation",
         "└── extended/                # Reference files (optional)",
-        "    ├── WirelessSettings.htm",
-        "    ├── LANSetup.htm",
-        "    └── ...                  # Config pages for future use",
         "```",
-        "",
-        "### Core Files (Root)",
-        "Files needed for parser functionality (intent-based):",
-        "- **Detection** - Identifying the modem model",
-        "- **Data extraction** - Channel data, system info, uptime",
-        "- **State handling** - Online/offline states",
-        "- **Restart/reboot** - Security or restart endpoints",
-        "- **Used by tests** - Any fixture loaded by test code",
-        "",
-        "### Extended Files (`extended/`)",
-        "Reference-only pages not used by parser:",
-        "- Event logs",
-        "- License pages",
-        "- Settings/config pages (WiFi, LAN, etc.)",
-        "- Documentation and research material",
-        "",
-        "### File Operations",
-        "When reorganizing fixtures, use `git mv` (not delete + add) to preserve file history.",
-        "",
-        "### What NOT to Include",
-        "- **JavaScript files** (.js) - Generic libraries, no modem-specific APIs",
-        "- **CSS files** (.css) - Styling only",
-        "- **Images** (.png, .gif, .jpg) - UI assets",
         "",
         "## Supported Modems",
         "",
@@ -198,29 +458,26 @@ def generate_index(output_path: Path | None = None) -> str:
     ]
 
     for m in modems:
-        status = str(m.get("status", "Unknown")).lower()
-        # Status with label for visibility
-        if "unverified" in status:
-            status_display = "❓ Unverified"
-        elif "verified" in status:
+        if m.get("verified") is True:
             status_display = "✅ Verified"
-        elif "pending" in status:
+        elif m.get("verified") is False:
             status_display = "⏳ Pending"
         else:
             status_display = "❓ Unknown"
 
-        isps = str(m.get("isps", "")).strip()
+        isps_raw: str | int | bool | list[str] | None = m.get("isps", [])
+        isps_list: list[str] | str = isps_raw if isinstance(isps_raw, list | str) else []
+        isps_badges = isps_to_badges(isps_list)
 
         lines.append(
             f"| {m.get('manufacturer', '')} | "
             f"[{m.get('model', '')}]({m['path']}/README.md) | "
             f"{m.get('docsis', '')} | "
-            f"{isps} | "
+            f"{isps_badges} | "
             f"{m.get('file_count', 0)} | "
             f"{status_display} |"
         )
 
-    # Add model timeline section (data-driven from READMEs)
     lines.extend(["", "## Model Timeline", ""])
     lines.extend(generate_timeline(modems))
 
@@ -229,15 +486,15 @@ def generate_index(output_path: Path | None = None) -> str:
             "",
             "## Legend",
             "",
-            "- **Files**: Number of fixture files (excludes README.md, diagnostics.json)",
-            "- **Status**: ✅ Verified, ⏳ Pending, ❓ Unknown/Unverified",
+            "- **Files**: Number of fixture files (excludes README.md, metadata.yaml)",
+            "- **Status**: ✅ Verified (parser.verified=True), ⏳ Pending, ❓ No parser",
             "",
             "---",
             "*Generated by `scripts/generate_fixture_index.py`*",
         ]
     )
 
-    markdown = "\n".join(lines) + "\n"  # Ensure trailing newline
+    markdown = "\n".join(lines) + "\n"
 
     if output_path:
         output_path.write_text(markdown)

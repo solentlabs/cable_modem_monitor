@@ -1,0 +1,14 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2017
+end_of_life: null # null = still current
+docsis_version: "3.1"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Rogers
+  - Shaw
+  - Videotron
+source: https://techinfodepot.shoutwiki.com/wiki/Technicolor_TC4400

@@ -1,0 +1,13 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2011
+end_of_life: 2019
+docsis_version: "3.0"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+  - Mediacom
+source: https://content.abt.com/documents/48624/SB6141-US-EN.pdf

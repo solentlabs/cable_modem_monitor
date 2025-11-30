@@ -1,5 +1,19 @@
 # Motorola MB7621 Test Fixtures
 
+
+<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->
+## Quick Facts
+
+| Spec | Value |
+|------|-------|
+| **DOCSIS** | 3.0 |
+| **Released** | 2017 |
+| **Status** | Current |
+| **ISPs** | Comcast, Cox, Spectrum, TWC, CableOne, RCN |
+| **Parser** | ✅ Verified |
+
+<!-- END AUTO-GENERATED -->
+
 ## Modem Information
 
 | Property | Value |

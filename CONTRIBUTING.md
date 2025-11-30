@@ -9,6 +9,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 - 📝 Improve documentation
 - 🧪 Add support for additional modem models
 - 🔧 Submit bug fixes or enhancements
+- 🌍 Help translate the integration (see [Translations](#translations) below)
 
 ---
 
@@ -958,5 +959,56 @@ Each release includes:
 - [HACS Documentation](https://hacs.xyz/)
 - [Python asyncio](https://docs.python.org/3/library/asyncio.html)
 - [pytest Documentation](https://docs.pytest.org/)
+
+---
+
+## Translations
+
+Help make Cable Modem Monitor accessible to users worldwide! The integration supports multiple languages through Home Assistant's translation system.
+
+### Current Languages
+
+| Language | Code | Status |
+|----------|------|--------|
+| English | `en.json` | ✅ Complete (source) |
+| Portuguese (Brazil) | `pt-BR.json` | ✅ Complete |
+| Spanish | `es.json` | ✅ Complete |
+| German | `de.json` | ✅ Complete |
+| French | `fr.json` | ✅ Complete |
+
+### Adding a New Language
+
+1. **Copy the English template**
+   ```bash
+   cp custom_components/cable_modem_monitor/translations/en.json \
+      custom_components/cable_modem_monitor/translations/XX.json
+   ```
+   Replace `XX` with your [language code](https://www.loc.gov/standards/iso639-2/php/code_list.php) (e.g., `it` for Italian, `nl` for Dutch)
+
+2. **Translate all strings** in the new file
+   - Keep the JSON structure intact
+   - Translate only the values, not the keys
+   - Preserve placeholders like `{detected_modem}` exactly as-is
+
+3. **Test your translation**
+   - Set Home Assistant to your language
+   - Add/reconfigure the integration
+   - Verify all strings display correctly
+
+4. **Submit a PR** with your translation file
+
+### Improving Existing Translations
+
+If you find translation errors or have better phrasing:
+1. Edit the relevant `.json` file
+2. Submit a PR with your improvements
+3. Native speakers are especially welcome to review!
+
+### Translation Tips
+
+- **Keep it natural** - Translate meaning, not word-for-word
+- **Technical terms** - Some terms like "DOCSIS" or "IP address" may stay in English
+- **Consistency** - Use the same term throughout (e.g., always "modem" or always "módem")
+- **Length** - UI labels should be concise; descriptions can be longer
 
 Thank you for contributing to Cable Modem Monitor! 🎉

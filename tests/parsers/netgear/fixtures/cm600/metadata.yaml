@@ -1,0 +1,12 @@
+# Modem metadata - verified against official sources
+# This file is read by scripts/generate_fixture_index.py
+
+release_date: 2016
+end_of_life: 2023
+docsis_version: "3.0"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+source: https://www.netgear.com/home/wifi/modems/cm600/

@@ -1,5 +1,18 @@
 # Motorola MB8600 Modem Fixtures
 
+
+<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->
+## Quick Facts
+
+| Spec | Value |
+|------|-------|
+| **DOCSIS** | 3.1 |
+| **Released** | 2017 |
+| **Status** | Current |
+| **ISPs** | Comcast, Cox, CableOne |
+
+<!-- END AUTO-GENERATED -->
+
 ## Modem Information
 
 | Property | Value |
