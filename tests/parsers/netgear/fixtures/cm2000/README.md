@@ -31,24 +31,47 @@
 - **Password Field**: `loginPassword`
 - **Default URL**: `http://192.168.100.1/`
 
-## Fixture Files
+## Directory Structure
 
-All files extracted from diagnostics.json with original modem filenames:
+```
+cm2000/
+├── DocsisStatus.htm      # Core - channel data
+├── RouterStatus.htm      # Core - system info, reboot
+├── DashBoard.htm         # Core - dashboard redirect
+├── DocsisOffline.htm     # Core - offline state
+├── index.htm             # Core - login, firmware version
+├── index_https.htm       # Core - HTTPS detection
+├── root.htm              # Core - root redirect
+├── README.md
+└── extended/             # Reference files
+    ├── eventLog.htm
+    ├── Logout.htm
+    ├── OpenSourceLicense.html
+    ├── SetPassword.htm
+    └── WebServiceManagement.htm
+```
+
+## Core Fixtures
 
 | File | Size | Description |
 |------|------|-------------|
-| index.htm | 73 KB | Login/main page, contains firmware version |
-| index_https.htm | 73 KB | HTTPS version of index.htm |
-| DocsisStatus.htm | 64 KB | DOCSIS channel data (primary parsing target) |
-| RouterStatus.htm | 59 KB | Router status, **reboot endpoint** |
-| SetPassword.htm | 27 KB | Password change page |
-| eventLog.htm | 20 KB | Event/system log |
-| DocsisOffline.htm | 6 KB | Offline status page |
-| WebServiceManagement.htm | 7 KB | Web service settings |
-| Logout.htm | 1 KB | Logout page |
-| DashBoard.htm | 362 B | Dashboard redirect |
-| root.htm | 362 B | Root redirect |
-| OpenSourceLicense.html | 78 KB | Open source licenses |
+| `DocsisStatus.htm` | 64 KB | DOCSIS channel data (primary parsing target) |
+| `RouterStatus.htm` | 59 KB | Router status, **reboot endpoint** |
+| `index.htm` | 73 KB | Login/main page, contains firmware version |
+| `index_https.htm` | 73 KB | HTTPS version of index.htm |
+| `DashBoard.htm` | 362 B | Dashboard redirect |
+| `DocsisOffline.htm` | 6 KB | Offline status page |
+| `root.htm` | 362 B | Root redirect |
+
+## Extended Fixtures (`extended/`)
+
+| File | Size | Description |
+|------|------|-------------|
+| `eventLog.htm` | 20 KB | Event/system log |
+| `SetPassword.htm` | 27 KB | Password change page |
+| `WebServiceManagement.htm` | 7 KB | Web service settings |
+| `Logout.htm` | 1 KB | Logout page |
+| `OpenSourceLicense.html` | 78 KB | Open source licenses |
 
 ## Data Available
 

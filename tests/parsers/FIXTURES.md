@@ -4,20 +4,61 @@ Auto-generated index of all modem fixtures with README documentation.
 
 **Total Modems:** 12
 
+## Fixture Organization Guidelines
+
+All fixture directories should follow this structure:
+
+```
+{model}/
+├── [Core files at root]     # Parser-essential files
+│   ├── DocsisStatus.htm     # Channel data (required)
+│   ├── RouterStatus.htm     # System info
+│   ├── index.htm            # Detection/navigation
+│   └── ...                  # Other parser-used files
+├── README.md                # Documentation (required)
+└── extended/                # Reference files (optional)
+    ├── WirelessSettings.htm
+    ├── LANSetup.htm
+    └── ...                  # Config pages for future use
+```
+
+### Core Files (Root)
+Files needed for parser functionality (intent-based):
+- **Detection** - Identifying the modem model
+- **Data extraction** - Channel data, system info, uptime
+- **State handling** - Online/offline states
+- **Restart/reboot** - Security or restart endpoints
+- **Used by tests** - Any fixture loaded by test code
+
+### Extended Files (`extended/`)
+Reference-only pages not used by parser:
+- Event logs
+- License pages
+- Settings/config pages (WiFi, LAN, etc.)
+- Documentation and research material
+
+### File Operations
+When reorganizing fixtures, use `git mv` (not delete + add) to preserve file history.
+
+### What NOT to Include
+- **JavaScript files** (.js) - Generic libraries, no modem-specific APIs
+- **CSS files** (.css) - Styling only
+- **Images** (.png, .gif, .jpg) - UI assets
+
 ## Supported Modems
 
 | Manufacturer | Model | DOCSIS | ISPs | Files | Status |
 |--------------|-------|--------|------|-------|--------|
-| Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 3 | ❓ Unknown |
+| Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 2 | ❓ Unknown |
 | Arris (originally Motorola SURFboard) | [SB6141](arris/fixtures/sb6141/README.md) | 3.0 | Comcast, Cox, TWC | 1 | ✅ Verified |
 | Arris (Motorola SURFboard) | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 1 | ❓ Unverified |
-| ARRIS | [SB8200](arris/fixtures/sb8200/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 1 | ⏳ Pending |
-| Motorola | [MB7621](motorola/fixtures/mb7621/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 6 | ✅ Verified |
+| ARRIS | [SB8200](arris/fixtures/sb8200/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 2 | ⏳ Pending |
+| Motorola | [MB7621](motorola/fixtures/mb7621/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 5 | ✅ Verified |
 | Motorola (MTRLC LLC) | [MB8600](motorola/fixtures/mb8600/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum, and most major ISPs | 1 | ⏳ Pending |
-| Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 7 | ❓ Unknown |
-| Netgear | [C3700-100NAS](netgear/fixtures/c3700/README.md) | 3.0 | Comcast, Cox, Spectrum | 23 | ❓ Unknown |
-| Netgear | [CM2000 (Nighthawk)](netgear/fixtures/cm2000/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 12 | ⏳ Pending |
-| Netgear | [CM600 (CM600-100NAS)](netgear/fixtures/cm600/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 8 | ✅ Verified |
+| Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 6 | ❓ Unknown |
+| Netgear | [C3700-100NAS](netgear/fixtures/c3700/README.md) | 3.0 | Comcast, Cox, Spectrum | 6 | ❓ Unknown |
+| Netgear | [CM2000 (Nighthawk)](netgear/fixtures/cm2000/README.md) | 3.1 | Comcast, Xfinity, Cox, Spectrum | 7 | ⏳ Pending |
+| Netgear | [CM600 (CM600-100NAS)](netgear/fixtures/cm600/README.md) | 3.0 | Comcast, Cox, Spectrum, TWC | 5 | ✅ Verified |
 | Technicolor | [TC4400](technicolor/fixtures/tc4400/README.md) | 3.1 | Comcast, Cox, Spectrum | 3 | ✅ Verified |
 | Technicolor | [XB7 / CGM4331COM](technicolor/fixtures/xb7/README.md) | 3.1 | Rogers, Comcast, Xfinity | 1 | ✅ Verified |
 

@@ -15,7 +15,22 @@
 | **Captured By** | @dlindnegm |
 | **Capture Date** | October 2025 |
 
-## Files
+## Directory Structure
+
+```
+mb8611/
+├── Login.html               # Core - authentication
+├── MotoHome.html            # Core - dashboard/detection
+├── MotoStatusConnection.html # Core - channel data tables
+├── MotoStatusSoftware.html  # Core - hardware/software versions
+├── MotoStatusSecurity.html  # Core - restart functionality
+├── hnap_full_status.json    # Core - HNAP API response
+├── README.md
+└── extended/
+    └── MotoStatusLog.html      # Event logs
+```
+
+## Core Fixtures
 
 ### HNAP API Response
 
@@ -24,16 +39,21 @@
   - 4 upstream channels
   - Format: Caret-delimited (`ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^`)
 
-### HTML Pages (for field mapping reference)
+### HTML Pages
 
 | File | Purpose |
 |------|---------|
-| Login.html | Authentication page, HNAP JS init |
-| MotoHome.html | Main dashboard |
-| MotoStatusConnection.html | Channel data tables |
-| MotoStatusSoftware.html | Hardware/software versions |
-| MotoStatusSecurity.html | Reboot/restart functionality |
-| MotoStatusLog.html | Event logs |
+| `Login.html` | Authentication page, HNAP JS init |
+| `MotoHome.html` | Main dashboard |
+| `MotoStatusConnection.html` | Channel data tables |
+| `MotoStatusSoftware.html` | Hardware/software versions |
+| `MotoStatusSecurity.html` | Restart functionality |
+
+## Extended Fixtures (`extended/`)
+
+| File | Purpose |
+|------|---------|
+| `MotoStatusLog.html` | Event logs |
 
 ## Authentication
 
