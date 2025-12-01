@@ -4,6 +4,7 @@
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -65,6 +66,93 @@ def is_privacy_safe_email(email: str) -> bool:
     return (
         email.endswith("@users.noreply.github.com") or email == "noreply@anthropic.com" or email == "noreply@github.com"
     )
+
+
+def get_required_python_version():
+    """Parse pyproject.toml to get the required Python version."""
+    if not os.path.exists("pyproject.toml"):
+        return (3, 11)  ***REMOVED*** Default fallback
+
+    with open("pyproject.toml") as f:
+        content = f.read()
+
+    ***REMOVED*** Match requires-python = ">=3.12" or ">=3.12,<3.13" etc.
+    match = re.search(r'requires-python\s*=\s*">=(\d+)\.(\d+)', content)
+    if match:
+        return (int(match.group(1)), int(match.group(2)))
+    return (3, 11)  ***REMOVED*** Default fallback
+
+
+def get_debian_version():
+    """Get Debian/Ubuntu version info if applicable."""
+    try:
+        with open("/etc/os-release") as f:
+            content = f.read()
+        version_match = re.search(r"VERSION_CODENAME=(\w+)", content)
+        id_match = re.search(r"^ID=(\w+)", content, re.MULTILINE)
+        if version_match and id_match:
+            return (id_match.group(1), version_match.group(1))
+    except FileNotFoundError:
+        pass
+    return (None, None)
+
+
+def print_python_install_instructions(required_major, required_minor):
+    """Print platform-specific Python installation instructions."""
+    distro, codename = get_debian_version()
+    is_chromeos = os.path.exists("/dev/.cros_milestone") or "chromeos" in platform.platform().lower()
+
+    print("")
+    print(f"  Python {required_major}.{required_minor} is required but not installed.")
+    print("")
+
+    if distro == "debian" and codename == "bookworm":
+        print("  Debian 12 (bookworm) ships with Python 3.11. To install Python 3.12:")
+        print("")
+        print("  Option 1: Use pyenv (recommended)")
+        print("    curl https://pyenv.run | bash")
+        print("    ***REMOVED*** Follow the instructions to add pyenv to your shell")
+        print("    pyenv install 3.12")
+        print("    pyenv local 3.12")
+        print("")
+        print("  Option 2: Build from source")
+        print("    sudo apt install build-essential libssl-dev zlib1g-dev \\")
+        print("      libbz2-dev libreadline-dev libsqlite3-dev libffi-dev \\")
+        print("      liblzma-dev libncurses-dev")
+        print("    wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz")
+        print("    tar xzf Python-3.12.0.tgz && cd Python-3.12.0")
+        print("    ./configure --enable-optimizations")
+        print("    make -j$(nproc) && sudo make altinstall")
+        print("")
+        if is_chromeos:
+            print("  Note: Chrome OS Flex uses Debian bookworm in Crostini.")
+            print("  pyenv works well in this environment.")
+            print("")
+    elif distro == "ubuntu":
+        print("  Ubuntu - install from deadsnakes PPA:")
+        print("")
+        print("    sudo apt install software-properties-common")
+        print("    sudo add-apt-repository ppa:deadsnakes/ppa")
+        print("    sudo apt update")
+        py_ver = f"{required_major}.{required_minor}"
+        print(f"    sudo apt install python{py_ver} python{py_ver}-venv")
+        print("")
+    elif platform.system() == "Darwin":
+        print("  macOS - install with Homebrew:")
+        print("")
+        print(f"    brew install python@{required_major}.{required_minor}")
+        print("")
+    elif platform.system() == "Windows":
+        print("  Windows - download from python.org:")
+        print("")
+        print(f"    https://www.python.org/downloads/release/python-{required_major}{required_minor}0/")
+        print("")
+    else:
+        print("  Install Python 3.12 using your system's package manager or pyenv:")
+        print("")
+        print("    curl https://pyenv.run | bash")
+        print("    pyenv install 3.12")
+        print("")
 
 
 def configure_git_email_privacy():
@@ -131,14 +219,16 @@ def main():  ***REMOVED*** noqa: C901
     print_success("Running from project root")
     print("")
 
-    ***REMOVED*** 2. Check Python version
+    ***REMOVED*** 2. Check Python version against pyproject.toml requirement
     print_step("Checking Python version...")
-    major, minor = sys.version_info[:2]
-    if major == 3 and minor >= 11:
-        print_success(f"Python {major}.{minor} found (requirement: 3.11+)")
+    current_major, current_minor = sys.version_info[:2]
+    required_major, required_minor = get_required_python_version()
+
+    if current_major == required_major and current_minor >= required_minor:
+        print_success(f"Python {current_major}.{current_minor} found (requirement: {required_major}.{required_minor}+)")
     else:
-        print_error(f"Python {major}.{minor} found, but 3.11+ required")
-        print("Please install Python 3.11 or newer")
+        print_error(f"Python {current_major}.{current_minor} found, but {required_major}.{required_minor}+ required")
+        print_python_install_instructions(required_major, required_minor)
         sys.exit(1)
     print("")
 
@@ -151,7 +241,7 @@ def main():  ***REMOVED*** noqa: C901
     else:
         print_error("venv module not installed")
         print("\nInstall it with:")
-        print(f"  Linux/macOS: sudo apt install python{major}.{minor}-venv")
+        print(f"  Linux/macOS: sudo apt install python{current_major}.{current_minor}-venv")
         print("  Windows: venv is included with Python\n")
         sys.exit(1)
     print("")
@@ -323,14 +413,6 @@ def main():  ***REMOVED*** noqa: C901
     except Exception:
         print_warning("Test execution had issues (may need additional setup)")
     print("")
-
-    ***REMOVED*** 13. Create .python-version file
-    if not os.path.exists(".python-version"):
-        print_step("Creating .python-version file...")
-        with open(".python-version", "w") as f:
-            f.write("3.11.0\n")
-        print_success("Created .python-version file")
-        print("")
 
     ***REMOVED*** Final message
     print("==========================================")

@@ -11,15 +11,16 @@ help:
 	@echo "  make clean       - Remove test artifacts and cache files"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  make lint        - Run ruff linter"
-	@echo "  make lint-fix    - Run ruff linter and auto-fix issues"
-	@echo "  make fix-imports - Fix import sorting with Ruff"
-	@echo "  make lint-all    - Run all linters (ruff, mypy, security)"
-	@echo "  make type-check  - Run mypy type checker"
-	@echo "  make format      - Format code with black"
+	@echo "  make lint         - Run ruff linter"
+	@echo "  make lint-fix     - Run ruff linter and auto-fix issues"
+	@echo "  make fix-imports  - Fix import sorting with Ruff"
+	@echo "  make lint-all     - Run all linters (ruff, mypy, security)"
+	@echo "  make type-check   - Run mypy type checker"
+	@echo "  make format       - Format code with black"
 	@echo "  make format-check - Check code formatting without modifying"
-	@echo "  make check       - Run all code quality checks (lint, format, type)"
-	@echo "  make quick-check - Quick checks (lint + format, skip type-check)"
+	@echo "  make check        - Run all code quality checks (lint, format, type)"
+	@echo "  make quick-check  - Quick checks (lint + format, skip type-check)"
+	@echo "  make validate-host - Cross-platform validation (auto-installs tools)"
 	@echo ""
 	@echo "Docker Development:"
 	@echo "  make docker-start   - Start Home Assistant dev environment"
@@ -95,12 +96,16 @@ lint-all: lint type-check
 	fi
 	@echo "✅ All linting checks completed!"
 
-***REMOVED*** Quick pre-commit validation (fast)
+***REMOVED*** Quick pre-commit validation (fast) - requires venv
 validate:
 	@echo "🔍 Running quick validation..."
 	@$(MAKE) quick-check
 	@$(MAKE) test-quick
 	@echo "✅ Validation passed! Safe to commit."
+
+***REMOVED*** Cross-platform validation (auto-installs tools, works without venv)
+validate-host:
+	@python scripts/dev/validate.py
 
 ***REMOVED*** Full CI validation (comprehensive)
 validate-ci:

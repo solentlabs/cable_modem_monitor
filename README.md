@@ -173,6 +173,7 @@ These models have been confirmed working with real hardware:
 | Model | Verification | Features |
 |-------|-------------|----------|
 | **Arris SB6141** | Community verified ([forum](https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant)) | Full channel data, system info |
+| **Arris SB8200** | User verified ([Issue ***REMOVED***42](https://github.com/kwschulz/cable_modem_monitor/issues/42)) | 32 DS / 3 US channels (DOCSIS 3.1), uptime |
 | **Motorola MB7621** | Maintainer verified | Full channel data, system info, restart |
 | **Netgear C3700** | Maintainer verified | Full channel data, system info (combo modem/router) |
 | **Netgear CM600** | User verified ([Issue ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3)) | 24 DS / 8 US channels, system info, restart |
@@ -837,4 +838,9 @@ Created for monitoring Cox Cable Motorola modems, but designed to work with vari
 
 ---
 
-**Disclaimer**: This integration reads data from your modem's web interface. It does not modify modem settings or configuration.
+***REMOVED******REMOVED*** Legal & Safety
+
+**⚠️ Disclaimer:**
+This integration interacts with the **user-facing diagnostic interface** (LAN side) of your modem. It does not modify boot files, interact with the ISP side (WAN), or bypass any service limits.
+
+Solent Labs is not affiliated with Arris, Motorola, Netgear, or any ISP. All product names are trademarks of their respective owners. Use this software at your own risk.

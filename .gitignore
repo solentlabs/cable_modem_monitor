@@ -95,3 +95,6 @@ db-*/
 
 ***REMOVED*** HAR capture artifacts
 captures/
+
+***REMOVED*** Raw data from issue debugging (user-submitted logs, configs, etc.)
+RAW_DATA/

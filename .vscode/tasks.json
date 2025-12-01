@@ -218,7 +218,10 @@
     {
       "label": "🚀 Quick Validation (Pre-commit)",
       "type": "shell",
-      "command": "echo '🔍 Running quick validation...' && echo '' && make quick-check && echo '' && make test-quick && echo '' && echo '✅ Quick validation passed! Safe to commit.' || (echo '' && echo '❌ Validation failed. Fix issues before committing.' && exit 1)",
+      "command": "python scripts/dev/validate.py",
+      "windows": {
+        "command": "python scripts/dev/validate.py"
+      },
       "group": {
         "kind": "test",
         "isDefault": false
@@ -229,7 +232,8 @@
         "clear": true,
         "focus": false
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Cross-platform lint & format check (auto-installs tools if missing)"
     },
     {
       "label": "🔍 Full CI Validation",
@@ -309,6 +313,19 @@
       },
       "problemMatcher": [],
       "detail": "Reconfigure git email (automatically done during initial setup)"
+    },
+    {
+      "label": "🔧 Fix Dev Container (Reinstall Dependencies)",
+      "type": "shell",
+      "command": "bash .devcontainer/post-create.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": [],
+      "detail": "Re-run post-create setup if tools like ruff/black are missing"
     },
     {
       "label": "⚙️ Setup Local Python Environment",

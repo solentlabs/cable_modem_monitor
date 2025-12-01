@@ -129,7 +129,10 @@
   // Pass the host workspace path as an environment variable
   // This allows docker-compose to use the correct path for volume mounts
   "remoteEnv": {
-    "HOST_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+    "HOST_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+    // Force Docker client to use API version compatible with host daemon
+    // Required when container's Docker client is newer than host's Docker daemon
+    "DOCKER_API_VERSION": "1.41"
   },
 
   // Post-create command to install Python dependencies and CodeQL CLI
