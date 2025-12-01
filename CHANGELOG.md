@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.5] - 2025-11-30
+
+### Fixed
+- **SB8200 Uptime Sensor** - Fix uptime showing "Unknown" by using correct `system_uptime` key (Issue #42)
+
 ## [3.8.4] - 2025-11-30
+
+### Added
+- **Verified Modem Metadata** - Parser metadata with release dates, DOCSIS versions, and fixture paths
+- **i18n Translations** - Internationalization support for integration strings
+- **SB8200 Uptime Support** - Parse uptime from cmswinfo.html product info page
+
+### Changed
+- **Diagnostic Improvements** - Organized fixture files and improved capture workflow
+
+### Fixed
+- **CodeQL Alerts** - Remove unused stdout/stderr variables (alerts #3, #4)
+- **Release Script** - Don't create tag with --no-push flag in PR workflow
 
 ## [3.8.3] - 2025-11-29
 
@@ -27,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mypy Type Error** - Added type annotation in html_crawler.py for BeautifulSoup rel attribute
 
 ## [3.8.2] - 2025-11-28
+
+### Added
+- **ARRIS SB8200 Parser** - Full support for DOCSIS 3.1 modem with 32 downstream + 3 upstream channels (Issue #42)
+
+### Fixed
+- **MB8611 Private Key Persistence** - Fix HNAP authentication key storage between sessions
 
 ## [3.8.1] - 2025-11-28
 

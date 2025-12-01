@@ -244,9 +244,9 @@ class TestSB8200ProductInfoParsing:
         soup = BeautifulSoup(sb8200_product_info_html, "html.parser")
         info = parser._parse_product_info(soup)
 
-        assert "uptime" in info
-        # "8 days 01h:16m:13s.00" = 8*86400 + 1*3600 + 16*60 + 13 = 695773 seconds
-        assert info["uptime"] == 695773
+        assert "system_uptime" in info
+        # Stored as raw string for display (matches other parsers)
+        assert info["system_uptime"] == "8 days 01h:16m:13s.00"
 
     def test_parse_hardware_version(self, sb8200_product_info_html):
         """Test hardware version parsing."""
