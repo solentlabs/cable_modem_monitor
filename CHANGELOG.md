@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.5] - 2025-11-30
+
+### Fixed
+- **SB8200 Uptime Sensor** - Fix uptime showing "Unknown" by using correct `system_uptime` key (Issue #42)
+
 ## [3.8.4] - 2025-11-30
 
 ## [3.8.3] - 2025-11-29

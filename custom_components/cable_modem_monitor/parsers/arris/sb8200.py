@@ -286,10 +286,9 @@ class ArrisSB8200Parser(ModemParser):
                     value = cells[1].get_text(strip=True)
 
                     if "Up Time" in label:
-                        uptime_seconds = self._parse_uptime(value)
-                        if uptime_seconds is not None:
-                            info["uptime"] = uptime_seconds
-                            _LOGGER.debug("Parsed SB8200 uptime: %s seconds", uptime_seconds)
+                        # Store as string for display (matches other parsers)
+                        info["system_uptime"] = value
+                        _LOGGER.debug("Parsed SB8200 uptime: %s", value)
 
                     elif "Hardware Version" in label:
                         info["hardware_version"] = value
