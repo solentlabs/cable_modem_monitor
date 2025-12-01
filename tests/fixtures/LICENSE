@@ -1,0 +1,12 @@
+# Test Fixture Data License
+
+The files contained in this directory are captured network responses used solely for the purpose of:
+1. Automated testing of the Solent Labs parser logic.
+2. Ensuring interoperability with third-party hardware.
+
+**Usage Restrictions:**
+- These files contain redacted snapshots of device interfaces.
+- They are not to be used to reverse engineer firmware binaries or bypass service restrictions.
+- All Personally Identifiable Information (PII) and unique device identifiers (MAC, Serial) have been sanitized.
+
+If you are a copyright holder and believe a file here infringes on your rights beyond fair use for interoperability testing, please contact the maintainers for immediate removal.

@@ -56,6 +56,8 @@ The SB8200 status pages are publicly accessible without authentication. This is 
 
 **Status:** Present but ISP-locked (disabled button)
 
+> **Community Action:** User @undotcom posted an [open letter to ARRIS](https://community.surfboard.com/sb8200-59/open-letter-to-arris-why-do-you-disable-basic-functionality-e-g-software-reboot-on-the-sb8200-5829) asking why software reboot is disabled. If you're affected by this limitation, consider adding your voice.
+
 The SB8200 firmware includes reboot functionality in `cmconfiguration.html`:
 
 ```html

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.6] - 2025-12-01
+
+### Added
+- **Test Fixtures License** - Added LICENSE file for test fixture data directory
+
+### Changed
+- **DevContainer Docker Compatibility** - Added `DOCKER_API_VERSION` env var for host daemon compatibility
+- **Setup Script pyenv Support** - Auto-initialize pyenv, prefer `python` over `python3` for shim compatibility
+- **Setup Python Detection** - Read required version from pyproject.toml, platform-specific install instructions
+
+### Fixed
+- **Port Cleanup Reliability** - Use `fuser` for reliable port 8123 cleanup (fixes VS Code port forwarding conflicts)
+- **VS Code Tasks** - Added "Fix Dev Container" task to reinstall dependencies when tools are missing
+
 ## [3.8.5] - 2025-11-30
 
 ### Fixed

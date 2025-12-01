@@ -34,8 +34,16 @@ check_port_in_use() {
 kill_port_processes() {
     local killed=0
 
-    # Try lsof first
-    if command -v lsof &> /dev/null; then
+    # Try fuser first - most reliable method
+    if command -v fuser &> /dev/null; then
+        if fuser -k 8123/tcp 2>/dev/null || sudo fuser -k 8123/tcp 2>/dev/null; then
+            echo "   Killed process using port 8123 (via fuser)"
+            killed=1
+        fi
+    fi
+
+    # Try lsof as fallback
+    if [ $killed -eq 0 ] && command -v lsof &> /dev/null; then
         PIDS=$(lsof -ti :8123 2>/dev/null || sudo lsof -ti :8123 2>/dev/null || true)
         if [ -n "$PIDS" ]; then
             echo "   Found processes: $PIDS"
@@ -47,28 +55,13 @@ kill_port_processes() {
         fi
     fi
 
-    # Try netstat as fallback
-    if [ $killed -eq 0 ] && command -v netstat &> /dev/null; then
-        PIDS=$(sudo netstat -tulpn 2>/dev/null | grep ":8123 " | awk '{print $7}' | cut -d'/' -f1 | sort -u || true)
-        if [ -n "$PIDS" ]; then
-            echo "   Found processes: $PIDS"
-            for PID in $PIDS; do
-                if [ "$PID" != "-" ] && [ -n "$PID" ]; then
-                    echo "   Killing process $PID..."
-                    kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
-                    killed=1
-                fi
-            done
-        fi
-    fi
-
-    # Try ss as last resort
+    # Try ss as last resort (handles 127.0.0.1:8123 format)
     if [ $killed -eq 0 ] && command -v ss &> /dev/null; then
-        PIDS=$(sudo ss -tulpn 2>/dev/null | grep ":8123 " | awk -F'pid=' '{print $2}' | awk '{print $1}' | cut -d',' -f1 | sort -u || true)
+        PIDS=$(sudo ss -tlnp 2>/dev/null | grep -E ":8123\b" | grep -oP 'pid=\K[0-9]+' | sort -u || true)
         if [ -n "$PIDS" ]; then
             echo "   Found processes: $PIDS"
             for PID in $PIDS; do
-                if [ "$PID" != "-" ] && [ -n "$PID" ]; then
+                if [ -n "$PID" ]; then
                     echo "   Killing process $PID..."
                     kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
                     killed=1
