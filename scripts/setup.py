@@ -343,10 +343,15 @@ def main():  # noqa: C901
     print_step("Setting up pre-commit hooks...")
     try:
         run_command(f"{pip_cmd} show pre-commit", quiet=True)
-        run_command(f"{precommit_cmd} install --install-hooks", quiet=True)
-        print_success("Pre-commit hooks installed")
-    except Exception:
-        print_warning("Pre-commit not installed (optional)")
+        # Install both pre-commit and commit-msg hooks to catch formatting AND commit message issues
+        run_command(
+            f"{precommit_cmd} install --install-hooks --hook-type pre-commit --hook-type commit-msg",
+            quiet=True,
+        )
+        print_success("Pre-commit hooks installed (pre-commit + commit-msg)")
+    except Exception as e:
+        print_warning(f"Pre-commit hook installation failed: {e}")
+        print("  Run manually: pre-commit install --hook-type pre-commit --hook-type commit-msg")
     print("")
 
     # 9. Check Docker

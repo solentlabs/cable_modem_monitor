@@ -39,9 +39,13 @@ class MotorolaMB7621Parser(MotorolaGenericParser):
     # MB7621 uses same URL patterns as generic, but we want to check
     # the software info page first to detect MB7621-specific strings
     url_patterns = [
-        {"path": "/MotoSwInfo.asp", "auth_method": "form"},  # Has MB7621 model string
-        {"path": "/MotoConnection.asp", "auth_method": "form"},
-        {"path": "/MotoHome.asp", "auth_method": "form"},
+        {
+            "path": "/MotoSwInfo.asp",
+            "auth_method": "form",
+            "auth_required": False,
+        },  # Has MB7621 model string, publicly accessible
+        {"path": "/MotoConnection.asp", "auth_method": "form", "auth_required": True},
+        {"path": "/MotoHome.asp", "auth_method": "form", "auth_required": True},
     ]
 
     # Override specific methods or add MB7621-specific logic here if needed

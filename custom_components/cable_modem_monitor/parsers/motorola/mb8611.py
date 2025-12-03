@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 class MotorolaMB8611HnapParser(ModemParser):
     """Parser for Motorola MB8611 cable modem using HNAP/SOAP protocol."""
 
-    name = "Motorola MB8611 (HNAP)"
+    name = "Motorola MB8611"
     manufacturer = "Motorola"
     models = ["MB8611", "MB8612"]
     priority = 101  # Higher priority for the API-based method
@@ -346,10 +346,11 @@ class MotorolaMB8611HnapParser(ModemParser):
 
                 try:
                     # Parse channel fields
-                    channel_id = int(fields[0])
+                    # fields[0] = row index (display order only, not meaningful)
+                    # fields[3] = DOCSIS Channel ID (what technicians reference)
+                    channel_id = int(fields[3])  # DOCSIS Channel ID
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
-                    ch_id = int(fields[3])
                     frequency = int(round(float(fields[4].strip()) * 1_000_000))  # MHz to Hz
                     power = float(fields[5].strip())
                     snr = float(fields[6].strip())
@@ -360,7 +361,6 @@ class MotorolaMB8611HnapParser(ModemParser):
                         "channel_id": channel_id,
                         "lock_status": lock_status,
                         "modulation": modulation,
-                        "ch_id": ch_id,
                         "frequency": int(frequency),
                         "power": power,
                         "snr": snr,
@@ -419,10 +419,11 @@ class MotorolaMB8611HnapParser(ModemParser):
 
                 try:
                     # Parse channel fields
-                    channel_id = int(fields[0])
+                    # fields[0] = row index (display order only, not meaningful)
+                    # fields[3] = DOCSIS Channel ID (what technicians reference)
+                    channel_id = int(fields[3])  # DOCSIS Channel ID
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
-                    ch_id = int(fields[3])
                     symbol_rate = int(fields[4])
                     frequency = int(round(float(fields[5].strip()) * 1_000_000))  # MHz to Hz
                     power = float(fields[6].strip())
@@ -431,7 +432,6 @@ class MotorolaMB8611HnapParser(ModemParser):
                         "channel_id": channel_id,
                         "lock_status": lock_status,
                         "modulation": modulation,
-                        "ch_id": ch_id,
                         "symbol_rate": symbol_rate,
                         "frequency": int(frequency),
                         "power": power,
@@ -520,9 +520,7 @@ class MotorolaMB8611HnapParser(ModemParser):
             }
 
             _LOGGER.info("MB8611: Sending restart command via HNAP")
-            response = builder.call_single(
-                session, base_url, "SetMotoStatusDSTargetFreq", restart_data
-            )
+            response = builder.call_single(session, base_url, "SetMotoStatusDSTargetFreq", restart_data)
 
             # Parse response to check result
             response_data = json.loads(response)

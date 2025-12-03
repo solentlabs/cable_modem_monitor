@@ -671,8 +671,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Pre-fill form with current values
         current_host = self.config_entry.data.get(CONF_HOST, "192.168.100.1")
         current_username = self.config_entry.data.get(CONF_USERNAME, "")
-        current_modem_choice = self.config_entry.data.get(CONF_MODEM_CHOICE, "auto")
+        stored_modem_choice = self.config_entry.data.get(CONF_MODEM_CHOICE, "auto")
         current_scan_interval = self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
+        # Normalize modem_choice to match dropdown options (which include " *" for unverified)
+        # The stored value may be the raw parser name without the asterisk
+        current_modem_choice = stored_modem_choice
+        if stored_modem_choice and stored_modem_choice != "auto":
+            # Find matching parser and get its display name
+            for p in sorted_parsers:
+                if p.name == stored_modem_choice or _get_parser_display_name(p) == stored_modem_choice:
+                    current_modem_choice = _get_parser_display_name(p)
+                    break
 
         # Get detection info for display
         detected_modem = self.config_entry.data.get(CONF_DETECTED_MODEM, "Not detected")

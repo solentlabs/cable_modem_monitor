@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Kabelmodem-Monitor",
-        "description": "Konfiguriere die Verbindung zu deinem Kabelmodem.",
+        "description": "Verbinde dein Modem. Mit * markierte Modelle sind nicht verifiziert.",
         "data": {
           "host": "Modem-IP-Adresse",
           "username": "Benutzername",
@@ -11,18 +11,18 @@
           "modem_choice": "Modem-Modell"
         },
         "data_description": {
-          "host": "Typischerweise 192.168.100.1 für die meisten Kabelmodems",
-          "username": "Optional, typischerweise 'admin' (leer lassen, wenn nicht erforderlich)",
-          "password": "Optional, sicher gespeichert (leer lassen, wenn nicht erforderlich)",
-          "modem_choice": "Wähle dein Modem-Modell oder 'auto' für automatische Erkennung. Mit * markierte Modelle sind nicht verifiziert oder haben bekannte Probleme."
+          "host": "Normalerweise 192.168.100.1",
+          "username": "Leer lassen, wenn nicht erforderlich",
+          "password": "Leer lassen, wenn nicht erforderlich",
+          "modem_choice": "'auto' für automatische Erkennung"
         }
       }
     },
     "error": {
-      "invalid_auth": "Authentifizierung fehlgeschlagen - Modem hat Login-Seite zurückgegeben.\n\nBitte überprüfe:\n1. Benutzername ist korrekt (typischerweise 'admin', siehe Modem-Etikett)\n2. Passwort ist korrekt (siehe Modem-Etikett)\n3. Anmeldedaten wurden nicht von den Standardwerten geändert\n\nBei weiteren Problemen:\n1. Versuche, dich manuell am Modem unter https://192.168.100.1 anzumelden\n2. Stelle sicher, dass dieselben Anmeldedaten im Webbrowser funktionieren\n3. Aktiviere Debug-Protokollierung und lade Diagnosen herunter, um sie mit Entwicklern zu teilen",
+      "invalid_auth": "Authentifizierung fehlgeschlagen - Modem hat Login-Seite zurückgegeben.\n\nBitte überprüfe:\n1. Benutzername ist korrekt (typischerweise 'admin', siehe Modem-Etikett)\n2. Passwort ist korrekt (siehe Modem-Etikett)\n3. Anmeldedaten wurden nicht von den Standardwerten geändert\n\nVersuche, dich manuell am Modem unter https://192.168.100.1 anzumelden, um die Anmeldedaten zu überprüfen.",
       "network_unreachable": "Modem nicht erreichbar - Netzwerkverbindungsproblem.\n\nBitte überprüfe:\n1. Netzwerkverbindung - Bist du im richtigen WLAN-Netzwerk?\n2. Gäste-WLAN - Gästenetzwerke blockieren oft den Zugriff auf lokale Geräte\n3. VPN - Trenne alle aktiven VPN-Verbindungen\n4. IP-Adresse - Überprüfe die IP des Modems (typischerweise 192.168.100.1)\n5. Modem-Weboberfläche - Stelle sicher, dass sie aktiviert und erreichbar ist\n\nVersuche, das Modem direkt im Browser zu erreichen, um die Konnektivität zu überprüfen.",
-      "cannot_connect": "Verbindung zum Modem fehlgeschlagen.\n\nBitte überprüfe:\n1. IP-Adresse ist korrekt (typischerweise 192.168.100.1)\n2. Wenn das Modem Authentifizierung erfordert, gib Benutzername/Passwort ein (leer lassen, wenn keine Authentifizierung nötig)\n3. Modem-Weboberfläche ist vom Home Assistant-Netzwerk aus erreichbar\n\nWenn dein Modem-Modell nicht unterstützt wird:\nWähle 'Unbekanntes Modem (Fallback-Modus)' im Modem-Modell-Dropdown, um grundlegende Konnektivitätsüberwachung und HTML-Erfassung für zukünftige Unterstützung zu aktivieren.",
-      "unsupported_modem": "Automatische Erkennung konnte dein Modem-Modell nicht identifizieren.\n\nUm fortzufahren:\n1. Wähle 'Unbekanntes Modem (Fallback-Modus)' im Modem-Modell-Dropdown unten\n2. Dies aktiviert grundlegende Konnektivitätsüberwachung (Ping/HTTP-Latenz)\n3. Klicke nach der Installation auf 'HTML erfassen'\n4. Lade Diagnosen herunter und teile sie mit Entwicklern, um vollständige Unterstützung hinzuzufügen",
+      "cannot_connect": "Verbindung zum Modem fehlgeschlagen.\n\nBitte überprüfe:\n1. IP-Adresse ist korrekt (typischerweise 192.168.100.1)\n2. Wenn das Modem Authentifizierung erfordert, gib Benutzername/Passwort ein\n3. Modem-Weboberfläche ist vom Home Assistant-Netzwerk aus erreichbar\n\nWenn dein Modem nicht unterstützt wird, wähle 'Unbekanntes Modem (Fallback-Modus)' für grundlegende Überwachung und HTML-Erfassung.",
+      "unsupported_modem": "Automatische Erkennung konnte dein Modem-Modell nicht identifizieren.\n\nUm fortzufahren:\n1. Wähle 'Unbekanntes Modem (Fallback-Modus)' im Dropdown unten\n2. Dies aktiviert grundlegende Konnektivitätsüberwachung (Ping/HTTP-Latenz)\n3. Klicke nach der Installation auf 'HTML erfassen'\n4. Lade Diagnosen herunter und teile sie mit Entwicklern, um vollständige Unterstützung hinzuzufügen",
       "invalid_input": "Ungültige Eingabe. Bitte überprüfe die Werte und versuche es erneut.",
       "unknown": "Unerwarteter Fehler aufgetreten. Überprüfe die Home Assistant-Logs für Details."
     },
@@ -30,27 +30,27 @@
       "already_configured": "Dieses Modem ist bereits konfiguriert"
     },
     "progress": {
-      "validate": "Verbinde mit Modem und erkenne Modell..."
+      "validate": "Verbinde mit Modem..."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Kabelmodem-Monitor Einstellungen",
-        "description": "Erkanntes Modem: {detected_modem} ({detected_manufacturer})\nLetzte Erkennung: {last_detection}",
+        "title": "Modem-Einstellungen",
+        "description": "Aktuell: {detected_modem}\nLetzte Prüfung: {last_detection}",
         "data": {
-          "host": "Modem-IP-Adresse",
-          "username": "Benutzername (optional)",
-          "password": "Passwort (leer lassen, um aktuelles zu behalten)",
+          "host": "Modem-IP",
+          "username": "Benutzername",
+          "password": "Passwort",
           "modem_choice": "Modem-Modell",
-          "scan_interval": "Abfrageintervall (Sekunden)"
+          "scan_interval": "Intervall (Sek.)"
         },
         "data_description": {
-          "host": "Die IP-Adresse deines Kabelmodems (typischerweise 192.168.100.1 für Motorola-Modems)",
-          "username": "Benutzername für Modem-Weboberfläche (leer lassen, wenn nicht erforderlich)",
-          "password": "Passwort für Modem-Weboberfläche (leer lassen, um bestehendes Passwort zu behalten, oder wenn nicht erforderlich)",
-          "modem_choice": "Wähle dein Modem-Modell oder 'auto' für automatische Erkennung. Ändere dies, wenn die automatische Erkennung nicht richtig funktioniert. Mit * markierte Modelle sind nicht verifiziert oder haben bekannte Probleme.",
-          "scan_interval": "Wie oft das Modem nach Daten abgefragt werden soll (60-1800 Sekunden). Standard: 600 Sekunden (10 Minuten). Niedrigere Werte erhöhen den Netzwerkverkehr und können ältere Modems belasten."
+          "host": "Normalerweise 192.168.100.1",
+          "username": "Leer lassen, wenn nicht erforderlich",
+          "password": "Leer = aktuelles behalten",
+          "modem_choice": "'auto' für Erkennung. Bei Fehler ändern.",
+          "scan_interval": "60-1800 Sek. Standard 600 (10 Min.)"
         }
       }
     }

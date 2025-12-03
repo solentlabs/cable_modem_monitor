@@ -50,7 +50,7 @@ class TestParserCaching:
         assert "ARRIS SB8200" in parser_names
         assert "Motorola MB Series (Generic)" in parser_names
         assert "Motorola MB7621" in parser_names
-        assert "Motorola MB8611 (HNAP)" in parser_names
+        assert "Motorola MB8611" in parser_names
         assert "Technicolor TC4400" in parser_names
         assert "Technicolor XB7" in parser_names
 
@@ -90,12 +90,12 @@ class TestGetParserByName:
         assert parser_class.name == "Motorola MB7621"
         assert parser_class.manufacturer == "Motorola"
 
-    def test_mb8611_hnap(self):
-        """Test loading MB8611 HNAP parser by name."""
-        parser_class = get_parser_by_name("Motorola MB8611 (HNAP)")
+    def test_mb8611(self):
+        """Test loading MB8611 parser by name."""
+        parser_class = get_parser_by_name("Motorola MB8611")
         assert parser_class is not None
         assert issubclass(parser_class, ModemParser)
-        assert parser_class.name == "Motorola MB8611 (HNAP)"
+        assert parser_class.name == "Motorola MB8611"
 
     def test_arris_sb6190(self):
         """Test loading ARRIS SB6190 parser by name."""
@@ -139,23 +139,23 @@ class TestUnverifiedParserSuffix:
 
     def test_get_parser_by_name_strips_asterisk_suffix(self):
         """Test that get_parser_by_name strips ' *' suffix from unverified parsers."""
-        # MB8611 is unverified, so UI shows "Motorola MB8611 (HNAP) *"
+        # MB8611 is unverified, so UI shows "Motorola MB8611 *"
         # But lookup should still work
-        parser_class = get_parser_by_name("Motorola MB8611 (HNAP) *")
+        parser_class = get_parser_by_name("Motorola MB8611 *")
         assert parser_class is not None
-        assert parser_class.name == "Motorola MB8611 (HNAP)"
+        assert parser_class.name == "Motorola MB8611"
 
     def test_get_parser_by_name_works_without_suffix(self):
         """Test that get_parser_by_name works with clean name too."""
-        parser_class = get_parser_by_name("Motorola MB8611 (HNAP)")
+        parser_class = get_parser_by_name("Motorola MB8611")
         assert parser_class is not None
-        assert parser_class.name == "Motorola MB8611 (HNAP)"
+        assert parser_class.name == "Motorola MB8611"
 
     def test_get_parser_by_name_strips_multiple_asterisks(self):
         """Test edge case: multiple asterisks/spaces are stripped."""
-        parser_class = get_parser_by_name("Motorola MB8611 (HNAP)  **")
+        parser_class = get_parser_by_name("Motorola MB8611  **")
         assert parser_class is not None
-        assert parser_class.name == "Motorola MB8611 (HNAP)"
+        assert parser_class.name == "Motorola MB8611"
 
     def test_verified_parser_works_with_suffix(self):
         """Test that verified parser also works if suffix accidentally added."""

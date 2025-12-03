@@ -172,23 +172,21 @@ class TestHnapParsing:
         assert "downstream" in data
         assert len(data["downstream"]) == 33  # 32 QAM256 + 1 OFDM PLC
 
-        # Check first channel (ID 1)
+        # Check first channel (DOCSIS Channel ID 20)
         first_channel = data["downstream"][0]
-        assert first_channel["channel_id"] == 1
+        assert first_channel["channel_id"] == 20  # DOCSIS Channel ID
         assert first_channel["lock_status"] == "Locked"
         assert first_channel["modulation"] == "QAM256"
-        assert first_channel["ch_id"] == 20
         assert first_channel["frequency"] == 543_000_000  # 543.0 MHz
         assert first_channel["power"] == 1.4
         assert first_channel["snr"] == 45.1
         assert first_channel["corrected"] == 41
         assert first_channel["uncorrected"] == 0
 
-        # Check OFDM PLC channel (last channel, ID 33)
+        # Check OFDM PLC channel (last channel, DOCSIS Channel ID 193)
         ofdm_channel = data["downstream"][32]
-        assert ofdm_channel["channel_id"] == 33
+        assert ofdm_channel["channel_id"] == 193  # DOCSIS Channel ID
         assert ofdm_channel["modulation"] == "OFDM PLC"
-        assert ofdm_channel["ch_id"] == 193
         assert ofdm_channel["frequency"] == 957_000_000  # 957.0 MHz
         assert ofdm_channel["power"] == -4.1
         assert ofdm_channel["snr"] == 41.1
@@ -214,23 +212,21 @@ class TestHnapParsing:
         assert "upstream" in data
         assert len(data["upstream"]) == 4
 
-        # Check first channel (ID 1)
+        # Check first channel (DOCSIS Channel ID 17)
         first_channel = data["upstream"][0]
-        assert first_channel["channel_id"] == 1
+        assert first_channel["channel_id"] == 17  # DOCSIS Channel ID
         assert first_channel["lock_status"] == "Locked"
         assert first_channel["modulation"] == "SC-QAM"
-        assert first_channel["ch_id"] == 17
         assert first_channel["symbol_rate"] == 5120
         # 16.4 MHz converted to Hz - account for floating-point precision
         assert abs(first_channel["frequency"] - 16_400_000) <= 1
         assert first_channel["power"] == 44.3
 
-        # Check last channel (ID 4)
+        # Check last channel (DOCSIS Channel ID 20)
         last_channel = data["upstream"][3]
-        assert last_channel["channel_id"] == 4
+        assert last_channel["channel_id"] == 20  # DOCSIS Channel ID
         assert last_channel["lock_status"] == "Locked"
         assert last_channel["modulation"] == "SC-QAM"
-        assert last_channel["ch_id"] == 20
         # 35.6 MHz converted to Hz - account for floating-point precision
         assert abs(last_channel["frequency"] - 35_600_000) <= 1
         assert last_channel["power"] == 45.5
@@ -379,7 +375,7 @@ class TestEdgeCases:
 
         # Should skip malformed entry and parse valid one
         assert len(data["downstream"]) == 1
-        assert data["downstream"][0]["channel_id"] == 2
+        assert data["downstream"][0]["channel_id"] == 1  # DOCSIS Channel ID from fields[3]
 
     @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
     def test_handles_exception_in_builder(self, mock_builder_class):
@@ -435,7 +431,7 @@ class TestMetadata:
     def test_name(self):
         """Test parser name."""
         parser = MotorolaMB8611HnapParser()
-        assert parser.name == "Motorola MB8611 (HNAP)"
+        assert parser.name == "Motorola MB8611"
 
     def test_manufacturer(self):
         """Test parser manufacturer."""
@@ -772,11 +768,9 @@ class TestRestartCapability:
 
         # Mock successful restart response
         mock_builder = Mock()
-        mock_builder.call_single.return_value = json.dumps({
-            "SetMotoStatusDSTargetFreqResponse": {
-                "SetMotoStatusDSTargetFreqResult": "OK"
-            }
-        })
+        mock_builder.call_single.return_value = json.dumps(
+            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "OK"}}
+        )
         mock_builder_class.return_value = mock_builder
 
         result = parser.restart(mock_session, base_url)
@@ -813,11 +807,9 @@ class TestRestartCapability:
 
         # Mock failed restart response
         mock_builder = Mock()
-        mock_builder.call_single.return_value = json.dumps({
-            "SetMotoStatusDSTargetFreqResponse": {
-                "SetMotoStatusDSTargetFreqResult": "FAILED"
-            }
-        })
+        mock_builder.call_single.return_value = json.dumps(
+            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "FAILED"}}
+        )
         mock_builder_class.return_value = mock_builder
 
         result = parser.restart(mock_session, base_url)
@@ -832,11 +824,9 @@ class TestRestartCapability:
 
         # Simulate that login was called and stored a builder
         mock_builder = Mock()
-        mock_builder.call_single.return_value = json.dumps({
-            "SetMotoStatusDSTargetFreqResponse": {
-                "SetMotoStatusDSTargetFreqResult": "OK"
-            }
-        })
+        mock_builder.call_single.return_value = json.dumps(
+            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "OK"}}
+        )
         parser._json_builder = mock_builder
 
         result = parser.restart(mock_session, base_url)

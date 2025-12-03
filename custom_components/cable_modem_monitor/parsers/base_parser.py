@@ -80,10 +80,22 @@ class ModemParser(ABC):
     # e.g., "tests/parsers/netgear/fixtures/c3700"
     fixtures_path: str | None = None
 
-    # URL patterns this parser can handle
-    # Each pattern is a dict with 'path' and optionally 'auth_required'
-    # auth_required: boolean (default True) - if False, can try without auth
-    # The scraper will try URLs in the order specified
+    # URL patterns this parser can handle.
+    #
+    # DETECTION CONTRACT:
+    # For auto-detection to work, at least one pattern must have 'auth_required': False
+    # pointing to a publicly accessible page containing model-identifying strings.
+    # Pages requiring auth are invisible to the anonymous probing phase.
+    #
+    # Each pattern is a dict with:
+    #   - 'path': URL path (e.g., "/MotoSwInfo.asp")
+    #   - 'auth_method': Authentication method ("none", "basic", "form", "hnap")
+    #   - 'auth_required': REQUIRED - explicitly set True or False (no implicit defaults!)
+    #
+    # Order matters: Put your detection page first if it's publicly accessible.
+    # The scraper tries URLs in the order specified.
+    #
+    # See: tests/parsers/test_parser_contract.py for validation
     url_patterns: list[dict[str, str | bool]] = []
 
     # Legacy field for backward compatibility (deprecated - use url_patterns)

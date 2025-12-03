@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor de Modem a Cabo",
-        "description": "Configure a conexão do seu modem a cabo.",
+        "description": "Conecte ao seu modem. Modelos com * não foram verificados.",
         "data": {
           "host": "Endereço IP do Modem",
           "username": "Usuário",
@@ -11,18 +11,18 @@
           "modem_choice": "Modelo do Modem"
         },
         "data_description": {
-          "host": "Normalmente 192.168.100.1 para a maioria dos modems a cabo",
-          "username": "Opcional, geralmente 'admin' (deixe em branco se não for necessário)",
-          "password": "Opcional, armazenada com segurança (deixe em branco se não for necessário)",
-          "modem_choice": "Selecione o modelo do seu modem ou escolha 'auto' para detecção automática. Modelos marcados com * não foram verificados ou têm problemas conhecidos."
+          "host": "Geralmente 192.168.100.1",
+          "username": "Deixe em branco se não for necessário",
+          "password": "Deixe em branco se não for necessário",
+          "modem_choice": "Use 'auto' para detecção automática"
         }
       }
     },
     "error": {
-      "invalid_auth": "Falha na autenticação - o modem retornou página de login.\n\nPor favor, verifique:\n1. O usuário está correto (geralmente 'admin', verifique a etiqueta do modem)\n2. A senha está correta (verifique a etiqueta do modem)\n3. As credenciais não foram alteradas dos padrões\n\nSe continuar com problemas:\n1. Tente fazer login manualmente no modem em https://192.168.100.1\n2. Certifique-se de que as mesmas credenciais funcionam no navegador\n3. Ative o log de depuração e baixe os diagnósticos para compartilhar com os desenvolvedores",
+      "invalid_auth": "Falha na autenticação - o modem retornou página de login.\n\nPor favor, verifique:\n1. O usuário está correto (geralmente 'admin', verifique a etiqueta do modem)\n2. A senha está correta (verifique a etiqueta do modem)\n3. As credenciais não foram alteradas dos padrões\n\nTente fazer login manualmente no modem em https://192.168.100.1 para verificar as credenciais.",
       "network_unreachable": "Não é possível alcançar o modem - problema de conectividade de rede.\n\nPor favor, verifique:\n1. Conexão de rede - Você está na rede WiFi correta?\n2. WiFi de convidados - Redes de convidados geralmente bloqueiam acesso a dispositivos locais\n3. VPN - Desconecte qualquer conexão VPN ativa\n4. Endereço IP - Verifique o IP do modem (geralmente 192.168.100.1)\n5. Interface web do modem - Certifique-se de que está habilitada e acessível\n\nTente acessar o modem diretamente no navegador para verificar a conectividade.",
-      "cannot_connect": "Falha ao conectar ao modem.\n\nPor favor, verifique:\n1. O endereço IP está correto (geralmente 192.168.100.1)\n2. Se o modem requer autenticação, insira usuário/senha (deixe em branco se não precisar de autenticação)\n3. A interface web do modem está acessível pela rede do Home Assistant\n\nSe o modelo do seu modem não for suportado:\nSelecione 'Modem Desconhecido (Modo Fallback)' no menu Modelo do Modem para habilitar monitoramento básico de conectividade e captura de HTML para suporte futuro.",
-      "unsupported_modem": "A detecção automática não conseguiu identificar o modelo do seu modem.\n\nPara continuar:\n1. Selecione 'Modem Desconhecido (Modo Fallback)' no menu Modelo do Modem abaixo\n2. Isso habilitará monitoramento básico de conectividade (ping/latência HTTP)\n3. Após a instalação, clique no botão 'Capturar HTML'\n4. Baixe os diagnósticos e compartilhe com os desenvolvedores para adicionar suporte completo",
+      "cannot_connect": "Falha ao conectar ao modem.\n\nPor favor, verifique:\n1. O endereço IP está correto (geralmente 192.168.100.1)\n2. Se o modem requer autenticação, insira usuário/senha\n3. A interface web do modem está acessível pela rede do Home Assistant\n\nSe o seu modem não for suportado, selecione 'Modem Desconhecido (Modo Fallback)' para habilitar monitoramento básico e captura de HTML.",
+      "unsupported_modem": "A detecção automática não conseguiu identificar o modelo do seu modem.\n\nPara continuar:\n1. Selecione 'Modem Desconhecido (Modo Fallback)' no menu abaixo\n2. Isso habilitará monitoramento básico de conectividade (ping/latência HTTP)\n3. Após a instalação, clique no botão 'Capturar HTML'\n4. Baixe os diagnósticos e compartilhe com os desenvolvedores para adicionar suporte completo",
       "invalid_input": "Entrada inválida fornecida. Por favor, verifique os valores e tente novamente.",
       "unknown": "Ocorreu um erro inesperado. Verifique os logs do Home Assistant para detalhes."
     },
@@ -30,27 +30,27 @@
       "already_configured": "Este modem já está configurado"
     },
     "progress": {
-      "validate": "Conectando ao modem e detectando modelo..."
+      "validate": "Conectando ao modem..."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configurações do Monitor de Modem a Cabo",
-        "description": "Modem Detectado: {detected_modem} ({detected_manufacturer})\nÚltima Detecção: {last_detection}",
+        "title": "Configurações do Modem",
+        "description": "Atual: {detected_modem}\nÚltima verificação: {last_detection}",
         "data": {
-          "host": "Endereço IP do Modem",
-          "username": "Usuário (opcional)",
-          "password": "Senha (deixe em branco para manter a atual)",
+          "host": "IP do Modem",
+          "username": "Usuário",
+          "password": "Senha",
           "modem_choice": "Modelo do Modem",
-          "scan_interval": "Intervalo de Atualização (segundos)"
+          "scan_interval": "Intervalo (seg)"
         },
         "data_description": {
-          "host": "O endereço IP do seu modem a cabo (geralmente 192.168.100.1 para modems Motorola)",
-          "username": "Usuário para interface web do modem (deixe em branco se não for necessário)",
-          "password": "Senha para interface web do modem (deixe em branco para manter a senha existente, ou se não for necessário)",
-          "modem_choice": "Selecione o modelo do seu modem ou escolha 'auto' para detecção automática. Altere isso se a detecção automática não estiver funcionando corretamente. Modelos marcados com * não foram verificados ou têm problemas conhecidos.",
-          "scan_interval": "Com que frequência consultar o modem para dados (60-1800 segundos). Padrão: 600 segundos (10 minutos). Valores menores aumentam o tráfego de rede e podem sobrecarregar modems mais antigos."
+          "host": "Geralmente 192.168.100.1",
+          "username": "Deixe em branco se não for necessário",
+          "password": "Em branco = manter atual",
+          "modem_choice": "Use 'auto' para detecção. Altere se incorreto.",
+          "scan_interval": "60-1800 seg. Padrão 600 (10 min)"
         }
       }
     }

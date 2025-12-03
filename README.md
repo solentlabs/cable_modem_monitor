@@ -108,17 +108,17 @@ Full guides: [Getting Started](./docs/GETTING_STARTED.md) | [Contributing](./CON
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
 <p align="center">
-  <img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="600"><br>
+  <img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard"><br>
   <em>Complete dashboard showing connection status, signal quality, and error tracking</em>
 </p>
 
 <p align="center">
-  <img src="images/downstream-power-levels.png" alt="Downstream Power Levels" width="600"><br>
+  <img src="images/downstream-power-levels.png" alt="Downstream Power Levels"><br>
   <em>Real-time power level monitoring across all downstream channels</em>
 </p>
 
 <p align="center">
-  <img src="images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio" width="600"><br>
+  <img src="images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio"><br>
   <em>SNR tracking helps identify signal quality issues before they cause problems</em>
 </p>
 
