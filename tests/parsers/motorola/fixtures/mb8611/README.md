@@ -75,8 +75,31 @@ Uses HNAP challenge-response authentication (HMAC-MD5).
 - Default credentials: `admin` / `motorola`
 - Implementation credit: @BowlesCR (Chris Bowles)
 
+## Parser Development Sources
+
+The MB8611 HNAP parser was built using these sources:
+
+### User Contributions (Issues #4, #6)
+- **@dlindnegm** - Original HTML page captures (October 2025)
+- **@cvonk (Coert Vonk)** - HAR captures, debug logs, iterative testing (November 2025)
+- Diagnostics JSON files in `RAW_DATA/MB8611/`
+
+### External Reference Implementations
+- **[Tatsh/mb8611](https://github.com/Tatsh/mb8611)** - Python CLI/library with typed API definitions
+  - Used for HNAP action names and response field definitions
+  - `GetMotoStatusSoftware` fields: `StatusSoftwareSfVer`, `StatusSoftwareSpecVer`
+- **[johlym/mb8611-metrics](https://github.com/johlym/mb8611-metrics)** - Prometheus metrics exporter
+- **[xNinjaKittyx/mb8600](https://github.com/xNinjaKittyx/mb8600)** - Related MB8600 implementation
+- **[BowlesCR/MB8600_Login](https://github.com/BowlesCR/MB8600_Login)** - HNAP authentication reference
+
+### Modem Web Interface Analysis
+- `MotoStatusConnection.html` JavaScript revealed:
+  - HNAP actions: `GetMotoStatusStartupSequence`, `GetMotoStatusConnectionInfo`, etc.
+  - Channel data format: `ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^|+|...`
+  - Restart via `SetMotoStatusDSTargetFreq` with `MotoStatusConnectionAction=1`
+
 ## References
 
 - Issue #4: Original fixture capture by @dlindnegm
-- Issue #6: HNAP authentication implementation
+- Issue #6: HNAP authentication and ongoing verification by @cvonk
 - Prior art: xNinjaKittyx/mb8600 repository

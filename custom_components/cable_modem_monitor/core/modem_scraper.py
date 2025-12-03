@@ -38,9 +38,17 @@ class CapturingSession(requests.Session):
         """Override request to capture responses."""
         response = super().request(method, url, **kwargs)
 
-        # Determine description based on URL
+        # Determine description based on URL and request headers
         description = "Parser fetch"
-        if "login" in url.lower() or "auth" in url.lower():
+
+        # Check for HNAP/SOAP requests (uses SOAPAction header)
+        headers = kwargs.get("headers", {})
+        soap_action = headers.get("SOAPAction", "")
+        if soap_action or "/hnap" in url.lower():
+            # Extract action name from SOAPAction header (e.g., '"http://...Login"' -> 'Login')
+            action_name = soap_action.strip('"').split("/")[-1] if soap_action else "unknown"
+            description = f"HNAP: {action_name}"
+        elif "login" in url.lower() or "auth" in url.lower():
             description = "Login/Auth page"
         elif "status" in url.lower():
             description = "Status page"
@@ -173,6 +181,9 @@ class ModemScraper:
             # Get parser name if available
             parser_name = self.parser.name if self.parser else "unknown"
 
+            # Capture timing data for performance analysis
+            elapsed_ms = response.elapsed.total_seconds() * 1000 if hasattr(response, "elapsed") else None
+
             self._captured_urls.append(
                 {
                     "url": response.url,
@@ -180,6 +191,7 @@ class ModemScraper:
                     "status_code": response.status_code,
                     "content_type": response.headers.get("Content-Type", "unknown"),
                     "size_bytes": len(response.text) if hasattr(response, "text") else 0,
+                    "elapsed_ms": elapsed_ms,
                     "content": response.text if hasattr(response, "text") else "",
                     "parser": parser_name,
                     "description": description,
