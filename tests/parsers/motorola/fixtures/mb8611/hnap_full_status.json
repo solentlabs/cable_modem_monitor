@@ -30,6 +30,16 @@
       "MotoLagCurrentStatus": "0",
       "GetMotoLagStatusResult": "OK"
     },
+    "GetMotoStatusSoftwareResponse": {
+      "StatusSoftwareSfVer": "8611-19.2.18",
+      "StatusSoftwareCustomerVer": "8611-19.2.18",
+      "StatusSoftwareSpecVer": "DOCSIS 3.1",
+      "StatusSoftwareHdVer": "7.0",
+      "StatusSoftwareCertificate": "N/A",
+      "StatusSoftwareSerialNum": "123456789012",
+      "StatusSoftwareMac": "AA:BB:CC:DD:EE:FF",
+      "GetMotoStatusSoftwareResult": "OK"
+    },
     "GetMultipleHNAPsResult": "OK"
   }
 }
