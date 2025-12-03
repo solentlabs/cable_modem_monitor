@@ -59,6 +59,8 @@ class MotorolaMB8611HnapParser(ModemParser):
         ModemCapability.DOWNSTREAM_CHANNELS,
         ModemCapability.UPSTREAM_CHANNELS,
         ModemCapability.SYSTEM_UPTIME,
+        ModemCapability.SOFTWARE_VERSION,
+        ModemCapability.RESTART,
     }
 
     @classmethod
@@ -215,6 +217,7 @@ class MotorolaMB8611HnapParser(ModemParser):
             "GetMotoStatusConnectionInfo",
             "GetMotoStatusDownstreamChannelInfo",
             "GetMotoStatusUpstreamChannelInfo",
+            "GetMotoStatusSoftware",
             "GetMotoLagStatus",
         ]
 
@@ -266,6 +269,7 @@ class MotorolaMB8611HnapParser(ModemParser):
             "GetMotoStatusConnectionInfo",
             "GetMotoStatusDownstreamChannelInfo",
             "GetMotoStatusUpstreamChannelInfo",
+            "GetMotoStatusSoftware",
             "GetMotoLagStatus",
         ]
 
@@ -451,6 +455,7 @@ class MotorolaMB8611HnapParser(ModemParser):
         try:
             self._extract_connection_info(hnap_data, system_info)
             self._extract_startup_info(hnap_data, system_info)
+            self._extract_software_info(hnap_data, system_info)
         except Exception as e:
             _LOGGER.error("MB8611: Error parsing system info: %s", e)
 
@@ -477,8 +482,68 @@ class MotorolaMB8611HnapParser(ModemParser):
         self._set_if_present(startup_info, "MotoConnSecurityStatus", system_info, "security_status")
         self._set_if_present(startup_info, "MotoConnSecurityComment", system_info, "security_comment")
 
+    def _extract_software_info(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract software/firmware version info from HNAP data."""
+        software_info = hnap_data.get("GetMotoStatusSoftwareResponse", {})
+        if not software_info:
+            return
+
+        ***REMOVED*** StatusSoftwareSfVer contains the firmware version (e.g., "8611-19.2.18")
+        self._set_if_present(software_info, "StatusSoftwareSfVer", system_info, "software_version")
+        self._set_if_present(software_info, "StatusSoftwareSpecVer", system_info, "docsis_version")
+        self._set_if_present(software_info, "StatusSoftwareSerialNum", system_info, "serial_number")
+
     def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
         """Set target[key] if source[source_key] exists and is non-empty."""
         value = source.get(source_key, "")
         if value:
             target[target_key] = value
+
+    def restart(self, session, base_url) -> bool:
+        """Restart the MB8611 modem via HNAP SetMotoStatusDSTargetFreq action."""
+        try:
+            ***REMOVED*** Use JSON builder if available (from login), otherwise create new
+            if self._json_builder is not None:
+                builder = self._json_builder
+            else:
+                builder = HNAPJsonRequestBuilder(
+                    endpoint=self.auth_config.hnap_endpoint,
+                    namespace=self.auth_config.soap_action_namespace,
+                )
+                _LOGGER.warning("MB8611: No stored JSON builder for restart - may lack auth")
+
+            ***REMOVED*** Build the restart request - action=1 triggers reboot
+            ***REMOVED*** Based on modem's JavaScript: SetMotoStatusDSTargetFreq with MotoStatusConnectionAction=1
+            restart_data = {
+                "MotoStatusConnectionAction": "1",
+                "MotoStatusXXX": "XXX",
+            }
+
+            _LOGGER.info("MB8611: Sending restart command via HNAP")
+            response = builder.call_single(
+                session, base_url, "SetMotoStatusDSTargetFreq", restart_data
+            )
+
+            ***REMOVED*** Parse response to check result
+            response_data = json.loads(response)
+            result = response_data.get("SetMotoStatusDSTargetFreqResponse", {}).get(
+                "SetMotoStatusDSTargetFreqResult", ""
+            )
+
+            if result == "OK":
+                _LOGGER.info("MB8611: Restart command sent successfully")
+                return True
+            else:
+                _LOGGER.error("MB8611: Restart failed with result: %s", result)
+                return False
+
+        except ConnectionResetError:
+            ***REMOVED*** Connection reset is expected - modem reboots immediately
+            _LOGGER.info("MB8611: Restart sent successfully (connection reset by rebooting modem)")
+            return True
+        except Exception as e:
+            if "Connection aborted" in str(e) or "Connection reset" in str(e):
+                _LOGGER.info("MB8611: Restart sent successfully (connection reset by rebooting modem)")
+                return True
+            _LOGGER.error("MB8611: Error sending restart command: %s", e)
+            return False

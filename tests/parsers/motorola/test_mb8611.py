@@ -291,12 +291,13 @@ class TestHnapParsing:
         ***REMOVED*** Verify builder instantiation
         mock_builder_class.assert_called_once_with(endpoint="/HNAP1/", namespace="http://purenetworks.com/HNAP1/")
 
-        ***REMOVED*** Verify SOAP actions
+        ***REMOVED*** Verify SOAP actions (including GetMotoStatusSoftware added in v3.9+)
         expected_actions = [
             "GetMotoStatusStartupSequence",
             "GetMotoStatusConnectionInfo",
             "GetMotoStatusDownstreamChannelInfo",
             "GetMotoStatusUpstreamChannelInfo",
+            "GetMotoStatusSoftware",
             "GetMotoLagStatus",
         ]
         mock_builder.call_multiple.assert_called_once_with(mock_session, base_url, expected_actions)
@@ -669,3 +670,177 @@ class TestAuthFailureDetection:
         parser = MotorolaMB8611HnapParser()
         error = Exception("Something went wrong")
         assert parser._is_auth_failure(error) is False
+
+
+class TestSoftwareVersionParsing:
+    """Test software version parsing from GetMotoStatusSoftware."""
+
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    def test_software_version_parsed(self, mock_builder_class, hnap_full_status):
+        """Test that software version is parsed from HNAP response."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "http://192.168.100.1"
+
+        mock_builder = Mock()
+        mock_builder.call_multiple.return_value = json.dumps(hnap_full_status)
+        mock_builder_class.return_value = mock_builder
+
+        soup = BeautifulSoup("<html></html>", "html.parser")
+        data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+        assert "system_info" in data
+        assert data["system_info"]["software_version"] == "8611-19.2.18"
+
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    def test_docsis_version_parsed(self, mock_builder_class, hnap_full_status):
+        """Test that DOCSIS spec version is parsed from HNAP response."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "http://192.168.100.1"
+
+        mock_builder = Mock()
+        mock_builder.call_multiple.return_value = json.dumps(hnap_full_status)
+        mock_builder_class.return_value = mock_builder
+
+        soup = BeautifulSoup("<html></html>", "html.parser")
+        data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+        assert "system_info" in data
+        assert data["system_info"]["docsis_version"] == "DOCSIS 3.1"
+
+    @patch("custom_components.cable_modem_monitor" ".parsers.motorola.mb8611.HNAPRequestBuilder")
+    def test_serial_number_parsed(self, mock_builder_class, hnap_full_status):
+        """Test that serial number is parsed from HNAP response."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "http://192.168.100.1"
+
+        mock_builder = Mock()
+        mock_builder.call_multiple.return_value = json.dumps(hnap_full_status)
+        mock_builder_class.return_value = mock_builder
+
+        soup = BeautifulSoup("<html></html>", "html.parser")
+        data = parser.parse(soup, session=mock_session, base_url=base_url)
+
+        assert "system_info" in data
+        assert data["system_info"]["serial_number"] == "***SERIAL***"
+
+    def test_software_info_with_empty_response(self):
+        """Test software info parsing with empty GetMotoStatusSoftwareResponse."""
+        parser = MotorolaMB8611HnapParser()
+        hnap_data: dict = {}
+
+        system_info: dict = {}
+        parser._extract_software_info(hnap_data, system_info)
+
+        ***REMOVED*** Should not add any keys
+        assert "software_version" not in system_info
+        assert "docsis_version" not in system_info
+        assert "serial_number" not in system_info
+
+    def test_software_version_capability(self):
+        """Test that SOFTWARE_VERSION capability is declared."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        parser = MotorolaMB8611HnapParser()
+        assert ModemCapability.SOFTWARE_VERSION in parser.capabilities
+
+
+class TestRestartCapability:
+    """Test modem restart functionality."""
+
+    def test_restart_capability_declared(self):
+        """Test that RESTART capability is declared."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        parser = MotorolaMB8611HnapParser()
+        assert ModemCapability.RESTART in parser.capabilities
+
+    def test_restart_method_exists(self):
+        """Test that restart method exists."""
+        parser = MotorolaMB8611HnapParser()
+        assert hasattr(parser, "restart")
+        assert callable(parser.restart)
+
+    @patch("custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPJsonRequestBuilder")
+    def test_restart_success(self, mock_builder_class):
+        """Test successful restart command."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        ***REMOVED*** Mock successful restart response
+        mock_builder = Mock()
+        mock_builder.call_single.return_value = json.dumps({
+            "SetMotoStatusDSTargetFreqResponse": {
+                "SetMotoStatusDSTargetFreqResult": "OK"
+            }
+        })
+        mock_builder_class.return_value = mock_builder
+
+        result = parser.restart(mock_session, base_url)
+
+        assert result is True
+        mock_builder.call_single.assert_called_once()
+        call_args = mock_builder.call_single.call_args
+        assert call_args[0][2] == "SetMotoStatusDSTargetFreq"
+        assert call_args[0][3]["MotoStatusConnectionAction"] == "1"
+
+    @patch("custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPJsonRequestBuilder")
+    def test_restart_connection_reset_is_success(self, mock_builder_class):
+        """Test that connection reset during restart is treated as success."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        ***REMOVED*** Mock connection reset (modem rebooting)
+        mock_builder = Mock()
+        mock_builder.call_single.side_effect = ConnectionResetError("Connection reset by peer")
+        mock_builder_class.return_value = mock_builder
+
+        result = parser.restart(mock_session, base_url)
+
+        ***REMOVED*** Connection reset means the modem is rebooting - success!
+        assert result is True
+
+    @patch("custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPJsonRequestBuilder")
+    def test_restart_failure(self, mock_builder_class):
+        """Test restart failure response."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        ***REMOVED*** Mock failed restart response
+        mock_builder = Mock()
+        mock_builder.call_single.return_value = json.dumps({
+            "SetMotoStatusDSTargetFreqResponse": {
+                "SetMotoStatusDSTargetFreqResult": "FAILED"
+            }
+        })
+        mock_builder_class.return_value = mock_builder
+
+        result = parser.restart(mock_session, base_url)
+
+        assert result is False
+
+    def test_restart_uses_stored_json_builder(self):
+        """Test that restart reuses the JSON builder from login."""
+        parser = MotorolaMB8611HnapParser()
+        mock_session = Mock()
+        base_url = "https://192.168.100.1"
+
+        ***REMOVED*** Simulate that login was called and stored a builder
+        mock_builder = Mock()
+        mock_builder.call_single.return_value = json.dumps({
+            "SetMotoStatusDSTargetFreqResponse": {
+                "SetMotoStatusDSTargetFreqResult": "OK"
+            }
+        })
+        parser._json_builder = mock_builder
+
+        result = parser.restart(mock_session, base_url)
+
+        assert result is True
+        ***REMOVED*** Should use the stored builder, not create a new one
+        mock_builder.call_single.assert_called_once()

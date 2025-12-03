@@ -843,4 +843,4 @@ Created for monitoring Cox Cable Motorola modems, but designed to work with vari
 **⚠️ Disclaimer:**
 This integration interacts with the **user-facing diagnostic interface** (LAN side) of your modem. It does not modify boot files, interact with the ISP side (WAN), or bypass any service limits.
 
-Solent Labs is not affiliated with Arris, Motorola, Netgear, or any ISP. All product names are trademarks of their respective owners. Use this software at your own risk.
+Solent Labs™ is not affiliated with Arris, Motorola, Netgear, or any ISP. All product names are trademarks of their respective owners. Use this software at your own risk.
