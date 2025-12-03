@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Moniteur de Modem Câble",
-        "description": "Configurez la connexion de votre modem câble.",
+        "description": "Connectez votre modem. Les modèles avec * ne sont pas vérifiés.",
         "data": {
           "host": "Adresse IP du Modem",
           "username": "Nom d'utilisateur",
@@ -11,18 +11,18 @@
           "modem_choice": "Modèle du Modem"
         },
         "data_description": {
-          "host": "Généralement 192.168.100.1 pour la plupart des modems câble",
-          "username": "Optionnel, généralement 'admin' (laisser vide si non requis)",
-          "password": "Optionnel, stocké de manière sécurisée (laisser vide si non requis)",
-          "modem_choice": "Sélectionnez votre modèle de modem, ou choisissez 'auto' pour la détection automatique. Les modèles marqués d'un * ne sont pas vérifiés ou ont des problèmes connus."
+          "host": "Généralement 192.168.100.1",
+          "username": "Laisser vide si non requis",
+          "password": "Laisser vide si non requis",
+          "modem_choice": "'auto' pour détection automatique"
         }
       }
     },
     "error": {
-      "invalid_auth": "Échec de l'authentification - le modem a renvoyé la page de connexion.\n\nVeuillez vérifier :\n1. Le nom d'utilisateur est correct (généralement 'admin', vérifiez l'étiquette du modem)\n2. Le mot de passe est correct (vérifiez l'étiquette du modem)\n3. Les identifiants n'ont pas été modifiés par rapport aux valeurs par défaut\n\nSi vous continuez à avoir des problèmes :\n1. Essayez de vous connecter manuellement au modem à https://192.168.100.1\n2. Assurez-vous que les mêmes identifiants fonctionnent dans un navigateur web\n3. Activez la journalisation de débogage et téléchargez les diagnostics à partager avec les développeurs",
+      "invalid_auth": "Échec de l'authentification - le modem a renvoyé la page de connexion.\n\nVeuillez vérifier :\n1. Le nom d'utilisateur est correct (généralement 'admin', vérifiez l'étiquette du modem)\n2. Le mot de passe est correct (vérifiez l'étiquette du modem)\n3. Les identifiants n'ont pas été modifiés par rapport aux valeurs par défaut\n\nEssayez de vous connecter manuellement au modem à https://192.168.100.1 pour vérifier les identifiants.",
       "network_unreachable": "Impossible d'atteindre le modem - problème de connectivité réseau.\n\nVeuillez vérifier :\n1. Connexion réseau - Êtes-vous sur le bon réseau WiFi ?\n2. WiFi invité - Les réseaux invités bloquent souvent l'accès aux appareils locaux\n3. VPN - Déconnectez toute connexion VPN active\n4. Adresse IP - Vérifiez l'IP du modem (généralement 192.168.100.1)\n5. Interface web du modem - Assurez-vous qu'elle est activée et accessible\n\nEssayez d'accéder au modem directement dans votre navigateur pour vérifier la connectivité.",
-      "cannot_connect": "Échec de la connexion au modem.\n\nVeuillez vérifier :\n1. L'adresse IP est correcte (généralement 192.168.100.1)\n2. Si le modem nécessite une authentification, entrez nom d'utilisateur/mot de passe (laisser vide si pas d'authentification nécessaire)\n3. L'interface web du modem est accessible depuis le réseau de Home Assistant\n\nSi votre modèle de modem n'est pas pris en charge :\nSélectionnez 'Modem Inconnu (Mode de Secours)' dans le menu déroulant Modèle du Modem pour activer la surveillance de connectivité de base et la capture HTML pour un support futur.",
-      "unsupported_modem": "La détection automatique n'a pas pu identifier votre modèle de modem.\n\nPour continuer :\n1. Sélectionnez 'Modem Inconnu (Mode de Secours)' dans le menu déroulant Modèle du Modem ci-dessous\n2. Cela activera la surveillance de connectivité de base (ping/latence HTTP)\n3. Après l'installation, cliquez sur le bouton 'Capturer HTML'\n4. Téléchargez les diagnostics et partagez-les avec les développeurs pour ajouter un support complet",
+      "cannot_connect": "Échec de la connexion au modem.\n\nVeuillez vérifier :\n1. L'adresse IP est correcte (généralement 192.168.100.1)\n2. Si le modem nécessite une authentification, entrez nom d'utilisateur/mot de passe\n3. L'interface web du modem est accessible depuis le réseau de Home Assistant\n\nSi votre modem n'est pas supporté, sélectionnez 'Modem Inconnu (Mode de Secours)' pour activer la surveillance de base et la capture HTML.",
+      "unsupported_modem": "La détection automatique n'a pas pu identifier votre modèle de modem.\n\nPour continuer :\n1. Sélectionnez 'Modem Inconnu (Mode de Secours)' dans le menu ci-dessous\n2. Cela activera la surveillance de connectivité de base (ping/latence HTTP)\n3. Après l'installation, cliquez sur le bouton 'Capturer HTML'\n4. Téléchargez les diagnostics et partagez-les avec les développeurs pour ajouter un support complet",
       "invalid_input": "Entrée invalide fournie. Veuillez vérifier les valeurs et réessayer.",
       "unknown": "Une erreur inattendue s'est produite. Vérifiez les journaux de Home Assistant pour plus de détails."
     },
@@ -30,27 +30,27 @@
       "already_configured": "Ce modem est déjà configuré"
     },
     "progress": {
-      "validate": "Connexion au modem et détection du modèle..."
+      "validate": "Connexion au modem..."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Paramètres du Moniteur de Modem Câble",
-        "description": "Modem Détecté : {detected_modem} ({detected_manufacturer})\nDernière Détection : {last_detection}",
+        "title": "Paramètres du Modem",
+        "description": "Actuel : {detected_modem}\nDernière vérification : {last_detection}",
         "data": {
-          "host": "Adresse IP du Modem",
-          "username": "Nom d'utilisateur (optionnel)",
-          "password": "Mot de passe (laisser vide pour conserver l'actuel)",
+          "host": "IP du Modem",
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe",
           "modem_choice": "Modèle du Modem",
-          "scan_interval": "Intervalle de Mise à Jour (secondes)"
+          "scan_interval": "Intervalle (sec)"
         },
         "data_description": {
-          "host": "L'adresse IP de votre modem câble (généralement 192.168.100.1 pour les modems Motorola)",
-          "username": "Nom d'utilisateur pour l'interface web du modem (laisser vide si non requis)",
-          "password": "Mot de passe pour l'interface web du modem (laisser vide pour conserver le mot de passe existant, ou si non requis)",
-          "modem_choice": "Sélectionnez votre modèle de modem, ou choisissez 'auto' pour la détection automatique. Modifiez ceci si la détection automatique ne fonctionne pas correctement. Les modèles marqués d'un * ne sont pas vérifiés ou ont des problèmes connus.",
-          "scan_interval": "Fréquence d'interrogation du modem pour les données (60-1800 secondes). Par défaut : 600 secondes (10 minutes). Des valeurs plus basses augmentent le trafic réseau et peuvent surcharger les modems plus anciens."
+          "host": "Généralement 192.168.100.1",
+          "username": "Laisser vide si non requis",
+          "password": "Vide = conserver actuel",
+          "modem_choice": "'auto' pour détection. Modifier si incorrect.",
+          "scan_interval": "60-1800 sec. Défaut 600 (10 min)"
         }
       }
     }

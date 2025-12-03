@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Monitor de Módem de Cable",
-        "description": "Configura la conexión de tu módem de cable.",
+        "description": "Conecta tu módem. Modelos con * no están verificados.",
         "data": {
           "host": "Dirección IP del Módem",
           "username": "Usuario",
@@ -11,18 +11,18 @@
           "modem_choice": "Modelo del Módem"
         },
         "data_description": {
-          "host": "Normalmente 192.168.100.1 para la mayoría de los módems de cable",
-          "username": "Opcional, típicamente 'admin' (dejar en blanco si no es necesario)",
-          "password": "Opcional, almacenada de forma segura (dejar en blanco si no es necesario)",
-          "modem_choice": "Selecciona el modelo de tu módem, o elige 'auto' para detectarlo automáticamente. Los modelos marcados con * no están verificados o tienen problemas conocidos."
+          "host": "Normalmente 192.168.100.1",
+          "username": "Dejar en blanco si no es necesario",
+          "password": "Dejar en blanco si no es necesario",
+          "modem_choice": "Usa 'auto' para detección automática"
         }
       }
     },
     "error": {
-      "invalid_auth": "Error de autenticación - el módem devolvió la página de inicio de sesión.\n\nPor favor verifica:\n1. El usuario es correcto (típicamente 'admin', revisa la etiqueta del módem)\n2. La contraseña es correcta (revisa la etiqueta del módem)\n3. Las credenciales no han sido cambiadas de los valores predeterminados\n\nSi continúas teniendo problemas:\n1. Intenta iniciar sesión manualmente en el módem en https://192.168.100.1\n2. Asegúrate de que las mismas credenciales funcionen en un navegador web\n3. Habilita el registro de depuración y descarga los diagnósticos para compartir con los desarrolladores",
+      "invalid_auth": "Error de autenticación - el módem devolvió la página de inicio de sesión.\n\nPor favor verifica:\n1. El usuario es correcto (típicamente 'admin', revisa la etiqueta del módem)\n2. La contraseña es correcta (revisa la etiqueta del módem)\n3. Las credenciales no han sido cambiadas de los valores predeterminados\n\nIntenta iniciar sesión manualmente en el módem en https://192.168.100.1 para verificar las credenciales.",
       "network_unreachable": "No se puede alcanzar el módem - problema de conectividad de red.\n\nPor favor verifica:\n1. Conexión de red - ¿Estás en la red WiFi correcta?\n2. WiFi de invitados - Las redes de invitados a menudo bloquean el acceso a dispositivos locales\n3. VPN - Desconecta cualquier conexión VPN activa\n4. Dirección IP - Verifica la IP del módem (típicamente 192.168.100.1)\n5. Interfaz web del módem - Asegúrate de que esté habilitada y accesible\n\nIntenta acceder al módem directamente en tu navegador para verificar la conectividad.",
-      "cannot_connect": "Error al conectar con el módem.\n\nPor favor verifica:\n1. La dirección IP es correcta (típicamente 192.168.100.1)\n2. Si el módem requiere autenticación, ingresa usuario/contraseña (dejar en blanco si no necesita autenticación)\n3. La interfaz web del módem es accesible desde la red de Home Assistant\n\nSi el modelo de tu módem no está soportado:\nSelecciona 'Módem Desconocido (Modo de Respaldo)' en el menú Modelo del Módem para habilitar el monitoreo básico de conectividad y captura de HTML para soporte futuro.",
-      "unsupported_modem": "La detección automática no pudo identificar el modelo de tu módem.\n\nPara continuar:\n1. Selecciona 'Módem Desconocido (Modo de Respaldo)' en el menú Modelo del Módem abajo\n2. Esto habilitará el monitoreo básico de conectividad (ping/latencia HTTP)\n3. Después de la instalación, haz clic en el botón 'Capturar HTML'\n4. Descarga los diagnósticos y compártelos con los desarrolladores para añadir soporte completo",
+      "cannot_connect": "Error al conectar con el módem.\n\nPor favor verifica:\n1. La dirección IP es correcta (típicamente 192.168.100.1)\n2. Si el módem requiere autenticación, ingresa usuario/contraseña\n3. La interfaz web del módem es accesible desde la red de Home Assistant\n\nSi tu módem no está soportado, selecciona 'Módem Desconocido (Modo de Respaldo)' para habilitar monitoreo básico y captura de HTML.",
+      "unsupported_modem": "La detección automática no pudo identificar el modelo de tu módem.\n\nPara continuar:\n1. Selecciona 'Módem Desconocido (Modo de Respaldo)' en el menú abajo\n2. Esto habilitará el monitoreo básico de conectividad (ping/latencia HTTP)\n3. Después de la instalación, haz clic en el botón 'Capturar HTML'\n4. Descarga los diagnósticos y compártelos con los desarrolladores para añadir soporte completo",
       "invalid_input": "Entrada inválida proporcionada. Por favor revisa los valores e intenta de nuevo.",
       "unknown": "Ocurrió un error inesperado. Revisa los registros de Home Assistant para más detalles."
     },
@@ -30,27 +30,27 @@
       "already_configured": "Este módem ya está configurado"
     },
     "progress": {
-      "validate": "Conectando al módem y detectando modelo..."
+      "validate": "Conectando al módem..."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configuración del Monitor de Módem de Cable",
-        "description": "Módem Detectado: {detected_modem} ({detected_manufacturer})\nÚltima Detección: {last_detection}",
+        "title": "Configuración del Módem",
+        "description": "Actual: {detected_modem}\nÚltima verificación: {last_detection}",
         "data": {
-          "host": "Dirección IP del Módem",
-          "username": "Usuario (opcional)",
-          "password": "Contraseña (dejar en blanco para mantener la actual)",
+          "host": "IP del Módem",
+          "username": "Usuario",
+          "password": "Contraseña",
           "modem_choice": "Modelo del Módem",
-          "scan_interval": "Intervalo de Actualización (segundos)"
+          "scan_interval": "Intervalo (seg)"
         },
         "data_description": {
-          "host": "La dirección IP de tu módem de cable (típicamente 192.168.100.1 para módems Motorola)",
-          "username": "Usuario para la interfaz web del módem (dejar en blanco si no es necesario)",
-          "password": "Contraseña para la interfaz web del módem (dejar en blanco para mantener la contraseña existente, o si no es necesario)",
-          "modem_choice": "Selecciona el modelo de tu módem, o elige 'auto' para detectarlo automáticamente. Cambia esto si la detección automática no funciona correctamente. Los modelos marcados con * no están verificados o tienen problemas conocidos.",
-          "scan_interval": "Con qué frecuencia consultar el módem para obtener datos (60-1800 segundos). Predeterminado: 600 segundos (10 minutos). Valores más bajos aumentan el tráfico de red y pueden sobrecargar módems más antiguos."
+          "host": "Normalmente 192.168.100.1",
+          "username": "Dejar en blanco si no es necesario",
+          "password": "En blanco = mantener actual",
+          "modem_choice": "Usa 'auto' para detección. Cambia si es incorrecto.",
+          "scan_interval": "60-1800 seg. Predeterminado 600 (10 min)"
         }
       }
     }
