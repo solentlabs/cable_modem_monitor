@@ -7,7 +7,7 @@ Auto-generated index of modem fixtures.
 - Parser classes - Verified status, manufacturer
 - `README.md` - Model name, contributor notes
 
-**Total Modems:** 12
+**Total Modems:** 13
 
 ## Fixture Organization Guidelines
 
@@ -27,6 +27,7 @@ All fixture directories should follow this structure:
 
 | Manufacturer | Model | DOCSIS | ISPs | Files | Status |
 |--------------|-------|--------|------|-------|--------|
+| ARRIS | [CM820B](arris/fixtures/cm820b/README.md) | 3.0 | ![VOLY](https://img.shields.io/badge/-VOLY-gray?style=flat-square "Volya") | 2 | ⏳ Awaiting |
 | Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 2 | ⏳ Awaiting |
 | ARRIS | [SB6141](arris/fixtures/sb6141/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") ![MED](https://img.shields.io/badge/-MED-557799?style=flat-square "Mediacom") | 1 | ✅ Verified |
 | ARRIS | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") | 1 | ✅ Verified |
@@ -44,6 +45,7 @@ All fixture directories should follow this structure:
 
 ```
 DOCSIS 3.0
+├── 2011  ARRIS       CM820B     ░███████████████████  14yr  Current
 ├── 2011  ARRIS       SB6141     ░███████████░░░░░░░░   8yr  EOL 2019
 ├── 2014  Netgear     C3700-100N ░░░░░███████████░░░░   8yr  EOL 2022
 ├── 2016  Netgear     CM600      ░░░░░░░░█████████░░░   7yr  EOL 2023
