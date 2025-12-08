@@ -61,7 +61,7 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the project maintainer at the email address listed in the
 [GitHub profile](https://github.com/kwschulz) or through GitHub's
-[reporting mechanisms](https://github.com/kwschulz/cable_modem_monitor/issues).
+[reporting mechanisms](https://github.com/solentlabs/cable_modem_monitor/issues).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

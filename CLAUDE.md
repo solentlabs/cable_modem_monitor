@@ -1,6 +1,8 @@
 # Claude Rules
 
-**Read `AI_CONTEXT.md` for project context, workflows, and development guidance.**
+> **For project context**: See `AI_CONTEXT.md` for workflows, architecture, and development guidance.
+>
+> **This file**: Claude-specific behavioral constraints.
 
 ## Irreversible Operations - STOP and VERIFY
 
