@@ -17,7 +17,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ class UniversalFallbackParser(ModemParser):
     models = ["Unknown"]
     priority = 1  # LOWEST priority - only used as last resort
 
-    # Verification status
-    verified = True  # Fallback parser is a diagnostic tool, always "works"
+    # Parser status - diagnostic tool, always "works"
+    status = ParserStatus.VERIFIED
     verification_source = "Diagnostic tool for HTML capture - not a real parser"
 
     # Capabilities - Fallback parser has no data capabilities (diagnostic mode only)

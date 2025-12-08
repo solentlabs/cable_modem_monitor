@@ -10,7 +10,7 @@
 | **Released** | 2017 |
 | **Status** | Current |
 | **ISPs** | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron |
-| **Parser** | ⏳ Pending |
+| **Parser** | ✅ Verified |
 
 <!-- END AUTO-GENERATED -->
 
@@ -33,7 +33,7 @@
 ## Links
 
 - [Technicolor TC4400 Support](https://www.technicolor.com/)
-- [Related Issue: #1](https://github.com/kwschulz/cable_modem_monitor/issues/1)
+- [Related Issue: #1](https://github.com/solentlabs/cable_modem_monitor/issues/1)
 
 ## Authentication
 

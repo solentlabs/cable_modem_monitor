@@ -11,7 +11,7 @@ from custom_components.cable_modem_monitor.core.auth_config import NoAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,9 +23,9 @@ class ArrisSB6190Parser(ModemParser):
     manufacturer = "ARRIS"
     models = ["SB6190"]
 
-    # Verification status
-    verified = False  # No user reports confirming this works
-    verification_source = None  # No confirmation found
+    # Parser status
+    status = ParserStatus.VERIFIED  # Confirmed by @sfennell in PR #22 (v3.0.0)
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/pull/22"
 
     # Device metadata
     release_date = "2016"

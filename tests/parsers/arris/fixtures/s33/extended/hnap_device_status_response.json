@@ -1,0 +1,12 @@
+{
+  "GetArrisDeviceStatusResponse": {
+    "FirmwareVersion": "TB01.03.001.10_012022_212.S3",
+    "InternetConnection": "Connected",
+    "DownstreamFrequency": "537000000 Hz",
+    "DownstreamSignalPower": "5 dBmV",
+    "DownstreamSignalSnr": "40 dB",
+    "StatusSoftwareModelName": "S33",
+    "StatusSoftwareModelName2": "S33",
+    "GetArrisDeviceStatusResult": "OK"
+  }
+}

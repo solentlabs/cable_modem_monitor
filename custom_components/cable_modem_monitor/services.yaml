@@ -12,7 +12,3 @@ clear_history:
           min: 1
           max: 365
           unit_of_measurement: days
-
-cleanup_entities:
-  name: Cleanup Entities
-  description: Remove orphaned cable modem entities left over from upgrades or reinstalls. This service identifies entities that are no longer connected to the integration and removes them from the entity registry. Use this after upgrading from v1.x to v2.0 or after entity naming changes.
