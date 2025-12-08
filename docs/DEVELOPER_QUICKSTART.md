@@ -9,7 +9,7 @@ Quick reference for getting started with Cable Modem Monitor development.
 
 ```bash
 ***REMOVED*** Clone and start
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 make docker-start
 
@@ -244,8 +244,8 @@ cable_modem_monitor/
 ***REMOVED******REMOVED*** URLs
 
 - **Home Assistant UI**: http://localhost:8123
-- **GitHub Repo**: https://github.com/kwschulz/cable_modem_monitor
-- **Issues**: https://github.com/kwschulz/cable_modem_monitor/issues
+- **GitHub Repo**: https://github.com/solentlabs/cable_modem_monitor
+- **Issues**: https://github.com/solentlabs/cable_modem_monitor/issues
 
 ---
 
@@ -303,8 +303,8 @@ lsof -ti:8123 | xargs kill
 1. **Environment issues?** See [Getting Started Guide](./GETTING_STARTED.md) for comprehensive setup and troubleshooting
 2. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed workflow and guidelines
 3. Read [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
-4. Open a [GitHub Issue](https://github.com/kwschulz/cable_modem_monitor/issues)
-5. Ask in [GitHub Discussions](https://github.com/kwschulz/cable_modem_monitor/discussions)
+4. Open a [GitHub Issue](https://github.com/solentlabs/cable_modem_monitor/issues)
+5. Ask in [GitHub Discussions](https://github.com/solentlabs/cable_modem_monitor/discussions)
 
 ---
 
@@ -313,7 +313,7 @@ lsof -ti:8123 | xargs kill
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for full development workflow
 - Check [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the codebase
 - Review [MODEM_COMPATIBILITY_GUIDE.md](./MODEM_COMPATIBILITY_GUIDE.md) for parser details
-- See [TEST_FIXTURE_STATUS.md](./TEST_FIXTURE_STATUS.md) for testing info
+- See [FIXTURES.md](../tests/parsers/FIXTURES.md) for supported modems and test fixtures
 
 ---
 

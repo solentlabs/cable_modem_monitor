@@ -136,7 +136,7 @@ jobs:
 
             ---
 
-            For more information, see [CONTRIBUTING.md](https://github.com/kwschulz/cable_modem_monitor/blob/main/CONTRIBUTING.md).`;
+            For more information, see [CONTRIBUTING.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md).`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

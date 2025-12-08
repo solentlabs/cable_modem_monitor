@@ -66,7 +66,7 @@ jobs:
 
           if [ -z "$CHANGELOG" ]; then
             echo "⚠️ Warning: No changelog entry found for version $VERSION"
-            CHANGELOG="See [CHANGELOG.md](https://github.com/kwschulz/cable_modem_monitor/blob/main/CHANGELOG.md) for details."
+            CHANGELOG="See [CHANGELOG.md](https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md) for details."
           fi
 
           ***REMOVED*** Save to file to preserve formatting

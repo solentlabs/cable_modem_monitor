@@ -86,7 +86,7 @@ The tag push triggers `.github/workflows/release.yml` which:
 - Creates a GitHub Release
 - Attaches release notes from the tag message
 
-Verify at: https://github.com/kwschulz/cable_modem_monitor/releases
+Verify at: https://github.com/solentlabs/cable_modem_monitor/releases
 
 ***REMOVED******REMOVED*** Version Numbering
 

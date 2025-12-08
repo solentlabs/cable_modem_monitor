@@ -4,10 +4,8 @@ Common issues and solutions for Cable Modem Monitor integration.
 
 ***REMOVED******REMOVED*** Table of Contents
 - [Connection and Authentication Issues](***REMOVED***connection-and-authentication-issues)
-- [Entity ID Cleanup](***REMOVED***entity-id-cleanup)
 - [Upstream Sensors Not Appearing](***REMOVED***upstream-sensors-not-appearing)
 - [Duplicate Entities](***REMOVED***duplicate-entities)
-- [Migration Issues](***REMOVED***migration-issues)
 
 ---
 
@@ -21,8 +19,8 @@ Common issues and solutions for Cable Modem Monitor integration.
 - Logs show timeout or connection errors
 - XB7 users may see timeout messages in logs
 
-**Improved Logging (v2.6.0+):**
-Starting in v2.6.0, connection issues are logged with appropriate severity levels:
+**Logging Levels:**
+Connection issues are logged with appropriate severity levels:
 - **Timeouts** - Logged at DEBUG level (modem may be busy or rebooting)
 - **Connection errors** - Logged at WARNING level (network issue)
 - **Authentication failures** - Logged at ERROR level (wrong credentials)
@@ -48,9 +46,9 @@ Cable modems periodically reboot or become busy during channel maintenance. This
 
 ***REMOVED******REMOVED******REMOVED******REMOVED*** 2. Network Issues vs. Web Server Issues
 
-**New in v2.6.0: Dual-Layer Health Monitoring**
+**Dual-Layer Health Monitoring**
 
-The integration now performs both ICMP ping and HTTP checks to diagnose connectivity:
+The integration performs both ICMP ping and HTTP checks to diagnose connectivity:
 
 | ICMP Ping | HTTP HEAD | Status | Diagnosis |
 |-----------|-----------|--------|-----------|
@@ -115,9 +113,9 @@ The integration now performs both ICMP ping and HTTP checks to diagnose connecti
 
 ***REMOVED******REMOVED******REMOVED*** Using Health Monitoring to Diagnose Issues
 
-**New in v2.6.0: Diagnostic Sensors**
+**Diagnostic Sensors**
 
-Three new sensors help diagnose connectivity:
+Three sensors help diagnose connectivity:
 
 1. **Cable Modem Health Status** (`sensor.cable_modem_health_status`)
    - Shows: `healthy`, `degraded`, `icmp_blocked`, or `unresponsive`
@@ -132,6 +130,8 @@ Three new sensors help diagnose connectivity:
    - Shows Layer 7 (HTTP) response time in milliseconds
    - Normal: 10-50ms for local network
    - Alert if >500ms consistently
+
+> **📚 Network Layers**: These refer to the [OSI model](https://grokipedia.com/page/OSI_model). Layer 3 (Network) handles IP routing and ICMP ping, while Layer 7 (Application) handles HTTP. By testing both layers, we can pinpoint whether issues are at the network level or the modem's web server.
 
 **Example Automation:**
 ```yaml
@@ -152,9 +152,7 @@ automation:
 
 ***REMOVED******REMOVED******REMOVED*** Modem Model Selection
 
-**New in v3.0.0: Modem Model Selection**
-
-During setup and in settings, you can now select your specific modem model or use auto-detection:
+During setup and in settings, you can select your specific modem model or use auto-detection:
 
 **Auto Detection (Recommended):**
 - Select "auto" from the Modem Model dropdown
@@ -240,124 +238,6 @@ logger:
 
 ---
 
-***REMOVED******REMOVED*** Entity ID Cleanup
-
-***REMOVED******REMOVED******REMOVED*** Problem: Old Entity IDs Without `cable_modem_` Prefix
-
-**Symptoms:**
-- Entities like `sensor.us_ch_1_power` or `sensor.downstream_ch_1_power` exist
-- Cannot delete them through the UI (delete button disabled)
-- These are from before v2.0 entity naming standardization
-
-**Why This Happens:**
-These entities were created before v2.0's automatic entity ID migration, or were created after migration but with the wrong naming scheme. They're tied to the active config entry, which prevents normal deletion.
-
-**Solution: Rename Entities to Use Correct Prefix**
-
-You can rename them through the UI or use a script for bulk updates.
-
-***REMOVED******REMOVED******REMOVED******REMOVED*** Option 1: Manual Rename (1-2 entities)
-
-1. Go to **Settings → Devices & Services → Entities**
-2. Search for the old entity (e.g., `us_ch_1_power`)
-3. Click on it
-4. Click the **settings gear icon**
-5. Under "Entity ID", change it to include the `cable_modem_` prefix:
-   - `sensor.us_ch_1_power` → `sensor.cable_modem_upstream_ch_1_power`
-   - `sensor.downstream_ch_1_power` → `sensor.cable_modem_downstream_ch_1_power`
-6. Click **Update**
-7. **Restart Home Assistant**
-8. **Hard refresh your browser** (Ctrl+Shift+R) to clear cache
-
-***REMOVED******REMOVED******REMOVED******REMOVED*** Option 2: Bulk Rename Script (10+ entities)
-
-If you have many entities to rename, use this Python script:
-
-**⚠️ IMPORTANT: Stop Home Assistant before running this script!**
-
-```python
-***REMOVED***!/usr/bin/env python3
-"""
-Rename cable modem entities to use correct cable_modem_ prefix.
-Run this script while Home Assistant is STOPPED.
-"""
-import json
-import sys
-
-***REMOVED*** Define the renames needed (add your specific entities here)
-renames = {
-    'sensor.us_ch_1_power': 'sensor.cable_modem_upstream_ch_1_power',
-    'sensor.us_ch_1_frequency': 'sensor.cable_modem_upstream_ch_1_frequency',
-    'sensor.us_ch_2_power': 'sensor.cable_modem_upstream_ch_2_power',
-    'sensor.us_ch_2_frequency': 'sensor.cable_modem_upstream_ch_2_frequency',
-    ***REMOVED*** Add more as needed...
-}
-
-***REMOVED*** Load entity registry
-registry_path = '/config/.storage/core.entity_registry'
-try:
-    with open(registry_path, 'r') as f:
-        data = json.load(f)
-except FileNotFoundError:
-    print(f"ERROR: Could not find {registry_path}")
-    print("Make sure you run this on your Home Assistant server")
-    sys.exit(1)
-
-***REMOVED*** Create backup
-backup_path = registry_path + '.backup'
-with open(backup_path, 'w') as f:
-    json.dump(data, f, indent=2)
-print(f"✓ Backup created: {backup_path}")
-
-***REMOVED*** Rename entities
-renamed = 0
-skipped = 0
-for entity in data['data']['entities']:
-    old_id = entity.get('entity_id')
-    if old_id in renames:
-        new_id = renames[old_id]
-        ***REMOVED*** Check if new_id already exists
-        existing = any(e.get('entity_id') == new_id for e in data['data']['entities'])
-        if existing:
-            print(f"⊗ Skipping {old_id}: {new_id} already exists")
-            skipped += 1
-            continue
-        entity['entity_id'] = new_id
-        print(f"✓ Renamed: {old_id} → {new_id}")
-        renamed += 1
-
-print(f"\nTotal renamed: {renamed}")
-print(f"Skipped (already exist): {skipped}")
-
-if renamed > 0:
-    ***REMOVED*** Save the updated registry
-    with open(registry_path, 'w') as f:
-        json.dump(data, f, indent=2)
-    print(f"\n✓ Changes saved to {registry_path}")
-    print("\nNext steps:")
-    print("1. Start Home Assistant")
-    print("2. Hard refresh your browser (Ctrl+Shift+R)")
-    print("3. Verify entities appear with new names")
-else:
-    print("\nNo changes made.")
-```
-
-**Steps:**
-
-1. **Stop Home Assistant** (Settings → System → Stop)
-2. Copy the script to your Home Assistant server
-3. Edit the `renames` dictionary with your specific entity IDs
-4. Run: `sudo python3 rename_entities.py`
-5. **Start Home Assistant**
-6. **Hard refresh your browser** (Ctrl+Shift+R)
-
-**To restore from backup if needed:**
-```bash
-sudo cp /config/.storage/core.entity_registry.backup /config/.storage/core.entity_registry
-```
-
----
-
 ***REMOVED******REMOVED*** Upstream Sensors Not Appearing
 
 ***REMOVED******REMOVED******REMOVED*** Problem: No Upstream Channel Sensors Created
@@ -390,7 +270,7 @@ sudo cp /config/.storage/core.entity_registry.backup /config/.storage/core.entit
    - Settings → Devices & Services → Cable Modem Monitor
    - Click ⋮ (three dots) → Reload
 
-If upstream sensors still don't appear after upgrading to v2.0.0+, please [open an issue](https://github.com/kwschulz/cable_modem_monitor/issues) with:
+If upstream sensors still don't appear after upgrading to v2.0.0+, please [open an issue](https://github.com/solentlabs/cable_modem_monitor/issues) with:
 - Your modem model
 - Debug logs showing upstream parsing
 - Diagnostics download from the integration
@@ -428,48 +308,6 @@ The "Ungrouped" entity will disappear once the browser cache is cleared.
 
 ---
 
-***REMOVED******REMOVED*** Migration Issues
-
-***REMOVED******REMOVED******REMOVED*** Problem: Entities Not Migrating from v1.x to v2.0
-
-**Symptoms:**
-- After upgrading to v2.0, entities still have old IDs
-- No automatic migration occurred
-- Entities use old naming without `cable_modem_` prefix
-
-**What Should Happen:**
-v2.0 includes automatic entity ID migration that runs on first startup after upgrade.
-
-**If Migration Didn't Work:**
-
-1. **Check if migration ran**:
-   - Settings → System → Logs
-   - Search for "Migrating" or "entity_id"
-   - Look for migration log messages
-
-2. **Manual Migration Options**:
-   - See [UPGRADING.md](UPGRADING.md) for detailed steps
-   - Option 1: Fresh install (cleanest)
-   - Option 2: Manual rename (preserves history)
-
-3. **Common Migration Blockers**:
-   - **Conflict with another integration** - If another integration already uses the target entity ID, migration will skip that entity
-   - **Platform mismatch** - If entity is from a different platform (not `cable_modem_monitor`), it won't migrate
-   - **Missing entity registry** - Rare, but entity registry corruption can prevent migration
-
-**Check for Conflicts:**
-```yaml
-***REMOVED*** Look for log messages like:
-"Cannot migrate sensor.downstream_ch_1_power: Target entity ID already exists (platform: other_integration)"
-```
-
-**Solution for Conflicts:**
-1. Delete or rename the conflicting entity from the other integration
-2. Reload Cable Modem Monitor integration
-3. Migration will retry automatically
-
----
-
 ***REMOVED******REMOVED*** Getting Help
 
 If you encounter issues not covered here:
@@ -491,7 +329,7 @@ If you encounter issues not covered here:
      - Recent logs (last 150 entries, sanitized)
      - Error details
    - This provides complete debugging information in one file!
-4. **Open an Issue**: [GitHub Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
+4. **Open an Issue**: [GitHub Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
    - Include your modem model
    - Attach diagnostics file (includes logs automatically)
    - If diagnostics aren't available, include manual logs

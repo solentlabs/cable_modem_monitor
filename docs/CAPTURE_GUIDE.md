@@ -7,9 +7,7 @@ This guide explains how to capture data from your modem to help developers add s
 | Situation | Use This Method |
 |-----------|-----------------|
 | Integration already installed | [Integration Capture Button](***REMOVED***method-1-integration-capture-button) |
-| Need to capture login/auth flow | [HAR Capture Script](***REMOVED***method-2-har-capture-script) |
-| Can't install anything | [Browser DevTools](***REMOVED***method-3-browser-devtools) |
-| Standalone (no integration) | [HTML Capture Script](***REMOVED***method-4-html-capture-script) |
+| Adding a new modem / need auth flow | [HAR Capture Script](***REMOVED***method-2-har-capture-script) |
 
 ---
 
@@ -33,7 +31,7 @@ This guide explains how to capture data from your modem to help developers add s
 
 **Best for:** Authentication issues, capturing full HTTP conversation including login flow.
 
-HAR files capture the complete HTTP conversation - headers, cookies, auth flow, and content.
+HAR (HTTP Archive) files capture the complete HTTP conversation - headers, cookies, auth flow, and content.
 
 ***REMOVED******REMOVED******REMOVED*** VS Code (One-Click)
 
@@ -63,49 +61,6 @@ python scripts/capture_modem.py --browser firefox
 4. Close browser - script sanitizes and compresses output
 
 The `.sanitized.har.gz` file is safe to share.
-
----
-
-***REMOVED******REMOVED*** Method 3: Browser DevTools
-
-**Best for:** When you can't install Python/Playwright.
-
-***REMOVED******REMOVED******REMOVED*** Firefox (Recommended)
-
-Firefox provides the most reliable HAR export.
-
-1. Open modem: `http://192.168.100.1`
-2. Press **F12** → **Network** tab
-3. Click gear → Check **Persist Logs**
-4. Log into modem, navigate to status page
-5. Right-click in Network panel → **Save All As HAR**
-6. Sanitize: `python scripts/sanitize_har.py your_capture.har`
-7. Attach sanitized file to GitHub issue
-
-***REMOVED******REMOVED******REMOVED*** Chrome/Edge (Limited)
-
-> ⚠️ Chrome only retains response bodies for the last page. Use Firefox for complete captures.
-
-Chrome is still useful for capturing authentication flow (login requests, cookies).
-
-1. Open DevTools → Settings → Network
-2. Enable **"Allow to generate HAR with sensitive data"**
-3. Open modem, enable **Preserve log** and **Disable cache**
-4. Log in and navigate to status page
-5. Click download icon → **Export HAR (with sensitive data)**
-6. Sanitize before sharing
-
----
-
-***REMOVED******REMOVED*** Method 4: HTML Capture Script
-
-**Best for:** Standalone capture when integration isn't installed.
-
-```bash
-python3 tools/capture_modem_html.py
-```
-
-Follow prompts for IP and credentials. Creates a sanitized ZIP file.
 
 ---
 
@@ -143,9 +98,28 @@ Follow prompts for IP and credentials. Creates a sanitized ZIP file.
 ***REMOVED******REMOVED*** What Happens Next?
 
 1. You share the capture in a GitHub issue
-2. Developer analyzes the structure/auth flow
-3. Developer builds parser with your samples as fixtures
-4. New version released with your modem support
-5. You verify it works
+2. Developer analyzes the structure and auth flow
+3. Developer may request additional captures (common!)
+4. Parser built and tested against your samples
+5. You verify it works on your actual modem
 
-**Typical timeline:** 2-6 hours of development once capture is provided.
+***REMOVED******REMOVED******REMOVED*** Pages to Capture
+
+For a complete parser, we typically need:
+
+| Page Type | What It Contains |
+|-----------|------------------|
+| **Status/DOCSIS page** | Channel data (power, SNR, frequency) |
+| **System info page** | Uptime, firmware version, model |
+| **Login flow** | Authentication mechanism |
+
+**Tip:** Navigate through your modem's menu during capture - more pages = fewer follow-ups.
+
+***REMOVED******REMOVED******REMOVED*** Expect Iteration
+
+Most new modem support requires 2-3 rounds of captures as we discover:
+- Additional pages with useful data
+- Edge cases in the HTML structure
+- Authentication quirks
+
+This is normal! Quick responses to follow-up requests speed up the process.

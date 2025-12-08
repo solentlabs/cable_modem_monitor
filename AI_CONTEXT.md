@@ -1,7 +1,11 @@
-***REMOVED*** Cable Modem Monitor - Project Context
+***REMOVED*** Cable Modem Monitor - AI Assistant Context
+
+> **Purpose**: This file provides project context for AI assistants (Claude, Copilot, etc.) working on this codebase. It's optimized for quick comprehension of key workflows and gotchas.
+>
+> **For Claude specifically**: See also `CLAUDE.md` for behavioral rules.
 
 ***REMOVED******REMOVED*** Project Details
-- **GitHub Repository**: https://github.com/kwschulz/cable_modem_monitor
+- **GitHub Repository**: https://github.com/solentlabs/cable_modem_monitor
 - **Type**: Home Assistant integration (installable via HACS)
 
 **Dynamic values (look these up, don't hardcode):**
@@ -9,7 +13,7 @@
 - **Test count**: Run `pytest tests/ --collect-only -q | tail -1`
 - **Supported modems**: Run `python scripts/dev/list-supported-modems.py`
 - **Release history**: `CHANGELOG.md`
-- **Open issues**: https://github.com/kwschulz/cable_modem_monitor/issues
+- **Open issues**: https://github.com/solentlabs/cable_modem_monitor/issues
 
 ***REMOVED******REMOVED*** Adding Support for New Modems: The Fallback Parser Workflow
 

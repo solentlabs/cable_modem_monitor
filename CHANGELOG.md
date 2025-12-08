@@ -1122,7 +1122,7 @@ This release provides extensive diagnostic information to help understand why th
 - **Critical Bug Fix** - Fixed config flow validation that allowed setup to succeed even when modem was unreachable
   - Changed `config_flow.py` to check correct key: `cable_modem_connection_status` instead of `connection_status`
   - This bug caused sensors to show as "unavailable" with no data despite successful integration setup
-  - Resolves [***REMOVED***4](https://github.com/kwschulz/cable_modem_monitor/issues/4)
+  - Resolves [***REMOVED***4](https://github.com/solentlabs/cable_modem_monitor/issues/4)
 - **Diagnostics Data Fix** - Updated `diagnostics.py` to use correct data keys with `cable_modem_` prefix
   - Fixed all key names to match actual data structure returned by modem scraper
   - Diagnostics now properly display connection status, channel counts, and system info
@@ -1170,7 +1170,7 @@ This release provides extensive diagnostic information to help understand why th
   - Detection by URL pattern (`network_setup.jst`) and content
   - Basic HTTP Authentication support
   - Used by Rogers (Canada), Comcast
-  - Resolves [***REMOVED***2](https://github.com/kwschulz/cable_modem_monitor/issues/2)
+  - Resolves [***REMOVED***2](https://github.com/solentlabs/cable_modem_monitor/issues/2)
 
 ***REMOVED******REMOVED******REMOVED*** Test Coverage
 - Added 27 comprehensive tests for XB7 parser:
@@ -1551,11 +1551,11 @@ This release provides extensive diagnostic information to help understand why th
 - Modem-specific HTML parsing may need adjustment for some models
 - Limited to HTTP (no HTTPS support for modem connections)
 
-[1.3.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.3.0
-[1.2.2]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.2
-[1.2.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.1
-[1.2.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.0
-[1.1.3]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.3
-[1.1.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.1
-[1.1.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.0
-[1.0.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.0.0
+[1.3.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.3.0
+[1.2.2]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.2
+[1.2.1]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.1
+[1.2.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.0
+[1.1.3]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.3
+[1.1.1]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.1
+[1.1.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.0
+[1.0.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.0.0

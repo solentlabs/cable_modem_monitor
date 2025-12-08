@@ -1,17 +1,17 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or Support
-    url: https://github.com/kwschulz/cable_modem_monitor/discussions
+    url: https://github.com/solentlabs/cable_modem_monitor/discussions
     about: Ask questions or get help from the community
   - name: Troubleshooting Guide
-    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md
     about: Check common issues and solutions
   - name: Testing on Home Assistant
-    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TESTING_ON_HA.md
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TESTING_ON_HA.md
     about: How to deploy a development branch to your HA instance for testing
   - name: Contributing Guide
-    url: https://github.com/kwschulz/cable_modem_monitor/blob/main/CONTRIBUTING.md
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/CONTRIBUTING.md
     about: Learn how to contribute to the project
   - name: Security Vulnerability
-    url: https://github.com/kwschulz/cable_modem_monitor/security/advisories/new
+    url: https://github.com/solentlabs/cable_modem_monitor/security/advisories/new
     about: Report a security vulnerability (private disclosure)

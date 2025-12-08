@@ -105,18 +105,30 @@ Before sharing, **remove any personal information:**
 
 1. Open the HTML file in a text editor
 2. Look for and remove/replace:
-   - ❌ Your modem's MAC address
-   - ❌ Your public IP address
-   - ❌ Any account numbers or identifiers
-   - ❌ ISP-specific information you want private
 
-**The signal data (power levels, SNR, frequencies) is fine to share** - that's what we need!
+| Data Type | Example | Replace With |
+|-----------|---------|--------------|
+| MAC Address | `A4:B5:C6:D7:E8:F9` | `00:00:00:00:00:00` |
+| Serial Number | `MJ1234567890` | `XXXXXXXXXXXX` |
+| Public IP | `73.45.123.89` | `0.0.0.0` |
+| Account ID | `8401234567` | `0000000000` |
+
+**Safe to keep:** Frequencies, power levels (dBmV), SNR (dB), channel IDs, modulation types, firmware version, model name, private IPs (192.168.x.x).
+
+**Quick check commands:**
+```bash
+***REMOVED*** Find MAC addresses
+grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' your_file.html
+
+***REMOVED*** Find potential public IPs
+grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' your_file.html | grep -v '^192\.168\.' | grep -v '^10\.'
+```
 
 ***REMOVED******REMOVED******REMOVED*** Step 5: Share the Information
 
 Create a GitHub issue with this information:
 
-**Go to:** https://github.com/kwschulz/cable_modem_monitor/issues/new
+**Go to:** https://github.com/solentlabs/cable_modem_monitor/issues/new
 
 **Title:** `Add support for [Modem Brand] [Model]`
 
@@ -228,11 +240,13 @@ Before creating an issue, gather:
 **Are you a developer?** You can contribute modem support directly!
 
 1. Fork the repository
-2. Add parsing logic for your modem in `modem_scraper.py`
-3. Add test fixtures in `tests/fixtures/`
+2. Add a parser in `custom_components/cable_modem_monitor/parsers/<manufacturer>/`
+3. Add test fixtures in `tests/parsers/<manufacturer>/fixtures/<model>/`
 4. Create a pull request
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for developer guidelines.
+**Important resources:**
+- [CONTRIBUTING.md](../CONTRIBUTING.md) - Developer guidelines
+- [FIXTURE_REQUIREMENTS.md](FIXTURE_REQUIREMENTS.md) - How to create proper test fixtures with metadata and PII scrubbing
 
 ---
 
@@ -269,7 +283,7 @@ Once we add support for your modem, you'll be able to:
 
 ***REMOVED******REMOVED*** Contact
 
-- **GitHub Issues:** https://github.com/kwschulz/cable_modem_monitor/issues
-- **GitHub Discussions:** https://github.com/kwschulz/cable_modem_monitor/discussions
+- **GitHub Issues:** https://github.com/solentlabs/cable_modem_monitor/issues
+- **GitHub Discussions:** https://github.com/solentlabs/cable_modem_monitor/discussions
 
 Thank you for helping expand modem compatibility!

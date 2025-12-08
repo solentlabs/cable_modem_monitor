@@ -14,7 +14,7 @@ This guide explains how to deploy a development branch of Cable Modem Monitor to
 
 ```bash
 ***REMOVED*** Clone the repo (or switch to the branch you want to test)
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 git checkout feature/your-branch-name
 
@@ -37,7 +37,7 @@ If the script doesn't work for your setup, follow these manual steps.
 
 ```bash
 ***REMOVED*** Clone the repository
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 
 ***REMOVED*** Switch to the branch you want to test
@@ -188,4 +188,4 @@ Then check Settings → System → Logs after restarting.
 
 - [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) - Local development setup
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - How to contribute
-- [HAR_CAPTURE_GUIDE.md](./HAR_CAPTURE_GUIDE.md) - Capturing modem data for debugging
+- [CAPTURE_GUIDE.md](./CAPTURE_GUIDE.md) - Capturing modem data for debugging

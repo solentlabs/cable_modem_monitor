@@ -10,7 +10,7 @@ This guide helps you set up your development environment and start contributing 
 
 ***REMOVED******REMOVED******REMOVED*** Want the fastest setup?
 ```bash
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 ./scripts/setup.sh    ***REMOVED*** Installs dependencies in .venv
 code .                ***REMOVED*** Opens in VS Code - that's it!
@@ -22,7 +22,7 @@ code .                ***REMOVED*** Opens in VS Code - that's it!
 
 ***REMOVED******REMOVED******REMOVED*** Want zero setup hassles?
 ```bash
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 code .                ***REMOVED*** Opens in VS Code
 ***REMOVED*** Click "Reopen in Container" when prompted (wait 2-3 min first time)
@@ -91,7 +91,7 @@ Do you have dependency or environment issues?
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/kwschulz/cable_modem_monitor.git
+   git clone https://github.com/solentlabs/cable_modem_monitor.git
    cd cable_modem_monitor
    ```
 
@@ -150,7 +150,7 @@ Do you have dependency or environment issues?
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/kwschulz/cable_modem_monitor.git
+   git clone https://github.com/solentlabs/cable_modem_monitor.git
    cd cable_modem_monitor
    ```
 
@@ -479,7 +479,7 @@ Ask yourself:
 - See [DEVELOPER_QUICKSTART.md](DEVELOPER_QUICKSTART.md) for common tasks
 
 **Found a Bug?**
-- [Open an issue](https://github.com/kwschulz/cable_modem_monitor/issues)
+- [Open an issue](https://github.com/solentlabs/cable_modem_monitor/issues)
 
 ---
 
@@ -488,7 +488,7 @@ Ask yourself:
 | Task | Command |
 |------|---------|
 | **Setup** | |
-| Clone repo | `git clone https://github.com/kwschulz/cable_modem_monitor.git` |
+| Clone repo | `git clone https://github.com/solentlabs/cable_modem_monitor.git` |
 | Setup local Python | `./scripts/setup.sh` |
 | Open in VS Code | `code .` |
 | Reopen in container | `F1` → "Dev Containers: Reopen in Container" |

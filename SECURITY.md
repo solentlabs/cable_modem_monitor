@@ -19,7 +19,7 @@ We take the security of Cable Modem Monitor seriously. If you believe you have f
 
 Instead, please report them via one of the following methods:
 
-1. **Preferred**: Open a [Security Advisory](https://github.com/kwschulz/cable_modem_monitor/security/advisories/new) on GitHub
+1. **Preferred**: Open a [Security Advisory](https://github.com/solentlabs/cable_modem_monitor/security/advisories/new) on GitHub
 2. **Alternative**: Email the maintainer directly at the email address listed in the [GitHub profile](https://github.com/kwschulz)
 
 ***REMOVED******REMOVED******REMOVED*** What to Include

@@ -40,7 +40,7 @@ This guide shows you how to use VS Code's Dev Container feature for a consistent
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/kwschulz/cable_modem_monitor.git
+   git clone https://github.com/solentlabs/cable_modem_monitor.git
    cd cable_modem_monitor
    ```
 
@@ -331,7 +331,7 @@ Run **"HA: Clean All Data (Reset)"** weekly to:
 
 **Dev Container Issues:**
 - [VS Code Dev Containers Documentation](https://code.visualstudio.com/docs/devcontainers/containers)
-- [Project Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
+- [Project Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
 
 **Home Assistant Development:**
 - [HA Developer Docs](https://developers.home-assistant.io/)

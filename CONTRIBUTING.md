@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ***REMOVED******REMOVED*** Ways to Contribute
 
-- 🐛 Report bugs via [GitHub Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
+- 🐛 Report bugs via [GitHub Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
 - 💡 Suggest features or improvements
 - 📝 Improve documentation
 - 🧪 Add support for additional modem models
@@ -37,9 +37,9 @@ The script automatically:
 - Sanitizes passwords and personal info
 - Compresses the output
 
-**Then:** [Open a modem request issue](https://github.com/kwschulz/cable_modem_monitor/issues/new?template=modem_request.yml) and attach the `.sanitized.har.gz` file.
+**Then:** [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) and attach the `.sanitized.har.gz` file.
 
-See [HAR Capture Guide](./docs/HAR_CAPTURE_GUIDE.md) for detailed instructions and alternative methods.
+See [Capture Guide](./docs/CAPTURE_GUIDE.md) for detailed instructions and alternative methods.
 
 ---
 
@@ -62,7 +62,7 @@ Docker provides an isolated, consistent development environment with Home Assist
 
 ```bash
 ***REMOVED*** Clone the repository
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 
 ***REMOVED*** Start Home Assistant with the integration
@@ -128,7 +128,7 @@ For developers who prefer working directly with Python without Docker:
 First, clone the repository and install the development dependencies. This will give you all the tools you need for testing, linting, and code formatting.
 
 ```bash
-git clone https://github.com/kwschulz/cable_modem_monitor.git
+git clone https://github.com/solentlabs/cable_modem_monitor.git
 cd cable_modem_monitor
 
 ***REMOVED*** Option 1: Use the automated setup script (recommended)
@@ -407,19 +407,24 @@ Your parser's `url_patterns` can specify:
 ***REMOVED******REMOVED******REMOVED*** Example Parsers
 
 Look at these existing parsers for examples:
-- **Simple (no auth)**: `parsers/arris_sb6141.py`
-- **Basic auth**: `parsers/technicolor_tc4400.py`
-- **Form auth**: `parsers/motorola_mb.py`
-- **Complex**: `parsers/technicolor_xb7.py`
+- **Simple (no auth)**: `parsers/arris/sb6141.py`
+- **Basic auth**: `parsers/technicolor/tc4400.py`
+- **Form auth**: `parsers/motorola/mb7621.py`
+- **Complex**: `parsers/technicolor/xb7.py`
 
 ***REMOVED******REMOVED******REMOVED*** Submitting Your Parser
 
 When you submit a pull request, include:
-- ✅ Parser file in `parsers/` directory
-- ✅ Test fixture HTML in `tests/fixtures/` (sanitize personal info!)
-- ✅ Test file in `tests/` directory
+- ✅ Parser file in `parsers/<manufacturer>/` directory
+- ✅ Test fixtures in `tests/parsers/<manufacturer>/fixtures/<model>/`
+- ✅ Test file in `tests/parsers/<manufacturer>/` directory
 - ✅ Update to docs listing the new supported modem
 - ✅ All tests passing: `pytest tests/ -v`
+
+**Important:** See **[Fixture Requirements](docs/FIXTURE_REQUIREMENTS.md)** for:
+- Required `metadata.yaml` file with modem release date, DOCSIS version, ISPs
+- PII scrubbing checklist (MAC addresses, serial numbers, public IPs)
+- What pages to capture from your modem
 
 ***REMOVED******REMOVED*** Code Style
 
@@ -474,7 +479,7 @@ This guide explains how to run tests locally before pushing to GitHub, preventin
 
 ***REMOVED******REMOVED******REMOVED*** Automated Testing Status
 
-[![Tests](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/kwschulz/cable_modem_monitor/actions/workflows/tests.yml)
+[![Tests](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
 
 ---
 
@@ -949,8 +954,8 @@ Each release includes:
 
 ***REMOVED******REMOVED*** Questions?
 
-- 💬 Open a [GitHub Discussion](https://github.com/kwschulz/cable_modem_monitor/discussions)
-- 🐛 Report issues via [GitHub Issues](https://github.com/kwschulz/cable_modem_monitor/issues)
+- 💬 Open a [GitHub Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions)
+- 🐛 Report issues via [GitHub Issues](https://github.com/solentlabs/cable_modem_monitor/issues)
 - 📧 Contact maintainers via GitHub
 
 ***REMOVED******REMOVED*** Resources

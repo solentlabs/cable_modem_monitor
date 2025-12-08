@@ -82,7 +82,7 @@ This integration relies on the following open source libraries:
 
 When using or referencing this project:
 - **Attribution:** Cable Modem Monitor by kwschulz
-- **Repository:** https://github.com/kwschulz/cable_modem_monitor
+- **Repository:** https://github.com/solentlabs/cable_modem_monitor
 - **License:** MIT License (see LICENSE file)
 
 ***REMOVED******REMOVED******REMOVED*** Our Commitment
@@ -128,8 +128,8 @@ Open source thrives on mutual respect and acknowledgment. We're committed to doi
 ***REMOVED******REMOVED*** Contact
 
 Questions about attribution or credits?
-- **GitHub Issues:** https://github.com/kwschulz/cable_modem_monitor/issues
-- **GitHub Discussions:** https://github.com/kwschulz/cable_modem_monitor/discussions
+- **GitHub Issues:** https://github.com/solentlabs/cable_modem_monitor/issues
+- **GitHub Discussions:** https://github.com/solentlabs/cable_modem_monitor/discussions
 
 ---
 
