@@ -10,7 +10,7 @@
 | **Released** | 2016 |
 | **Status** | EOL 2023 |
 | **ISPs** | Comcast, Cox, Spectrum, TWC |
-| **Parser** | ⏳ Pending |
+| **Parser** | ✅ Verified |
 
 <!-- END AUTO-GENERATED -->
 
@@ -137,7 +137,7 @@ url_patterns = [
    - Download diagnostics within 5 minutes
    - Post to GitHub issue or HA community forum
 4. **Report results:**
-   - GitHub Issue: https://github.com/kwschulz/cable_modem_monitor/issues
+   - GitHub Issue: https://github.com/solentlabs/cable_modem_monitor/issues
    - HA Forum: https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant
 
 ***REMOVED******REMOVED*** Related Documentation

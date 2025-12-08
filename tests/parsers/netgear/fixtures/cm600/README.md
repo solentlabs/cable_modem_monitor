@@ -39,7 +39,7 @@
 - [Netgear CM600 Support (EOL)](https://www.netgear.com/support/product/cm600)
 - [CM600 Data Sheet (PDF)](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)
 - [Quick Start Guide (PDF)](https://www.downloads.netgear.com/files/GDC/CM600/CM600_All_MSOs_QSG_EN.pdf)
-- [Related Issue: ***REMOVED***3](https://github.com/kwschulz/cable_modem_monitor/issues/3)
+- [Related Issue: ***REMOVED***3](https://github.com/solentlabs/cable_modem_monitor/issues/3)
 
 ***REMOVED******REMOVED*** Authentication
 
@@ -249,7 +249,7 @@ These fields exist in the HTML as placeholders but are never populated by the fi
 
 ***REMOVED******REMOVED*** Contributor Information
 
-- **Original Issue**: [***REMOVED***3 - Netgear CM600 Login Doesn't Work](https://github.com/kwschulz/cable_modem_monitor/issues/3)
+- **Original Issue**: [***REMOVED***3 - Netgear CM600 Login Doesn't Work](https://github.com/solentlabs/cable_modem_monitor/issues/3)
 - **Contributor**: @chairstacker
 - **Fixtures Captured**: November 2025
 - **Parser Status**: Verified working (v3.5.1+)

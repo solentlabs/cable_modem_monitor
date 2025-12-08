@@ -45,6 +45,12 @@ CONTAINER_NAME = "ha-cable-modem-test"
 COMPOSE_FILE = "docker-compose.test.yml"
 HA_PORT = 8123
 
+***REMOVED*** Other HA test containers that might be using the same port
+OTHER_HA_CONTAINERS = [
+    "ha-internet-health-test",
+    ***REMOVED*** Add other project containers here as needed
+]
+
 
 def print_header(message: str):
     """Print a header line."""
@@ -227,8 +233,31 @@ def check_integration_mounted() -> bool:
         return False
 
 
+def stop_other_ha_containers() -> list[str]:
+    """Stop other HA test containers that might be using port 8123."""
+    stopped = []
+    for container in OTHER_HA_CONTAINERS:
+        ***REMOVED*** Check if container is running
+        result = subprocess.run(
+            ["docker", "inspect", container, "--format", "{{.State.Running}}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip().lower() == "true":
+            print_info(f"Stopping {container}...")
+            subprocess.run(["docker", "stop", container], capture_output=True, timeout=30)
+            stopped.append(container)
+    return stopped
+
+
 def run_cleanup():
     """Run the cleanup script if it exists, otherwise do basic cleanup."""
+    ***REMOVED*** First, stop any other HA test containers using port 8123
+    stopped = stop_other_ha_containers()
+    if stopped:
+        print_info(f"Stopped other HA containers: {', '.join(stopped)}")
+
     cleanup_script = get_project_dir() / "scripts" / "dev" / "ha-cleanup.sh"
 
     if cleanup_script.exists() and platform.system() != "Windows":

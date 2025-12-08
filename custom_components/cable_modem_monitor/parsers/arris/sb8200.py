@@ -12,7 +12,7 @@ from custom_components.cable_modem_monitor.core.auth_config import NoAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ class ArrisSB8200Parser(ModemParser):
     manufacturer = "ARRIS"
     models = ["SB8200"]
 
-    ***REMOVED*** Verification status
-    verified = True
-    verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/42"
+    ***REMOVED*** Parser status
+    status = ParserStatus.VERIFIED
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/42 (@undotcom)"
 
     ***REMOVED*** Device metadata
     release_date = "2016"

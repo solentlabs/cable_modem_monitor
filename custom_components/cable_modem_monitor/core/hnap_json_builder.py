@@ -9,7 +9,7 @@ HAR capture tool (scripts/capture_modem.py).
 References:
 - BowlesCR's MB8600 Login PoC: https://github.com/BowlesCR/MB8600_Login
 - xNinjaKittyx's mb8600: https://github.com/xNinjaKittyx/mb8600
-- Issue ***REMOVED***40: https://github.com/kwschulz/cable_modem_monitor/issues/40
+- Issue ***REMOVED***40: https://github.com/solentlabs/cable_modem_monitor/issues/40
 """
 
 from __future__ import annotations
@@ -55,6 +55,25 @@ class HNAPJsonRequestBuilder:
         self.endpoint = endpoint
         self.namespace = namespace
         self._private_key: str | None = None  ***REMOVED*** Stored after successful login for auth headers
+        ***REMOVED*** Store last request/response for diagnostics (passwords redacted)
+        self._last_auth_attempt: dict | None = None
+
+    def clear_auth_cache(self) -> None:
+        """Clear cached authentication.
+
+        Call this after modem restart to force re-authentication on next request.
+        The modem invalidates all sessions on reboot, so cached credentials become stale.
+        """
+        self._private_key = None
+
+    def get_last_auth_attempt(self) -> dict | None:
+        """Get the last authentication attempt details for diagnostics.
+
+        Returns a dict with request/response data (passwords redacted) or None
+        if no auth attempt has been made. Useful for debugging authentication
+        issues by comparing what we sent vs what the browser sends.
+        """
+        return self._last_auth_attempt
 
     def _get_hnap_auth(self, action: str) -> str:
         """Generate HNAP_AUTH header for authenticated requests.
@@ -95,17 +114,31 @@ class HNAPJsonRequestBuilder:
         ***REMOVED*** Build JSON request
         request_data = {action: params or {}}
 
+        url = f"{base_url}{self.endpoint}"
+        headers = {
+            "SOAPAction": f'"{self.namespace}{action}"',
+            "HNAP_AUTH": self._get_hnap_auth(action),
+            "Content-Type": "application/json",
+        }
+
         response = session.post(
-            f"{base_url}{self.endpoint}",
+            url,
             json=request_data,
-            headers={
-                "SOAPAction": f'"{self.namespace}{action}"',
-                "HNAP_AUTH": self._get_hnap_auth(action),
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=10,
             verify=session.verify,
         )
+
+        ***REMOVED*** Enhanced error diagnostics for failed HTTP requests
+        if not response.ok:
+            _LOGGER.error(
+                "HNAP call_single failed: action=%s, status=%s, url=%s",
+                action,
+                response.status_code,
+                url,
+            )
+            _LOGGER.error("HNAP call_single request: %s", request_data)
+            _LOGGER.error("HNAP call_single response: %s", response.text[:500] if response.text else "(empty)")
 
         response.raise_for_status()
         return cast(str, response.text)
@@ -156,7 +189,9 @@ class HNAPJsonRequestBuilder:
         response.raise_for_status()
         return cast(str, response.text)
 
-    def login(self, session: requests.Session, base_url: str, username: str, password: str) -> tuple[bool, str]:
+    def login(  ***REMOVED*** noqa: C901 - complexity from multi-step auth protocol
+        self, session: requests.Session, base_url: str, username: str, password: str
+    ) -> tuple[bool, str]:
         """
         Perform JSON-based HNAP login with challenge-response authentication.
 
@@ -183,13 +218,31 @@ class HNAPJsonRequestBuilder:
 
         try:
             ***REMOVED*** Step 1: Request challenge
+            ***REMOVED*** Note: PrivateLogin field is required for MB8611 authentication
+            ***REMOVED*** It tells the modem which field will contain the hashed password
             challenge_data = {
                 "Login": {
                     "Action": "request",
                     "Username": username,
                     "LoginPassword": "",
                     "Captcha": "",
+                    "PrivateLogin": "LoginPassword",
                 }
+            }
+
+            ***REMOVED*** Log request payload for debugging (helps compare with browser requests)
+            _LOGGER.debug(
+                "HNAP challenge request payload: %s",
+                json.dumps(challenge_data, separators=(",", ":")),
+            )
+
+            ***REMOVED*** Initialize auth attempt tracking
+            self._last_auth_attempt = {
+                "challenge_request": challenge_data,
+                "challenge_response": None,
+                "login_request": None,
+                "login_response": None,
+                "error": None,
             }
 
             response = session.post(
@@ -204,7 +257,11 @@ class HNAPJsonRequestBuilder:
                 verify=session.verify,
             )
 
+            ***REMOVED*** Store challenge response for diagnostics
+            self._last_auth_attempt["challenge_response"] = response.text[:1000] if response.text else None
+
             if response.status_code != 200:
+                self._last_auth_attempt["error"] = f"Challenge HTTP {response.status_code}"
                 _LOGGER.error(
                     "JSON HNAP challenge request failed with HTTP %d: %s",
                     response.status_code,
@@ -261,8 +318,22 @@ class HNAPJsonRequestBuilder:
                     "Username": username,
                     "LoginPassword": login_password,
                     "Captcha": "",
+                    "PrivateLogin": "LoginPassword",
                 }
             }
+
+            ***REMOVED*** Log request payload with password redacted for debugging
+            redacted_login = {
+                "Login": {
+                    **login_data["Login"],
+                    "LoginPassword": "[REDACTED]",
+                }
+            }
+            _LOGGER.debug(
+                "HNAP login request payload: %s",
+                json.dumps(redacted_login, separators=(",", ":")),
+            )
+            self._last_auth_attempt["login_request"] = redacted_login
 
             response = session.post(
                 f"{base_url}{self.endpoint}",
@@ -282,7 +353,11 @@ class HNAPJsonRequestBuilder:
                 len(response.text),
             )
 
+            ***REMOVED*** Store login response for diagnostics
+            self._last_auth_attempt["login_response"] = response.text[:1000] if response.text else None
+
             if response.status_code != 200:
+                self._last_auth_attempt["error"] = f"Login HTTP {response.status_code}"
                 _LOGGER.error(
                     "JSON HNAP login failed with HTTP status %s. Response: %s",
                     response.status_code,
@@ -304,6 +379,7 @@ class HNAPJsonRequestBuilder:
                     )
                     return (True, response.text)
                 else:
+                    self._last_auth_attempt["error"] = f"LoginResult={login_result}"
                     _LOGGER.warning(
                         "JSON HNAP login failed: LoginResult=%s. Response: %s",
                         login_result,
@@ -323,12 +399,18 @@ class HNAPJsonRequestBuilder:
         except requests.exceptions.Timeout as e:
             _LOGGER.error("JSON HNAP login timeout: %s", str(e))
             self._private_key = None
+            if self._last_auth_attempt:
+                self._last_auth_attempt["error"] = f"Timeout: {e}"
             return (False, "")
         except requests.exceptions.ConnectionError as e:
             _LOGGER.error("JSON HNAP login connection error: %s", str(e))
             self._private_key = None
+            if self._last_auth_attempt:
+                self._last_auth_attempt["error"] = f"ConnectionError: {e}"
             return (False, "")
         except Exception as e:
             _LOGGER.error("JSON HNAP login exception: %s", str(e), exc_info=True)
             self._private_key = None
+            if self._last_auth_attempt:
+                self._last_auth_attempt["error"] = f"Exception: {e}"
             return (False, "")

@@ -38,7 +38,7 @@ from bs4 import BeautifulSoup
 from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,9 +51,9 @@ class NetgearCM2000Parser(ModemParser):
     models = ["CM2000"]
     priority = 50  ***REMOVED*** Standard priority
 
-    ***REMOVED*** Verification status - awaiting user confirmation of v3.8.1 fixes
-    verified = False  ***REMOVED*** Pending user confirmation of software version and restart - Issue ***REMOVED***38
-    verification_source = "https://github.com/kwschulz/cable_modem_monitor/issues/38 (@m4dh4tt3r-88)"
+    ***REMOVED*** Parser status - awaiting user confirmation
+    status = ParserStatus.AWAITING_VERIFICATION
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/38"
 
     ***REMOVED*** Device metadata
     release_date = "2020-08"

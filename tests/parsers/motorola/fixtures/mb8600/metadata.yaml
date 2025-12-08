@@ -9,3 +9,7 @@ isps:
   - Cox
   - CableOne
 source: https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/
+
+***REMOVED*** Parser status (for fixtures without parser code yet)
+status: in_progress
+tracking_issue: https://github.com/solentlabs/cable_modem_monitor/issues/40

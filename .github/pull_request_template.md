@@ -87,11 +87,21 @@ Fixes ***REMOVED***
 
 <!-- Only applicable if adding support for a new modem model -->
 
-- [ ] I have added a new parser in `custom_components/cable_modem_monitor/parsers/`
+- [ ] I have added a new parser in `custom_components/cable_modem_monitor/parsers/<manufacturer>/`
 - [ ] I have included test fixtures (HTML samples from the modem)
 - [ ] I have added tests for the new parser
 - [ ] I have updated `docs/MODEM_COMPATIBILITY_GUIDE.md`
 - [ ] I have tested with the actual modem hardware
+
+***REMOVED******REMOVED******REMOVED******REMOVED*** Fixture Requirements
+
+- [ ] Created `metadata.yaml` in fixture directory (see [template](../docs/FIXTURE_REQUIREMENTS.md***REMOVED***metadatayaml-template))
+- [ ] **PII scrubbed from all fixtures:**
+  - [ ] MAC addresses removed/anonymized (e.g., `00:00:00:00:00:00`)
+  - [ ] Serial numbers removed/anonymized (e.g., `XXXXXXXXXXXX`)
+  - [ ] Public IP addresses removed (e.g., `0.0.0.0`)
+  - [ ] Account/subscriber IDs removed
+- [ ] Captured ALL available status pages (downstream, upstream, system info, logs if available)
 
 ***REMOVED******REMOVED******REMOVED*** Compliance
 

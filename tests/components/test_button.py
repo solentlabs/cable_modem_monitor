@@ -11,7 +11,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.button import (
     CaptureHtmlButton,
-    CleanupEntitiesButton,
     ModemRestartButton,
     ResetEntitiesButton,
     UpdateModemDataButton,
@@ -60,13 +59,12 @@ async def test_async_setup_entry(mock_coordinator, mock_config_entry):
 
     await async_setup_entry(hass, mock_config_entry, async_add_entities)
 
-    ***REMOVED*** Verify five buttons were added (Restart, Cleanup, Reset, Update, Capture)
+    ***REMOVED*** Verify four buttons were added (Restart, Reset, Update, Capture)
     assert async_add_entities.call_count == 1
     added_entities = async_add_entities.call_args[0][0]
-    assert len(added_entities) == 5
+    assert len(added_entities) == 4
     assert isinstance(added_entities[0], ModemRestartButton)
-    assert isinstance(added_entities[1], CleanupEntitiesButton)
-    assert isinstance(added_entities[2], ResetEntitiesButton)
+    assert isinstance(added_entities[1], ResetEntitiesButton)
 
 
 @pytest.mark.asyncio
@@ -303,97 +301,6 @@ async def test_monitor_restart_exception_handling(mock_coordinator, mock_config_
 
     ***REMOVED*** Verify polling interval was restored despite phase 1 timeout (try/finally)
     assert mock_coordinator.update_interval == timedelta(seconds=600)
-
-
-@pytest.mark.asyncio
-async def test_cleanup_button_initialization(mock_coordinator, mock_config_entry):
-    """Test cleanup button initialization."""
-    button = CleanupEntitiesButton(mock_coordinator, mock_config_entry)
-
-    assert button._attr_name == "Cleanup Entities"
-    assert button._attr_unique_id == "test_entry_id_cleanup_entities_button"
-    assert button._attr_icon == "mdi:broom"
-    from homeassistant.const import EntityCategory
-
-    assert button._attr_entity_category == EntityCategory.CONFIG
-
-
-@pytest.mark.asyncio
-async def test_cleanup_button_with_orphaned_entities(mock_coordinator, mock_config_entry):
-    """Test cleanup button removes orphaned entities."""
-    hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
-
-    button = CleanupEntitiesButton(mock_coordinator, mock_config_entry)
-    button.hass = hass
-
-    ***REMOVED*** Mock entity registry with orphaned entities
-    with patch("homeassistant.helpers.entity_registry.async_get") as mock_get_registry:
-        mock_registry = Mock()
-
-        ***REMOVED*** Create mock entities: some orphaned, some not
-        mock_entity_orphaned = Mock()
-        mock_entity_orphaned.platform = DOMAIN
-        mock_entity_orphaned.config_entry_id = None  ***REMOVED*** Orphaned
-
-        mock_entity_valid = Mock()
-        mock_entity_valid.platform = DOMAIN
-        mock_entity_valid.config_entry_id = "valid_entry"
-
-        mock_registry.entities.values.return_value = [
-            mock_entity_orphaned,
-            mock_entity_valid,
-        ]
-        mock_get_registry.return_value = mock_registry
-
-        await button.async_press()
-
-        ***REMOVED*** Verify cleanup service was called
-        service_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == DOMAIN]
-        assert len(service_calls) > 0
-        assert service_calls[0][0][1] == "cleanup_entities"
-
-        ***REMOVED*** Verify success notification mentions orphaned entities
-        notification_calls = [
-            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
-        ]
-        assert len(notification_calls) > 0
-        notification_data = notification_calls[0][0][2]
-        assert "orphaned" in notification_data["message"].lower()
-
-
-@pytest.mark.asyncio
-async def test_cleanup_button_no_orphaned_entities(mock_coordinator, mock_config_entry):
-    """Test cleanup button when no orphaned entities exist."""
-    hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
-
-    button = CleanupEntitiesButton(mock_coordinator, mock_config_entry)
-    button.hass = hass
-
-    ***REMOVED*** Mock entity registry with no orphaned entities
-    with patch("homeassistant.helpers.entity_registry.async_get") as mock_get_registry:
-        mock_registry = Mock()
-
-        mock_entity_valid = Mock()
-        mock_entity_valid.platform = DOMAIN
-        mock_entity_valid.config_entry_id = "valid_entry"
-
-        mock_registry.entities.values.return_value = [mock_entity_valid]
-        mock_get_registry.return_value = mock_registry
-
-        await button.async_press()
-
-        ***REMOVED*** Verify notification says no orphaned entities found
-        notification_calls = [
-            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
-        ]
-        assert len(notification_calls) > 0
-        notification_data = notification_calls[0][0][2]
-        assert "No orphaned entities" in notification_data["message"]
-        assert "clean" in notification_data["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -689,3 +596,154 @@ async def test_capture_html_button_exception(mock_coordinator, mock_config_entry
         notification_data = notification_calls[0][0][2]
         assert "HTML Capture Error" in notification_data["title"]
         assert "Test error" in notification_data["message"]
+
+
+@pytest.mark.asyncio
+async def test_restart_clears_auth_cache_before_monitoring(mock_coordinator, mock_config_entry):
+    """Test that auth cache is cleared after restart, before polling resumes.
+
+    This test verifies the fix for the issue where after modem restart,
+    the cached HNAP auth tokens become invalid, causing 500 errors until
+    the cache naturally expires.
+
+    Flow:
+    1. Coordinator has scraper with cached auth
+    2. User clicks restart button
+    3. Restart succeeds, modem reboots
+    4. Cache is cleared BEFORE monitoring starts
+    5. Next poll re-authenticates successfully
+    """
+    from unittest.mock import MagicMock
+
+    hass = Mock(spec=HomeAssistant)
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    ***REMOVED*** Create a mock scraper with cached auth
+    mock_scraper = MagicMock()
+    mock_scraper.clear_auth_cache = MagicMock()
+
+    ***REMOVED*** Attach scraper to coordinator (simulating the fix in __init__.py)
+    mock_coordinator.scraper = mock_scraper
+
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
+    button.hass = hass
+    button.coordinator = mock_coordinator
+
+    ***REMOVED*** Simulate immediate success for monitoring
+    mock_coordinator.last_update_success = True
+    mock_coordinator.data = {
+        "cable_modem_connection_status": "online",
+        "cable_modem_downstream_channel_count": 32,
+        "cable_modem_upstream_channel_count": 4,
+    }
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        await button._monitor_restart()
+
+    ***REMOVED*** CRITICAL: Verify auth cache was cleared
+    mock_scraper.clear_auth_cache.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_restart_cache_clear_handles_missing_scraper(mock_coordinator, mock_config_entry):
+    """Test that cache clear gracefully handles coordinator without scraper attribute.
+
+    This ensures backwards compatibility if the scraper isn't attached to the coordinator.
+    """
+    hass = Mock(spec=HomeAssistant)
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    ***REMOVED*** Coordinator WITHOUT scraper attribute (old behavior)
+    ***REMOVED*** This should NOT raise an error
+    if hasattr(mock_coordinator, "scraper"):
+        delattr(mock_coordinator, "scraper")
+
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
+    button.hass = hass
+    button.coordinator = mock_coordinator
+
+    mock_coordinator.last_update_success = True
+    mock_coordinator.data = {
+        "cable_modem_connection_status": "online",
+        "cable_modem_downstream_channel_count": 32,
+        "cable_modem_upstream_channel_count": 4,
+    }
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        ***REMOVED*** Should not raise AttributeError
+        await button._monitor_restart()
+
+
+@pytest.mark.asyncio
+async def test_restart_reauth_after_cache_clear(mock_coordinator, mock_config_entry):
+    """Test that polling successfully re-authenticates after cache is cleared.
+
+    Simulates the full flow:
+    1. Cached auth exists
+    2. Restart clears cache
+    3. First poll after restart triggers re-authentication
+    4. Re-auth succeeds with new credentials from rebooted modem
+    """
+    from unittest.mock import MagicMock
+
+    hass = Mock(spec=HomeAssistant)
+    hass.services = Mock()
+    hass.services.async_call = AsyncMock()
+
+    ***REMOVED*** Create mock scraper with HNAP builder that has cached private key
+    mock_json_builder = MagicMock()
+    mock_json_builder._private_key = "OLD_CACHED_KEY_123"
+    mock_json_builder.clear_auth_cache = MagicMock()
+
+    mock_parser = MagicMock()
+    mock_parser._json_builder = mock_json_builder
+
+    mock_scraper = MagicMock()
+    mock_scraper.parser = mock_parser
+    mock_scraper.session = MagicMock()
+
+    def clear_cache_impl():
+        """Simulate actual cache clearing."""
+        mock_json_builder._private_key = None
+        mock_json_builder.clear_auth_cache()
+        mock_scraper.session = MagicMock()  ***REMOVED*** New session
+
+    mock_scraper.clear_auth_cache = clear_cache_impl
+    mock_coordinator.scraper = mock_scraper
+
+    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
+    button.hass = hass
+    button.coordinator = mock_coordinator
+
+    ***REMOVED*** Track polling calls to verify re-auth happens
+    poll_count = [0]
+    original_session = mock_scraper.session
+
+    async def mock_refresh():
+        poll_count[0] += 1
+        mock_coordinator.last_update_success = True
+        mock_coordinator.data = {
+            "cable_modem_connection_status": "online",
+            "cable_modem_downstream_channel_count": 32,
+            "cable_modem_upstream_channel_count": 4,
+        }
+
+    mock_coordinator.async_request_refresh = mock_refresh
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        await button._monitor_restart()
+
+    ***REMOVED*** Verify:
+    ***REMOVED*** 1. Old private key was cleared
+    assert mock_json_builder._private_key is None
+
+    ***REMOVED*** 2. New session was created (different object)
+    assert mock_scraper.session is not original_session
+
+    ***REMOVED*** 3. HNAP builder's clear was called
+    mock_json_builder.clear_auth_cache.assert_called()
+
+    ***REMOVED*** 4. Polling occurred (which would trigger re-auth in real code)
+    assert poll_count[0] > 0

@@ -24,7 +24,7 @@
 | **Release Year** | 2018 |
 | **ISPs** | Comcast, Xfinity, Cox, Spectrum, and most major ISPs |
 | **Max Speed** | 1 Gbps (single ethernet), 2 Gbps (LAG) |
-| **Related Issue** | [***REMOVED***40](https://github.com/kwschulz/cable_modem_monitor/issues/40) |
+| **Related Issue** | [***REMOVED***40](https://github.com/solentlabs/cable_modem_monitor/issues/40) |
 | **Captured By** | @bigfluffycloud |
 | **Capture Date** | November 2025 |
 | **Parser Status** | Pending parser development |

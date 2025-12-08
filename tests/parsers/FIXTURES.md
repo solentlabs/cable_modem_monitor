@@ -27,18 +27,18 @@ All fixture directories should follow this structure:
 
 | Manufacturer | Model | DOCSIS | ISPs | Files | Status |
 |--------------|-------|--------|------|-------|--------|
-| Arris | [S33](arris/fixtures/s33/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 2 | ❓ Unknown |
+| Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 2 | ⏳ Awaiting |
 | ARRIS | [SB6141](arris/fixtures/sb6141/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") ![MED](https://img.shields.io/badge/-MED-557799?style=flat-square "Mediacom") | 1 | ✅ Verified |
-| ARRIS | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") | 1 | ⏳ Pending |
+| ARRIS | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") | 1 | ✅ Verified |
 | ARRIS | [SB8200](arris/fixtures/sb8200/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 3 | ✅ Verified |
 | Motorola | [MB7621](motorola/fixtures/mb7621/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") ![RCN](https://img.shields.io/badge/-RCN-556688?style=flat-square "RCN Corporation") ![C1](https://img.shields.io/badge/-C1-7788aa?style=flat-square "Cable One") | 5 | ✅ Verified |
-| Motorola | [MB8600](motorola/fixtures/mb8600/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![C1](https://img.shields.io/badge/-C1-7788aa?style=flat-square "Cable One") | 1 | ❓ Unknown |
-| Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 6 | ⏳ Pending |
+| Motorola | [MB8600](motorola/fixtures/mb8600/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![C1](https://img.shields.io/badge/-C1-7788aa?style=flat-square "Cable One") | 1 | 🔧 In Progress |
+| Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 6 | ⏳ Awaiting |
 | Netgear | [C3700-100NAS](netgear/fixtures/c3700/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 6 | ✅ Verified |
-| Netgear | [CM2000 (Nighthawk)](netgear/fixtures/cm2000/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 7 | ⏳ Pending |
+| Netgear | [CM2000 (Nighthawk)](netgear/fixtures/cm2000/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") | 7 | ⏳ Awaiting |
 | Netgear | [CM600 (CM600-100NAS)](netgear/fixtures/cm600/README.md) | 3.0 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable") | 5 | ✅ Verified |
-| Technicolor | [TC4400](technicolor/fixtures/tc4400/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications") ![SHAW](https://img.shields.io/badge/-SHAW-668899?style=flat-square "Shaw Communications") ![VID](https://img.shields.io/badge/-VID-779988?style=flat-square "Vidéotron") | 3 | ⏳ Pending |
-| Technicolor | [XB7 / CGM4331COM](technicolor/fixtures/xb7/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") | 1 | ⏳ Pending |
+| Technicolor | [TC4400](technicolor/fixtures/tc4400/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") ![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications") ![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)") ![ROG](https://img.shields.io/badge/-ROG-aa6666?style=flat-square "Rogers Communications") ![SHAW](https://img.shields.io/badge/-SHAW-668899?style=flat-square "Shaw Communications") ![VID](https://img.shields.io/badge/-VID-779988?style=flat-square "Vidéotron") | 3 | ✅ Verified |
+| Technicolor | [XB7 / CGM4331COM](technicolor/fixtures/xb7/README.md) | 3.1 | ![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast") | 1 | ✅ Verified |
 
 ***REMOVED******REMOVED*** Model Timeline
 
@@ -56,7 +56,7 @@ DOCSIS 3.1
 ├── 2017  Technicolor TC4400     ░░░░░░░░░███████████   8yr  Current
 ├── 2020  Netgear     CM2000     ░░░░░░░░░░░░░███████   5yr  Current
 ├── 2020  Motorola    MB8611     ░░░░░░░░░░░░░███████   5yr  Current
-├── 2020  Arris       S33        ░░░░░░░░░░░░░███████   5yr  Current
+├── 2020  Arris/CommS S33        ░░░░░░░░░░░░░███████   5yr  Current
 └── 2020  Technicolor XB7        ░░░░░░░░░░░░░███████   5yr  Current
 
 ```
@@ -67,7 +67,7 @@ _Scale: 2010-2025 (15 years)_
 ***REMOVED******REMOVED*** Legend
 
 - **Files**: Number of fixture files (excludes README.md, metadata.yaml)
-- **Status**: ✅ Verified (parser.verified=True), ⏳ Pending, ❓ No parser
+- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | ❌ Broken | ❓ No parser
 
 ---
 *Generated by `scripts/generate_fixture_index.py`*

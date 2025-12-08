@@ -12,6 +12,33 @@ if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.core.auth_config import AuthConfig
 
 
+class ParserStatus(str, Enum):
+    """Parser verification/lifecycle status.
+
+    Tracks where a parser is in its development and validation lifecycle:
+
+    IN_PROGRESS: Parser is actively being developed (not yet released).
+                 Use for parsers in feature branches or WIP PRs.
+
+    AWAITING_VERIFICATION: Parser released but awaiting user confirmation.
+                           Use after merging, before first user report.
+
+    VERIFIED: Parser confirmed working by at least one user.
+              Should have verification_source set to issue/forum link.
+
+    BROKEN: Parser has known issues that prevent normal operation.
+            Should have verification_source explaining the problem.
+
+    DEPRECATED: Parser is being phased out (e.g., superseded by better impl).
+    """
+
+    IN_PROGRESS = "in_progress"
+    AWAITING_VERIFICATION = "awaiting_verification"
+    VERIFIED = "verified"
+    BROKEN = "broken"
+    DEPRECATED = "deprecated"
+
+
 class ModemCapability(str, Enum):
     """Standardized capability names for modem parsers.
 
@@ -65,11 +92,16 @@ class ModemParser(ABC):
     ***REMOVED*** Default is 50 for backward compatibility
     priority: int = 50
 
-    ***REMOVED*** Verification status - defaults to False until confirmed by real user
-    ***REMOVED*** Set to True only after verification by maintainer or user report
-    verified: bool = False
-    ***REMOVED*** Optional: Link to issue, forum post, or commit confirming verification
+    ***REMOVED*** Parser lifecycle status - defaults to AWAITING_VERIFICATION for new parsers
+    ***REMOVED*** Use ParserStatus.VERIFIED after user confirmation, BROKEN for known issues
+    status: ParserStatus = ParserStatus.AWAITING_VERIFICATION
+    ***REMOVED*** Optional: Link to issue, forum post, or commit for verification/status
     verification_source: str | None = None
+
+    @property
+    def verified(self) -> bool:
+        """Backward compatibility: True if status is VERIFIED."""
+        return self.status == ParserStatus.VERIFIED
 
     ***REMOVED*** Device metadata - for display and mock server
     ***REMOVED*** Format: "YYYY-MM" or "YYYY" for approximate dates
@@ -112,7 +144,7 @@ class ModemParser(ABC):
     capabilities: set[ModemCapability] = set()
 
     ***REMOVED*** GitHub repo base URL for fixtures links
-    GITHUB_REPO_URL = "https://github.com/kwschulz/cable_modem_monitor"
+    GITHUB_REPO_URL = "https://github.com/solentlabs/cable_modem_monitor"
 
     @classmethod
     def has_capability(cls, capability: ModemCapability) -> bool:
@@ -148,7 +180,8 @@ class ModemParser(ABC):
             "name": cls.name,
             "manufacturer": cls.manufacturer,
             "models": cls.models,
-            "verified": cls.verified,
+            "status": cls.status.value,
+            "verified": cls.status == ParserStatus.VERIFIED,  ***REMOVED*** Backward compat
             "docsis_version": cls.docsis_version,
         }
 

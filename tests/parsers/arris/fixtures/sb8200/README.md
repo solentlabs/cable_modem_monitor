@@ -25,7 +25,7 @@
 | **Release Year** | 2017 |
 | **ISPs** | Comcast, Xfinity, Cox, Spectrum, and most major ISPs |
 | **Max Speed** | 2 Gbps downstream (with LAG) |
-| **Related Issue** | [***REMOVED***42](https://github.com/kwschulz/cable_modem_monitor/issues/42) |
+| **Related Issue** | [***REMOVED***42](https://github.com/solentlabs/cable_modem_monitor/issues/42) |
 | **Contributor** | @undotcom |
 | **Capture Date** | November 2025 |
 | **Parser Status** | Verified |

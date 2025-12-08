@@ -58,7 +58,6 @@ async def async_setup_entry(
     async_add_entities(
         [
             ModemRestartButton(coordinator, entry, restart_available),
-            CleanupEntitiesButton(coordinator, entry),
             ResetEntitiesButton(coordinator, entry),
             UpdateModemDataButton(coordinator, entry),
             CaptureHtmlButton(coordinator, entry),
@@ -363,6 +362,12 @@ class ModemRestartButton(ModemButtonBase):
             ***REMOVED*** Wait 5 seconds for modem to go offline
             await asyncio.sleep(5)
 
+            ***REMOVED*** Clear auth cache before polling resumes
+            ***REMOVED*** Modem invalidates all sessions on reboot, so cached credentials become stale
+            if hasattr(self.coordinator, "scraper"):
+                self.coordinator.scraper.clear_auth_cache()
+                _LOGGER.debug("Cleared auth cache after modem restart")
+
             ***REMOVED*** Phase 1: Wait for modem to respond (max 2 minutes)
             phase1_max_wait = 120
             modem_responding, elapsed_time = await self._wait_for_modem_response(phase1_max_wait)
@@ -399,62 +404,6 @@ class ModemRestartButton(ModemButtonBase):
             _LOGGER.info("Restored polling interval to %s", original_interval)
             ***REMOVED*** Force one final refresh with restored interval
             await self.coordinator.async_request_refresh()
-
-
-class CleanupEntitiesButton(ModemButtonBase):
-    """Button to clean up orphaned entities."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the button."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "Cleanup Entities"
-        self._attr_unique_id = f"{entry.entry_id}_cleanup_entities_button"
-        self._attr_icon = "mdi:broom"
-        self._attr_entity_category = EntityCategory.CONFIG
-
-    async def async_press(self) -> None:
-        """Handle the button press."""
-        from homeassistant.helpers import entity_registry as er
-
-        _LOGGER.info("Cleanup entities button pressed")
-
-        entity_reg = er.async_get(self.hass)
-
-        ***REMOVED*** Count entities before cleanup
-        all_cable_modem = [e for e in entity_reg.entities.values() if e.platform == DOMAIN]
-        orphaned_before = [e for e in all_cable_modem if not e.config_entry_id]
-
-        ***REMOVED*** Call the cleanup_entities service
-        await self.hass.services.async_call(
-            DOMAIN,
-            "cleanup_entities",
-            {},
-            blocking=True,
-        )
-
-        ***REMOVED*** Show user notification
-        if orphaned_before:
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Entity Cleanup Complete",
-                    "message": f"Successfully removed {len(orphaned_before)} orphaned cable modem entities.",
-                    "notification_id": "cable_modem_cleanup_success",
-                },
-            )
-        else:
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Entity Cleanup Complete",
-                    "message": "No orphaned entities found. Your entity registry is clean!",
-                    "notification_id": "cable_modem_cleanup_success",
-                },
-            )
-
-        _LOGGER.info("Entity cleanup completed")
 
 
 class ResetEntitiesButton(ModemButtonBase):

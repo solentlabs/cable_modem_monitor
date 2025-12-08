@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "有线调制解调器监控",
+        "description": "连接到您的有线调制解调器。标有 * 的型号尚未验证。",
+        "data": {
+          "host": "调制解调器 IP 地址",
+          "username": "用户名",
+          "password": "密码",
+          "modem_choice": "调制解调器型号"
+        },
+        "data_description": {
+          "host": "通常是 192.168.100.1",
+          "username": "如果不需要请留空",
+          "password": "如果不需要请留空",
+          "modem_choice": "使用 'auto' 进行自动检测"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "认证失败 - 调制解调器返回登录页面。\n\n请检查：\n1. 用户名是否正确（通常是 'admin'，请查看调制解调器标签）\n2. 密码是否正确（请查看调制解调器标签）\n3. 凭据是否未更改过默认值\n\n请尝试在 https://192.168.100.1 手动登录调制解调器以验证凭据。\n\n如需高级调试，请在 configuration.yaml 中启用调试日志：\nlogger:\n  logs:\n    custom_components.cable_modem_monitor: debug\n\n然后在日志中搜索 'HNAP request payload' 以与浏览器的网络选项卡进行比较。",
+      "network_unreachable": "无法访问调制解调器 - 网络连接问题。\n\n请检查：\n1. 网络连接 - 您是否连接到正确的 WiFi 网络？\n2. 访客 WiFi - 访客网络通常会阻止访问本地设备\n3. VPN - 断开所有活动的 VPN 连接\n4. IP 地址 - 验证调制解调器的 IP（通常是 192.168.100.1）\n5. 调制解调器 Web 界面 - 确保已启用并可访问\n\n请尝试在浏览器中直接访问调制解调器以验证连接。",
+      "cannot_connect": "无法连接到调制解调器。\n\n请检查：\n1. IP 地址是否正确（通常是 192.168.100.1）\n2. 如果调制解调器需要认证，请输入用户名/密码\n3. 调制解调器的 Web 界面是否可从 Home Assistant 网络访问\n\n如果您的调制解调器不受支持，请选择「未知调制解调器（回退模式）」以启用基本监控和 HTML 捕获。",
+      "unsupported_modem": "自动检测无法识别您的调制解调器型号。\n\n请按以下步骤操作：\n1. 从下拉菜单中选择「未知调制解调器（回退模式）」\n2. 这将启用基本连接监控（ping/HTTP 延迟）\n3. 安装后，点击「捕获 HTML」按钮\n4. 下载诊断信息并与开发人员分享以添加完整支持",
+      "invalid_input": "输入无效。请检查数值并重试。",
+      "unknown": "发生意外错误。请查看 Home Assistant 日志了解详情。"
+    },
+    "abort": {
+      "already_configured": "此调制解调器已配置"
+    },
+    "progress": {
+      "validate": "正在连接调制解调器..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "有线调制解调器设置",
+        "description": "当前：{detected_modem}\n上次检测：{last_detection}",
+        "data": {
+          "host": "调制解调器 IP",
+          "username": "用户名",
+          "password": "密码",
+          "modem_choice": "调制解调器型号",
+          "scan_interval": "轮询间隔（秒）"
+        },
+        "data_description": {
+          "host": "通常是 192.168.100.1",
+          "username": "如果不需要请留空",
+          "password": "留空 = 保留当前密码",
+          "modem_choice": "使用 'auto' 进行检测。如不正确请更改。",
+          "scan_interval": "60-1800 秒。默认 600（10 分钟）"
+        }
+      }
+    }
+  }
+}

@@ -94,39 +94,38 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
             elif hasattr(system_log, "records"):
                 _LOGGER.debug("system_log.records found (direct), record count: %d", len(system_log.records))
 
-                ***REMOVED*** system_log only stores errors/warnings, not INFO/DEBUG logs
-                ***REMOVED*** Record format is: (logger_name, (file, line_num), exception_or_none)
+                ***REMOVED*** system_log stores LogRecord objects or SimpleEntry named tuples
+                ***REMOVED*** SimpleEntry format: (name, timestamp, level, message, exception, root_cause)
                 for record in system_log.records:
                     try:
-                        if isinstance(record, tuple) and len(record) >= 3:
-                            logger_name, location_info, exception_info = record[0], record[1], record[2]
+                        if hasattr(record, "name") and hasattr(record, "message"):
+                            ***REMOVED*** SimpleEntry or LogRecord-like object with name and message attrs
+                            if "cable_modem_monitor" in str(record.name):
+                                ***REMOVED*** Get level - could be int or string
+                                level = getattr(record, "level", "ERROR")
+                                if isinstance(level, int):
+                                    import logging
 
-                            ***REMOVED*** Filter for cable_modem_monitor logs
-                            if "cable_modem_monitor" in str(logger_name):
-                                ***REMOVED*** Extract file and line number if available
-                                file_info = ""
-                                if isinstance(location_info, tuple) and len(location_info) >= 2:
-                                    file_info = f" at {location_info[0]}:{location_info[1]}"
+                                    level = logging.getLevelName(level)
 
-                                ***REMOVED*** Format the message
-                                message = f"Error{file_info}"
-                                if exception_info:
-                                    message += f": {str(exception_info)[:200]}"
+                                ***REMOVED*** Get timestamp
+                                timestamp = getattr(record, "timestamp", None) or getattr(
+                                    record, "created", time.time()
+                                )
 
-                                sanitized_message = _sanitize_log_message(message)
+                                sanitized_message = _sanitize_log_message(str(record.message))
                                 recent_logs.append(
                                     {
-                                        ***REMOVED*** Collection time (original timestamp unavailable)
-                                        "timestamp": time.time(),
-                                        "level": "ERROR",  ***REMOVED*** system_log only stores errors/warnings
-                                        "logger": str(logger_name).replace(
+                                        "timestamp": timestamp,
+                                        "level": str(level),
+                                        "logger": str(record.name).replace(
                                             "custom_components.cable_modem_monitor.", ""
                                         ),
                                         "message": sanitized_message,
                                     }
                                 )
-                        elif hasattr(record, "name"):
-                            ***REMOVED*** LogRecord object format (fallback for older versions)
+                        elif hasattr(record, "getMessage"):
+                            ***REMOVED*** Standard LogRecord object
                             if "cable_modem_monitor" in record.name:
                                 sanitized_message = _sanitize_log_message(record.getMessage())
                                 recent_logs.append(
@@ -134,6 +133,30 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                         "timestamp": record.created,
                                         "level": record.levelname,
                                         "logger": record.name.replace("custom_components.cable_modem_monitor.", ""),
+                                        "message": sanitized_message,
+                                    }
+                                )
+                        elif isinstance(record, tuple) and len(record) >= 4:
+                            ***REMOVED*** Legacy tuple format: (name, timestamp, level, message, ...)
+                            logger_name = record[0]
+                            if "cable_modem_monitor" in str(logger_name):
+                                timestamp = record[1] if len(record) > 1 else time.time()
+                                level = record[2] if len(record) > 2 else "ERROR"
+                                message = record[3] if len(record) > 3 else "Unknown"
+
+                                if isinstance(level, int):
+                                    import logging
+
+                                    level = logging.getLevelName(level)
+
+                                sanitized_message = _sanitize_log_message(str(message))
+                                recent_logs.append(
+                                    {
+                                        "timestamp": timestamp,
+                                        "level": str(level),
+                                        "logger": str(logger_name).replace(
+                                            "custom_components.cable_modem_monitor.", ""
+                                        ),
                                         "message": sanitized_message,
                                     }
                                 )
@@ -262,6 +285,63 @@ def _get_detection_method(entry: ConfigEntry) -> str:
         return "auto_detected"
 
 
+def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
+    """Get HNAP authentication attempt details from the parser if available.
+
+    This retrieves the last HNAP login request/response data from the parser's
+    JSON builder, which is invaluable for debugging authentication failures.
+    Users can compare these requests with what their browser sends to identify
+    differences (e.g., missing fields, wrong format).
+
+    Args:
+        coordinator: DataUpdateCoordinator with scraper reference
+
+    Returns:
+        Dict with auth attempt details or explanatory note if not available
+    """
+    try:
+        ***REMOVED*** Navigate: coordinator -> scraper -> parser -> _json_builder
+        scraper = getattr(coordinator, "scraper", None)
+        if not scraper:
+            return {"note": "Scraper not available"}
+
+        parser = getattr(scraper, "parser", None)
+        if not parser:
+            return {"note": "Parser not available (might be using fallback mode)"}
+
+        json_builder = getattr(parser, "_json_builder", None)
+        if not json_builder:
+            return {"note": "Not an HNAP modem (no JSON builder)"}
+
+        auth_attempt = json_builder.get_last_auth_attempt()
+        if not auth_attempt:
+            return {"note": "No HNAP auth attempt recorded yet"}
+
+        ***REMOVED*** Sanitize the auth attempt data
+        sanitized: dict[str, Any] = {}
+        for key, value in auth_attempt.items():
+            if value is None:
+                sanitized[key] = None
+            elif isinstance(value, str):
+                sanitized[key] = _sanitize_log_message(value)
+            elif isinstance(value, dict):
+                ***REMOVED*** For request dicts, keep structure but sanitize strings
+                sanitized[key] = {
+                    k: _sanitize_log_message(str(v)) if isinstance(v, str) else v for k, v in value.items()
+                }
+            else:
+                sanitized[key] = value
+
+        return {
+            "note": "HNAP auth attempt captured - compare with browser Network tab",
+            "data": sanitized,
+        }
+
+    except Exception as e:
+        _LOGGER.debug("Error getting HNAP auth attempt: %s", e)
+        return {"note": f"Error retrieving auth data: {type(e).__name__}"}
+
+
 def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry) -> dict[str, Any]:
     """Build the main diagnostics dictionary from coordinator data."""
     data = coordinator.data if coordinator.data else {}
@@ -354,6 +434,10 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "note": "Parser detection succeeded on first attempt",
             "attempted_parsers": [],
         }
+
+    ***REMOVED*** Add HNAP authentication attempt details if available
+    ***REMOVED*** This helps debug auth failures by showing exactly what requests we sent
+    diagnostics["hnap_auth_debug"] = _get_hnap_auth_attempt(coordinator)
 
     ***REMOVED*** Add recent logs (last 150 records)
     ***REMOVED*** This is extremely helpful for debugging connection and detection issues

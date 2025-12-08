@@ -12,7 +12,7 @@ from custom_components.cable_modem_monitor.core.authentication import AuthFactor
 from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
 from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,9 +25,9 @@ class MotorolaMB8611HnapParser(ModemParser):
     models = ["MB8611", "MB8612"]
     priority = 101  ***REMOVED*** Higher priority for the API-based method
 
-    ***REMOVED*** Verification status
-    verified = False
-    verification_source = "Awaiting real-world confirmation (Issues ***REMOVED***4, ***REMOVED***6)"
+    ***REMOVED*** Parser status - awaiting user confirmation
+    status = ParserStatus.AWAITING_VERIFICATION
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/4"
 
     ***REMOVED*** Device metadata
     release_date = "2020"
@@ -500,7 +500,16 @@ class MotorolaMB8611HnapParser(ModemParser):
             target[target_key] = value
 
     def restart(self, session, base_url) -> bool:
-        """Restart the MB8611 modem via HNAP SetMotoStatusDSTargetFreq action."""
+        """Restart the MB8611 modem via HNAP SetStatusSecuritySettings action.
+
+        The restart is triggered from the Security settings page (MotoStatusSecurity.html)
+        using the SetStatusSecuritySettings HNAP action with MotoStatusSecurityAction=1.
+
+        Based on analysis of modem's JavaScript in MotoStatusSecurity.html:
+        - Action 1 = Reboot
+        - Action 2 = Factory Reset
+        - Action 3 = Change password
+        """
         try:
             ***REMOVED*** Use JSON builder if available (from login), otherwise create new
             if self._json_builder is not None:
@@ -513,26 +522,34 @@ class MotorolaMB8611HnapParser(ModemParser):
                 _LOGGER.warning("MB8611: No stored JSON builder for restart - may lack auth")
 
             ***REMOVED*** Build the restart request - action=1 triggers reboot
-            ***REMOVED*** Based on modem's JavaScript: SetMotoStatusDSTargetFreq with MotoStatusConnectionAction=1
+            ***REMOVED*** Based on modem's MotoStatusSecurity.html JavaScript:
+            ***REMOVED*** result_xml.Set("SetStatusSecuritySettings/MotoStatusSecurityAction", "1");
+            ***REMOVED*** result_xml.Set("SetStatusSecuritySettings/MotoStatusSecXXX", "XXX");
             restart_data = {
-                "MotoStatusConnectionAction": "1",
-                "MotoStatusXXX": "XXX",
+                "MotoStatusSecurityAction": "1",
+                "MotoStatusSecXXX": "XXX",
             }
 
-            _LOGGER.info("MB8611: Sending restart command via HNAP")
-            response = builder.call_single(session, base_url, "SetMotoStatusDSTargetFreq", restart_data)
+            _LOGGER.info("MB8611: Sending restart command via HNAP SetStatusSecuritySettings")
+            response = builder.call_single(session, base_url, "SetStatusSecuritySettings", restart_data)
 
             ***REMOVED*** Parse response to check result
             response_data = json.loads(response)
-            result = response_data.get("SetMotoStatusDSTargetFreqResponse", {}).get(
-                "SetMotoStatusDSTargetFreqResult", ""
+            result = response_data.get("SetStatusSecuritySettingsResponse", {}).get(
+                "SetStatusSecuritySettingsResult", ""
             )
 
             if result == "OK":
                 _LOGGER.info("MB8611: Restart command sent successfully")
                 return True
             else:
+                ***REMOVED*** Enhanced error diagnostics - log full request/response for debugging
                 _LOGGER.error("MB8611: Restart failed with result: %s", result)
+                _LOGGER.error(
+                    "MB8611: Restart diagnostics - Request: action=SetStatusSecuritySettings, " "params=%s",
+                    restart_data,
+                )
+                _LOGGER.error("MB8611: Restart diagnostics - Full response: %s", response)
                 return False
 
         except ConnectionResetError:

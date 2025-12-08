@@ -151,21 +151,25 @@ sys.path.insert(0, str(repo_root))
 
 
 def load_parser_metadata() -> dict[str, dict]:
-    """Load verified status from parser classes.
+    """Load status from parser classes.
 
     Returns:
-        Dict mapping fixtures_path to parser metadata (verified, manufacturer)
+        Dict mapping fixtures_path to parser metadata (status, verified, manufacturer)
     """
     from custom_components.cable_modem_monitor.parsers import get_parsers
+    from custom_components.cable_modem_monitor.parsers.base_parser import ParserStatus
 
     parser_map = {}
     for parser_class in get_parsers():
         if parser_class.fixtures_path:
             fixtures_path = parser_class.fixtures_path.rstrip("/")
+            ***REMOVED*** Access status class attribute directly (works on class, unlike property)
+            status = getattr(parser_class, "status", ParserStatus.AWAITING_VERIFICATION)
             parser_map[fixtures_path] = {
                 "name": parser_class.name,
                 "manufacturer": parser_class.manufacturer,
-                "verified": parser_class.verified,
+                "status": status.value if hasattr(status, "value") else str(status),
+                "verified": status == ParserStatus.VERIFIED,
             }
     return parser_map
 
@@ -273,6 +277,23 @@ def update_readme_quick_facts(fixture_dir: Path, metadata: dict, parser_info: di
     return False
 
 
+def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: dict) -> None:
+    """Apply metadata.yaml fields to info dict (mutates info in place)."""
+    if metadata.get("release_date"):
+        info["release_year"] = str(metadata["release_date"])[:4]
+    if metadata.get("end_of_life"):
+        info["eol_year"] = str(metadata["end_of_life"])[:4]
+    if metadata.get("docsis_version"):
+        info["docsis"] = metadata["docsis_version"]
+    if metadata.get("isps"):
+        info["isps"] = metadata["isps"]  ***REMOVED*** Keep as list
+    ***REMOVED*** Status can come from metadata.yaml for fixtures without parsers
+    if metadata.get("status"):
+        info["status"] = metadata["status"]
+    if metadata.get("tracking_issue"):
+        info["tracking_issue"] = metadata["tracking_issue"]
+
+
 def extract_fixture_info(
     fixture_dir: Path, base_dir: Path, parser_map: dict[str, dict]
 ) -> dict[str, str | int | bool | None]:
@@ -288,25 +309,24 @@ def extract_fixture_info(
     info: dict[str, str | int | bool | None] = {
         "path": str(fixture_dir.relative_to(base_dir)),
         "model": fixture_dir.name.upper(),
-        "manufacturer": fixture_dir.parent.parent.name.capitalize(),
+        ***REMOVED*** ARRIS is officially all caps; others use title case
+        "manufacturer": (
+            "ARRIS"
+            if fixture_dir.parent.parent.name.lower() == "arris"
+            else fixture_dir.parent.parent.name.capitalize()
+        ),
     }
 
     ***REMOVED*** 1. Load from metadata.yaml (source of truth for research data)
     metadata = load_fixture_metadata(fixture_dir)
     if metadata:
-        if metadata.get("release_date"):
-            info["release_year"] = str(metadata["release_date"])[:4]
-        if metadata.get("end_of_life"):
-            info["eol_year"] = str(metadata["end_of_life"])[:4]
-        if metadata.get("docsis_version"):
-            info["docsis"] = metadata["docsis_version"]
-        if metadata.get("isps"):
-            info["isps"] = metadata["isps"]  ***REMOVED*** Keep as list
+        _apply_metadata_to_info(info, metadata)
 
-    ***REMOVED*** 2. Load from parser (source of truth for code-related data)
+    ***REMOVED*** 2. Load from parser (source of truth for code-related data) - overrides metadata
     parser_meta = parser_map.get(fixture_path_from_repo)
     if parser_meta:
         info["manufacturer"] = parser_meta.get("manufacturer") or info["manufacturer"]
+        info["status"] = parser_meta.get("status", info.get("status", ""))
         info["verified"] = parser_meta.get("verified", False)
 
     ***REMOVED*** 3. Fallback to README.md for model name
@@ -457,13 +477,17 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "|--------------|-------|--------|------|-------|--------|",
     ]
 
+    status_icons = {
+        "verified": "✅ Verified",
+        "in_progress": "🔧 In Progress",
+        "awaiting_verification": "⏳ Awaiting",
+        "broken": "❌ Broken",
+        "deprecated": "⊘ Deprecated",
+    }
+
     for m in modems:
-        if m.get("verified") is True:
-            status_display = "✅ Verified"
-        elif m.get("verified") is False:
-            status_display = "⏳ Pending"
-        else:
-            status_display = "❓ Unknown"
+        status = str(m.get("status", ""))
+        status_display = status_icons.get(status, "❓ Unknown")
 
         isps_raw: str | int | bool | list[str] | None = m.get("isps", [])
         isps_list: list[str] | str = isps_raw if isinstance(isps_raw, list | str) else []
@@ -487,7 +511,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "***REMOVED******REMOVED*** Legend",
             "",
             "- **Files**: Number of fixture files (excludes README.md, metadata.yaml)",
-            "- **Status**: ✅ Verified (parser.verified=True), ⏳ Pending, ❓ No parser",
+            "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | ❌ Broken | ❓ No parser",
             "",
             "---",
             "*Generated by `scripts/generate_fixture_index.py`*",

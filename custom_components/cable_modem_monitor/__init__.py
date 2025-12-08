@@ -40,9 +40,6 @@ SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
     }
 )
 
-SERVICE_CLEANUP_ENTITIES = "cleanup_entities"
-SERVICE_CLEANUP_ENTITIES_SCHEMA = vol.Schema({})
-
 
 def _select_parser(parsers: list, modem_choice: str):
     """Select appropriate parser based on user choice.
@@ -285,50 +282,6 @@ def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> 
     return stats_deleted
 
 
-def _create_cleanup_entities_handler(hass: HomeAssistant):
-    """Create the cleanup entities service handler."""
-
-    async def handle_cleanup_entities(call: ServiceCall) -> None:
-        """Handle cleanup_entities service call."""
-        from homeassistant.helpers import entity_registry as er
-
-        _LOGGER.info("Starting orphaned entity cleanup")
-
-        entity_reg = er.async_get(hass)
-
-        ***REMOVED*** Find all cable modem entities
-        all_cable_modem = [
-            entity_entry for entity_entry in entity_reg.entities.values() if entity_entry.platform == DOMAIN
-        ]
-
-        ***REMOVED*** Separate active from orphaned
-        active = [e for e in all_cable_modem if e.config_entry_id]
-        orphaned = [e for e in all_cable_modem if not e.config_entry_id]
-
-        _LOGGER.info(
-            f"Found {len(all_cable_modem)} total cable modem entities: "
-            f"{len(active)} active, {len(orphaned)} orphaned"
-        )
-
-        if not orphaned:
-            _LOGGER.info("No orphaned entities found - cleanup not needed")
-            return
-
-        ***REMOVED*** Remove orphaned entities
-        removed_count = 0
-        for entity_entry in orphaned:
-            try:
-                entity_reg.async_remove(entity_entry.entity_id)
-                _LOGGER.debug("Removed orphaned entity: %s", entity_entry.entity_id)
-                removed_count += 1
-            except Exception as e:
-                _LOGGER.error("Failed to remove %s: %s", entity_entry.entity_id, e)
-
-        _LOGGER.info("Successfully removed %s orphaned entities", removed_count)
-
-    return handle_cleanup_entities
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cable Modem Monitor from a config entry."""
     _LOGGER.info("Cable Modem Monitor version %s is starting", VERSION)
@@ -391,6 +344,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry=entry,
     )
 
+    ***REMOVED*** Store scraper reference for cache invalidation after modem restart
+    coordinator.scraper = scraper  ***REMOVED*** type: ignore[attr-defined]
+
     ***REMOVED*** Perform initial data fetch
     await _perform_initial_refresh(coordinator, entry)
 
@@ -416,14 +372,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             schema=SERVICE_CLEAR_HISTORY_SCHEMA,
         )
 
-    if not hass.services.has_service(DOMAIN, SERVICE_CLEANUP_ENTITIES):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_CLEANUP_ENTITIES,
-            _create_cleanup_entities_handler(hass),
-            schema=SERVICE_CLEANUP_ENTITIES_SCHEMA,
-        )
-
     return True
 
 
@@ -444,7 +392,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ***REMOVED*** Unregister services if this is the last entry
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_CLEAR_HISTORY)
-            hass.services.async_remove(DOMAIN, SERVICE_CLEANUP_ENTITIES)
 
     return bool(unload_ok)
 

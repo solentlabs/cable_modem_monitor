@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.diagnostics import (
+    _get_hnap_auth_attempt,
     _sanitize_log_message,
     async_get_config_entry_diagnostics,
 )
@@ -637,3 +638,103 @@ async def test_diagnostics_parser_detection_history_not_available(mock_config_en
     assert "note" in history
     assert "succeeded on first attempt" in history["note"]
     assert history["attempted_parsers"] == []
+
+
+class TestGetHnapAuthAttempt:
+    """Test _get_hnap_auth_attempt helper function."""
+
+    def test_returns_note_when_no_scraper(self):
+        """Test returns explanatory note when scraper not available."""
+        coordinator = Mock()
+        coordinator.scraper = None
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert result["note"] == "Scraper not available"
+
+    def test_returns_note_when_no_parser(self):
+        """Test returns explanatory note when parser not available."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = None
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert result["note"] == "Parser not available (might be using fallback mode)"
+
+    def test_returns_note_when_no_json_builder(self):
+        """Test returns explanatory note when no JSON builder (not HNAP modem)."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = Mock()
+        coordinator.scraper.parser._json_builder = None
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert result["note"] == "Not an HNAP modem (no JSON builder)"
+
+    def test_returns_note_when_no_auth_attempt(self):
+        """Test returns explanatory note when no auth attempt recorded."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = Mock()
+        coordinator.scraper.parser._json_builder = Mock()
+        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = None
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert result["note"] == "No HNAP auth attempt recorded yet"
+
+    def test_returns_auth_attempt_data(self):
+        """Test returns auth attempt data when available."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = Mock()
+        coordinator.scraper.parser._json_builder = Mock()
+        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+            "challenge_request": {"Login": {"Action": "request", "Username": "admin"}},
+            "challenge_response": '{"LoginResponse": {"Challenge": "ABC"}}',
+            "login_request": {"Login": {"Action": "login", "LoginPassword": "[REDACTED]"}},
+            "login_response": '{"LoginResponse": {"LoginResult": "OK"}}',
+            "error": None,
+        }
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert "data" in result
+        assert "compare with browser" in result["note"]
+        assert result["data"]["challenge_request"]["Login"]["Action"] == "request"
+
+    def test_sanitizes_sensitive_data(self):
+        """Test that auth attempt data is sanitized."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = Mock()
+        coordinator.scraper.parser._json_builder = Mock()
+        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+            "challenge_request": {"Login": {"Username": "admin"}},
+            "challenge_response": "password=secret123",
+            "login_request": None,
+            "login_response": None,
+            "error": None,
+        }
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        ***REMOVED*** Password should be redacted in response
+        assert "secret123" not in result["data"]["challenge_response"]
+        assert "REDACTED" in result["data"]["challenge_response"]
+
+    def test_handles_exception_gracefully(self):
+        """Test that exceptions are handled gracefully."""
+        coordinator = Mock()
+        coordinator.scraper = Mock()
+        coordinator.scraper.parser = Mock()
+        ***REMOVED*** Simulate an exception
+        coordinator.scraper.parser._json_builder = Mock()
+        coordinator.scraper.parser._json_builder.get_last_auth_attempt.side_effect = Exception("Something went wrong")
+
+        result = _get_hnap_auth_attempt(coordinator)
+
+        assert "Error retrieving auth data" in result["note"]
+        assert "Exception" in result["note"]

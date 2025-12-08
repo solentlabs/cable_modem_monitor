@@ -36,7 +36,7 @@
 
 - [Netgear CM2000 Product Page](https://www.netgear.com/home/wifi/modems/cm2000/)
 - [Netgear CM2000 Support](https://www.netgear.com/support/product/cm2000)
-- [Related Issue: ***REMOVED***38](https://github.com/kwschulz/cable_modem_monitor/issues/38)
+- [Related Issue: ***REMOVED***38](https://github.com/solentlabs/cable_modem_monitor/issues/38)
 
 ***REMOVED******REMOVED*** Authentication
 
@@ -194,7 +194,7 @@ if(confirm("Rebooting the router will disrupt active traffic on the network. Are
 
 ***REMOVED******REMOVED*** Contributor Information
 
-- **Original Issue**: [***REMOVED***38 - Netgear CM2000 Support Request](https://github.com/kwschulz/cable_modem_monitor/issues/38)
+- **Original Issue**: [***REMOVED***38 - Netgear CM2000 Support Request](https://github.com/solentlabs/cable_modem_monitor/issues/38)
 - **Contributor**: @m4dh4tt3r-88
 - **Fixtures Captured**: November 2025
 - **Parser Status**: ⏳ Pending v3.8.1 verification

@@ -49,11 +49,16 @@ class TestSB8200ParserDetection:
 
     def test_parser_metadata(self):
         """Test parser metadata is correct."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ParserStatus
+
         assert ArrisSB8200Parser.name == "ARRIS SB8200"
         assert ArrisSB8200Parser.manufacturer == "ARRIS"
         assert "SB8200" in ArrisSB8200Parser.models
         assert ArrisSB8200Parser.docsis_version == "3.1"
-        assert ArrisSB8200Parser.verified is True
+        assert ArrisSB8200Parser.status == ParserStatus.VERIFIED
+        ***REMOVED*** Also test the verified property via an instance
+        parser = ArrisSB8200Parser()
+        assert parser.verified is True
 
 
 class TestSB8200ParserCapabilities:

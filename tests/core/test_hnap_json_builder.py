@@ -280,6 +280,8 @@ class TestLogin:
         assert request_json["Login"]["Action"] == "request"
         assert request_json["Login"]["Username"] == "testuser"
         assert request_json["Login"]["LoginPassword"] == ""
+        ***REMOVED*** PrivateLogin field is required for MB8611 authentication
+        assert request_json["Login"]["PrivateLogin"] == "LoginPassword"
 
     def test_login_request_format(self, builder, mock_session):
         """Test that login request includes computed password."""
@@ -312,6 +314,8 @@ class TestLogin:
         login_password = request_json["Login"]["LoginPassword"]
         assert len(login_password) == 32
         assert login_password.isupper()
+        ***REMOVED*** PrivateLogin field is required for MB8611 authentication
+        assert request_json["Login"]["PrivateLogin"] == "LoginPassword"
 
     def test_private_key_computation(self, builder, mock_session):
         """Test that private key is computed correctly."""
@@ -533,3 +537,195 @@ class TestIntegration:
         ***REMOVED*** Fetch data
         result = builder.call_single(mock_session, "http://192.168.100.1", "GetMotoStatusConnectionInfo")
         assert "MB8611" in result
+
+
+class TestClearAuthCache:
+    """Test auth cache clearing for modem restart scenarios."""
+
+    def test_clear_auth_cache_clears_private_key(self, builder):
+        """Test that clear_auth_cache clears the stored private key."""
+        builder._private_key = "STOREDPRIVATEKEY***SERIAL***34"
+
+        builder.clear_auth_cache()
+
+        assert builder._private_key is None
+
+    def test_clear_auth_cache_when_already_none(self, builder):
+        """Test clear_auth_cache is safe when private key is already None."""
+        assert builder._private_key is None
+
+        builder.clear_auth_cache()  ***REMOVED*** Should not raise
+
+        assert builder._private_key is None
+
+    def test_reauth_after_cache_clear(self, builder, mock_session):
+        """Test that login works correctly after cache is cleared."""
+        ***REMOVED*** First login
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "FIRST",
+                    "Cookie": "cookie1",
+                    "PublicKey": "key1",
+                }
+            }
+        )
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "pass")
+        assert success is True
+        first_key = builder._private_key
+
+        ***REMOVED*** Clear cache (simulates modem restart)
+        builder.clear_auth_cache()
+        assert builder._private_key is None
+
+        ***REMOVED*** Re-login with different challenge (modem rebooted)
+        challenge_response2 = MagicMock()
+        challenge_response2.status_code = 200
+        challenge_response2.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "SECOND",
+                    "Cookie": "cookie2",
+                    "PublicKey": "key2",
+                }
+            }
+        )
+        login_response2 = MagicMock()
+        login_response2.status_code = 200
+        login_response2.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response2, login_response2]
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "pass")
+
+        assert success is True
+        assert builder._private_key is not None
+        assert builder._private_key != first_key  ***REMOVED*** Different challenge = different key
+
+
+class TestAuthAttemptTracking:
+    """Test that auth attempts are tracked for diagnostics."""
+
+    def test_get_last_auth_attempt_initially_none(self, builder):
+        """Test that get_last_auth_attempt returns None before any login."""
+        assert builder.get_last_auth_attempt() is None
+
+    def test_auth_attempt_stored_on_successful_login(self, builder, mock_session):
+        """Test that successful login stores auth attempt data."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST123",
+                    "Cookie": "session_cookie",
+                    "PublicKey": "PUBKEY456",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "password")
+
+        assert success is True
+        auth_attempt = builder.get_last_auth_attempt()
+        assert auth_attempt is not None
+        assert "challenge_request" in auth_attempt
+        assert "challenge_response" in auth_attempt
+        assert "login_request" in auth_attempt
+        assert "login_response" in auth_attempt
+        assert auth_attempt["error"] is None
+
+    def test_auth_attempt_contains_redacted_password(self, builder, mock_session):
+        """Test that stored login request has password redacted."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        builder.login(mock_session, "http://192.168.100.1", "admin", "secretpassword")
+
+        auth_attempt = builder.get_last_auth_attempt()
+        login_req = auth_attempt["login_request"]
+        ***REMOVED*** Password should be redacted
+        assert login_req["Login"]["LoginPassword"] == "[REDACTED]"
+
+    def test_auth_attempt_stores_error_on_failed_login(self, builder, mock_session):
+        """Test that failed login stores error information."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "FAILED"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "wrongpass")
+
+        assert success is False
+        auth_attempt = builder.get_last_auth_attempt()
+        assert auth_attempt["error"] == "LoginResult=FAILED"
+
+    def test_auth_attempt_stores_challenge_request_format(self, builder, mock_session):
+        """Test that challenge request includes PrivateLogin field."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        builder.login(mock_session, "http://192.168.100.1", "testuser", "pass")
+
+        auth_attempt = builder.get_last_auth_attempt()
+        challenge_req = auth_attempt["challenge_request"]
+
+        ***REMOVED*** Verify PrivateLogin field is present (MB8611 requirement)
+        assert challenge_req["Login"]["PrivateLogin"] == "LoginPassword"
+        assert challenge_req["Login"]["Action"] == "request"
+        assert challenge_req["Login"]["Username"] == "testuser"

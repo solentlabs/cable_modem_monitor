@@ -312,9 +312,17 @@ Examples:
 What to do:
     1. Browser will open to your modem's login page
     2. Log in using your modem's credentials
-    3. Navigate to the DOCSIS status / signal pages
+    3. IMPORTANT: Visit ALL of these pages to capture complete data:
+       - Connection Status / DOCSIS status page (channel data)
+       - Settings / Security page (for restart/reboot support)
+       - Product Info / About page (firmware version, uptime)
+       - Any other configuration pages
     4. Close the browser window when done
     5. HAR files will be saved automatically
+
+Why visit all pages?
+    We analyze the web interface to understand how to read modem data.
+    Missing pages = missing features (like restart/reboot support).
         """,
     )
 
@@ -412,8 +420,13 @@ What to do:
     print()
     print("Instructions:")
     print("  1. Log into your modem when the browser opens")
-    print("  2. Navigate to status/signal/DOCSIS pages")
+    print("  2. Visit ALL pages to capture complete API data:")
+    print("     • Connection Status / Signal pages (channel data)")
+    print("     • Settings / Security page (restart/reboot support)")
+    print("     • Product Info / About page (firmware, uptime)")
     print("  3. Close the browser window when done")
+    print()
+    print("TIP: More pages visited = more features we can support!")
     print()
     print("Starting browser...")
     print()

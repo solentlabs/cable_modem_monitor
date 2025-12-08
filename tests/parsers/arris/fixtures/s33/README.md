@@ -10,6 +10,7 @@
 | **Released** | 2020 |
 | **Status** | Current |
 | **ISPs** | Comcast, Cox, Spectrum |
+| **Parser** | ⏳ Pending |
 
 <!-- END AUTO-GENERATED -->
 
@@ -23,7 +24,7 @@
 | **Release Year** | 2019 |
 | **ISPs** | Comcast, Xfinity, Cox, Spectrum |
 | **Firmware** | TB01.03.001.10_012022_212.S3 |
-| **Related Issue** | [***REMOVED***32](https://github.com/kwschulz/cable_modem_monitor/issues/32) |
+| **Related Issue** | [***REMOVED***32](https://github.com/solentlabs/cable_modem_monitor/issues/32) |
 | **Captured By** | @gmogoody |
 | **Capture Date** | November 2025 |
 

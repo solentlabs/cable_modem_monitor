@@ -123,8 +123,12 @@ async def _connect_to_modem(hass: HomeAssistant, scraper) -> dict[str, Any]:
     ***REMOVED*** Check for authentication failures (login page detected)
     if modem_data.get("_auth_failure") or modem_data.get("_login_page_detected"):
         _LOGGER.error(
-            "Authentication failure detected. Modem returned login page. " "Diagnostic context: %s",
+            "Authentication failure detected. Modem returned login page. Diagnostic context: %s",
             modem_data.get("_diagnostic_context", {}),
+        )
+        _LOGGER.info(
+            "To debug HNAP authentication issues, enable debug logging and look for "
+            "'HNAP request payload' entries to compare with browser Network tab requests."
         )
         raise InvalidAuthError("Received login page - please check username and password")
 

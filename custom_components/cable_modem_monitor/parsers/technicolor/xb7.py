@@ -11,7 +11,7 @@ from custom_components.cable_modem_monitor.core.auth_config import RedirectFormA
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,9 +23,9 @@ class TechnicolorXB7Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["XB7", "CGM4331COM"]
 
-    ***REMOVED*** Verification status
-    verified = False  ***REMOVED*** No confirmed user reports
-    verification_source = None  ***REMOVED*** Needs user verification
+    ***REMOVED*** Parser status
+    status = ParserStatus.VERIFIED  ***REMOVED*** Confirmed by @esand in ***REMOVED***2 (v3.0)
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/2 (@esand)"
 
     ***REMOVED*** Device metadata
     release_date = "2018"

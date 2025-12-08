@@ -32,7 +32,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import parse_uptime_to_seconds
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,9 +45,9 @@ class NetgearC3700Parser(ModemParser):
     models = ["C3700", "C3700-100NAS"]
     priority = 50  ***REMOVED*** Standard priority
 
-    ***REMOVED*** Verification status
-    verified = True
-    verification_source = "kwschulz (personal verification)"
+    ***REMOVED*** Parser status
+    status = ParserStatus.VERIFIED
+    verification_source = "kwschulz (maintainer)"
 
     ***REMOVED*** Device metadata
     release_date = "2014-09"

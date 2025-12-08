@@ -761,7 +761,11 @@ class TestRestartCapability:
 
     @patch("custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPJsonRequestBuilder")
     def test_restart_success(self, mock_builder_class):
-        """Test successful restart command."""
+        """Test successful restart command.
+
+        The restart uses SetStatusSecuritySettings (from MotoStatusSecurity.html)
+        with MotoStatusSecurityAction=1 to trigger a reboot.
+        """
         parser = MotorolaMB8611HnapParser()
         mock_session = Mock()
         base_url = "https://192.168.100.1"
@@ -769,7 +773,7 @@ class TestRestartCapability:
         ***REMOVED*** Mock successful restart response
         mock_builder = Mock()
         mock_builder.call_single.return_value = json.dumps(
-            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "OK"}}
+            {"SetStatusSecuritySettingsResponse": {"SetStatusSecuritySettingsResult": "OK"}}
         )
         mock_builder_class.return_value = mock_builder
 
@@ -778,8 +782,9 @@ class TestRestartCapability:
         assert result is True
         mock_builder.call_single.assert_called_once()
         call_args = mock_builder.call_single.call_args
-        assert call_args[0][2] == "SetMotoStatusDSTargetFreq"
-        assert call_args[0][3]["MotoStatusConnectionAction"] == "1"
+        assert call_args[0][2] == "SetStatusSecuritySettings"
+        assert call_args[0][3]["MotoStatusSecurityAction"] == "1"
+        assert call_args[0][3]["MotoStatusSecXXX"] == "XXX"
 
     @patch("custom_components.cable_modem_monitor.parsers.motorola.mb8611.HNAPJsonRequestBuilder")
     def test_restart_connection_reset_is_success(self, mock_builder_class):
@@ -808,7 +813,7 @@ class TestRestartCapability:
         ***REMOVED*** Mock failed restart response
         mock_builder = Mock()
         mock_builder.call_single.return_value = json.dumps(
-            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "FAILED"}}
+            {"SetStatusSecuritySettingsResponse": {"SetStatusSecuritySettingsResult": "FAILED"}}
         )
         mock_builder_class.return_value = mock_builder
 
@@ -825,7 +830,7 @@ class TestRestartCapability:
         ***REMOVED*** Simulate that login was called and stored a builder
         mock_builder = Mock()
         mock_builder.call_single.return_value = json.dumps(
-            {"SetMotoStatusDSTargetFreqResponse": {"SetMotoStatusDSTargetFreqResult": "OK"}}
+            {"SetStatusSecuritySettingsResponse": {"SetStatusSecuritySettingsResult": "OK"}}
         )
         parser._json_builder = mock_builder
 

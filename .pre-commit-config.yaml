@@ -99,23 +99,31 @@ repos:
 
       - id: regenerate-fixtures-index
         name: Regenerate FIXTURES.md and README Quick Facts
-        entry: .venv/bin/python scripts/generate_fixture_index.py
+        entry: scripts/dev/run-python.sh scripts/generate_fixture_index.py
         language: script
         files: ^tests/parsers/.*/fixtures/.*/(README\.md|metadata\.yaml)$
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: check-fixture-pii
+        name: Check fixtures for PII and metadata
+        entry: scripts/dev/run-python.sh scripts/dev/check-fixture-pii.py
+        language: script
+        files: ^tests/parsers/.*/fixtures/.*\.(html|yaml)$
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: validate-commit-msg
         name: Validate commit message (conventional commits)
-        entry: python scripts/dev/validate.py --commit-msg-file
-        language: system
+        entry: scripts/dev/run-python.sh scripts/dev/validate.py --commit-msg-file
+        language: script
         stages: [commit-msg]
         always_run: true
 
       - id: validate-code
         name: Validate code (fallback for missing tools)
-        entry: python scripts/dev/validate.py --lint --format
-        language: system
+        entry: scripts/dev/run-python.sh scripts/dev/validate.py --lint --format
+        language: script
         pass_filenames: false
         stages: [manual]
         always_run: true

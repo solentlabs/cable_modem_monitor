@@ -128,10 +128,10 @@ class TestModemScraper:
         """Test that restart_modem falls back from HTTPS to HTTP when connection refused."""
         import requests
 
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
         ***REMOVED*** Create scraper with HTTPS URL
-        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MotorolaGenericParser])
+        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock session.get to simulate HTTPS failure, HTTP success
         call_count = [0]
@@ -174,9 +174,9 @@ class TestModemScraper:
 
     def test_restart_modem_calls_login_with_credentials(self, mocker):
         """Test that restart_modem calls login when credentials are provided."""
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
-        scraper = ModemScraper("http://192.168.100.1", "admin", "motorola", parser=[MotorolaGenericParser])
+        scraper = ModemScraper("http://192.168.100.1", "admin", "motorola", parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -189,7 +189,7 @@ class TestModemScraper:
             return_value=(
                 "<html><title>Motorola Cable Modem</title></html>",
                 "http://192.168.100.1/MotoConnection.asp",
-                MotorolaGenericParser,
+                MotorolaMB7621Parser,
             ),
         )
 
@@ -211,10 +211,10 @@ class TestModemScraper:
 
     def test_restart_modem_skips_login_without_credentials(self, mocker):
         """Test that restart_modem skips login when no credentials provided."""
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
         ***REMOVED*** No username/password
-        scraper = ModemScraper("http://192.168.100.1", None, None, parser=[MotorolaGenericParser])
+        scraper = ModemScraper("http://192.168.100.1", None, None, parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -227,7 +227,7 @@ class TestModemScraper:
             return_value=(
                 "<html><title>Motorola Cable Modem</title></html>",
                 "http://192.168.100.1/MotoConnection.asp",
-                MotorolaGenericParser,
+                MotorolaMB7621Parser,
             ),
         )
 
@@ -249,9 +249,9 @@ class TestModemScraper:
 
     def test_restart_modem_fails_when_login_fails(self, mocker):
         """Test that restart_modem aborts when login fails."""
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
-        scraper = ModemScraper("http://192.168.100.1", "admin", "wrong_password", parser=[MotorolaGenericParser])
+        scraper = ModemScraper("http://192.168.100.1", "admin", "wrong_password", parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -264,7 +264,7 @@ class TestModemScraper:
             return_value=(
                 "<html><title>Motorola Cable Modem</title></html>",
                 "http://192.168.100.1/MotoConnection.asp",
-                MotorolaGenericParser,
+                MotorolaMB7621Parser,
             ),
         )
 
@@ -284,9 +284,9 @@ class TestModemScraper:
 
     def test_restart_modem_fails_when_connection_fails(self, mocker):
         """Test that restart_modem fails gracefully when connection fails."""
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
-        scraper = ModemScraper("http://192.168.100.1", parser=[MotorolaGenericParser])
+        scraper = ModemScraper("http://192.168.100.1", parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock _fetch_data to return None (connection failed)
         mocker.patch.object(scraper, "_fetch_data", return_value=None)
@@ -343,10 +343,10 @@ class TestModemScraper:
 
         This is critical to ensure protocol detection (HTTP vs HTTPS) happens on every restart.
         """
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import MotorolaGenericParser
+        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
 
         ***REMOVED*** Create scraper with HTTPS and pre-set parser (simulating cached state)
-        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MotorolaGenericParser])
+        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MotorolaMB7621Parser])
 
         ***REMOVED*** Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -360,7 +360,7 @@ class TestModemScraper:
             return (
                 "<html><title>Motorola Cable Modem</title></html>",
                 "http://192.168.100.1/MotoConnection.asp",
-                MotorolaGenericParser,
+                MotorolaMB7621Parser,
             )
 
         mock_fetch = mocker.patch.object(scraper, "_fetch_data", side_effect=mock_fetch_with_update)

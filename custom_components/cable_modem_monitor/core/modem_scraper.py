@@ -144,6 +144,31 @@ class ModemScraper:
         self._failed_urls: list[dict[str, Any]] = []  ***REMOVED*** Track failed fetches for diagnostics
         self._capture_enabled: bool = False  ***REMOVED*** Flag to enable HTML capture
 
+    def clear_auth_cache(self) -> None:
+        """Clear cached authentication and create fresh session.
+
+        Call this after modem restart to force re-authentication on next poll.
+        The modem invalidates all sessions on reboot, so cached credentials
+        and session cookies become stale, causing 500 errors.
+        """
+        import requests as req
+
+        ***REMOVED*** Create fresh session (clears cookies)
+        old_verify = self.session.verify if hasattr(self.session, "verify") else not self.verify_ssl
+        self.session = req.Session()
+        self.session.verify = old_verify
+
+        ***REMOVED*** Clear parser's HNAP builder cache if present
+        if (
+            hasattr(self, "parser")
+            and self.parser is not None
+            and hasattr(self.parser, "_json_builder")
+            and self.parser._json_builder is not None
+        ):
+            self.parser._json_builder.clear_auth_cache()
+
+        _LOGGER.debug("Cleared auth cache and created fresh session")
+
     def _capture_response(self, response: requests.Response, description: str = "") -> None:
         """Capture HTTP response for diagnostics.
 
