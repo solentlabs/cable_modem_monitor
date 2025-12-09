@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [3.9.0] - 2025-12-09
 
+***REMOVED******REMOVED*** [3.9.0] - 2025-12-09
+
 ***REMOVED******REMOVED******REMOVED*** Added
 - **Arris/CommScope S33 Parser** - Full support for DOCSIS 3.1 modem with HNAP authentication
 - **ParserStatus Enum** - New lifecycle states for parser development (experimental, verified, deprecated)
