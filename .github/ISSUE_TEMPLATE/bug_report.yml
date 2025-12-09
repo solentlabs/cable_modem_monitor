@@ -13,7 +13,7 @@ body:
         Before submitting, please check:
         - [ ] You've searched existing issues to avoid duplicates
         - [ ] You're using the latest version of the integration
-        - [ ] You've reviewed the [Troubleshooting Guide](https://github.com/kwschulz/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)
+        - [ ] You've reviewed the [Troubleshooting Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TROUBLESHOOTING.md)
 
   - type: input
     id: version

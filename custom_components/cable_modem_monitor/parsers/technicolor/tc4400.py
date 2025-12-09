@@ -10,7 +10,7 @@ from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConf
 from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number, parse_uptime_to_seconds
 
-from ..base_parser import ModemCapability, ModemParser
+from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ class TechnicolorTC4400Parser(ModemParser):
     manufacturer = "Technicolor"
     models = ["TC4400"]
 
-    # Verification status
-    verified = False  # No confirmed user reports
-    verification_source = None  # Check Issue #1 for status
+    # Parser status
+    status = ParserStatus.VERIFIED  # Confirmed by @Mar1usW3 in #1 (v2.2.0)
+    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/1 (@Mar1usW3)"
 
     # Device metadata
     release_date = "2017"

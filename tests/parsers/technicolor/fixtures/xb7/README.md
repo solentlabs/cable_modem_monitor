@@ -10,7 +10,7 @@
 | **Released** | 2020 |
 | **Status** | Current |
 | **ISPs** | Comcast |
-| **Parser** | ⏳ Pending |
+| **Parser** | ✅ Verified |
 
 <!-- END AUTO-GENERATED -->
 

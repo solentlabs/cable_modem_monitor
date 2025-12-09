@@ -2,6 +2,32 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Welcome",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "if [ -f .venv/bin/activate ]; then cat scripts/dev/next_steps.txt; else cat scripts/dev/welcome_message.txt; fi"
+      ],
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-Command",
+          "if (Test-Path .venv\\Scripts\\activate) { Get-Content scripts\\dev\\next_steps.txt } else { Get-Content scripts\\dev\\welcome_message.txt }"
+        ]
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": false
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
       "label": "Run All Tests",
       "type": "shell",
       "command": "make test",

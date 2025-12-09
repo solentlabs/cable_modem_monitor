@@ -52,6 +52,9 @@ def eval_ast_value(node: ast.expr):
         return node.s
     elif isinstance(node, ast.Num):  # Python 3.7 compatibility
         return node.n
+    elif isinstance(node, ast.Attribute):
+        # Handle ParserStatus.VERIFIED, ParserStatus.PENDING, etc.
+        return node.attr.lower()  # Returns "verified", "pending", "broken", etc.
     return None
 
 
@@ -114,11 +117,20 @@ def discover_parsers() -> list[dict]:  # noqa: C901
                 if "fallback" in node.name.lower():
                     continue
 
+                # Handle status field (new) or verified field (legacy)
+                status = attrs.get("status", attrs.get("verified", "pending"))
+                # Normalize: True -> "verified", False -> "pending", string -> as-is
+                if status is True:
+                    status = "verified"
+                elif status is False:
+                    status = "pending"
+
                 parser_info = {
                     "name": attrs.get("name", node.name),
                     "manufacturer": attrs.get("manufacturer", manufacturer_dir.name.title()),
                     "models": attrs.get("models", []),
-                    "verified": attrs.get("verified", False),
+                    "status": status,
+                    "verified": status == "verified",  # Backward compat
                     "verification_source": attrs.get("verification_source"),
                     "priority": attrs.get("priority", 50),
                     "class_name": node.name,
@@ -148,18 +160,36 @@ def print_table(parsers: list[dict]) -> None:
     print(f"{'Modem':<{name_width}}  {'Manufacturer':<{mfr_width}}  {'Models':<{models_width}}  Status")
     print(f"{'-' * name_width}  {'-' * mfr_width}  {'-' * models_width}  {'-' * 20}")
 
+    # Status display mapping
+    status_display = {
+        "verified": "✓ Verified",
+        "in_progress": "🔧 In Progress",
+        "awaiting_verification": "⏳ Awaiting Verification",
+        "broken": "✗ Broken",
+        "deprecated": "⊘ Deprecated",
+    }
+
     # Rows
-    verified_count = 0
+    status_counts: dict[str, int] = {}
     for p in parsers:
-        status = "✓ Verified" if p["verified"] else "⚠ Unverified"
-        if p["verified"]:
-            verified_count += 1
+        status = p.get("status", "awaiting_verification")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        display = status_display.get(status, f"? {status}")
         models = ", ".join(p["models"]) or "-"
-        print(f"{p['name']:<{name_width}}  {p['manufacturer']:<{mfr_width}}  {models:<{models_width}}  {status}")
+        print(f"{p['name']:<{name_width}}  {p['manufacturer']:<{mfr_width}}  {models:<{models_width}}  {display}")
 
     # Summary
     print()
-    print(f"Total: {len(parsers)} parsers ({verified_count} verified, {len(parsers) - verified_count} unverified)")
+    parts = [f"{status_counts.get('verified', 0)} verified"]
+    if status_counts.get("in_progress"):
+        parts.append(f"{status_counts['in_progress']} in progress")
+    if status_counts.get("awaiting_verification"):
+        parts.append(f"{status_counts['awaiting_verification']} awaiting verification")
+    if status_counts.get("broken"):
+        parts.append(f"{status_counts['broken']} broken")
+    if status_counts.get("deprecated"):
+        parts.append(f"{status_counts['deprecated']} deprecated")
+    print(f"Total: {len(parsers)} parsers ({', '.join(parts)})")
 
 
 def print_markdown(parsers: list[dict]) -> None:
@@ -168,19 +198,38 @@ def print_markdown(parsers: list[dict]) -> None:
         print("No parsers found.")
         return
 
+    status_display = {
+        "verified": "✓ Verified",
+        "in_progress": "🔧 In Progress",
+        "awaiting_verification": "⏳ Awaiting Verification",
+        "broken": "✗ Broken",
+        "deprecated": "⊘ Deprecated",
+    }
+
     print("| Modem | Manufacturer | Models | Status | Verification Source |")
     print("|-------|--------------|--------|--------|---------------------|")
 
+    status_counts: dict[str, int] = {}
     for p in parsers:
-        status = "✓ Verified" if p["verified"] else "⚠ Unverified"
+        status = p.get("status", "awaiting_verification")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        display = status_display.get(status, f"? {status}")
         models = ", ".join(p["models"]) or "-"
         source = p["verification_source"] or "-"
-        print(f"| {p['name']} | {p['manufacturer']} | {models} | {status} | {source} |")
+        print(f"| {p['name']} | {p['manufacturer']} | {models} | {display} | {source} |")
 
     # Summary
-    verified_count = sum(1 for p in parsers if p["verified"])
     print()
-    print(f"**Total:** {len(parsers)} parsers ({verified_count} verified, {len(parsers) - verified_count} unverified)")
+    parts = [f"{status_counts.get('verified', 0)} verified"]
+    if status_counts.get("in_progress"):
+        parts.append(f"{status_counts['in_progress']} in progress")
+    if status_counts.get("awaiting_verification"):
+        parts.append(f"{status_counts['awaiting_verification']} awaiting verification")
+    if status_counts.get("broken"):
+        parts.append(f"{status_counts['broken']} broken")
+    if status_counts.get("deprecated"):
+        parts.append(f"{status_counts['deprecated']} deprecated")
+    print(f"**Total:** {len(parsers)} parsers ({', '.join(parts)})")
 
 
 def print_json(parsers: list[dict]) -> None:

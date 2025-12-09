@@ -8,8 +8,10 @@ from unittest.mock import Mock
 import pytest
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.parsers.motorola.generic import RESTART_WINDOW_SECONDS
-from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import MotorolaMB7621Parser
+from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import (
+    RESTART_WINDOW_SECONDS,
+    MotorolaMB7621Parser,
+)
 
 
 @pytest.fixture
@@ -175,8 +177,7 @@ class TestParsing:
 class TestRestartDetection:
     """Test restart detection and zero-value filtering.
 
-    These tests verify the base Motorola parsing behavior inherited from
-    MotorolaGenericParser. During the restart window (first 5 minutes after boot),
+    During the restart window (first 5 minutes after boot),
     zero power/SNR values are filtered to None to avoid false readings.
     """
 
@@ -360,36 +361,6 @@ class TestAutoDetection:
 
         assert MotorolaMB7621Parser.can_parse(soup, url, login_html) is False
 
-    def test_mb7621_detected_before_generic(self, swinfo_html):
-        """MB7621 should be detected instead of Generic when model string present.
-
-        This is the key auto-detection test. When MotoSwInfo.asp is checked,
-        MB7621 should match. If only Generic matches, there's a regression.
-        """
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import (
-            MotorolaGenericParser,
-        )
-        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import (
-            MotorolaMB7621Parser,
-        )
-
-        soup = BeautifulSoup(swinfo_html, "html.parser")
-        url = "http://192.168.100.1/MotoSwInfo.asp"
-
-        # Both parsers will match this HTML
-        mb7621_matches = MotorolaMB7621Parser.can_parse(soup, url, swinfo_html)
-        generic_matches = MotorolaGenericParser.can_parse(soup, url, swinfo_html)
-
-        # MB7621 MUST match - this is the critical assertion
-        assert mb7621_matches is True, "MB7621 parser should detect MB7621 modem"
-
-        # Generic also matches (it checks title), which is fine
-        # The issue is whether MB7621 is tried FIRST during detection
-        assert generic_matches is True, "Generic also matches (expected)"
-
-        # MB7621 has higher priority than Generic
-        assert MotorolaMB7621Parser.priority > MotorolaGenericParser.priority
-
     def test_swinfo_page_is_first_url_pattern(self):
         """MotoSwInfo.asp should be MB7621's first URL pattern.
 
@@ -425,13 +396,6 @@ class TestAutoDetection:
         2. MB7621's /MotoSwInfo.asp should be tried
         3. can_parse should return True for that page
         """
-        from custom_components.cable_modem_monitor.parsers.motorola.generic import (
-            MotorolaGenericParser,
-        )
-        from custom_components.cable_modem_monitor.parsers.motorola.mb7621 import (
-            MotorolaMB7621Parser,
-        )
-
         soup = BeautifulSoup(swinfo_html, "html.parser")
         url = "http://192.168.100.1/MotoSwInfo.asp"
 
@@ -444,6 +408,3 @@ class TestAutoDetection:
 
         # When that page is fetched, MB7621 should be detected
         assert MotorolaMB7621Parser.can_parse(soup, url, swinfo_html) is True
-
-        # And MB7621 should have higher priority than Generic
-        assert MotorolaMB7621Parser.priority > MotorolaGenericParser.priority

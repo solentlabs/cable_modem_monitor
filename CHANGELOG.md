@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.0] - 2025-12-09
+
+## [3.9.0] - 2025-12-09
+
+### Added
+- **Arris/CommScope S33 Parser** - Full support for DOCSIS 3.1 modem with HNAP authentication
+- **ParserStatus Enum** - New lifecycle states for parser development (experimental, verified, deprecated)
+- **HNAP Request Logging** - Debug logs now show exact JSON payloads sent to modem (helps compare with browser)
+- **HNAP Auth Diagnostics** - Diagnostics JSON includes `hnap_auth_debug` section with request/response data
+- **Debug Guidance in Error Messages** - Auth failure messages now include debug logging instructions (6 languages)
+- **Fixture Requirements Guide** - `docs/FIXTURE_REQUIREMENTS.md` with metadata.yaml template and PII checklist
+- **Examples Documentation** - Dashboard and automation examples moved to `docs/EXAMPLES.md`
+
+### Changed
+- **MB8611 HNAP Login** - Added `PrivateLogin` field to login requests (potential fix for auth failures)
+- **TC4400 Parser Verified** - Updated verification status with community confirmation
+- **XB7 Parser Verified** - Updated verification status with community confirmation
+- **README Restructure** - Reduced from 756 to 371 lines (51% reduction) following single-source-of-truth principle
+- **PR Template** - Added explicit fixture checkboxes for PII scrubbing and metadata.yaml
+
+### Removed
+- **Entity Cleanup Feature** - Removed vestigial v2.0 migration code (entity_cleanup.py, CleanupEntitiesButton, cleanup_entities service)
+- **Motorola Generic Parser** - Removed obsolete parser superseded by model-specific parsers
+
+### Fixed
+- **HNAP Auth Cache** - Clear auth cache after modem restart to prevent stale token errors
+- **MB8611 Restart Action** - Use correct HNAP action for restart command
+- **Pre-commit Hook Compatibility** - Support both .venv and pyenv environments
+
+### Developer Experience
+- **Welcome Task** - New VS Code task for first-time dev container setup
+- **Port Conflict Resolution** - Improved handling of port 8123 conflicts
+- **Fixture PII Validation** - Pre-commit hook checks for MAC addresses and public IPs
+
 ## [3.8.6] - 2025-12-01
 
 ### Added
@@ -1122,7 +1156,7 @@ This release provides extensive diagnostic information to help understand why th
 - **Critical Bug Fix** - Fixed config flow validation that allowed setup to succeed even when modem was unreachable
   - Changed `config_flow.py` to check correct key: `cable_modem_connection_status` instead of `connection_status`
   - This bug caused sensors to show as "unavailable" with no data despite successful integration setup
-  - Resolves [#4](https://github.com/kwschulz/cable_modem_monitor/issues/4)
+  - Resolves [#4](https://github.com/solentlabs/cable_modem_monitor/issues/4)
 - **Diagnostics Data Fix** - Updated `diagnostics.py` to use correct data keys with `cable_modem_` prefix
   - Fixed all key names to match actual data structure returned by modem scraper
   - Diagnostics now properly display connection status, channel counts, and system info
@@ -1170,7 +1204,7 @@ This release provides extensive diagnostic information to help understand why th
   - Detection by URL pattern (`network_setup.jst`) and content
   - Basic HTTP Authentication support
   - Used by Rogers (Canada), Comcast
-  - Resolves [#2](https://github.com/kwschulz/cable_modem_monitor/issues/2)
+  - Resolves [#2](https://github.com/solentlabs/cable_modem_monitor/issues/2)
 
 ### Test Coverage
 - Added 27 comprehensive tests for XB7 parser:
@@ -1551,11 +1585,11 @@ This release provides extensive diagnostic information to help understand why th
 - Modem-specific HTML parsing may need adjustment for some models
 - Limited to HTTP (no HTTPS support for modem connections)
 
-[1.3.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.3.0
-[1.2.2]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.2
-[1.2.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.1
-[1.2.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.2.0
-[1.1.3]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.3
-[1.1.1]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.1
-[1.1.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.1.0
-[1.0.0]: https://github.com/kwschulz/cable_modem_monitor/releases/tag/v1.0.0
+[1.3.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.3.0
+[1.2.2]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.2
+[1.2.1]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.1
+[1.2.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.2.0
+[1.1.3]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.3
+[1.1.1]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.1
+[1.1.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.1.0
+[1.0.0]: https://github.com/solentlabs/cable_modem_monitor/releases/tag/v1.0.0

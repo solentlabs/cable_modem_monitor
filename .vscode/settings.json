@@ -5,6 +5,13 @@
   // ========================================
 
   // ========================================
+  // Task Auto-Run Permission
+  // ========================================
+
+  // Allow automatic tasks (Welcome message on folder open)
+  "task.allowAutomaticTasks": "on",
+
+  // ========================================
   // Python Configuration
   // ========================================
   //
