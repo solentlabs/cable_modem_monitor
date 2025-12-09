@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.9.0] - 2025-12-09
+
+***REMOVED******REMOVED******REMOVED*** Added
+- **Arris/CommScope S33 Parser** - Full support for DOCSIS 3.1 modem with HNAP authentication
+- **ParserStatus Enum** - New lifecycle states for parser development (experimental, verified, deprecated)
+- **HNAP Request Logging** - Debug logs now show exact JSON payloads sent to modem (helps compare with browser)
+- **HNAP Auth Diagnostics** - Diagnostics JSON includes `hnap_auth_debug` section with request/response data
+- **Debug Guidance in Error Messages** - Auth failure messages now include debug logging instructions (6 languages)
+- **Fixture Requirements Guide** - `docs/FIXTURE_REQUIREMENTS.md` with metadata.yaml template and PII checklist
+- **Examples Documentation** - Dashboard and automation examples moved to `docs/EXAMPLES.md`
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **MB8611 HNAP Login** - Added `PrivateLogin` field to login requests (potential fix for auth failures)
+- **TC4400 Parser Verified** - Updated verification status with community confirmation
+- **XB7 Parser Verified** - Updated verification status with community confirmation
+- **README Restructure** - Reduced from 756 to 371 lines (51% reduction) following single-source-of-truth principle
+- **PR Template** - Added explicit fixture checkboxes for PII scrubbing and metadata.yaml
+
+***REMOVED******REMOVED******REMOVED*** Removed
+- **Entity Cleanup Feature** - Removed vestigial v2.0 migration code (entity_cleanup.py, CleanupEntitiesButton, cleanup_entities service)
+- **Motorola Generic Parser** - Removed obsolete parser superseded by model-specific parsers
+
+***REMOVED******REMOVED******REMOVED*** Fixed
+- **HNAP Auth Cache** - Clear auth cache after modem restart to prevent stale token errors
+- **MB8611 Restart Action** - Use correct HNAP action for restart command
+- **Pre-commit Hook Compatibility** - Support both .venv and pyenv environments
+
+***REMOVED******REMOVED******REMOVED*** Developer Experience
+- **Welcome Task** - New VS Code task for first-time dev container setup
+- **Port Conflict Resolution** - Improved handling of port 8123 conflicts
+- **Fixture PII Validation** - Pre-commit hook checks for MAC addresses and public IPs
+
 ***REMOVED******REMOVED*** [3.8.6] - 2025-12-01
 
 ***REMOVED******REMOVED******REMOVED*** Added
