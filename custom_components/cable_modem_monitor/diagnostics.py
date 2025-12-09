@@ -104,8 +104,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                 ***REMOVED*** Get level - could be int or string
                                 level = getattr(record, "level", "ERROR")
                                 if isinstance(level, int):
-                                    import logging
-
                                     level = logging.getLevelName(level)
 
                                 ***REMOVED*** Get timestamp
@@ -145,8 +143,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                 message = record[3] if len(record) > 3 else "Unknown"
 
                                 if isinstance(level, int):
-                                    import logging
-
                                     level = logging.getLevelName(level)
 
                                 sanitized_message = _sanitize_log_message(str(message))
