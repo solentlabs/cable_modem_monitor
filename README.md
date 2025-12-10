@@ -16,7 +16,7 @@
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
-![Cable Modem Health Dashboard](images/dashboard-screenshot.png)
+<img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="500">
 
 *Monitor your cable modem's signal quality, errors, and connection health in real-time*
 
@@ -69,18 +69,28 @@ cd cable_modem_monitor
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
 <p align="center">
-  <img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard"><br>
+  <img src="images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="400"><br>
   <em>Complete dashboard showing connection status, signal quality, and error tracking</em>
 </p>
 
 <p align="center">
-  <img src="images/downstream-power-levels.png" alt="Downstream Power Levels"><br>
+  <img src="images/downstream-power-levels.png" alt="Downstream Power Levels" width="500"><br>
   <em>Real-time power level monitoring across all downstream channels</em>
 </p>
 
 <p align="center">
-  <img src="images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio"><br>
+  <img src="images/signal-to-noise-ratio.png" alt="Signal-to-Noise Ratio" width="500"><br>
   <em>SNR tracking helps identify signal quality issues before they cause problems</em>
+</p>
+
+<p align="center">
+  <img src="images/latency.png" alt="Modem Latency Monitoring" width="500"><br>
+  <em>Ping and HTTP latency monitoring for real-time health assessment</em>
+</p>
+
+<p align="center">
+  <img src="images/corrected_errors.png" alt="Corrected Errors" width="500"><br>
+  <em>Track corrected errors over time to spot developing line issues</em>
 </p>
 
 ---
@@ -205,7 +215,7 @@ After installation, you can configure additional settings:
    - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
    - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
 
-![Cable Modem Configuration Settings](images/cable-modem-settings.png)
+<img src="images/cable-modem-settings.png" alt="Cable Modem Configuration Settings" width="400">
 
 *Configuration options available through the Settings UI*
 

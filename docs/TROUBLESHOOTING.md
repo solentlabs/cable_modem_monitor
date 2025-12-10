@@ -5,6 +5,7 @@ Common issues and solutions for Cable Modem Monitor integration.
 ***REMOVED******REMOVED*** Table of Contents
 - [Connection and Authentication Issues](***REMOVED***connection-and-authentication-issues)
 - [Upstream Sensors Not Appearing](***REMOVED***upstream-sensors-not-appearing)
+- [Orphaned Channel Sensors](***REMOVED***orphaned-channel-sensors)
 - [Duplicate Entities](***REMOVED***duplicate-entities)
 
 ---
@@ -274,6 +275,29 @@ If upstream sensors still don't appear after upgrading to v2.0.0+, please [open 
 - Your modem model
 - Debug logs showing upstream parsing
 - Diagnostics download from the integration
+
+---
+
+***REMOVED******REMOVED*** Orphaned Channel Sensors
+
+***REMOVED******REMOVED******REMOVED*** Problem: Unavailable Channel Sensors After Cable Company Changes
+
+**Symptoms:**
+- Some channel sensors show "unavailable" permanently
+- Happened after cable company made network changes
+- Modem now reports fewer channels than before
+
+**Cause:**
+Sensors are created at integration startup based on the channels your modem reports. If your cable company decommissions channels, the sensors persist but return no data.
+
+**Solution:**
+Press the **Reset Entities** button to clean up:
+1. Settings → Devices & Services → Cable Modem Monitor
+2. Click on the device
+3. Press "Reset Entities" button
+4. Integration will reload with only current channels
+
+Historical data is preserved - the same channels will reconnect to their history.
 
 ---
 
