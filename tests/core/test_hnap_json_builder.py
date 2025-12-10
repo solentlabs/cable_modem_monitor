@@ -249,8 +249,11 @@ class TestLogin:
         assert builder._private_key is not None
         assert len(builder._private_key) == 32  ***REMOVED*** HMAC-MD5 hex
 
-        ***REMOVED*** Verify cookie was set
-        mock_session.cookies.set.assert_called_once_with("uid", "session_cookie_value")
+        ***REMOVED*** Verify both cookies were set (uid and PrivateKey)
+        ***REMOVED*** The modem's browser login (Login.js) requires both cookies for authenticated actions
+        assert mock_session.cookies.set.call_count == 2
+        mock_session.cookies.set.assert_any_call("uid", "session_cookie_value")
+        mock_session.cookies.set.assert_any_call("PrivateKey", builder._private_key)
 
     def test_challenge_request_format(self, builder, mock_session):
         """Test that challenge request is properly formatted."""

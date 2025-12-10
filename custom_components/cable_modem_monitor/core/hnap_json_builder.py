@@ -303,8 +303,13 @@ class HNAPJsonRequestBuilder:
             private_key = _hmac_md5(public_key + password, challenge)
             self._private_key = private_key  ***REMOVED*** Store for subsequent authenticated requests
 
-            ***REMOVED*** Set the session cookie
+            ***REMOVED*** Set the session cookies
+            ***REMOVED*** The modem's browser login (Login.js) sets both 'uid' and 'PrivateKey' cookies:
+            ***REMOVED***   $.cookie('uid', obj.Cookie, { path: '/' });
+            ***REMOVED***   $.cookie('PrivateKey', PrivateKey, {path: '/' });
+            ***REMOVED*** Both are required for authenticated actions like restart to work.
             session.cookies.set("uid", cookie)
+            session.cookies.set("PrivateKey", private_key)
 
             ***REMOVED*** LoginPassword = HMAC_MD5(PrivateKey, Challenge)
             login_password = _hmac_md5(private_key, challenge)
