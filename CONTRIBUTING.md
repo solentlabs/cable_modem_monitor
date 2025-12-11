@@ -976,10 +976,19 @@ Help make Cable Modem Monitor accessible to users worldwide! The integration sup
 | Language | Code | Status |
 |----------|------|--------|
 | English | `en.json` | ✅ Complete (source) |
-| Portuguese (Brazil) | `pt-BR.json` | ✅ Complete |
-| Spanish | `es.json` | ✅ Complete |
 | German | `de.json` | ✅ Complete |
+| Dutch | `nl.json` | ✅ Complete |
 | French | `fr.json` | ✅ Complete |
+| Chinese (Simplified) | `zh-CN.json` | ✅ Complete |
+| Italian | `it.json` | ✅ Complete |
+| Spanish | `es.json` | ✅ Complete |
+| Polish | `pl.json` | ✅ Complete |
+| Swedish | `sv.json` | ✅ Complete |
+| Russian | `ru.json` | ✅ Complete |
+| Portuguese (Brazil) | `pt-BR.json` | ✅ Complete |
+| Ukrainian | `uk.json` | ✅ Complete |
+
+For detailed translation guidelines, see [docs/TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md).
 
 ### Adding a New Language
 

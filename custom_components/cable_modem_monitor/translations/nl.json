@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Verbind met uw kabelmodem. Modellen gemarkeerd met * zijn niet geverifieerd.",
+        "data": {
+          "host": "Modem IP-adres",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord",
+          "modem_choice": "Modemmodel"
+        },
+        "data_description": {
+          "host": "Meestal 192.168.100.1",
+          "username": "Leeg laten indien niet vereist",
+          "password": "Leeg laten indien niet vereist",
+          "modem_choice": "Gebruik 'auto' voor automatische detectie"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authenticatie mislukt - modem gaf inlogpagina terug.\n\nControleer a.u.b.:\n1. Gebruikersnaam is correct (meestal 'admin', zie modemlabel)\n2. Wachtwoord is correct (zie modemlabel)\n3. Inloggegevens zijn niet gewijzigd van standaard\n\nProbeer handmatig in te loggen op de modem via https://192.168.100.1 om te verifiëren dat de inloggegevens werken.",
+      "network_unreachable": "Kan modem niet bereiken - netwerkconnectiviteitsprobleem.\n\nControleer a.u.b.:\n1. Netwerkverbinding - Bent u op het juiste WiFi-netwerk?\n2. Gast-WiFi - Gastnetwerken blokkeren vaak toegang tot lokale apparaten\n3. VPN - Verbreek actieve VPN-verbindingen\n4. IP-adres - Controleer het IP van de modem (meestal 192.168.100.1)\n5. Modem webinterface - Zorg dat deze is ingeschakeld en toegankelijk is\n\nProbeer de modem direct in uw browser te openen om de connectiviteit te verifiëren.",
+      "cannot_connect": "Kan niet verbinden met de modem.\n\nControleer a.u.b.:\n1. IP-adres is correct (meestal 192.168.100.1)\n2. Als de modem authenticatie vereist, voer gebruikersnaam/wachtwoord in\n3. De webinterface van de modem is toegankelijk vanaf het Home Assistant-netwerk\n\nAls uw modem niet wordt ondersteund, selecteer 'Onbekende Modem (Terugvalmodus)' om basismonitoring en HTML-capture in te schakelen.",
+      "unsupported_modem": "Automatische detectie kon uw modemmodel niet identificeren.\n\nOm door te gaan:\n1. Selecteer 'Onbekende Modem (Terugvalmodus)' uit de dropdown hieronder\n2. Dit schakelt basisconnectiviteitsmonitoring in (ping/HTTP-latentie)\n3. Na installatie, klik op de knop 'HTML Vastleggen'\n4. Download diagnostiek en deel met ontwikkelaars om volledige ondersteuning toe te voegen",
+      "invalid_input": "Ongeldige invoer. Controleer de waarden en probeer opnieuw.",
+      "unknown": "Onverwachte fout opgetreden. Controleer de Home Assistant-logs voor details."
+    },
+    "abort": {
+      "already_configured": "Deze modem is al geconfigureerd"
+    },
+    "progress": {
+      "validate": "Verbinden met modem..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cable Modem-instellingen",
+        "description": "Huidig: {detected_modem}\nLaatst gecontroleerd: {last_detection}",
+        "data": {
+          "host": "Modem IP",
+          "username": "Gebruikersnaam",
+          "password": "Wachtwoord",
+          "modem_choice": "Modemmodel",
+          "scan_interval": "Poll-interval (sec)"
+        },
+        "data_description": {
+          "host": "Meestal 192.168.100.1",
+          "username": "Leeg laten indien niet vereist",
+          "password": "Leeg = huidige behouden",
+          "modem_choice": "Gebruik 'auto' voor detectie. Wijzig indien onjuist.",
+          "scan_interval": "60-1800 sec. Standaard 600 (10 min)"
+        }
+      }
+    }
+  }
+}

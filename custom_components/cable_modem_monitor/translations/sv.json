@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Anslut till ditt kabelmodem. Modeller markerade med * är overifierade.",
+        "data": {
+          "host": "Modemets IP-adress",
+          "username": "Användarnamn",
+          "password": "Lösenord",
+          "modem_choice": "Modemmodell"
+        },
+        "data_description": {
+          "host": "Vanligtvis 192.168.100.1",
+          "username": "Lämna tomt om det inte krävs",
+          "password": "Lämna tomt om det inte krävs",
+          "modem_choice": "Använd 'auto' för automatisk detektering"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Autentisering misslyckades - modemet returnerade inloggningssidan.\n\nVänligen verifiera:\n1. Användarnamnet är korrekt (vanligtvis 'admin', kontrollera modemetiketten)\n2. Lösenordet är korrekt (kontrollera modemetiketten)\n3. Inloggningsuppgifterna har inte ändrats från standard\n\nFörsök logga in på modemet manuellt på https://192.168.100.1 för att verifiera att inloggningsuppgifterna fungerar.",
+      "network_unreachable": "Kan inte nå modemet - problem med nätverksanslutning.\n\nVänligen kontrollera:\n1. Nätverksanslutning - Är du på rätt WiFi-nätverk?\n2. Gäst-WiFi - Gästnätverk blockerar ofta åtkomst till lokala enheter\n3. VPN - Koppla från aktiva VPN-anslutningar\n4. IP-adress - Verifiera modemets IP (vanligtvis 192.168.100.1)\n5. Modemets webbgränssnitt - Se till att det är aktiverat och tillgängligt\n\nFörsök komma åt modemet direkt i din webbläsare för att verifiera anslutningen.",
+      "cannot_connect": "Kunde inte ansluta till modemet.\n\nVänligen verifiera:\n1. IP-adressen är korrekt (vanligtvis 192.168.100.1)\n2. Om modemet kräver autentisering, ange användarnamn/lösenord\n3. Modemets webbgränssnitt är tillgängligt från Home Assistants nätverk\n\nOm ditt modem inte stöds, välj 'Okänt Modem (Reservläge)' för att aktivera grundläggande övervakning och HTML-fångst.",
+      "unsupported_modem": "Automatisk detektering kunde inte identifiera din modemmodell.\n\nFör att fortsätta:\n1. Välj 'Okänt Modem (Reservläge)' från rullgardinsmenyn nedan\n2. Detta aktiverar grundläggande anslutningsövervakning (ping/HTTP-latens)\n3. Efter installation, klicka på knappen 'Fånga HTML'\n4. Ladda ner diagnostik och dela med utvecklare för att lägga till fullt stöd",
+      "invalid_input": "Ogiltig inmatning. Kontrollera värdena och försök igen.",
+      "unknown": "Ett oväntat fel inträffade. Kontrollera Home Assistant-loggarna för detaljer."
+    },
+    "abort": {
+      "already_configured": "Detta modem är redan konfigurerat"
+    },
+    "progress": {
+      "validate": "Ansluter till modem..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cable Modem-inställningar",
+        "description": "Nuvarande: {detected_modem}\nSenast kontrollerad: {last_detection}",
+        "data": {
+          "host": "Modem-IP",
+          "username": "Användarnamn",
+          "password": "Lösenord",
+          "modem_choice": "Modemmodell",
+          "scan_interval": "Pollningsintervall (sek)"
+        },
+        "data_description": {
+          "host": "Vanligtvis 192.168.100.1",
+          "username": "Lämna tomt om det inte krävs",
+          "password": "Tomt = behåll nuvarande",
+          "modem_choice": "Använd 'auto' för detektering. Ändra om felaktig.",
+          "scan_interval": "60-1800 sek. Standard 600 (10 min)"
+        }
+      }
+    }
+  }
+}
