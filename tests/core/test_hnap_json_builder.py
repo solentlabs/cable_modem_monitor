@@ -199,6 +199,67 @@ class TestCallMultiple:
         assert "Action1" in request_json["GetMultipleHNAPs"]
         assert "Action2" in request_json["GetMultipleHNAPs"]
 
+    def test_default_empty_action_value_is_empty_dict(self, builder, mock_session):
+        """Test that default empty action value is {} for backwards compatibility.
+
+        MB8611 was working with empty dict {}, so we preserve that as default.
+        Parsers can override this for modems that need empty string "".
+        """
+        mock_response = MagicMock()
+        mock_response.text = "{}"
+        mock_response.status_code = 200
+        mock_session.post.return_value = mock_response
+
+        actions = ["GetMotoStatusConnectionInfo", "GetMotoStatusStartupSequence"]
+        builder.call_multiple(mock_session, "http://192.168.100.1", actions)
+
+        call_args = mock_session.post.call_args
+        request_json = call_args[1]["json"]
+
+        # Default should be empty dict {} for MB8611 compatibility
+        for action in actions:
+            assert action in request_json["GetMultipleHNAPs"]
+            assert request_json["GetMultipleHNAPs"][action] == {}, (
+                f"Default action value should be empty dict {{}}, "
+                f"got {type(request_json['GetMultipleHNAPs'][action]).__name__}: "
+                f"{request_json['GetMultipleHNAPs'][action]!r}"
+            )
+
+    def test_configurable_empty_action_value_string(self, mock_session):
+        """Test that empty_action_value can be configured to empty string for S33.
+
+        S33 requires empty string "" for action values (observed in HAR captures).
+        Using {} causes 500 Internal Server Error on S33.
+
+        Reference: https://github.com/solentlabs/cable_modem_monitor/issues/32
+        """
+        # Create builder with empty string configuration (like S33 does)
+        builder = HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            empty_action_value="",
+        )
+
+        mock_response = MagicMock()
+        mock_response.text = "{}"
+        mock_response.status_code = 200
+        mock_session.post.return_value = mock_response
+
+        actions = ["GetCustomerStatusDownstreamChannelInfo", "GetCustomerStatusUpstreamChannelInfo"]
+        builder.call_multiple(mock_session, "http://192.168.100.1", actions)
+
+        call_args = mock_session.post.call_args
+        request_json = call_args[1]["json"]
+
+        # With empty_action_value="", should use empty strings
+        for action in actions:
+            assert action in request_json["GetMultipleHNAPs"]
+            assert request_json["GetMultipleHNAPs"][action] == "", (
+                f"Action '{action}' should have empty string value when configured, "
+                f"got {type(request_json['GetMultipleHNAPs'][action]).__name__}: "
+                f"{request_json['GetMultipleHNAPs'][action]!r}"
+            )
+
     def test_soap_action_header(self, builder, mock_session):
         """Test that SOAPAction header is correct for batched calls."""
         mock_response = MagicMock()
@@ -249,8 +310,11 @@ class TestLogin:
         assert builder._private_key is not None
         assert len(builder._private_key) == 32  # HMAC-MD5 hex
 
-        # Verify cookie was set
-        mock_session.cookies.set.assert_called_once_with("uid", "session_cookie_value")
+        # Verify both cookies were set (uid and PrivateKey)
+        # The modem's browser login (Login.js) requires both cookies for authenticated actions
+        assert mock_session.cookies.set.call_count == 2
+        mock_session.cookies.set.assert_any_call("uid", "session_cookie_value")
+        mock_session.cookies.set.assert_any_call("PrivateKey", builder._private_key)
 
     def test_challenge_request_format(self, builder, mock_session):
         """Test that challenge request is properly formatted."""

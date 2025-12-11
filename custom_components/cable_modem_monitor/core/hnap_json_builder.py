@@ -44,16 +44,26 @@ class HNAPJsonRequestBuilder:
     This builder handles those cases.
     """
 
-    def __init__(self, endpoint: str, namespace: str):
+    def __init__(self, endpoint: str, namespace: str, empty_action_value: str | dict | None = None):
         """
         Initialize JSON HNAP request builder.
 
         Args:
             endpoint: HNAP endpoint path (e.g., "/HNAP1/")
             namespace: HNAP namespace (e.g., "http://purenetworks.com/HNAP1/")
+            empty_action_value: Value to use for actions without parameters in GetMultipleHNAPs.
+                Different modem firmwares expect different formats:
+                - "" (empty string): S33, observed in HAR captures
+                - {} (empty dict): MB8611, legacy default
+                Defaults to {} for backwards compatibility.
+                No official HNAP spec exists for JSON format; this is vendor-specific.
+                See: https://github.com/solentlabs/cable_modem_monitor/issues/32
         """
+        if empty_action_value is None:
+            empty_action_value = {}
         self.endpoint = endpoint
         self.namespace = namespace
+        self.empty_action_value = empty_action_value
         self._private_key: str | None = None  # Stored after successful login for auth headers
         # Store last request/response for diagnostics (passwords redacted)
         self._last_auth_attempt: dict | None = None
@@ -159,7 +169,11 @@ class HNAPJsonRequestBuilder:
             requests.RequestException: If request fails
         """
         # Build JSON request with nested action objects
-        action_objects: dict[str, dict] = {action: {} for action in actions}
+        # The empty value format is modem-specific (no official HNAP JSON spec exists):
+        # - S33: uses "" (empty string), observed in HAR captures
+        # - MB8611: uses {} (empty dict), legacy behavior
+        # Reference: https://github.com/solentlabs/cable_modem_monitor/issues/32
+        action_objects = {action: self.empty_action_value for action in actions}
         request_data = {"GetMultipleHNAPs": action_objects}
 
         _LOGGER.debug(
@@ -303,8 +317,13 @@ class HNAPJsonRequestBuilder:
             private_key = _hmac_md5(public_key + password, challenge)
             self._private_key = private_key  # Store for subsequent authenticated requests
 
-            # Set the session cookie
+            # Set the session cookies
+            # The modem's browser login (Login.js) sets both 'uid' and 'PrivateKey' cookies:
+            #   $.cookie('uid', obj.Cookie, { path: '/' });
+            #   $.cookie('PrivateKey', PrivateKey, {path: '/' });
+            # Both are required for authenticated actions like restart to work.
             session.cookies.set("uid", cookie)
+            session.cookies.set("PrivateKey", private_key)
 
             # LoginPassword = HMAC_MD5(PrivateKey, Challenge)
             login_password = _hmac_md5(private_key, challenge)

@@ -10,7 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 from .utils.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,8 +104,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                 # Get level - could be int or string
                                 level = getattr(record, "level", "ERROR")
                                 if isinstance(level, int):
-                                    import logging
-
                                     level = logging.getLevelName(level)
 
                                 # Get timestamp
@@ -145,8 +143,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
                                 message = record[3] if len(record) > 3 else "Unknown"
 
                                 if isinstance(level, int):
-                                    import logging
-
                                     level = logging.getLevelName(level)
 
                                 sanitized_message = _sanitize_log_message(str(message))
@@ -344,9 +340,18 @@ def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
 
 def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry) -> dict[str, Any]:
     """Build the main diagnostics dictionary from coordinator data."""
+    from datetime import datetime
+
     data = coordinator.data if coordinator.data else {}
 
     diagnostics = {
+        # Solent Labs™ metadata - helps identify official diagnostics captures
+        "_solentlabs": {
+            "tool": "cable_modem_monitor/diagnostics",
+            "version": VERSION,
+            "captured_at": datetime.now().isoformat(),
+            "note": "Captured with Solent Labs™ Cable Modem Monitor diagnostics",
+        },
         "config_entry": {
             "title": entry.title,
             "host": entry.data.get("host"),
