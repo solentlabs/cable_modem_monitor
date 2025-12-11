@@ -4,10 +4,13 @@ This guide explains how to capture data from your modem to help developers add s
 
 ***REMOVED******REMOVED*** Which Method Should I Use?
 
-| Situation | Use This Method |
-|-----------|-----------------|
-| Integration already installed | [Integration Capture Button](***REMOVED***method-1-integration-capture-button) |
-| Adding a new modem / need auth flow | [HAR Capture Script](***REMOVED***method-2-har-capture-script) |
+| Modem Type | Use This Method |
+|------------|-----------------|
+| HTML-based modems (SB6141, SB8200, etc.) | Either method works |
+| HNAP/API modems (MB8611, S33, etc.) | [HAR Capture Script](***REMOVED***method-2-har-capture-script) **required** |
+| Authentication issues / new modem | [HAR Capture Script](***REMOVED***method-2-har-capture-script) |
+
+> **Why HNAP modems need HAR:** These modems load data via JavaScript API calls after the page loads. The Integration Capture only sees the HTML shell, not the API responses. HAR captures the full HTTP conversation including these async calls.
 
 ---
 
@@ -55,12 +58,15 @@ python scripts/capture_modem.py --browser firefox
 ```
 
 **What happens:**
-1. Browser opens to your modem
+1. Browser opens to your modem (cache disabled for fresh data)
 2. Log in normally - script just records
 3. Navigate to DOCSIS status pages
-4. Close browser - script sanitizes and compresses output
+4. **Wait 3-5 seconds on each page** for async data to load
+5. Close browser - script sanitizes and compresses output
 
 The `.sanitized.har.gz` file is safe to share.
+
+> **Important:** Many modems fetch data asynchronously via JavaScript after the page loads. If you navigate too quickly, these API calls won't be captured. Wait a few seconds on each page, especially the Connection Status page.
 
 ---
 

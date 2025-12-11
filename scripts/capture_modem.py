@@ -170,6 +170,36 @@ BLOAT_EXTENSIONS = {
 }
 
 
+def _get_capture_version() -> str:
+    """Get the cable_modem_monitor version for metadata."""
+    try:
+        from custom_components.cable_modem_monitor.const import VERSION
+
+        return VERSION
+    except ImportError:
+        return "unknown"
+
+
+def _add_solent_labs_metadata(har: dict) -> None:
+    """Add Solent Labs™ capture metadata to HAR file.
+
+    This metadata helps identify:
+    - That the HAR was captured with our official tools
+    - Which version of the tools was used
+    - When and how it was captured
+
+    The metadata is added as a custom '_solentlabs' field in the HAR log.
+    """
+    har["log"]["_solentlabs"] = {
+        "tool": "cable_modem_monitor/capture_modem.py",
+        "version": _get_capture_version(),
+        "captured_at": datetime.now().isoformat(),
+        "cache_disabled": True,
+        "service_workers_blocked": True,
+        "note": "Captured with Solent Labs™ Cable Modem Monitor HAR capture tool",
+    }
+
+
 def filter_and_compress_har(har_path: Path) -> tuple[Path, dict]:
     """Filter out bloat from HAR and compress it.
 
@@ -178,6 +208,9 @@ def filter_and_compress_har(har_path: Path) -> tuple[Path, dict]:
     """
     with open(har_path, encoding="utf-8") as f:
         har = json.load(f)
+
+    ***REMOVED*** Add Solent Labs™ metadata
+    _add_solent_labs_metadata(har)
 
     original_count = len(har["log"]["entries"])
     original_size = har_path.stat().st_size
@@ -317,12 +350,15 @@ What to do:
        - Settings / Security page (for restart/reboot support)
        - Product Info / About page (firmware version, uptime)
        - Any other configuration pages
-    4. Close the browser window when done
-    5. HAR files will be saved automatically
+    4. Wait 3-5 seconds on each page for async data to load!
+    5. Close the browser window when done
+    6. HAR files will be saved automatically
 
-Why visit all pages?
+Why visit all pages and wait?
     We analyze the web interface to understand how to read modem data.
     Missing pages = missing features (like restart/reboot support).
+    Many modems load data asynchronously via JavaScript - waiting ensures
+    we capture these API calls in the HAR file.
         """,
     )
 
@@ -424,11 +460,13 @@ Why visit all pages?
     print("     • Connection Status / Signal pages (channel data)")
     print("     • Settings / Security page (restart/reboot support)")
     print("     • Product Info / About page (firmware, uptime)")
-    print("  3. Close the browser window when done")
+    print("  3. IMPORTANT: Wait 3-5 seconds on each page for data to load!")
+    print("     (Some modems fetch data asynchronously after page load)")
+    print("  4. Close the browser window when done")
     print()
     print("TIP: More pages visited = more features we can support!")
     print()
-    print("Starting browser...")
+    print("Starting browser (cache disabled for fresh captures)...")
     print()
 
     try:
@@ -449,6 +487,7 @@ Why visit all pages?
                 "record_har_path": str(output_path),
                 "record_har_content": "embed",  ***REMOVED*** Embed response bodies in HAR
                 "ignore_https_errors": True,  ***REMOVED*** Modems often have self-signed certs
+                "service_workers": "block",  ***REMOVED*** Disable service workers to prevent caching
             }
 
             ***REMOVED*** Add HTTP Basic Auth credentials if needed
@@ -456,6 +495,11 @@ Why visit all pages?
                 context_options["http_credentials"] = http_credentials
 
             context = browser.new_context(**context_options)
+
+            ***REMOVED*** Enable route interception to disable HTTP cache
+            ***REMOVED*** This ensures all requests go to the network, capturing async HNAP calls
+            ***REMOVED*** that might otherwise be served from cache
+            context.route("**/*", lambda route: route.continue_())
 
             ***REMOVED*** Create page and navigate to modem
             page = context.new_page()

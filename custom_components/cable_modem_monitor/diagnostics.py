@@ -10,7 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 from .utils.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
@@ -340,9 +340,18 @@ def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
 
 def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry) -> dict[str, Any]:
     """Build the main diagnostics dictionary from coordinator data."""
+    from datetime import datetime
+
     data = coordinator.data if coordinator.data else {}
 
     diagnostics = {
+        ***REMOVED*** Solent Labs™ metadata - helps identify official diagnostics captures
+        "_solentlabs": {
+            "tool": "cable_modem_monitor/diagnostics",
+            "version": VERSION,
+            "captured_at": datetime.now().isoformat(),
+            "note": "Captured with Solent Labs™ Cable Modem Monitor diagnostics",
+        },
         "config_entry": {
             "title": entry.title,
             "host": entry.data.get("host"),

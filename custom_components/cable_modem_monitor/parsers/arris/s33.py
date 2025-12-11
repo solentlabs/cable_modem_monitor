@@ -95,8 +95,11 @@ class ArrisS33HnapParser(ModemParser):
         The session should have verify=False for self-signed certs.
         """
         ***REMOVED*** Try JSON-based HNAP login
+        ***REMOVED*** S33 requires empty string "" for action values (observed in HAR captures)
         self._json_builder = HNAPJsonRequestBuilder(
-            endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
+            endpoint=self.auth_config.hnap_endpoint,
+            namespace=self.auth_config.soap_action_namespace,
+            empty_action_value="",
         )
 
         _LOGGER.debug("S33: Attempting JSON-based HNAP login to %s", base_url)
@@ -190,7 +193,9 @@ class ArrisS33HnapParser(ModemParser):
             _LOGGER.debug("S33: Reusing JSON builder from login (private_key preserved)")
         else:
             builder = HNAPJsonRequestBuilder(
-                endpoint=self.auth_config.hnap_endpoint, namespace=self.auth_config.soap_action_namespace
+                endpoint=self.auth_config.hnap_endpoint,
+                namespace=self.auth_config.soap_action_namespace,
+                empty_action_value="",
             )
             _LOGGER.warning("S33: No stored JSON builder - creating new one (may lack auth)")
 
@@ -457,6 +462,7 @@ class ArrisS33HnapParser(ModemParser):
             builder = HNAPJsonRequestBuilder(
                 endpoint=self.auth_config.hnap_endpoint,
                 namespace=self.auth_config.soap_action_namespace,
+                empty_action_value="",
             )
             _LOGGER.warning("S33: No stored JSON builder for restart - creating new one (may lack auth)")
 

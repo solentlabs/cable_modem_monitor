@@ -281,11 +281,19 @@ async def test_diagnostics_basic_structure(mock_config_entry, mock_coordinator):
     diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
     ***REMOVED*** Verify basic structure
+    assert "_solentlabs" in diagnostics
     assert "config_entry" in diagnostics
     assert "coordinator" in diagnostics
     assert "modem_data" in diagnostics
     assert "downstream_channels" in diagnostics
     assert "upstream_channels" in diagnostics
+
+    ***REMOVED*** Verify Solent Labs™ metadata
+    solentlabs = diagnostics["_solentlabs"]
+    assert solentlabs["tool"] == "cable_modem_monitor/diagnostics"
+    assert "version" in solentlabs
+    assert "captured_at" in solentlabs
+    assert "Solent Labs" in solentlabs["note"]
 
     ***REMOVED*** Verify config entry data
     assert diagnostics["config_entry"]["title"] == "Test Modem"
