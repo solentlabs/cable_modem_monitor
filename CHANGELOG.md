@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED*** [3.9.1] - 2025-12-11
+
+***REMOVED******REMOVED******REMOVED*** Addressed
+- **S33 HNAP Empty Action Value** - S33 parser now uses empty string `""` instead of empty dict `{}` for HNAP action values, resolving 500 errors (Related to ***REMOVED***32)
+- **MB8611 Restart PrivateKey Cookie** - Added missing `PrivateKey` cookie required for authenticated actions like modem restart (Related to ***REMOVED***6)
+- **Diagnostics Logging** - Removed redundant logging imports
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **CI Dependencies** - Bumped actions/checkout from 4 to 6
+
+***REMOVED******REMOVED******REMOVED*** Documentation
+- **README Improvements** - Updated screenshots and added troubleshooting guidance
+- **CAPTURE_GUIDE** - Clarified HNAP vs HTML capture requirements
+
 ***REMOVED******REMOVED*** [3.9.0] - 2025-12-09
 
 ***REMOVED******REMOVED******REMOVED*** Added
