@@ -209,14 +209,20 @@ class MotorolaMB7621Parser(ModemParser):
         return power, snr
 
     def _parse_downstream_row(self, cols: list, is_restarting: bool) -> dict | None:
-        """Parse a single downstream channel row."""
+        """Parse a single downstream channel row.
+
+        Table structure:
+        Channel | Lock Status | Modulation | Channel ID | Freq (MHz) | Pwr | SNR | Corrected | Uncorrected
+        cols[0]   cols[1]       cols[2]      cols[3]      cols[4]      [5]   [6]    [7]         [8]
+        """
         if len(cols) < 9:
             return None
 
         try:
-            channel_id = extract_number(cols[0].text)
+            ***REMOVED*** Channel ID is in column 3 (not column 0 which is just a row counter)
+            channel_id = extract_number(cols[3].text)
             if channel_id is None:
-                _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[0].text)
+                _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[3].text)
                 return None
 
             freq_mhz = extract_float(cols[4].text)
@@ -280,7 +286,12 @@ class MotorolaMB7621Parser(ModemParser):
         return channels
 
     def _parse_upstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
-        """Parse upstream channel data."""
+        """Parse upstream channel data.
+
+        Table structure:
+        Channel | Lock Status | Channel Type | Channel ID | Symb. Rate | Freq (MHz) | Pwr
+        cols[0]   cols[1]       cols[2]        cols[3]      cols[4]      cols[5]      cols[6]
+        """
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
         is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
         _LOGGER.debug(
@@ -300,9 +311,10 @@ class MotorolaMB7621Parser(ModemParser):
                         cols = row.find_all("td")
                         if len(cols) >= 7:
                             try:
-                                channel_id = extract_number(cols[0].text)
+                                ***REMOVED*** Channel ID is in column 3 (not column 0 which is just a row counter)
+                                channel_id = extract_number(cols[3].text)
                                 if channel_id is None:
-                                    _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[0].text)
+                                    _LOGGER.debug("Skipping row - could not extract channel_id from: %s", cols[3].text)
                                     continue
 
                                 lock_status = cols[1].text.strip()

@@ -111,7 +111,11 @@ class TestParsing:
     """Test data parsing."""
 
     def test_downstream_channels(self, connection_html, home_html):
-        """Test parsing of downstream channels."""
+        """Test parsing of downstream channels.
+
+        Note: Channel ID is the DOCSIS Channel ID (col 3), not the display row number (col 0).
+        From the fixture, the first row has: Channel=1, Channel ID=21
+        """
         parser = MotorolaMB7621Parser()
         soup_conn = BeautifulSoup(connection_html, "html.parser")
         soup_home = BeautifulSoup(home_html, "html.parser")
@@ -126,7 +130,8 @@ class TestParsing:
         ***REMOVED*** Verify downstream channels
         assert "downstream" in data
         assert len(data["downstream"]) > 0
-        assert data["downstream"][0]["channel_id"] == "1"
+        ***REMOVED*** First row: Channel=1, Channel ID=21 (col 3 is the actual DOCSIS channel ID)
+        assert data["downstream"][0]["channel_id"] == "21"
         assert data["downstream"][0]["frequency"] == 237000000
         assert data["downstream"][0]["power"] == 0.5
         assert data["downstream"][0]["snr"] == 41.4
@@ -135,7 +140,11 @@ class TestParsing:
         assert data["downstream"][0]["modulation"] == "QAM256"
 
     def test_upstream_channels(self, connection_html, home_html):
-        """Test parsing of upstream channels."""
+        """Test parsing of upstream channels.
+
+        Note: Channel ID is the DOCSIS Channel ID (col 3), not the display row number (col 0).
+        From the fixture, the first row has: Channel=1, Channel ID=2
+        """
         parser = MotorolaMB7621Parser()
         soup_conn = BeautifulSoup(connection_html, "html.parser")
         soup_home = BeautifulSoup(home_html, "html.parser")
@@ -150,7 +159,8 @@ class TestParsing:
         ***REMOVED*** Verify upstream channels
         assert "upstream" in data
         assert len(data["upstream"]) > 0
-        assert data["upstream"][0]["channel_id"] == "1"
+        ***REMOVED*** First row: Channel=1, Channel ID=2 (col 3 is the actual DOCSIS channel ID)
+        assert data["upstream"][0]["channel_id"] == "2"
         assert data["upstream"][0]["frequency"] == 24000000
         assert data["upstream"][0]["power"] == 36.2
         assert data["upstream"][0]["modulation"] == "ATDMA"
