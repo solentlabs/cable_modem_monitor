@@ -1077,6 +1077,7 @@ class ModemScraper:
                 if fixtures_url:
                     info["fixtures_url"] = fixtures_url
             info["verified"] = self.parser.verified
+            info["supports_icmp"] = self.parser.supports_icmp
             return info
         return {}
 

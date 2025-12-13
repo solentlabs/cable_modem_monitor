@@ -47,13 +47,10 @@ async def async_setup_entry(
     entities.append(ModemInfoSensor(coordinator, entry))
 
     # Add health monitoring sensors
-    entities.extend(
-        [
-            ModemHealthStatusSensor(coordinator, entry),
-            ModemPingLatencySensor(coordinator, entry),
-            ModemHttpLatencySensor(coordinator, entry),
-        ]
-    )
+    entities.append(ModemHealthStatusSensor(coordinator, entry))
+    entities.append(ModemHttpLatencySensor(coordinator, entry))
+    # Add ping latency sensor only if modem supports ICMP (default True)
+    entities.extend([ModemPingLatencySensor(coordinator, entry)] if coordinator.data.get("supports_icmp", True) else [])
 
     # Check if we're in fallback mode (unsupported modem)
     # In fallback mode, only connectivity sensors have data

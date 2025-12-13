@@ -86,7 +86,11 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
         base_url = f"http://{host}"
-        health_result = await health_monitor.check_health(base_url)
+
+        # Check if parser supports ICMP ping (skip if not)
+        detection_info = scraper.get_detection_info()
+        supports_icmp = detection_info.get("supports_icmp", True)
+        health_result = await health_monitor.check_health(base_url, skip_ping=not supports_icmp)
 
         try:
             data: dict[str, Any] = await hass.async_add_executor_job(scraper.get_modem_data)
@@ -99,6 +103,7 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
             data["http_success"] = health_result.http_success
             data["http_latency_ms"] = health_result.http_latency_ms
             data["consecutive_failures"] = health_monitor.consecutive_failures
+            data["supports_icmp"] = supports_icmp
 
             # Create indexed lookups for O(1) channel access (performance optimization)
             # This prevents O(n) linear searches in each sensor's native_value property
@@ -124,7 +129,7 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
             return data
         except Exception as err:
             # If scraper fails but health check succeeded, return partial data
-            if health_result.ping_success or health_result.http_success:
+            if health_result.is_healthy:
                 _LOGGER.warning("Scraper failed but modem is responding to health checks: %s", err)
                 return {
                     "cable_modem_connection_status": "offline",
@@ -135,6 +140,7 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
                     "http_success": health_result.http_success,
                     "http_latency_ms": health_result.http_latency_ms,
                     "consecutive_failures": health_monitor.consecutive_failures,
+                    "supports_icmp": supports_icmp,
                 }
             raise UpdateFailed(f"Error communicating with modem: {err}") from err
 

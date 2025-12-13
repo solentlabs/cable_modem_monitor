@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **S33 Firmware Version** - Added `GetArrisDeviceStatus` HNAP action to retrieve firmware version (Issue #32)
+- **ICMP Skip Support** - Parsers can declare `supports_icmp = False` to skip ping checks for modems that block ICMP
+
+### Addressed
+- **S33 ICMP Blocked** - S33 no longer shows "icmp_blocked" health status; ping check skipped for this modem (Issue #32)
+- **S33 Uptime Parsing** - Support "X days HH:MM:SS" format returned by S33 modem (Issue #32)
+- **S33 Restart** - Fetch current EEE/LED config before reboot to match browser behavior (Issue #32)
+
 ## [3.9.2] - 2025-12-13
 
 ### Security
-- **PII Sanitization Fix** - Fixed diagnostics sanitization missing WiFi credentials, device names, serial numbers, and SSIDs in Netgear `tagValueList` JavaScript variables (Related to #61)
+- **PII Sanitization** - Addressed diagnostics sanitization gap for WiFi credentials, device names, serial numbers, and SSIDs in Netgear `tagValueList` JavaScript variables (Related to #61)
 
 ### Added
 - **Device Name Detection** - Sanitization now detects and redacts device names appearing before IP/MAC addresses in access control lists
 - **PII Check CI Job** - New CI workflow validates fixture files for unsanitized PII on every PR
 - **Enhanced PII Checker** - Pre-commit hook now detects `tagValueList` credentials and validates HAR files
 
-### Fixed
+### Changed
 - **Fixture PII Cleanup** - Redacted WiFi passwords, serial numbers, SSIDs, WEP keys, and device identifiers from existing test fixtures
 
 ## [3.9.1] - 2025-12-11
