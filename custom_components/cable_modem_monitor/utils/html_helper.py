@@ -136,6 +136,100 @@ def sanitize_html(html: str) -> str:
         flags=re.IGNORECASE,
     )
 
+    # 13. WiFi credentials and device names in Netgear tagValueList (pipe-delimited format)
+    # In DashBoard.htm, WiFi SSIDs and passphrases are stored as positional values
+    # In AccessControl.htm, device names appear before IP/MAC addresses
+    # e.g., var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|password1|password2|...'
+    # e.g., var tagValueList = '19|1|DeviceName|IP|MAC|1|1|DeviceName2|IP|MAC|...'
+    def sanitize_tag_value_list(match: re.Match[str]) -> str:
+        """Sanitize potential WiFi credentials and device names in tagValueList."""
+        prefix = match.group(1)  # "var tagValueList = '"
+        values_str = match.group(2)  # The pipe-delimited values
+        suffix = match.group(3)  # "'" or '"'
+
+        values = values_str.split("|")
+        # Known safe values that shouldn't be redacted (status, config values)
+        safe_values = {
+            "good",
+            "locked",
+            "not locked",
+            "atdma",
+            "unknown",
+            "operational",
+            "ok",
+            "none",
+            "&nbsp;",
+            "enabled",
+            "disabled",
+            "bpi+",
+            "qam256",
+            "qam64",
+            "qpsk",
+            "retail",
+            "ipv6 only",
+            "ipv6only",
+            "success",
+            "primary",
+            "backup primary",
+            "honor mdd",
+            "dhcpclient",
+            "fixed ip",
+            "enable",
+            "off",
+            "on",
+            "both",
+            "in progress",
+            "synchronized",
+            "not synchronized",
+            "done",
+        }
+
+        sanitized_values = []
+        for i, val in enumerate(values):
+            val_stripped = val.strip()
+            val_lower = val_stripped.lower()
+
+            # Check if next value is an IP/MAC placeholder (indicates this is a device name)
+            next_val = values[i + 1].strip() if i + 1 < len(values) else ""
+            is_before_ip_or_mac = next_val.startswith("***") or next_val == "XX:XX:XX:XX:XX:XX"
+
+            # Device name: appears before IP/MAC, contains letters, not a placeholder
+            is_device_name = (
+                is_before_ip_or_mac
+                and re.search(r"[a-zA-Z]", val_stripped)  # Contains letters
+                and val_stripped != "--"  # Not empty placeholder
+                and not val_stripped.startswith("***")  # Not already redacted
+            )
+
+            # WiFi credential: 8+ alphanumeric chars, not status values
+            is_potential_credential = (
+                len(val_stripped) >= 8
+                and re.match(r"^[a-zA-Z0-9]+$", val_stripped)
+                and val_lower not in safe_values
+                and not re.match(r"^\d+$", val_stripped)  # Not pure numbers
+                and not val_stripped.startswith("***")  # Not already redacted
+                and not re.match(r"^V\d", val_stripped)  # Not version strings
+                and not val_stripped.endswith("Hz")
+                and not val_stripped.endswith("dB")
+                and not val_stripped.endswith("dBmV")
+                and "Ksym" not in val_stripped
+            )
+
+            if is_device_name:
+                sanitized_values.append("***DEVICE***")
+            elif is_potential_credential:
+                sanitized_values.append("***WIFI_CRED***")
+            else:
+                sanitized_values.append(val)
+
+        return prefix + "|".join(sanitized_values) + suffix
+
+    html = re.sub(
+        r"(var\s+tagValueList\s*=\s*['\"])([^'\"]+)(['\"])",
+        sanitize_tag_value_list,
+        html,
+    )
+
     return html
 
 
@@ -163,6 +257,11 @@ PII_ALLOWLIST = [
     "***IPv6***",
     "***EMAIL***",
     "***CONFIG_PATH***",
+    "***WIFI_CRED***",
+    "***SERIAL***",
+    "***WEP_KEY***",
+    "***SSID***",
+    "***DEVICE***",
 ]
 
 

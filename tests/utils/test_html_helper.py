@@ -195,3 +195,107 @@ class TestSanitizeHtmlEdgeCases:
         assert "38.2 dB" in sanitized
         assert "555000000" in sanitized
         assert "12345" in sanitized
+
+
+class TestTagValueListSanitization:
+    """Tests for WiFi credential sanitization in tagValueList."""
+
+    def test_sanitizes_wifi_passphrase_in_dashboard(self):
+        """Test that WiFi passphrases in DashBoard tagValueList are sanitized."""
+        content = (
+            "var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|"
+            "happymango167|happymango167|20|0|1|0|none|NETGEAR-Guest|"
+            "None|NETGEAR-5G-Guest|None|0|0|0|0|0|1|0|0|1|0|0|0|0|"
+            "---.---.---.---|1|';"
+        )
+        sanitized = sanitize_html(content)
+
+        # WiFi passphrases should be redacted
+        assert "happymango167" not in sanitized
+        assert "***WIFI_CRED***" in sanitized
+
+    def test_preserves_status_values_in_tagvaluelist(self):
+        """Test that status values like 'Locked', 'Good' are preserved."""
+        content = (
+            "var tagValueList = '345000000|Locked|OK|Operational|OK|"
+            "Operational|&nbsp;|&nbsp;|Enabled|BPI+|Mon Nov 24 2025|0|0|0';"
+        )
+        sanitized = sanitize_html(content)
+
+        # Status values should be preserved
+        assert "Locked" in sanitized
+        assert "OK" in sanitized
+        assert "Operational" in sanitized
+        assert "Enabled" in sanitized
+        assert "BPI+" in sanitized
+
+    def test_preserves_numeric_values_in_tagvaluelist(self):
+        """Test that numeric values like frequencies are preserved."""
+        content = "var tagValueList = '345000000|8|1|256|5120000|30840000';"
+        sanitized = sanitize_html(content)
+
+        # Numeric values should be preserved
+        assert "345000000" in sanitized
+        assert "5120000" in sanitized
+        assert "30840000" in sanitized
+
+    def test_preserves_version_strings_in_tagvaluelist(self):
+        """Test that version strings are preserved."""
+        content = "var tagValueList = 'V2.02.18|0|0|1|0|retail|0|1|0|0|0|1|1|';"
+        sanitized = sanitize_html(content)
+
+        # Version strings should be preserved
+        assert "V2.02.18" in sanitized
+        assert "retail" in sanitized
+
+    def test_sanitizes_double_quoted_tagvaluelist(self):
+        """Test that double-quoted tagValueList is also sanitized."""
+        content = 'var tagValueList = "0|Good|both|none|MySSID1234|secretpass99";'
+        sanitized = sanitize_html(content)
+
+        # Passphrase-like values should be redacted
+        assert "secretpass99" not in sanitized
+        assert "***WIFI_CRED***" in sanitized
+
+    def test_preserves_short_values_in_tagvaluelist(self):
+        """Test that short values (< 8 chars) are preserved."""
+        content = "var tagValueList = '0|Good|| |ABC|XYZ123|none|Off|On';"
+        sanitized = sanitize_html(content)
+
+        # Short values should be preserved (under 8 chars)
+        assert "ABC" in sanitized
+        assert "Good" in sanitized
+        assert "none" in sanitized
+
+    def test_handles_docsis_channel_data(self):
+        """Test that DOCSIS channel data is not incorrectly sanitized."""
+        content = (
+            "var tagValueList = '8|1|Locked|QAM256|1|345000000 Hz|2.9|"
+            "46.3|289|320|2|Locked|QAM256|2|351000000 Hz|3|46.4|240|278';"
+        )
+        sanitized = sanitize_html(content)
+
+        # DOCSIS data should be preserved
+        assert "Locked" in sanitized
+        assert "QAM256" in sanitized
+        assert "345000000 Hz" in sanitized
+
+    def test_wifi_cred_in_allowlist(self):
+        """Test that WIFI_CRED placeholder is in allowlist."""
+        assert "***WIFI_CRED***" in PII_ALLOWLIST
+
+    def test_sanitizes_device_names_before_ip(self):
+        """Test that device names appearing before IP/MAC placeholders are redacted."""
+        content = (
+            "var tagValueList = '19|1|MyDevice|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|"
+            "AnotherDevice|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|"
+            "--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|';"
+        )
+        sanitized = sanitize_html(content)
+
+        # Device names should be redacted
+        assert "MyDevice" not in sanitized
+        assert "AnotherDevice" not in sanitized
+        assert "***DEVICE***" in sanitized
+        # Empty placeholder should be preserved
+        assert "|--|" in sanitized
