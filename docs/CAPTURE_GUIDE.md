@@ -7,10 +7,10 @@ This guide explains how to capture data from your modem to help developers add s
 | Modem Type | Use This Method |
 |------------|-----------------|
 | HTML-based modems (SB6141, SB8200, etc.) | Either method works |
-| HNAP/API modems (MB8611, S33, etc.) | [HAR Capture Script](#method-2-har-capture-script) **required** |
+| [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)/API modems (MB8611, S33, etc.) | [HAR Capture Script](#method-2-har-capture-script) **required** |
 | Authentication issues / new modem | [HAR Capture Script](#method-2-har-capture-script) |
 
-> **Why HNAP modems need HAR:** These modems load data via JavaScript API calls after the page loads. The Integration Capture only sees the HTML shell, not the API responses. HAR captures the full HTTP conversation including these async calls.
+> **Why HNAP modems need HAR:** These modems load data via JavaScript API calls after the page loads. The Integration Capture only sees the HTML shell, not the API responses. [HAR](http://www.softwareishard.com/blog/har-12-spec/) captures the full HTTP conversation including these async calls.
 
 ---
 
@@ -34,7 +34,7 @@ This guide explains how to capture data from your modem to help developers add s
 
 **Best for:** Authentication issues, capturing full HTTP conversation including login flow.
 
-HAR (HTTP Archive) files capture the complete HTTP conversation - headers, cookies, auth flow, and content.
+[HAR (HTTP Archive)](http://www.softwareishard.com/blog/har-12-spec/) files capture the complete HTTP conversation - headers, cookies, auth flow, and content.
 
 ### VS Code (One-Click)
 

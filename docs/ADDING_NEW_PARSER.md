@@ -59,7 +59,7 @@ Key pages:
 - /: Main page
 - /status.html: Channel status page
 
-Authentication: HTTP Basic Auth / Form-based / HNAP / None
+Authentication: HTTP Basic Auth / Form-based / [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) / None
 
 Related: Issue #[number] (if applicable)
 """
@@ -277,7 +277,10 @@ def login(self, session, base_url, username, password) -> bool:
     return response.status_code == 200
 ```
 
-#### HNAP (Home Network Administration Protocol)
+#### [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) (Home Network Administration Protocol)
+
+HNAP is a [SOAP](https://www.w3.org/TR/soap/)-based protocol used by some Motorola and Arris modems. Originally developed by Pure Networks (acquired by Cisco), it's still used for local device management despite being abandoned by its original stewards.
+
 ```python
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
 

@@ -4,6 +4,8 @@
 release_date: 2016
 end_of_life: 2023
 docsis_version: "3.0"
+protocol: HTML # HNAP = JSON API, HTML = web scraping
+chipset: Intel Puma 6 # Known for latency issues under load
 isps:
   - Comcast
   - Cox

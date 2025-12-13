@@ -4,6 +4,8 @@
 release_date: 2014
 end_of_life: 2022
 docsis_version: "3.0"
+protocol: HTML # HNAP = JSON API, HTML = web scraping
+chipset: Broadcom BCM3383
 isps:
   - Comcast
   - Cox

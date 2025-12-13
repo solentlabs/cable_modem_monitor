@@ -17,7 +17,7 @@ These models are actively tested or have been confirmed to work reliably by the 
 ### ⚠️ Community Reported (Mixed Results)
 These models have been reported to work by some users, but have also had reports of issues. They are not actively tested and may not work for everyone. Use the "auto" detection or select your model during configuration.
 
-- **Motorola MB8611** - Two parsers available: "HNAP" (for HNAP/SOAP protocol) and "Static" (for HTML scraping). **Important:** Select the correct parser for your firmware. If entities show as unavailable, try the other parser variant or check diagnostics.
+- **Motorola MB8611** - Two parsers available: "HNAP" (for [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)/[SOAP](https://www.w3.org/TR/soap/) protocol) and "Static" (for HTML scraping). **Important:** Select the correct parser for your firmware. If entities show as unavailable, try the other parser variant or check diagnostics.
 - **Technicolor TC4400** - Parser has 95% test coverage, but some users report entity availability issues (Issue #1). Awaiting debug logs from affected users.
 - **Arris SB6183**
 - **Arris SB8200**

@@ -4,6 +4,8 @@
 release_date: 2020
 end_of_life: null # null = still current
 docsis_version: "3.1"
+protocol: HTML # HNAP = JSON API, HTML = web scraping
+chipset: Broadcom BCM3390
 isps:
   - Comcast
 notes: ISP-provided gateway only (not retail). Xfinity XB7 branding.
