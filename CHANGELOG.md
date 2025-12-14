@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.2] - 2025-12-13
+
+### Security
+- **PII Sanitization Fix** - Fixed diagnostics sanitization missing WiFi credentials, device names, serial numbers, and SSIDs in Netgear `tagValueList` JavaScript variables (Related to #61)
+
+### Added
+- **Device Name Detection** - Sanitization now detects and redacts device names appearing before IP/MAC addresses in access control lists
+- **PII Check CI Job** - New CI workflow validates fixture files for unsanitized PII on every PR
+- **Enhanced PII Checker** - Pre-commit hook now detects `tagValueList` credentials and validates HAR files
+
+### Fixed
+- **Fixture PII Cleanup** - Redacted WiFi passwords, serial numbers, SSIDs, WEP keys, and device identifiers from existing test fixtures
+
 ## [3.9.1] - 2025-12-11
 
 ### Addressed

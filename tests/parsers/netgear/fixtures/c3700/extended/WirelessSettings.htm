@@ -1747,10 +1747,10 @@ function InitTagValue()
   5G Wep key 1 (text) | 5G Wep key 2 (text) | 5G Wep key 3 (text) | 5G Wep key 4 (text) | 5G wep passphrase
 */
 
-    var tagValueList = 'US|1|0|NETGEAR38|0|2|WPA2-PSK|happymango167|automatic|0|0|0000000000|0000000000|0000000000|0000000000||11|1|0|NETGEAR38-5G|153|2|WPA2-PSK|happymango167|automatic|0|0|0000000000|0000000000|0000000000|0000000000||153|1|United States|0|1|0|0|0|1|1|0|0|1|1|';
+    var tagValueList = 'US|1|0|***SSID***|0|2|WPA2-PSK|***WIFI_CRED***|automatic|0|0|0000000000|0000000000|0000000000|0000000000||11|1|0|***SSID***-5G|153|2|WPA2-PSK|***WIFI_CRED***|automatic|0|0|0000000000|0000000000|0000000000|0000000000||153|1|United States|0|1|0|0|0|1|1|0|0|1|1|';
 /*
-    var tagValueList = "1|1|aaaaa|11|6|2|1|abcdefg|sharedkey|0|0|1234567890|0FE99CAF21|3858BE6E22|9876543210|12345678|"
-                            + "1|0|AAAA|44|2|1|abcdefg|sharedkey|0|0|1234567890|0FE99CAF21|3858BE6E22|9876543210|12345678";
+    var tagValueList = "1|1|aaaaa|11|6|2|1|abcdefg|sharedkey|0|0|1234567890|***WEP_KEY***|***WEP_KEY***|9876543210|12345678|"
+                            + "1|0|AAAA|44|2|1|abcdefg|sharedkey|0|0|1234567890|***WEP_KEY***|***WEP_KEY***|9876543210|12345678";
 */
     return tagValueList.split("|");
 }
@@ -2261,7 +2261,7 @@ function filterChannelNum()
 
 function InitTagEnterprise()
 {
-    //var tagValueList = "1|2|600|***PRIVATE_IP***.24|1812|testing123|0|0|0.0.0.0|1812||"
+    //var tagValueList = "1|2|600|***PRIVATE_IP***.24|1812|***WIFI_CRED***|0|0|0.0.0.0|1812||"
     var tagValueList = "1|1|0|0.0.0.0|1812||1|0|0.0.0.0|1812||";
 
     return tagValueList.split("|");
