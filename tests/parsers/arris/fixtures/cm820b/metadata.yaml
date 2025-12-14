@@ -1,0 +1,11 @@
+***REMOVED*** Modem metadata - verified against official sources
+***REMOVED*** This file is read by scripts/generate_fixture_index.py
+
+release_date: 2011
+end_of_life: null ***REMOVED*** discontinued, but exact date is unknown
+docsis_version: "3.0"
+protocol: HTML ***REMOVED*** HNAP = JSON API, HTML = web scraping
+chipset: Intel Puma 5
+isps:
+  - Volya
+source: https://www.speedguide.net/routers/arris-touchstone-cm820-docsiseurodocsis-30-cable-2487
