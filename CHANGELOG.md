@@ -7,9 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ***REMOVED******REMOVED*** [Unreleased]
 
+***REMOVED******REMOVED******REMOVED*** Highlights
+
+🎛️ **Unified Status Sensor** - Single pass/fail sensor replaces deprecated connection and health sensors:
+- `Operational` - All good: data parsed, DOCSIS locked, reachable
+- `ICMP Blocked` - HTTP works but ping fails (parser-specific)
+- `Partial Lock` / `Not Locked` - DOCSIS lock issues
+- `Parser Error` / `Unresponsive` - Connection problems
+
+📊 **Dashboard Generator Service** - One-click Lovelace dashboard creation:
+- Call `cable_modem_monitor.generate_dashboard` from Developer Tools > Services
+- Returns copy-paste ready YAML with your modem's actual channel IDs
+- Configurable: include/exclude status card, graphs, latency, errors
+
 ***REMOVED******REMOVED******REMOVED*** Added
+- **Unified Status Sensor** - New `sensor.cable_modem_status` combines connection health and DOCSIS lock state into single pass/fail sensor
+- **Dashboard Generator Service** - New `generate_dashboard` service returns ready-to-use Lovelace YAML for all modem channels
 - **S33 Firmware Version** - Added `GetArrisDeviceStatus` HNAP action to retrieve firmware version (Issue ***REMOVED***32)
 - **ICMP Skip Support** - Parsers can declare `supports_icmp = False` to skip ping checks for modems that block ICMP
+
+***REMOVED******REMOVED******REMOVED*** Changed
+- **Status Sensor States** - Simplified to pass/fail states: Operational, ICMP Blocked, Partial Lock, Not Locked, Parser Error, Unresponsive
+
+***REMOVED******REMOVED******REMOVED*** Removed
+- **Deprecated Sensors** - Removed `cable_modem_connection_status` and `cable_modem_health_status` (use unified `cable_modem_status` instead)
 
 ***REMOVED******REMOVED******REMOVED*** Addressed
 - **S33 ICMP Blocked** - S33 no longer shows "icmp_blocked" health status; ping check skipped for this modem (Issue ***REMOVED***32)
@@ -20,7 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MB7621 Channel ID** - Channels now use DOCSIS Channel ID instead of row counter
 
 ***REMOVED******REMOVED******REMOVED*** Documentation
-- **FIXTURES.md** - Added Protocol (HNAP/HTML) and Chipset columns to supported modems table
+- **FIXTURES.md** - Added Protocol (HNAP/HTML) and Chipset columns with reference sections
+- **README/TROUBLESHOOTING** - Updated status sensor documentation to reflect unified sensor
 
 ***REMOVED******REMOVED*** [3.9.2] - 2025-12-13
 
