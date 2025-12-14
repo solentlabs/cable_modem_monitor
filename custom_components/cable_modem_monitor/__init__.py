@@ -11,7 +11,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -37,6 +37,21 @@ SERVICE_CLEAR_HISTORY = "clear_history"
 SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
     {
         vol.Required("days_to_keep"): cv.positive_int,
+    }
+)
+
+SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
+SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
+    {
+        vol.Optional("include_downstream_power", default=True): cv.boolean,
+        vol.Optional("include_downstream_snr", default=True): cv.boolean,
+        vol.Optional("include_upstream_power", default=True): cv.boolean,
+        vol.Optional("include_upstream_frequency", default=False): cv.boolean,
+        vol.Optional("include_errors", default=True): cv.boolean,
+        vol.Optional("include_latency", default=True): cv.boolean,
+        vol.Optional("include_status_card", default=True): cv.boolean,
+        vol.Optional("graph_hours", default=24): cv.positive_int,
+        vol.Optional("short_titles", default=False): cv.boolean,
     }
 )
 
@@ -215,6 +230,223 @@ def _create_clear_history_handler(hass: HomeAssistant):
     return handle_clear_history
 
 
+def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
+    """Get dashboard card titles based on user preference."""
+    if short_titles:
+        return {
+            "ds_power": "DS Power (dBmV)",
+            "ds_snr": "DS SNR (dB)",
+            "us_power": "US Power (dBmV)",
+            "us_freq": "US Frequency (MHz)",
+            "corrected": "Corrected Errors",
+            "uncorrected": "Uncorrected Errors",
+        }
+    return {
+        "ds_power": "Downstream Power Levels (dBmV)",
+        "ds_snr": "Downstream Signal-to-Noise Ratio (dB)",
+        "us_power": "Upstream Power Levels (dBmV)",
+        "us_freq": "Upstream Frequency (MHz)",
+        "corrected": "Corrected Errors (Total)",
+        "uncorrected": "Uncorrected Errors (Total)",
+    }
+
+
+def _get_channel_ids(coordinator) -> tuple[list[int], list[int]]:
+    """Extract downstream and upstream channel IDs from coordinator data."""
+    downstream_ids: list[int] = []
+    upstream_ids: list[int] = []
+
+    if not coordinator.data:
+        return downstream_ids, upstream_ids
+
+    if "_downstream_by_id" in coordinator.data:
+        downstream_ids = sorted(coordinator.data["_downstream_by_id"].keys())
+    elif "cable_modem_downstream" in coordinator.data:
+        for idx, ch in enumerate(coordinator.data["cable_modem_downstream"]):
+            ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+            downstream_ids.append(ch_id)
+        downstream_ids = sorted(downstream_ids)
+
+    if "_upstream_by_id" in coordinator.data:
+        upstream_ids = sorted(coordinator.data["_upstream_by_id"].keys())
+    elif "cable_modem_upstream" in coordinator.data:
+        for idx, ch in enumerate(coordinator.data["cable_modem_upstream"]):
+            ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+            upstream_ids.append(ch_id)
+        upstream_ids = sorted(upstream_ids)
+
+    return downstream_ids, upstream_ids
+
+
+def _build_status_card_yaml() -> list[str]:
+    """Build YAML for the status entities card."""
+    return [
+        "  - type: entities",
+        "    title: Cable Modem Status",
+        "    entities:",
+        "      - entity: sensor.cable_modem_status",
+        "        name: Status",
+        "      - entity: sensor.cable_modem_ping_latency",
+        "        name: Ping",
+        "      - entity: sensor.cable_modem_http_latency",
+        "        name: HTTP",
+        "        icon: mdi:speedometer",
+        "      - entity: sensor.cable_modem_software_version",
+        "        name: Software Version",
+        "      - entity: sensor.cable_modem_system_uptime",
+        "        name: Uptime",
+        "      - entity: sensor.cable_modem_last_boot_time",
+        "        name: Last Boot",
+        "        format: date",
+        "      - entity: sensor.cable_modem_ds_channel_count",
+        "        name: Downstream Channel Count",
+        "      - entity: sensor.cable_modem_us_channel_count",
+        "        name: Upstream Channel Count",
+        "      - entity: sensor.cable_modem_total_corrected_errors",
+        "        name: Total Corrected Errors",
+        "      - entity: sensor.cable_modem_total_uncorrected_errors",
+        "        name: Total Uncorrected Errors",
+        "      - entity: button.cable_modem_restart_modem",
+        "        name: Restart",
+        "    show_header_toggle: false",
+        "    state_color: false",
+    ]
+
+
+def _build_channel_graph_yaml(title: str, hours: int, channel_ids: list[int], entity_pattern: str) -> list[str]:
+    """Build YAML for a channel history graph."""
+    yaml_parts = [
+        "  - type: history-graph",
+        f"    title: {title}",
+        f"    hours_to_show: {hours}",
+        "    entities:",
+    ]
+    for ch_id in channel_ids:
+        yaml_parts.append(f"      - entity: {entity_pattern.format(ch_id=ch_id)}")
+        yaml_parts.append(f"        name: Ch {ch_id}")
+    return yaml_parts
+
+
+def _build_error_graphs_yaml(titles: dict[str, str]) -> list[str]:
+    """Build YAML for error history graphs."""
+    return [
+        "  - type: history-graph",
+        f"    title: {titles['corrected']}",
+        "    hours_to_show: 168",
+        "    entities:",
+        "      - entity: sensor.cable_modem_total_corrected_errors",
+        "        name: Corrected Error Count",
+        "  - type: history-graph",
+        f"    title: {titles['uncorrected']}",
+        "    hours_to_show: 168",
+        "    entities:",
+        "      - entity: sensor.cable_modem_total_uncorrected_errors",
+        "        name: Uncorrected Error Count",
+    ]
+
+
+def _build_latency_graph_yaml() -> list[str]:
+    """Build YAML for the latency history graph."""
+    return [
+        "  - type: history-graph",
+        "    title: Latency",
+        "    hours_to_show: 6",
+        "    entities:",
+        "      - entity: sensor.cable_modem_ping_latency",
+        "        name: Ping",
+        "      - entity: sensor.cable_modem_http_latency",
+        "        name: HTTP",
+    ]
+
+
+def _create_generate_dashboard_handler(hass: HomeAssistant):
+    """Create the generate dashboard service handler."""
+
+    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
+        """Handle the generate_dashboard service call."""
+        ***REMOVED*** Get options from call
+        opts = {
+            "ds_power": call.data.get("include_downstream_power", True),
+            "ds_snr": call.data.get("include_downstream_snr", True),
+            "us_power": call.data.get("include_upstream_power", True),
+            "us_freq": call.data.get("include_upstream_frequency", False),
+            "errors": call.data.get("include_errors", True),
+            "latency": call.data.get("include_latency", True),
+            "status": call.data.get("include_status_card", True),
+        }
+        graph_hours = call.data.get("graph_hours", 24)
+        titles = _get_dashboard_titles(call.data.get("short_titles", False))
+
+        ***REMOVED*** Get coordinator data to find actual channel IDs
+        if DOMAIN not in hass.data or not hass.data[DOMAIN]:
+            return {"yaml": "***REMOVED*** Error: No cable modem configured"}
+
+        entry_id = next(iter(hass.data[DOMAIN]))
+        coordinator = hass.data[DOMAIN][entry_id]
+        downstream_ids, upstream_ids = _get_channel_ids(coordinator)
+
+        ***REMOVED*** Build YAML
+        yaml_parts = [
+            "***REMOVED*** Cable Modem Dashboard",
+            "***REMOVED*** Copy from here, paste into: Dashboard > Add Card > Manual",
+            "type: vertical-stack",
+            "cards:",
+        ]
+
+        if opts["status"]:
+            yaml_parts.extend(_build_status_card_yaml())
+
+        if opts["ds_power"] and downstream_ids:
+            yaml_parts.extend(
+                _build_channel_graph_yaml(
+                    titles["ds_power"],
+                    graph_hours,
+                    downstream_ids,
+                    "sensor.cable_modem_ds_ch_{ch_id}_power",
+                )
+            )
+
+        if opts["ds_snr"] and downstream_ids:
+            yaml_parts.extend(
+                _build_channel_graph_yaml(
+                    titles["ds_snr"],
+                    graph_hours,
+                    downstream_ids,
+                    "sensor.cable_modem_ds_ch_{ch_id}_snr",
+                )
+            )
+
+        if opts["us_power"] and upstream_ids:
+            yaml_parts.extend(
+                _build_channel_graph_yaml(
+                    titles["us_power"],
+                    graph_hours,
+                    upstream_ids,
+                    "sensor.cable_modem_us_ch_{ch_id}_power",
+                )
+            )
+
+        if opts["us_freq"] and upstream_ids:
+            yaml_parts.extend(
+                _build_channel_graph_yaml(
+                    titles["us_freq"],
+                    graph_hours,
+                    upstream_ids,
+                    "sensor.cable_modem_us_ch_{ch_id}_frequency",
+                )
+            )
+
+        if opts["errors"]:
+            yaml_parts.extend(_build_error_graphs_yaml(titles))
+
+        if opts["latency"]:
+            yaml_parts.extend(_build_latency_graph_yaml())
+
+        return {"yaml": "\n".join(yaml_parts)}
+
+    return handle_generate_dashboard
+
+
 def _clear_db_history(hass: HomeAssistant, cable_modem_entities: list, days_to_keep: int) -> int:
     """Clear history from database (runs in executor)."""
     try:
@@ -378,6 +610,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             schema=SERVICE_CLEAR_HISTORY_SCHEMA,
         )
 
+    if not hass.services.has_service(DOMAIN, SERVICE_GENERATE_DASHBOARD):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GENERATE_DASHBOARD,
+            _create_generate_dashboard_handler(hass),
+            schema=SERVICE_GENERATE_DASHBOARD_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
     return True
 
 
@@ -398,6 +639,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ***REMOVED*** Unregister services if this is the last entry
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_CLEAR_HISTORY)
+            hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
 
     return bool(unload_ok)
 

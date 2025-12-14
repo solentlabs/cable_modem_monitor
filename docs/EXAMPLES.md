@@ -22,7 +22,7 @@ cards:
   - type: entities
     title: Cable Modem Status
     entities:
-      - entity: sensor.cable_modem_connection_status
+      - entity: sensor.cable_modem_status
         name: Status
       - entity: sensor.cable_modem_software_version
         name: Software Version
@@ -310,15 +310,15 @@ automation:
           entity_id: button.cable_modem_restart_modem
 ```
 
-***REMOVED******REMOVED******REMOVED*** Modem Health Alert (v2.6.0+)
+***REMOVED******REMOVED******REMOVED*** Modem Status Alert (v3.10.0+)
 
 ```yaml
 automation:
-  - alias: "Cable Modem Health Alert"
+  - alias: "Cable Modem Status Alert"
     trigger:
       - platform: state
-        entity_id: sensor.cable_modem_health_status
-        to: "unresponsive"
+        entity_id: sensor.cable_modem_status
+        to: "Unresponsive"
         for:
           minutes: 5
     action:
@@ -326,4 +326,19 @@ automation:
         data:
           title: "Modem Offline"
           message: "Cable modem is not responding. Check power and connections."
+
+  - alias: "Cable Modem DOCSIS Alert"
+    trigger:
+      - platform: state
+        entity_id: sensor.cable_modem_status
+        to:
+          - "Not Locked"
+          - "Partial Lock"
+        for:
+          minutes: 10
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "Modem Connection Issue"
+          message: "Cable modem DOCSIS status: {{ states('sensor.cable_modem_status') }}"
 ```

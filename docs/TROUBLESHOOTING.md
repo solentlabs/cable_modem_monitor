@@ -42,7 +42,7 @@ Cable modems periodically reboot or become busy during channel maintenance. This
 
 **Solution:**
 - **No action needed** - Integration will retry on next poll
-- Check the Cable Modem Health Status sensor (v2.6.0+) to see modem responsiveness
+- Check `sensor.cable_modem_status` to see current operational state
 - If timeouts persist for >10 minutes, check modem power and connections
 
 ***REMOVED******REMOVED******REMOVED******REMOVED*** 2. Network Issues vs. Web Server Issues
@@ -58,16 +58,15 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
 | ❌ Fail | ✅ Success | `icmp_blocked` | ICMP blocked (firewall) |
 | ❌ Fail | ❌ Fail | `unresponsive` | Network down / offline |
 
-**Check Health Status:**
-- Look at `sensor.cable_modem_health_status` (v2.6.0+)
-- Check `sensor.cable_modem_ping_latency_ms` for network performance
-- Check `sensor.cable_modem_http_latency_ms` for web server performance
-- Monitor `sensor.cable_modem_availability` for uptime percentage
+**Check Status:**
+- Look at `sensor.cable_modem_status` for overall operational state
+- Check `sensor.cable_modem_ping_latency` for network performance
+- Check `sensor.cable_modem_http_latency` for web server performance
 
 **What to Do:**
-- **Degraded**: Web server crashed, try restarting modem
-- **ICMP Blocked**: Firewall blocking ping, check network settings
+- **ICMP Blocked**: Ping fails but HTTP works - check if modem blocks ICMP (set `supports_icmp = False` in parser)
 - **Unresponsive**: Check modem power, cables, and network connection
+- **Parser Error**: Modem reachable but data format changed - report issue with diagnostics
 
 ***REMOVED******REMOVED******REMOVED******REMOVED*** 3. Wrong Credentials
 
@@ -116,11 +115,12 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
 
 **Diagnostic Sensors**
 
-Three sensors help diagnose connectivity:
+Key sensors help diagnose connectivity:
 
-1. **Cable Modem Health Status** (`sensor.cable_modem_health_status`)
-   - Shows: `healthy`, `degraded`, `icmp_blocked`, or `unresponsive`
+1. **Cable Modem Status** (`sensor.cable_modem_status`)
+   - Pass/fail status: `Operational`, `ICMP Blocked`, `Partial Lock`, `Not Locked`, `Parser Error`, `Unresponsive`
    - Use in automations to alert on modem issues
+   - Combines connection, health, and DOCSIS lock status
 
 2. **Cable Modem Ping Latency** (`sensor.cable_modem_ping_latency`)
    - Shows Layer 3 (ICMP) response time in milliseconds
@@ -137,11 +137,11 @@ Three sensors help diagnose connectivity:
 **Example Automation:**
 ```yaml
 automation:
-  - alias: "Cable Modem Health Alert"
+  - alias: "Cable Modem Status Alert"
     trigger:
       - platform: state
-        entity_id: sensor.cable_modem_health_status
-        to: "unresponsive"
+        entity_id: sensor.cable_modem_status
+        to: "Unresponsive"
         for:
           minutes: 5
     action:

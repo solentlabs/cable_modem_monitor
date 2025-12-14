@@ -7,9 +7,9 @@ from unittest.mock import Mock
 import pytest
 
 from custom_components.cable_modem_monitor.sensor import (
-    ModemConnectionStatusSensor,
     ModemDownstreamChannelCountSensor,
     ModemSoftwareVersionSensor,
+    ModemStatusSensor,
     ModemSystemUptimeSensor,
     ModemTotalCorrectedSensor,
     ModemTotalUncorrectedSensor,
@@ -32,8 +32,8 @@ class TestSensorImports:
         assert expected_base_sensors == 7
 
 
-class TestConnectionStatusSensor:
-    """Test connection status sensor."""
+class TestStatusSensor:
+    """Test unified status sensor."""
 
     @pytest.fixture
     def mock_coordinator(self):
@@ -42,9 +42,12 @@ class TestConnectionStatusSensor:
         ***REMOVED*** Use plain dict for data (sensors call .get() on it)
         coordinator.data = {
             "cable_modem_connection_status": "online",
-            "cable_modem_downstream": [],
-            "cable_modem_upstream": [],
+            "cable_modem_downstream": [{"lock_status": "Locked"}],
+            "cable_modem_upstream": [{"channel": "1"}],
+            "health_status": "responsive",
+            "cable_modem_fallback_mode": False,
         }
+        coordinator.last_update_success = True
         return coordinator
 
     @pytest.fixture
@@ -55,19 +58,22 @@ class TestConnectionStatusSensor:
         entry.data = {"host": "192.168.100.1"}
         return entry
 
-    def test_connection_status_online(self, mock_coordinator, mock_entry):
-        """Test connection status sensor with online status."""
-        sensor = ModemConnectionStatusSensor(mock_coordinator, mock_entry)
+    def test_status_operational(self, mock_coordinator, mock_entry):
+        """Test status sensor with operational status."""
+        sensor = ModemStatusSensor(mock_coordinator, mock_entry)
 
-        ***REMOVED*** Test state
-        assert sensor.native_value == "online"
+        ***REMOVED*** Test state - unified sensor returns "Operational" when all good
+        assert sensor.native_value == "Operational"
 
-    def test_connection_status_offline(self, mock_coordinator, mock_entry):
-        """Test connection status sensor with offline status."""
-        mock_coordinator.data = {"cable_modem_connection_status": "unreachable"}
-        sensor = ModemConnectionStatusSensor(mock_coordinator, mock_entry)
+    def test_status_unresponsive(self, mock_coordinator, mock_entry):
+        """Test status sensor with unresponsive status."""
+        mock_coordinator.data = {
+            "cable_modem_connection_status": "unreachable",
+            "health_status": "unresponsive",
+        }
+        sensor = ModemStatusSensor(mock_coordinator, mock_entry)
 
-        assert sensor.native_value == "unreachable"
+        assert sensor.native_value == "Unresponsive"
 
 
 class TestErrorSensors:
@@ -233,7 +239,8 @@ class TestSensorAttributes:
 
     def test_sensor_has_unique_id(self, mock_coordinator, mock_entry):
         """Test that sensors have unique IDs."""
-        sensor = ModemConnectionStatusSensor(mock_coordinator, mock_entry)
+        mock_coordinator.last_update_success = True
+        sensor = ModemStatusSensor(mock_coordinator, mock_entry)
 
         ***REMOVED*** Unique ID should be based on entry_id and sensor type
         assert sensor.unique_id is not None
@@ -241,7 +248,8 @@ class TestSensorAttributes:
 
     def test_sensor_has_device_info(self, mock_coordinator, mock_entry):
         """Test that sensors have device info."""
-        sensor = ModemConnectionStatusSensor(mock_coordinator, mock_entry)
+        mock_coordinator.last_update_success = True
+        sensor = ModemStatusSensor(mock_coordinator, mock_entry)
 
         ***REMOVED*** Device info should link sensors to the modem device
         assert sensor.device_info is not None
@@ -299,8 +307,8 @@ class TestEntityNaming:
     def test_sensor_naming(self, mock_coordinator):
         """Test sensor naming has correct display names and unique IDs."""
         from custom_components.cable_modem_monitor.sensor import (
-            ModemConnectionStatusSensor,
             ModemDownstreamPowerSensor,
+            ModemStatusSensor,
             ModemTotalCorrectedSensor,
         )
 
@@ -308,10 +316,10 @@ class TestEntityNaming:
         entry.entry_id = "test"
         entry.data = {"host": "192.168.100.1"}
 
-        ***REMOVED*** Test connection status sensor
-        connection_sensor = ModemConnectionStatusSensor(mock_coordinator, entry)
-        assert connection_sensor.name == "Connection Status"
-        assert connection_sensor.unique_id == "test_cable_modem_connection_status"
+        ***REMOVED*** Test unified status sensor
+        status_sensor = ModemStatusSensor(mock_coordinator, entry)
+        assert status_sensor.name == "Status"
+        assert status_sensor.unique_id == "test_cable_modem_status"
 
         ***REMOVED*** Test error sensor
         error_sensor = ModemTotalCorrectedSensor(mock_coordinator, entry)
@@ -557,8 +565,7 @@ class TestFallbackModeSensorCreation:
         sensor_names = [entity._attr_name for entity in added_entities]
 
         ***REMOVED*** Should include ALL sensor types in normal mode
-        assert "Connection Status" in sensor_names
-        assert "Health Status" in sensor_names
+        assert "Status" in sensor_names  ***REMOVED*** Unified status sensor (replaces Connection Status + Health Status)
         assert "Ping Latency" in sensor_names
         assert "HTTP Latency" in sensor_names
         assert "Total Corrected Errors" in sensor_names  ***REMOVED*** Should be present
@@ -594,8 +601,7 @@ class TestFallbackModeSensorCreation:
         sensor_names = [entity._attr_name for entity in added_entities]
 
         ***REMOVED*** Should include connectivity sensors (have data in fallback)
-        assert "Connection Status" in sensor_names
-        assert "Health Status" in sensor_names
+        assert "Status" in sensor_names  ***REMOVED*** Unified status sensor
         assert "Ping Latency" in sensor_names
         assert "HTTP Latency" in sensor_names
         assert "Modem Info" in sensor_names  ***REMOVED*** Always included (device metadata)
@@ -608,8 +614,8 @@ class TestFallbackModeSensorCreation:
         assert "Software Version" not in sensor_names  ***REMOVED*** Skipped in fallback
         assert "System Uptime" not in sensor_names  ***REMOVED*** Skipped in fallback
 
-        ***REMOVED*** Should have exactly 5 sensors (Connection, Modem Info, Health, Ping, HTTP)
-        assert len(added_entities) == 5
+        ***REMOVED*** Should have exactly 4 sensors (Status, Modem Info, Ping, HTTP)
+        assert len(added_entities) == 4
 
     @pytest.mark.asyncio
     async def test_no_channel_sensors(self, mock_hass, mock_entry, mock_coordinator_fallback_mode):
@@ -637,8 +643,13 @@ class TestFallbackModeSensorCreation:
         assert not any("_ds_" in uid for uid in sensor_unique_ids)  ***REMOVED*** No downstream channel sensors
         assert not any("_us_" in uid for uid in sensor_unique_ids)  ***REMOVED*** No upstream channel sensors
 
-    def test_connection_status_shows_limited_in_fallback(self, mock_coordinator_fallback_mode, mock_entry):
-        """Test that connection status sensor shows 'limited' in fallback mode."""
-        sensor = ModemConnectionStatusSensor(mock_coordinator_fallback_mode, mock_entry)
+    def test_status_shows_operational_in_fallback(self, mock_coordinator_fallback_mode, mock_entry):
+        """Test that unified status sensor shows 'Operational' in fallback mode.
 
-        assert sensor.native_value == "limited"
+        In fallback mode, we don't have channel data to assess DOCSIS lock status,
+        so the sensor reports Operational if the modem is reachable.
+        """
+        sensor = ModemStatusSensor(mock_coordinator_fallback_mode, mock_entry)
+
+        ***REMOVED*** Fallback mode with responsive health = Operational
+        assert sensor.native_value == "Operational"

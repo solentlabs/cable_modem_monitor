@@ -106,7 +106,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   - Frequency (Hz)
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
-- **Connection Status**: Monitor modem online/offline state
+- **Unified Status**: Single sensor showing operational state (Operational/Degraded/Not Locked/Unresponsive)
 - **System Information**: Software version, uptime, channel counts, and last boot time
 - **Health Monitoring**: Real-time modem health checks with:
   - Ping latency monitoring
@@ -226,23 +226,28 @@ After installation, you can configure additional settings:
 All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification.
 
 **Entity Naming Pattern:**
-- System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_connection_status`)
+- System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_status`)
 - Channel sensors: `sensor.cable_modem_{direction}_ch_{number}_{metric}`
   - Example: `sensor.cable_modem_ds_ch_1_power` (downstream channel 1 power)
   - Example: `sensor.cable_modem_us_ch_3_frequency` (upstream channel 3 frequency)
 
-***REMOVED******REMOVED******REMOVED*** Connection Status
-- `sensor.cable_modem_connection_status`: Overall connection state (online/offline)
+***REMOVED******REMOVED******REMOVED*** Modem Status
+- `sensor.cable_modem_status`: Unified pass/fail status combining connection, health, and DOCSIS lock state
+  - **Operational**: All good - data parsed, DOCSIS locked, reachable
+  - **ICMP Blocked**: HTTP works but ping fails (check parser `supports_icmp` setting)
+  - **Partial Lock**: Some downstream channels not locked
+  - **Not Locked**: DOCSIS not locked to ISP
+  - **Parser Error**: Modem reachable but data couldn't be parsed
+  - **Unresponsive**: Can't reach modem via HTTP
 
 ***REMOVED******REMOVED******REMOVED*** System Information
 - `sensor.cable_modem_software_version`: Modem firmware/software version
 - `sensor.cable_modem_system_uptime`: How long the modem has been running
 - `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
-- `sensor.cable_modem_downstream_channel_count`: Number of active downstream channels
-- `sensor.cable_modem_upstream_channel_count`: Number of active upstream channels
+- `sensor.cable_modem_ds_channel_count`: Number of active downstream channels
+- `sensor.cable_modem_us_channel_count`: Number of active upstream channels
 
-***REMOVED******REMOVED******REMOVED*** Health Monitoring
-- `sensor.cable_modem_health_status`: Overall modem health (healthy/degraded/offline)
+***REMOVED******REMOVED******REMOVED*** Latency Monitoring
 - `sensor.cable_modem_ping_latency`: Ping response time in milliseconds
 - `sensor.cable_modem_http_latency`: HTTP response time in milliseconds
 
