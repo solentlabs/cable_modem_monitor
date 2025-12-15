@@ -12,7 +12,7 @@
 
 <!-- Meta -->
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
-[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/CAPTURE_GUIDE.md)
+[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/MODEM_REQUEST.md)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
@@ -149,7 +149,7 @@ Using a modem marked with asterisk (*)? **[Report it working](https://github.com
 
 If your modem isn't supported or you'd like to help expand compatibility, we'd love your help!
 
-**📖 See the [Capture Guide](./docs/CAPTURE_GUIDE.md)** for step-by-step instructions on capturing diagnostic data.
+**📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for step-by-step instructions on capturing and submitting diagnostic data.
 
 **Want to develop the parser yourself?** See the [Contributing Guide](./CONTRIBUTING.md) for details.
 
@@ -365,7 +365,7 @@ MIT License - see LICENSE file for details
 - [Contributing Guide](./CONTRIBUTING.md) - How to contribute code or add modem support
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Examples](./docs/EXAMPLES.md) - Dashboard and automation YAML
-- [Capture Guide](./docs/CAPTURE_GUIDE.md) - Help add support for your modem
+- [Modem Request Guide](./docs/MODEM_REQUEST.md) - Help add support for your modem
 - [AI Context](./AI_CONTEXT.md) - Project context for AI assistants
 
 ***REMOVED******REMOVED******REMOVED*** External Resources

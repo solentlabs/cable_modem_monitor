@@ -17,29 +17,14 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 **Don't see your modem supported?** You can help us add it by capturing data from your modem's web interface.
 
-***REMOVED******REMOVED******REMOVED*** Quick Capture (Recommended)
+> **📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for complete instructions on capturing data, reviewing for PII, and submitting your request.
 
-The easiest way to capture modem data, especially for modems with login:
+**Quick summary:**
+1. Capture your modem's web pages (two methods available)
+2. **Review the capture for your WiFi credentials** - automated sanitization isn't perfect
+3. [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
 
-```bash
-***REMOVED*** One-time setup
-pip install playwright && playwright install chromium
-
-***REMOVED*** Capture (opens browser, you log in, close when done)
-python scripts/capture_modem.py
-```
-
-Or in VS Code: **Ctrl+Shift+P** → **Tasks: Run Task** → **📹 Capture Modem Traffic**
-
-The script automatically:
-- Records all network traffic while you navigate
-- Removes fonts, images, and duplicates (10MB → ~20KB)
-- Sanitizes passwords and personal info
-- Compresses the output
-
-**Then:** [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) and attach the `.sanitized.har.gz` file.
-
-See [Capture Guide](./docs/CAPTURE_GUIDE.md) for detailed instructions and alternative methods.
+Your captured data becomes a test fixture that lets us develop and verify the parser without physical access to your modem.
 
 ---
 

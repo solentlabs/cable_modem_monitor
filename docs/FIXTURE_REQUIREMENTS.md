@@ -1,6 +1,8 @@
 ***REMOVED*** Test Fixture Requirements
 
-When contributing modem support, test fixtures are essential for reliable parsing and regression testing. This guide explains how to create proper fixtures.
+> **Submitting data for a new modem?** See [MODEM_REQUEST.md](MODEM_REQUEST.md) first - it covers capture methods, PII review, and the submission process.
+
+This guide explains the technical requirements for test fixtures used in parser development.
 
 ***REMOVED******REMOVED*** Fixture Directory Structure
 
