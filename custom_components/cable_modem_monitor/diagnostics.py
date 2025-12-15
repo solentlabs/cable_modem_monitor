@@ -352,6 +352,25 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "captured_at": datetime.now().isoformat(),
             "note": "Captured with Solent Labs™ Cable Modem Monitor diagnostics",
         },
+        # PII review guidance - displayed prominently for users sharing diagnostics
+        "_review_before_sharing": {
+            "warning": (
+                "Automated sanitization is best-effort, not foolproof. "
+                "Modem manufacturers store data in unpredictable formats. "
+                "Please verify your credentials are not present before sharing."
+            ),
+            "checklist": [
+                "Search this file for your WiFi network name (SSID)",
+                "Search this file for your WiFi password",
+                "Search this file for your router admin password",
+                "Check that public IPs show as ***PUBLIC_IP***",
+            ],
+            "how_to_search": "Use Ctrl+F (Cmd+F on Mac) in your text editor",
+            "if_you_find_credentials": (
+                "Replace them with ***REDACTED*** and note it in your GitHub issue " "so we can improve the sanitizer."
+            ),
+            "documentation": "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md",
+        },
         "config_entry": {
             "title": entry.title,
             "host": entry.data.get("host"),

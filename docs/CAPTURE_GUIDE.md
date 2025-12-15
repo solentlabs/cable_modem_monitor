@@ -1,6 +1,8 @@
 # Capture Guide for Modem Diagnostics
 
-This guide explains how to capture data from your modem to help developers add support for your model.
+> **Looking to submit a modem request?** See [MODEM_REQUEST.md](MODEM_REQUEST.md) for the complete guide including PII review checklist and submission process.
+
+This guide provides technical details on capture methods and troubleshooting.
 
 ## Which Method Should I Use?
 
