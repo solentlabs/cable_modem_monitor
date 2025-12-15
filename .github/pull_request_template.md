@@ -90,12 +90,12 @@ Fixes #
 - [ ] I have added a new parser in `custom_components/cable_modem_monitor/parsers/<manufacturer>/`
 - [ ] I have included test fixtures (HTML samples from the modem)
 - [ ] I have added tests for the new parser
-- [ ] I have updated `docs/MODEM_COMPATIBILITY_GUIDE.md`
+- [ ] I have verified the modem appears in `tests/parsers/FIXTURES.md` (auto-generated from metadata.yaml)
 - [ ] I have tested with the actual modem hardware
 
 #### Fixture Requirements
 
-- [ ] Created `metadata.yaml` in fixture directory (see [template](../docs/FIXTURE_REQUIREMENTS.md#metadatayaml-template))
+- [ ] Created `metadata.yaml` in fixture directory (see [template](../docs/reference/FIXTURE_FORMAT.md#metadatayaml-template))
 - [ ] **PII scrubbed from all fixtures:**
   - [ ] MAC addresses removed/anonymized (e.g., `00:00:00:00:00:00`)
   - [ ] Serial numbers removed/anonymized (e.g., `XXXXXXXXXXXX`)

@@ -726,7 +726,25 @@ def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
 
 ## Resources
 
-- **Project Wiki:** [Link to wiki if available]
+### DOCSIS Standards
+
+The parser data schema is aligned with industry standards for cable modem metrics:
+
+| Standard | Description | Link |
+|----------|-------------|------|
+| **RFC 4546** | DOCSIS 2.0 RF Interface MIB - defines core metrics (`docsIfSigQSignalNoise`, `docsIfDownChannelPower`, etc.) | [IETF](https://www.rfc-editor.org/rfc/rfc4546) |
+| **CableLabs MIBs** | Normative source for DOCSIS 3.0/3.1 MIB definitions | [mibs.cablelabs.com](http://mibs.cablelabs.com/MIBs/DOCSIS/) |
+| **TR-181 DOCSIS** | Broadband Forum consumer-side data model | [GitHub](https://github.com/BroadbandForum/cwmp-data-models/blob/master/tr-181-2-15-0-docsis.xml) |
+
+Schema field mapping:
+- `frequency` → `docsIfDownChannelFrequency` (Hz)
+- `power` → `docsIfDownChannelPower` (dBmV, standards use TenthdBmV)
+- `snr` → `docsIfSigQSignalNoise` (dB, standards use TenthdB)
+- `corrected` → `docsIfSigQCorrecteds`
+- `uncorrected` → `docsIfSigQUncorrectables`
+
+### Project Resources
+
 - **Example Parsers:**
   - Simple: `arris/sb6141.py`
   - Complex: `motorola/mb8611_hnap.py`

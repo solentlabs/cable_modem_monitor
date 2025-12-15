@@ -61,7 +61,7 @@ usage() {
     echo "  2. Paste it into your HA's 'config/custom_components/' directory"
     echo "  3. Restart Home Assistant"
     echo ""
-    echo "See docs/TESTING_ON_HA.md for detailed instructions."
+    echo "See docs/setup/TESTING_ON_HA.md for detailed instructions."
 }
 
 check_source() {

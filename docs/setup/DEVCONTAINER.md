@@ -2,7 +2,7 @@
 
 **Comprehensive reference for dev container development**
 
-> **🚀 Quick Start?** See [Getting Started Guide](./GETTING_STARTED.md) for setup comparison and decision tree.
+> **🚀 Quick Start?** See [Getting Started Guide](GETTING_STARTED.md) for setup comparison and decision tree.
 >
 > This guide provides detailed dev container instructions, troubleshooting, and advanced topics.
 

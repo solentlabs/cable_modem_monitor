@@ -186,7 +186,7 @@ External projects with working MB8600 code:
 
 ## RAW_DATA Contents
 
-> **Note:** We use both HAR and HTML page captures to obtain real page data that has been properly PII-scrubbed. HAR files capture the full request/response flow (including authentication sequences), while HTML captures provide clean, static fixtures for parser testing. See the [Capture Guide](docs/CAPTURE_GUIDE.md) for details.
+> **Note:** We use both HAR and HTML page captures to obtain real page data that has been properly PII-scrubbed. HAR files capture the full request/response flow (including authentication sequences), while HTML captures provide clean, static fixtures for parser testing. See the [Modem Request Guide](../../../../../docs/MODEM_REQUEST.md) for details.
 
 The `/home/kwschulz/Projects/RAW_DATA/MB8600/` folder contains:
 

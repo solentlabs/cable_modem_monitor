@@ -134,7 +134,7 @@ potentially_flagged_code()  # nosec B501
 
 ### Test Locally (Optional)
 
-Requires CodeQL CLI installation. See `docs/CODEQL_TESTING_GUIDE.md` for setup.
+Requires CodeQL CLI installation. See `docs/reference/CODEQL_TESTING_GUIDE.md` for setup.
 
 ```bash
 # Quick syntax check
@@ -172,7 +172,7 @@ queries: security-extended,security-and-quality,.github/codeql/queries
 
 - **High-level overview:** `docs/CODEQL_OVERVIEW.md` (start here!)
 - **Query details:** `queries/README.md`
-- **Local testing:** `docs/CODEQL_TESTING_GUIDE.md`
+- **Local testing:** `docs/reference/CODEQL_TESTING_GUIDE.md`
 - **CodeQL docs:** https://codeql.github.com/docs/
 
 ## Troubleshooting

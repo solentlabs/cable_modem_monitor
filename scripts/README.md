@@ -89,7 +89,7 @@ make clean
 bash scripts/dev/test-codeql.sh
 ```
 
-> **Note:** CodeQL CLI must be installed first. See `docs/CODEQL_TESTING_GUIDE.md` for setup instructions.
+> **Note:** CodeQL CLI must be installed first. See `docs/reference/CODEQL_TESTING_GUIDE.md` for setup instructions.
 
 **Testing Fresh Developer Experience:**
 

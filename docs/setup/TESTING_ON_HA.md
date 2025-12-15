@@ -2,7 +2,7 @@
 
 This guide explains how to deploy a development branch of Cable Modem Monitor to a real Home Assistant instance for testing.
 
-> **For local development** (running tests, working on code): See [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md)
+> **For local development** (running tests, working on code): See [Getting Started](./GETTING_STARTED.md)
 >
 > **For stable installation** (released versions): See [README.md Installation](../README.md#installation)
 
@@ -186,6 +186,6 @@ Then check Settings → System → Logs after restarting.
 
 ## See Also
 
-- [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) - Local development setup
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - How to contribute
-- [CAPTURE_GUIDE.md](./CAPTURE_GUIDE.md) - Capturing modem data for debugging
+- [Getting Started](./GETTING_STARTED.md) - Local development setup
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) - How to contribute
+- [Modem Request Guide](../MODEM_REQUEST.md) - Capturing modem data for debugging

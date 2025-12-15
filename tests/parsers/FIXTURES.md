@@ -7,7 +7,7 @@ Auto-generated index of modem fixtures.
 - Parser classes - Verified status, manufacturer
 - `README.md` - Model name, contributor notes
 
-**Total Modems:** 13 (9 ✅ verified, 3 ⏳ awaiting, 1 🔧 in progress)
+**Total Modems:** 13 (10 ✅ verified, 2 ⏳ awaiting, 1 🔧 in progress)
 
 ## Fixture Organization Guidelines
 
@@ -27,7 +27,7 @@ All fixture directories should follow this structure:
 
 | Manufacturer | Model | DOCSIS | Protocol | Chipset | ISPs | Files | Status |
 |--------------|-------|--------|----------|---------|------|-------|--------|
-| ARRIS | [CM820B](arris/fixtures/cm820b/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 5](#puma-5) | ![VOLY](https://img.shields.io/badge/-VOLY-gray?style=flat-square "Volya") | 2 | ✅ Verified |
+| ARRIS | [CM820B](arris/fixtures/cm820b/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 5](#puma-5) | [![VOLY](https://img.shields.io/badge/-VOLY-5599aa?style=flat-square "Volia")](#volya) | 2 | ✅ Verified |
 | Arris/CommScope | [S33](arris/fixtures/s33/README.md) | 3.1 | **HNAP** | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 2 | ⏳ Awaiting |
 | ARRIS | [SB6141](arris/fixtures/sb6141/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3380](#bcm3380) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable")](#twc) [![MED](https://img.shields.io/badge/-MED-557799?style=flat-square "Mediacom")](#mediacom) | 1 | ✅ Verified |
 | ARRIS | [SB6190](arris/fixtures/sb6190/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 6](#puma-6) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable")](#twc) | 1 | ✅ Verified |

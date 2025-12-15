@@ -36,7 +36,7 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ## Development
 
-**📖 See the [Getting Started Guide](./docs/GETTING_STARTED.md)** for development environment setup.
+**📖 See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for development environment setup.
 
 Quick start:
 ```bash
@@ -340,7 +340,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
     - Hardcoded credential detection
     - SSL/TLS misconfiguration checks
     - Path traversal prevention
-- **Security Documentation**: See [CodeQL Testing Guide](./docs/CODEQL_TESTING_GUIDE.md) for details
+- **Security Documentation**: See [CodeQL Testing Guide](./docs/reference/CODEQL_TESTING_GUIDE.md) for details
 - **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
 
 ### Authentication Support

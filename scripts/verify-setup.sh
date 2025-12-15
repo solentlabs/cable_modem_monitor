@@ -303,7 +303,7 @@ else
         echo ""
     fi
     echo "For help, see:"
-    echo "  • docs/DEVELOPER_QUICKSTART.md"
+    echo "  • docs/setup/GETTING_STARTED.md"
     echo "  • CONTRIBUTING.md"
     echo ""
     exit 1

@@ -205,4 +205,4 @@ body:
 
         Your contribution helps everyone with the same modem model. Once the parser is developed, we'll ask you to test it and provide feedback.
 
-        **Tip:** If you want to help test development branches, see the [Testing on HA guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/TESTING_ON_HA.md).
+        **Tip:** If you want to help test development branches, see the [Testing on HA guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/setup/TESTING_ON_HA.md).

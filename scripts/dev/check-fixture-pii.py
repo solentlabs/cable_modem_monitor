@@ -297,7 +297,7 @@ def main() -> int:  # noqa: C901
                 checked_dirs.add(fixture_dir)
                 if not check_metadata_exists(fixture_dir):
                     print(f"\n❌ Missing metadata.yaml in {fixture_dir}")
-                    print("  → See docs/FIXTURE_REQUIREMENTS.md for template")
+                    print("  → See docs/reference/FIXTURE_FORMAT.md for template")
                     exit_code = 1
 
     # Find all HAR files

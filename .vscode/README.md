@@ -91,7 +91,7 @@ Press `Ctrl+Shift+P` → **"Tasks: Run Task"**
 
 | Topic | Location |
 |-------|----------|
-| Environment setup | [docs/GETTING_STARTED.md](../docs/GETTING_STARTED.md) |
-| Dev Container | [docs/VSCODE_DEVCONTAINER_GUIDE.md](../docs/VSCODE_DEVCONTAINER_GUIDE.md) |
+| Environment setup | [docs/setup/GETTING_STARTED.md](../docs/setup/GETTING_STARTED.md) |
+| Dev Container | [docs/setup/DEVCONTAINER.md](../docs/setup/DEVCONTAINER.md) |
 | Troubleshooting | [docs/TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md) |
 | Development workflow | [CONTRIBUTING.md](../CONTRIBUTING.md) |
