@@ -502,13 +502,17 @@ class TestS33Restart:
         mock_builder = MagicMock()
         mock_builder.call_single.side_effect = [
             ***REMOVED*** First call: GetArrisConfigurationInfo
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "1", "LedStatus": "1"}}',
+            (
+                '{"GetArrisConfigurationInfoResponse": {'
+                '"GetArrisConfigurationInfoResult": "OK", '
+                '"ethSWEthEEE": "1", "LedStatus": "1"}}'
+            ),
             ***REMOVED*** Second call: SetArrisConfigurationInfo
-            '{"SetArrisConfigurationInfoResponse": {'
-            '"SetArrisConfigurationInfoResult": "OK", '
-            '"SetArrisConfigurationInfoAction": "REBOOT"}}',
+            (
+                '{"SetArrisConfigurationInfoResponse": {'
+                '"SetArrisConfigurationInfoResult": "OK", '
+                '"SetArrisConfigurationInfoAction": "REBOOT"}}'
+            ),
         ]
         parser._json_builder = mock_builder
 
@@ -534,9 +538,11 @@ class TestS33Restart:
         mock_builder = MagicMock()
         mock_builder.call_single.side_effect = [
             ***REMOVED*** First call: GetArrisConfigurationInfo
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}',
+            (
+                '{"GetArrisConfigurationInfoResponse": {'
+                '"GetArrisConfigurationInfoResult": "OK", '
+                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
+            ),
             ***REMOVED*** Second call: SetArrisConfigurationInfo (OK but no action)
             '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "OK"}}',
         ]
@@ -555,9 +561,11 @@ class TestS33Restart:
         mock_builder = MagicMock()
         ***REMOVED*** First call succeeds, second call causes connection reset (modem rebooting)
         mock_builder.call_single.side_effect = [
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}',
+            (
+                '{"GetArrisConfigurationInfoResponse": {'
+                '"GetArrisConfigurationInfoResult": "OK", '
+                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
+            ),
             ConnectionResetError("Connection reset by peer"),
         ]
         parser._json_builder = mock_builder
@@ -575,9 +583,11 @@ class TestS33Restart:
         mock_builder = MagicMock()
         mock_builder.call_single.side_effect = [
             ***REMOVED*** First call: GetArrisConfigurationInfo succeeds
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}',
+            (
+                '{"GetArrisConfigurationInfoResponse": {'
+                '"GetArrisConfigurationInfoResult": "OK", '
+                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
+            ),
             ***REMOVED*** Second call: SetArrisConfigurationInfo returns ERROR
             '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "ERROR"}}',
         ]
@@ -596,13 +606,17 @@ class TestS33Restart:
         mock_builder = MagicMock()
         mock_builder.call_single.side_effect = [
             ***REMOVED*** First call: GetArrisConfigurationInfo with specific values
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "1", "LedStatus": "0"}}',
+            (
+                '{"GetArrisConfigurationInfoResponse": {'
+                '"GetArrisConfigurationInfoResult": "OK", '
+                '"ethSWEthEEE": "1", "LedStatus": "0"}}'
+            ),
             ***REMOVED*** Second call: SetArrisConfigurationInfo
-            '{"SetArrisConfigurationInfoResponse": {'
-            '"SetArrisConfigurationInfoResult": "OK", '
-            '"SetArrisConfigurationInfoAction": "REBOOT"}}',
+            (
+                '{"SetArrisConfigurationInfoResponse": {'
+                '"SetArrisConfigurationInfoResult": "OK", '
+                '"SetArrisConfigurationInfoAction": "REBOOT"}}'
+            ),
         ]
         parser._json_builder = mock_builder
 
