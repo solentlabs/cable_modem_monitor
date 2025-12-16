@@ -19,7 +19,7 @@ cd cable_modem_monitor
 git checkout feature/your-branch-name
 
 # Run the deployment script
-./scripts/deploy_updates.sh
+./scripts/maintenance/deploy_updates.sh
 ```
 
 The script supports multiple deployment methods:
@@ -151,14 +151,14 @@ git fetch origin pull/44/head:pr-44
 git checkout pr-44
 
 # Deploy
-./scripts/deploy_updates.sh
+./scripts/maintenance/deploy_updates.sh
 ```
 
 Or use GitHub CLI:
 
 ```bash
 gh pr checkout 44
-./scripts/deploy_updates.sh
+./scripts/maintenance/deploy_updates.sh
 ```
 
 ---
