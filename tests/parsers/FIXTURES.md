@@ -7,7 +7,7 @@ Auto-generated index of modem fixtures.
 - Parser classes - Verified status, manufacturer
 - `README.md` - Model name, contributor notes
 
-**Total Modems:** 14 (10 ✅ verified, 3 ⏳ awaiting, 1 🔧 in progress)
+**Total Modems:** 15 (10 ✅ verified, 4 ⏳ awaiting, 1 🔧 in progress)
 
 ## Fixture Organization Guidelines
 
@@ -36,6 +36,7 @@ All fixture directories should follow this structure:
 | Motorola | [MB8600](motorola/fixtures/mb8600/README.md) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![C1](https://img.shields.io/badge/-C1-7788aa?style=flat-square "Cable One")](#cableone) | 1 | 🔧 In Progress |
 | Motorola | [MB8611](motorola/fixtures/mb8611/README.md) | 3.1 | **HNAP** | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 6 | ✅ Verified |
 | Netgear | [C3700-100NAS](netgear/fixtures/c3700/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3383](#bcm3383) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 6 | ✅ Verified |
+| Netgear | [C7000v2](netgear/fixtures/c7000v2/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) | 3 | ⏳ Awaiting |
 | Netgear | [CM1200](netgear/fixtures/cm1200/README.md) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 1 | ⏳ Awaiting |
 | Netgear | [CM2000 (Nighthawk)](netgear/fixtures/cm2000/README.md) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 7 | ⏳ Awaiting |
 | Netgear | [CM600 (CM600-100NAS)](netgear/fixtures/cm600/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3384](#bcm3384) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) [![TWC](https://img.shields.io/badge/-TWC-7799aa?style=flat-square "Time Warner Cable")](#twc) | 5 | ✅ Verified |
@@ -49,6 +50,7 @@ DOCSIS 3.0
 ├── 2011  ARRIS       CM820B     ░███████████████████  14yr  Current
 ├── 2011  ARRIS       SB6141     ░███████████░░░░░░░░   8yr  EOL 2019
 ├── 2014  Netgear     C3700-100N ░░░░░███████████░░░░   8yr  EOL 2022
+├── 2016  Netgear     C7000v2    ░░░░░░░░████████████   9yr  Current
 ├── 2016  Netgear     CM600      ░░░░░░░░█████████░░░   7yr  EOL 2023
 ├── 2016  ARRIS       SB6190     ░░░░░░░░█████████░░░   7yr  EOL 2023
 └── 2017  Motorola    MB7621     ░░░░░░░░░███████████   8yr  Current
