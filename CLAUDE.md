@@ -4,6 +4,23 @@
 >
 > **This file**: Claude-specific behavioral constraints.
 
+***REMOVED******REMOVED*** Pre-Push Verification - ALWAYS Run Before Push
+
+Before pushing ANY commits, run these checks on the ENTIRE project:
+
+```bash
+***REMOVED*** Run linting on entire project (not just custom_components/)
+ruff check .
+
+***REMOVED*** Run full test suite
+pytest
+
+***REMOVED*** If either fails, fix before pushing
+```
+
+**Why?** CI runs on the entire project. Pre-commit hooks only check staged files.
+Skipping this causes CI failures that should have been caught locally.
+
 ***REMOVED******REMOVED*** Irreversible Operations - STOP and VERIFY
 
 When the user gives explicit constraints (e.g., "without closing the PR", "don't delete X"):
