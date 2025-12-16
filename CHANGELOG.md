@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.10.0] - 2025-12-16
+
 ### Highlights
+
+📡 **3 New Modem Parsers** - Netgear C7000v2, Netgear CM1200, and Arris CM820B now supported
 
 🎛️ **Unified Status Sensor** - Single pass/fail sensor replaces deprecated connection and health sensors:
 - `Operational` - All good: data parsed, DOCSIS locked, reachable
@@ -20,11 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Returns copy-paste ready YAML with your modem's actual channel IDs
 - Configurable: include/exclude status card, graphs, latency, errors
 
+🌍 **12-Language Support** - Added 6 new languages: Dutch, Italian, Polish, Swedish, Russian, Ukrainian
+
 ### Added
+- **Netgear C7000v2 Parser** - Support for Netgear C7000v2 cable modem/router combo (DOCSIS 3.0)
+- **Netgear CM1200 Parser** - Support for Netgear Nighthawk CM1200 (DOCSIS 3.1) - contributed via Issue #63
+- **Arris CM820B Parser** - Support for Arris CM820B EuroDOCSIS 3.0 modem - community contribution from @dimkalinux
 - **Unified Status Sensor** - New `sensor.cable_modem_status` combines connection health and DOCSIS lock state into single pass/fail sensor
 - **Dashboard Generator Service** - New `generate_dashboard` service returns ready-to-use Lovelace YAML for all modem channels
 - **S33 Firmware Version** - Added `GetArrisDeviceStatus` HNAP action to retrieve firmware version (Issue #32)
 - **ICMP Skip Support** - Parsers can declare `supports_icmp = False` to skip ping checks for modems that block ICMP
+- **12-Language Support** - Added Dutch, Italian, Polish, Swedish, Russian, and Ukrainian translations
 
 ### Changed
 - **Status Sensor States** - Simplified to pass/fail states: Operational, ICMP Blocked, Partial Lock, Not Locked, Parser Error, Unresponsive
@@ -39,8 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **MB7621 Channel ID** - Channels now use DOCSIS Channel ID instead of row counter
+- **CM2000 OFDM Parsing** - Added missing OFDM downstream/upstream channel parsing for DOCSIS 3.1 channels
+- **MB8611 OFDM Capability** - Declared OFDM capability (channels were already parsed but capability wasn't flagged)
+- **Config Flow Asterisk** - Correctly display asterisk for unverified parsers in modem selection
+
+### Security
+- **Netgear tagValueList Sanitization** - WiFi credentials in Netgear's positional `tagValueList` format are now properly sanitized in diagnostics (Issue #61)
 
 ### Documentation
+- **Documentation Restructure** - Consolidated scattered docs into clear user journeys; net reduction of ~930 lines
+- **MODEM_REQUEST.md** - New comprehensive guide for modem data submissions with PII review checklist
+- **SB8200 Reboot** - Added historical context explaining why reboot is disabled (SNMP-only)
 - **FIXTURES.md** - Added Protocol (HNAP/HTML) and Chipset columns with reference sections
 - **README/TROUBLESHOOTING** - Updated status sensor documentation to reflect unified sensor
 
