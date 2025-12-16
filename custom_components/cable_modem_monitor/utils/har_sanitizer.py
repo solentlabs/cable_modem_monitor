@@ -210,7 +210,7 @@ def _sanitize_response_content(content: dict[str, Any]) -> None:
             data = json.loads(content["text"])
             content["text"] = json.dumps(_sanitize_json_recursive(data))
         except json.JSONDecodeError:
-            pass
+            pass  ***REMOVED*** Invalid JSON - leave content unchanged
 
 
 def _sanitize_response(resp: dict[str, Any]) -> None:

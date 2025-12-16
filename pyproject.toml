@@ -54,15 +54,21 @@ exclude = [
 [tool.ruff.lint]
 select = [
     "E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N",
+    "PLC",    ***REMOVED*** pylint convention (catches useless imports, etc.)
+    "PLE",    ***REMOVED*** pylint errors
+    "PLW",    ***REMOVED*** pylint warnings (catches self-assignment, redeclared names)
 ]  ***REMOVED*** Enable key rule categories: style, complexity, import sorting, modern syntax
 ***REMOVED*** Note: F841 (unused variables) is already included via "F" (Pyflakes)
 ***REMOVED*** Note: ERA (commented-out code) disabled - too aggressive, flags format docs like "***REMOVED*** cells[0] = Channel"
+***REMOVED*** Note: Inline imports (imports inside functions) not caught by ruff - use CodeQL for that
 
 ignore = [
-    "B008",   ***REMOVED*** Allow function calls in default args (common in HA)
-    "B904",   ***REMOVED*** Allow bare `raise` for re-raising
-    "SIM108", ***REMOVED*** Avoid forced ternary expressions
-    "TID252", ***REMOVED*** Allow relative imports in HA custom components
+    "B008",     ***REMOVED*** Allow function calls in default args (common in HA)
+    "B904",     ***REMOVED*** Allow bare `raise` for re-raising
+    "SIM108",   ***REMOVED*** Avoid forced ternary expressions
+    "TID252",   ***REMOVED*** Allow relative imports in HA custom components
+    "PLW0603",  ***REMOVED*** Allow global statement updates (used for caching)
+    "PLC0415",  ***REMOVED*** Allow imports inside functions (lazy loading for HA performance)
 ]
 
 [tool.ruff.lint.mccabe]
