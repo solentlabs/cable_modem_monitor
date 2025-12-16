@@ -1,13 +1,14 @@
 """Tests for the Netgear CM2000 (Nighthawk) parser.
 
 Parser Status: ✅ Verified by @m4dh4tt3r-88
-- 31 downstream + 4 upstream channels
+- 31 downstream QAM + OFDM channels
+- 4 upstream ATDMA channels + OFDMA support
 - Software version from index.htm
 - Restart via RouterStatus.htm
 
 Fixtures available:
 - index.htm: Login page with firmware version
-- DocsisStatus.htm: DOCSIS channel data (31 DS + 4 US channels)
+- DocsisStatus.htm: DOCSIS channel data (31 DS + 4 US channels, 1 OFDM DS, 2 OFDMA US)
 - RouterStatus.htm: Restart endpoint
 
 Related: Issue #38 (Netgear CM2000 Support Request)
@@ -358,3 +359,98 @@ class TestCM2000Restart:
         post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
         assert len(post_requests) == 1
         assert "buttonSelect=2" in post_requests[0].text
+
+
+class TestCM2000OFDMParsing:
+    """Tests for OFDM/OFDMA channel parsing (DOCSIS 3.1)."""
+
+    def test_ofdm_capability_declared(self):
+        """Test that OFDM capabilities are declared."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        assert ModemCapability.OFDM_DOWNSTREAM in NetgearCM2000Parser.capabilities
+        assert ModemCapability.OFDM_UPSTREAM in NetgearCM2000Parser.capabilities
+
+    def test_parse_ofdm_downstream_from_fixture(self, cm2000_docsis_status_html):
+        """Test parsing OFDM downstream channels from fixture.
+
+        The fixture contains:
+        InitDsOfdmTableTagValue with 2 channels, 1 locked at 762MHz
+        """
+        if cm2000_docsis_status_html is None:
+            pytest.skip("DocsisStatus.htm fixture not available")
+
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup(cm2000_docsis_status_html, "html.parser")
+
+        # Test the OFDM parsing directly
+        ofdm_channels = parser._parse_ofdm_downstream(soup)
+
+        # Fixture has 1 locked OFDM channel (channel 33 at 762MHz)
+        assert len(ofdm_channels) == 1
+        channel = ofdm_channels[0]
+        assert channel["frequency"] == 762000000
+        assert channel["modulation"] == "OFDM"
+        assert channel["is_ofdm"] is True
+        assert channel["channel_id"] == "33"
+        assert channel["power"] == 11.18
+        assert channel["snr"] == 40.8
+
+    def test_parse_ofdma_upstream_from_fixture(self, cm2000_docsis_status_html):
+        """Test parsing OFDMA upstream channels from fixture.
+
+        The fixture contains:
+        InitUsOfdmaTableTagValue with 2 channels, both Not Locked
+        """
+        if cm2000_docsis_status_html is None:
+            pytest.skip("DocsisStatus.htm fixture not available")
+
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup(cm2000_docsis_status_html, "html.parser")
+
+        # Test the OFDMA parsing directly
+        ofdma_channels = parser._parse_ofdma_upstream(soup)
+
+        # Fixture has 0 locked OFDMA channels (both are "Not Locked")
+        assert len(ofdma_channels) == 0
+
+    def test_full_parse_includes_ofdm(self, cm2000_docsis_status_html):
+        """Test that full parse() includes OFDM channels in results."""
+        if cm2000_docsis_status_html is None:
+            pytest.skip("DocsisStatus.htm fixture not available")
+
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup(cm2000_docsis_status_html, "html.parser")
+
+        result = parser.parse(soup)
+
+        # Should have 31 QAM + 1 OFDM = 32 downstream channels
+        downstream = result["downstream"]
+        assert len(downstream) == 32
+
+        # Find the OFDM channel
+        ofdm_channels = [ch for ch in downstream if ch.get("is_ofdm") is True]
+        assert len(ofdm_channels) == 1
+        assert ofdm_channels[0]["modulation"] == "OFDM"
+
+    def test_extract_tagvaluelist_helper(self, cm2000_docsis_status_html):
+        """Test the _extract_tagvaluelist helper function."""
+        if cm2000_docsis_status_html is None:
+            pytest.skip("DocsisStatus.htm fixture not available")
+
+        parser = NetgearCM2000Parser()
+        soup = BeautifulSoup(cm2000_docsis_status_html, "html.parser")
+
+        # Test extracting OFDM downstream tagValueList
+        values = parser._extract_tagvaluelist(soup, "InitDsOfdmTableTagValue")
+        assert values is not None
+        assert values[0] == "2"  # Channel count
+
+        # Test extracting OFDMA upstream tagValueList
+        values = parser._extract_tagvaluelist(soup, "InitUsOfdmaTableTagValue")
+        assert values is not None
+        assert values[0] == "2"  # Channel count
+
+        # Test non-existent function returns None
+        values = parser._extract_tagvaluelist(soup, "NonExistentFunction")
+        assert values is None
