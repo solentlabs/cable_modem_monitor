@@ -44,8 +44,12 @@ def _get_parser_display_name(parser_class) -> str:
     Returns:
         Display name with " *" suffix if not verified
     """
+    from .parsers.base_parser import ParserStatus
+
     name: str = str(parser_class.name)
-    if not parser_class.verified:
+    ***REMOVED*** Check status class attribute directly (not the verified property,
+    ***REMOVED*** which requires an instance to evaluate correctly)
+    if parser_class.status != ParserStatus.VERIFIED:
         name += " *"
     return name
 
