@@ -1,0 +1,1020 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='CM1200'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+
+<title>NETGEAR Modem CM1200</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+
+<script type="text/javascript">
+
+var isInited = 0;
+
+var vApply = "Apply";
+var vCancel = "Cancel";
+var vLocked = "Locked";
+var vOperational = "Operational";
+var vDisabled = "Disabled";
+var vNotLockedl = "Not Locked";
+var vUnknown = "Unknown";
+var gExtUsPower = "";
+
+    $(document).ready(function()
+    {
+        $("***REMOVED***target").submit(function() {
+        });
+    });
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    /*
+    function moveToHTMLend()
+    {
+        window.location.href='***REMOVED***helpframe-anchor';
+        setHelpIframeVisible();
+    }
+    */
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('***REMOVED***content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm***REMOVED***" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function drawTable(tableId, tags, onAddRowCB)
+{
+    var cellsNum = 0;
+    var item = 0;
+    var totalTagNum = tags.length - 1; // expect the first 1
+    var theTable = document.getElementById(tableId);
+
+    if ( !tags[tags.length - 1])
+        totalTagNum --;
+    cellsNum = totalTagNum /  parseInt(tags[0]);
+
+    if (theTable != null)
+    {
+        // Terry 20111228, remove all table content before to fill out the new content
+        while (theTable.rows.length > 1)
+        {
+            theTable.deleteRow(theTable.rows.length - 1);
+        }
+        //
+
+        for (item = 0; item < parseInt(tags[0]); item++)
+        {
+            var newRow = theTable.insertRow(-1);
+            var cellsList = onAddRowCB(newRow, item , (item * cellsNum) + 1, tags);
+
+            for (i = 0; i < cellsList.length; i++)
+            {
+                if (cellsList[i].length == 0)
+                {
+                    newRow.insertCell(-1).innerHTML = '&nbsp;';
+                }
+                else
+                {
+                    newRow.insertCell(-1).innerHTML = cellsList[i];
+                }
+            }
+        }
+    }
+}
+
+function InitTagValue()
+{
+/*
+  Acquire Downstream Channel (text) | Acquire Downstream Channel Comment (text) |
+  Connectivity State (text) | Connectivity State Comment (text) |
+  Boot State (text) | Boot State Comment (text) |
+  Configuration File (text) | Configuration File Comment (text) |
+  Security (text) | Security Comment (text) |
+  Current System Time (text)
+*/
+    //var tagValueList = "0|In Progress|In Progress|Not Synchronized|In Progress|Unknown|In Progress|Unknown|Disabled|Disabled|--- --- -- --:--:-- ----";
+    //var tagValueList = "399|Done|Done|Synchronized|Done|Unknown|In Progress|Unknown|Disabled|Disabled|123 456 78 90:12:34 5678";
+
+    var tagValueList = '765000000|Locked|OK|Operational|OK|Operational|&nbsp;|&nbsp;|Enabled|BPI+|Sun Dec 14 11:56:29 2025|0|0|0|39 days 15:47:33|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    for (i =0; i < tagValues.length; i++)
+    {
+        if (tagValues[i] == "Apply")
+            tagValues[i] = vApply;
+        else if (tagValues[i] == "Cancel")
+            tagValues[i] = vCancel;
+        else if (tagValues[i] == "Locked")
+            tagValues[i] = vLocked;
+        else if (tagValues[i] == "Operational")
+            tagValues[i] = vOperational;
+        else if (tagValues[i] == "Disabled")
+            tagValues[i] = vDisabled;
+        else if (tagValues[i] == "Not Locked")
+            tagValues[i] = vNotLockedl;
+        else if (tagValues[i] == "Unknown")
+            tagValues[i] = vUnknown;
+    }
+    document.getElementById("AcquireDsChanelStatus").innerHTML = tagValues[0] + " Hz";
+    document.getElementById("AcquireDsChanelComment").innerHTML = tagValues[1];
+    document.getElementById("ConnectivityStateStatus").innerHTML = tagValues[2];
+    document.getElementById("ConnectivityStateComment").innerHTML = tagValues[3];
+    document.getElementById("BootStateStatus").innerHTML = tagValues[4];
+    document.getElementById("BootStateComment").innerHTML = tagValues[5];
+    document.getElementById("ConfigurationFileStatus").innerHTML = tagValues[6];
+    document.getElementById("ConfigurationFileComment").innerHTML = tagValues[7];
+    if(tagValues[6] == "&nbsp;")
+        document.getElementById("ConfigurationFile").style.display = "none";
+    document.getElementById("SecurityStatus").innerHTML = tagValues[8];
+    document.getElementById("SecurityComment").innerHTML = tagValues[9];
+    document.getElementById("CurrentSystemTime").innerHTML = 'Current System Time:' + tagValues[10];
+    document.getElementById("SystemUpTime").innerHTML = 'System Up Time:' + tagValues[14];
+    $("***REMOVED***Startupfreq").val(tagValues[11]);   //20120525 jeffery implement goto freq
+    if( tagValues[12] == 0 )
+    {
+        document.getElementById("DownstreamBondedChannels").innerHTML = 'Downstream Bonded Channels';
+    }
+    else
+    {
+        document.getElementById("DownstreamBondedChannels").innerHTML = 'Downstream Bonded Channels' + ' (Partial Service)';
+    }
+    if( tagValues[13] == 0 )
+    {
+        document.getElementById("UpstreamBondedChannels").innerHTML = 'Upstream Bonded Channels';
+    }
+    else
+    {
+        document.getElementById("UpstreamBondedChannels").innerHTML = 'Upstream Bonded Channels' + ' (Partial Service)';
+    }
+
+    document.getElementsByName("extUsPower")[0].value = tagValues[15];
+}
+
+function InitUsTableTagValue()
+{
+/*
+  Channel (text) | Lock Status (text) | US Channel Type (text) | Channel ID (text) | Symbol Rate (text) | Frequency (text) | Power (text)
+*/
+/*
+    var tagValueList = "4" +
+        "|1|Not Locked|Unknown|0|0|0|0.0" +
+        "|2|Not Locked|Unknown|0|0|0|0.0" +
+        "|3|Not Locked|Unknown|0|0|0|0.0" +
+        "|4|Not Locked|Unknown|0|0|0|0.0";
+*/
+    var tagValueList = '8|1|Locked|ATDMA|3|5120|13200000 Hz|47.5|2|Locked|ATDMA|4|5120|19600000 Hz|47.5|3|Not Locked|Unknown|0|0|0 Hz|0.0|4|Not Locked|Unknown|0|0|0 Hz|0.0|5|Not Locked|Unknown|0|0|0 Hz|0.0|6|Not Locked|Unknown|0|0|0 Hz|0.0|7|Not Locked|Unknown|0|0|0 Hz|0.0|8|Not Locked|Unknown|0|0|0 Hz|0.0|';
+
+    return tagValueList.split("|");
+}
+
+function onAddUsRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    for (i =0; i < tags.length; i++)
+    {
+        if (tags[i] == "Apply")
+            tags[i] = vApply;
+        else if (tags[i] == "Cancel")
+            tags[i] = vCancel;
+        else if (tags[i] == "Locked")
+            tags[i] = vLocked;
+        else if (tags[i] == "Operational")
+            tags[i] = vOperational;
+        else if (tags[i] == "Disabled")
+            tags[i] = vDisabled;
+        else if (tags[i] == "Not Locked")
+            tags[i] = vNotLockedl;
+        else if (tags[i] == "Unknown")
+            tags[i] = vUnknown;
+    }
+    var cellsArray = new Array();
+
+    cellsArray [0] = tags[firstCellIdx + 0];
+    cellsArray [1] = tags[firstCellIdx + 1];
+    cellsArray [2] = tags[firstCellIdx + 2];
+    cellsArray [3] = tags[firstCellIdx + 3];
+    cellsArray [4] = tags[firstCellIdx + 4] + " Ksym/sec";
+    cellsArray [5] = tags[firstCellIdx + 5];
+    cellsArray [6] = tags[firstCellIdx + 6] + " dBmV";
+
+    return cellsArray;
+}
+
+function InitDsTableTagValue()
+{
+/*
+  Channel (text) | Lock Status (text) | Modulation (text) | Channel ID (text) | Frequency (text) | Power (text) | SNR (text) | Correctables (text) | Uncorrectables (text)
+*/
+/*
+    var tagValueList = "8" +
+        "|1|Locked|Unknown|0|809500000|-61.6|0.0|11|0" +
+        "|2|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|3|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|4|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|5|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|6|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|7|Not Locked|Unknown|0|0|0.0|0.0|0|0" +
+        "|8|Not Locked|Unknown|0|0|0.0|0.0|0|0";
+*/
+    var tagValueList = '32|1|Locked|QAM256|32|765000000 Hz|10.5|44.2|8180|3392|2|Locked|QAM256|3|579000000 Hz|8.7|44|12155|7783|3|Locked|QAM256|4|585000000 Hz|8.8|44|12676|8520|4|Locked|QAM256|5|591000000 Hz|8.9|44|11746|7216|5|Locked|QAM256|6|597000000 Hz|9.2|44|11336|6683|6|Locked|QAM256|7|603000000 Hz|9.4|44|10121|5581|7|Locked|QAM256|8|609000000 Hz|9.4|44|10345|5911|8|Locked|QAM256|9|615000000 Hz|9.5|44|9273|4738|9|Locked|QAM256|10|621000000 Hz|9.7|44|8843|4218|10|Locked|QAM256|11|627000000 Hz|9.8|43.9|8718|5052|11|Locked|QAM256|12|633000000 Hz|9.9|43.7|7945|3991|12|Locked|QAM256|13|639000000 Hz|10|43.7|8451|4375|13|Locked|QAM256|14|645000000 Hz|10.1|43.9|8474|4412|14|Locked|QAM256|15|651000000 Hz|10.4|43.9|8724|5110|15|Locked|QAM256|16|657000000 Hz|10.4|44|8854|4959|16|Locked|QAM256|17|663000000 Hz|10.7|43.9|9160|5006|17|Locked|QAM256|18|669000000 Hz|10.8|44|9174|5672|18|Locked|QAM256|19|675000000 Hz|10.8|43.4|8424|4759|19|Locked|QAM256|20|681000000 Hz|10.8|44.1|9066|4948|20|Locked|QAM256|21|687000000 Hz|11.1|44.2|9074|5204|21|Locked|QAM256|22|693000000 Hz|11.3|44.4|9177|5264|22|Locked|QAM256|23|699000000 Hz|11.5|44.4|8376|4654|23|Locked|QAM256|24|705000000 Hz|11.4|44.4|8982|5211|24|Locked|QAM256|25|723000000 Hz|11.3|44.4|8579|4971|25|Locked|QAM256|26|729000000 Hz|11.3|44.3|9072|5108|26|Locked|QAM256|27|735000000 Hz|11.2|44.2|9049|4988|27|Locked|QAM256|28|741000000 Hz|11.2|44.3|8515|4443|28|Locked|QAM256|29|747000000 Hz|11|44.3|9230|4826|29|Locked|QAM256|30|753000000 Hz|10.8|44.3|8673|4185|30|Locked|QAM256|31|759000000 Hz|10.6|44.2|8437|3363|31|Locked|QAM256|33|567000000 Hz|8.6|44.1|13360|10040|32|Not Locked|Unknown|0|0 Hz|0.0|0.0|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function InitCmIpProvModeTag()
+{
+/*
+  Is Retail (bool) | IP Provisioning Mode (text) | MIB Value (text)
+*/
+    //var tagValueList = "1|Honor MDD|honorMdd(4)|"
+    var tagValueList = '1|IPv6 Only|ipv6Only(1)|';
+
+    return tagValueList.split("|");
+}
+
+function onAddDsRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    for (i =0; i < tags.length; i++)
+    {
+        if (tags[i] == "Apply")
+            tags[i] = vApply;
+        else if (tags[i] == "Cancel")
+            tags[i] = vCancel;
+        else if (tags[i] == "Locked")
+            tags[i] = vLocked;
+        else if (tags[i] == "Operational")
+            tags[i] = vOperational;
+        else if (tags[i] == "Disabled")
+            tags[i] = vDisabled;
+        else if (tags[i] == "Not Locked")
+            tags[i] = vNotLockedl;
+        else if (tags[i] == "Unknown")
+            tags[i] = vUnknown;
+    }
+    var cellsArray = new Array();
+
+    cellsArray [0] = tags[firstCellIdx + 0];
+    cellsArray [1] = tags[firstCellIdx + 1];
+    cellsArray [2] = tags[firstCellIdx + 2];
+    cellsArray [3] = tags[firstCellIdx + 3];
+    cellsArray [4] = tags[firstCellIdx + 4];
+    cellsArray [5] = tags[firstCellIdx + 5] + " dBmV";
+    cellsArray [6] = tags[firstCellIdx + 6] + " dB";
+    cellsArray [7] = tags[firstCellIdx + 7];
+    cellsArray [8] = tags[firstCellIdx + 8];
+
+    return cellsArray;
+}
+
+function InitUsTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    drawTable('usTable', tagValues, onAddUsRowCB);
+}
+
+function InitDsTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    drawTable('dsTable', tagValues, onAddDsRowCB);
+}
+
+function InitCmIpProvModeUpdateView(tagValues)
+{
+    if(tagValues[0] == "1") // Retail
+    {
+        document.getElementById("IpProvModeStatus").innerHTML = tagValues[1];
+        document.getElementById("IpProvModeComment").innerHTML = tagValues[2];
+    }
+    else
+    {
+        $('***REMOVED***CmIpProvMode').hide();
+    }
+}
+
+function InitUsOfdmaTableTagValue()
+{
+    /*
+    var tagValueList = '2'
+        + '|1||Success|1300000 Hz|74~1673|18|30.8 dBmV'
+        + '|2||Success|41300000 Hz|74~1673|18|30.5 dBmV';
+    */
+    var tagValueList = '2|1|Locked|3 ,4 ,11 ,12 ,13|1|19725000 Hz|44.5 dBmV|2|Not Locked|0|0|0 Hz|0 dBmV';
+
+    return tagValueList.split("|");
+}
+
+function onAddUsOfdmaRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+
+    cellsArray [0] = tags[firstCellIdx + 0];
+    cellsArray [1] = tags[firstCellIdx + 1];
+    cellsArray [2] = tags[firstCellIdx + 2];
+    cellsArray [3] = tags[firstCellIdx + 3];
+    cellsArray [4] = tags[firstCellIdx + 4];
+    cellsArray [5] = tags[firstCellIdx + 5];
+
+    return cellsArray;
+}
+
+function InitUsOfdmaTableUpdateView(tagValues)
+{
+    drawTable('usOfdmaTable', tagValues, onAddUsOfdmaRowCB);
+}
+
+function InitDsOfdmTableTagValue()
+{
+    /*
+    var tagValueList = '2'
+        + '|1|66|Primary|297600000 Hz|148~3947|0|0'
+        + '|2|99|Backup Primary|495600000 Hz|148~3947|0|0';
+    */
+    var tagValueList = '2|1|Locked|0 ,1 ,2|1|380000000 Hz|7.7 dBmV|44.6 dB|1108 ~ 2987|96295586575|6302798190|4584|2|Not Locked|0|0|0 Hz|0 dBmV|0.0 dB|0 ~ 4095|0|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function onAddDsOfdmRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+
+    cellsArray [0] = tags[firstCellIdx + 0];
+    cellsArray [1] = tags[firstCellIdx + 1];
+    cellsArray [2] = tags[firstCellIdx + 2];
+    cellsArray [3] = tags[firstCellIdx + 3];
+    cellsArray [4] = tags[firstCellIdx + 4];
+    cellsArray [5] = tags[firstCellIdx + 5];
+    cellsArray [6] = tags[firstCellIdx + 6];
+    cellsArray [7] = tags[firstCellIdx + 7];
+    cellsArray [8] = tags[firstCellIdx + 8];
+    cellsArray [9] = tags[firstCellIdx + 9];
+    cellsArray [10] = tags[firstCellIdx + 10];
+
+    return cellsArray;
+}
+
+function InitDsOfdmTableUpdateView(tagValues)
+{
+    drawTable('dsOfdmTable', tagValues, onAddDsOfdmRowCB);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitUsTableUpdateView(InitUsTableTagValue());
+    InitDsTableUpdateView(InitDsTableTagValue());
+    InitCmIpProvModeUpdateView(InitCmIpProvModeTag());
+    InitUsOfdmaTableUpdateView(InitUsOfdmaTableTagValue());
+    InitDsOfdmTableUpdateView(InitDsOfdmTableTagValue());
+}
+
+//20120525 jeffery implement goto freq
+function checkData()
+{
+    var extUsPower = document.getElementsByName("extUsPower")[0].value;
+    var reply;
+    if(extUsPower != "0" || extUsPower != "3")
+    {
+        if(extUsPower == "1" && document.getElementById("ext_us_power").checked == false ||
+            extUsPower == "2" && document.getElementById("ext_us_power").checked == true)
+        {
+            reply = confirm("Device will reboot after the change of Extended Upstream Transmit Power setting. Please confirm if you want to proceed.");
+            if (!reply)
+            {
+                loadSettings();
+                return false;
+            }
+       }
+    }
+    return true;
+}
+
+function loadSettings()
+{
+    var extUsPower = document.getElementsByName("extUsPower")[0].value;
+    if(extUsPower == "0")
+    {
+        $("***REMOVED***ext_us_pwr_line").hide();
+        $("***REMOVED***ext_us_pwr_title").hide();
+        $("***REMOVED***ext_us_pwr_checkbox").hide();
+    }
+    else if(extUsPower == "3")
+    {
+        document.getElementById("ext_us_power").checked = true;
+        document.getElementById("ext_us_power").disabled = true;
+    }
+    else
+    {
+        document.getElementById("ext_us_power").disabled = false;
+        if(extUsPower == "1")
+        {
+            document.getElementById("ext_us_power").checked = true;
+        }
+        else
+        {
+            document.getElementById("ext_us_power").checked = false;
+        }
+    }
+}
+
+</script>
+<style type="text/css">
+.style1 {
+				text-align: left;
+}
+</style>
+</head>
+<body onload="BodyInit();loadSettings();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <div class="subhead2">
+            Cable Connection
+        </div>
+        <table border="0" style="height:370px" class="subhead2-table">
+            <tr>
+                <td class="scrollpane-table-seperate-border" colspan="2">
+                    <div class="scroll-pane" style="height:410px;width:620px;overflow:auto;scrolling:auto">
+                        <!-- 20120525 Jeffery implement goto freq -->
+                        <form id="target" name="gotodsfreq" method="POST" action='/goform/DocsisStatus?id=752013609'>
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align:center">
+                                        <button value="Apply" type="SUBMIT" onClick="buttonClick(this,'Apply'); return checkData();"
+                                        name="action" class="button-apply">
+                                            <span class="roundleft_apply">
+                                                Apply&nbsp;
+                                                <span class="apply-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                </span>
+                                            </span>
+                                            <span class="roundright_apply">
+                                                &nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        <button value="Cancel" onClick="buttonClick(this,'Cancel');BodyInit();" type="BUTTON" name="Cancel" class="button-rule">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b>
+                                            Frequency start Value
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        This field below allows you to modify the frequency the cable modem start with its scan during initialization and registration. Enter the new start frequency and restart the cable modem for it to take effect.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="buttonHit">
+                                        <input type="hidden" name="buttonValue">
+                                        <table border="1" cellpadding="2" cellspacing="0" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                    <b>
+                                                        Starting Frequency
+                                                    </b>
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="Startupfreq" size="10" maxlength="9" id="Startupfreq">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b>
+                                            Startup Procedure
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table border="1" cellpadding="2" cellspacing="0" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                    <span class="thead">
+                                                        <b>
+                                                            Procedure
+                                                        </b>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        <b>
+                                                            Status
+                                                        </b>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        <b>
+                                                            Comment
+                                                        </b>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="style1">
+                                                    Acquire Downstream Channel
+                                                </td>
+                                                <td id="AcquireDsChanelStatus">
+                                                </td>
+                                                <td id="AcquireDsChanelComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="style1">
+                                                    Connectivity State
+                                                </td>
+                                                <td id="ConnectivityStateStatus">
+                                                </td>
+                                                <td id="ConnectivityStateComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="style1">
+                                                    Boot State
+                                                </td>
+                                                <td id="BootStateStatus">
+                                                </td>
+                                                <td id="BootStateComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                            <tr id="ConfigurationFile">
+                                                <td class="style1">
+                                                    Configuration File
+                                                </td>
+                                                <td id="ConfigurationFileStatus">
+                                                </td>
+                                                <td id="ConfigurationFileComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="style1">
+                                                    Security
+                                                </td>
+                                                <td id="SecurityStatus">
+                                                </td>
+                                                <td id="SecurityComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                            <tr id="CmIpProvMode">
+                                                <td class="style1">
+                                                    IP Provisioning Mode
+                                                </td>
+                                                <td id="IpProvModeStatus">
+                                                </td>
+                                                <td id="IpProvModeComment">
+                                                    &nbsp;
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b id="DownstreamBondedChannels">
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table border="1" cellpadding="2" cellspacing="0" id="dsTable" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Lock Status
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Modulation
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Frequency
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Power
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        SNR
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Correctables
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Uncorrectables
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <!-- <tr><td>1</td><td>Locked</td><td>unknown</td><td>0</td><td>809500000 Hz</td><td>-61.6 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>2</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>3</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>4</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>5</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>6</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>7</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            <tr><td>8</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Hz</td><td> 0.0 dBmV</td><td> 0.0 dB</td></tr>
+                                            -->
+                                        </table>
+                                        <!-- <table border>
+                                        <tr><td colspan="4"><b>Downstream Channel 0</b></td></tr>
+                                        <tr><td>Lock Status</td><td>In Progress</td><td>Modulation</td><td>Unknown</td></tr>
+                                        <tr><td>Channel ID</td><td>0</td><td>Symbol rate</td><td>0 sym/sec</td></tr>
+                                        <tr><td>Downstream Frequency</td><td>0 Hz</td><td>Downstream Power</td><td>0 dBmV</td></tr>
+                                        <tr><td>SNR</td><td>0 dBmV</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                                        </table>
+                                        -->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b id="UpstreamBondedChannels">
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table border="1" cellpadding="2" cellspacing="0" class="TableStyle" id="usTable">
+                                            <tr>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Lock Status
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        US Channel Type
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Symbol Rate
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Frequency
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Power
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <!-- <tr><td>1</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Ksym/sec</td><td>0 Hz</td><td> 0.0 dBmV</td></tr>
+                                            <tr><td>2</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Ksym/sec</td><td>0 Hz</td><td> 0.0 dBmV</td></tr>
+                                            <tr><td>3</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Ksym/sec</td><td>0 Hz</td><td> 0.0 dBmV</td></tr>
+                                            <tr><td>4</td><td>Not Locked</td><td>Unknown</td><td>0</td><td>0 Ksym/sec</td><td>0 Hz</td><td> 0.0 dBmV</td></tr>
+                                            -->
+                                        </table>
+                                        <!-- <table border>
+                                        <tr><td colspan="4"><b>Upstream Channel</b></td></tr>
+                                        <tr><td>Lock Status</td><td>Not Locked</td><td>Modulation</td><td>QPSK</td></tr>
+                                        <tr><td>Channel ID</td><td>2152232456</td><td>Symbol rate</td><td>0 Ksym/sec</td></tr>
+                                        <tr><td>Upstream Frequency</td><td>-2142734840 Hz</td><td>Upstream Power</td><td>0 dBmV</td></tr>
+                                        </table>
+                                        -->
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b>Downstream OFDM Channels</b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table border="1" cellpadding="2" cellspacing="0" id="dsOfdmTable" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Lock <br>Status
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Modulation / <br>Profile ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel <br>ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Frequency
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Power
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        SNR / <br>MER
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Active Subcarrier <br>Number Range
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Unerrored <br>Codewords
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Correctable <br>Codewords
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Uncorrectable <br>Codewords
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <b>Upstream OFDMA Channels</b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table border="1" cellpadding="2" cellspacing="0" id="usOfdmaTable" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Lock Status
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Modulation / Profile ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Channel ID
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Frequency
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="thead">
+                                                        Power
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr id="ext_us_pwr_line">
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="ext_us_pwr_title">
+                                    <td>
+                                        <b>
+                                            Extended Upstream Transmit Power
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr id="ext_us_pwr_checkbox">
+                                    <td>
+                                        <input type="checkbox" id="ext_us_power" name="ext_us_power" value="ext_us_power">Enable Extended Upstream Transmit Power
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td id="CurrentSystemTime" style="font-size:13px;font-family:Helvetica;font-weight:bold">
+                                        <b>
+                                            Current System Time:
+                                        </b>
+                                        --- --- -- --:--:-- ----
+                                        <br>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td id="SystemUpTime" style="font-size:13px;font-family:Helvetica;font-weight:bold">
+                                        <b>
+                                            System Up Time:
+                                        </b>
+                                        00:00:00
+                                        <br>
+                                    </td>
+                                </tr>
+
+                            </table>
+                            <input type="hidden" name="extUsPower" value="">
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <tr style="vertical-align: middle;text-align:center">
+                <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                    <div class="help-frame-div">
+                        <iframe src="DocsisStatus_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                        </iframe>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div class="subhead2-bottom">
+            <span style="float:left;padding-left:10px;padding-top:5px">
+                <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+            </span>
+            <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                Help Center
+            </span>
+            <span class="button-help-arrow">
+                <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+            </span>
+            <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                Show/Hide Help Center
+            </span>
+        </div>
+        <!--a name="helpframe-anchor"></a-->
+    </div>
+</body>
+</html>

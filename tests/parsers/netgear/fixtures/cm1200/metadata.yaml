@@ -1,0 +1,15 @@
+***REMOVED*** Modem metadata - verified against official sources
+release_date: 2019
+end_of_life: null ***REMOVED*** null = still current
+docsis_version: "3.1"
+protocol: HTML
+chipset: Broadcom BCM3390
+isps:
+  - Comcast
+  - Spectrum
+  - Cox
+source: https://www.netgear.com/home/wifi/cable-modems/cm1200/
+
+***REMOVED*** Fixture capture info
+firmware_tested: null ***REMOVED*** Not visible in capture
+captured_from_issue: 63
