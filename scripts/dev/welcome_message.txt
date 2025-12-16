@@ -16,4 +16,4 @@ Option 2: Dev Container (Zero Setup)
   - All dependencies pre-installed
   - Guaranteed consistency with CI
 
-See docs/GETTING_STARTED.md for detailed comparison
+See docs/setup/GETTING_STARTED.md for detailed comparison

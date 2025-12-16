@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Połącz się z modemem kablowym. Modele oznaczone * są niezweryfikowane.",
+        "data": {
+          "host": "Adres IP modemu",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło",
+          "modem_choice": "Model modemu"
+        },
+        "data_description": {
+          "host": "Zwykle 192.168.100.1",
+          "username": "Pozostaw puste, jeśli nie jest wymagane",
+          "password": "Pozostaw puste, jeśli nie jest wymagane",
+          "modem_choice": "Użyj 'auto' do automatycznego wykrywania"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Uwierzytelnianie nie powiodło się - modem zwrócił stronę logowania.\n\nProszę sprawdzić:\n1. Nazwa użytkownika jest poprawna (zwykle 'admin', sprawdź etykietę modemu)\n2. Hasło jest poprawne (sprawdź etykietę modemu)\n3. Dane logowania nie zostały zmienione z domyślnych\n\nSpróbuj zalogować się do modemu ręcznie pod adresem https://192.168.100.1, aby zweryfikować dane logowania.",
+      "network_unreachable": "Nie można połączyć się z modemem - problem z łącznością sieciową.\n\nProszę sprawdzić:\n1. Połączenie sieciowe - Czy jesteś w odpowiedniej sieci WiFi?\n2. WiFi dla gości - Sieci gościnne często blokują dostęp do urządzeń lokalnych\n3. VPN - Rozłącz aktywne połączenia VPN\n4. Adres IP - Sprawdź IP modemu (zwykle 192.168.100.1)\n5. Interfejs webowy modemu - Upewnij się, że jest włączony i dostępny\n\nSpróbuj uzyskać dostęp do modemu bezpośrednio w przeglądarce, aby zweryfikować łączność.",
+      "cannot_connect": "Nie udało się połączyć z modemem.\n\nProszę sprawdzić:\n1. Adres IP jest poprawny (zwykle 192.168.100.1)\n2. Jeśli modem wymaga uwierzytelnienia, wprowadź nazwę użytkownika/hasło\n3. Interfejs webowy modemu jest dostępny z sieci Home Assistant\n\nJeśli twój modem nie jest obsługiwany, wybierz 'Nieznany Modem (Tryb Awaryjny)', aby włączyć podstawowe monitorowanie i przechwytywanie HTML.",
+      "unsupported_modem": "Automatyczne wykrywanie nie mogło zidentyfikować modelu twojego modemu.\n\nAby kontynuować:\n1. Wybierz 'Nieznany Modem (Tryb Awaryjny)' z listy rozwijanej poniżej\n2. To włącza podstawowe monitorowanie łączności (opóźnienie ping/HTTP)\n3. Po instalacji kliknij przycisk 'Przechwyć HTML'\n4. Pobierz diagnostykę i udostępnij programistom, aby dodać pełne wsparcie",
+      "invalid_input": "Nieprawidłowe dane wejściowe. Sprawdź wartości i spróbuj ponownie.",
+      "unknown": "Wystąpił nieoczekiwany błąd. Sprawdź logi Home Assistant, aby uzyskać szczegóły."
+    },
+    "abort": {
+      "already_configured": "Ten modem jest już skonfigurowany"
+    },
+    "progress": {
+      "validate": "Łączenie z modemem..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ustawienia Cable Modem",
+        "description": "Obecny: {detected_modem}\nOstatnio sprawdzono: {last_detection}",
+        "data": {
+          "host": "IP modemu",
+          "username": "Nazwa użytkownika",
+          "password": "Hasło",
+          "modem_choice": "Model modemu",
+          "scan_interval": "Interwał odpytywania (sek)"
+        },
+        "data_description": {
+          "host": "Zwykle 192.168.100.1",
+          "username": "Pozostaw puste, jeśli nie jest wymagane",
+          "password": "Puste = zachowaj obecne",
+          "modem_choice": "Użyj 'auto' do wykrywania. Zmień, jeśli niepoprawne.",
+          "scan_interval": "60-1800 sek. Domyślnie 600 (10 min)"
+        }
+      }
+    }
+  }
+}

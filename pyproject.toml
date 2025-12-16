@@ -54,15 +54,21 @@ exclude = [
 [tool.ruff.lint]
 select = [
     "E", "F", "W", "C90", "I", "UP", "B", "SIM", "TID", "N",
+    "PLC",    # pylint convention (catches useless imports, etc.)
+    "PLE",    # pylint errors
+    "PLW",    # pylint warnings (catches self-assignment, redeclared names)
 ]  # Enable key rule categories: style, complexity, import sorting, modern syntax
 # Note: F841 (unused variables) is already included via "F" (Pyflakes)
 # Note: ERA (commented-out code) disabled - too aggressive, flags format docs like "# cells[0] = Channel"
+# Note: Inline imports (imports inside functions) not caught by ruff - use CodeQL for that
 
 ignore = [
-    "B008",   # Allow function calls in default args (common in HA)
-    "B904",   # Allow bare `raise` for re-raising
-    "SIM108", # Avoid forced ternary expressions
-    "TID252", # Allow relative imports in HA custom components
+    "B008",     # Allow function calls in default args (common in HA)
+    "B904",     # Allow bare `raise` for re-raising
+    "SIM108",   # Avoid forced ternary expressions
+    "TID252",   # Allow relative imports in HA custom components
+    "PLW0603",  # Allow global statement updates (used for caching)
+    "PLC0415",  # Allow imports inside functions (lazy loading for HA performance)
 ]
 
 [tool.ruff.lint.mccabe]
@@ -77,7 +83,12 @@ combine-as-imports = true
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]           # Allow unused imports for package exposure
 "tests/**/*.py" = ["B011", "S101"] # Allow assert and safe eval in tests
-"scripts/**/*.py" = ["T201"]       # Allow print statements in scripts
+"scripts/**/*.py" = [
+    "T201",     # Allow print statements
+    "PLW1510",  # Allow subprocess.run without check (dev scripts handle errors manually)
+    "PLC0206",  # Allow dict iteration without .items() (readability preference)
+    "PLE0704",  # Allow bare raise in cleanup handlers
+]
 
 [tool.ruff.lint.flake8-type-checking]
 strict = false                     # Avoid strict import enforcement for type-checking

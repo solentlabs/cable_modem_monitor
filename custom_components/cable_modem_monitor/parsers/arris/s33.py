@@ -44,6 +44,9 @@ class ArrisS33HnapParser(ModemParser):
     docsis_version = "3.1"
     fixtures_path = "tests/parsers/arris/fixtures/s33"
 
+    # S33 blocks ICMP ping - skip ping check and use HTTP-only health status
+    supports_icmp = False
+
     def __init__(self):
         """Initialize the parser with instance-level state."""
         super().__init__()
@@ -201,11 +204,13 @@ class ArrisS33HnapParser(ModemParser):
 
         # Make batched HNAP request for all data
         # S33 uses GetCustomer* action names (vs MB8611's GetMoto*)
+        # GetArrisDeviceStatus provides firmware version
         hnap_actions = [
             "GetCustomerStatusStartupSequence",
             "GetCustomerStatusConnectionInfo",
             "GetCustomerStatusDownstreamChannelInfo",
             "GetCustomerStatusUpstreamChannelInfo",
+            "GetArrisDeviceStatus",
         ]
 
         _LOGGER.debug("S33: Fetching modem data via JSON HNAP GetMultipleHNAPs")
@@ -407,6 +412,7 @@ class ArrisS33HnapParser(ModemParser):
         try:
             self._extract_connection_info(hnap_data, system_info)
             self._extract_startup_info(hnap_data, system_info)
+            self._extract_device_status(hnap_data, system_info)
         except Exception as e:
             _LOGGER.error("S33: Error parsing system info: %s", e)
 
@@ -434,11 +440,45 @@ class ArrisS33HnapParser(ModemParser):
         self._set_if_present(startup_info, "CustomerConnBootStatus", system_info, "boot_status")
         self._set_if_present(startup_info, "CustomerConnSecurityStatus", system_info, "security_status")
 
+    def _extract_device_status(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract device status fields from HNAP data (firmware version, etc.)."""
+        device_status = hnap_data.get("GetArrisDeviceStatusResponse", {})
+        if not device_status:
+            return
+
+        # FirmwareVersion -> software_version
+        self._set_if_present(device_status, "FirmwareVersion", system_info, "software_version")
+        self._set_if_present(device_status, "InternetConnection", system_info, "internet_connection")
+
     def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
         """Set target[key] if source[source_key] exists and is non-empty."""
         value = source.get(source_key, "")
         if value:
             target[target_key] = value
+
+    def _get_current_config(self, builder, session, base_url: str) -> dict[str, str]:
+        """Get current modem configuration (EEE and LED settings).
+
+        The browser fetches this before sending a reboot command to preserve settings.
+        """
+        try:
+            response = builder.call_single(session, base_url, "GetArrisConfigurationInfo", {})
+            response_data: dict = json.loads(response)
+            config_response: dict[str, str] = response_data.get("GetArrisConfigurationInfoResponse", {})
+
+            if config_response.get("GetArrisConfigurationInfoResult") == "OK":
+                _LOGGER.debug(
+                    "S33: Got current config: EEE=%s, LED=%s",
+                    config_response.get("ethSWEthEEE"),
+                    config_response.get("LedStatus"),
+                )
+                return config_response
+
+            _LOGGER.warning("S33: GetArrisConfigurationInfo returned non-OK result")
+            return {}
+        except Exception as e:
+            _LOGGER.warning("S33: Failed to get current config: %s", str(e)[:100])
+            return {}
 
     def restart(self, session, base_url) -> bool:
         """Restart the S33 modem via HNAP SetArrisConfigurationInfo.
@@ -467,15 +507,18 @@ class ArrisS33HnapParser(ModemParser):
             _LOGGER.warning("S33: No stored JSON builder for restart - creating new one (may lack auth)")
 
         try:
-            # Build restart request matching configuration.js pattern:
-            # result_xml.Set("SetArrisConfigurationInfo/Action", "reboot");
-            # Also include the other fields that the JS sends (even if empty/default)
+            # First, get current configuration values (EEE and LED settings)
+            # The browser does this before sending reboot to preserve current settings
+            current_config = self._get_current_config(builder, session, base_url)
+
+            # Build restart request with current settings preserved
             restart_data = {
                 "Action": "reboot",
-                "SetEEEEnable": "",  # Energy Efficient Ethernet - not changing
-                "LED_Status": "",  # LED status - not changing
+                "SetEEEEnable": current_config.get("ethSWEthEEE", "0"),
+                "LED_Status": current_config.get("LedStatus", "1"),
             }
 
+            _LOGGER.debug("S33: Sending restart with config: %s", restart_data)
             response = builder.call_single(session, base_url, "SetArrisConfigurationInfo", restart_data)
 
             # Log response for debugging

@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import re
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -54,8 +56,6 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[s
     Returns:
         List of log record dicts with timestamp, level, and message
     """
-    from pathlib import Path
-
     recent_logs = []
 
     # Method 1: Try to get logs from system_log integration (if available)
@@ -340,8 +340,6 @@ def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
 
 def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry) -> dict[str, Any]:
     """Build the main diagnostics dictionary from coordinator data."""
-    from datetime import datetime
-
     data = coordinator.data if coordinator.data else {}
 
     diagnostics = {
@@ -351,6 +349,25 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "version": VERSION,
             "captured_at": datetime.now().isoformat(),
             "note": "Captured with Solent Labs™ Cable Modem Monitor diagnostics",
+        },
+        # PII review guidance - displayed prominently for users sharing diagnostics
+        "_review_before_sharing": {
+            "warning": (
+                "Automated sanitization is best-effort, not foolproof. "
+                "Modem manufacturers store data in unpredictable formats. "
+                "Please verify your credentials are not present before sharing."
+            ),
+            "checklist": [
+                "Search this file for your WiFi network name (SSID)",
+                "Search this file for your WiFi password",
+                "Search this file for your router admin password",
+                "Check that public IPs show as ***PUBLIC_IP***",
+            ],
+            "how_to_search": "Use Ctrl+F (Cmd+F on Mac) in your text editor",
+            "if_you_find_credentials": (
+                "Replace them with ***REDACTED*** and note it in your GitHub issue " "so we can improve the sanitizer."
+            ),
+            "documentation": "https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md",
         },
         "config_entry": {
             "title": entry.title,
@@ -463,8 +480,6 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
         capture = coordinator.data["_raw_html_capture"]
 
         # Check if capture has expired (5 minute TTL)
-        from datetime import datetime
-
         try:
             expires_at = datetime.fromisoformat(capture.get("ttl_expires", ""))
             if datetime.now() < expires_at:

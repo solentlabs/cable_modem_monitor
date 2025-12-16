@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Connetti al tuo modem via cavo. I modelli contrassegnati con * non sono verificati.",
+        "data": {
+          "host": "Indirizzo IP del modem",
+          "username": "Nome utente",
+          "password": "Password",
+          "modem_choice": "Modello modem"
+        },
+        "data_description": {
+          "host": "Di solito 192.168.100.1",
+          "username": "Lascia vuoto se non richiesto",
+          "password": "Lascia vuoto se non richiesto",
+          "modem_choice": "Usa 'auto' per il rilevamento automatico"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Autenticazione fallita - il modem ha restituito la pagina di login.\n\nVerifica:\n1. Il nome utente è corretto (tipicamente 'admin', controlla l'etichetta del modem)\n2. La password è corretta (controlla l'etichetta del modem)\n3. Le credenziali non sono state modificate dai valori predefiniti\n\nProva ad accedere manualmente al modem su https://192.168.100.1 per verificare che le credenziali funzionino.",
+      "network_unreachable": "Impossibile raggiungere il modem - problema di connettività di rete.\n\nVerifica:\n1. Connessione di rete - Sei sulla rete WiFi corretta?\n2. WiFi ospiti - Le reti ospiti spesso bloccano l'accesso ai dispositivi locali\n3. VPN - Disconnetti eventuali connessioni VPN attive\n4. Indirizzo IP - Verifica l'IP del modem (tipicamente 192.168.100.1)\n5. Interfaccia web del modem - Assicurati che sia abilitata e accessibile\n\nProva ad accedere direttamente al modem nel tuo browser per verificare la connettività.",
+      "cannot_connect": "Impossibile connettersi al modem.\n\nVerifica:\n1. L'indirizzo IP è corretto (tipicamente 192.168.100.1)\n2. Se il modem richiede autenticazione, inserisci nome utente/password\n3. L'interfaccia web del modem è accessibile dalla rete di Home Assistant\n\nSe il tuo modem non è supportato, seleziona 'Modem Sconosciuto (Modalità Fallback)' per abilitare il monitoraggio base e la cattura HTML.",
+      "unsupported_modem": "Il rilevamento automatico non è riuscito a identificare il modello del tuo modem.\n\nPer procedere:\n1. Seleziona 'Modem Sconosciuto (Modalità Fallback)' dal menu a tendina qui sotto\n2. Questo abilita il monitoraggio base della connettività (latenza ping/HTTP)\n3. Dopo l'installazione, clicca il pulsante 'Cattura HTML'\n4. Scarica la diagnostica e condividila con gli sviluppatori per aggiungere il supporto completo",
+      "invalid_input": "Input non valido. Controlla i valori e riprova.",
+      "unknown": "Si è verificato un errore imprevisto. Controlla i log di Home Assistant per i dettagli."
+    },
+    "abort": {
+      "already_configured": "Questo modem è già configurato"
+    },
+    "progress": {
+      "validate": "Connessione al modem..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Impostazioni Cable Modem",
+        "description": "Attuale: {detected_modem}\nUltimo controllo: {last_detection}",
+        "data": {
+          "host": "IP del modem",
+          "username": "Nome utente",
+          "password": "Password",
+          "modem_choice": "Modello modem",
+          "scan_interval": "Intervallo di polling (sec)"
+        },
+        "data_description": {
+          "host": "Di solito 192.168.100.1",
+          "username": "Lascia vuoto se non richiesto",
+          "password": "Vuoto = mantieni attuale",
+          "modem_choice": "Usa 'auto' per il rilevamento. Cambia se non corretto.",
+          "scan_interval": "60-1800 sec. Predefinito 600 (10 min)"
+        }
+      }
+    }
+  }
+}

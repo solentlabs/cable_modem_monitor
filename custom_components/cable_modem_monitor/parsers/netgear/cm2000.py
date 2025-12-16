@@ -309,11 +309,9 @@ class NetgearCM2000Parser(ModemParser):
     def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
         """Parse downstream channel data from DocsisStatus.htm.
 
-        The CM2000 likely embeds channel data in JavaScript variables similar to C3700.
-        Format expected:
-        - InitDsTableTagValue() function contains tagValueList
-        - Format: 'count|ch1_data|ch2_data|...'
-        - Each channel: num|lock|modulation|id|frequency|power|snr|corrected|uncorrected
+        The CM2000 embeds channel data in JavaScript variables:
+        - InitDsTableTagValue() function contains DOCSIS 3.0 QAM channels
+        - InitDsOfdmTableTagValue() function contains DOCSIS 3.1 OFDM channels
 
         Returns:
             List of downstream channel dictionaries
@@ -321,14 +319,21 @@ class NetgearCM2000Parser(ModemParser):
         channels: list[dict] = []
 
         try:
-            # Method 1: Try JavaScript variable extraction (like C3700)
-            channels = self._parse_downstream_from_js(soup)
+            # Parse DOCSIS 3.0 QAM channels
+            qam_channels = self._parse_downstream_from_js(soup)
+            channels.extend(qam_channels)
 
-            # Method 2: Try HTML table extraction (like CM600) if JS method fails
-            if not channels:
-                channels = self._parse_downstream_from_table(soup)
+            # Fallback to HTML table if JS method fails
+            if not qam_channels:
+                qam_channels = self._parse_downstream_from_table(soup)
+                channels.extend(qam_channels)
 
-            _LOGGER.info("CM2000: Parsed %d downstream channels", len(channels))
+            _LOGGER.info("CM2000: Parsed %d downstream QAM channels", len(qam_channels))
+
+            # Parse DOCSIS 3.1 OFDM channels
+            ofdm_channels = self._parse_ofdm_downstream(soup)
+            channels.extend(ofdm_channels)
+            _LOGGER.info("CM2000: Parsed %d downstream OFDM channels", len(ofdm_channels))
 
         except Exception as e:
             _LOGGER.error("Error parsing CM2000 downstream channels: %s", e, exc_info=True)
@@ -467,20 +472,31 @@ class NetgearCM2000Parser(ModemParser):
     def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901
         """Parse upstream channel data from DocsisStatus.htm.
 
+        The CM2000 embeds channel data in JavaScript variables:
+        - InitUsTableTagValue() function contains DOCSIS 3.0 ATDMA channels
+        - InitUsOfdmaTableTagValue() function contains DOCSIS 3.1 OFDMA channels
+
         Returns:
             List of upstream channel dictionaries
         """
         channels: list[dict] = []
 
         try:
-            # Method 1: Try JavaScript variable extraction
-            channels = self._parse_upstream_from_js(soup)
+            # Parse DOCSIS 3.0 ATDMA channels
+            atdma_channels = self._parse_upstream_from_js(soup)
+            channels.extend(atdma_channels)
 
-            # Method 2: Try HTML table extraction if JS method fails
-            if not channels:
-                channels = self._parse_upstream_from_table(soup)
+            # Fallback to HTML table if JS method fails
+            if not atdma_channels:
+                atdma_channels = self._parse_upstream_from_table(soup)
+                channels.extend(atdma_channels)
 
-            _LOGGER.info("CM2000: Parsed %d upstream channels", len(channels))
+            _LOGGER.info("CM2000: Parsed %d upstream ATDMA channels", len(atdma_channels))
+
+            # Parse DOCSIS 3.1 OFDMA channels
+            ofdma_channels = self._parse_ofdma_upstream(soup)
+            channels.extend(ofdma_channels)
+            _LOGGER.info("CM2000: Parsed %d upstream OFDMA channels", len(ofdma_channels))
 
         except Exception as e:
             _LOGGER.error("Error parsing CM2000 upstream channels: %s", e, exc_info=True)
@@ -604,6 +620,145 @@ class NetgearCM2000Parser(ModemParser):
             _LOGGER.debug("CM2000: Table upstream parsing failed: %s", e)
 
         return channels
+
+    def _extract_tagvaluelist(self, soup: BeautifulSoup, func_name: str) -> list[str] | None:
+        """Extract tagValueList values from a JavaScript function.
+
+        Args:
+            soup: BeautifulSoup object
+            func_name: Name of the JS function (e.g., "InitDsOfdmTableTagValue")
+
+        Returns:
+            List of pipe-separated values or None if not found
+        """
+        regex_pattern = re.compile(func_name)
+        for script in soup.find_all("script"):
+            if not script.string or not regex_pattern.search(script.string):
+                continue
+
+            func_match = re.search(rf"function {func_name}\(\)[^{{]*\{{(.*?)\n\s*\}}", script.string, re.DOTALL)
+            if not func_match:
+                continue
+
+            func_body = func_match.group(1)
+            func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+
+            match = re.search(r"var tagValueList = [\"']([^\"']+)[\"']", func_body_clean)
+            if match:
+                return match.group(1).split("|")
+
+        return None
+
+    def _parse_ofdm_downstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse OFDM downstream channels from InitDsOfdmTableTagValue.
+
+        CM2000 OFDM format (12 fields per channel):
+        count|num|lock|profile_ids|channel_id|frequency|power|snr|active_range|
+              unerrored_cw|correctable_cw|uncorrectable_cw|...
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitDsOfdmTableTagValue")
+            if not values or len(values) < 12:
+                return channels
+
+            channel_count = int(values[0])
+            fields_per_channel = 11
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_ofdm_downstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM2000: OFDM downstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_ofdm_downstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single OFDM downstream channel."""
+        try:
+            freq_str = values[idx + 4].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            power_str = values[idx + 5].replace(" dBmV", "").strip()
+            snr_str = values[idx + 6].replace(" dB", "").strip()
+
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(power_str),
+                "snr": float(snr_str),
+                "modulation": "OFDM",
+                "is_ofdm": True,
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM2000 OFDM Downstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
+
+    def _parse_ofdma_upstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse OFDMA upstream channels from InitUsOfdmaTableTagValue.
+
+        CM2000 OFDMA format (6 fields per channel):
+        count|num|lock|profile_id|channel_id|frequency|power|...
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitUsOfdmaTableTagValue")
+            if not values or len(values) < 7:
+                return channels
+
+            channel_count = int(values[0])
+            fields_per_channel = 6
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_ofdma_upstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM2000: OFDMA upstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_ofdma_upstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single OFDMA upstream channel."""
+        try:
+            freq_str = values[idx + 4].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            power_str = values[idx + 5].replace(" dBmV", "").strip()
+
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(power_str),
+                "channel_type": "OFDMA",
+                "is_ofdm": True,
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM2000 OFDMA Upstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
 
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from DocsisStatus.htm.

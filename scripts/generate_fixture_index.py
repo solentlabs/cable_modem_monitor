@@ -47,7 +47,136 @@ ISP_ORDER = [
     "rogers",
     "shaw",
     "videotron",  # Canadian ISPs
+    "volia",  # Ukrainian ISP
 ]
+
+# Chipset reference data for documentation
+# Format: chipset_key -> (display_name, manufacturer, docsis, notes, link)
+CHIPSET_INFO: dict[str, tuple[str, str, str, str, str]] = {
+    "bcm3390": (
+        "BCM3390",
+        "Broadcom",
+        "3.1",
+        "Current flagship. 2x2 OFDM, 32x8 SC-QAM. Speeds exceeding 1 Gbps.",
+        "https://www.prnewswire.com/news-releases/broadcom-unleashes-gigabit-speeds-for-consumer-cable-modems-300016203.html",
+    ),
+    "bcm3384": (
+        "BCM3384",
+        "Broadcom",
+        "3.0",
+        "Reliable mid-tier. 16x4 or 24x8 channels.",
+        "https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html",
+    ),
+    "bcm3383": (
+        "BCM3383",
+        "Broadcom",
+        "3.0",
+        "Entry-level 8x4 chipset with integrated WiFi SoC.",
+        "https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html",
+    ),
+    "bcm3380": (
+        "BCM3380",
+        "Broadcom",
+        "3.0",
+        "Legacy 8x4 chipset. First single-chip DOCSIS 3.0 solution (2009).",
+        "https://www.webwire.com/ViewPressRel.asp?aId=92729",
+    ),
+    "puma 5": (
+        "Puma 5",
+        "Intel",
+        "3.0",
+        "Legacy 8x4 chipset (TI TNETC4800). "
+        "[Latency issues](https://www.theregister.com/2017/08/09/intel_puma_modem_woes/) less severe than Puma 6.",
+        "https://boxmatrix.info/wiki/Property:Puma5",
+    ),
+    "puma 6": (
+        "Puma 6",
+        "Intel",
+        "3.0",
+        "⚠️ **Avoid.** [Hardware flaw](https://www.theregister.com/2017/04/11/intel_puma_6_arris/) "
+        "causes latency spikes up to 250ms under load. No fix available.",
+        "https://boxmatrix.info/wiki/Property:Puma6",
+    ),
+    "puma 7": (
+        "Puma 7",
+        "Intel",
+        "3.1",
+        "⚠️ **Avoid.** [Same architectural issues](https://www.theregister.com/2018/08/14/intel_puma_modem/) "
+        "as Puma 6. Major vendors switched to Broadcom.",
+        "https://boxmatrix.info/wiki/Property:Puma7",
+    ),
+}
+
+# ISP/Provider reference data with approval list links
+# Format: isp_key -> (full_name, region, approval_list_url, notes)
+ISP_INFO: dict[str, tuple[str, str, str, str]] = {
+    "comcast": (
+        "Comcast Xfinity",
+        "US (nationwide)",
+        "https://www.xfinity.com/support/articles/list-of-approved-cable-modems",
+        "Online activation required",
+    ),
+    "cox": (
+        "Cox Communications",
+        "US (18 states)",
+        "https://www.cox.com/residential/internet/learn/using-cox-compatible-modems.html",
+        "",
+    ),
+    "spectrum": (
+        "Spectrum (Charter)",
+        "US (41 states)",
+        "https://www.spectrum.net/support/internet/compliant-modems-spectrum-network",
+        "Formerly TWC, Bright House",
+    ),
+    "twc": (
+        "Time Warner Cable",
+        "—",
+        "",
+        "Merged into Spectrum (2016)",
+    ),
+    "mediacom": (
+        "Mediacom",
+        "US (Midwest/South)",
+        "https://mediacomcable.com/compatible-retail-modems/",
+        "",
+    ),
+    "rcn": (
+        "Astound (formerly RCN)",
+        "US (Northeast)",
+        "https://www.astound.com/support/internet/bring-your-own-modem/",
+        "No official list; DOCSIS 3.1 recommended",
+    ),
+    "cableone": (
+        "Sparklight (Cable One)",
+        "US (21 states)",
+        "https://support.sparklight.com/hc/en-us/articles/115009158227-Supported-Modems-Residential-Only",
+        "DOCSIS 3.1 required",
+    ),
+    "rogers": (
+        "Rogers",
+        "Canada",
+        "",
+        "No BYOM; Rogers equipment required",
+    ),
+    "shaw": (
+        "Shaw Communications",
+        "Canada (Western)",
+        "",
+        "Merged with Rogers (2023)",
+    ),
+    "videotron": (
+        "Vidéotron",
+        "Canada (Quebec)",
+        "",
+        "Helix service requires leased equipment",
+    ),
+    "volia": (
+        "Volia",
+        "Ukraine",
+        "https://en.wikipedia.org/wiki/Volia_(ISP)",
+        "Acquired by Datagroup (2021)",
+    ),
+}
 
 # ISP brand colors for Shields.io badges (muted tones)
 # Format: name -> (abbreviation, full_name, hex_color_muted)
@@ -71,19 +200,24 @@ ISP_COLORS: dict[str, tuple[str, str, str]] = {
     "cableone": ("C1", "Cable One", "7788aa"),
     "shaw": ("SHAW", "Shaw Communications", "668899"),
     "videotron": ("VID", "Vidéotron", "779988"),
+    "volia": ("VOLY", "Volia", "5599aa"),
+    "volya": ("VOLY", "Volia", "5599aa"),  # Alternative spelling
 }
 
 
 def isp_to_badge(isp_name: str) -> str:
-    """Convert an ISP name to a Shields.io badge with abbreviation and tooltip."""
+    """Convert an ISP name to a Shields.io badge with abbreviation, tooltip, and anchor link."""
     isp_lower = isp_name.lower().strip()
 
     for key, (abbrev, full_name, color) in ISP_COLORS.items():
         if key in isp_lower:
             badge_text = quote(abbrev, safe="")
             url = f"https://img.shields.io/badge/-{badge_text}-{color}?style=flat-square"
-            # Markdown image with title attribute for tooltip
-            return f'![{abbrev}]({url} "{full_name}")'
+            # Markdown image with title attribute for tooltip, wrapped in anchor to reference
+            badge = f'![{abbrev}]({url} "{full_name}")'
+            # Link to provider reference section (use key for anchor)
+            anchor_key = key.replace(" ", "-").replace("&", "")
+            return f"[{badge}](#{anchor_key})"
 
     # Fallback: generic gray badge for unknown ISPs (use first 4 chars as abbrev)
     abbrev = isp_name.strip()[:4].upper()
@@ -142,6 +276,85 @@ def isps_to_badges(isps: list[str] | str) -> str:
     # Sort by order and generate badges
     matched_isps.sort(key=lambda x: x[0])
     return " ".join(isp_to_badge(isp) for _, _, isp in matched_isps)
+
+
+def chipset_to_link(chipset: str) -> str:
+    """Convert a chipset name to a linked reference.
+
+    Args:
+        chipset: Chipset name (e.g., "Broadcom BCM3390", "Intel Puma 6")
+
+    Returns:
+        Markdown link to chipset reference section, or plain text if unknown
+    """
+    if not chipset:
+        return ""
+
+    chipset_lower = chipset.lower()
+
+    # Find matching chipset in our reference data
+    for key in CHIPSET_INFO:
+        if key in chipset_lower:
+            display_name, _, _, _, _ = CHIPSET_INFO[key]
+            anchor = key.replace(" ", "-")
+            return f"[{display_name}](#{anchor})"
+
+    # Unknown chipset - return as plain text
+    return chipset
+
+
+def generate_chipset_reference() -> list[str]:
+    """Generate the Chipset Reference section."""
+    lines = [
+        "## Chipset Reference",
+        "",
+        "| Chipset | Manufacturer | DOCSIS | Notes |",
+        "|---------|--------------|--------|-------|",
+    ]
+
+    for key, (display_name, manufacturer, docsis, notes, link) in CHIPSET_INFO.items():
+        anchor = key.replace(" ", "-")
+        # Create anchor target and optionally link the chipset name
+        if link:
+            chipset_cell = f'<span id="{anchor}"></span>[{display_name}]({link})'
+        else:
+            chipset_cell = f'<span id="{anchor}"></span>{display_name}'
+        lines.append(f"| {chipset_cell} | {manufacturer} | {docsis} | {notes} |")
+
+    return lines
+
+
+def generate_provider_reference() -> list[str]:
+    """Generate the Provider Reference section."""
+    lines = [
+        "## Provider Reference",
+        "",
+        "| Code | Provider | Region | Approved Modems | Notes |",
+        "|------|----------|--------|-----------------|-------|",
+    ]
+
+    for key in ISP_ORDER:
+        if key not in ISP_INFO:
+            continue
+        if key in ("xfinity", "time warner"):  # Skip duplicates
+            continue
+
+        full_name, region, approval_url, notes = ISP_INFO[key]
+        abbrev, _, _ = ISP_COLORS.get(key, (key.upper()[:4], key, "gray"))
+        anchor = key.replace(" ", "-").replace("&", "")
+
+        # Create anchor target
+        code_cell = f'<span id="{anchor}"></span>{abbrev}'
+
+        # Approval list link or placeholder
+        if approval_url:
+            approval_cell = f"[Official list]({approval_url})"
+        else:
+            approval_cell = "—"
+
+        lines.append(f"| {code_cell} | {full_name} | {region} | {approval_cell} | {notes} |")
+
+    return lines
 
 
 # Add project root to path so we can import parsers
@@ -285,6 +498,10 @@ def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: 
         info["eol_year"] = str(metadata["end_of_life"])[:4]
     if metadata.get("docsis_version"):
         info["docsis"] = metadata["docsis_version"]
+    if metadata.get("protocol"):
+        info["protocol"] = metadata["protocol"]
+    if metadata.get("chipset"):
+        info["chipset"] = metadata["chipset"]
     if metadata.get("isps"):
         info["isps"] = metadata["isps"]  # Keep as list
     # Status can come from metadata.yaml for fixtures without parsers
@@ -414,6 +631,35 @@ def generate_timeline(modems: list[dict]) -> list[str]:
     return lines
 
 
+def _format_status_summary(modems: list[dict]) -> str:
+    """Calculate and format status breakdown for modems.
+
+    Args:
+        modems: List of modem info dicts with 'status' field
+
+    Returns:
+        Formatted string like " (10 ✅ verified, 2 ⏳ awaiting)" or empty string
+    """
+    status_counts = {"verified": 0, "awaiting_verification": 0, "in_progress": 0, "broken": 0}
+    for m in modems:
+        status = str(m.get("status", ""))
+        if status in status_counts:
+            status_counts[status] += 1
+
+    # Format status summary (only show non-zero counts)
+    status_parts = []
+    if status_counts["verified"]:
+        status_parts.append(f"{status_counts['verified']} ✅ verified")
+    if status_counts["awaiting_verification"]:
+        status_parts.append(f"{status_counts['awaiting_verification']} ⏳ awaiting")
+    if status_counts["in_progress"]:
+        status_parts.append(f"{status_counts['in_progress']} 🔧 in progress")
+    if status_counts["broken"]:
+        status_parts.append(f"{status_counts['broken']} ❌ broken")
+
+    return f" ({', '.join(status_parts)})" if status_parts else ""
+
+
 def generate_index(output_path: Path | None = None, update_readmes: bool = True) -> str:
     """Generate the fixture index markdown and optionally update READMEs.
 
@@ -445,17 +691,19 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
     if update_readmes and readmes_updated > 0:
         print(f"Updated {readmes_updated} README files with Quick Facts")
 
+    status_summary = _format_status_summary(modems)
+
     lines = [
         "# Modem Fixture Library",
         "",
         "Auto-generated index of modem fixtures.",
         "",
         "**Data Sources:**",
-        "- `metadata.yaml` - Release dates, EOL, DOCSIS version, ISPs",
+        "- `metadata.yaml` - Release dates, EOL, DOCSIS version, protocol, chipset, ISPs",
         "- Parser classes - Verified status, manufacturer",
         "- `README.md` - Model name, contributor notes",
         "",
-        f"**Total Modems:** {len(modems)}",
+        f"**Total Modems:** {len(modems)}{status_summary}",
         "",
         "## Fixture Organization Guidelines",
         "",
@@ -473,8 +721,8 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "",
         "## Supported Modems",
         "",
-        "| Manufacturer | Model | DOCSIS | ISPs | Files | Status |",
-        "|--------------|-------|--------|------|-------|--------|",
+        "| Manufacturer | Model | DOCSIS | Protocol | Chipset | ISPs | Files | Status |",
+        "|--------------|-------|--------|----------|---------|------|-------|--------|",
     ]
 
     status_icons = {
@@ -493,10 +741,24 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         isps_list: list[str] | str = isps_raw if isinstance(isps_raw, list | str) else []
         isps_badges = isps_to_badges(isps_list)
 
+        # Get protocol and chipset, with sensible defaults
+        protocol_raw = str(m.get("protocol", "HTML") or "HTML")
+        # HTML gets official orange badge, HNAP stays bold black (no official branding)
+        if protocol_raw == "HTML":
+            protocol = '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
+        elif protocol_raw == "HNAP":
+            protocol = "**HNAP**"
+        else:
+            protocol = protocol_raw
+        chipset = str(m.get("chipset", "") or "")
+        chipset_linked = chipset_to_link(chipset)
+
         lines.append(
             f"| {m.get('manufacturer', '')} | "
             f"[{m.get('model', '')}]({m['path']}/README.md) | "
             f"{m.get('docsis', '')} | "
+            f"{protocol} | "
+            f"{chipset_linked} | "
             f"{isps_badges} | "
             f"{m.get('file_count', 0)} | "
             f"{status_display} |"
@@ -512,6 +774,20 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "",
             "- **Files**: Number of fixture files (excludes README.md, metadata.yaml)",
             "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | ❌ Broken | ❓ No parser",
+            "- **Protocol**: ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping |"
+            " **[HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)** ="
+            " [SOAP](https://www.w3.org/TR/soap/)-based, requires auth",
+            "",
+        ]
+    )
+
+    # Add reference sections
+    lines.extend(generate_chipset_reference())
+    lines.append("")
+    lines.extend(generate_provider_reference())
+
+    lines.extend(
+        [
             "",
             "---",
             "*Generated by `scripts/generate_fixture_index.py`*",

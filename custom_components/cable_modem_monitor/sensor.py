@@ -40,20 +40,16 @@ async def async_setup_entry(
 
     entities: list[SensorEntity] = []
 
-    # Add connection status sensor
-    entities.append(ModemConnectionStatusSensor(coordinator, entry))
+    # Add unified status sensor
+    entities.append(ModemStatusSensor(coordinator, entry))
 
     # Add modem info sensor (device metadata)
     entities.append(ModemInfoSensor(coordinator, entry))
 
-    # Add health monitoring sensors
-    entities.extend(
-        [
-            ModemHealthStatusSensor(coordinator, entry),
-            ModemPingLatencySensor(coordinator, entry),
-            ModemHttpLatencySensor(coordinator, entry),
-        ]
-    )
+    # Add latency sensors
+    entities.append(ModemHttpLatencySensor(coordinator, entry))
+    # Add ping latency sensor only if modem supports ICMP (default True)
+    entities.extend([ModemPingLatencySensor(coordinator, entry)] if coordinator.data.get("supports_icmp", True) else [])
 
     # Check if we're in fallback mode (unsupported modem)
     # In fallback mode, only connectivity sensors have data
@@ -163,25 +159,117 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         )
 
 
-class ModemConnectionStatusSensor(ModemSensorBase):
-    """Sensor for modem connection status."""
+class ModemStatusSensor(ModemSensorBase):
+    """Unified sensor for modem status.
+
+    Pass/fail status combining connection, health, and DOCSIS state:
+    - Operational: All good - data parsed, DOCSIS locked, reachable
+    - ICMP Blocked: HTTP works but ping fails (only if supports_icmp=True)
+    - Partial Lock: Some downstream channels not locked
+    - Not Locked: DOCSIS not locked to ISP
+    - Parser Error: Modem reachable but data couldn't be parsed
+    - Unresponsive: Can't reach modem via HTTP
+    """
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._attr_name = "Connection Status"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_connection_status"
+        self._attr_name = "Status"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_status"
         self._attr_icon = "mdi:router-network"
 
     @property
     def available(self) -> bool:
-        """Connection status sensor is always available to show offline state."""
+        """Status sensor is always available to show current state."""
         return bool(self.coordinator.last_update_success)
 
     @property
     def native_value(self) -> str:
-        """Return the state of the sensor."""
-        return str(self.coordinator.data.get("cable_modem_connection_status", "unknown"))
+        """Return the unified modem status.
+
+        Priority order (most to least concerning):
+        1. Unresponsive - can't reach modem via HTTP
+        2. Parser Error - reached modem but can't parse data
+        3. Not Locked - DOCSIS not locked to ISP
+        4. Partial Lock - some downstream channels unlocked
+        5. ICMP Blocked - HTTP works but ping fails (parser expects ping)
+        6. Operational - all good
+        """
+        data = self.coordinator.data
+
+        # Check health status first - can we reach the modem?
+        health_status = data.get("health_status", "unknown")
+        if health_status == "unresponsive":
+            return "Unresponsive"
+
+        # Check connection status - did parsing work?
+        connection_status = data.get("cable_modem_connection_status", "unknown")
+        if connection_status in ("offline", "unreachable"):
+            return "Unresponsive"
+        if connection_status == "parser_issue":
+            return "Parser Error"
+
+        # Check DOCSIS status - derive from channel lock status
+        docsis_status = self._derive_docsis_status(data)
+        if docsis_status == "Not Locked":
+            return "Not Locked"
+        if docsis_status == "Partial Lock":
+            return "Partial Lock"
+
+        # Check for ICMP blocked (only if parser expects ping to work)
+        supports_icmp = data.get("supports_icmp", True)
+        if supports_icmp and health_status == "icmp_blocked":
+            return "ICMP Blocked"
+
+        # All good
+        return "Operational"
+
+    def _derive_docsis_status(self, data: dict) -> str:
+        """Derive DOCSIS lock status from channel data.
+
+        Returns:
+            - "Operational": All DS channels locked and US channels present
+            - "Partial Lock": Some DS channels locked
+            - "Not Locked": No DS channels locked
+        """
+        downstream = data.get("cable_modem_downstream", [])
+        upstream = data.get("cable_modem_upstream", [])
+
+        if not downstream:
+            # No downstream data - might be fallback mode or parser issue
+            # Don't report as "Not Locked" if we simply don't have the data
+            return "Operational" if data.get("cable_modem_fallback_mode") else "Unknown"
+
+        # Count locked channels
+        locked_count = 0
+        total_count = len(downstream)
+
+        for ch in downstream:
+            lock_status = ch.get("lock_status", "").lower()
+            # Consider various "locked" indicators
+            if lock_status in ("locked", "locked qam", "qam256", "qam64", "ofdm"):
+                locked_count += 1
+            elif not lock_status:
+                # No lock_status field - assume locked if we have data
+                locked_count += 1
+
+        if locked_count == total_count and upstream:
+            return "Operational"
+        elif locked_count > 0:
+            return "Partial Lock"
+        else:
+            return "Not Locked"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional diagnostic attributes."""
+        data = self.coordinator.data
+        return {
+            "connection_status": data.get("cable_modem_connection_status", "unknown"),
+            "health_status": data.get("health_status", "unknown"),
+            "docsis_status": self._derive_docsis_status(data),
+            "diagnosis": data.get("health_diagnosis", ""),
+        }
 
 
 class ModemInfoSensor(ModemSensorBase):
@@ -598,32 +686,6 @@ class ModemLanTransmittedDropsSensor(ModemLanStatsSensor):
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry, interface, "transmitted_drops")
-
-
-class ModemHealthStatusSensor(ModemSensorBase):
-    """Sensor for modem health status (healthy/degraded/icmp_blocked/unresponsive)."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "Health Status"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_health_status"
-        self._attr_icon = "mdi:heart-pulse"
-
-    @property
-    def native_value(self) -> str:
-        """Return the health status."""
-        return str(self.coordinator.data.get("health_status", "unknown"))
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional state attributes."""
-        return {
-            "diagnosis": self.coordinator.data.get("health_diagnosis", ""),
-            "ping_success": self.coordinator.data.get("ping_success", False),
-            "http_success": self.coordinator.data.get("http_success", False),
-            "consecutive_failures": self.coordinator.data.get("consecutive_failures", 0),
-        }
 
 
 class ModemPingLatencySensor(ModemSensorBase):

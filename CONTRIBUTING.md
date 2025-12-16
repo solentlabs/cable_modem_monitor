@@ -17,29 +17,14 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 **Don't see your modem supported?** You can help us add it by capturing data from your modem's web interface.
 
-### Quick Capture (Recommended)
+> **📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for complete instructions on capturing data, reviewing for PII, and submitting your request.
 
-The easiest way to capture modem data, especially for modems with login:
+**Quick summary:**
+1. Capture your modem's web pages (two methods available)
+2. **Review the capture for your WiFi credentials** - automated sanitization isn't perfect
+3. [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
 
-```bash
-# One-time setup
-pip install playwright && playwright install chromium
-
-# Capture (opens browser, you log in, close when done)
-python scripts/capture_modem.py
-```
-
-Or in VS Code: **Ctrl+Shift+P** → **Tasks: Run Task** → **📹 Capture Modem Traffic**
-
-The script automatically:
-- Records all network traffic while you navigate
-- Removes fonts, images, and duplicates (10MB → ~20KB)
-- Sanitizes passwords and personal info
-- Compresses the output
-
-**Then:** [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) and attach the `.sanitized.har.gz` file.
-
-See [Capture Guide](./docs/CAPTURE_GUIDE.md) for detailed instructions and alternative methods.
+Your captured data becomes a test fixture that lets us develop and verify the parser without physical access to your modem.
 
 ---
 
@@ -47,7 +32,7 @@ See [Capture Guide](./docs/CAPTURE_GUIDE.md) for detailed instructions and alter
 
 You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).
 
-> **📖 See [Getting Started Guide](./docs/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
+> **📖 See [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
 
 ### Docker Development (Recommended)
 
@@ -93,7 +78,7 @@ For the best development experience, use VS Code with Dev Containers:
 - Press `F1` → "Dev Containers: Reopen in Container"
 - Wait for the container to build (2-3 minutes first time)
 
-See [Getting Started Guide](./docs/GETTING_STARTED.md) or [VS Code Dev Container Guide](./docs/VSCODE_DEVCONTAINER_GUIDE.md) for detailed instructions and troubleshooting.
+See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) or [VS Code Dev Container Guide](./docs/setup/DEVCONTAINER.md) for detailed instructions and troubleshooting.
 
 #### Docker Commands
 
@@ -139,7 +124,7 @@ pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes 
 pre-commit install  # Install git hooks for automatic code formatting
 ```
 
-**Having environment issues?** See [Getting Started Guide](./docs/GETTING_STARTED.md) for:
+**Having environment issues?** See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) for:
 - Comprehensive troubleshooting
 - Environment comparison and decision tree
 - Platform-specific notes
@@ -253,178 +238,19 @@ You can deploy your changes to a real Home Assistant instance for manual testing
 ./scripts/deploy_updates.sh --docker homeassistant --restart
 ```
 
-See [Testing on HA](./docs/TESTING_ON_HA.md) for detailed instructions and troubleshooting.
+See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and troubleshooting.
 
 ## Adding Support for New Modem Models
 
-Thanks to our modular parser architecture, adding support for a new modem is simple! The integration uses a **plugin system** that automatically discovers and registers parsers.
+> **📖 See [Parser Guide](docs/reference/PARSER_GUIDE.md)** for complete instructions.
 
-### Quick Start Guide
+**Quick overview:**
+1. Capture HTML from your modem's status pages
+2. Create parser in `parsers/<manufacturer>/<model>.py` (extend `ModemParser`)
+3. Add test fixtures with `metadata.yaml` (see [Fixture Format](docs/reference/FIXTURE_FORMAT.md))
+4. Write tests - the plugin system auto-discovers your parser
 
-1. **Capture HTML from your modem**
-   ```bash
-   # Save the status page HTML for testing
-   curl -u username:password http://MODEM_IP/status_page.html > tests/fixtures/brand_model.html
-   ```
-
-2. **Create a new parser file** in `custom_components/cable_modem_monitor/parsers/`
-
-   Use `parsers/parser_template.py` as a starting point, or copy an existing parser:
-
-   ```python
-   # custom_components/cable_modem_monitor/parsers/my_modem.py
-   from bs4 import BeautifulSoup
-   from .base_parser import ModemParser
-   from ..utils import extract_number, extract_float
-
-   class MyModemParser(ModemParser):
-       """Parser for My Modem Model."""
-
-       # Metadata - define your modem info
-       name = "My Modem Brand Model"
-       manufacturer = "My Modem Brand"
-       models = ["Model123", "Model456"]
-
-       # URL patterns your modem uses
-       # The scraper will try these URLs automatically
-       url_patterns = [
-           {"path": "/status.html", "auth_method": "basic"},  # or "form" or "none"
-           {"path": "/connection.asp", "auth_method": "basic"},  # fallback URL
-       ]
-
-       @classmethod
-       def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
-           """Detect if this parser can handle the modem's HTML."""
-           # Check for unique identifiers in the HTML
-           return "My Modem" in soup.title.string if soup.title else False
-
-       def login(self, session, base_url, username, password):
-           """Handle authentication (if required)."""
-           if not username or not password:
-               return True  # No auth needed
-
-           # For basic auth:
-           session.auth = (username, password)
-           return True
-
-           # For form auth, see motorola_mb.py for example
-
-       def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
-           """Parse all data from the modem."""
-           downstream = self._parse_downstream(soup)
-           upstream = self._parse_upstream(soup)
-           system_info = self._parse_system_info(soup)
-
-           return {
-               "downstream": downstream,
-               "upstream": upstream,
-               "system_info": system_info,
-           }
-
-       def _parse_downstream(self, soup):
-           """Parse downstream channel data."""
-           channels = []
-           # Your parsing logic here
-           # Return list of dicts with: channel_id, frequency, power, snr, corrected, uncorrected
-           return channels
-
-       def _parse_upstream(self, soup):
-           """Parse upstream channel data."""
-           channels = []
-           # Your parsing logic here
-           # Return list of dicts with: channel_id, frequency, power
-           return channels
-
-       def _parse_system_info(self, soup):
-           """Parse system information."""
-           return {
-               "software_version": "...",
-               "system_uptime": "...",
-               # etc.
-           }
-   ```
-
-3. **Create tests** in `tests/test_parser_my_modem.py`
-
-   ```python
-   import pytest
-   from bs4 import BeautifulSoup
-   from custom_components.cable_modem_monitor.parsers.my_modem import MyModemParser
-
-   @pytest.fixture
-   def sample_html():
-       """Load the test fixture."""
-       with open("tests/fixtures/my_modem.html") as f:
-           return f.read()
-
-   def test_parser_detection(sample_html):
-       """Test that the parser correctly identifies the modem."""
-       soup = BeautifulSoup(sample_html, "html.parser")
-       assert MyModemParser.can_parse(soup, "http://192.168.0.1/status.html", sample_html)
-
-   def test_parsing_downstream(sample_html):
-       """Test downstream channel parsing."""
-       soup = BeautifulSoup(sample_html, "html.parser")
-       parser = MyModemParser()
-       data = parser.parse(soup)
-
-       assert len(data["downstream"]) > 0
-       assert "channel_id" in data["downstream"][0]
-       assert "frequency" in data["downstream"][0]
-       # etc.
-   ```
-
-4. **Test your parser**
-   ```bash
-   # Run your specific tests
-   pytest tests/test_parser_my_modem.py -v
-
-   # Make sure all tests still pass
-   pytest tests/ -v
-   ```
-
-5. **That's it!** The parser will be automatically:
-   - Discovered by the integration
-   - Added to the modem selection dropdown
-   - Tried during auto-detection
-   - Cached after successful connection
-
-### Parser Architecture Benefits
-
-- **✅ Zero core changes needed** - Just add your parser file
-- **✅ Auto-discovery** - Plugin system finds your parser automatically
-- **✅ URL patterns in parser** - No hardcoded URLs in the scraper
-- **✅ User control** - Users can manually select your parser if auto-detection fails
-- **✅ Performance caching** - Parser choice is cached after first success
-
-### Authentication Methods
-
-Your parser's `url_patterns` can specify:
-- `"auth_method": "none"` - No authentication (e.g., ARRIS SB6141)
-- `"auth_method": "basic"` - HTTP Basic Auth (e.g., Technicolor TC4400)
-- `"auth_method": "form"` - Form-based login (e.g., Motorola MB series)
-
-### Example Parsers
-
-Look at these existing parsers for examples:
-- **Simple (no auth)**: `parsers/arris/sb6141.py`
-- **Basic auth**: `parsers/technicolor/tc4400.py`
-- **Form auth**: `parsers/motorola/mb7621.py`
-- **Complex**: `parsers/technicolor/xb7.py`
-
-### Submitting Your Parser
-
-When you submit a pull request, include:
-- ✅ Parser file in `parsers/<manufacturer>/` directory
-- ✅ Test fixtures in `tests/parsers/<manufacturer>/fixtures/<model>/`
-- ✅ Test file in `tests/parsers/<manufacturer>/` directory
-- ✅ Update to docs listing the new supported modem
-- ✅ All tests passing: `pytest tests/ -v`
-
-**Important:** See **[Fixture Requirements](docs/FIXTURE_REQUIREMENTS.md)** for:
-- Required `metadata.yaml` file with modem release date, DOCSIS version, ISPs
-- PII scrubbing checklist (MAC addresses, serial numbers, public IPs)
-- What pages to capture from your modem
+**Example parsers:** `arris/sb6141.py` (simple), `motorola/mb7621.py` (form auth), `technicolor/xb7.py` (complex)
 
 ## Code Style
 
@@ -471,316 +297,27 @@ bash scripts/dev/lint.sh
 ```
 
 See `docs/SECURITY_LINTING.md` for security-specific linting tools (Bandit, Semgrep).
-See `docs/LINTING.md` for comprehensive linting documentation.
+See `docs/reference/LINTING.md` for comprehensive linting documentation.
 
 ## Testing Guide
 
-This guide explains how to run tests locally before pushing to GitHub, preventing CI failures and speeding up development.
+> **📖 See [Testing Guide](./docs/reference/TESTING.md)** for comprehensive testing documentation including:
+> - Running tests locally
+> - Test suite overview
+> - CI/CD pipeline details
+> - Troubleshooting common issues
 
-### Automated Testing Status
-
-[![Tests](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
-
----
-
-### Prerequisites
-
-Before running tests locally, ensure you have:
-
-```bash
-# Check Python version (3.11+ required)
-python3 --version
-
-# Install required system packages (Ubuntu/Debian/WSL)
-sudo apt update
-sudo apt install python3-pip python3-venv
-
-# Verify installation
-python3 -m pip --version
-python3 -m venv --help
-```
-
-**Note:** If you're using Windows with WSL, make sure these packages are installed in your WSL distribution.
-
----
-
-### Quick Start - Local Testing
-
-#### First-Time Setup
-
-Run the full test suite (creates virtual environment automatically):
-
-```bash
-./scripts/dev/run_tests_local.sh
-```
-
-This will:
-- Create a Python virtual environment (`.venv/`)
-- Install all test dependencies
-- Run code quality checks (ruff)
-- Run all tests with pytest
-- Generate coverage report
-
-**Time:** ~2-3 minutes (first run), ~30 seconds (subsequent runs)
-
-#### Quick Testing During Development
-
-After initial setup, use the quick test script:
-
-```bash
-./scripts/dev/quick_test.sh
-```
-
-This runs tests with minimal output for rapid feedback during development.
-
-**Time:** ~5-10 seconds
-
----
-
-### Why Test Locally?
-
-**Benefits:**
-- ⚡ Catch errors before CI runs (faster feedback)
-- 💰 Save GitHub Actions minutes
-- 🎯 Prevent "fix CI" commits
-- 📈 Maintain code quality
-- 🚀 Faster development cycle
-
-**Recommended Workflow:**
-1. Make code changes
-2. Run `./scripts/dev/quick_test.sh` frequently during development
-3. Run `./scripts/dev/run_tests_local.sh` before committing
-4. Push to GitHub only when local tests pass
-
----
-
-### Test Suite Overview
-
-#### Unit Tests
-Located in `tests/test_modem_scraper.py`
-
-**Coverage:**
-- ✅ Downstream channel parsing (24 channels)
-- ✅ Upstream channel parsing (5 channels)
-- ✅ Software version extraction
-- ✅ System uptime parsing
-- ✅ Channel count validation
-- ✅ Total error calculation
-
-#### Integration Tests
-Real-world scenario testing with actual modem HTML fixtures
-
-**Tests:**
-- ✅ Full parse workflow (Motorola MB series)
-- ✅ Power level validation (-20 to +20 dBmV downstream, 20-60 dBmV upstream)
-- ✅ SNR validation (0-60 dB)
-- ✅ Frequency validation (DOCSIS 3.0 ranges)
-
-#### Test Fixtures
-Real HTML responses from modems in `tests/fixtures/`:
-- `moto_connection.html` - Channel data and uptime
-- `moto_home.html` - Software version and channel counts
-
-### CI/CD Pipeline
-
-#### Automated Workflows
-
-**On Every Push/PR:**
-1. **Tests Job**
-   - Matrix testing: Python 3.11 & 3.12
-   - Runs full pytest suite
-   - Generates coverage report
-   - Uploads to Codecov
-
-2. **Lint Job**
-   - Code quality checks with ruff
-   - Enforces Python best practices
-   - Validates code style
-
-3. **Validate Job**
-   - HACS validation
-   - Ensures integration meets HACS requirements
-
-### Manual Testing (Alternative)
-
-If you prefer manual control over the test environment:
-
-#### 1. Set Up Virtual Environment (Once)
-
-```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate it
-source venv/bin/activate  # Linux/Mac/WSL
-# OR
-venv\Scripts\activate  # Windows CMD
-# OR
-venv\Scripts\Activate.ps1  # Windows PowerShell
-```
-
-#### 2. Install Dependencies (Once)
-
-```bash
-pip install --upgrade pip
-pip install -r tests/requirements.txt
-```
-
-#### 3. Run Tests
-
+**Quick commands:**
 ```bash
 # Run all tests
 pytest tests/ -v
 
-# Run specific test file
-pytest tests/test_config_flow.py -v
+# Quick test during development
+./scripts/dev/quick_test.sh
 
-# Run specific test
-pytest tests/test_config_flow.py::TestConfigFlow::test_scan_interval_minimum_valid -v
-
-# Run with coverage
-pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=term
-
-# Generate HTML coverage report
-pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=html
-# Open htmlcov/index.html in browser
+# Full test suite with linting
+./scripts/dev/run_tests_local.sh
 ```
-
-#### 4. Run Code Quality Checks
-
-```bash
-# Check code quality
-ruff check custom_components/cable_modem_monitor/
-
-# Auto-fix issues
-ruff check --fix custom_components/cable_modem_monitor/
-```
-
-#### 5. Deactivate Virtual Environment (When Done)
-
-```bash
-deactivate
-```
-
-### Test Results
-
-#### Current Status
-**Total Tests:** 443 tests across 26 test files
-- ✅ **Components (162 tests):** diagnostics, sensors, buttons, config flow, coordinator, modem scraper
-- ✅ **Parsers (146 tests):** All 10 modem parsers with comprehensive coverage
-- ✅ **Core Modules (115 tests):** signal_analyzer, health_monitor, hnap_builder, authentication, discovery, crawler
-- ✅ **Utils (20 tests):** entity cleanup, HTML helpers
-
-#### Coverage Goals
-- **Current:** ~70% (test-to-code ratio)
-- **Required:** 60%+ (enforced in CI/CD)
-- **Status:** ✅ Target achieved and maintained
-- **Critical paths:** All user-facing functionality, parsers, and core infrastructure fully tested
-
-### Adding New Tests
-
-#### For New Features
-1. Add HTML fixture if parsing new data
-2. Write unit test for parsing function
-3. Write integration test for complete workflow
-4. Validate data ranges and types
-
-#### Example
-```python
-def test_new_feature(self, scraper, html_fixture):
-    """Test new feature parsing."""
-    soup = BeautifulSoup(html_fixture, 'html.parser')
-    result = scraper._parse_new_feature(soup)
-
-    assert result is not None, "Should parse feature"
-    assert isinstance(result, expected_type)
-    assert result in valid_range
-```
-
-### Regression Testing
-
-Before each release:
-1. Run full test suite locally
-2. Verify all tests pass
-3. Check coverage hasn't decreased
-4. Test with live modem if possible
-5. Review GitHub Actions results
-
-### Troubleshooting
-
-#### "ModuleNotFoundError" when running tests
-
-**Solution:** Install test dependencies
-```bash
-source venv/bin/activate
-pip install -r tests/requirements.txt
-```
-
-#### Virtual environment not activating
-
-**Linux/Mac/WSL:**
-```bash
-source venv/bin/activate
-```
-
-**Windows (PowerShell):**
-```powershell
-venv\Scripts\Activate.ps1
-```
-
-**Windows (CMD):**
-```cmd
-venv\Scripts\activate.bat
-```
-
-#### Tests pass locally but fail in CI
-
-**Possible causes:**
-1. **Missing dependency** - Check `tests/requirements.txt` includes all imports
-2. **Python version difference** - CI tests on 3.11 and 3.12
-3. **File path issues** - Use relative imports in tests
-4. **Environment-specific code** - Mock external dependencies properly
-
-#### Permission denied on test scripts
-
-**Solution:** Make scripts executable
-```bash
-chmod +x scripts/dev/run_tests_local.sh scripts/dev/quick_test.sh
-```
-
----
-
-### Continuous Improvement
-
-#### Planned Enhancements
-- [x] Add tests for config_flow.py
-- [x] Add tests for coordinator.py
-- [ ] Add tests for sensor.py
-- [ ] Add tests for button.py
-- [ ] Integration tests with Home Assistant test framework
-- [ ] Mock HTTP requests for network isolation
-- [ ] Performance benchmarks
-
-#### Contributing Tests
-When adding support for new modem models:
-1. Capture HTML from modem status pages
-2. Add to `tests/fixtures/`
-3. Create test cases for new HTML structure
-4. Ensure backward compatibility with existing tests
-
-### Resources
-
-- [pytest Documentation](https://docs.pytest.org/)
-- [Home Assistant Testing](https://developers.home-assistant.io/docs/development_testing)
-- [Coverage.py](https://coverage.readthedocs.io/)
-
-### Support
-
-If tests fail:
-1. Check GitHub Actions logs for details
-2. Run tests locally to reproduce
-3. Review test output and tracebacks
-4. Open issue with test failure details
 
 ## Submitting Changes
 
@@ -969,51 +506,10 @@ Each release includes:
 
 ## Translations
 
-Help make Cable Modem Monitor accessible to users worldwide! The integration supports multiple languages through Home Assistant's translation system.
+> **📖 See [Translation Guide](docs/TRANSLATION_GUIDE.md)** for complete instructions.
 
-### Current Languages
+**12 languages supported:** English, German, Dutch, French, Chinese, Italian, Spanish, Polish, Swedish, Russian, Portuguese (Brazil), Ukrainian
 
-| Language | Code | Status |
-|----------|------|--------|
-| English | `en.json` | ✅ Complete (source) |
-| Portuguese (Brazil) | `pt-BR.json` | ✅ Complete |
-| Spanish | `es.json` | ✅ Complete |
-| German | `de.json` | ✅ Complete |
-| French | `fr.json` | ✅ Complete |
+**To add a language:** Copy `translations/en.json` → `translations/XX.json`, translate values (not keys), submit PR.
 
-### Adding a New Language
-
-1. **Copy the English template**
-   ```bash
-   cp custom_components/cable_modem_monitor/translations/en.json \
-      custom_components/cable_modem_monitor/translations/XX.json
-   ```
-   Replace `XX` with your [language code](https://www.loc.gov/standards/iso639-2/php/code_list.php) (e.g., `it` for Italian, `nl` for Dutch)
-
-2. **Translate all strings** in the new file
-   - Keep the JSON structure intact
-   - Translate only the values, not the keys
-   - Preserve placeholders like `{detected_modem}` exactly as-is
-
-3. **Test your translation**
-   - Set Home Assistant to your language
-   - Add/reconfigure the integration
-   - Verify all strings display correctly
-
-4. **Submit a PR** with your translation file
-
-### Improving Existing Translations
-
-If you find translation errors or have better phrasing:
-1. Edit the relevant `.json` file
-2. Submit a PR with your improvements
-3. Native speakers are especially welcome to review!
-
-### Translation Tips
-
-- **Keep it natural** - Translate meaning, not word-for-word
-- **Technical terms** - Some terms like "DOCSIS" or "IP address" may stay in English
-- **Consistency** - Use the same term throughout (e.g., always "modem" or always "módem")
-- **Length** - UI labels should be concise; descriptions can be longer
-
-Thank you for contributing to Cable Modem Monitor! 🎉
+Thank you for contributing to Cable Modem Monitor!

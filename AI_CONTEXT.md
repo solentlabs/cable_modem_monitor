@@ -131,11 +131,22 @@ ssh <host> "cd /tmp && tar xzf cmm.tar.gz && sudo cp -rf cable_modem_monitor/* /
 
 | Topic | Location |
 |-------|----------|
-| Development setup | `docs/GETTING_STARTED.md` |
+| Development setup | `docs/setup/GETTING_STARTED.md` |
 | Contributing guide | `CONTRIBUTING.md` |
 | Release history | `CHANGELOG.md` |
 | Parser development | `CONTRIBUTING.md` lines 218-382 |
 | Fixture library | `tests/parsers/FIXTURES.md` |
+| Parser guide (with schema) | `docs/reference/PARSER_GUIDE.md` |
+
+## Standards References
+
+Parser data schema fields (`frequency`, `power`, `snr`, `corrected`, `uncorrected`) are aligned with DOCSIS industry standards:
+
+- **[RFC 4546](https://www.rfc-editor.org/rfc/rfc4546)** - DOCSIS RF Interface MIB (IETF)
+- **[CableLabs MIBs](http://mibs.cablelabs.com/MIBs/DOCSIS/)** - Normative DOCSIS 3.0/3.1 definitions
+- **[TR-181 DOCSIS](https://github.com/BroadbandForum/cwmp-data-models/blob/master/tr-181-2-15-0-docsis.xml)** - Broadband Forum consumer data model
+
+See `docs/reference/PARSER_GUIDE.md` → "DOCSIS Standards" for field mapping details.
 
 ---
 *This file contains stable guidance. Version-specific details belong in CHANGELOG.md.*

@@ -12,7 +12,7 @@
 
 <!-- Meta -->
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
-[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/CAPTURE_GUIDE.md)
+[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/MODEM_REQUEST.md)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
@@ -36,7 +36,7 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 ## Development
 
-**📖 See the [Getting Started Guide](./docs/GETTING_STARTED.md)** for development environment setup.
+**📖 See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for development environment setup.
 
 Quick start:
 ```bash
@@ -106,7 +106,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
   - Frequency (Hz)
   - Corrected/Uncorrected errors
 - **Summary Sensors**: Total corrected and uncorrected errors across all channels
-- **Connection Status**: Monitor modem online/offline state
+- **Unified Status**: Single sensor showing operational state (Operational/Degraded/Not Locked/Unresponsive)
 - **System Information**: Software version, uptime, channel counts, and last boot time
 - **Health Monitoring**: Real-time modem health checks with:
   - Ping latency monitoring
@@ -149,7 +149,7 @@ Using a modem marked with asterisk (*)? **[Report it working](https://github.com
 
 If your modem isn't supported or you'd like to help expand compatibility, we'd love your help!
 
-**📖 See the [Capture Guide](./docs/CAPTURE_GUIDE.md)** for step-by-step instructions on capturing diagnostic data.
+**📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for step-by-step instructions on capturing and submitting diagnostic data.
 
 **Want to develop the parser yourself?** See the [Contributing Guide](./CONTRIBUTING.md) for details.
 
@@ -226,23 +226,28 @@ After installation, you can configure additional settings:
 All sensors use the `cable_modem_` prefix for consistent entity naming and easy identification.
 
 **Entity Naming Pattern:**
-- System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_connection_status`)
+- System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_status`)
 - Channel sensors: `sensor.cable_modem_{direction}_ch_{number}_{metric}`
   - Example: `sensor.cable_modem_ds_ch_1_power` (downstream channel 1 power)
   - Example: `sensor.cable_modem_us_ch_3_frequency` (upstream channel 3 frequency)
 
-### Connection Status
-- `sensor.cable_modem_connection_status`: Overall connection state (online/offline)
+### Modem Status
+- `sensor.cable_modem_status`: Unified pass/fail status combining connection, health, and DOCSIS lock state
+  - **Operational**: All good - data parsed, DOCSIS locked, reachable
+  - **ICMP Blocked**: HTTP works but ping fails (check parser `supports_icmp` setting)
+  - **Partial Lock**: Some downstream channels not locked
+  - **Not Locked**: DOCSIS not locked to ISP
+  - **Parser Error**: Modem reachable but data couldn't be parsed
+  - **Unresponsive**: Can't reach modem via HTTP
 
 ### System Information
 - `sensor.cable_modem_software_version`: Modem firmware/software version
 - `sensor.cable_modem_system_uptime`: How long the modem has been running
 - `sensor.cable_modem_last_boot_time`: When the modem last rebooted (timestamp device class)
-- `sensor.cable_modem_downstream_channel_count`: Number of active downstream channels
-- `sensor.cable_modem_upstream_channel_count`: Number of active upstream channels
+- `sensor.cable_modem_ds_channel_count`: Number of active downstream channels
+- `sensor.cable_modem_us_channel_count`: Number of active upstream channels
 
-### Health Monitoring
-- `sensor.cable_modem_health_status`: Overall modem health (healthy/degraded/offline)
+### Latency Monitoring
 - `sensor.cable_modem_ping_latency`: Ping response time in milliseconds
 - `sensor.cable_modem_http_latency`: HTTP response time in milliseconds
 
@@ -335,7 +340,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
     - Hardcoded credential detection
     - SSL/TLS misconfiguration checks
     - Path traversal prevention
-- **Security Documentation**: See [CodeQL Testing Guide](./docs/CODEQL_TESTING_GUIDE.md) for details
+- **Security Documentation**: See [CodeQL Testing Guide](./docs/reference/CODEQL_TESTING_GUIDE.md) for details
 - **Vulnerability Reporting**: See [SECURITY.md](./SECURITY.md) for responsible disclosure
 
 ### Authentication Support
@@ -360,7 +365,7 @@ MIT License - see LICENSE file for details
 - [Contributing Guide](./CONTRIBUTING.md) - How to contribute code or add modem support
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Examples](./docs/EXAMPLES.md) - Dashboard and automation YAML
-- [Capture Guide](./docs/CAPTURE_GUIDE.md) - Help add support for your modem
+- [Modem Request Guide](./docs/MODEM_REQUEST.md) - Help add support for your modem
 - [AI Context](./AI_CONTEXT.md) - Project context for AI assistants
 
 ### External Resources

@@ -648,14 +648,14 @@ class ModemScraper:
             current_base_url = self.base_url.replace("https://", f"{protocol}://").replace("http://", f"{protocol}://")
             _LOGGER.debug("Trying protocol: %s (current_base_url: %s)", protocol, current_base_url)
 
-            for url, auth_method, parser_class in urls_to_try:
+            for url_template, auth_method, parser_class in urls_to_try:
                 # Replace protocol in URL to match current attempt
-                url = url.replace(self.base_url, current_base_url)
+                target_url = url_template.replace(self.base_url, current_base_url)
 
                 try:
                     _LOGGER.debug(
                         "Attempting to fetch %s (auth: %s, parser: %s)",
-                        url,
+                        target_url,
                         auth_method,
                         parser_class.name if parser_class else "unknown",
                     )
@@ -664,17 +664,17 @@ class ModemScraper:
                         auth = (self.username, self.password)
 
                     # Use configured SSL verification setting
-                    response = self.session.get(url, timeout=10, auth=auth, verify=self.verify_ssl)
+                    response = self.session.get(target_url, timeout=10, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
                         parser_name = parser_class.name if parser_class else "unknown"
                         _LOGGER.info(
                             "Successfully connected to %s (HTML: %s bytes, parser: %s)",
-                            url,
+                            target_url,
                             len(response.text),
                             parser_name,
                         )
-                        self.last_successful_url = url
+                        self.last_successful_url = target_url
 
                         # Capture raw HTML if requested
                         self._capture_response(response, "Initial connection page")
@@ -683,11 +683,11 @@ class ModemScraper:
                         _LOGGER.debug("About to update base_url from %s to %s", self.base_url, current_base_url)
                         self.base_url = current_base_url
                         _LOGGER.debug("Updated! base_url is now: %s", self.base_url)
-                        return response.text, url, parser_class
+                        return response.text, target_url, parser_class
                     else:
-                        _LOGGER.debug("Got status %s from %s", response.status_code, url)
+                        _LOGGER.debug("Got status %s from %s", response.status_code, target_url)
                 except requests.RequestException as e:
-                    _LOGGER.debug("Failed to fetch from %s: %s: %s", url, type(e).__name__, e)
+                    _LOGGER.debug("Failed to fetch from %s: %s: %s", target_url, type(e).__name__, e)
                     continue
 
         return None
@@ -1077,6 +1077,7 @@ class ModemScraper:
                 if fixtures_url:
                     info["fixtures_url"] = fixtures_url
             info["verified"] = self.parser.verified
+            info["supports_icmp"] = self.parser.supports_icmp
             return info
         return {}
 

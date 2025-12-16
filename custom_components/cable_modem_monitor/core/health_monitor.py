@@ -21,7 +21,7 @@ class HealthCheckResult:
     """Result of a health check operation."""
 
     timestamp: float
-    ping_success: bool
+    ping_success: bool | None  # None when ping is skipped (modem doesn't support ICMP)
     ping_latency_ms: float | None
     http_success: bool
     http_latency_ms: float | None
@@ -29,11 +29,18 @@ class HealthCheckResult:
     @property
     def is_healthy(self) -> bool:
         """Return True if modem is responding to either ping or HTTP."""
+        if self.ping_success is None:
+            # Ping skipped - health based on HTTP only
+            return self.http_success
         return self.ping_success or self.http_success
 
     @property
     def status(self) -> str:
         """Return human-readable status."""
+        # When ping is skipped (None), use HTTP-only status
+        if self.ping_success is None:
+            return "responsive" if self.http_success else "unresponsive"
+
         if self.ping_success and self.http_success:
             return "responsive"
         elif self.ping_success and not self.http_success:
@@ -46,6 +53,10 @@ class HealthCheckResult:
     @property
     def diagnosis(self) -> str:
         """Return detailed diagnosis."""
+        # When ping is skipped (None), use HTTP-only diagnosis
+        if self.ping_success is None:
+            return "Responsive (HTTP)" if self.http_success else "Network down / offline"
+
         if self.ping_success and self.http_success:
             return "Fully responsive"
         elif self.ping_success and not self.http_success:
@@ -93,12 +104,13 @@ class ModemHealthMonitor:
                 "This is common for cable modems with self-signed certificates."
             )
 
-    async def check_health(self, base_url: str) -> HealthCheckResult:
+    async def check_health(self, base_url: str, skip_ping: bool = False) -> HealthCheckResult:
         """
-        Perform dual-layer health check.
+        Perform health check.
 
         Args:
             base_url: Modem URL (e.g., http://192.168.100.1)
+            skip_ping: If True, skip ICMP ping check (for modems that block ICMP)
 
         Returns:
             HealthCheckResult with ping and HTTP status
@@ -117,28 +129,41 @@ class ModemHealthMonitor:
             _LOGGER.error("Failed to parse URL %s: %s", base_url, e)
             host = None
 
-        # Run ping and HTTP check in parallel (skip ping if host is invalid)
+        # Initialize results
+        ping_success: bool | None = None
+        ping_latency: float | None = None
+        http_success: bool = False
+        http_latency: float | None = None
+
         if host:
-            ping_result, http_result = await asyncio.gather(
-                self._check_ping(host), self._check_http(base_url), return_exceptions=True
-            )
-
-            # Handle exceptions
-            if isinstance(ping_result, BaseException):
-                _LOGGER.debug("Ping check exception: %s", ping_result)
-                ping_success, ping_latency = False, None
+            if skip_ping:
+                # Skip ping - only run HTTP check
+                http_result = await self._check_http(base_url)
+                if isinstance(http_result, BaseException):
+                    _LOGGER.debug("HTTP check exception: %s", http_result)
+                    http_success, http_latency = False, None
+                else:
+                    http_success, http_latency = http_result
+                # ping_success remains None to indicate skipped
             else:
-                ping_success, ping_latency = ping_result
+                # Run ping and HTTP check in parallel
+                results = await asyncio.gather(
+                    self._check_ping(host), self._check_http(base_url), return_exceptions=True
+                )
+                ping_result_raw, http_result_raw = results
 
-            if isinstance(http_result, BaseException):
-                _LOGGER.debug("HTTP check exception: %s", http_result)
-                http_success, http_latency = False, None
-            else:
-                http_success, http_latency = http_result
-        else:
-            # Invalid host - both checks fail
-            ping_success, ping_latency = False, None
-            http_success, http_latency = False, None
+                # Handle exceptions
+                if isinstance(ping_result_raw, BaseException):
+                    _LOGGER.debug("Ping check exception: %s", ping_result_raw)
+                    ping_success, ping_latency = False, None
+                else:
+                    ping_success, ping_latency = ping_result_raw
+
+                if isinstance(http_result_raw, BaseException):
+                    _LOGGER.debug("HTTP check exception: %s", http_result_raw)
+                    http_success, http_latency = False, None
+                else:
+                    http_success, http_latency = http_result_raw
 
         # Create result
         result = HealthCheckResult(

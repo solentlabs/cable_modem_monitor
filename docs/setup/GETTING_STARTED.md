@@ -471,12 +471,11 @@ Ask yourself:
 ## Getting Help
 
 **Setup Issues:**
-- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed troubleshooting
-- Check [VSCODE_DEVCONTAINER_GUIDE.md](VSCODE_DEVCONTAINER_GUIDE.md) for dev container details
+- Check [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for detailed troubleshooting
+- Check [Dev Container Guide](DEVCONTAINER.md) for dev container details
 
 **Development Questions:**
-- See [CONTRIBUTING.md](../CONTRIBUTING.md) for workflow and guidelines
-- See [DEVELOPER_QUICKSTART.md](DEVELOPER_QUICKSTART.md) for common tasks
+- See [CONTRIBUTING.md](../../CONTRIBUTING.md) for workflow and guidelines
 
 **Found a Bug?**
 - [Open an issue](https://github.com/solentlabs/cable_modem_monitor/issues)

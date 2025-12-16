@@ -449,6 +449,18 @@ class TestMetadata:
         parser = MotorolaMB8611HnapParser()
         assert parser.priority == 101  # Higher priority for the API-based method
 
+    def test_ofdm_capability(self):
+        """Test that OFDM_DOWNSTREAM capability is declared.
+
+        The MB8611 returns OFDM channels (modulation="OFDM PLC") in the same
+        MotoConnDownstreamChannel response as QAM channels. The fixture shows
+        channel 33 with modulation "OFDM PLC" at 957 MHz.
+        """
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+
+        parser = MotorolaMB8611HnapParser()
+        assert ModemCapability.OFDM_DOWNSTREAM in parser.capabilities
+
 
 class TestJsonHnapSupport:
     """Test JSON-based HNAP support for firmware variants that use JSON instead of XML/SOAP."""
