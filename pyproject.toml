@@ -83,7 +83,12 @@ combine-as-imports = true
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]           ***REMOVED*** Allow unused imports for package exposure
 "tests/**/*.py" = ["B011", "S101"] ***REMOVED*** Allow assert and safe eval in tests
-"scripts/**/*.py" = ["T201"]       ***REMOVED*** Allow print statements in scripts
+"scripts/**/*.py" = [
+    "T201",     ***REMOVED*** Allow print statements
+    "PLW1510",  ***REMOVED*** Allow subprocess.run without check (dev scripts handle errors manually)
+    "PLC0206",  ***REMOVED*** Allow dict iteration without .items() (readability preference)
+    "PLE0704",  ***REMOVED*** Allow bare raise in cleanup handlers
+]
 
 [tool.ruff.lint.flake8-type-checking]
 strict = false                     ***REMOVED*** Avoid strict import enforcement for type-checking
