@@ -6,12 +6,12 @@
   ],
   "config_flow": true,
   "documentation": "https://github.com/solentlabs/cable_modem_monitor",
+  "integration_type": "device",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/solentlabs/cable_modem_monitor/issues",
   "requirements": [
     "beautifulsoup4==4.12.2",
     "defusedxml==0.7.1"
   ],
-  "version": "3.10.0",
-  "integration_type": "device"
+  "version": "3.10.0"
 }
