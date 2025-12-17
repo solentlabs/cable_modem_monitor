@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.10.1] - 2025-12-17
+
+### Highlights
+
+🏪 **HACS Default Repository Submission** - Preparing for inclusion in the HACS default repository list
+
+### Added
+- **Hassfest Validation** - Added hassfest CI workflow required for HACS default submission
+- **AI Skills** - Added modem-request-triage and issue-to-fixture AI skills for development workflow
+
+### Fixed
+- **Manifest Key Order** - Sorted manifest.json keys per Home Assistant requirements (domain, name, then alphabetical)
+- **Test Warnings** - Resolved implicit string concatenation warnings in test_s33.py
+
+### Changed
+- **Scripts Cleanup** - Removed 6 superseded maintenance scripts
+
 ## [3.10.0] - 2025-12-16
 
 ### Highlights
