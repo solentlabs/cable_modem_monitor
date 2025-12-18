@@ -35,7 +35,7 @@
 
 ## Implementation History
 
-**Added by:** sfennell (@sfennell@fennell.org)
+**Added by:** @sfennell
 **Date:** November 7, 2025
 **Commit:** a6d09ad "Added support for Arris SB6190"
 **Release:** v3.0.0

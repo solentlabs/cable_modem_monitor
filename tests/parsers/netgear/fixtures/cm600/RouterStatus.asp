@@ -542,7 +542,7 @@ function InitTagValue()
 5G  Guest Network SSID (td) | Guest Network AP (td)
 System Up Time | Current System Time
 */
-    var tagValueList = '1.01B|V1.01.22|4DF168WV011F3|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|203.0.113.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|203.0.113.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
+    var tagValueList = '1.01B|V1.01.22|***SERIAL***|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|203.0.113.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|203.0.113.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
 //    var tagValueList = 'c312|V1.01.02|12af23|1|XX:XX:XX:XX:XX:XX|***PRIVATE_IP***.173/16|***PRIVATE_IP***.254|203.0.113.1, ---.---.---.---, ---.---.---.---|Allowed|XX:XX:XX:XX:XX:XX|---.---.---.---|DHCP Client|---.---.---.---|203.0.113.1|XX:XX:XX:XX:XX:XX|192.168.0.1/24|Off||||||||||||||||||||||||||||||||0|---|---|---|---|---|---|---|---|0|0|1|0|';
 /*
     var tagValueList = "v1.0|v0.1|12345678|None" +

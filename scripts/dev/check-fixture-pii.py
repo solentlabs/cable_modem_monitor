@@ -42,6 +42,12 @@ WIFI_CRED_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Motorola password variable pattern
+MOTO_PASSWORD_PATTERN = re.compile(
+    r"var\s+Current(?:Pw|Password)[A-Za-z]*\s*=\s*['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
+
 # Known safe values (anonymized placeholders)
 SAFE_VALUES = set(PII_ALLOWLIST) | {
     "00:00:00:00:00:00",
@@ -158,6 +164,23 @@ def is_safe_mac(mac: str) -> bool:
     return mac_lower in SAFE_MACS or mac_lower == "xx:xx:xx:xx:xx:xx"
 
 
+def check_motorola_passwords(content: str, filepath: Path) -> list[str]:
+    """Check for Motorola JavaScript password variables.
+
+    Looks for var CurrentPwAdmin = 'value' or var CurrentPwUser = 'value' patterns.
+    """
+    issues = []
+
+    for match in MOTO_PASSWORD_PATTERN.finditer(content):
+        password = match.group(1)
+        # Skip already-redacted values
+        if password.startswith("***"):
+            continue
+        issues.append(f"  Motorola password variable found: '{password}'")
+
+    return issues
+
+
 def check_tagvaluelist_credentials(content: str, filepath: Path) -> list[str]:
     """Check tagValueList for potential WiFi credentials.
 
@@ -213,6 +236,10 @@ def check_html_file(filepath: Path) -> list[str]:
     # Additional check for tagValueList credentials
     tagvalue_issues = check_tagvaluelist_credentials(content, filepath)
     issues.extend(tagvalue_issues)
+
+    # Check for Motorola password variables
+    moto_issues = check_motorola_passwords(content, filepath)
+    issues.extend(moto_issues)
 
     return issues
 

@@ -136,7 +136,16 @@ def sanitize_html(html: str) -> str:
         flags=re.IGNORECASE,
     )
 
-    # 13. WiFi credentials and device names in Netgear tagValueList (pipe-delimited format)
+    # 13. Motorola JavaScript password variables
+    # e.g., var CurrentPwAdmin = 'cableadmin'; or var CurrentPwUser = 'password123';
+    html = re.sub(
+        r"(var\s+Current(?:Pw|Password)[A-Za-z]*\s*=\s*['\"])([^'\"]+)(['\"])",
+        r"\1***PASSWORD***\3",
+        html,
+        flags=re.IGNORECASE,
+    )
+
+    # 14. WiFi credentials and device names in Netgear tagValueList (pipe-delimited format)
     # In DashBoard.htm, WiFi SSIDs and passphrases are stored as positional values
     # In AccessControl.htm, device names appear before IP/MAC addresses
     # e.g., var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|password1|password2|...'
@@ -262,6 +271,7 @@ PII_ALLOWLIST = [
     "***WEP_KEY***",
     "***SSID***",
     "***DEVICE***",
+    "***PASSWORD***",
 ]
 
 

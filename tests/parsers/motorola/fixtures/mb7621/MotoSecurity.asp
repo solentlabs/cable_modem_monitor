@@ -11,9 +11,9 @@
 
 function checkForwarding(){return false;}function menuClick(value){    if(checkForwarding())    {        return false;    }    if(value == 'status')    {        window.location.href='MotoSwInfo.asp';    }}function menuMouseMove(value){    document.getElementById('tdStatus').style.backgroundColor = '#52555a';    document.getElementById('divStatus').style.display = 'none';    if(value == 'status')    {        document.getElementById('tdStatus').style.backgroundColor = '#868a8d';        document.getElementById('divStatus').style.display = 'block';    }}function gotoHome(){    if(checkForwarding())    {        return false;    }    window.location.href='MotoHome.asp';}function gotoPage(value){if(checkForwarding()){return false;}window.location.href=value;}
 var CurrentNameAdmin = 'admin';
-var CurrentPwAdmin = 'cableadmin';
-var CurrentNameUser = 'admin';
-var CurrentPwUser = 'AubsKen';
+var CurrentPwAdmin = '***PASSWORD***';
+var CurrentNameUser = 'user';
+var CurrentPwUser = '***PASSWORD***';
 
 var isEncryptPswd = 1;
 var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";

@@ -732,7 +732,7 @@ class TestSoftwareVersionParsing:
         data = parser.parse(soup, session=mock_session, base_url=base_url)
 
         assert "system_info" in data
-        assert data["system_info"]["serial_number"] == "123456789012"
+        assert data["system_info"]["serial_number"] == "***SERIAL***"
 
     def test_software_info_with_empty_response(self):
         """Test software info parsing with empty GetMotoStatusSoftwareResponse."""
