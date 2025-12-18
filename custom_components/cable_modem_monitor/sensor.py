@@ -156,6 +156,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
             "offline",
             "limited",  # Fallback mode - basic connectivity only
             "parser_issue",  # Known parser but no channel data extracted
+            "no_signal",  # Modem online but no cable signal
         )
 
 
@@ -208,6 +209,8 @@ class ModemStatusSensor(ModemSensorBase):
             return "Unresponsive"
         if connection_status == "parser_issue":
             return "Parser Error"
+        if connection_status == "no_signal":
+            return "No Signal"
 
         # Check DOCSIS status - derive from channel lock status
         docsis_status = self._derive_docsis_status(data)

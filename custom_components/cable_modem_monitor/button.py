@@ -15,6 +15,8 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import CONF_HOST, DOMAIN
+from .core.modem_scraper import ModemScraper
+from .parsers import get_parser_by_name, get_parsers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,7 +79,6 @@ async def _check_restart_support(hass: HomeAssistant, entry: ConfigEntry) -> boo
     # Check if parser has restart method
     modem_choice = entry.data.get("modem_choice", "")
     if modem_choice and modem_choice != "auto":
-        from .parsers import get_parser_by_name
 
         def check_parser() -> bool:
             try:
@@ -133,8 +134,6 @@ class ModemRestartButton(ModemButtonBase):
             CONF_WORKING_URL,
             VERIFY_SSL,
         )
-        from .core.modem_scraper import ModemScraper
-        from .parsers import get_parsers
 
         host = self._entry.data[HOST_KEY]
         username = self._entry.data.get(CONF_USERNAME)
@@ -146,8 +145,6 @@ class ModemRestartButton(ModemButtonBase):
 
         # Optimization: Only load the specific parser if user selected one
         if modem_choice and modem_choice != "auto":
-            from .parsers import get_parser_by_name
-
             parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
             if parser_class:
                 parser = parser_class()
@@ -569,8 +566,6 @@ class CaptureHtmlButton(ModemButtonBase):
             CONF_WORKING_URL,
             VERIFY_SSL,
         )
-        from .core.modem_scraper import ModemScraper
-        from .parsers import get_parsers
 
         host = self._entry.data[HOST_KEY]
         username = self._entry.data.get(CONF_USERNAME)
@@ -581,8 +576,6 @@ class CaptureHtmlButton(ModemButtonBase):
 
         # Load parser (same logic as restart button)
         if modem_choice and modem_choice != "auto":
-            from .parsers import get_parser_by_name
-
             parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
             if parser_class:
                 parser = parser_class()

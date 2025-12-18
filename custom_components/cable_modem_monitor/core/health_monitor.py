@@ -225,6 +225,24 @@ class ModemHealthMonitor:
             _LOGGER.debug("Ping exception for %s: %s", host, e)
             return False, None
 
+    def _process_http_response(self, response, base_url: str, start_time: float) -> tuple[bool, float | None] | None:
+        """Process HTTP response and validate redirects.
+
+        Returns:
+            (success, latency_ms) tuple, or None if redirect is unsafe
+        """
+        # Validate redirect if present
+        if response.status in (301, 302, 303, 307, 308):
+            redirect_url = response.headers.get("Location", "")
+            if not self._is_safe_redirect(base_url, redirect_url):
+                _LOGGER.warning("Unsafe redirect detected: %s -> %s", base_url, redirect_url)
+                return None
+
+        latency_ms = (time.time() - start_time) * 1000
+        # Accept any response (2xx, 3xx, 4xx) as "alive"
+        success = response.status < 500
+        return success, latency_ms if success else None
+
     async def _check_http(self, base_url: str) -> tuple[bool, float | None]:
         """
         Perform HTTP check with SSL verification and redirect validation.
@@ -246,43 +264,31 @@ class ModemHealthMonitor:
 
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 # Try HEAD first (lightweight)
+                head_failed = False
                 try:
                     async with session.head(base_url, allow_redirects=False) as response:
-                        # Validate redirect if present
-                        if response.status in (301, 302, 303, 307, 308):
-                            redirect_url = response.headers.get("Location", "")
-                            if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning("Unsafe redirect detected: %s -> %s", base_url, redirect_url)
-                                return False, None
+                        result = self._process_http_response(response, base_url, start_time)
+                        return result if result else (False, None)
+                except Exception as head_err:
+                    # HEAD failed - many modems don't support HEAD or reset the connection
+                    _LOGGER.debug("HEAD request failed, trying GET: %s", head_err)
+                    head_failed = True
 
-                        latency_ms = (time.time() - start_time) * 1000
-                        # Accept any response (2xx, 3xx, 4xx) as "alive"
-                        success = response.status < 500
-                        return success, latency_ms if success else None
-                except (aiohttp.ClientError, TimeoutError):
-                    # HEAD failed, try GET (some modems don't support HEAD)
+                # Fallback to GET if HEAD failed
+                if head_failed:
                     start_time = time.time()  # Reset timer
                     async with session.get(base_url, allow_redirects=False) as response:
-                        # Validate redirect if present
-                        if response.status in (301, 302, 303, 307, 308):
-                            redirect_url = response.headers.get("Location", "")
-                            if not self._is_safe_redirect(base_url, redirect_url):
-                                _LOGGER.warning("Unsafe redirect detected: %s -> %s", base_url, redirect_url)
-                                return False, None
-
-                        latency_ms = (time.time() - start_time) * 1000
-                        success = response.status < 500
-                        return success, latency_ms if success else None
+                        result = self._process_http_response(response, base_url, start_time)
+                        return result if result else (False, None)
 
         except TimeoutError:
             _LOGGER.debug("HTTP check timeout for %s", base_url)
-            return False, None
         except aiohttp.ClientConnectorError as e:
             _LOGGER.debug("HTTP check connection error for %s: %s", base_url, e)
-            return False, None
         except Exception as e:
             _LOGGER.debug("HTTP check exception for %s: %s", base_url, e)
-            return False, None
+
+        return False, None
 
     def _update_stats(self, result: HealthCheckResult):
         """Update running statistics."""

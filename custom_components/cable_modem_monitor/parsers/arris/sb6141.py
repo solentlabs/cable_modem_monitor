@@ -54,11 +54,40 @@ class ArrisSB6141Parser(ModemParser):
         downstream_channels = self._parse_downstream(soup)
         upstream_channels = self._parse_upstream(soup)
 
+        system_info: dict = {}
+
+        # Detect "no signal" condition: table structure exists but no channel data
+        # This happens when modem is not connected to cable service
+        if not downstream_channels and not upstream_channels and self._has_table_structure(soup):
+            system_info["no_signal"] = True
+            _LOGGER.info("Modem has table structure but no signal data - likely no cable connection")
+
         return {
             "downstream": downstream_channels,
             "upstream": upstream_channels,
-            "system_info": {},
+            "system_info": system_info,
         }
+
+    def _has_table_structure(self, soup: BeautifulSoup) -> bool:
+        """Check if the HTML has the expected table structure for signal data.
+
+        Returns True if we find the characteristic table headers, indicating
+        the modem is serving a valid page but has no signal data.
+        """
+        # Look for characteristic ARRIS table labels
+        expected_labels = ["Channel ID", "Frequency", "Power Level"]
+        found_labels = 0
+
+        for table in soup.find_all("table"):
+            for row in table.find_all("tr"):
+                cells = row.find_all("td")
+                if cells:
+                    label = cells[0].text.strip()
+                    if label in expected_labels:
+                        found_labels += 1
+
+        # If we found at least 2 of the expected labels, structure is present
+        return found_labels >= 2
 
     @classmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:

@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import ssl
 from datetime import datetime, timedelta
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -27,7 +32,9 @@ from .const import (
     VERIFY_SSL,
     VERSION,
 )
+from .core.health_monitor import ModemHealthMonitor
 from .core.modem_scraper import ModemScraper
+from .parsers import get_parser_by_name, get_parsers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,9 +87,6 @@ def _select_parser(parsers: list, modem_choice: str):
 
 async def _create_health_monitor(hass: HomeAssistant):
     """Create health monitor with SSL context."""
-    import ssl
-
-    from .core.health_monitor import ModemHealthMonitor
 
     def create_ssl_context():
         """Create SSL context (runs in executor to avoid blocking)."""
@@ -164,8 +168,6 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
 
 async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
     """Perform initial data refresh based on entry state."""
-    from homeassistant.config_entries import ConfigEntryState
-
     if entry.state == ConfigEntryState.SETUP_IN_PROGRESS:
         await coordinator.async_config_entry_first_refresh()
     else:
@@ -175,8 +177,6 @@ async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
 
 def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
     """Update device registry with detected modem info."""
-    from homeassistant.helpers import device_registry as dr
-
     device_registry = dr.async_get(hass)
 
     device = device_registry.async_get_or_create(
@@ -202,8 +202,6 @@ def _create_clear_history_handler(hass: HomeAssistant):
 
     async def handle_clear_history(call: ServiceCall) -> None:
         """Handle the clear_history service call."""
-        from homeassistant.helpers import entity_registry as er
-
         days_to_keep = call.data.get("days_to_keep", 30)
         _LOGGER.info("Clearing cable modem history older than %s days", days_to_keep)
 
@@ -534,8 +532,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Optimization: Only do full parser discovery if needed
     if modem_choice and modem_choice != "auto":
         # User selected specific parser - load only that one (fast path)
-        from .parsers import get_parser_by_name
-
         parser_class = await hass.async_add_executor_job(get_parser_by_name, modem_choice)
         if parser_class:
             _LOGGER.info("Loaded specific parser: %s (skipped full discovery)", modem_choice)
@@ -544,15 +540,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             # Fallback to auto if parser not found
             _LOGGER.warning("Parser '%s' not found, falling back to auto discovery", modem_choice)
-            from .parsers import get_parsers
-
             parsers = await hass.async_add_executor_job(get_parsers)
             selected_parser = parsers
             parser_name_hint = entry.data.get(CONF_PARSER_NAME)
     else:
         # Auto mode - need all parsers for discovery
-        from .parsers import get_parsers
-
         parsers = await hass.async_add_executor_job(get_parsers)
         selected_parser = parsers
         parser_name_hint = entry.data.get(CONF_PARSER_NAME)

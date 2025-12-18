@@ -1009,6 +1009,20 @@ class ModemScraper:
         # This allows installation to succeed without showing dummy channel data
         if system_info.get("fallback_mode"):
             status = "limited"
+        elif system_info.get("no_signal"):
+            # Parser found valid page structure but no signal data
+            # This means modem is online but has no cable connection
+            status = "no_signal"
+            parser_name = self.parser.name if self.parser else "Unknown"
+            system_info["status_message"] = (
+                f"📡 No Cable Signal\n\n"
+                f"Connected to {parser_name}, but no signal data available.\n\n"
+                f"This is normal if:\n"
+                f"• Modem is not connected to cable service\n"
+                f"• Cable line is disconnected\n"
+                f"• Modem is still acquiring signal after power-on\n\n"
+                f"The modem's web interface is working correctly."
+            )
         elif not downstream and not upstream:
             # Known parser detected but extracted no channel data
             # This could happen if: modem in bridge mode, parser bug, HTML format changed

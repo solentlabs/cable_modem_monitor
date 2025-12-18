@@ -13,5 +13,5 @@
     "beautifulsoup4==4.12.2",
     "defusedxml==0.7.1"
   ],
-  "version": "3.10.1"
+  "version": "3.10.2"
 }
