@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.10.2] - 2025-12-18
+
+### CRITICAL HOTFIX
+
+⚠️ **v3.10.1 is broken** - A BFG history rewrite accidentally replaced `#` comment characters with `***REMOVED***` in the released code, causing SyntaxError on startup for all users.
+
 ### Fixed
+- **CRITICAL: SyntaxError on startup** - Fixed `***REMOVED***` corruption in source files caused by overly aggressive BFG history sanitization
+- **Blocking Import Warning** - Moved deferred imports to top-level to avoid `Detected blocking call to import_module` warnings on HA 2024.7+ (Issue #70)
+- **Health Monitor HTTP Fallback** - Improved exception handling when HEAD request fails, properly falls back to GET
 - **PII Sanitization** - Extended sanitizer to catch Motorola JavaScript password variables (`var CurrentPwAdmin = 'x'`) missed by v3.9.2 tagValueList fix
 - **Fixture PII** - Sanitized passwords, serial numbers, and email in 5 fixture files (MB7621, MB8611, CM600, XB7, SB6190)
+
+### Added
+- **No Signal Detection** - SB6141 parser now detects when modem is online but has no cable signal, showing "No Signal" status instead of misleading "Parser Issue"
 
 ## [3.10.1] - 2025-12-17
 

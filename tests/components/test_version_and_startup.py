@@ -135,8 +135,8 @@ class TestParserSelectionOptimization:
         mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
 
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.parsers.get_parsers") as mock_get_parsers,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
+            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
@@ -195,8 +195,8 @@ class TestParserSelectionOptimization:
         mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
 
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.parsers.get_parsers") as mock_get_parsers,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
+            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
@@ -252,8 +252,8 @@ class TestParserSelectionOptimization:
         mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
 
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.parsers.get_parsers") as mock_get_parsers,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
+            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
