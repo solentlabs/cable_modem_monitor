@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PII Sanitization** - Extended sanitizer to catch Motorola JavaScript password variables (`var CurrentPwAdmin = 'x'`) missed by v3.9.2 tagValueList fix
+- **Fixture PII** - Sanitized passwords, serial numbers, and email in 5 fixture files (MB7621, MB8611, CM600, XB7, SB6190)
+
 ## [3.10.1] - 2025-12-17
 
 ### Highlights
