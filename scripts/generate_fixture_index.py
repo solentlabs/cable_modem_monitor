@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate a fixture index from multiple sources.
+"""Generate a fixture index and attribution from multiple sources.
 
 Data sources (in priority order):
-1. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps
+1. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps, attribution
 2. Parser classes - verified status, manufacturer
 3. README.md - model name, contributor (fallback only)
 
@@ -10,6 +10,10 @@ This separation allows:
 - Contributors to focus on parser code, not research
 - Maintainers to backfill metadata independently
 - No merge conflicts (each modem has its own files)
+
+Outputs:
+- tests/parsers/FIXTURES.md - Modem fixture library index
+- docs/ATTRIBUTION.md - Auto-generated attribution section (partial update)
 
 Usage:
     python scripts/generate_fixture_index.py
@@ -407,6 +411,10 @@ def load_fixture_metadata(fixture_dir: Path) -> dict:
 README_START_MARKER = "<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->"
 README_END_MARKER = "<!-- END AUTO-GENERATED -->"
 
+# Markers for auto-generated ATTRIBUTION section
+ATTRIBUTION_START_MARKER = "<!-- AUTO-GENERATED FROM fixtures - DO NOT EDIT BELOW -->"
+ATTRIBUTION_END_MARKER = "<!-- END AUTO-GENERATED ATTRIBUTION -->"
+
 
 def generate_quick_facts(metadata: dict, parser_info: dict | None) -> str:
     """Generate Quick Facts markdown table from metadata.
@@ -490,6 +498,185 @@ def update_readme_quick_facts(fixture_dir: Path, metadata: dict, parser_info: di
     return False
 
 
+def collect_attribution_data(parsers_dir: Path) -> dict:
+    """Collect attribution data from all fixture metadata.yaml files.
+
+    Returns:
+        Dict with 'data_contributors' and 'external_references' lists
+    """
+    data_contributors: list[dict] = []
+    external_references: list[dict] = []
+
+    for fixture_dir in sorted(parsers_dir.glob("*/fixtures/*/")):
+        metadata = load_fixture_metadata(fixture_dir)
+        if not metadata:
+            continue
+
+        attribution = metadata.get("attribution", {})
+        if not attribution:
+            continue
+
+        model = fixture_dir.name.upper()
+        manufacturer = fixture_dir.parent.parent.name.capitalize()
+        if manufacturer.lower() == "arris":
+            manufacturer = "ARRIS"
+
+        # Collect data contributors (supports both old and new formats)
+        # Old format: data_contributor: "@username" (string)
+        # New format: data_contributors: [{username: "@username", issue: 4, contribution: "..."}]
+        contributors_list = attribution.get("data_contributors", [])
+        if contributors_list:
+            # New format: array of contributor objects
+            for c in contributors_list:
+                data_contributors.append(
+                    {
+                        "username": c.get("username", ""),
+                        "modem": f"{manufacturer} {model}",
+                        "issue": c.get("issue") or metadata.get("captured_from_issue"),
+                        "contribution": c.get("contribution", ""),
+                    }
+                )
+        else:
+            # Old format: single string
+            contributor = attribution.get("data_contributor")
+            if contributor:
+                issue = metadata.get("captured_from_issue")
+                data_contributors.append(
+                    {
+                        "username": contributor,
+                        "modem": f"{manufacturer} {model}",
+                        "issue": issue,
+                    }
+                )
+
+        # Collect external references
+        refs = attribution.get("external_references", [])
+        for ref in refs:
+            external_references.append(
+                {
+                    "name": ref.get("name", ""),
+                    "url": ref.get("url", ""),
+                    "contribution": ref.get("contribution", ""),
+                    "modem": f"{manufacturer} {model}",
+                }
+            )
+
+    return {
+        "data_contributors": data_contributors,
+        "external_references": external_references,
+    }
+
+
+def generate_attribution_section(attribution_data: dict) -> str:
+    """Generate the auto-generated attribution markdown section.
+
+    Args:
+        attribution_data: Dict from collect_attribution_data()
+
+    Returns:
+        Markdown string with attribution tables
+    """
+    lines = [ATTRIBUTION_START_MARKER, ""]
+
+    # Data Contributors section
+    contributors = attribution_data.get("data_contributors", [])
+    if contributors:
+        lines.extend(
+            [
+                "### Data Contributors (Auto-Generated)",
+                "",
+                "Users who provided modem captures for parser development:",
+                "",
+                "| Contributor | Modem | Contribution | Issue |",
+                "|-------------|-------|--------------|-------|",
+            ]
+        )
+        for c in contributors:
+            issue_link = (
+                f"[#{c['issue']}](https://github.com/solentlabs/cable_modem_monitor/issues/{c['issue']})"
+                if c.get("issue")
+                else "—"
+            )
+            contribution = c.get("contribution", "Data capture")
+            lines.append(f"| {c['username']} | {c['modem']} | {contribution} | {issue_link} |")
+        lines.append("")
+
+    # External References section
+    refs = attribution_data.get("external_references", [])
+    if refs:
+        lines.extend(
+            [
+                "### External References (Auto-Generated)",
+                "",
+                "Open source projects that informed our parser implementations:",
+                "",
+                "| Project | Used For | Contribution |",
+                "|---------|----------|--------------|",
+            ]
+        )
+        for r in refs:
+            project_link = f"[{r['name']}]({r['url']})" if r.get("url") else r.get("name", "")
+            lines.append(f"| {project_link} | {r['modem']} | {r['contribution']} |")
+        lines.append("")
+
+    if not contributors and not refs:
+        lines.extend(
+            [
+                "_No fixture-specific attribution data found._",
+                "",
+                "_Add attribution to fixture `metadata.yaml` files to populate this section._",
+                "",
+            ]
+        )
+
+    lines.append(ATTRIBUTION_END_MARKER)
+    return "\n".join(lines)
+
+
+def update_attribution_file(attribution_data: dict) -> bool:
+    """Update ATTRIBUTION.md with auto-generated section.
+
+    Args:
+        attribution_data: Dict from collect_attribution_data()
+
+    Returns:
+        True if file was updated, False otherwise
+    """
+    attribution_path = repo_root / "docs" / "ATTRIBUTION.md"
+    if not attribution_path.exists():
+        print(f"Warning: {attribution_path} not found")
+        return False
+
+    content = attribution_path.read_text()
+    new_section = generate_attribution_section(attribution_data)
+
+    # Check if markers exist
+    if ATTRIBUTION_START_MARKER in content and ATTRIBUTION_END_MARKER in content:
+        # Replace existing section
+        pattern = re.compile(
+            re.escape(ATTRIBUTION_START_MARKER) + r".*?" + re.escape(ATTRIBUTION_END_MARKER),
+            re.DOTALL,
+        )
+        new_content = pattern.sub(new_section, content)
+    else:
+        # Insert before "---\n\n## Dependencies" section
+        insert_point = content.find("---\n\n## Dependencies")
+        if insert_point != -1:
+            new_content = content[:insert_point] + new_section + "\n\n" + content[insert_point:]
+        else:
+            # Fallback: append before final ---
+            last_divider = content.rfind("\n---\n")
+            if last_divider != -1:
+                new_content = content[:last_divider] + "\n\n" + new_section + content[last_divider:]
+            else:
+                new_content = content + "\n\n" + new_section
+
+    if new_content != content:
+        attribution_path.write_text(new_content)
+        return True
+    return False
+
+
 def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: dict) -> None:
     """Apply metadata.yaml fields to info dict (mutates info in place)."""
     if metadata.get("release_date"):
@@ -509,6 +696,8 @@ def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: 
         info["status"] = metadata["status"]
     if metadata.get("tracking_issue"):
         info["tracking_issue"] = metadata["tracking_issue"]
+    if metadata.get("source_code"):
+        info["source_code"] = metadata["source_code"]
 
 
 def extract_fixture_info(
@@ -660,12 +849,64 @@ def _format_status_summary(modems: list[dict]) -> str:
     return f" ({', '.join(status_parts)})" if status_parts else ""
 
 
-def generate_index(output_path: Path | None = None, update_readmes: bool = True) -> str:
-    """Generate the fixture index markdown and optionally update READMEs.
+_STATUS_ICONS = {
+    "verified": "✅ Verified",
+    "in_progress": "🔧 In Progress",
+    "awaiting_verification": "⏳ Awaiting",
+    "broken": "❌ Broken",
+    "deprecated": "⊘ Deprecated",
+}
+
+
+def _format_modem_table_row(m: dict) -> str:
+    """Format a single modem as a markdown table row."""
+    status = str(m.get("status", ""))
+    status_display = _STATUS_ICONS.get(status, "❓ Unknown")
+
+    isps_raw: str | int | bool | list[str] | None = m.get("isps", [])
+    isps_list: list[str] | str = isps_raw if isinstance(isps_raw, list | str) else []
+    isps_badges = isps_to_badges(isps_list)
+
+    # Get protocol and chipset, with sensible defaults
+    protocol_raw = str(m.get("protocol", "HTML") or "HTML")
+    if protocol_raw == "HTML":
+        protocol = '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
+    elif protocol_raw == "HNAP":
+        protocol = "**HNAP**"
+    else:
+        protocol = protocol_raw
+    chipset = str(m.get("chipset", "") or "")
+    chipset_linked = chipset_to_link(chipset)
+
+    # Add source code icon if available
+    model_link = f"[{m.get('model', '')}]({m['path']}/README.md)"
+    source_code = m.get("source_code")
+    if source_code:
+        model_link += f' [📦]({source_code} "GPL source code")'
+
+    return (
+        f"| {m.get('manufacturer', '')} | "
+        f"{model_link} | "
+        f"{m.get('docsis', '')} | "
+        f"{protocol} | "
+        f"{chipset_linked} | "
+        f"{isps_badges} | "
+        f"{m.get('file_count', 0)} | "
+        f"{status_display} |"
+    )
+
+
+def generate_index(
+    output_path: Path | None = None,
+    update_readmes: bool = True,
+    update_attribution: bool = True,
+) -> str:
+    """Generate the fixture index markdown and optionally update READMEs and ATTRIBUTION.md.
 
     Args:
         output_path: Path to write FIXTURES.md (None for no write)
         update_readmes: If True, update Quick Facts in each README.md
+        update_attribution: If True, update auto-generated section in ATTRIBUTION.md
     """
     parsers_dir = repo_root / "tests" / "parsers"
 
@@ -690,6 +931,12 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
 
     if update_readmes and readmes_updated > 0:
         print(f"Updated {readmes_updated} README files with Quick Facts")
+
+    # Update ATTRIBUTION.md with auto-generated section
+    if update_attribution:
+        attribution_data = collect_attribution_data(parsers_dir)
+        if update_attribution_file(attribution_data):
+            print("Updated docs/ATTRIBUTION.md with fixture attribution")
 
     status_summary = _format_status_summary(modems)
 
@@ -725,44 +972,8 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "|--------------|-------|--------|----------|---------|------|-------|--------|",
     ]
 
-    status_icons = {
-        "verified": "✅ Verified",
-        "in_progress": "🔧 In Progress",
-        "awaiting_verification": "⏳ Awaiting",
-        "broken": "❌ Broken",
-        "deprecated": "⊘ Deprecated",
-    }
-
     for m in modems:
-        status = str(m.get("status", ""))
-        status_display = status_icons.get(status, "❓ Unknown")
-
-        isps_raw: str | int | bool | list[str] | None = m.get("isps", [])
-        isps_list: list[str] | str = isps_raw if isinstance(isps_raw, list | str) else []
-        isps_badges = isps_to_badges(isps_list)
-
-        # Get protocol and chipset, with sensible defaults
-        protocol_raw = str(m.get("protocol", "HTML") or "HTML")
-        # HTML gets official orange badge, HNAP stays bold black (no official branding)
-        if protocol_raw == "HTML":
-            protocol = '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
-        elif protocol_raw == "HNAP":
-            protocol = "**HNAP**"
-        else:
-            protocol = protocol_raw
-        chipset = str(m.get("chipset", "") or "")
-        chipset_linked = chipset_to_link(chipset)
-
-        lines.append(
-            f"| {m.get('manufacturer', '')} | "
-            f"[{m.get('model', '')}]({m['path']}/README.md) | "
-            f"{m.get('docsis', '')} | "
-            f"{protocol} | "
-            f"{chipset_linked} | "
-            f"{isps_badges} | "
-            f"{m.get('file_count', 0)} | "
-            f"{status_display} |"
-        )
+        lines.append(_format_modem_table_row(m))
 
     lines.extend(["", "## Model Timeline", ""])
     lines.extend(generate_timeline(modems))
@@ -777,6 +988,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "- **Protocol**: ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping |"
             " **[HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)** ="
             " [SOAP](https://www.w3.org/TR/soap/)-based, requires auth",
+            "- **📦**: GPL source code available (firmware uses open source components)",
             "",
         ]
     )

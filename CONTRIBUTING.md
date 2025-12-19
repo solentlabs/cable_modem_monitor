@@ -489,6 +489,98 @@ Each release includes:
 - Publishing others' private information
 - Unprofessional conduct
 
+## Attribution Policy
+
+We believe in giving credit where credit is due. This section outlines how we acknowledge contributions.
+
+### Data Contributors
+
+Users who provide modem captures for new parser development are acknowledged in:
+
+| Location | What's Credited |
+|----------|-----------------|
+| Fixture README | Name, modem model, capture date |
+| Parser `verification_source` | Issue link after user confirms working |
+| Release notes | When parser ships |
+
+### External Code & Inspiration
+
+When we reference external implementations to understand modem protocols or authentication:
+
+1. **Document the source** in the parser docstring:
+   ```python
+   """
+   Motorola MB8611 parser for Cable Modem Monitor.
+
+   Auth implementation informed by:
+   - BowlesCR/MB8600_Login: https://github.com/BowlesCR/MB8600_Login
+
+   See ATTRIBUTION.md for full credits.
+   """
+   ```
+
+2. **Add to ATTRIBUTION.md** with:
+   - Project name and author
+   - Repository URL
+   - What we learned from it
+   - License acknowledgment
+
+3. **We learn from, not copy** - External references inform our approach, but we implement in our own architecture with proper attribution.
+
+### AI-Assisted Development
+
+When using AI tools during development, additional care is needed for attribution:
+
+1. **Review all attributions before committing** - AI may add plausible-sounding citations that weren't actually referenced during development.
+
+2. **Verify you can answer "how did we use this?"** - If you can't explain the specific influence, use softer framing instead of claiming direct learning.
+
+3. **Data contributors are verifiable** - Issue numbers, forum posts, and HAR captures can be traced. External code references added by AI may not be.
+
+#### Honest Framing Levels
+
+| Framing | Use When | Example |
+|---------|----------|---------|
+| "Based on" / "Informed by" | You directly studied their code or docs | BowlesCR's HMAC-MD5 auth flow |
+| "Field definitions from" | You verified specific details came from them | Tatsh's StatusSoftwareSfVer fields |
+| "Related prior art" | Similar work exists, can't verify direct influence | Projects doing similar modem monitoring |
+
+#### When In Doubt
+
+- **Don't remove existing attribution** - Removing credit looks worse than over-crediting
+- **Soften the language** - Change "Based on" to "Related prior art"
+- **Document the uncertainty** - Note in your tracker that influence couldn't be verified
+
+### Testers & Validators
+
+Users who test pre-release parsers and confirm functionality:
+
+| Contribution | Acknowledgment |
+|--------------|----------------|
+| Confirms parser works | Parser marked "Verified", issue closed with thanks |
+| Reports bugs during testing | Credited in fix commit |
+| Provides additional captures | Added to fixture README |
+
+### Our Commitment
+
+- ✅ Credit external research and code references
+- ✅ Acknowledge all data contributors
+- ✅ Thank testers who validate our work
+- ✅ Respect open source licenses
+- ✅ Reach out to original authors when heavily referencing their work
+
+### If We Missed You
+
+If we've used your work without proper attribution or forgot to credit your contribution:
+
+1. We apologize - it was unintentional
+2. Please [open an issue](https://github.com/solentlabs/cable_modem_monitor/issues) or contact us
+3. We'll add proper attribution immediately
+
+See [ATTRIBUTION.md](./docs/ATTRIBUTION.md) for the full list of credits.
+
+---
+
 ## Questions?
 
 - 💬 Open a [GitHub Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions)

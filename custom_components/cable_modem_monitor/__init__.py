@@ -107,6 +107,7 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
     {
         vol.Optional("include_downstream_power", default=True): cv.boolean,
         vol.Optional("include_downstream_snr", default=True): cv.boolean,
+        vol.Optional("include_downstream_frequency", default=True): cv.boolean,
         vol.Optional("include_upstream_power", default=True): cv.boolean,
         vol.Optional("include_upstream_frequency", default=False): cv.boolean,
         vol.Optional("include_errors", default=True): cv.boolean,
@@ -295,6 +296,7 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
         return {
             "ds_power": "DS Power (dBmV)",
             "ds_snr": "DS SNR (dB)",
+            "ds_freq": "DS Frequency (MHz)",
             "us_power": "US Power (dBmV)",
             "us_freq": "US Frequency (MHz)",
             "corrected": "Corrected Errors",
@@ -303,6 +305,7 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     return {
         "ds_power": "Downstream Power Levels (dBmV)",
         "ds_snr": "Downstream Signal-to-Noise Ratio (dB)",
+        "ds_freq": "Downstream Frequency (MHz)",
         "us_power": "Upstream Power Levels (dBmV)",
         "us_freq": "Upstream Frequency (MHz)",
         "corrected": "Corrected Errors (Total)",
@@ -556,6 +559,7 @@ def _create_generate_dashboard_handler(hass: HomeAssistant):
         opts = {
             "ds_power": call.data.get("include_downstream_power", True),
             "ds_snr": call.data.get("include_downstream_snr", True),
+            "ds_freq": call.data.get("include_downstream_frequency", True),
             "us_power": call.data.get("include_upstream_power", True),
             "us_freq": call.data.get("include_upstream_frequency", False),
             "errors": call.data.get("include_errors", True),
@@ -587,53 +591,27 @@ def _create_generate_dashboard_handler(hass: HomeAssistant):
         if opts["status"]:
             yaml_parts.extend(_build_status_card_yaml())
 
-        if opts["ds_power"]:
-            _add_channel_graphs(
-                yaml_parts,
-                downstream_info,
-                titles["ds_power"],
-                "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power",
-                graph_hours,
-                channel_label,
-                channel_grouping,
-                short_titles,
-            )
+        # Channel graph configurations: (opt_key, channel_info, title_key, entity_pattern)
+        channel_graphs = [
+            ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
+            ("ds_snr", downstream_info, "ds_snr", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
+            ("ds_freq", downstream_info, "ds_freq", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
+            ("us_power", upstream_info, "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
+            ("us_freq", upstream_info, "us_freq", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
+        ]
 
-        if opts["ds_snr"]:
-            _add_channel_graphs(
-                yaml_parts,
-                downstream_info,
-                titles["ds_snr"],
-                "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr",
-                graph_hours,
-                channel_label,
-                channel_grouping,
-                short_titles,
-            )
-
-        if opts["us_power"]:
-            _add_channel_graphs(
-                yaml_parts,
-                upstream_info,
-                titles["us_power"],
-                "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power",
-                graph_hours,
-                channel_label,
-                channel_grouping,
-                short_titles,
-            )
-
-        if opts["us_freq"]:
-            _add_channel_graphs(
-                yaml_parts,
-                upstream_info,
-                titles["us_freq"],
-                "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency",
-                graph_hours,
-                channel_label,
-                channel_grouping,
-                short_titles,
-            )
+        for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
+            if opts[opt_key]:
+                _add_channel_graphs(
+                    yaml_parts,
+                    ch_info,
+                    titles[title_key],
+                    entity_pattern,
+                    graph_hours,
+                    channel_label,
+                    channel_grouping,
+                    short_titles,
+                )
 
         if opts["errors"]:
             yaml_parts.extend(_build_error_graphs_yaml(titles))

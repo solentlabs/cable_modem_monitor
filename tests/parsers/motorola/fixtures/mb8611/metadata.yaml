@@ -11,3 +11,28 @@ isps:
   - Cox
   - Spectrum
 source: https://www.motorola.com/us/mb8611/p
+source_code: https://help.motorolanetwork.com/kb/general/gpl-code-center # MB8611 v8611-19.2.18 (414 MB)
+
+# Fixture capture info
+firmware_tested: "8611-19.2.18"
+captured_from_issue: 4
+
+# Attribution
+attribution:
+  data_contributors:
+    - username: "@dlindnegm"
+      issue: 4
+      contribution: "Original HTML page captures"
+    - username: "@cvonk"
+      issue: 6
+      contribution: "HAR captures, debug logs, iterative testing"
+  external_references:
+    - name: "BowlesCR/MB8600_Login"
+      url: "https://github.com/BowlesCR/MB8600_Login"
+      contribution: "HNAP HMAC-MD5 challenge-response authentication"
+    - name: "Tatsh/mb8611"
+      url: "https://github.com/Tatsh/mb8611"
+      contribution: "HNAP action names and response field definitions (StatusSoftwareSfVer, etc.)"
+    - name: "xNinjaKittyx/mb8600"
+      url: "https://github.com/xNinjaKittyx/mb8600"
+      contribution: "Protocol reference and prior art for understanding HNAP flow"

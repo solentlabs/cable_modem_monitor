@@ -539,3 +539,196 @@ class TestFallbackParserDetection:
         # When both parsers are available, detection logic should try Motorola first
         # because it's excluded from phases 1-3 by manufacturer check
         # This test verifies the parsers themselves work correctly
+
+
+class TestLogoutAfterPoll:
+    """Tests for session cleanup after polling."""
+
+    def test_perform_logout_calls_endpoint_when_defined(self, mocker):
+        """Test that _perform_logout calls the logout endpoint when parser defines it."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser with logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = "/Logout.htm"
+        scraper.parser = mock_parser
+
+        # Mock session.get
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper._perform_logout()
+
+        # Should have called the logout endpoint
+        mock_get.assert_called_once_with("http://192.168.100.1/Logout.htm", timeout=5)
+
+    def test_perform_logout_skips_when_no_endpoint(self, mocker):
+        """Test that _perform_logout does nothing when parser has no logout_endpoint."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser without logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = None
+        scraper.parser = mock_parser
+
+        # Mock session.get
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper._perform_logout()
+
+        # Should not have called anything
+        mock_get.assert_not_called()
+
+    def test_perform_logout_skips_when_no_parser(self, mocker):
+        """Test that _perform_logout does nothing when no parser is set."""
+        scraper = ModemScraper("http://192.168.100.1")
+        scraper.parser = None
+
+        # Mock session.get
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper._perform_logout()
+
+        # Should not have called anything
+        mock_get.assert_not_called()
+
+    def test_perform_logout_handles_request_failure(self, mocker):
+        """Test that _perform_logout gracefully handles request failures."""
+        import requests
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser with logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = "/Logout.htm"
+        scraper.parser = mock_parser
+
+        # Mock session.get to raise an exception
+        mocker.patch.object(
+            scraper.session, "get", side_effect=requests.exceptions.ConnectionError("Connection refused")
+        )
+
+        # Should not raise - logout failure is non-critical
+        scraper._perform_logout()
+
+    def test_get_modem_data_calls_logout_in_finally(self, mocker):
+        """Test that get_modem_data calls _perform_logout even on success."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser with logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = "/Logout.htm"
+        mock_parser.parse.return_value = {
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
+        }
+        scraper.parser = mock_parser
+
+        # Mock _fetch_data
+        mocker.patch.object(scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", None))
+        mocker.patch.object(scraper, "_handle_login_result", return_value="<html></html>")
+
+        # Mock session.get to track logout call
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper.get_modem_data()
+
+        # Should have called logout endpoint
+        mock_get.assert_called_with("http://192.168.100.1/Logout.htm", timeout=5)
+
+    def test_get_modem_data_calls_logout_on_error(self, mocker):
+        """Test that get_modem_data calls _perform_logout even on error."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser with logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = "/Logout.htm"
+        scraper.parser = mock_parser
+
+        # Mock _fetch_data to return None (error case)
+        mocker.patch.object(scraper, "_fetch_data", return_value=None)
+
+        # Mock session.get to track logout call
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper.get_modem_data()
+
+        # Should still have called logout endpoint (in finally block)
+        mock_get.assert_called_with("http://192.168.100.1/Logout.htm", timeout=5)
+
+    def test_get_detection_info_includes_logout_endpoint(self, mocker):
+        """Test that get_detection_info exposes logout_endpoint from parser."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser with logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test Modem"
+        mock_parser.manufacturer = "Test"
+        mock_parser.release_date = "2020"
+        mock_parser.docsis_version = "3.1"
+        mock_parser.fixtures_path = None
+        mock_parser.verified = True
+        mock_parser.supports_icmp = True
+        mock_parser.logout_endpoint = "/Logout.htm"
+        scraper.parser = mock_parser
+        scraper.last_successful_url = "http://192.168.100.1"
+
+        info = scraper.get_detection_info()
+
+        assert info["logout_endpoint"] == "/Logout.htm"
+
+    def test_get_detection_info_logout_endpoint_none_when_not_set(self, mocker):
+        """Test that get_detection_info returns None for logout_endpoint when not set."""
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser without logout_endpoint
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test Modem"
+        mock_parser.manufacturer = "Test"
+        mock_parser.release_date = None
+        mock_parser.docsis_version = None
+        mock_parser.fixtures_path = None
+        mock_parser.verified = False
+        mock_parser.supports_icmp = True
+        mock_parser.logout_endpoint = None
+        scraper.parser = mock_parser
+        scraper.last_successful_url = "http://192.168.100.1"
+
+        info = scraper.get_detection_info()
+
+        assert info["logout_endpoint"] is None
+
+    def test_perform_logout_with_https_url(self, mocker):
+        """Test that _perform_logout works with HTTPS base URL."""
+        scraper = ModemScraper("https://192.168.100.1")
+
+        mock_parser = mocker.Mock()
+        mock_parser.logout_endpoint = "/Logout.htm"
+        scraper.parser = mock_parser
+
+        mock_get = mocker.patch.object(scraper.session, "get")
+
+        scraper._perform_logout()
+
+        mock_get.assert_called_once_with("https://192.168.100.1/Logout.htm", timeout=5)
+
+    def test_perform_logout_with_different_endpoint_formats(self, mocker):
+        """Test that _perform_logout works with various endpoint formats."""
+        test_cases = [
+            ("/Logout.htm", "http://192.168.100.1/Logout.htm"),
+            ("/Logout.asp", "http://192.168.100.1/Logout.asp"),
+            ("/Logout.html", "http://192.168.100.1/Logout.html"),
+            ("/cgi-bin/logout", "http://192.168.100.1/cgi-bin/logout"),
+        ]
+
+        for endpoint, expected_url in test_cases:
+            scraper = ModemScraper("http://192.168.100.1")
+
+            mock_parser = mocker.Mock()
+            mock_parser.logout_endpoint = endpoint
+            scraper.parser = mock_parser
+
+            mock_get = mocker.patch.object(scraper.session, "get")
+
+            scraper._perform_logout()
+
+            mock_get.assert_called_once_with(expected_url, timeout=5)

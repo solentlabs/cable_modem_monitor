@@ -942,6 +942,9 @@ class ModemScraper:
             _LOGGER.error("Error fetching modem data: %s", e)
             return self._create_error_response("unreachable")
         finally:
+            # End session for single-session modems (before restoring original session)
+            self._perform_logout()
+
             # Restore original session if we replaced it
             if original_session is not None:
                 self.session = original_session
@@ -950,6 +953,28 @@ class ModemScraper:
     def _create_error_response(self, status: str) -> dict:
         """Create error response dictionary."""
         return {"cable_modem_connection_status": status, "cable_modem_downstream": [], "cable_modem_upstream": []}
+
+    def _perform_logout(self) -> None:
+        """End session for modems that only support one authenticated session.
+
+        Some modems (e.g., Netgear C7000v2) only allow one authenticated session
+        at a time. If the integration holds the session, users can't access the
+        modem's web interface. Calling the logout endpoint frees the session.
+        """
+        if not self.parser:
+            return
+
+        logout_endpoint = getattr(self.parser, "logout_endpoint", None)
+        if not logout_endpoint:
+            return
+
+        try:
+            logout_url = f"{self.base_url}{logout_endpoint}"
+            self.session.get(logout_url, timeout=5)
+            _LOGGER.debug("Session ended via %s", logout_endpoint)
+        except Exception as e:
+            # Don't fail the poll if logout fails - it's just cleanup
+            _LOGGER.debug("Logout request failed (non-critical): %s", e)
 
     def _ensure_parser(self, html: str, successful_url: str, suggested_parser: type[ModemParser] | None) -> bool:
         """Ensure parser is detected or instantiated.
