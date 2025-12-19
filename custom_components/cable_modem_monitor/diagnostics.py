@@ -399,6 +399,7 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "total_corrected_errors": data.get("cable_modem_total_corrected", 0),
             "total_uncorrected_errors": data.get("cable_modem_total_uncorrected", 0),
             "software_version": data.get("cable_modem_software_version", "Unknown"),
+            "model_name": data.get("cable_modem_model_name"),
             "system_uptime": data.get("cable_modem_system_uptime", "Unknown"),
             "health_status": data.get("health_status", "not_available"),
             "health_diagnosis": data.get("health_diagnosis", ""),

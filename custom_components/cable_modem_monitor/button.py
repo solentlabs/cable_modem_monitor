@@ -14,7 +14,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import CONF_HOST, DOMAIN
+from .const import CONF_ACTUAL_MODEL, CONF_DETECTED_MODEM, CONF_HOST, DOMAIN
 from .core.modem_scraper import ModemScraper
 from .parsers import get_parser_by_name, get_parsers
 
@@ -31,15 +31,18 @@ class ModemButtonBase(CoordinatorEntity, ButtonEntity):
         super().__init__(coordinator)
         self._entry = entry
 
-        # Get detected modem info from config entry, with fallback to generic values
+        # Get modem info from config entry
+        # NOTE: Device name is kept as "Cable Modem" for entity ID stability.
+        # With has_entity_name=True, entity IDs are generated from device name.
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
-        model = entry.data.get("detected_modem", "Cable Modem Monitor")
+        actual_model = entry.data.get(CONF_ACTUAL_MODEL)
+        detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "Cable Modem",
             "manufacturer": manufacturer,
-            "model": model,
+            "model": actual_model or detected_modem,
             "configuration_url": f"http://{entry.data[CONF_HOST]}",
         }
 

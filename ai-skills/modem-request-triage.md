@@ -583,8 +583,11 @@ Steps that could be scripted to speed up the workflow:
 After parser is verified and issue closed:
 
 ```bash
-# Remove raw user data (may contain PII)
-rm -rf RAW_DATA/{MODEL}/
+# Move to Closed folder for reference (keeps issue history intact)
+mv RAW_DATA/{version}/{modem-folder}/ RAW_DATA/Closed/
 ```
 
-RAW_DATA is gitignored and should not be committed. Delete after parser is stable to avoid PII accumulation.
+RAW_DATA is gitignored and should not be committed. Move completed items to `Closed/` subfolder to:
+- Preserve issue history and user submissions for future reference
+- Keep active work separate from completed work
+- Maintain audit trail of what data was used to build each parser

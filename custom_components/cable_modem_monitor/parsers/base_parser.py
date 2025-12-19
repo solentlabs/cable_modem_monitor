@@ -207,6 +207,33 @@ class ModemParser(ABC):
         return metadata
 
     @classmethod
+    def get_actual_model(cls, data: dict) -> str | None:
+        """Extract actual model name from parsed modem data.
+
+        This returns the real model name as reported by the modem itself,
+        which may differ from the parser name. For example:
+        - Parser: "Netgear C3700"
+        - Actual: "C3700-100NAS"
+
+        Parsers should store the model in system_info["model_name"].
+
+        Args:
+            data: Parsed modem data dictionary (raw or prefixed format)
+
+        Returns:
+            Actual model name, or None if not available
+        """
+        # Check raw format first (system_info nested dict)
+        system_info = data.get("system_info", {})
+        model = system_info.get("model_name") or system_info.get("model")
+        if model:
+            return str(model)
+
+        # Check prefixed format (from scraper's _build_response)
+        prefixed = data.get("cable_modem_model_name")
+        return str(prefixed) if prefixed else None
+
+    @classmethod
     @abstractmethod
     def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
         """

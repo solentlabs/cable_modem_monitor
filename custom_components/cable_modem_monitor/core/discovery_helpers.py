@@ -118,7 +118,8 @@ class ParserHeuristics:
                 url = f"{base_url}{pattern['path']}"
                 try:
                     _LOGGER.debug("Trying anonymous access to %s for parser %s", url, parser_class.name)
-                    response = session.get(url, timeout=5, verify=verify_ssl)
+                    # Short timeout - local modems should respond quickly
+                    response = session.get(url, timeout=2, verify=verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.info("Anonymous access successful to %s (%s bytes)", url, len(response.text))

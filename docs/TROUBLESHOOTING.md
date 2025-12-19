@@ -4,6 +4,7 @@ Common issues and solutions for Cable Modem Monitor integration.
 
 ## Table of Contents
 - [Connection and Authentication Issues](#connection-and-authentication-issues)
+  - [Combo Modem/Routers (Two IP Addresses)](#5-combo-modemrouters-two-ip-addresses)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
 - [Duplicate Entities](#duplicate-entities)
@@ -99,7 +100,44 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
    - Windows: `ipconfig | findstr "Default Gateway"`
    - Linux/Mac: `ip route | grep default`
 
-#### 5. ISP Disabled Web Interface
+#### 5. Combo Modem/Routers (Two IP Addresses)
+
+**Symptoms:**
+- Health status shows `icmp_blocked` but modem works
+- One IP address works, another doesn't
+- Slow response on one IP, fast on another
+
+**What's Happening:**
+
+Combo modem/router devices (like Netgear C3700, C7000, Arris TG series) have **two network interfaces** in one box:
+
+```
+[Cable ISP] ←→ [Cable Modem Chip] ←→ [Router Chip] ←→ [Your Devices]
+                192.168.100.1          192.168.0.1
+```
+
+| Interface | Typical IP | Purpose | ICMP Ping |
+|-----------|------------|---------|-----------|
+| Cable Modem | 192.168.100.1 | DOCSIS management | Often blocked |
+| Router LAN | 192.168.0.1 | Gateway for devices | Usually works |
+
+**Why ICMP is blocked on one:**
+- The modem interface (192.168.100.1) has stricter firewall rules
+- ISPs often require blocking ICMP on the "upstream" interface for security
+- The router interface (192.168.0.1) is the trusted LAN side
+
+**Solution:**
+
+If you see `icmp_blocked` status:
+1. **Try the other IP address** - If using 192.168.100.1, try 192.168.0.1 (or vice versa)
+2. **Check your gateway** - `ip route | grep default` shows your router's LAN IP
+3. **Both IPs may work** - Choose based on preference:
+   - Modem IP (192.168.100.1): Faster response, but `icmp_blocked` health status
+   - Router IP (192.168.0.1): Full health status, but separate auth session
+
+**Note:** This only applies to combo modem/router devices. Standalone modems (like Arris SB8200, Netgear CM2000) only have one interface.
+
+#### 6. ISP Disabled Web Interface
 
 **Symptoms:**
 - Cannot access modem web interface from ANY device
@@ -362,17 +400,41 @@ If you encounter issues not covered here:
 
 ## Quick Reference
 
-### Correct Entity ID Format (v2.0+)
+### Entity ID Format (v3.11+)
+
+Channel sensors now include channel type for DOCSIS 3.1 compatibility:
 
 | Sensor Type | Entity ID | Display Name |
 |------------|-----------|--------------|
-| Downstream Power | `sensor.cable_modem_downstream_ch_1_power` | DS Ch 1 Power |
-| Downstream SNR | `sensor.cable_modem_downstream_ch_1_snr` | DS Ch 1 SNR |
-| Upstream Power | `sensor.cable_modem_upstream_ch_1_power` | US Ch 1 Power |
-| Upstream Frequency | `sensor.cable_modem_upstream_ch_1_frequency` | US Ch 1 Frequency |
+| Downstream QAM Power | `sensor.cable_modem_ds_qam_ch_32_power` | DS QAM Ch 32 Power |
+| Downstream OFDM Power | `sensor.cable_modem_ds_ofdm_ch_1_power` | DS OFDM Ch 1 Power |
+| Downstream SNR | `sensor.cable_modem_ds_qam_ch_32_snr` | DS QAM Ch 32 SNR |
+| Upstream ATDMA Power | `sensor.cable_modem_us_atdma_ch_3_power` | US ATDMA Ch 3 Power |
+| Upstream OFDMA Power | `sensor.cable_modem_us_ofdma_ch_1_power` | US OFDMA Ch 1 Power |
 | Channel Count | `sensor.cable_modem_downstream_channel_count` | DS Channel Count |
 
 **Note:**
 - Entity IDs always include `cable_modem_` prefix
-- Display names use DS/US abbreviations (industry standard)
+- Channel type is included: `qam`, `ofdm`, `atdma`, `ofdma`
 - DS = Downstream, US = Upstream
+
+### DOCSIS Channel Types
+
+Cable modems use different modulation schemes based on DOCSIS version:
+
+| Channel Type | Direction | DOCSIS | Description | Spec Reference |
+|-------------|-----------|--------|-------------|----------------|
+| **QAM** | Downstream | 3.0/3.1 | [Quadrature Amplitude Modulation](https://en.wikipedia.org/wiki/QAM_(television)) - Traditional downstream channel using 256-QAM or 1024-QAM | [DOCSIS 3.0 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.0) |
+| **OFDM** | Downstream | 3.1 | [Orthogonal Frequency-Division Multiplexing](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiplexing) - High-capacity DOCSIS 3.1 downstream using 4096-QAM | [DOCSIS 3.1 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.1) |
+| **ATDMA** | Upstream | 3.0/3.1 | [Advanced Time Division Multiple Access](https://en.wikipedia.org/wiki/DOCSIS#DOCSIS_2.0) - Traditional upstream channel | [DOCSIS 3.0 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.0) |
+| **OFDMA** | Upstream | 3.1 | [Orthogonal Frequency-Division Multiple Access](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiple_access) - High-capacity DOCSIS 3.1 upstream | [DOCSIS 3.1 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.1) |
+
+**DOCSIS 3.0 modems:** Only have QAM (downstream) and ATDMA (upstream) channels.
+**DOCSIS 3.1 modems:** Have both traditional channels (QAM/ATDMA) and high-capacity channels (OFDM/OFDMA).
+
+### Sensor Attributes
+
+Each channel sensor exposes these attributes:
+- `channel_id`: CMTS-assigned channel identifier (stable per frequency)
+- `channel_type`: Modulation type (qam, ofdm, atdma, ofdma)
+- `frequency`: Channel frequency in Hz (power/SNR sensors only)
