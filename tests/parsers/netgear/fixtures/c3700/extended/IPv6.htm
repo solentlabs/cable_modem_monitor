@@ -1,0 +1,368 @@
+ï»¿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+
+<script type="text/javascript" src="wep.js"></script>
+
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+// Nick Implement ASP Tag display on GUI
+        BodyInit();
+// Nick Implement ASP Tag display on GUI
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+function setHelpIframeVisible(){
+    $('.help-frame-div').css("visibility","visible");
+}
+
+
+function showHelpIframe()
+{
+    var imgSrc=document.getElementById('help-button');
+
+    if(imgSrc.src.search("up")>=0)
+    {
+        $(".help-frame-div").show();
+        imgSrc.src="img/helparrowdown-icon.gif";
+    }
+    else
+    {
+        $(".help-frame-div").hide();
+        imgSrc.src="img/helparrowup-icon.gif";
+        setTimeout(setHelpIframeVisible,500);
+    }
+}
+
+function moveToHTMLend()
+{
+    window.location.href='#helpframe-anchor';
+    setHelpIframeVisible();
+}
+
+
+function loadhelp(fname,anchname)
+{
+    var pane = window.frames["helpframe"].$('#content');
+    var imgSrc=document.getElementById('help-button');
+    if(imgSrc.src.search("up")<0)
+    {
+        $(".help-frame-div").show();
+        pane.jScrollPane({showArrows:true});
+
+
+        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+        {
+                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                $(".help-frame-div").show();
+        }
+        else
+        {
+                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                $(".help-frame-div").show();
+        }
+
+        $(".help-frame-div").show();
+        pane.jScrollPane({showArrows:true});
+    }
+}
+
+function check_data()
+{
+    return true;
+}
+
+function InitTagValue()
+{
+/*
+  System Delegated Prefix|DHCPv6 Server Enabled|LAN Delegated Prefix|Start Address|Number of Addresses|Valid Lifetime|Disable Stateless Dhcpv6|Disable IPv6 Firewall Protection
+*/
+    var tagValueList = '***IPv6***::/56|0|***IPv6***::/64|***IPv6***/64|255|3600|0|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    //System Delegated Prefix
+    document.getElementById("SystemPrefix").innerHTML = tagValues[0];
+
+    //IP Assign Mode
+    if(tagValues[1] == 1) //dhcpv6
+    {
+        document.getElementsByName("IpAssign")[0].checked = true;
+        ipAssignMode(0);
+    }
+    else
+    {
+        document.getElementsByName("IpAssign")[1].checked = true;
+        ipAssignMode(1);
+    }
+
+    //LAN Delegated Prefix
+    document.getElementById("DhcpV6Prefix").innerHTML = tagValues[2];
+
+    //Start Address
+    document.getElementsByName("DhcpV6StartAddress")[0].value = tagValues[3];
+
+    //Number of Addresses
+    document.getElementsByName("DhcpV6NumAddresses")[0].value = tagValues[4];
+
+    //Valid Lifetime
+    document.getElementsByName("DhcpV6ValidLifetime")[0].value = tagValues[5];
+
+    //Disable IPv6 Firewall Protection
+    if(tagValues[6] == 1)
+    {
+        document.getElementsByName("DisableFirewallv6")[0].checked = true;
+    }
+    else
+    {
+        document.getElementsByName("DisableFirewallv6")[0].checked = false;
+    }
+
+    if(tagValues[0].indexOf(":") == -1)
+    {
+        document.getElementsByName("DhcpV6StartAddress")[0].disabled=true;
+        document.getElementsByName("DhcpV6NumAddresses")[0].disabled=true;
+        document.getElementsByName("DhcpV6ValidLifetime")[0].disabled=true;
+        document.getElementsByName("DisableFirewallv6")[0].disabled=true;
+        document.getElementsByName("IpAssign")[0].disabled=true;
+        document.getElementsByName("IpAssign")[1].disabled=true;
+    }
+    else
+    {
+        document.getElementsByName("DhcpV6StartAddress")[0].disabled=false;
+        document.getElementsByName("DhcpV6NumAddresses")[0].disabled=false;
+        document.getElementsByName("DhcpV6ValidLifetime")[0].disabled=false;
+        document.getElementsByName("DisableFirewallv6")[0].disabled=false;
+        document.getElementsByName("IpAssign")[0].disabled=false;
+        document.getElementsByName("IpAssign")[1].disabled=false;
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+function ipAssignMode(mode)
+{
+    if(mode == 0)
+    {
+        $("#dhcpv6_setting").show();
+    }
+    else
+    {
+        $("#dhcpv6_setting").hide();
+    }
+}
+
+</script></head>
+<BODY onLoad="changeContentSize()" onResize="changeContentSize()" class="page-body">
+      <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="USB_settings" method="post" action='/goform/IPv6Web??id=1280103083'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                IPv6
+            </div>
+            <TABLE border=0 style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply'); return check_data();" type="submit" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel'); location.href='IPv6.htm'" type="button" name="cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <span><b>System Delegated Prefix</b></span>
+                                        &nbsp;
+                                        <span id="SystemPrefix">::</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                	<td nowrap colspan="2"><b>IP Address Assignment</b></td>
+                                </tr>
+                                <tr>
+                                	<td colspan="2" nowrap><input type="radio" name="IpAssign" value="dhcp" onclick="ipAssignMode(0)" checked>Use DHCP Server</td>
+                                </tr>
+                                <tr>
+                                	<td colspan="2" nowrap><input type="radio" name="IpAssign" value="auto" onclick="ipAssignMode(1)">Auto Config</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">&nbsp;</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <table id="dhcpv6_setting">
+                                            <tr>
+                                                <td colspan="2">
+                                                    <b>Server Settings</b><br>
+                                                    LAN Delegated Prefix will be derived from System Delegated Prefix and Start Address will have the same prefix as the LAN Delegated Prefix.
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2">&nbsp;</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    LAN Delegated Prefix
+                                                </td>
+                                                <td>
+                                                    <span id="DhcpV6Prefix">::</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    Start Address
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="DhcpV6StartAddress" size="48" maxlength="48" value="::">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    Number of Addresses
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="DhcpV6NumAddresses" size="6" maxlength="6" value="255">
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    Valid Lifetime
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="DhcpV6ValidLifetime" size="6" maxlength="6" value="3600">
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="DisableFirewallv6" value="DisableFirewallv6">
+                                        <b>
+                                            Disable IPv6 Firewall Protection
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr style="text-align:center;vertical-align: middle;">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="IPv6_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </TABLE>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT type=hidden name=enable_all_usb value="0">
+            <a name="helpframe-anchor"></a>
+        </FORM>
+    </div>
+</BODY>
+</HTML>

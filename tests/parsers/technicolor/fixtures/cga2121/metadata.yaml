@@ -3,7 +3,7 @@ release_date: 2015
 end_of_life: null # null = still current, or year
 docsis_version: "3.0"
 protocol: HTML
-chipset: Broadcom # Per copyright footer
+chipset: Broadcom BCM3384ZU # Per DeviWiki
 isps:
   - Telia
 source: null # No official product page found

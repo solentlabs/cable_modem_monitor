@@ -257,7 +257,12 @@ class NetgearCM1200Parser(ModemParser):
         return None
 
     def _parse_downstream_from_js(self, soup: BeautifulSoup) -> list[dict]:
-        """Parse downstream channels from JavaScript variables."""
+        """Parse downstream QAM channels from InitDsTableTagValue().
+
+        Note: channel_type is hardcoded to "qam" because this method exclusively
+        parses InitDsTableTagValue(), which only contains QAM channel data.
+        The CM1200 uses separate JS functions for each channel type - see README.
+        """
         channels: list[dict] = []
 
         try:
@@ -301,6 +306,7 @@ class NetgearCM1200Parser(ModemParser):
                 "power": float(values[idx + 5]),
                 "snr": float(values[idx + 6]),
                 "modulation": values[idx + 2],
+                "channel_type": "qam",
                 "corrected": int(values[idx + 7]),
                 "uncorrected": int(values[idx + 8]),
             }
@@ -309,9 +315,13 @@ class NetgearCM1200Parser(ModemParser):
             return None
 
     def _parse_ofdm_downstream(self, soup: BeautifulSoup) -> list[dict]:
-        """Parse OFDM downstream channels from InitDsOfdmTableTagValue.
+        """Parse OFDM downstream channels from InitDsOfdmTableTagValue().
 
-        OFDM format: count|num|lock|subcarriers|id|frequency|power|snr|active_range|...|
+        Note: channel_type is hardcoded to "ofdm" because this method exclusively
+        parses InitDsOfdmTableTagValue(), which only contains OFDM channel data.
+
+        OFDM format: count|num|lock|profile|id|freq|power|snr|range|unerrored|correctable|uncorrectable
+        (11 fields per channel)
         """
         channels: list[dict] = []
 
@@ -321,7 +331,8 @@ class NetgearCM1200Parser(ModemParser):
                 return channels
 
             channel_count = int(values[0])
-            fields_per_channel = 12
+            # 11 fields: ch|lock|profile|id|freq|power|snr|range|unerrored|correctable|uncorrectable
+            fields_per_channel = 11
             idx = 1
 
             for i in range(channel_count):
@@ -357,6 +368,7 @@ class NetgearCM1200Parser(ModemParser):
                 "power": float(power_str),
                 "snr": float(snr_str),
                 "modulation": "OFDM",
+                "channel_type": "ofdm",
                 "is_ofdm": True,
             }
         except (ValueError, IndexError) as e:
@@ -388,11 +400,13 @@ class NetgearCM1200Parser(ModemParser):
         return channels
 
     def _parse_upstream_from_js(self, soup: BeautifulSoup) -> list[dict]:
-        """Parse upstream channels from JavaScript variables.
+        """Parse upstream ATDMA channels from InitUsTableTagValue().
 
-        CM1200 upstream format:
-        count|num|lock|type|channel_id|symbol_rate|frequency|power
-        Note: Symbol Rate comes BEFORE Frequency (different from CM2000)
+        Note: channel_type comes from the data itself (values[idx+2] = "ATDMA")
+        unlike downstream where we hardcode it.
+
+        Format: count|num|lock|type|channel_id|symbol_rate|frequency|power
+        (7 fields per channel, Symbol Rate before Frequency - different from CM2000)
         """
         channels: list[dict] = []
 
@@ -445,9 +459,13 @@ class NetgearCM1200Parser(ModemParser):
             return None
 
     def _parse_ofdma_upstream(self, soup: BeautifulSoup) -> list[dict]:
-        """Parse OFDMA upstream channels from InitUsOfdmaTableTagValue.
+        """Parse OFDMA upstream channels from InitUsOfdmaTableTagValue().
 
-        OFDMA format: count|num|lock|channels|id|frequency|power|...
+        Note: channel_type is hardcoded to "OFDMA" because this method exclusively
+        parses InitUsOfdmaTableTagValue(), which only contains OFDMA channel data.
+
+        Format: count|num|lock|profile|id|frequency|power
+        (6 fields per channel)
         """
         channels: list[dict] = []
 

@@ -9,7 +9,7 @@
 | **DOCSIS** | 3.1 |
 | **Released** | 2017 |
 | **Status** | Current |
-| **ISPs** | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron |
+| **ISPs** | Comcast, Cox, Spectrum, Rogers, Shaw, Videotron, Vodafone Germany, Unitymedia |
 | **Parser** | ✅ Verified |
 
 <!-- END AUTO-GENERATED -->

@@ -46,6 +46,25 @@ def _sanitize_log_message(message: str) -> str:
     return message
 
 
+def _sanitize_url_list(url_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sanitize a list of captured URL entries.
+
+    Args:
+        url_list: List of URL data dicts with optional 'content' field
+
+    Returns:
+        List of sanitized URL data dicts
+    """
+    sanitized = []
+    for url_data in url_list:
+        entry = url_data.copy()
+        if "content" in entry:
+            entry["content"] = sanitize_html(entry["content"])
+            entry["sanitized_size_bytes"] = len(entry["content"])
+        sanitized.append(entry)
+    return sanitized
+
+
 def _get_recent_logs(hass: HomeAssistant, max_records: int = 150) -> list[dict[str, Any]]:  # noqa: C901
     """Get recent log records for cable_modem_monitor.
 
@@ -484,15 +503,9 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
         try:
             expires_at = datetime.fromisoformat(capture.get("ttl_expires", ""))
             if datetime.now() < expires_at:
-                # Sanitize content in each captured URL (HTML, JS, CSS, etc.)
-                sanitized_urls = []
-                for url_data in capture.get("urls", []):
-                    sanitized_url = url_data.copy()
-                    if "content" in sanitized_url:
-                        sanitized_url["content"] = sanitize_html(sanitized_url["content"])
-                        # Add size info for sanitized content
-                        sanitized_url["sanitized_size_bytes"] = len(sanitized_url["content"])
-                    sanitized_urls.append(sanitized_url)
+                # Sanitize content in captured URLs and failed URLs
+                sanitized_urls = _sanitize_url_list(capture.get("urls", []))
+                sanitized_failed = _sanitize_url_list(capture.get("failed_urls", []))
 
                 diagnostics["raw_html_capture"] = {
                     "captured_at": capture.get("timestamp"),
@@ -503,8 +516,10 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
                         "(MACs, serials, passwords, private IPs)"
                     ),
                     "url_count": len(sanitized_urls),
+                    "failed_url_count": len(sanitized_failed),
                     "total_size_kb": sum(u.get("size_bytes", 0) for u in sanitized_urls) / 1024,
                     "urls": sanitized_urls,
+                    "failed_urls": sanitized_failed,
                 }
                 _LOGGER.info("Including raw HTML capture in diagnostics (%d URLs)", len(sanitized_urls))
             else:

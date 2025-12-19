@@ -1,0 +1,324 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Router C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+
+<script type="text/javascript" src="wep.js"></script>
+
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript">
+<!--
+    var routerMode = 0;
+    var guiCustomization = 0;
+
+    $(document).ready(function()
+    {
+// Nick Implement ASP Tag display on GUI
+        BodyInit();
+// Nick Implement ASP Tag display on GUI
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            document.getElementsByName("buttonHit")[0].disabled = true;
+            document.getElementsByName("buttonValue")[0].disabled = true;
+            $("#apply").attr('disabled', true);
+//            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function InitTagValue()
+{
+/*
+  Router Mode | Optus Support |
+*/
+    var tagValueList = '1|0|';
+/*
+    var tagValueList = "1|1|";
+*/
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Router Mode */
+    // 0: Bridge
+    routerMode = tagValues[0];
+    if(routerMode == 0)
+    {
+        document.getElementsByName("rgeRouterIpProvMode")[1].checked = true;
+    }
+    else
+    {
+        document.getElementsByName("rgeRouterIpProvMode")[0].checked = true;
+    }
+
+    /* GUI Style */
+    guiCustomization = tagValues[1];
+}
+
+// Nick Implement ASP Tag display on GUI
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+function applyData()
+{
+    if(guiCustomization == 0)
+    {
+        //Generic
+        if(document.getElementsByName("rgeRouterIpProvMode")[0].checked == true)
+        {
+            $('#rgeRouterIpProvMode').val("Routeur");
+            $('#target').submit();
+        }
+        else
+        {
+            $('#rgeRouterIpProvMode').val("Bridge");
+            $('#target').submit();
+        }
+    }
+    else if(guiCustomization == 1)
+    {
+        //Optus
+        if(routerMode == 0) //Bridge mode to Router mode
+        {
+            if(document.getElementsByName("rgeRouterIpProvMode")[0].checked == true)
+            {
+                var msg = confirm('WARNING\n\"Change Bridge Mode to NAT Mode.\"');
+                if(msg) //comfirm and change to Bridge mode
+                {
+                    $('#rgeRouterIpProvMode').val("Routeur");
+                    $('#target').submit();
+                }
+                else
+                {
+                    document.getElementsByName("rgeRouterIpProvMode")[0].checked = true;
+                }
+            }
+            else
+            {
+                document.getElementsByName("rgeRouterIpProvMode")[1].checked = true;
+            }
+        }
+        else //Router mode to Bridge mode
+        {
+            if(document.getElementsByName("rgeRouterIpProvMode")[1].checked == true)
+            {
+                var msg = confirm('WARNING\n\"Bridge mode will disable Wifi and only one Ethernet port (LAN 1) can be used.\"\n\"Please record the new gateway address (GUI login page) as it will change to 192.168.100.1 in bridge mode\"\n');
+                if(msg) //comfirm and change to Bridge mode
+                {
+                    $('#rgeRouterIpProvMode').val("Bridge");
+                    $('#target').submit();
+                }
+                else
+                {
+                    document.getElementsByName("rgeRouterIpProvMode")[1].checked = true;
+                }
+            }
+            else
+            {
+                document.getElementsByName("rgeRouterIpProvMode")[0].checked = true;
+            }
+        }
+    }
+}
+
+// Nick Implement ASP Tag display on GUI
+//-->
+</script></head>
+<BODY onLoad="changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="Rg_mode" method="post" action='/goform/RouterMode?id=1102764329'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Router Mode
+            </div>
+            <TABLE border=0 style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');applyData();" type="button" name="apply" id="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <TR>
+                                    <TD colspan="2">
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <TR>
+                                    <TD style="white-space: nowrap;">
+                                        <b>
+                                            Router Mode
+                                        </b>
+                                        <input type="radio" name="rgeRouterIpProvMode" value="Routeur" onclick="">
+                                        Yes
+                                        <input type="radio" name="rgeRouterIpProvMode" value="Bridge" onclick="">
+                                        No
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="RouterMode_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </TABLE>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <a name="helpframe-anchor"></a>
+        </FORM>
+    </div>
+</BODY>
+</HTML>

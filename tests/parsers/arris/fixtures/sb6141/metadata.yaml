@@ -14,9 +14,3 @@ isps:
   - Mediacom
 source: https://content.abt.com/documents/48624/SB6141-US-EN.pdf
 source_code: https://sourceforge.net/projects/sb6141.arris/
-
-# Attribution
-attribution:
-  data_contributors:
-    - username: "@captain-coredump"
-      contribution: "HTML samples and compatibility testing (Community Forum)"

@@ -1,0 +1,588 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+<script type="text/javascript" src="script/sorttable.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<style type="text/css">
+A {
+	 COLOR: blue; TEXT-DECORATION: underline
+}
+</style>
+<style type="text/css">
+	.subheadtext
+	{
+		cursor: pointer;
+		text-decoration: underline;
+		font-weight: Bold;
+	}
+</style>
+<script type="text/javascript">
+<!--
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        BodyInit();
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            window.frames["helpframe"].$('#content').jScrollPane({showArrows:true});
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+        if((navigator.appName.indexOf("Internet Explorer")==-1) ||
+           (navigator.appVersion.indexOf("MSIE 9")==-1))
+             changeContentSize();
+
+    }
+
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h.htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h.htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function adjust_column_backColor()
+{
+    var i;
+    var row_rules_wired = document.getElementsByName("row_rules_wired");
+    var row_rules_wireless = document.getElementsByName("row_rules_wireless");
+	var row_rules_wireless_2g = document.getElementsByName("row_rules_wireless_2g");
+	var row_rules_wireless_5g = document.getElementsByName("row_rules_wireless_5g");
+
+    for(i=0 ; i<row_rules_wired.length ; i++) {
+        if(i%2 == 0)
+            row_rules_wired[i].style.backgroundColor = "white";
+        else
+            row_rules_wired[i].style.backgroundColor = "#e5e5e5";
+    }
+
+    for(i=0 ; i<row_rules_wireless.length ; i++) {
+    if(i%2 == 0)
+        row_rules_wireless[i].style.backgroundColor = "white";
+    else
+        row_rules_wireless[i].style.backgroundColor = "#e5e5e5";
+    }
+
+    for(i=0 ; i<row_rules_wireless_2g.length ; i++) {
+    if(i%2 == 0)
+        row_rules_wireless_2g[i].style.backgroundColor = "white";
+    else
+        row_rules_wireless_2g[i].style.backgroundColor = "#e5e5e5";
+    }
+
+    for(i=0 ; i<row_rules_wireless_5g.length ; i++) {
+    if(i%2 == 0)
+        row_rules_wireless_5g[i].style.backgroundColor = "white";
+    else
+        row_rules_wireless_5g[i].style.backgroundColor = "#e5e5e5";
+    }
+
+	var enable_access_control = document.getElementsByName("enable_access_control");
+
+    if(enable_access_control[0].value != "1") {
+		for(i=0 ; i<$('td[name=show_status]').length ; i++)
+		{
+			$('td[name=show_status]')[i].style.display = "none";
+		}
+	}
+}
+function loadSettings()
+{
+    adjust_column_backColor();
+}
+
+function InitTagValue()
+{
+    /*
+    Access Control Enable/Disable | Access Rule Allow/Block | Dual band support |
+    */
+    //var tagValueList = "1|1|1|";
+    var tagValueList = '0|1|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    // Access Control Enable/Disable
+    // 0: Disable; 1: Enable
+    document.getElementsByName("enable_access_control")[0].value = tagValues[0];
+    if (tagValues[0] == '1')
+    {
+        $("#access_control_mode").html('Turned On');
+
+        // Access Rule
+        // 0: block all; 1: allow all
+        document.getElementsByName("access_all_setting")[0].value = tagValues[1];
+        if (tagValues[1] == '1')
+        {
+            $("#access_all_desc").html('General Rule: Allow all new devices to connect');
+        }
+        else
+        {
+            $("#access_all_desc").html('General Rule: Block all new devices from connecting');
+        }
+    }
+    else // Need not show access rule when the access control is turned off.
+    {
+        $("#access_control_mode").html('Turned Off');
+    }
+
+    if (tagValues[2] == 1 )
+    {
+        $("#wifi_5g_title").show();
+        $("#wifi_5g_table").show();
+    }
+
+}
+
+function InitAvailableWiredTagValue()
+{
+   /* # (td) , Status, IP Address (td), MAC Address(td), Device Name (td) */
+    var TableTagValueList = '2|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|ReadySHARE (Internal server)|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|eero|';
+
+    /*var TableTagValueList = "5" +
+                                "|1|192.168.0.1|XX:XX:XX:XX:XX:XX|NICK-PC" +
+                                "|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|TERRY-PC" +
+                                "|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test3" +
+                                "|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test4" +
+                                "|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|aaa|";
+    */
+    return TableTagValueList.split("|");
+}
+
+
+function InitUpdateWiredTableView(tagValues)
+{
+    var TotalRow = parseInt(tagValues[0]);
+    var AppendRowText = "";
+    var isAccessControlEnable = document.getElementsByName("enable_access_control")[0].value;
+
+    for(var i = 0; i < TotalRow; i++)
+    {
+        AppendRowText += '<tr name="row_rules_wired">\n';
+        AppendRowText += '<td align="center"><span class="">' + (i +1) + '<\/span><\/td>\n';
+
+        AppendRowText += '<td align="center" name="show_status">'
+                      + ((tagValues[i * 4 + 1] == "1")
+                      ? '<span name="rule_status" class="acl_allowed">Allowed</span>'
+                      : '<span name="rule_status" class="acl_blocked">Blocked</span>')
+                      + '<\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_ip">' + tagValues[i * 4 + 2] + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_mac" class="">' + tagValues[i * 4 + 3].toUpperCase() + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 4 + 4])) + '<\/span><\/td>\n';
+        AppendRowText += '<\/tr>\n';
+    }
+
+    $('#WiredTable tr:last').after(AppendRowText);
+}
+
+function InitAvailableWireless2GTagValue()
+{
+   /* SSID (td) , Status, IP Address (td), MAC Address(td), Device Name (td) */
+    var TableTagValueList = '8|NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|Herschel|NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|Kitchen|NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|24WestinghouseRokuTV|NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|Bedroom|NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|Familyroom|NETGEAR38|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX||NETGEAR38|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|Galaxy-S24-FE|NETGEAR38|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|HP39EBFE|';
+
+    /*var TableTagValueList = "5" +
+                                "|NetGear-Emerson|1|192.168.0.1|XX:XX:XX:XX:XX:XX|NICK-PC" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|TERRY-PC" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test3" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test4" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|aaa|";
+    */
+    return TableTagValueList.split("|");
+}
+
+function InitUpdateWireless2GTableView(tagValues)
+{
+    var TotalRow = parseInt(tagValues[0]);
+    var AppendRowText = "";
+    var isAccessControlEnable = document.getElementsByName("enable_access_control")[0].value;
+
+    for(var i = 0; i < TotalRow; i++)
+    {
+        AppendRowText += '<tr name="row_rules_wireless_2g">\n';
+        if (i == 0)
+        {
+            AppendRowText += '<td rowspan=' + TotalRow + ' align="center"><span name="rule_ssid">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 1])) + '<\/span><\/td>\n';
+        }
+
+        AppendRowText += '<td align="center" name="show_status">'
+                      + ((tagValues[i * 5 + 2] == "1")
+                      ? '<span name="rule_status" class="acl_allowed">Allowed</span>'
+                      : '<span name="rule_status" class="acl_blocked">Blocked</span>')
+                      + '<\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_ip">' + tagValues[i * 5 + 3] + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_mac" class="">' + tagValues[i * 5 + 4].toUpperCase() + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 5])) + '<\/span><\/td>\n';
+        AppendRowText += '<\/tr>\n';
+    }
+
+    $('#Wireless2GTable tr:last').after(AppendRowText);
+}
+
+function InitAvailableGuest2GTagValue()
+{
+   /* SSID (td) , Status, IP Address (td), MAC Address(td), Device Name (td) */
+    var TableTagValueList = '0|';
+
+    /*var TableTagValueList = "5" +
+                                "|NetGear-Emerson|1|192.168.0.1|XX:XX:XX:XX:XX:XX|NICK-PC" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|TERRY-PC" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test3" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test4" +
+                                "|NetGear-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|aaa|";
+    */
+    return TableTagValueList.split("|");
+}
+
+function InitUpdateGuest2GTableView(tagValues)
+{
+    var TotalRow = parseInt(tagValues[0]);
+    var AppendRowText = "";
+    var isAccessControlEnable = document.getElementsByName("enable_access_control")[0].value;
+
+    for(var i = 0; i < TotalRow; i++)
+    {
+        AppendRowText += '<tr name="row_rules_wireless_2g">\n';
+        if (i == 0)
+        {
+            AppendRowText += '<td rowspan=' + TotalRow + ' align="center"><span name="rule_ssid">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 1])) + '<\/span><\/td>\n';
+        }
+
+        AppendRowText += '<td align="center" name="show_status">'
+                      + ((tagValues[i * 5 + 2] == "1")
+                      ? '<span name="rule_status" class="acl_allowed">Allowed</span>'
+                      : '<span name="rule_status" class="acl_blocked">Blocked</span>')
+                      + '<\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_ip">' + tagValues[i * 5 + 3] + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_mac" class="">' + tagValues[i * 5 + 4].toUpperCase() + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 5])) + '<\/span><\/td>\n';
+        AppendRowText += '<\/tr>\n';
+    }
+
+    $('#Wireless2GTable tr:last').after(AppendRowText);
+}
+
+function InitAvailableWireless5GTagValue()
+{
+   /* SSID (td) , Status, IP Address (td), MAC Address(td), Device Name (td) */
+    var TableTagValueList = '2|NETGEAR38-5G|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|RokuStreamingStick|NETGEAR38-5G|1|***PRIVATE_IP***<br>***IPv6***|XX:XX:XX:XX:XX:XX|SUSAN-s-S24-FE|';
+
+    /*var TableTagValueList = "5" +
+                                "|NetGear-5G-Emerson|1|192.168.0.1|XX:XX:XX:XX:XX:XX|NICK-PC" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|TERRY-PC" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test3" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test4" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|aaa|";
+    */
+    return TableTagValueList.split("|");
+}
+
+function InitUpdateWireless5GTableView(tagValues)
+{
+    var TotalRow = parseInt(tagValues[0]);
+    var AppendRowText = "";
+    var isAccessControlEnable = document.getElementsByName("enable_access_control")[0].value;
+
+    for(var i = 0; i < TotalRow; i++)
+    {
+        AppendRowText += '<tr name="row_rules_wireless_5g">\n';
+        if (i == 0)
+        {
+            AppendRowText += '<td rowspan=' + TotalRow + ' align="center"><span name="rule_ssid">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 1])) + '<\/span><\/td>\n';
+        }
+
+        AppendRowText += '<td align="center" name="show_status">'
+                      + ((tagValues[i * 5 + 2] == "1")
+                      ? '<span name="rule_status" class="acl_allowed">Allowed</span>'
+                      : '<span name="rule_status" class="acl_blocked">Blocked</span>')
+                      + '<\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_ip">' + tagValues[i * 5 + 3] + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_mac" class="">' + tagValues[i * 5 + 4].toUpperCase() + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 5])) + '<\/span><\/td>\n';
+        AppendRowText += '<\/tr>\n';
+    }
+
+    $('#Wireless5GTable tr:last').after(AppendRowText);
+}
+
+function InitAvailableGuest5GTagValue()
+{
+   /* SSID (td) , Status, IP Address (td), MAC Address(td), Device Name (td) */
+    var TableTagValueList = '0|';
+
+    /*var TableTagValueList = "5" +
+                                "|NetGear-5G-Emerson|1|192.168.0.1|XX:XX:XX:XX:XX:XX|NICK-PC" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|TERRY-PC" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test3" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|test4" +
+                                "|NetGear-5G-Emerson|1|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|aaa|";
+    */
+    return TableTagValueList.split("|");
+}
+
+function InitUpdateGuest5GTableView(tagValues)
+{
+    var TotalRow = parseInt(tagValues[0]);
+    var AppendRowText = "";
+    var isAccessControlEnable = document.getElementsByName("enable_access_control")[0].value;
+
+    for(var i = 0; i < TotalRow; i++)
+    {
+        AppendRowText += '<tr name="row_rules_wireless_5g">\n';
+        if (i == 0)
+        {
+            AppendRowText += '<td rowspan=' + TotalRow + ' align="center"><span name="rule_ssid">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 1])) + '<\/span><\/td>\n';
+        }
+
+        AppendRowText += '<td align="center" name="show_status">'
+                      + ((tagValues[i * 5 + 2] == "1")
+                      ? '<span name="rule_status" class="acl_allowed">Allowed</span>'
+                      : '<span name="rule_status" class="acl_blocked">Blocked</span>')
+                      + '<\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_ip">' + tagValues[i * 5 + 3] + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span name="rule_mac" class="">' + tagValues[i * 5 + 4].toUpperCase() + '<\/span><\/td>\n';
+        AppendRowText += '<td align="center"><span class="">' + encodeHtmlEntities(piplineDecode(tagValues[i * 5 + 5])) + '<\/span><\/td>\n';
+        AppendRowText += '<\/tr>\n';
+    }
+
+    $('#Wireless5GTable tr:last').after(AppendRowText);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitUpdateWiredTableView(InitAvailableWiredTagValue());
+    InitUpdateWireless2GTableView(InitAvailableWireless2GTagValue());
+    InitUpdateGuest2GTableView(InitAvailableGuest2GTagValue());
+    InitUpdateWireless5GTableView(InitAvailableWireless5GTagValue());
+    InitUpdateGuest5GTableView(InitAvailableGuest5GTagValue());
+}
+//--></script></head>
+<body onload="loadSettings();changeContentSize()" class="page-body" onResize="changeContentSize()">
+<!--<img class="cover-image" src="img/cover-image_noh.gif">
+<img class="body-image" src="img/subhead2-background_noh.jpg">-->
+<div id="full-page-container">
+
+<form id="target" method="post" action='/goform/AttchedDevices_new?id=1160479146'>
+    <!-- access_control_mode: 1: enabled 0: disabled -->
+    <input name="enable_access_control" type="hidden" value= "1">
+    <!-- access_all_new_devices: 1: allow all 0: block all -->
+    <input name="access_all_setting" type="hidden" value= "1">
+    <input type="hidden" name="buttonHit">
+    <input type="hidden" name="buttonValue">
+    <!-- <img class="subtop-image" src="img/subhead2-top_noh.gif"> -->
+    <div class="subhead2"> Attached Devices</div>
+    <table border="0" style="height:370px" class="subhead2-table">
+        <tr>
+            <td class="scrollpane-table-seperate-border" colspan="2">
+                <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                    <table style="border-collapse:collapse;width:97%">
+                        <tr>
+                            <td colspan="2" height="12" >
+                                <div style="background-image:url('liteblue.gif');width:100%">
+                                    &nbsp;
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td nowrap colspan="2" align="right">
+                                Go to
+                                <a href="AccessControl.htm">
+                                    Access Control
+                                </a>
+                                to allow or block devices.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table border="0" cellpadding="3" cellspacing="0" width="100%">
+                                    <tr>
+                                        <td width="50%">
+                                        </td>
+                                        <td width="30%" align="left">
+                                             Access Control:
+                            			<span id="access_control_mode">
+                                        </span>
+                            			<br>
+                            			<span id="access_all_desc">
+                                        </span>
+                                        </td>
+                                        <td width="20%" align="right">
+                                            &nbsp;&nbsp;&nbsp;<button value="Cancel" onclick="buttonClick(this,'Refresh');location.href='AttachedDevices_new.htm';"  type="button" name="refresh" class="button-rule" ><span class="roundleft_button"><span class="refresh-icon">&nbsp;&nbsp;&nbsp;&nbsp; Refresh</span></span><span class="roundright_button">&nbsp;&nbsp;&nbsp;&nbsp;</span></button>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                         <td nowrap colspan="2"><b>Wired Devices</b></td>
+                        </tr>
+                        <tr>
+                        	<td colspan="2">
+                        	    <table id="WiredTable" class="sortable" border="1" cellpadding="2" cellspacing="0" width="100%">
+                                    <tr class="table_header">
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">#</span></td>
+                                        <td nowrap align="center" width="10%" name="show_status"><span class="subheadtext">Status</span></td>
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">IP Address</span></td>
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">MAC Address</span></td>
+                                        <td nowrap align="center" width="30%"><span class="subheadtext">Device Name</span></td>
+                                    </tr>
+                            	</table>
+                        	</td>
+                        </tr>
+                        <tr>
+                         <td nowrap colspan="2">&nbsp;</td>
+                        </tr>
+                        <tr>
+                         <td nowrap colspan="2"><b>2.4G Wireless Devices (Wireless intruders also show up here)</b></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <table id="Wireless2GTable" class="mysortable" border="1" cellpadding="2" cellspacing="0" width="100%">
+                                    <tr class="table_header">
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">SSID</span></td>
+                                        <td nowrap align="center" width="10%" name="show_status"><span class="subheadtext">Status</span></td>
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">IP Address</span></td>
+                                        <td nowrap align="center" width="20%"><span class="subheadtext">MAC Address</span></td>
+                                        <td nowrap align="center" width="30%"><span class="subheadtext">Device Name</span></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td nowrap colspan="2">&nbsp;</td>
+                        </tr>
+                        <tr id="wifi_5g_title" style='display:none'>
+                            <td nowrap colspan="2">
+                                <b>
+                                    5G Wireless Devices (Wireless intruders also show up here)
+                                </b>
+                            </td>
+                        </tr>
+                        <tr id="wifi_5g_table" style='display:none'>
+                        	<td colspan="2">
+                        	    <table id="Wireless5GTable" class="mysortable" border="1" cellpadding="2" cellspacing="0" width="100%">
+                                	<tr class="table_header">
+                                		<td nowrap align="center" width="20%"><span class="subheadtext">SSID</span></td>
+                                		<td nowrap align="center" width="10%" name="show_status"><span class="subheadtext">Status</span></td>
+                                		<td nowrap align="center" width="20%"><span class="subheadtext">IP Address</span></td>
+                                		<td nowrap align="center" width="20%"><span class="subheadtext">MAC Address</span></td>
+                                		<td nowrap align="center" width="30%"><span class="subheadtext">Device Name</span></td>
+                                	</tr>
+                            	</table>
+                        	</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" height="12" >
+                                <div style="background-image:url('liteblue.gif');width:100%">&nbsp;</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr valign="middle" align="center">
+            <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                <div class="help-frame-div">
+                    <iframe src="AttachedDevices_new_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                    </iframe>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <div class="subhead2-bottom">
+        <span style="float:left;padding-left:10px;padding-top:5px">
+            <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+        </span>
+        <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+            Help Center
+        </span>
+        <span class="button-help-arrow">
+            <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+        </span>
+        <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+            Show/Hide Help Center
+        </span>
+    </div>
+    <a name="helpframe-anchor"></a>
+</form>
+</div>
+</body>
+</html>

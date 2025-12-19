@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.11.0] - 2025-12-24
+## [3.11.0] - 2025-12-27
 
 ### ⚠️ BREAKING CHANGE: Channel Sensor Entity IDs
 
@@ -51,14 +51,26 @@ sensor.cable_modem_us_ofdma_ch_1_power
   - `id_only` - Labels like "Ch 32"
   - `type_id` - Labels like "QAM 32"
 - **Channel Attributes** - Each channel sensor now exposes `channel_id`, `channel_type`, and `frequency` as state attributes
+- **Downstream Frequency Graph** - `generate_dashboard` service now accepts `include_downstream_frequency` parameter
+- **Technicolor CGA2121 Parser** - New parser for Technicolor CGA2121 gateways (#75)
+- **Arris G54 Parser** - New parser for Arris G54 gateway devices (#72)
+- **Session Logout Support** - Parsers can now define `logout_endpoint` for modems that only allow one authenticated session (e.g., Netgear C3700)
+- **Auto-Generate Attribution** - Fixture metadata now automatically generates contributor attribution
 
 ### Changed
 - **Entity ID Format** - Channel sensors use `ds_{type}_ch_{id}` format instead of `ds_ch_{id}`
 - **Sensor Names** - Channel sensors now display type in name (e.g., "DS QAM Ch 32 Power")
 
+### Fixed
+- **Arris S33 Parser** - Removed incorrect uptime mapping, fixed frequency parsing (#32)
+- **CM1200 Channel Type Detection** - Fixed OFDM/OFDMA channels not showing correctly; parser now includes channel_type for downstream channels, and coordinator checks all relevant fields (channel_type, modulation, is_ofdm) (#63)
+
 ### Technical
 - **Channel Normalization** - Coordinator normalizes channel_type from parser data (is_ofdm, modulation, channel_type fields)
 - **Frequency-Based Indexing** - Channels are sorted by frequency within each type for stable index assignment
+
+### Upgrade Notes
+To enable new features added in v3.11 (actual model display in device info, ICMP detection for health monitoring), go to **Settings → Devices & Services → Cable Modem Monitor → Configure → Submit**. This triggers a fresh validation that populates the new config fields. This is a good practice after any upgrade to pick up new configuration options.
 
 ## [3.10.2] - 2025-12-18
 

@@ -143,21 +143,30 @@ class TestCM1200Parsing:
             assert "power" in ch
             assert "snr" in ch
             assert "modulation" in ch
+            assert "channel_type" in ch  # Required for v3.11+ entity naming
             # corrected/uncorrected only present on QAM channels
             if not ch.get("is_ofdm"):
                 assert "corrected" in ch
                 assert "uncorrected" in ch
+
+        # Verify QAM downstream channels have correct channel_type
+        qam_channels = [ch for ch in downstream if not ch.get("is_ofdm")]
+        assert len(qam_channels) == 31
+        for ch in qam_channels:
+            assert ch["channel_type"] == "qam", "QAM channel missing channel_type='qam'"
 
         # Verify specific QAM downstream values (from fixture)
         first_ds = downstream[0]
         assert first_ds["frequency"] == 765000000
         assert first_ds["modulation"] == "QAM256"
         assert first_ds["channel_id"] == "32"
+        assert first_ds["channel_type"] == "qam"
 
-        # Verify OFDM channel exists
+        # Verify OFDM channel exists with correct channel_type
         ofdm_channels = [ch for ch in downstream if ch.get("is_ofdm")]
         assert len(ofdm_channels) == 1
         assert ofdm_channels[0]["modulation"] == "OFDM"
+        assert ofdm_channels[0]["channel_type"] == "ofdm", "OFDM channel should have channel_type='ofdm'"
 
     def test_parse_upstream(self, cm1200_docsis_status_html):
         """Test parsing upstream channels."""

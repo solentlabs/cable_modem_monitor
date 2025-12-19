@@ -51,16 +51,20 @@ def _normalize_channel_type(channel: dict[str, Any], direction: str) -> str:
     - Downstream: 'qam' (DOCSIS 3.0) or 'ofdm' (DOCSIS 3.1)
     - Upstream: 'atdma' (DOCSIS 3.0) or 'ofdma' (DOCSIS 3.1)
 
-    Falls back to 'qam'/'atdma' if modulation not specified.
+    Checks fields in order: channel_type, modulation, is_ofdm flag.
+    Falls back to 'qam'/'atdma' if type cannot be determined.
     """
+    # Check explicit channel_type first (e.g., "ATDMA", "OFDMA", "qam", "ofdm")
+    channel_type = channel.get("channel_type", "").lower()
     modulation = channel.get("modulation", "").lower()
+    is_ofdm = channel.get("is_ofdm", False)
 
     if direction == "downstream":
-        if "ofdm" in modulation:
+        if channel_type == "ofdm" or "ofdm" in modulation or is_ofdm:
             return "ofdm"
         return "qam"  # Default for DOCSIS 3.0 or unspecified
     else:  # upstream
-        if "ofdma" in modulation:
+        if channel_type == "ofdma" or "ofdma" in modulation or is_ofdm:
             return "ofdma"
         return "atdma"  # Default for DOCSIS 3.0 or unspecified
 

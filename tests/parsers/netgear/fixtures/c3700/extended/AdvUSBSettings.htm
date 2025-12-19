@@ -1,0 +1,303 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+
+<script type="text/javascript" src="wep.js"></script>
+
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+// Nick Implement ASP Tag display on GUI
+        BodyInit();
+// Nick Implement ASP Tag display on GUI
+
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function update_enable_check()
+{
+   	var cf = document.forms[0];
+	if( cf.enable_all_usb_device[0].checked )
+		cf.enable_all_usb.value = "1";
+	else
+		cf.enable_all_usb.value = "0";
+}
+
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+
+//    var tagValueList = "0|";
+    var tagValueList = '0|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+
+    // Enable any USB Device connected to the USB port
+    // 0: Yes
+    // 1: No
+    document.getElementsByName("enable_all_usb_device")[tagValues[0]].checked = true;
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    modifyBtnCss();
+	adjustAprovingButton();
+}
+function modifyBtnCss()
+{
+    $('button').each(function(){
+        var len = parent.calculate_string_pixel($(this).children().text());
+        var txt = trim($(this).children().text());
+        if(len > 137)
+        {
+            $(this).css("background","none");
+            $(this).css("position","relative");
+            $(this).css("z-index","1");
+            $(this).css("height","32px");
+            //var img = document.createElement("img");
+            //img.style.position = "absolute";
+            //img.src = "img/page-table-button.gif";
+            //img.style.right="55px";
+            //img.style.top = "101px";
+            //img.style.width = "137px";
+            //img.style.height = "32px";
+            //$(this).parent().append(img);
+			//$(this).css("background-image", "url('img/page-table-button.gif')");
+			$(this).css("background-image", "url('img/page-table-button-large.gif')");
+			$(this).css("background-size", "140px 32px");
+			$(this).css("background-repeat", "no-repeat");
+        }
+    });
+}
+// Chuck 20150317 Fix Mantis#14328: Issue2: "Approved Devices" button in "usb settings" page should display correctly on all browser.
+function adjustAprovingButton()
+{
+	if($('#approve_text').height() > 16)
+	{
+		$("#approve_btn").attr('class', 'page-table-button-large');
+	}
+}
+// Nick Implement ASP Tag display on GUI
+</script></head>
+<BODY onLoad="changeContentSize()" onResize="changeContentSize()" class="page-body">
+	  <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="USB_settings" method="post" action='/goform/AdvUSBSettings?id=1280103083'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                USB Settings
+            </div>
+            <TABLE border=0 style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');update_enable_check();" type="submit" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <TR>
+                                    <TD colspan="2">
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <TR>
+                                    <TD style="white-space: nowrap;">
+                                        <b>
+                                            Enable any USB Device connected to the USB port
+                                        </b>
+                                        <input type="radio" name="enable_all_usb_device" value="0" onclick="update_enable_check();">
+                                        Yes
+                                        <input type="radio" name="enable_all_usb_device" value="1" onclick="update_enable_check();">
+                                        No
+                                    </TD>
+                                    <TD>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="button" value=" Approved Devices " id="approve_btn" name="approve" class="page-table-button" onClick="buttonClick(this,' Approved Devices ');location.href='AdvUSBSettingsDrv.htm';">
+                                            <!--span class="roundleft_button"-->
+                                            	  <div id="approve_text" style="width:125px;word-break:break-all;">
+                                                 &nbsp;&nbsp;Approved Devices
+                                                </div>
+                                            <!--/span-->
+                                            <!--span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span-->
+                                        </button>
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr style="text-align:center;vertical-align: middle;">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="AdvUSBSettings_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </TABLE>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT type=hidden name=enable_all_usb value="0">
+            <a name="helpframe-anchor"></a>
+        </FORM>
+    </div>
+</BODY>
+</HTML>

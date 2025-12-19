@@ -60,7 +60,7 @@ Create `RAW_DATA/{MODEL}/ISSUE.md`:
 
 ## Phase 2: Triage (Go/No-Go)
 
-### 2.1 Auth Feasibility Check
+### 2.1 Auth Feasibility Check (DO THIS FIRST)
 
 **Before analyzing data completeness, verify we can actually authenticate.**
 
@@ -100,70 +100,9 @@ for entry in urls:
 **Without the auth flow, we cannot build authentication support.** Static HTML captures don't show how the browser established the session.
 
 **If auth feasibility fails:**
-
-1. **First: Search for external implementations** (see 2.1.1 below)
-2. **If found:** May not need HAR capture - use reference with attribution
-3. **If not found:** Request HAR capture via `scripts/capture_modem.py`
-
-Do NOT proceed to data analysis without either auth flow captured OR external reference found.
-
----
-
-### 2.1.1 Fallback: Search for External Implementations
-
-**When our tools can't get what we need, check if someone else has already reverse-engineered this modem.**
-
-5 minutes of research can save days waiting for user data that may never come.
-
-**Search patterns:**
-
-| Situation | Search Query |
-|-----------|--------------|
-| Form-based auth blocked | `"{modem model}" API python github` |
-| Unusual protocol | `"{manufacturer}" modem protocol python` |
-| ISP-specific device | `"{ISP name}" modem home assistant` |
-| General | `"{model}" DOCSIS github` |
-
-**What to look for:**
-
-| Finding | Value | Why |
-|---------|-------|-----|
-| Python library | High | Often has complete auth + API documented |
-| Prometheus/InfluxDB exporter | Medium | Shows what data is available and how to get it |
-| HA integration | Check scope | May overlap or may serve different purpose |
-| Security advisory | Medium | Often documents API structure unintentionally |
-
-**If found:**
-
-1. **Verify scope** - Does it cover authentication? Does it fetch DOCSIS channel data?
-2. **Check for HA overlap** - If existing HA integration, what does it do?
-3. **Document in ISSUE.md** - Add "External Reference" section with links
-4. **Plan attribution** - Note sources to cite (see Attribution Policy below)
-
-**If existing HA integration found:**
-
-| Their Scope | Our Scope | Action |
-|-------------|-----------|--------|
-| Same (signal monitoring) | Same | Consider contributing instead of duplicating |
-| Different (device tracking) | Signal monitoring | No conflict - proceed with attribution |
-
-**Known reference implementations:**
-
-| Project | Modems | What It Provides |
-|---------|--------|------------------|
-| [BowlesCR/MB8600_Login](https://github.com/BowlesCR/MB8600_Login) | Motorola MB8600 | HNAP auth (HMAC-MD5) |
-| [Tatsh/mb8611](https://github.com/Tatsh/mb8611) | Motorola MB8611 | HNAP field definitions |
-| [ties/compal_CH7465LG_py](https://github.com/ties/compal_CH7465LG_py) | Compal CH7465 | SHA256 auth + XML API |
-| [arris_cable_modem_stats](https://github.com/andrewfraley/arris_cable_modem_stats) | Arris SB8200, S33 | HTML scraping patterns |
-| [Netgear-Modem-Prometheus-Exporter](https://github.com/tylxr59/Netgear-Modem-Prometheus-Exporter) | Netgear CM1200 | HTML scraping patterns |
-| [docsis-cable-load-monitor](https://github.com/sp4rkie/docsis-cable-load-monitor) | Technicolor TC4400 | HTML scraping patterns |
-
-**Outcome:**
-
-- **Reference found** → Build auth from reference, release, have user re-capture (now authenticated)
-- **Nothing found** → Request HAR capture from user
-
-**Important:** External references are a fallback, not a first choice. Our capture tools should get what we need in most cases.
+→ STOP here
+→ Request HAR capture via `scripts/capture_modem.py`
+→ Do NOT proceed to data analysis (waste of time without auth)
 
 ---
 
@@ -225,13 +164,6 @@ grep -ri "serial" RAW_DATA/{MODEL}/
 - [ ] Only login page captured (auth blocking)
 - [ ] Manual capture with no sanitization
 - [ ] Auth described but not captured (e.g., "I don't see the login POST in the HAR")
-
-**YELLOW FLAGS (note limitation, decide if data is still useful):**
-- [ ] **Missing frequency data** - modem UI doesn't expose channel frequencies
-- [ ] **Missing codeword counts** - no error correction stats available
-- [ ] **No uptime/system info** - limited diagnostic capabilities
-
-If YELLOW FLAGS: Document the limitation in ISSUE.md. Consider whether the available data (SNR, power, modulation) is still valuable for signal monitoring. Most users care about SNR/power trends - frequency is nice-to-have. Proceed if core metrics are available.
 
 **GREEN LIGHT (proceed):**
 - [ ] Status pages with channel data present
@@ -715,10 +647,7 @@ If user says "Let me know what you would need" or similar:
   □ Create ISSUE.md with context
 
 □ Phase 2: Triage
-  □ Auth feasibility check (can our tools authenticate?)
-  □ If blocked → Search for external implementations (fallback)
-  □ If reference found → Document and plan attribution
-  □ If nothing found → Request HAR capture
+  □ **Auth feasibility check FIRST** (form-based auth? need HAR?)
   □ Scan for completeness (status pages present?)
   □ Scan for PII (WiFi creds, MACs, serials?)
   □ Check capture method
