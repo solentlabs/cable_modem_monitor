@@ -118,6 +118,12 @@ class ModemParser(ABC):
     # and the Ping Latency sensor is not created
     supports_icmp: bool = True
 
+    # Session cleanup - endpoint to call after each poll to end the session
+    # Set for modems that only support one authenticated session at a time
+    # (e.g., Netgear C7000v2 uses "/Logout.htm")
+    # When set: scraper calls this endpoint after get_modem_data() completes
+    logout_endpoint: str | None = None
+
     # URL patterns this parser can handle.
     #
     # DETECTION CONTRACT:
