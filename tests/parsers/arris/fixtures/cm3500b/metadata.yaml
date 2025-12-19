@@ -1,0 +1,13 @@
+# Modem metadata - verified against official sources
+release_date: null # Unable to determine
+end_of_life: null # null = still current
+docsis_version: "3.1"
+protocol: HTML
+chipset: "MaxLinear" # RF HW from product page
+isps:
+  - Vodafone Germany
+source: null # No public product page found
+
+# Fixture capture info
+firmware_tested: "11.05.042.02.EURO.NCS"
+captured_from_issue: 73

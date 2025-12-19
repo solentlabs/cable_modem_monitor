@@ -1,0 +1,83 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>Touchstone Login</title>
+    <meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+    <meta http-equiv=Content-Language content=en-us>
+    <meta http-equiv="Pragma" content="no-cache">
+    <link rel="stylesheet" href="/arris_style.css">
+    <script type="text/javascript">
+      function setFocus()
+      {
+        document.getElementById("username").focus();
+      }
+      function validateForm()
+      {
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+        document.getElementById("error_user").innerHTML = "";
+        document.getElementById("error_pass").innerHTML = "";
+        var flag = true;
+        if (username == "" | username == null)
+        {
+          document.getElementById("error_user").innerHTML = "username cannot be blank";
+          flag = false;
+        }
+        if (password == "" | password == null)
+        {
+          document.getElementById("error_pass").innerHTML = "password cannot be blank";
+          flag = false;
+        }
+        return flag;
+      }
+    </script>
+    <style>
+      #login_form {
+      border: 3px solid #0c055c;
+      }
+      td {
+      padding: 5px;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  <head>
+  <body class="CM3500" onload="setFocus()">
+    <div class="wrapper">
+      <div class="header">
+        <div class="header_text"><h1>Login</h1></div>
+      </div>
+      <div class="main_body">
+        <div class="heading1 spc0">
+          Enter credentials
+        </div>
+        <form method="post" action="login_cgi" onsubmit="return validateForm()">
+          <div id="login_form">
+            <table>
+              <tr>
+                <td>Username:</td>
+                <td><input type="text" id="username" name="username" />
+                <td><div id="error_user" class="error"><?USERNAME_RESULT></div></td>
+              </tr>
+              <tr>
+                <td>Password:</td>
+                <td><input type="password" name="password" id="password"></td>
+                <td><div id="error_pass" class="error"></div></td>
+              </tr>
+              <tr>
+                <td colspan=2 style="text-align:center"><input value="Login" id="configure" type="submit"></td>
+              </tr>
+            </table>
+          </div>
+        </form>
+      </div> <!-- main_body -->
+      <div class="push"></div>
+    </div> <!-- wrapper -->
+    <div class="footer">
+      &copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+    </div>
+  </body>
+</html>
