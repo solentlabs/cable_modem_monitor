@@ -362,17 +362,41 @@ If you encounter issues not covered here:
 
 ## Quick Reference
 
-### Correct Entity ID Format (v2.0+)
+### Entity ID Format (v3.11+)
+
+Channel sensors now include channel type for DOCSIS 3.1 compatibility:
 
 | Sensor Type | Entity ID | Display Name |
 |------------|-----------|--------------|
-| Downstream Power | `sensor.cable_modem_downstream_ch_1_power` | DS Ch 1 Power |
-| Downstream SNR | `sensor.cable_modem_downstream_ch_1_snr` | DS Ch 1 SNR |
-| Upstream Power | `sensor.cable_modem_upstream_ch_1_power` | US Ch 1 Power |
-| Upstream Frequency | `sensor.cable_modem_upstream_ch_1_frequency` | US Ch 1 Frequency |
+| Downstream QAM Power | `sensor.cable_modem_ds_qam_ch_32_power` | DS QAM Ch 32 Power |
+| Downstream OFDM Power | `sensor.cable_modem_ds_ofdm_ch_1_power` | DS OFDM Ch 1 Power |
+| Downstream SNR | `sensor.cable_modem_ds_qam_ch_32_snr` | DS QAM Ch 32 SNR |
+| Upstream ATDMA Power | `sensor.cable_modem_us_atdma_ch_3_power` | US ATDMA Ch 3 Power |
+| Upstream OFDMA Power | `sensor.cable_modem_us_ofdma_ch_1_power` | US OFDMA Ch 1 Power |
 | Channel Count | `sensor.cable_modem_downstream_channel_count` | DS Channel Count |
 
 **Note:**
 - Entity IDs always include `cable_modem_` prefix
-- Display names use DS/US abbreviations (industry standard)
+- Channel type is included: `qam`, `ofdm`, `atdma`, `ofdma`
 - DS = Downstream, US = Upstream
+
+### DOCSIS Channel Types
+
+Cable modems use different modulation schemes based on DOCSIS version:
+
+| Channel Type | Direction | DOCSIS | Description | Spec Reference |
+|-------------|-----------|--------|-------------|----------------|
+| **QAM** | Downstream | 3.0/3.1 | [Quadrature Amplitude Modulation](https://en.wikipedia.org/wiki/QAM_(television)) - Traditional downstream channel using 256-QAM or 1024-QAM | [DOCSIS 3.0 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.0) |
+| **OFDM** | Downstream | 3.1 | [Orthogonal Frequency-Division Multiplexing](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiplexing) - High-capacity DOCSIS 3.1 downstream using 4096-QAM | [DOCSIS 3.1 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.1) |
+| **ATDMA** | Upstream | 3.0/3.1 | [Advanced Time Division Multiple Access](https://en.wikipedia.org/wiki/DOCSIS#DOCSIS_2.0) - Traditional upstream channel | [DOCSIS 3.0 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.0) |
+| **OFDMA** | Upstream | 3.1 | [Orthogonal Frequency-Division Multiple Access](https://en.wikipedia.org/wiki/Orthogonal_frequency-division_multiple_access) - High-capacity DOCSIS 3.1 upstream | [DOCSIS 3.1 PHY](https://www.cablelabs.com/specifications/CM-SP-PHYv3.1) |
+
+**DOCSIS 3.0 modems:** Only have QAM (downstream) and ATDMA (upstream) channels.
+**DOCSIS 3.1 modems:** Have both traditional channels (QAM/ATDMA) and high-capacity channels (OFDM/OFDMA).
+
+### Sensor Attributes
+
+Each channel sensor exposes these attributes:
+- `channel_id`: CMTS-assigned channel identifier (stable per frequency)
+- `channel_type`: Modulation type (qam, ofdm, atdma, ofdma)
+- `frequency`: Channel frequency in Hz (power/SNR sensors only)

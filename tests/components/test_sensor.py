@@ -326,10 +326,10 @@ class TestEntityNaming:
         assert error_sensor.name == "Total Corrected Errors"
         assert error_sensor.unique_id == "test_cable_modem_total_corrected"
 
-        # Test channel sensor
-        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-        assert channel_sensor.name == "DS Ch 5 Power"
-        assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
+        # Test channel sensor (v3.11+ uses channel_type and channel_id)
+        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel_type="qam", channel_id=5)
+        assert channel_sensor.name == "DS QAM Ch 5 Power"
+        assert channel_sensor.unique_id == "test_cable_modem_ds_qam_ch_5_power"
 
 
 class TestLastBootTimeSensor:
