@@ -71,6 +71,20 @@ Check if submission includes:
 | Auth flow (if needed) | Login page + authenticated pages |
 | Event log (optional) | `EventLog.htm` or similar - useful for future outage detection features |
 
+**Auth flow verification (if modem requires login):**
+
+For modems requiring authentication, verify the HAR/capture includes:
+1. The login request (POST with credentials or auth headers)
+2. The session mechanism (cookies, tokens)
+3. Authenticated page responses
+
+```bash
+# Check HAR for login-related requests
+grep -i "login\|auth\|credential\|session" RAW_DATA/{MODEL}/*.har | head -20
+```
+
+**RED FLAG:** If user describes auth flow but says "I don't see it in the capture" or similar, STOP and request re-capture. Do not proceed with auth implementation based on description alone.
+
 ### 2.2 Scan for PII
 
 Search artifacts for:
@@ -102,11 +116,12 @@ grep -ri "serial" RAW_DATA/{MODEL}/
 - [ ] PII detected (real WiFi creds, MACs, serials)
 - [ ] Only login page captured (auth blocking)
 - [ ] Manual capture with no sanitization
+- [ ] Auth described but not captured (e.g., "I don't see the login POST in the HAR")
 
 **GREEN LIGHT (proceed):**
 - [ ] Status pages with channel data present
 - [ ] No PII detected or properly sanitized
-- [ ] Auth flow captured (if modem requires login)
+- [ ] Auth flow captured AND visible in HAR (if modem requires login)
 
 If RED FLAGS → Draft response using "Need more data" template, STOP here.
 
