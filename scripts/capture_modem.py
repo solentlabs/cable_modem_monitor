@@ -216,21 +216,25 @@ def filter_and_compress_har(har_path: Path) -> tuple[Path, dict]:
     original_size = har_path.stat().st_size
 
     # Filter entries
-    seen_urls = set()
+    seen_requests = set()
     filtered_entries = []
 
     for entry in har["log"]["entries"]:
-        url = entry.get("request", {}).get("url", "")
+        request = entry.get("request", {})
+        method = request.get("method", "GET")
+        url = request.get("url", "")
 
         # Skip bloat file types
         url_lower = url.lower().split("?")[0]  # Remove query params for extension check
         if any(url_lower.endswith(ext) for ext in BLOAT_EXTENSIONS):
             continue
 
-        # Skip duplicates (keep first occurrence)
-        if url in seen_urls:
+        # Skip duplicates (keep first occurrence of each method+url combination)
+        # This preserves both GET and POST to the same URL (e.g., login form + submit)
+        request_key = (method, url)
+        if request_key in seen_requests:
             continue
-        seen_urls.add(url)
+        seen_requests.add(request_key)
 
         filtered_entries.append(entry)
 
