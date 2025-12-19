@@ -1,0 +1,728 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+var AlertTimeDisabled = false;
+var AlertHourDisabled = false;
+
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function disable_am(disable_flag)
+{
+	var cf = document.forms[0];
+	cf.cfAlert_am[0].disabled = disable_flag;
+	cf.cfAlert_am[1].disabled = disable_flag;
+}
+
+function OnAlertChange()
+{
+	var cf = document.forms[0];
+	var index = cf.cfAlert_Select.selectedIndex;
+	if ( (index == 0) || (index == 1) || (index == 4) )
+	{
+		cf.cfAlert_Day.selectedIndex = 0;
+		cf.cfAlert_Hour.selectedIndex= 0;
+		cf.cfAlert_Day.disabled = true;
+		cf.cfAlert_Hour.disabled = true;
+		AlertTimeDisabled = true;
+		AlertHourDisabled = true;
+		disable_am(true);
+	}
+	else if(index == 2) // daily
+	{
+		cf.cfAlert_Day.selectedIndex = 0;
+		cf.cfAlert_Day.disabled = true;
+		cf.cfAlert_Hour.disabled = false;
+		AlertTimeDisabled = true;
+		AlertHourDisabled = false;
+		disable_am(false);
+
+	}
+	else if(index == 3) // weekly
+	{
+		cf.cfAlert_Day.disabled = false;
+		cf.cfAlert_Hour.disabled = false;
+		AlertTimeDisabled = false;
+		AlertHourDisabled = false;
+		disable_am(false);
+	}
+}
+function checkData()
+{
+    var cf = document.forms[0];
+    cf.email_alert.value = "0";
+    cf.time_day.value = "";
+    cf.time_hour.value = "";
+    cf.time_type.value = "0";
+
+    if(!cf.email_notify.checked) cf.email_enable.value = 0;
+    else
+    {
+        cf.email_enable.value = 1;
+        var tmp=cf.email_smtp.value.split(".");
+        if(tmp.length < 3
+			|| (cf.email_smtp.value.match( /[\x22-\x22]/ )) // "
+			|| (cf.email_smtp.value.match( /[\x3A-\x3A]/ )) // :
+			|| (cf.email_smtp.value.match( /[\x3C-\x3C]/ )) // <
+			|| (cf.email_smtp.value.match( /[\x3E-\x3E]/ )) // >
+			|| (cf.email_smtp.value.match( /[\x27-\x27]/ )) // '
+			|| (cf.email_smtp.value.match( /[\x7C-\x7C]/ )) // |
+			|| (cf.email_smtp.value.match( /[\x2F-\x2F]/ )) // /
+			|| (cf.email_smtp.value.match( /[\x5B-\x5B]/ )) // [
+			|| (cf.email_smtp.value.match( /[\x5C-\x5C]/ )) // \
+			|| (cf.email_smtp.value.match( /[\x5D-\x5D]/ )) // ]
+			)
+        {
+            alert("Error: Invalid SMTP server address.");
+            cf.email_smtp.focus();
+            return false;
+        }
+        if(cf.email_addr.value.indexOf("@", 0) == -1
+			|| cf.email_addr.value.indexOf(".", 0) == -1
+			|| (cf.email_addr.value.match( /[\x22-\x22]/ )) // "
+			|| (cf.email_addr.value.match( /[\x3A-\x3A]/ )) // :
+			|| (cf.email_addr.value.match( /[\x3C-\x3C]/ )) // <
+			|| (cf.email_addr.value.match( /[\x3E-\x3E]/ )) // >
+			|| (cf.email_addr.value.match( /[\x27-\x27]/ )) // '
+			|| (cf.email_addr.value.match( /[\x7C-\x7C]/ )) // |
+			|| (cf.email_addr.value.match( /[\x2F-\x2F]/ )) // /
+			|| (cf.email_addr.value.match( /[\x5B-\x5B]/ )) // [
+			|| (cf.email_addr.value.match( /[\x5C-\x5C]/ )) // \
+			|| (cf.email_addr.value.match( /[\x5D-\x5D]/ )) // ]
+			)
+        {
+            alert("Error: Invalid e-mail address.");
+            cf.email_addr.focus();
+            return false;
+        }
+
+        if (cf.smtp_auth.checked)
+            cf.auth_enable.value = 1;
+        else
+            cf.auth_enable.value = 0;
+
+        if(cf.block_site.checked)
+            cf.email_alert.value = "1";
+
+        cf.time_type.value = cf.cfAlert_Select.options[cf.cfAlert_Select.selectedIndex].value;
+
+        if(cf.cfAlert_Select.selectedIndex == 2)// daily
+        {
+            if(cf.cfAlert_Hour.selectedIndex < 0)
+            {
+                return false;
+            }
+            if(!cf.cfAlert_am[0].checked && !cf.cfAlert_am[1].checked)
+            {
+                return false;
+            }
+            cf.time_hour.value = cf.cfAlert_Hour.options[cf.cfAlert_Hour.selectedIndex].value;
+            if(cf.cfAlert_am[1].checked) cf.time_hour.value = parseInt(cf.time_hour.value) + 12;
+        }
+
+        if(cf.cfAlert_Select.selectedIndex == 3) // weekly
+        {
+            if(cf.cfAlert_Day.selectedIndex < 0)
+            {
+                return false;
+            }
+            if(cf.cfAlert_Hour.selectedIndex < 0)
+            {
+                return false;
+            }
+            if(!cf.cfAlert_am[0].checked && !cf.cfAlert_am[1].checked)
+            {
+                return false;
+            }
+            cf.time_day.value = cf.cfAlert_Day.options[cf.cfAlert_Day.selectedIndex].value;
+            cf.time_hour.value = cf.cfAlert_Hour.options[cf.cfAlert_Hour.selectedIndex].value;
+            if(cf.cfAlert_am[1].checked) cf.time_hour.value = parseInt(cf.time_hour.value) + 12;
+        }
+    }
+    return true;
+}
+
+function init()
+{
+    var cf = document.forms[0];
+    cf.email_notify.checked = false;
+    cf.smtp_auth.checked = false;
+    cf.block_site.checked = false;
+    cf.cfAlert_Select.selectedIndex = 4;
+    cf.cfAlert_Day.selectedIndex = 0;
+    cf.cfAlert_Hour.selectedIndex = 0;
+    cf.cfAlert_am[0].checked = true;
+    cf.cfAlert_am[1].checked = false;
+
+    if(cf.email_alert.value == "1")
+    {
+        cf.block_site.checked = true;
+    }
+
+    if(cf.time_type.value==1) cf.cfAlert_Select.selectedIndex=0;
+    else if(cf.time_type.value==2) cf.cfAlert_Select.selectedIndex=1;
+    else if(cf.time_type.value==3) cf.cfAlert_Select.selectedIndex=2;
+    else if(cf.time_type.value==4) cf.cfAlert_Select.selectedIndex=3;
+    else if(cf.time_type.value==0) cf.cfAlert_Select.selectedIndex=4;
+
+    if(cf.time_type.value == 0 || cf.time_type.value == 1 || cf.time_type.value == 2)
+    //none or when log full or hourly
+    {
+        cf.cfAlert_Day.disabled = true;
+        cf.cfAlert_Hour.disabled = true;
+        cf.cfAlert_am[0].disabled = true;
+        cf.cfAlert_am[1].disabled = true;
+    }
+    else if(cf.time_type.value == 3) //daily
+    {
+        cf.cfAlert_Day.disabled = true;
+        if(cf.time_hour.value >= 12) //pm
+        {
+            cf.cfAlert_Hour.selectedIndex = cf.time_hour.value - 12;
+            cf.cfAlert_am[1].checked = true;
+        }
+        else //am
+        {
+            cf.cfAlert_Hour.selectedIndex = cf.time_hour.value;
+            cf.cfAlert_am[0].checked = true;
+        }
+    }
+    else if(cf.time_type.value == 4) //weekly
+    {
+        cf.cfAlert_Day.selectedIndex = cf.time_day.value;
+        if(cf.time_hour.value >= 12) //pm
+        {
+            cf.cfAlert_Hour.selectedIndex = cf.time_hour.value - 12;
+            cf.cfAlert_am[1].checked = true;
+        }
+        else //am
+        {
+            cf.cfAlert_Hour.selectedIndex = cf.time_hour.value;
+            cf.cfAlert_am[0].checked = true;
+        }
+    }
+
+    if(cf.email_enable.value == 1)
+    {
+        cf.email_notify.checked = true;
+        if (cf.auth_enable.value == 0)
+        {
+            cf.auth_user.disabled = true;
+            cf.auth_pwd.disabled = true;
+        }
+    }
+    else
+    {
+        cf.smtp_auth.disabled = true;
+        cf.block_site.disabled = true;
+        cf.email_smtp.disabled = true;
+        cf.email_addr.disabled = true;
+        cf.auth_user.disabled = true;
+        cf.auth_pwd.disabled = true;
+        cf.cfAlert_Select.disabled = true;
+        cf.cfAlert_Day.disabled = true;
+        cf.cfAlert_Hour.disabled = true;
+        cf.cfAlert_am[0].disabled = true;
+        cf.cfAlert_am[1].disabled = true;
+    }
+
+
+    if (cf.auth_enable.value == 1)
+        cf.smtp_auth.checked = true;
+
+    if(cf.smtp_check.value != "OK")
+    {
+        alert(cf.smtp_check.value);
+        cf.smtp_check.value = "OK";
+        history.back();
+    }
+
+}
+
+function setGray()
+{
+    var cf = document.forms[0];
+
+    if(cf.email_notify.checked)
+    {
+        cf.smtp_auth.disabled = false;
+        cf.block_site.disabled = false;
+        cf.email_smtp.disabled = false;
+        cf.email_addr.disabled = false;
+        if(cf.smtp_auth.checked)
+		{
+			cf.auth_user.disabled = false;
+			cf.auth_pwd.disabled = false;
+		}
+        cf.cfAlert_Select.disabled = false;
+		OnAlertChange();
+    }
+    else
+    {
+        cf.smtp_auth.disabled = true;
+        cf.block_site.disabled = true;
+        cf.email_smtp.disabled = true;
+        cf.email_addr.disabled = true;
+        cf.auth_user.disabled = true;
+        cf.auth_pwd.disabled = true;
+        cf.cfAlert_Select.disabled = true;
+        cf.cfAlert_Day.disabled = true;
+        cf.cfAlert_Hour.disabled = true;
+        cf.cfAlert_am[0].disabled = true;
+        cf.cfAlert_am[1].disabled = true;
+    }
+}
+
+function CancelAction()
+{
+    var cf = document.forms[0];
+
+    cf.result.value="cancel";
+    return true;
+}
+
+function setAuthGray()
+{
+    var cf = document.forms[0];
+
+    if(cf.smtp_auth.checked)
+    {
+        cf.auth_user.disabled = false;
+        cf.auth_pwd.disabled = false;
+    }
+    else
+    {
+        cf.auth_user.disabled = true;
+        cf.auth_pwd.disabled = true;
+    }
+}
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+/*
+  Turn E-mail Notification (checkbox) | Outgoing Mail Server(text) | Sendto E-mail Address (text)|
+  Requires authentication (checkbox) | User Name (text) | Password (text)
+  Send Alert Immediately (checkbox) | Send logs according to this schedule (select | Day (select) | Time (select)
+*/
+    var tagValueList = '0|||0|||0|0|7|0|';
+//    var tagValueList = "1|***SMTP_SERVER***|***EMAIL***|***WIFI_CRED***|***WIFI_CRED***|1|4|5|2";
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Turn E-mail Notification */
+    document.getElementsByName("email_enable")[0].value=tagValues[0];
+
+    /* Outgoing Mail Server */
+    document.getElementsByName("email_smtp")[0].value=tagValues[1];
+
+    /* Sendto E-mail Address */
+    document.getElementsByName("email_addr")[0].value=tagValues[2];
+
+    /* Requires authentication */
+    document.getElementsByName("auth_enable")[0].value=tagValues[3];
+
+    /* User Name */
+    document.getElementsByName("auth_user")[0].value=piplineDecode(tagValues[4]);
+
+    /* Password */
+    document.getElementsByName("auth_pwd")[0].value=piplineDecode(tagValues[5]);
+
+    /* Send Alert Immediately */
+    document.getElementsByName("email_alert")[0].value=tagValues[6];
+
+    /* Send logs schedule */
+    document.getElementsByName("time_type")[0].value=tagValues[7];
+
+    /* Day */
+    document.getElementsByName("time_day")[0].value=tagValues[8];
+
+    /* Time */
+    document.getElementsByName("time_hour")[0].value=tagValues[9];
+
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+// Nick Implement ASP Tag display on GUI
+//-->
+</script>
+</head>
+<BODY bgColor="#ffffff" onload="BodyInit(); init(); changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" action='/goform/E-mail?id=1160479146'
+        method="POST" name="formname">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                E-mail
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onClick="buttonClick(this,'Apply');return checkData()" type="SUBMIT" name="cfAlert_Apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');CancelAction();reset();BodyInit();init();" type="button" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="email_notify" value="checkboxValue" onclick="javascript:setGray();">
+                                        <b>
+                                            Turn E-mail Notification On
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('E-mail','receive')"><b>Send alerts and logs through e-mail</b> </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        Your Outgoing Mail Server
+                                    </td>
+                                    <td style="width:50%;text-align:right">
+                                        <input type="text" name="email_smtp" value="" size="24" maxlength="50" onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        Send to This E-mail Address
+                                    </td>
+                                    <td style="width:50%;text-align:right">
+                                        <input type="text" name="email_addr" value="" size="24" maxlength="50" onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <input type="checkbox" name="smtp_auth" onclick="javascript:setAuthGray();">
+                                        <B>
+                                            My mail server requires authentication
+                                        </B>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        User Name
+                                    </td>
+                                    <td style="width:50%;text-align:right">
+                                        <INPUT maxLength=64 name=auth_user size=24 value="" onkeyup="ignorSingleQuotation(this);" onkeypress="ignorSingleQuotation(this);">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Password
+                                    </td>
+                                    <td style="width:50%;text-align:right">
+                                        <INPUT type=password maxLength=64 name=auth_pwd size=24 value="">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('E-mail','alert')"><input type="checkbox"  name="block_site" value="checkboxValue"><b>Send Alert Immediately</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        When someone attempts to visit a blocked site
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('E-mail','schedule')"><b>Send logs according to this schedule</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <select name="cfAlert_Select" size="1" onchange="OnAlertChange();">
+                                            <option selected="selected" value=1>
+                                                When log is full
+                                            </option>
+                                            <option value=2>
+                                                Hourly
+                                            </option>
+                                            <option value=3>
+                                                Daily
+                                            </option>
+                                            <option value=4>
+                                                Weekly
+                                            </option>
+                                            <option value=0>
+                                                None
+                                            </option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        Day &nbsp;
+                                        <select name="cfAlert_Day" size="1" onFocus="if (AlertTimeDisabled) this.blur()">
+                                            <option selected="selected" value=0>
+                                                Sunday
+                                            </option>
+                                            <option value=1>
+                                                Monday
+                                            </option>
+                                            <option value=2>
+                                                Tuesday
+                                            </option>
+                                            <option value=3>
+                                                Wednesday
+                                            </option>
+                                            <option value=4>
+                                                Thursday
+                                            </option>
+                                            <option value=5>
+                                                Friday
+                                            </option>
+                                            <option value=6>
+                                                Saturday
+                                            </option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        Time
+                                        <select name="cfAlert_Hour" size="1" onFocus="if (AlertHourDisabled) this.blur()">
+                                            <option value=0>
+                                                12:00
+                                            </option>
+                                            <option selected="selected" value=1>
+                                                1:00
+                                            </option>
+                                            <option value=2>
+                                                2:00
+                                            </option>
+                                            <option value=3>
+                                                3:00
+                                            </option>
+                                            <option value=4>
+                                                4:00
+                                            </option>
+                                            <option value=5>
+                                                5:00
+                                            </option>
+                                            <option value=6>
+                                                6:00
+                                            </option>
+                                            <option value=7>
+                                                7:00
+                                            </option>
+                                            <option value=8>
+                                                8:00
+                                            </option>
+                                            <option value=9>
+                                                9:00
+                                            </option>
+                                            <option value=10>
+                                                10:00
+                                            </option>
+                                            <option value=11>
+                                                11:00
+                                            </option>
+                                        </select>
+                                        <input type="radio" checked="checked" name="cfAlert_am" value="am">
+                                        a.m.
+                                        <input type="radio" name="cfAlert_am" value="pm">
+                                        p.m.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="E-mail_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT name=email_enable type=hidden value="0">
+            <INPUT name=email_alert type=hidden value="0">
+            <INPUT name=auth_enable type=hidden value="0">
+            <INPUT name=smtp_check type=hidden value="OK">
+            <INPUT name=time_type type=hidden value="0">
+            <INPUT name=time_day type=hidden value="0">
+            <INPUT name=time_hour type=hidden value="0">
+            <INPUT name=result type=hidden value="apply">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

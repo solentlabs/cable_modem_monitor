@@ -1,0 +1,877 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--style type="text/javascript">
+    classes.num.all.fontFamily = "Courier";
+    classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+    $(document).ready(function()
+    {
+//        if(need_to_check_browser_type())
+//            window.location.href="USBBasic.htm";
+
+        BodyInit();
+        loadSettings();
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+function need_to_check_browser_type()
+{
+    var isIE = navigator.userAgent.search("MSIE") > -1;
+    var isFirefox = navigator.userAgent.search("Firefox") > -1;
+    var isOpera = navigator.userAgent.search("Opera") > -1;
+    var isChrome = navigator.userAgent.search("Chrome") > -1;
+    var isSafari = navigator.userAgent.search("Safari") > -1;
+    var router_smb_link_style = document.getElementsByName('router_smb_link_style');
+
+    if(isChrome & router_smb_link_style[0].value!="others")
+        return true;
+    else if(!isChrome & isSafari & router_smb_link_style[0].value!="safari")
+        return true;
+    else if(isIE & router_smb_link_style[0].value!="explorer")
+        return true;
+    else if(!isSafari & !isIE & router_smb_link_style[0].value!="others")
+        return true;
+    else
+        return false;
+}
+
+function remove_disk()
+{
+    var msg = ""
+	cf=document.forms[0];
+
+	if(cf.usb_num.value == 0)
+	{
+         msg+= "No Disk.\n";
+    }
+	else if(cf.usb_num.value > 1)
+	{
+		openWarnWindow();
+		return false;
+	}
+
+    if (msg.length > 1)
+	{
+		alert(msg);
+		return false;
+    }
+    return true;
+}
+
+function loadSettings()
+{
+    var cf=document.forms[0];
+
+    setUSBSupportLevel();
+
+	if (cf.no_usb_device.value == 1)
+    {
+        var removeButton;
+        cf.Remove.disabled = 'true';
+        removeButton=document.getElementsByName("Remove");
+        removeButton[0].outerHTML='<button type="submit" disabled="disabled" value="Safely Remove USB Device" name="Remove" class="button-grey" onClick="buttonClick(this,\'Safely Remove USB Device\');return remove_disk();"><span class="roundleft_grey">&nbsp;&nbsp; Safely Remove USB Device<\/span><span class="roundright_grey">&nbsp;&nbsp;&nbsp;&nbsp;<\/span><\/button>';
+        removeButton[0].style.cursor='default';
+    }
+
+    if (cf.umountsucc.value == "1")
+    {
+        //openWarnWindow();
+          alert("Now you can remove this device.");
+    }
+    else if (cf.umountsucc.value == "2")
+    {
+        //openWarnWindow();
+    }
+}
+
+function setUSBSupportLevel()
+{
+    var cf=document.forms[0];
+    var SupportLevel = cf.ReadyShareSupportedLevel.value;
+    var support_basic = SupportLevel & 1 ? 1 : 0;
+    var support_remote = SupportLevel & 2 ? 1 : 0;
+    var support_printing = SupportLevel & 4 ? 1 : 0;
+
+    if(support_basic)
+        document.getElementById("USB_basic").style.display = "";
+    else
+        document.getElementById("USB_basic").style.display = "none";
+
+    if(support_remote)
+        document.getElementById("USB_remote").style.display = "block";
+    else
+        document.getElementById("USB_remote").style.display = "none";
+
+    if(support_printing)
+        document.getElementById("USB_printer").style.display = "block";
+    else
+        document.getElementById("USB_printer").style.display = "none";
+}
+
+// Chuck 20140902 fix mantis#12486
+// We will use polling instead of onBeforeUnload in following browsers
+// PC: Opera with Presto,
+// iPad: Safari,
+// iPhone: Opera
+// Android Pad: Opera, Chrome(restoring delayed about 3 secs?), Firefox
+// Android Phone:
+function isOnBeforeUnloadSupported()
+{
+    if(navigator.userAgent.indexOf("Presto") > -1
+        || navigator.userAgent.indexOf("iPad") > -1
+        || navigator.userAgent.indexOf("iPhone") > -1
+        || navigator.userAgent.indexOf("Android") > -1
+        )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+// Chuck 20140902 fix mantis#12486
+// Because the following browser can't handle the window opened by itself, we will use BlockUI instead of polling or onBeforeUnload to prevent user clicking the GUI when a statistic/connection status window is opening.
+// PC:
+// iPad: Opera Mini,
+// iPhone:
+// Android Pad: Dolphin Mini, UC, Safari, Native
+// Android Phone:
+function isUnsupportedMobileBrowser()
+{
+    /* Examples:
+     * iPad-Safari: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile/11D201 Safari/9537.53
+     * iPad-Opera: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) OPiOS/8.0.2.80660 Mobile/11D201 Safari/9537.53
+     * iPad-Chrome: Mozilla/5.0 (iPad; CPU OS 7_1_1 like Mac OS X) AppleWebKit/537.51.2 (KHTML, like Gecko) CriOS/36.0.1985.57 Mobile/11D201 Safari/9537.53 (000514)
+     * Android-Native: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30
+     * Android-Opera: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.138 Safari/537.36 OPR/22.0.1485.81203
+     * Android-Chrome: Mozilla/5.0 (Linux; U; Android 4.1.2; zh-tw; GT-N8010 Build/JZO54K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1958.135 Safari/537.36
+     * PC-IE: Mozilla/5.0 (Windows NT 6.1; Trident/7.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; InfoPath.3; .NET4.0C; .NET4.0E; rv:11.0) like Gecko
+     * PC-Opera: Opera/9.80 (Windows NT 6.1; U; zh-tw) Presto/2.10.289 Version/12.00
+     * PC-Chrome: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.102 Safari/537.36
+     */
+    var firstSupportedWebKit = "AppleWebKit/535";
+    if(navigator.userAgent.indexOf("iPad") == -1
+        && navigator.userAgent.indexOf("iPhone") == -1
+        && navigator.userAgent.indexOf("Android") == -1
+        )
+    {
+        // Is PC browser.
+        return false;
+    }
+    else if(navigator.userAgent.indexOf("OPiOS") > -1)
+    {
+        // Although the AppleWebKit version of Opera on iOS is greater than 534, but it still can't handle the opened window.
+        return true;
+    }
+    else if(navigator.userAgent.indexOf("AppleWebKit/") > -1
+        && navigator.userAgent.substring(navigator.userAgent.indexOf("AppleWebKit/")) < firstSupportedWebKit)
+    {
+        // The browser using the lower version (<=534) of AppleWebKit can't handle the window opened by itself.
+        return true;
+    }
+
+    return false;
+}
+
+// Chuck 20140902 fix mantis#12486
+var intervalId;
+function detectPoppedWindowStatus()
+{
+    intervalId = setInterval(reloadPage, 200);
+}
+
+// Chuck 20140902 fix mantis#12486
+function closeIframe()
+{
+    top.$.unblockUI();
+    window.location.reload();
+}
+
+function setTimer()
+{
+    setTimeout(reloadPage,300);
+}
+function reloadPage()
+{
+    if(childWindow.closed)
+    {
+		parent.document.getElementById("diablePage").style.display = "none";
+        window.location.reload();
+
+        // Chuck 20140902 fix mantis#12486
+        // Chuck 20150203 Fix TD#328: C7000-100NAS: User Interface -- GUI is stuck when closing "connection status" page quickly.
+        //if(!isOnBeforeUnloadSupported())
+        {
+            clearInterval(intervalId);
+        }
+    }
+}
+/*--End--*/
+
+function openWarnWindow()
+{
+     //var ischrome = navigator.userAgent.toLowerCase().indexOf('chrome');
+     //if(ischrome > -1){
+     //    var nwin = window.open();
+     //    nwin.location = "USBUmount.htm";
+     //}else{
+     //    window.open('USBUmount.htm','','width=400,height=360,status=yes,resizable=yes,alwaysRaised=yes');
+     //}
+
+    // Chuck 20140902 fix mantis#12486
+    if(isUnsupportedMobileBrowser())
+    {
+        top.$.blockUI({
+            message: '<iframe width="500px" height="550px" src="USBUmount.htm"></iframe>',
+            css: {width: '100%', height: '0px', top: '0px', left: '0px', border: '0px', backgroundColor: 'transparent'},
+            onOverlayClick: closeIframe
+        });
+    }
+    else
+    {
+        childWindow = window.open('USBUmount.htm','trwarn_win',"width=400,height=380,status=yes,resizable=no");
+        childWindow.focus();
+        showDisablePage(parent.document.getElementById("diablePage"),childWindow,parent.document.getElementById("all").offsetWidth,parent.document.getElementById("all").offsetHeight);
+
+        // Chuck 20140902 fix mantis#12486
+        // Chuck 20150203 Fix TD#328: C7000-100NAS: User Interface -- GUI is stuck when closing "connection status" page quickly.
+        //if(!isOnBeforeUnloadSupported())
+        {
+            detectPoppedWindowStatus();
+        }
+    }
+}
+
+function UpdateAliveLink()
+{
+    parent.$('.SubMenuActive').addClass('SubMenu');
+    parent.$('.SubMenuActive').removeClass('SubMenuActive');
+    parent.$('#Advanced_Settings').addClass('SubMenuActive');
+    parent.$('#Advanced_Settings').removeClass('SubMenu');
+}
+
+// Nick Implement ASP Tag display on GUI
+var Lnxip;
+var IsLanIp;
+var SambaName;
+
+function InitTagValue()
+{
+/*
+  ReadyShare Supported Level (hidden) | USB support (checked) |
+  No USB device | USB device Number: ***REDACTED*** USB Umount success |
+*/
+//    var tagValueList = "5|0|1|0|0|***WIFI_CRED***";
+    var tagValueList = '1|0|1|0|0|***DEVICE***|***PRIVATE_IP***|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+
+    // ReadyShare Supported Level
+    document.getElementsByName("ReadyShareSupportedLevel")[0].value = tagValues[0];
+
+    /* USB support */
+    document.getElementsByName("USB_support")[tagValues[1]].checked = true;
+
+    // No USB device
+    document.getElementsByName("no_usb_device")[0].value = tagValues[2];
+
+    // USB device Number: ***REDACTED*** = tagValues[3];
+
+    // USB Umount success
+    // 0: no need umount
+    // 1: successlly umount usb device
+    // 2: umount all device
+    document.getElementsByName("umountsucc")[0].value = tagValues[4];
+
+    Lnxip = tagValues[6];
+    IsLanIp = 	tagValues[7];
+    SambaName = tagValues[5];
+
+    if(IsLanIp == "1")
+    {
+	    if (navigator.appVersion.indexOf("MSIE") != -1 && (navigator.appVersion.indexOf("Win")!=-1)
+	        && navigator.userAgent.indexOf("MSIE 11.0") == -1)
+	    {
+	//        alert("IE");
+	//        document.getElementById("devicename").href = "\\\\" + tagValues[5] + "\\";
+	        document.getElementById("devicename").href = "file://" + tagValues[5] + "/";
+	        document.getElementById("devicename").innerHTML = "\\\\" + tagValues[5] ;
+	    }
+	    else if ((navigator.userAgent.toString().toLowerCase().indexOf("safari") != -1)
+	        && (navigator.userAgent.toString().toLowerCase().indexOf("chrome") == -1))
+	//        &&  (navigator.userAgent.toString().toLowerCase().indexOf("mac")!=-1))
+	    {
+	//        alert ("safari for mac");
+	        document.getElementById("devicename").href = "smb://" + tagValues[6] + "/";
+	        document.getElementById("devicename").innerHTML = "\\\\" + tagValues[5] ;
+
+	    }
+	    else if((navigator.userAgent.indexOf("MSIE 11.0") != -1)
+	         || (navigator.userAgent.toString().toLowerCase().indexOf("chrome") != -1)
+	         || (navigator.userAgent.toString().toLowerCase().indexOf("mozilla") != -1))
+	    {
+	        document.getElementById("devicename").innerHTML = "\\\\" + tagValues[5];
+	        document.getElementById("devicename").removeAttribute("style");
+	    }
+	/*
+	    else if ((navigator.appVersion.indexOf("Linux")!=-1) || (navigator.appVersion.indexOf("X11")!=-1))
+	    {
+	        alert ("LINUX another");
+	    }
+	*/
+	    else
+	    {
+	//        alert ("another");
+	        document.getElementById("devicename").removeAttribute("style");
+	        document.getElementById("devicename").innerHTML = "\\\\" + tagValues[5];
+	    }
+    }
+	else
+	{
+	     document.getElementById("devicename").removeAttribute("style");
+            document.getElementById("devicename").innerHTML = "\\\\" + tagValues[5];
+	}
+}
+
+function InitUpdateUSBBasicTableTagView()
+{
+/*
+  Share Name) | Read Access | Write Access
+  Folder Name | Volume Name | Total Space | Free Space
+*/
+    var tagValueList = '0|';
+/*
+    var tagValueList = "3" +
+                            "|FolderA | N/A | N/A | N/A | N/A | N/A | N/A" +
+                            "|FolderB | N/A | N/A | N/A | N/A | N/A | N/A" +
+                            "|FolderC | N/A | N/A | N/A | N/A | N/A | N/A";
+*/
+    return tagValueList.split("|");
+}
+
+function onAddUSBAvailableRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+
+    if(IsLanIp == "1")
+    {
+	    if (navigator.appVersion.indexOf("MSIE") != -1 && (navigator.appVersion.indexOf("Win")!=-1))
+	    {
+	//        alert("IE");
+	        cellsArray [0] = "<a target='_blank' href='file:" + tags[firstCellIdx + 0]+ "' style='color: #0000FF;text-decoration:underline;'>"+  tags[firstCellIdx + 0]+ "<\/a>";
+	    }
+	    else if ((navigator.userAgent.toString().toLowerCase().indexOf("safari") != -1)
+	        && (navigator.userAgent.toString().toLowerCase().indexOf("chrome") == -1)
+	        )
+	    {
+	//        alert ("safari for mac");
+	        var shareName=tags[firstCellIdx + 0].replace("\\\\", "");
+			shareName = shareName.replace(/\\/g, "/");
+	        //while (shareName.search("\\") != -1)
+	        //{
+	            //shareName = shareName.replace("\\", "/");
+	        //}
+
+		 shareName = shareName.replace(SambaName, "");  //remove "Samba Name" (ex: from "readyshare/USB_Storage" to "/USB_Storage")
+	        cellsArray [0] = "<a target='_blank' href='smb://" + Lnxip +  shareName
+	            + "' style='color: #0000FF;text-decoration:underline;'>"+ tags[firstCellIdx + 0] + "<\/a>";
+
+	    }
+	/*
+	    else if ((navigator.appVersion.indexOf("Linux")!=-1) || (navigator.appVersion.indexOf("X11")!=-1))
+	    {
+	        alert ("LINUX another");
+	    }
+	*/
+	    else
+	    {
+	//        alert ("another");
+	        cellsArray [0] = "&nbsp;" + tags[firstCellIdx + 0] + "&nbsp;";
+	    }
+    }
+    else
+    {
+        cellsArray [0] = "&nbsp;" + tags[firstCellIdx + 0] + "&nbsp;";
+    }
+
+    if(tags[firstCellIdx + 0] == "Not Shared")
+    {
+    	cellsArray [0] = "<a href='USBAdv.htm' style='color: #0000FF;text-decoration:underline;'>"+ tags[firstCellIdx + 0] + "<\/a>";
+    }
+
+//    cellsArray [0] = "&nbsp;" + tags[firstCellIdx + 0] + "&nbsp;";
+    cellsArray [1] = "&nbsp;" + tags[firstCellIdx + 1] + "&nbsp;";
+    cellsArray [2] = "&nbsp;" + tags[firstCellIdx + 2] + "&nbsp;";
+    cellsArray [3] = "&nbsp;" + tags[firstCellIdx + 3] + "&nbsp;";
+    cellsArray [4] = "&nbsp;" + tags[firstCellIdx + 4] + "&nbsp;";
+    cellsArray [5] = "&nbsp;" + tags[firstCellIdx + 5] + "&nbsp;";
+    cellsArray [6] = "&nbsp;" + tags[firstCellIdx + 6] + "&nbsp;";
+
+    return cellsArray;
+}
+
+function InitUpdateUSBBasicTableView(tagValues)
+{
+    /* draw table and insert content value */
+    drawTable('AvailableFoldersTable', tagValues, onAddUSBAvailableRowCB);
+}
+
+function drawTable(tableId, tags, onAddRowCB)
+{
+    var cellsNum = 0;
+    var item = 0;
+    var totalTagNum = tags.length - 1; // expect the first 1
+    var theTable = document.getElementById(tableId);
+
+    var tableStatus = [];
+
+    if ( !tags[tags.length - 1])
+        totalTagNum --;
+    cellsNum = totalTagNum /  parseInt(tags[0]);
+
+    for(i=0; i<parseInt(tags[0]); i++)
+    {
+        if(i==0)
+        {
+            tableStatus[i] = i;
+        }
+        else
+        {
+            if(tags[i*cellsNum+5] == tags[(i-1)*cellsNum+5])
+            {
+                tableStatus[i] = tableStatus[i-1];
+            }
+            else
+            {
+                tableStatus[i] = i;
+            }
+        }
+    }
+
+    if (theTable != null)
+    {
+        // Terry 20111228, remove all table content before to fill out the new content
+        while (theTable.rows.length > 1)
+        {
+            theTable.deleteRow(theTable.rows.length - 1);
+        }
+        //
+
+        for (item = 0; item < parseInt(tags[0]); item++)
+        {
+            var newRow = theTable.insertRow(-1);
+            var cellsList = onAddRowCB(newRow, item , (item * cellsNum) + 1, tags);
+
+            for (i = 0; i < cellsList.length; i++)
+            {
+                if (cellsList[i].length == 0)
+                {
+                    newRow.insertCell(-1).innerHTML = '&nbsp;';
+                }
+                else
+                {
+                    if(i==5 || i==6 || i==7)
+                    {
+                        if(tableStatus[item] != tableStatus[item-1])
+                        {
+                            var k;
+                            var spanNumber = 0;
+                            for(k=0;k<tableStatus.length;k++)
+                            {
+                                if(tableStatus[k]==item)
+                                {
+                                    spanNumber++;
+                                }
+                            }
+                            var newCell = newRow.insertCell(-1);
+                            newCell.setAttribute('rowSpan',spanNumber);
+                            newCell.innerHTML=cellsList[i];
+                        }
+                    }
+                    else
+                    {
+                        var newCell = newRow.insertCell(-1);
+                        newCell.innerHTML = cellsList[i];
+                    }
+                }
+            }
+        }
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitUpdateUSBBasicTableView(InitUpdateUSBBasicTableTagView());
+}
+// Nick Implement ASP Tag display on GUI
+//-->
+</script></head>
+<body class="page-body" onload="changeContentSize();" onResize="changeContentSize()">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="frmService" method="post" action='/goform/USBBasic?id=1160479146'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                USB Storage (Basic Settings)
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Refresh');location.href='USBBasic.htm'" type="button" name="Refresh" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="refresh-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp; Refresh
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="USB_basic">
+                                    <td>
+                                        <input type="radio" name="USB_support">
+                                        Basic
+                                    </td>
+                                </tr>
+                                <tr id="USB_remote" style='display:none'>
+                                    <td>
+                                        <input type="radio" name="USB_support">
+                                        ReadyShare Remote (Allows you to access ReadyShare Storage from anywhere.)
+                                    </td>
+                                </tr>
+                                <tr id="USB_printer" style='display:none'>
+                                    <!-- Nick 20111011 <td><input type="radio" name="USB_support"  onclick="location.replace('USB_basic_printing.htm');">ReadySHARE Printing</td>-->
+                                    <td>
+                                        <input type="radio" name="USB_support" onclick="location.href='/USBPrinter.htm'">
+                                        ReadySHARE Printer
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('USBBasic','device')"><b>Network/Device Name :</b></a>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;
+                                        <a id='devicename' target='_blank' style="color: #0000FF;text-decoration:underline;"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('USBBasic','available_folder')"><b>Available Network Folders</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="2" cellspacing="0" width="100%" id='AvailableFoldersTable' class="TableStyle">
+                                            <tr>
+                                                <td style="text-align:center;white-space: nowrap;width:20%">
+                                                    <span class="thead">
+                                                        Share Name
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:20%">
+                                                    <span class="thead">
+                                                        Read<BR>Access
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:7%">
+                                                    <span class="thead">
+                                                        Write<BR>Access
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:19%">
+                                                    <span class="thead">
+                                                        Folder Name
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:20%">
+                                                    <span class="thead">
+                                                        Volume Name
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:7%">
+                                                    <span class="thead">
+                                                        Total<BR>Space
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center;white-space: nowrap;width:7%">
+                                                    <span class="thead">
+                                                        Free<BR>Space
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <input type="hidden" name="no_usb_device">
+                                        <input type="hidden" name="sharefolderNum" value="0">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="button" value="Edit" name="Edit" class="button-rule" onclick="buttonClick(this,'Edit');UpdateAliveLink();location.href='USBAdvRetail.htm'">
+                                            <span class="roundleft_button">
+                                                <span class="edit-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Edit
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="submit" value="Safely Remove USB Device" name="Remove" class="button-rule" onclick="buttonClick(this,'Safely Remove USB Device');return remove_disk();">
+                                            <span class="roundleft_button">
+                                                &nbsp;&nbsp; Safely Remove USB Device
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="USBBasic_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="usb_num" value="0">
+            <input type="hidden" name="action" value="basic">
+            <INPUT name=umountsucc type=hidden value="0">
+            <INPUT name=router_smb_link_style type=hidden value="others">
+            <input name="ReadyShareSupportedLevel" type="hidden" value="5">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

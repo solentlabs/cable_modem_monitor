@@ -48,3 +48,14 @@ Examples of irreversible operations requiring verification:
 **NEVER use "Closes #X", "Fixes #X", or similar auto-close keywords.**
 - Users should close their own tickets after confirming fixes work
 - Use "Related to #X" or "Addresses #X" instead
+
+## Issue Labels
+
+Labels should reflect actionable state:
+
+- `in-development` - Code actively being written or in unreleased branch
+- `needs-testing` - Released and awaiting user verification (user CAN test now)
+- `needs-data` - Waiting on user to provide captures/info
+
+**Only change to `needs-testing` after the code is released and installable.**
+A parser on an unreleased branch is still `in-development` even if the code is complete.

@@ -1,0 +1,914 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='<title>NETGEAR Gateway C3700-100NAS</title>'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+var MacAddress;
+var DisableFixedIP = false;
+var DisableFixedDNS = false;
+var DisableFixedMAC = false;
+var isSupportComHem = false;
+var ParentalControlEnabled = false; // Chuck 20150120 Add for parental Control
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.bas-help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".bas-help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".bas-help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                var linkName = "";
+
+				linkName = fname+"_h." +"htm";
+
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=linkName;
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=linkName+"#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+// foxconn, khfan, remove start, 2014/09/24
+// Defect # 126
+// C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+/*
+function checkType(wan_proto) // called from basictop.htm
+{
+	if (1)
+//	if (basictop.document.forms[0])
+	{
+		if (wan_proto == "pppoe")
+		    window.location.href = "BAS_pppoe.htm";
+		else if (wan_proto == "pptp")
+		    window.location.href = "BAS_pptp.htm";
+		else if (wan_proto == "bpa")
+		    window.location.href = "BAS_bpa.htm";
+		else if (wan_proto == "l2tp")
+		    window.location.href = "BAS_l2tp.htm";
+		else
+		    window.location.href = "BAS_ether.htm";
+	}
+	else
+	    window.setTimeout(checkType(),300);
+}
+*/
+// foxconn, khfan, remove end, 2014/09/24
+
+
+function goTestApply()
+{
+	var winoptions = "width=640,height=480,menubar=yes,toolbar=yes,status=yes,location=yes,resizable=yes";
+	// foxconn, khfan, remove start, 2014/09/24
+    // Defect # 126
+    // C7000-100NAS: Security -- Some broken URL links are found by sortsite and error in URLs.
+    /*
+	if(document.forms[0].runtest.value == "yes")
+		window.open('BAS_wtest_d.htm','test_win',winoptions);
+	*/
+}
+
+function loadcheck()
+{
+	//loadhelp('BAS_ether');
+	if(isIE()){
+		document.formname.system_name.size="24";
+		document.formname.domain_name.size="24";
+	}
+	if(!isSupportComHem)
+	    MacAddress=document.formname.Spoofmac.value;
+	setIP();
+	setDNS();
+	if(!isSupportComHem)
+	    setMAC();
+}
+function setIP()
+{
+	var cf = document.forms[0];
+	var dflag = cf.WANAssign[0].checked;
+	setDisabled(dflag,cf.WPethr1,cf.WPethr2,cf.WPethr3,cf.WPethr4,cf.WMask1,cf.WMask2,cf.WMask3,cf.WMask4,cf.WGateway1,cf.WGateway2,cf.WGateway3,cf.WGateway4);
+	if (cf.WANAssign[1].checked)
+	{
+	    cf.DNSAssign[1].checked = true;
+	    setDNS();
+	}
+	DisableFixedIP = dflag;
+}
+function setDNS()
+{
+	var cf = document.forms[0];
+	var dflag = cf.DNSAssign[0].checked;
+
+	if(ParentalControlEnabled && cf.DNSAssign[0].checked)
+	{
+		alert('The DNS Server setup will not take effect due to Parental Controls is enabled. If you need to configure DNS manually, please disable the Parental Controls.');
+		cf.DNSAssign[1].checked=true;
+		dflag=false;
+	}
+
+	if (cf.WANAssign[1].checked && cf.DNSAssign[0].checked)
+	{
+		cf.DNSAssign[1].checked=true;
+		dflag = false;
+	}
+
+// NICK third dns setDisabled(dflag,cf.DAddr1,cf.DAddr2,cf.DAddr3,cf.DAddr4,cf.PDAddr1,cf.PDAddr2,cf.PDAddr3,cf.PDAddr4);
+	setDisabled(dflag,cf.DAddr1,cf.DAddr2,cf.DAddr3,cf.DAddr4,cf.PDAddr1,cf.PDAddr2,cf.PDAddr3,cf.PDAddr4,cf.TDAddr1,cf.TDAddr2,cf.TDAddr3,cf.TDAddr4);
+	DisableFixedDNS = dflag;
+}
+function setMAC()
+{
+	var cf = document.forms[0];
+
+	if (cf.MACAssign[0].checked)
+	  cf.Spoofmac.value = cf.wan_hwaddr_def.value;
+	else if(cf.MACAssign[1].checked)
+	  cf.Spoofmac.value = cf.wan_hwaddr_pc.value;
+	else if (cf.MACAssign[2].checked)
+	  cf.Spoofmac.value = cf.wan_hwaddr2.value;
+
+	if (cf.MACAssign[2].checked)
+	  cf.Spoofmac.disabled = false;
+	else
+		cf.Spoofmac.disabled = true;
+	DisableFixedMAC = cf.Spoofmac.disabled;
+}
+
+function isValidStr(str, start_char, end_char)
+{
+	for (i=0; i<str.length; i++)
+	{
+		var c = str.substring(i, i+1);
+		if (c < start_char || c > end_char)
+			return false;
+	}
+	return true;
+}
+
+function checkData()
+{
+	var cf = document.forms[0];
+	var msg = "";
+	var lan_ipaddr = cf.lan_ipaddr.value.split(".");
+	var lan_netmask = cf.lan_netmask.value.split(".");
+	var l_ipaddr = (lan_ipaddr[0] << 24) | (lan_ipaddr[1] << 16) | (lan_ipaddr[2] << 8)| (lan_ipaddr[3]);
+	var l_netmask = (lan_netmask[0]<< 24) | (lan_netmask[1]<< 16) | (lan_netmask[2]<< 8)| (lan_netmask[3]);
+	var w_ipaddr = (cf.WPethr1.value << 24) | (cf.WPethr2.value << 16) | (cf.WPethr3.value << 8)| (cf.WPethr4.value);
+	var w_netmask = (cf.WMask1.value<< 24) | (cf.WMask2.value<< 16) | (cf.WMask3.value<< 8)| (cf.WMask4.value);
+
+	if (cf.system_name.value.match( /[^\x20-\x7E]/ ))
+	{
+		alert("Invalid account name.");
+		return false;
+	}
+
+	if(!isSupportComHem)
+	{
+		if (cf.domain_name.value.match( /[^\x20-\x7E]/ ))
+		{
+			alert("Invalid domain name.");
+			return false;
+		}
+	}
+
+	if(cf.WANAssign[1].checked)
+	{
+		if(checkIP(cf.WPethr1,cf.WPethr2,cf.WPethr3,cf.WPethr4,255)
+		    ||checkIPMatchWithNetmask(cf.WMask1,cf.WMask2,cf.WMask3,cf.WMask4,cf.WPethr1,cf.WPethr2,cf.WPethr3,cf.WPethr4))
+			msg+= "Invalid IP address. Please enter it again.";
+		else
+		{
+			cf.WPethr1.value = parseInt(cf.WPethr1.value,10);
+			cf.WPethr2.value = parseInt(cf.WPethr2.value,10);
+			cf.WPethr3.value = parseInt(cf.WPethr3.value,10);
+			cf.WPethr4.value = parseInt(cf.WPethr4.value,10);
+		}
+		if(checkIP(cf.WMask1,cf.WMask2,cf.WMask3,cf.WMask4,255))
+			msg+= "Invalid subnet mask. Please enter it again.\n";
+		else
+		{
+			cf.WMask1.value = parseInt(cf.WMask1.value,10);
+			cf.WMask2.value = parseInt(cf.WMask2.value,10);
+			cf.WMask3.value = parseInt(cf.WMask3.value,10);
+			cf.WMask4.value = parseInt(cf.WMask4.value,10);
+		}
+		if(checkIP(cf.WGateway1,cf.WGateway2,cf.WGateway3,cf.WGateway4,255)
+		    ||checkIPMatchWithNetmask(cf.WMask1,cf.WMask2,cf.WMask3,cf.WMask4,cf.WGateway1,cf.WGateway2,cf.WGateway3,cf.WGateway4))
+			msg+= "Invalid gateway IP address. Please enter it again.";
+		else
+		{
+			cf.WGateway1.value = parseInt(cf.WGateway1.value,10);
+			cf.WGateway2.value = parseInt(cf.WGateway2.value,10);
+			cf.WGateway3.value = parseInt(cf.WGateway3.value,10);
+			cf.WGateway4.value = parseInt(cf.WGateway4.value,10);
+		}
+
+		var w_gateway = (cf.WGateway1.value<< 24) | (cf.WGateway2.value<< 16) | (cf.WGateway3.value<< 8)| (cf.WGateway4.value);
+		var tmpip = cf.WPethr1.value+'.'+cf.WPethr2.value+'.'+cf.WPethr3.value+'.'+cf.WPethr4.value;
+		var tmpgwip = cf.WGateway1.value+'.'+cf.WGateway2.value+'.'+cf.WGateway3.value+'.'+cf.WGateway4.value;
+		if((w_ipaddr&w_netmask) != (w_gateway&w_netmask))
+		{
+			alert("Error: IP Address " + tmpip + " is in a different subnet as the gateway address " + tmpgwip);
+			return false;
+		}
+	}
+	if(cf.DNSAssign[1].checked)
+	{
+           if(checkIP(cf.DAddr1,cf.DAddr2,cf.DAddr3,cf.DAddr4,254)||(parseInt(cf.DAddr4.value,10)==0))
+           {
+               msg+= "Invalid primary DNS address. Please enter it again.\n";
+           }
+           else
+           {
+               cf.DAddr1.value = parseInt(cf.DAddr1.value,10);
+               cf.DAddr2.value = parseInt(cf.DAddr2.value,10);
+               cf.DAddr3.value = parseInt(cf.DAddr3.value,10);
+               cf.DAddr4.value = parseInt(cf.DAddr4.value,10);
+           }
+
+           if((cf.PDAddr1.value.length==0 && cf.PDAddr2.value.length==0 && cf.PDAddr3.value.length==0 && cf.PDAddr4.value.length==0)
+               && (cf.TDAddr1.value.length>0 || cf.TDAddr2.value.length>0 || cf.TDAddr3.value.length>0 || cf.TDAddr4.value.length>0))
+           {
+               msg+= "Invalid secondary DNS address. Please enter it again.\n";
+           }
+
+           if(cf.PDAddr1.value.length>0 || cf.PDAddr2.value.length>0 || cf.PDAddr3.value.length>0 || cf.PDAddr4.value.length>0)
+           {
+               if(checkIP(cf.PDAddr1,cf.PDAddr2,cf.PDAddr3,cf.PDAddr4,254)||(parseInt(cf.PDAddr4.value,10)==0))
+               {
+                   msg+= "Invalid secondary DNS address. Please enter it again.\n";
+               }
+               else
+               {
+                   cf.PDAddr1.value = parseInt(cf.PDAddr1.value,10);
+                   cf.PDAddr2.value = parseInt(cf.PDAddr2.value,10);
+                   cf.PDAddr3.value = parseInt(cf.PDAddr3.value,10);
+                   cf.PDAddr4.value = parseInt(cf.PDAddr4.value,10);
+               }
+           }
+
+           if(cf.TDAddr1.value.length>0 || cf.TDAddr2.value.length>0 || cf.TDAddr3.value.length>0 || cf.TDAddr4.value.length>0)
+           {
+               if(checkIP(cf.TDAddr1,cf.TDAddr2,cf.TDAddr3,cf.TDAddr4,254)||(parseInt(cf.TDAddr4.value,10)==0))
+               {
+                   msg+= "Invalid tertiary DNS address. Please enter it again.\n";
+               }
+               else
+               {
+                   cf.TDAddr1.value = parseInt(cf.TDAddr1.value,10);
+                   cf.TDAddr2.value = parseInt(cf.TDAddr2.value,10);
+                   cf.TDAddr3.value = parseInt(cf.TDAddr3.value,10);
+                   cf.TDAddr4.value = parseInt(cf.TDAddr4.value,10);
+               }
+           }
+       }
+
+	if(!isSupportComHem)
+	{
+		if( checkMacStr(cf.Spoofmac) || MacStrallf(cf.Spoofmac) )
+			msg+= "Invalid MAC address.";
+	}
+
+	if (msg.length > 1)
+	{
+		alert(msg);
+		return false;
+	}
+	if (!isValidStr(cf.system_name.value, ' ', '~'))
+	{
+		if (!confirm("The Account Name or Domain Name contains illegal characters. This may cause the system to behave unexpectedly. Do you want to continue?"))
+			return false;
+	}
+
+	if(!isSupportComHem)
+	{
+		if (!isValidStr(cf.domain_name.value, '!', '~'))
+		{
+			if (!confirm("The Account Name or Domain Name contains illegal characters. This may cause the system to behave unexpectedly. Do you want to continue?"))
+				return false;
+		}
+	}
+
+	if ((w_ipaddr != 0) &&
+	    (((l_netmask & w_netmask ) & l_ipaddr) == ((l_netmask & w_netmask ) & w_ipaddr)))
+    {
+//        alert("IP address is conflicted with LAN IP subnet.\nPlease do ipconfig /release and ipconfig /renew and enter the new IP in the browser in order to access the GUI again.");
+    }
+
+	cf.wan_ipaddr.value = cf.WPethr1.value+'.'+cf.WPethr2.value+'.'+cf.WPethr3.value+'.'+cf.WPethr4.value;
+	cf.wan_netmask.value = cf.WMask1.value+'.'+cf.WMask2.value+'.'+cf.WMask3.value+'.'+cf.WMask4.value;
+	cf.wan_gateway.value = cf.WGateway1.value+'.'+cf.WGateway2.value+'.'+cf.WGateway3.value+'.'+cf.WGateway4.value;
+	cf.wan_dns1_pri.value = cf.DAddr1.value+'.'+cf.DAddr2.value+'.'+cf.DAddr3.value+'.'+cf.DAddr4.value;
+	cf.wan_dns1_sec.value = cf.PDAddr1.value+'.'+cf.PDAddr2.value+'.'+cf.PDAddr3.value+'.'+cf.PDAddr4.value;
+// NICK third dns
+	cf.wan_dns1_thi.value = cf.TDAddr1.value+'.'+cf.TDAddr2.value+'.'+cf.TDAddr3.value+'.'+cf.TDAddr4.value;
+// NICK third dns
+	if(!isSupportComHem)
+		cf.wan_hwaddr2.value = cf.Spoofmac.value.toUpperCase();
+	return sumvalue(cf);
+}
+
+function hwaddr_select()
+{
+
+}
+
+function loadSettings()
+{
+	var cf = document.forms[0];
+	var wan_proto = cf.wan_proto.value;
+	var wan_ipaddr = cf.wan_ipaddr.value.split(".");
+	var wan_netmask = cf.wan_netmask.value.split(".");
+	var wan_gateway = cf.wan_gateway.value.split(".");
+	var wan_dns_sel = cf.wan_dns_sel.value;
+	var wan_dns1_pri = cf.wan_dns1_pri.value.split(".");
+	var wan_dns1_sec = cf.wan_dns1_sec.value.split(".");
+// NICK third dns
+	var wan_dns1_thi = cf.wan_dns1_thi.value.split(".");
+// NICK third dns
+	if(!isSupportComHem)
+		var wan_hwaddr_sel = cf.wan_hwaddr_sel.value;
+
+	if (wan_proto == "static")
+		cf.WANAssign[1].checked = true;
+	else
+		cf.WANAssign[0].checked = true;
+	setIP();
+	cf.WPethr1.value = wan_ipaddr[0];
+	cf.WPethr2.value = wan_ipaddr[1];
+	cf.WPethr3.value = wan_ipaddr[2];
+	cf.WPethr4.value = wan_ipaddr[3];
+	cf.WMask1.value = wan_netmask[0];
+	cf.WMask2.value = wan_netmask[1];
+	cf.WMask3.value = wan_netmask[2];
+	cf.WMask4.value = wan_netmask[3];
+	cf.WGateway1.value = wan_gateway[0];
+	cf.WGateway2.value = wan_gateway[1];
+	cf.WGateway3.value = wan_gateway[2];
+	cf.WGateway4.value = wan_gateway[3];
+
+	cf.DNSAssign[wan_dns_sel].checked = true;
+	setDNS();
+	if (cf.wan_dns1_pri.value != "")
+	{
+		cf.DAddr1.value = wan_dns1_pri[0];
+		cf.DAddr2.value = wan_dns1_pri[1];
+		cf.DAddr3.value = wan_dns1_pri[2];
+		cf.DAddr4.value = wan_dns1_pri[3];
+	}
+	if (cf.wan_dns1_sec.value != "")
+	{
+		cf.PDAddr1.value = wan_dns1_sec[0];
+		cf.PDAddr2.value = wan_dns1_sec[1];
+		cf.PDAddr3.value = wan_dns1_sec[2];
+		cf.PDAddr4.value = wan_dns1_sec[3];
+	}
+// NICK third dns
+	if (cf.wan_dns1_thi.value != "")
+	{
+		cf.TDAddr1.value = wan_dns1_thi[0];
+		cf.TDAddr2.value = wan_dns1_thi[1];
+		cf.TDAddr3.value = wan_dns1_thi[2];
+		cf.TDAddr4.value = wan_dns1_thi[3];
+	}
+// NICK third dns
+	if(!isSupportComHem)
+	{
+		if (wan_hwaddr_sel == 0)
+			cf.Spoofmac.value = cf.wan_hwaddr_def.value;
+		else if (wan_hwaddr_sel == 2)
+			cf.Spoofmac.value = cf.wan_hwaddr2.value;
+		cf.MACAssign[wan_hwaddr_sel].checked = true;
+	}
+}
+
+function InitTagValue()
+{
+/*
+  support comherm|Account Name (text) | Domain Name (text) |
+  Internet IP Address (combobox) | IP Address (string) | IP Subnet Mask (string) | Gateway IP Address (string) |
+  DNS Address (combobox) | Primary DNS (string) | Secondary DNS (string) |
+  Gateway MAC Address (combobox) | Gateway MAC (text) | LAN IP (hidden)
+*/
+//var tagValueList = "abc name|bde name|0|***PRIVATE_IP***.1|255.255.255.0|***PRIVATE_IP***.254|0|***PRIVATE_IP***.2|***PRIVATE_IP***.3|0|XX:XX:XX:XX:XX:XX|192.168.0.1";
+//var tagValueList = "abc name|bde name|0|***PRIVATE_IP***.1|255.255.255.0|***PRIVATE_IP***.254|0|***PRIVATE_IP***.2|***PRIVATE_IP***.3|1|XX:XX:XX:XX:XX:XX|192.168.0.1|***PRIVATE_IP***.4";
+//var tagValueList = "abc name|bde name|0|0.0.0.0|255.255.255.0|***PRIVATE_IP***.254|0|0.0.0.0|***PRIVATE_IP***.3|2|XX:XX:XX:XX:XX:XX|192.168.0.1";
+    var tagValueList = '0|C3700-100NAS||0|***PUBLIC_IP***|255.255.224.0|***PUBLIC_IP***|1|***PUBLIC_IP***|***PUBLIC_IP***|***PUBLIC_IP***|0|***DEVICE***|***DEVICE***|XX:XX:XX:XX:XX:XX|192.168.0.1|0|1|';
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Account name */
+    document.getElementsByName("system_name")[0].value = piplineDecode(tagValues[1]);
+
+    if(tagValues[0] == "0")
+    {
+        isSupportComHem = false;
+        /* Domain name */
+        document.getElementsByName("domain_name")[0].value = piplineDecode(tagValues[2]);
+
+        /* Internet IP Address */
+        if (tagValues[3] == 0) document.getElementsByName("wan_proto")[0].value="dhcp";
+        else if (tagValues[3] == 1) document.getElementsByName("wan_proto")[0].value="static";
+
+        /* IP Address */
+        document.getElementsByName("wan_ipaddr")[0].value = tagValues[4];
+        /* IP Subnet Mask */
+        document.getElementsByName("wan_netmask")[0].value = tagValues[5];
+
+        /* Gateway IP Address */
+        document.getElementsByName("wan_gateway")[0].value = tagValues[6];
+
+        /* DNS Address */
+        document.getElementsByName("wan_dns_sel")[0].value = tagValues[7];
+
+        /* Primary DNS */
+        if (tagValues[8] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_pri")[0].value = tagValues[8];
+        }
+
+        /* Secondary DNS */
+        if (tagValues[9] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_sec")[0].value = tagValues[9];
+        }
+
+        if (tagValues[10] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_thi")[0].value = tagValues[10];
+        }
+
+        /* Gateway MAC Address */
+        document.getElementsByName("wan_hwaddr_sel")[0].value = tagValues[11];
+
+        /* MAC Address */
+        document.getElementsByName("wan_hwaddr_def")[0].value = tagValues[12];
+        document.getElementsByName("wan_hwaddr_pc")[0].value = tagValues[13];
+        document.getElementsByName("wan_hwaddr2")[0].value = tagValues[14];
+
+        /* LAN IP Address */
+        document.getElementsByName("lan_ipaddr")[0].value = tagValues[15];
+    }
+    else
+    {//support comhem
+        isSupportComHem = true;
+        $('#domainTr').hide();
+        document.forms[0].WANAssign[1].disabled = true;
+        document.forms[0].DNSAssign[1].disabled = true;
+
+        /* Internet IP Address */
+        if (tagValues[2] == 0) document.getElementsByName("wan_proto")[0].value="dhcp";
+        else if (tagValues[2] == 1) document.getElementsByName("wan_proto")[0].value="static";
+
+        /* IP Address */
+        document.getElementsByName("wan_ipaddr")[0].value = tagValues[3];
+        /* IP Subnet Mask */
+        document.getElementsByName("wan_netmask")[0].value = tagValues[4];
+
+        /* Gateway IP Address */
+        document.getElementsByName("wan_gateway")[0].value = tagValues[5];
+
+        /* DNS Address */
+        document.getElementsByName("wan_dns_sel")[0].value = tagValues[6];
+
+        /* Primary DNS */
+        if (tagValues[7] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_pri")[0].value = tagValues[7];
+        }
+
+        /* Secondary DNS */
+        if (tagValues[8] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_sec")[0].value = tagValues[8];
+        }
+
+        if (tagValues[9] != "0.0.0.0") {
+            document.getElementsByName("wan_dns1_thi")[0].value = tagValues[9];
+        }
+
+        $('#macTr1').hide();
+        $('#macTr2').hide();
+        $('#macTr3').hide();
+        $('#macTr4').hide();
+        $('#macTr5').hide();
+
+        /* LAN IP Address */
+        document.getElementsByName("lan_ipaddr")[0].value = tagValues[10];
+    }
+
+	// Chuck 20150120 Add for parental Control
+	ParentalControlEnabled = (tagValues[16] == 1) ? true : false;
+	if(ParentalControlEnabled)
+	{
+		document.getElementsByName("wan_dns_sel")[0].value = "1";
+	}
+
+	// Chuck 20150203 We won't display MAC settings when Retail or Genie is supported
+	if(tagValues[17] == 1) // Retail/Genie supported
+	{
+		$('#macTr1').hide();
+        $('#macTr2').hide();
+        $('#macTr3').hide();
+        $('#macTr4').hide();
+        $('#macTr5').hide();
+		$("#helpframe").contents().find("#mac_addr").hide();
+	}
+
+	// Chuck 20150317 Fix Mantis#14328: Issue4: Help file centerâs style should be improved.
+	window.helpframe.initJScrollPane();
+
+    {
+        document.getElementById("staticCheckbox").style.display = "";
+        document.getElementById("staticIp").style.display = "";
+        document.getElementById("staticMask").style.display = "";
+        document.getElementById("staticGateway").style.display = "";
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+function showParentalAlert()
+{
+	alert('The DNS Server setup will not take effect due to Parental Controls is enabled. If you need to configure DNS manually, please disable the Parental Controls.');
+}
+//-->
+</script>
+</head>
+<body onload="BodyInit(); loadSettings(); loadcheck();goTestApply();changeContentSize('bas-help-frame-div')" onResize="changeContentSize('bas-help-frame-div')" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <!-- nick 20111214, mark the attribute "target" for non-display menu bar if user
+        click apply button. -->
+        <!--<form id="target" name="formname" method="POST" action="/goform/BasicSettingsBottom"
+        target="_parent">-->
+        <form id="target" name="formname" method="POST" action='/goform/BasicSettingsBottom?id=1160479146'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Internet Setup
+            </div>
+            <table border="0" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button type="submit" value="SUBMIT" onClick="buttonClick(this,'Apply');return checkData()" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button type="button" value="BUTTON" onClick="buttonClick(this,'Cancel');reset();BodyInit();loadSettings();loadcheck();" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        <!-- <button type="submit" value="SUBMIT" onClick="buttonClick(this,'Test');return
+                        checkData()" name="Test" class="button-apply" style="padding-left:10px"> <span class="roundleft_apply" >Test &nbsp;<span class="apply-icon">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="roundright_apply">&nbsp;&nbsp;&nbsp;</span></button>
+                        -->
+                    </td>
+                </tr>
+                <!-- // Nick, we don't need login <tr><td colspan="2" class="table-seperate-border"><iframe  style="width:100%;height:90px;margin-top:10px" allowTransparency="true" src="BAS_basictop1.htm" frameborder="0" scrolling="no"></iframe></td></tr>
+                -->
+                <tr>
+                    <td colspan="2" class="scrollpane-table-seperate-border">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('BasicSettingsBottom','acname')"><b>Account Name</b> &nbsp;(If Required)</a>
+                                    </td>
+                                    <td align="right">
+                                        <input type="text" name="system_name" maxlength="60" size="15" onKeyPress="ignorSingleQuotation(this);" onkeyup="ignorSingleQuotation(this);">
+                                    </td>
+                                </tr>
+                                <tr id="domainTr">
+                                    <td style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('BasicSettingsBottom','doname')"><b>Domain Name</b> &nbsp;(If Required)</a>
+                                    </td>
+                                    <td align="right">
+                                        <input type="text" name="domain_name" maxlength="60" size="15" value="" onKeyPress="ignorSingleQuotation(this);" onkeyup="ignorSingleQuotation(this);">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('BasicSettingsBottom','InternetIP')"><b>Internet IP Address</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <input type="radio" name="WANAssign" value="dhcp" onClick="setIP()">
+                                        Get Dynamically from ISP
+                                    </td>
+                                </tr>
+                                <tr id="staticCheckbox" style="display:none">
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <input type="radio" name="WANAssign" value="static" onClick="setIP()">
+                                        Use Static IP Address
+                                    </td>
+                                </tr>
+                                <tr id="staticIp" style="display:none">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        IP Address
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="WPethr1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WPethr2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WPethr3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WPethr4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr id="staticMask" style="display:none">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        IP Subnet Mask
+                                    </td>
+                                    <td style="text-align:right" class="num">
+                                        <input type="text" name="WMask1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WMask2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WMask3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WMask4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr id="staticGateway" style="display:none">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        Gateway IP Address
+                                    </td>
+                                    <td style="text-align:right" class="num">
+                                        <input type="text" name="WGateway1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WGateway2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WGateway3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="WGateway4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedIP) this.blur()" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <a href="javascript:loadhelp('BasicSettingsBottom','DNSaddress')"><b>Domain Name Server (DNS) Address</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <input type="radio" name="DNSAssign" value="0" onClick="setDNS()">
+                                        Get Automatically from ISP
+                                    </td>
+                                </tr>
+                                <tr id="staticDnsCheckbox">
+                                    <td colspan="2" style="white-space: nowrap;">
+                                        <input type="radio" name="DNSAssign" value="1" onClick="setDNS()">
+                                        Use These DNS Servers
+                                    </td>
+                                </tr>
+                                <tr id="primaryDns">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        Primary DNS
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="DAddr1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,1)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="DAddr2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="DAddr3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="DAddr4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr id="secondaryDns">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        Secondary DNS
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="PDAddr1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,1)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="PDAddr2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="PDAddr3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="PDAddr4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <!--NICK third dns -->
+                                <tr id="tertiaryDns">
+                                    <td style="white-space: nowrap;">
+                                        <img alt="" src="spacer.gif" width="20" height="12" style="border:0px">
+                                        Tertiary DNS
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" name="TDAddr1" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,1)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="TDAddr2" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="TDAddr3" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,0)">
+                                        .
+                                        <input type="text" name="TDAddr4" class="num" size="4" maxlength="3" onFocus="if(DisableFixedDNS) this.blur()" onkeydown="if(ParentalControlEnabled) return false; bscheck(event,this,0)" onkeyup="if(ParentalControlEnabled){showParentalAlert(); return false;} jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <!--NICK third dns -->
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="macTr1">
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <a href="javascript:loadhelp('BasicSettingsBottom','localaddress')"><b>Gateway MAC Address</b></a>
+                                    </td>
+                                </tr>
+                                <tr id="macTr2">
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <input type="radio" name="MACAssign" value="0" onClick="setMAC();hwaddr_select();">
+                                        Use Default Address
+                                    </td>
+                                </tr>
+                                <tr id="macTr3">
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <input type="radio" name="MACAssign" value="1" onClick="setMAC();hwaddr_select();">
+                                        Use Computer MAC Address
+                                    </td>
+                                </tr>
+                                <tr id="macTr4">
+                                    <td style="white-space: nowrap;" align="left">
+                                        <input type="radio" name="MACAssign" value="2" onClick="setMAC();hwaddr_select();">
+                                        Use This MAC Address
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right" class="num">
+                                        <input type="text" class="num" name="Spoofmac" size="17" maxlength="17" value=""
+                                        onFocus="if(DisableFixedMAC) this.blur()">
+                                    </td>
+                                </tr>
+                                <tr id="macTr5">
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="bas-help-frame-div">
+                            <iframe id="helpframe" name="helpframe" src="BasicSettingsBottom_h.htm" scrolling="no" class="help-iframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="runtest" value="no">
+            <INPUT name=wan_proto type=hidden value="dhcp">
+            <INPUT name=wan_ipaddr type=hidden value="0.0.0.0">
+            <INPUT name=wan_netmask type=hidden value="0.0.0.0">
+            <INPUT name=wan_gateway type=hidden value="0.0.0.0">
+            <INPUT name=wan_dns_sel type=hidden value="0">
+            <INPUT name=wan_dns1_pri type=hidden value="">
+            <INPUT name=wan_dns1_sec type=hidden value="">
+            <!--NICK third dns -->
+            <input name="wan_dns1_thi" type="hidden" value="">
+            <!--NICK third dns -->
+            <INPUT name=wan_hwaddr_sel type=hidden value="0">
+            <INPUT name=wan_hwaddr_def type=hidden value="">
+            <INPUT name=wan_hwaddr2 type=hidden value="">
+            <INPUT name=wan_hwaddr_pc type=hidden value="">
+            <INPUT name=lan_ipaddr type=hidden value="">
+            <INPUT name=lan_netmask type=hidden value="">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

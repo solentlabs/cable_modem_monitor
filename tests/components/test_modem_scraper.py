@@ -669,6 +669,7 @@ class TestLogoutAfterPoll:
         mock_parser.verified = True
         mock_parser.supports_icmp = True
         mock_parser.logout_endpoint = "/Logout.htm"
+        mock_parser.capabilities = set()  # Required for get_detection_info
         scraper.parser = mock_parser
         scraper.last_successful_url = "http://192.168.100.1"
 
@@ -690,6 +691,7 @@ class TestLogoutAfterPoll:
         mock_parser.verified = False
         mock_parser.supports_icmp = True
         mock_parser.logout_endpoint = None
+        mock_parser.capabilities = set()  # Required for get_detection_info
         scraper.parser = mock_parser
         scraper.last_successful_url = "http://192.168.100.1"
 

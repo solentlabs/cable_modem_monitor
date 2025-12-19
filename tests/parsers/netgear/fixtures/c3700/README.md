@@ -32,14 +32,15 @@ Complete HTML capture from a Netgear C3700-100NAS cable modem/router.
 | **Hardware Version** | V2.02.18 |
 | **Authentication** | HTTP Basic Auth |
 | **Captured By** | @kwschulz |
-| **Capture Date** | November 2025 |
+| **Capture Date** | December 2025 |
 
 ## Capture Details
 
 - **Initial Capture**: 2025-11-23 (modem offline, 21 pages)
 - **DocsisStatus Update**: 2025-11-23 (modem online, channel data added)
+- **Extended Update**: 2025-12-27 (added 16 configuration pages)
 - **Status**: Modem ONLINE with active DOCSIS connection
-- **Total Pages**: 22 HTML pages (including DocsisStatus.htm)
+- **Total Pages**: 38 HTML pages (5 core + 33 extended)
 - **Source**: Home Assistant diagnostics data
 
 ## Directory Structure
@@ -56,7 +57,7 @@ c3700/
 └── extended/             # Reference pages (not used by parser)
     ├── WirelessSettings.htm
     ├── GuestNetwork.htm
-    └── ... (17 files)
+    └── ... (33 files)
 ```
 
 ## Core Fixtures (Root)
@@ -78,11 +79,13 @@ Reference pages for future features. Not used by parser but useful for documenta
 
 | Category | Files |
 |----------|-------|
-| **Wireless** | WirelessSettings.htm (161KB), GuestNetwork.htm (112KB), AddWPSClient_TOP.htm |
-| **Router** | LANSetup.htm, WANSetup.htm, UPnP.htm, UPnPMedia.htm, DynamicDNS.htm |
-| **Security** | AccessControl.htm, BlockSites.htm, Schedule.htm |
+| **Wireless** | WirelessSettings.htm, GuestNetwork.htm, AddWPSClient_TOP.htm, WirelessRadarApList.htm, WirelessRadarChList.htm, BasicSettingsBottom.htm |
+| **Router** | LANSetup.htm, WANSetup.htm, UPnP.htm, UPnPMedia.htm, DynamicDNS.htm, RouterMode.htm, IPv6.htm, PortForwarding.htm |
+| **USB** | USBBasic.htm, USBAdvRetail.htm, AdvUSBSettings.htm |
+| **Security** | AccessControl.htm, BlockSites.htm, BlockServices.htm, Schedule.htm, SetPassword.htm, RemoteManagementRetail.htm |
 | **Logs** | Logs.htm, eventLog.htm, Diagnostics.htm |
-| **Other** | BackupSettings.htm, SpeedTest.htm, document.htm |
+| **Network** | AttachedDevices_new.htm, E-mail.htm |
+| **Other** | BackupSettings.htm, SpeedTest.htm, document.htm, GPL_rev1.htm, Logout.htm |
 
 ## Channel Data Format
 

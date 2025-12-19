@@ -235,6 +235,7 @@ class ModemScraper:
         status_code: int | None = None,
         exception_type: str | None = None,
         resource_type: str = "unknown",
+        response_body: str | None = None,
     ) -> None:
         """Record a failed URL fetch for diagnostics.
 
@@ -244,22 +245,27 @@ class ModemScraper:
             status_code: HTTP status code if available
             exception_type: Exception class name if applicable
             resource_type: Type of resource (html, javascript, etc.)
+            response_body: Response body content (for error pages like session conflicts)
         """
         if not self._capture_enabled:
             return
 
         from datetime import datetime
 
-        self._failed_urls.append(
-            {
-                "url": url,
-                "reason": reason,
-                "status_code": status_code,
-                "exception_type": exception_type,
-                "resource_type": resource_type,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        entry = {
+            "url": url,
+            "reason": reason,
+            "status_code": status_code,
+            "exception_type": exception_type,
+            "resource_type": resource_type,
+            "timestamp": datetime.now().isoformat(),
+        }
+        # Include response body for error pages - helps diagnose session conflicts, auth errors, etc.
+        if response_body:
+            entry["content"] = response_body
+            entry["size_bytes"] = len(response_body)
+
+        self._failed_urls.append(entry)
         _LOGGER.debug("Recorded failed URL: %s - %s", url, reason)
 
     def _fetch_parser_url_patterns(self) -> None:  # noqa: C901
@@ -326,6 +332,7 @@ class ModemScraper:
                         reason=f"HTTP {response.status_code}",
                         status_code=response.status_code,
                         resource_type="parser_pattern",
+                        response_body=response.text if hasattr(response, "text") else None,
                     )
 
             except Exception as e:
@@ -446,6 +453,7 @@ class ModemScraper:
                             reason=f"HTTP {response.status_code}",
                             status_code=response.status_code,
                             resource_type=resource_type,
+                            response_body=response.text if hasattr(response, "text") else None,
                         )
 
                 except Exception as e:

@@ -1,0 +1,611 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function checkRemoteMG()
+{
+	var cf = document.forms[0];
+
+	if(cf.remote_mg_enable.checked)
+	{
+		cf.http_rmenable.value = 1;
+	}
+	else
+	{
+		cf.http_rmenable.value = 0;
+	}
+
+	if(cf.remote_mg_enable_https.checked)
+	{
+		cf.https_rmenable.value = 1;
+	}
+	else
+	{
+		cf.https_rmenable.value = 0;
+	}
+
+	if(cf.rm_access[1].checked) /* range of IP */
+	{
+		if (checkIP(cf.start_ip_1, cf.start_ip_2, cf.start_ip_3, cf.start_ip_4, 254))
+		{
+			alert("Invalid Start IP.");
+			return false;
+		}
+		else if (checkIP(cf.fin_ip_1, cf.fin_ip_2, cf.fin_ip_3, cf.fin_ip_4, 254))
+		{
+			alert("Invalid End IP.");
+			return false;
+		}
+		else if (cp_ip(cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4))
+		{
+			alert("Start IP must be less than End IP.");
+			return false;
+		}
+		else
+		{
+			cf.start_ip_1.value = parseInt(cf.start_ip_1.value,10);
+			cf.start_ip_2.value = parseInt(cf.start_ip_2.value,10);
+			cf.start_ip_3.value = parseInt(cf.start_ip_3.value,10);
+			cf.start_ip_4.value = parseInt(cf.start_ip_4.value,10);
+			cf.fin_ip_1.value = parseInt(cf.fin_ip_1.value,10);
+			cf.fin_ip_2.value = parseInt(cf.fin_ip_2.value,10);
+			cf.fin_ip_3.value = parseInt(cf.fin_ip_3.value,10);
+			cf.fin_ip_4.value = parseInt(cf.fin_ip_4.value,10);
+			cf.http_rmstartip.value = cf.start_ip_1.value+'.'+cf.start_ip_2.value+'.'+cf.start_ip_3.value+'.'+cf.start_ip_4.value;
+			cf.http_rmendip.value = cf.fin_ip_1.value+'.'+cf.fin_ip_2.value+'.'+cf.fin_ip_3.value+'.'+cf.fin_ip_4.value;
+		}
+	}
+	else if(cf.rm_access[0].checked) /* a specific IP */
+	{
+		var local_ip = cf.local_ip_1.value+'.'+cf.local_ip_2.value+'.'+cf.local_ip_3.value+'.'+cf.local_ip_4.value;
+		if (checkIP(cf.local_ip_1, cf.local_ip_2, cf.local_ip_3, cf.local_ip_4, 254)||(parseInt(cf.local_ip_4.value,10) ==0)
+			|| (cf.http_wanipaddr.value == local_ip))
+		{
+			alert("Invalid IP address. Please enter it again.");
+			return false;
+		}
+		else
+		{
+			cf.local_ip_1.value = parseInt(cf.local_ip_1.value,10);
+			cf.local_ip_2.value = parseInt(cf.local_ip_2.value,10);
+			cf.local_ip_3.value = parseInt(cf.local_ip_3.value,10);
+			cf.local_ip_4.value = parseInt(cf.local_ip_4.value,10);
+			cf.http_rmstartip.value = local_ip;
+			cf.http_rmendip.value = cf.http_rmstartip.value;
+		}
+	}
+	else /* everyone */
+	{
+		cf.http_rmstartip.value = "0.0.0.0";
+		cf.http_rmendip.value = "255.255.255.255";
+	}
+
+	if(isNaN(cf.http_rmport.value) || !_isN: ***REDACTED***(cf.http_rmport.value)||
+	   parseInt(cf.http_rmport.value,10) < 1024 ||
+	   parseInt(cf.http_rmport.value,10) > 65535 ||
+	   cf.http_rmport.value.indexOf(".") != -1)
+	{
+	    alert("Invalid port number. It should be in the range 1024-65535. ");
+	    cf.http_rmport.focus();
+	    return false;
+	}
+	else
+	{
+		cf.http_rmport.value = parseInt(cf.http_rmport.value,10);
+	}
+
+	if(isNaN(cf.https_rmport.value) || !_isN: ***REDACTED***(cf.https_rmport.value)||
+	   parseInt(cf.https_rmport.value,10) < 1024 ||
+	   parseInt(cf.https_rmport.value,10) > 65535 ||
+	   cf.https_rmport.value.indexOf(".") != -1)
+	{
+	    alert("Invalid port number. It should be in the range 1024-65535. ");
+	    cf.https_rmport.focus();
+	    return false;
+	}
+	else
+	{
+		cf.https_rmport.value = parseInt(cf.https_rmport.value,10);
+	}
+
+	if(cf.http_rmport.value == cf.https_rmport.value)
+	{
+		alert("Invalid port number. The two port numbers can't be same. ");
+	    cf.http_rmport.focus();
+		return false;
+	}
+
+	return true;
+}
+
+function init()
+{
+    var cf = document.forms[0];
+    var dflag;
+
+	if (cf.http_rmenable.value == 1)
+	{
+		cf.remote_mg_enable.checked = true;
+	}
+
+	if (cf.https_rmenable.value == 1)
+	{
+		cf.remote_mg_enable_https.checked = true;
+	}
+
+	if ((cf.http_rmstartip.value == "0.0.0.0") && (cf.http_rmendip.value == "255.255.255.255")) /* everyone */
+	{
+		cf.rm_access[2].checked = true;
+		dflag = cf.rm_access[2].checked;
+		setDisabled(dflag,cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4);
+        setDisabled(dflag,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4);
+        setDisabled(dflag,cf.local_ip_1,cf.local_ip_2,cf.local_ip_3,cf.local_ip_4);
+        clearData1();
+	}
+	else if (cf.http_rmstartip.value == cf.http_rmendip.value) /* a specific IP */
+	{
+		var startip = cf.http_rmstartip.value.split(".");
+
+		cf.rm_access[0].checked = true;
+		dflag = cf.rm_access[0].checked;
+		setDisabled(dflag,cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4);
+        setDisabled(dflag,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4);
+
+		cf.local_ip_1.value = startip[0];
+		cf.local_ip_2.value = startip[1];
+		cf.local_ip_3.value = startip[2];
+    	cf.local_ip_4.value = startip[3];
+        clearData3();
+	}
+	else /* range of IP */
+	{
+		var startip = cf.http_rmstartip.value.split(".");
+		var endip = cf.http_rmendip.value.split(".");
+
+		cf.rm_access[1].checked = true;
+		dflag = cf.rm_access[1].checked;
+		setDisabled(dflag,cf.local_ip_1,cf.local_ip_2,cf.local_ip_3,cf.local_ip_4);
+
+    	cf.start_ip_1.value = startip[0];
+    	cf.start_ip_2.value = startip[1];
+    	cf.start_ip_3.value = startip[2];
+    	cf.start_ip_4.value = startip[3];
+    	cf.fin_ip_1.value = endip[0];
+    	cf.fin_ip_2.value = endip[1];
+    	cf.fin_ip_3.value = endip[2];
+    	cf.fin_ip_4.value = endip[3];
+        clearData2();
+	}
+}
+
+function clearData1()
+{
+	var cf = document.forms[0];
+
+    var dflag = cf.rm_access[2].checked;
+    setDisabled(dflag,cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4);
+    setDisabled(dflag,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4);
+    setDisabled(dflag,cf.local_ip_1,cf.local_ip_2,cf.local_ip_3,cf.local_ip_4);
+
+	cf.start_ip_1.value = "";
+	cf.start_ip_2.value = "";
+	cf.start_ip_3.value = "";
+	cf.start_ip_4.value = "";
+	cf.fin_ip_1.value = "";
+	cf.fin_ip_2.value = "";
+	cf.fin_ip_3.value = "";
+   	cf.fin_ip_4.value = "";
+	cf.local_ip_1.value = "";
+	cf.local_ip_2.value = "";
+	cf.local_ip_3.value = "";
+	cf.local_ip_4.value = "";
+}
+
+function clearData2()
+{
+	var cf = document.forms[0];
+
+	var dflag = cf.rm_access[1].checked;
+    setDisabled(dflag,cf.local_ip_1,cf.local_ip_2,cf.local_ip_3,cf.local_ip_4);
+    dflag = false;
+    setDisabled(dflag,cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4);
+    setDisabled(dflag,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4);
+
+	cf.local_ip_1.value = "";
+	cf.local_ip_2.value = "";
+	cf.local_ip_3.value = "";
+	cf.local_ip_4.value = "";
+}
+
+function clearData3()
+{
+	var cf = document.forms[0];
+
+    var dflag = cf.rm_access[0].checked;
+    setDisabled(dflag,cf.start_ip_1,cf.start_ip_2,cf.start_ip_3,cf.start_ip_4);
+    setDisabled(dflag,cf.fin_ip_1,cf.fin_ip_2,cf.fin_ip_3,cf.fin_ip_4);
+    dflag = false;
+    setDisabled(dflag,cf.local_ip_1,cf.local_ip_2,cf.local_ip_3,cf.local_ip_4);
+
+	cf.start_ip_1.value = "";
+	cf.start_ip_2.value = "";
+	cf.start_ip_3.value = "";
+	cf.start_ip_4.value = "";
+	cf.fin_ip_1.value = "";
+	cf.fin_ip_2.value = "";
+	cf.fin_ip_3.value = "";
+   	cf.fin_ip_4.value = "";
+}
+
+function InitTagValue()
+{
+/*
+  Turn Remote Management On (checkbox) | Remote Management Address (text) | IP Address Range From (text) | IP Address Range To (text) |
+  Port Number (text) | Wan Ip Address (text)
+*/
+    //var tagValueList = "1|***DEVICE***|***PRIVATE_IP***.44|***PRIVATE_IP***.44|8081|***PRIVATE_IP***.5";
+    //var tagValueList = "1|***DEVICE***|***PRIVATE_IP***.3|***PRIVATE_IP***.55|8081|***PRIVATE_IP***.5";
+    //var tagValueList = "0|http://***PRIVATE_IP***.3:80|0.0.0.0|255.255.255.255|8081|***PRIVATE_IP***.5";
+    var tagValueList = '0|0|http://***PUBLIC_IP***:8080, http://[***IPv6***]:8080<br>https://***PUBLIC_IP***:8443, https://[***IPv6***]:8443|0.0.0.0|255.255.255.255|8080|8443|***PUBLIC_IP***|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Turn Remote Management On */
+    document.getElementsByName("http_rmenable")[0].value = tagValues[0];
+	document.getElementsByName("https_rmenable")[0].value = tagValues[1];
+
+    /* Remote Management Address */
+    document.getElementById("rmt_mgmt_address").innerHTML = tagValues[2];
+
+    /* IP Address Range From */
+    document.getElementsByName("http_rmstartip")[0].value = tagValues[3];
+
+    /* IP Address Range To */
+    document.getElementsByName("http_rmendip")[0].value = tagValues[4];
+
+    /* Port Number */
+    document.getElementsByName("http_rmport")[0].value = tagValues[5];
+    document.getElementsByName("https_rmport")[0].value = tagValues[6];
+
+    /* Wan Ip Address */
+    document.getElementsByName("http_wanipaddr")[0].value = tagValues[7];
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+}
+
+function showHttpsAlert(checkbox)
+{
+	if(checkbox.checked)
+	{
+		alert("Remote Management using HTTPS will be slower than HTTP due to the encryption algorithm of HTTPS.");
+	}
+}
+</script>
+</head>
+<body onload="BodyInit();init();changeContentSize()" onResize="changeContentSize()" class="page-body">
+    <img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="remotemg" action='/goform/RemoteManagementRetail?id=1160479146' method="post">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Remote Management
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onclick="buttonClick(this,'Apply');if(!checkRemoteMG()) return false;" type="submit" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');location.href='RemoteManagementRetail.htm'" type="button" name="Cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <input type="checkbox" name="remote_mg_enable" value="remote_mg">
+                                        <a href="javascript:loadhelp('RemoteManagementRetail','turnon')"><b>Turn Remote Management On (HTTP)</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <input type="checkbox" name="remote_mg_enable_https" value="remote_mg_https" onclick="showHttpsAlert(this);">
+                                        <a href="javascript:loadhelp('RemoteManagementRetail','turnon')"><b>Turn Remote Management On (HTTPS)</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <a href="javascript:loadhelp('RemoteManagementRetail','address')"><b>Remote Management Address:</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2" id="rmt_mgmt_address">
+                                        https://0.0.0.0:8080
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td valign="top" colspan="2">
+                                        <A href="javascript:loadhelp('RemoteManagementRetail','access')"><B>Allow Remote Access By:</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;width:50%">
+                                        <input type="radio" name="rm_access" value="ip_single" onClick="clearData3()">
+                                        Only This Computer:
+                                    </td>
+                                    <td style="white-space: nowrap;width:50%;text-align:right" class="num">
+                                        <input type="text" class="num" size="4" maxlength="3" name="local_ip_1" value="" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" class="num" size="4" maxlength="3" name="local_ip_2" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" class="num" size="4" maxlength="3" name="local_ip_3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                        .
+                                        <input type="text" class="num" size="4" maxlength="3" name="local_ip_4" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        &nbsp;
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        <input type="radio" name="rm_access" value="ip_range" onClick="clearData2()">
+                                        IP Address Range:
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right">
+                                        From
+                                        <span class="num">
+                                            <input type="text" class="num" size="4" maxlength="3" name="start_ip_1" value="" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="start_ip_2" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="start_ip_3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="start_ip_4" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        &nbsp;
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right">
+                                        To
+                                        <span class="num">
+                                            <input type="text" class="num" size="4" maxlength="3" name="fin_ip_1" value="" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="fin_ip_2" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="fin_ip_3" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" class="num" size="4" maxlength="3" name="fin_ip_4" value="" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        &nbsp;
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;" colspan="2">
+                                        <input type="radio" checked="checked" name="rm_access" value="all" onClick="clearData1()">
+                                        Everyone
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('RemoteManagementRetail','port')"><b>Port Number (HTTP):</b></a>
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right">
+                                        <input type="text" class="num" name="http_rmport" value="8080" size=6 maxlength=5>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        <a href="javascript:loadhelp('RemoteManagementRetail','port')"><b>Port Number (HTTPS):</b></a>
+                                    </td>
+                                    <td style="white-space: nowrap;text-align:right">
+                                        <input type="text" class="num" name="https_rmport" value="8443" size=6 maxlength=5>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="RemoteManagementRetail_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <INPUT name=http_rmenable type=hidden value="0">
+			<INPUT name=https_rmenable type=hidden value="0">
+            <INPUT name=http_rmstartip type=hidden value="0.0.0.0">
+            <INPUT name=http_rmendip type=hidden value="255.255.255.255">
+            <INPUT name=http_wanipaddr type=hidden value="0.0.0.0">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

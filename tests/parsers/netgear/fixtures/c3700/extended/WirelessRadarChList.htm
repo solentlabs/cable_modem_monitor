@@ -1,0 +1,591 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+<style type="text/css" media="screen,print">
+#inputWidth520 {font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;font-size:11px;width:520px;}
+td,input
+{
+ font-size:12px;
+ font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;
+}
+</style>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+    var ssidList;
+    var curChannel = 6;
+
+    $(document).ready(function()
+    {
+        BodyInit();
+        makeBarChart(ssidList, 510, 250);
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+
+/* Nick 20111027, Workaround to fix help frame can't work in IE6/IE7 */
+                var po;
+                po = $('.help-frame-div').position();
+             if (navigator.appVersion.indexOf("MSIE") != -1 && parseFloat(navigator.appVersion.split("MSIE")[1]) < 8) {
+               $('.help-frame-div').offset({top: 5 + po.top,left:0+ po.left});
+             }
+             else
+             {
+               $('.help-frame-div').offset({top: -10 + po.top,left:0+ po.left});
+             }
+/* Nick 20111027, Workaround to fix help frame can't work in IE6/IE7 */
+
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    	$('div').filter(function() {
+            return this.id.match(/bar*/);
+        }).mouseover(function(e) {
+            var tipDiv = document.createElement("DIV");
+
+            tipDiv.setAttribute('id', "tooltip");
+            tipDiv.style.top = e.pageY + 10;
+            tipDiv.style.left = e.pageX + 20;
+            tipDiv.style.position = "absolute";
+            tipDiv.style.fontSize = "15px";
+            tipDiv.style.border = "solid black 1px"; // Bar border style
+            tipDiv.style.padding = "2px";
+            tipDiv.style.backgroundColor = "#ffffdc";
+            tipDiv.style.fontWeight = "bold";
+            tipDiv.style.zIndex = 1000;
+            tipDiv.setAttribute('title', $(this).attr('title'));
+            $(this).attr('title','');
+            tipDiv.innerHTML = tipDiv.title.replace(/\n/g, "<br>") ;
+            document.body.appendChild(tipDiv);
+
+    		$('#tooltip').fadeIn('200');
+    		$('#tooltip').fadeTo('10',0.8);
+        }).mousemove(function(e) {
+            $('#tooltip').css('top', e.pageY + 10);
+            $('#tooltip').css('left', e.pageX + 20);
+        }).mouseout(function(e) {
+    		$(this).attr('title', $('#tooltip').attr('title'));
+            $('#tooltip').remove();
+        });
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+        /*
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+        */
+    }
+
+// Terry 20120308, Use bar chart to present all channel status
+
+function makeBarChart(rawData, width, height)
+{
+    var tagValueList = '1|2|3|4|5|6|7|8|9|10|11|';
+
+    var channelList = tagValueList.split("|");
+
+    var data = new Array(channelList.length);
+
+    for (i = 0; i < channelList.length; i++)
+    {
+        if (rawData[channelList[i] - 1] != undefined)
+        {
+            data[i] = (rawData[channelList[i] - 1].split("\n")).length;
+        }
+        else
+        {
+            data[i] = 0;
+        }
+    }
+
+    width -= 24;
+    height -= 14;
+
+    var chart = document.createElement("DIV");
+
+    chart.style.position = "relative";
+    chart.style.width = width + "px";
+    chart.style.height = height + "px";
+    chart.style.border = "solid black 0px";
+    chart.style.paddingLeft = "10px";
+    chart.style.paddingRight = "10px";
+    chart.style.paddingTop = "10px";
+    chart.style.paddingBottom = "0px";
+    chart.style.backgroundColor = "transparent";
+
+    // Text 1 // Number of WiFi Networks
+    var text1Div = document.createElement("div");
+    text1Div.innerHTML = "Number of WiFi Networks";
+    text1Div.align = "center";
+    text1Div.style.position = "absolute";
+    text1Div.style.left = 0+"px";
+    text1Div.style.top = 0 + "px";
+    text1Div.style.width = 54+"px";
+    text1Div.style.fontSize = "12px";
+    chart.appendChild(text1Div);
+
+    // Text 2 // Move the mouse over each bar to see the WiFi names in that channel
+    var text2Div = document.createElement("div");
+    text2Div.innerHTML = "Move the mouse over each bar to see the WiFi names in that channel";
+    text2Div.align = "center";
+    text2Div.style.position = "absolute";
+    text2Div.style.left = 70+"px";
+    text2Div.style.top = 0 + "px";
+    text2Div.style.width = 400+"px";
+    text2Div.style.fontSize = "12px";
+	text2Div.style.paddingLeft = "25px";
+	text2Div.style.paddingRight = "25px";
+    chart.appendChild(text2Div);
+
+    // Text 3 Channel
+    var text3Div = document.createElement("div");
+    text3Div.innerHTML = "Channel";
+    text3Div.align = "right";
+    text3Div.style.position = "absolute";
+    text3Div.style.left = 80+"px";
+    text3Div.style.top = height + 15 + "px";
+    text3Div.style.width = width+ "px";
+    text3Div.style.fontSize = "12px";
+    chart.appendChild(text3Div);
+
+    var barwidth = 32;
+    var maxdata = Math.max.apply(this, data);
+    //var maxdata = 2;
+    var scale = (height-50) / maxdata;
+
+//    for (var i = 0; i < data.length; i++)
+    for (var i = 0; i < channelList.length; i++)
+    {
+        var bar = document.createElement("div");
+        var barheight = data[i] * scale;
+
+        bar.setAttribute('id', "bar_" + i);
+        if (data[i] > 0)
+        {
+            // Bar
+            bar.style.position = "absolute";
+            bar.style.left = (barwidth*i+1+80)+"px";
+            bar.style.top = height-barheight+10+"px";
+            bar.style.width = (barwidth-6) + "px";
+            bar.style.height = (barheight)+1 + "px";
+            bar.style.border = "0px";
+            bar.style.backgroundColor = "#EED233";
+            bar.style.fontSize = "1px";
+            bar.title = ssidList[channelList[i] - 1];
+
+            chart.appendChild(bar);
+
+            if (channelList[i] == curChannel)
+            {
+                var bar_b = document.createElement("div");
+                var barheight_b = barheight / data[i];
+
+                bar_b.setAttribute('id', "bar_" + i + "b");
+                bar_b.style.position = "absolute";
+                bar_b.style.left = (barwidth*i+1+80)+"px";
+                bar_b.style.top = height-barheight_b+10+"px";
+                bar_b.style.width = (barwidth-6) + "px";
+                bar_b.style.height = (barheight_b)+1 + "px";
+                bar_b.style.border = "0px";
+                bar_b.style.backgroundColor = "#0572CF";
+                bar_b.style.fontSize = "1px";
+                bar_b.title = ssidList[channelList[i] - 1];
+
+                chart.appendChild(bar_b);
+            }
+        }
+
+        // Axis x text
+        var xText = document.createElement("div");
+        xText.style.position = "absolute";
+        xText.style.left = (barwidth*i+1+80)+"px";
+        xText.style.top = height+15+"px";
+        xText.style.width = (barwidth-6) + "px";
+        xText.style.height = 5 + "px";
+        xText.style.fontSize = "12px";
+        xText.innerHTML = channelList[i];
+        xText.align = "center";
+        chart.appendChild(xText);
+
+        // Bar value text
+        var vText = document.createElement("div");
+        vText.style.position = "absolute";
+        vText.style.left = (barwidth*i+1+80)+"px";
+        vText.style.top = height-barheight-10+"px";
+        vText.style.width = (barwidth-6) + "px";
+        vText.style.height = 5 + "px";
+        vText.style.fontSize = "12px";
+        if (data[i] != 0)
+        {
+            vText.innerHTML = data[i];
+        }
+        vText.align = "center";
+        chart.appendChild(vText);
+    }
+
+    // Y axis
+    var xAxis = document.createElement("div");
+    xAxis.style.position = "absolute";
+    xAxis.style.left = 73+"px";
+    xAxis.style.top = 0+"px";
+    xAxis.style.width = 2+"px";
+    xAxis.style.height = height + 10 + "px";
+    xAxis.style.border = "0px";
+    xAxis.style.backgroundColor = "blue";
+    chart.appendChild(xAxis);
+
+    // X axis
+    var yAxis = document.createElement("div");
+    yAxis.style.position = "absolute";
+    yAxis.style.left = 73+"px";
+    yAxis.style.top = height+10+"px";
+    yAxis.style.width = width-40+"px";
+    yAxis.style.height = 2 + "px";
+    yAxis.style.border = "0px";
+    yAxis.style.backgroundColor = "blue";
+    yAxis.style.fontSize = "1px";
+    chart.appendChild(yAxis);
+
+    // Hint 1 color
+    var h1Bar = document.createElement("div");
+    h1Bar.style.position = "absolute";
+    h1Bar.style.left = (barwidth*13+1+100)+"px";
+    h1Bar.style.top = 10+"px";
+    h1Bar.style.width = 10 + "px";
+    h1Bar.style.height = 5 + "px";
+    h1Bar.style.border = "0px";
+    h1Bar.style.backgroundColor = "#0572CF";
+    h1Bar.style.fontSize = "1px";
+    chart.appendChild(h1Bar);
+
+    // Hint 1 Text
+    var h1Text = document.createElement("div");
+    h1Text.style.position = "absolute";
+    h1Text.style.left = (barwidth*13+1+120)+"px";
+    h1Text.style.top = 2+"px";
+    h1Text.style.width = 80 + "px";
+    h1Text.style.height = 5 + "px";
+    h1Text.style.fontSize = "12px";
+    h1Text.innerHTML = "My WiFi";
+    chart.appendChild(h1Text);
+
+    // Hint 2 color
+    var h2Bar = document.createElement("div");
+    h2Bar.style.position = "absolute";
+    h2Bar.style.left = (barwidth*13+1+100)+"px";
+    h2Bar.style.top = 25+"px";
+    h2Bar.style.width = 10 + "px";
+    h2Bar.style.height = 5 + "px";
+    h2Bar.style.border = "0px";
+    h2Bar.style.backgroundColor = "#EED233";
+    h2Bar.style.fontSize = "1px";
+    chart.appendChild(h2Bar);
+
+    // Hint 2 text
+    var h2Text = document.createElement("div");
+    h2Text.style.position = "absolute";
+    h2Text.style.left = (barwidth*13+1+120)+"px";
+    h2Text.style.top = 17+"px";
+    h2Text.style.width = 80 + "px";
+    h2Text.style.height = 5 + "px";
+    h2Text.style.fontSize = "12px";
+    h2Text.innerHTML = "Other's WiFi";
+    chart.appendChild(h2Text);
+
+    // document.body.appendChild(chart);
+    document.getElementById("tableContext").appendChild(chart);
+
+    // Update msgTable
+//    if (data[curChannel - 1] > 3)
+//    {
+        var table = document.getElementById("msgTable");
+        var row = table.insertRow(table.rows.length);
+        var cell = row.insertCell(-1);
+
+        cell.colSpan = "2";
+        cell.align = "right";
+        cell.innerHTML = "<font size='2'>You can choose a channel with less networks for a better connection.<\/font>";
+//    }
+
+    return chart;
+}
+//
+
+function InitTagValue()
+{
+/*
+  Enable Wireless Gateway Radio(text) | Current Channel(text) | Name (SSID) | Max Channel num (text)
+*/
+    //var tagValueList = "1";
+    //var tagValueList = "9";
+    var tagValueList = '1|11|***WIFI_CRED***|13|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    document.getElementsByName("wirelessEnabled")[0].value = tagValues[0];
+//    document.getElementById("currentChannel").innerHTML = tagValues[1];
+    document.getElementsByName("wirelessSsid")[0].value = piplineDecode(tagValues[2]);
+    document.getElementsByName("maxChannelNum")[0].value = tagValues[3];
+
+    curChannel = parseInt(tagValues[1]);
+    ssidList = new Array(parseInt(document.getElementsByName("maxChannelNum")[0].value));
+
+    if (tagValues[4] == "1")
+    {
+        $("#wifi5G").show();
+    }
+    else
+    {
+        $("#wifi5G").hide();
+    }
+
+}
+
+function InitApTableTagValue()
+{
+/*
+  Network Name (text) | Security Mode (text) | Mode (text) | PHY Mode (text) | RSSI (text) |
+  Channel (text) | BSSID (text)
+*/
+    var tagValueList = '20|DIRECT-FE-HP ENVY 4520 series|WPA2-PSK  AES-CCMP |Managed|802.11n|-53|1|XX:XX:XX:XX:XX:XX|***WIFI_CRED***|WPA2-PSK  AES-CCMP |Managed|802.11ac|-73|1|XX:XX:XX:XX:XX:XX|SpectrumSetup-5B|WPA2-PSK  AES-CCMP |Managed|802.11ac|-72|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-43|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-6|6|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11ac|-79|9|XX:XX:XX:XX:XX:XX|SpectrumSetup-1B|WPA2-PSK  AES-CCMP |Managed|802.11ac|-80|11|XX:XX:XX:XX:XX:XX|***WIFI_CRED***|WPA2-PSK  AES-CCMP |Managed|802.11ac|-79|9|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-43|6|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-53|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-53|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-53|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-43|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-7|6|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-7|6|XX:XX:XX:XX:XX:XX|fbi van|WPA2-PSK  AES-CCMP |Managed|802.11ac|-72|6|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11ac|-78|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11n|-41|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11n|-41|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11n|-57|1|XX:XX:XX:XX:XX:XX';
+/*
+    var tagValueList = "4" +
+        "|ike2.4GHz|WPA-PSK  AES-CCMP|Managed|802.11n|-81 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|voice|WPA-PSK  AES-CCMP |Managed|802.11b/g|-81 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|0CG2003D4E|WPA-PSK  AES-CCMP  TKIP |Managed|802.11n|-80 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|telenet-398948|WEP|Unknown|802.11b/g|-88 dBm|1|XX:XX:XX:XX:XX:XX";
+*/
+
+    return tagValueList.split("|");
+}
+
+
+function InitApTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    // drawTable('apTable', tagValues, onAddRowCB);
+    for (i = 0; i < parseInt(tagValues[0]); i++)
+    {
+        var ssid = encodeHtmlEntities(piplineDecode(tagValues[1 + i * 7 + 0]));
+        var channel = parseInt(tagValues[1 + i * 7 + 5]);
+
+        if (ssidList[channel - 1] == null)
+        {
+            ssidList[channel - 1] = ssid;
+        }
+        else
+        {
+            ssidList[channel - 1] = ssidList[channel - 1] + "\n" + ssid;
+        }
+    }
+
+    if (parseInt(document.getElementsByName("wirelessEnabled")[0].value) != 0)
+    {
+        // Add my network
+        if (ssidList[curChannel - 1] == null)
+        {
+            ssidList[curChannel - 1] = "<font color='#0071d7'>" + document.getElementsByName("wirelessSsid")[0].value + "<\/font>";
+        }
+        else
+        {
+            ssidList[curChannel - 1] = ssidList[curChannel - 1] + "\n" + "<font color='#0071d7'>" + document.getElementsByName("wirelessSsid")[0].value + "<\/font>";
+        }
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitApTableUpdateView(InitApTableTagValue());
+}
+// Nick Implement ASP Tag display on GUI
+//-->
+</script>
+
+</head>
+
+<body class="page-body" onload="changeContentSize()" onResize="changeContentSize()">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form action='/goform/WirelessRadar?id=1339915179' method="POST" name="WirelessRadar">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Wireless Channel
+            </div>
+            <table border="0" style="height:320px" class="subhead2-table" cellpadding="0" cellspacing="0">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        <table border="0" style="border-collapse:collapse;width:600px" bgcolor="white" cellpadding="0" cellspacing="0" id="msgTable">
+                            <tr>
+                                <td style="width:50%;text-align:left">
+                                    Number of WiFi networks in your neighborhood in each WiFi channel.
+                                </td>
+                                <td style="width:50%;text-align:right">
+                                    <span id='wifi5G'>
+                                        <input type="radio" name="wirelessswitch" value="wifi24G" onclick="location.href='WirelessRadarChList.htm';" checked="checked">
+                                        <b>
+                                            2.4GHz b/g/n
+                                        </b>
+                                        <input type="radio" name="wirelessswitch" value="wifi5G" onclick="location.href='WirelessRadarChList_an.htm';">
+                                        <b>
+                                            5GHz a/n
+                                        </b>
+                                    </span>
+                                    &nbsp;&nbsp;&nbsp;
+                                    <button value="Cancel" onclick="buttonClick(this,'Refresh');location.href='WirelessRadarChList.htm'" type="button" name="Refresh" class="button-rule">
+                                        <span class="roundleft_button">
+                                            <span class="refresh-icon">
+                                                &nbsp;&nbsp;&nbsp;&nbsp; Refresh
+                                            </span>
+                                        </span>
+                                        <span class="roundright_button">
+                                            &nbsp;&nbsp;&nbsp;&nbsp;
+                                        </span>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width:50%;text-align:left">
+                                </td>
+                                <td style="width:50%;text-align:right">
+                                    &nbsp;&nbsp;&nbsp;
+                                    <button value="Cancel" onclick="buttonClick(this,'Refresh');location.href='WirelessSettings.htm'" type="button" name="Refresh" class="button-rule">
+                                        <span class="roundleft_button">
+                                            &nbsp;&nbsp;&nbsp;&nbsp; Change Channel
+                                        </span>
+                                        <span class="roundright_button">
+                                            &nbsp;&nbsp;&nbsp;&nbsp;
+                                        </span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:315px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td id="tableContext">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="WirelessRadarChList_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <a name="helpframe-anchor"></a>
+            <input type="hidden" name="wirelessEnabled" value="0">
+            <input type="hidden" name="maxChannelNum" value="13">
+            <input type="hidden" name="wirelessSsid" value="">
+        </form>
+    </div>
+</body>
+</html>

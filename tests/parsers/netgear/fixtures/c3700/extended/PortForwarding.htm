@@ -1,0 +1,857 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<!--STYLE TYPE="text/javascript">
+	classes.num.all.fontFamily = "Courier";
+	classes.num.all.fontSize = "10pt" ;
+</style-->
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+var total = 0;
+var portForwardingListTotal = 30;
+var isRetail = 0;
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function init()
+{
+    var cf = document.forms[0];
+    var lanSplit = cf.lanIP.value.split(".");
+
+    cf.SV_IP1.value=lanSplit[0];
+    cf.SV_IP2.value=lanSplit[1];
+    cf.SV_IP3.value=lanSplit[2];
+    cf.SV_IP4.value="";
+
+    return true;
+}
+
+function validIp()
+{
+    var cf = document.forms[0];
+    if(document.getElementById("ip_type_ipv4").checked == true)
+    {
+        if(checkIP(cf.SV_IP1,cf.SV_IP2,cf.SV_IP3,cf.SV_IP4,254)
+            || parseInt(cf.SV_IP4.value,10) == 0)
+        return alertR(msg_invalid_ip);
+
+        // Terry 20120303, internal IP address should not be same as modem's LAN ip address
+        var lanSplit = cf.lanIP.value.split(".");
+        if(cf.SV_IP1.value == lanSplit[0] && cf.SV_IP2.value == lanSplit[1] && cf.SV_IP3.value == lanSplit[2] && cf.SV_IP4.value == lanSplit[3])
+        {
+            return alertR(msg_invalid_ip);
+        }
+    }
+    else if(document.getElementById("ip_type_ipv6").checked == true)
+    {
+        if(cf.SV_IPv6.value == "")
+        {
+            return alertR(msg_invalid_ip);
+        }
+    }
+
+    return true;
+}
+
+function showIP()
+{
+    var cf = document.forms[0];
+    var num = cf.entryData.value.split("#");
+    var nowName = cf.svs_gm.options[cf.svs_gm.selectedIndex].value;
+    var i, data1, data2, data3, flag=0;
+
+    for(i=0; i<=num[1]; i++)
+    {
+        data1 = num[0].split("@");
+        if(i>0)
+        {
+            data2 = data1[i].split(";");
+            if(data2[0] == nowName)
+            {
+                data3 = data2[1].split(".");
+                cf.SV_IP1.value=data3[0];
+                cf.SV_IP2.value=data3[1];
+                cf.SV_IP3.value=data3[2];
+                cf.SV_IP4.value=data3[3];
+                flag=1;
+                break;
+            }
+        }
+    }
+    if(flag == 0)
+    {
+        var lanSplit = cf.lanIP.value.split(".");
+
+        cf.SV_IP1.value=lanSplit[0];
+        cf.SV_IP2.value=lanSplit[1];
+        cf.SV_IP3.value=lanSplit[2];
+        cf.SV_IP4.value="";
+    }
+    return true;
+}
+
+function Check(caller)
+{
+    var cf = document.forms[0];
+    var form_size = cf.elements.length;
+    var checkFlag = 0;
+
+    cf.selectEntry.value = "";
+
+    if(caller == "0")
+    {
+        cf.action.value = "add";
+        cf.SV_IP1.value = parseInt(cf.SV_IP1.value,10);
+        cf.SV_IP2.value = parseInt(cf.SV_IP2.value,10);
+        cf.SV_IP3.value = parseInt(cf.SV_IP3.value,10);
+        cf.SV_IP4.value = parseInt(cf.SV_IP4.value,10);
+        cf.inputIP.value=cf.SV_IP1.value + "." + cf.SV_IP2.value+ "." + cf.SV_IP3.value+ "." + cf.SV_IP4.value;
+        cf.selectService.value=cf.svs_gm.options[cf.svs_gm.selectedIndex].value;
+    }
+    else if(caller == "1")
+        cf.action.value = "edit";
+    else if(caller == "2")
+        cf.action.value = "delete";
+    else if(caller == "3")
+        cf.action.value = "custom";
+    else if(caller == "4")
+        cf.action.value = "apply";
+
+    if(caller == "1" || caller == "2")
+    {
+    	for (var i = 0; i < form_size; i++)
+    	{
+    		if (cf.elements[i].type == "radio")
+    		{
+		        if(cf.elements[i].name != "serv_type" && cf.elements[i].checked == true)
+                {
+                    cf.selectEntry.value = i-9;
+                }
+            }
+        }
+    }
+    return;
+}
+function doTypeChange(newIndex)
+{
+	var cf = document.forms[0];
+	if (newIndex == 0)
+		location.href = "PortForwarding.htm";
+	else if (newIndex == 1)
+		location.href = "PortTriggering.htm";
+}
+
+function enableFwpf()
+{
+	var cf = document.forms[0];
+	if (cf.enable.checked)
+		cf.fwpf_enable.value = 0;
+	else
+		cf.fwpf_enable.value = 1;
+}
+
+function updateServiceInfo()
+{
+    var cf = document.forms[0];
+    // TCP: 4, UDP: 3, BOTH: 254
+
+    if (cf.svs_gm.value == "FTP")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 20;
+        cf.endGlobalPort.value = 21;
+    }
+    else if (cf.svs_gm.value == "HTTP")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 80;
+        cf.endGlobalPort.value = 80;
+    }
+    else if (cf.svs_gm.value == "ICUII")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 23566;
+        cf.endGlobalPort.value = 23566;
+    }
+    else if (cf.svs_gm.value == "IP Phone")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 6670;
+        cf.endGlobalPort.value = 6670;
+    }
+
+    else if (cf.svs_gm.value == "NetMeeting/H.323")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 1720;
+        cf.endGlobalPort.value = 1720;
+    }
+    else if (cf.svs_gm.value == "News")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 119;
+        cf.endGlobalPort.value = 119;
+    }
+    else if (cf.svs_gm.value == "Quake II & III")
+    {
+        cf.protocolType.value = 254;
+        cf.startGlobalPort.value = 27960;
+        cf.endGlobalPort.value = 27960;
+    }
+    else if (cf.svs_gm.value == "Real Audio")
+    {
+        cf.protocolType.value = 254;
+        cf.startGlobalPort.value = 6970;
+        cf.endGlobalPort.value = 7170;
+    }
+    else if (cf.svs_gm.value == "Telnet")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 23;
+        cf.endGlobalPort.value = 23;
+    }
+    else if (cf.svs_gm.value == "VPN-PPTP")
+    {
+        cf.protocolType.value = 4;
+        cf.startGlobalPort.value = 1723;
+        cf.endGlobalPort.value = 1723;
+    }
+}
+
+function updateSchList()
+{
+    document.getElementsByName("sch_list")[0].disabled = !(document.getElementsByName("skeyword")[1].checked);
+}
+
+function updateSchListIdx()
+{
+    document.getElementsByName("SchListIdx")[0].value = document.getElementsByName("sch_list")[0].selectedIndex;
+}
+
+function InitTagValue()
+{
+/*
+  Service IP Address(text) |
+  Port Forwarding Type(combobox) | Selected Schedule (text) | Schedule List Size (text) | Schedule List option 1 | Schedule List option 2 | ...
+*/
+    //var tagValueList = "***PRIVATE_IP***|2|0|4|***WIFI_CRED***|Test2|aabc|MySche";
+    //var tagValueList = "***PRIVATE_IP***|1|3|4|***WIFI_CRED***|Test2|aabc|MySche";
+    var tagValueList = '192.168.0.1|1|0|1|2|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function drawSelectOptions(SelectName, tags)
+{
+    for (i = 0; i < tags.length; i++)
+    {
+        if (tags[i].length == 0)
+        {
+            // Skip null string
+            continue;
+        }
+        drawSelectOption(SelectName, i, piplineDecode(tags[i]));
+    }
+}
+
+function drawSelectOption(SelectName, index, tag)
+{
+    var Select =  document.getElementsByName(SelectName)[0];
+
+    var Opt = document.createElement('option');
+    Opt.text = tag;
+    Opt.value = index;
+
+    try {
+       Select.add(Opt, SelectName[null]); // standards compliant; doesn't work in IE
+    }
+    catch(ex) {
+       Select.add(Opt, null); // IE only
+    }
+}
+
+function InitUpdateView(tagValues)
+{
+    document.getElementsByName("lanIP")[0].value = tagValues[0];
+
+    if(tagValues[1] == 0)
+    {
+        document.getElementById("perschedule_option").style.display = 'block';
+    }
+
+    if(tagValues[2] == "1")
+    {
+        $("#IPTYPE").show();
+    }
+    else
+    {
+        $("#IPTYPE").hide();
+    }
+
+    if(tagValues[3] == "1")
+    {
+        document.getElementById("button_tr").style.display = 'none';
+        document.getElementById("portforwarding_option").style.display = 'none';
+        document.getElementById("portforwarding_option_line").style.display = 'none';
+        document.getElementById("enable_pfTable").style.display = 'none';
+        isRetail = 1;
+    }
+    else
+    {
+        document.getElementById("button_tr").style.display = 'block';
+        document.getElementById("portforwarding_option").style.display = 'block';
+        document.getElementById("portforwarding_option_line").style.display = 'block';
+        document.getElementById("enable_pfTable").style.display = 'block';
+        isRetail = 0;
+    }
+
+    document.getElementsByName("skeyword")[parseInt(tagValues[4])].checked = true;
+
+    var selSch = new Array();
+    for (i = 0; i < parseInt(tagValues[6]); i++)
+    {
+        selSch.push(tagValues[7+i]);
+    }
+    document.getElementsByName("sch_list")[0].options.remove(document.getElementsByName("sch_list")[0].options[0]);
+    drawSelectOptions("sch_list", selSch);
+
+    if (parseInt(tagValues[6]) == 0)
+    {
+        document.getElementsByName("skeyword")[1].disabled = true;
+        document.getElementsByName("sch_list")[0].disabled = true;
+    }
+    else
+    {
+        document.getElementsByName("sch_list")[0].selectedIndex = parseInt(tagValues[5]);
+    }
+}
+
+function InitPfTableTagValue()
+{
+/*
+  Enable (checkbox) | Service Name (text) | Protocol (text) | External Start Port (text) | External End Port (text) | External IP (text) |
+  Internal Start Port (text) | Internal End Port (text) | Server IP Address (text)
+*/
+    var tagValueList = '0|';
+/*
+    var tagValueList = "4" +
+        "|0|FTP|TCP|20|25|***PRIVATE_IP***.3|30|40|***PRIVATE_IP***" +
+        "|0|HTTP|UDP|80|80|***PRIVATE_IP***.5|80|80|***PRIVATE_IP***" +
+        "|1|TELNET|TCP/UDP|23|23|Any|23|23|***PRIVATE_IP***" +
+        "|1|HTTPS|TCP|443|443|Any|443|443|***PRIVATE_IP***";
+*/
+
+    return tagValueList.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+    cellsArray [0] = "<span class='thead'>" + (rowId +1) + "<\/span>";
+    cellsArray [1] = "<input type='radio' name='SelIdx' value='" + rowId + "' />";
+    cellsArray [2] = "<input type='checkbox' name='PfEnable' value='" + rowId + "' " + ((tags[firstCellIdx + 0] == 1)? "checked" : "") + " />";
+
+    // Terry 20120109, translate space characters to HTML code.
+    cellsArray [3] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 1]));
+
+    cellsArray [4] = tags[firstCellIdx + 2] + ": " + tags[firstCellIdx + 3];
+    if (parseInt(tags[firstCellIdx + 4]) != 0 && tags[firstCellIdx + 4] != tags[firstCellIdx + 3])
+    {
+        cellsArray [4] = cellsArray [4] + " ~ " + tags[firstCellIdx + 4];
+    }
+    cellsArray [5] = tags[firstCellIdx + 5];
+    cellsArray [6] = tags[firstCellIdx + 2] + ": " + tags[firstCellIdx + 6];
+    if (parseInt(tags[firstCellIdx + 7]) != 0 && tags[firstCellIdx + 7] != tags[firstCellIdx + 6])
+    {
+        cellsArray [6] = cellsArray [6] + " ~ " + tags[firstCellIdx + 7];
+    }
+    cellsArray [7] = tags[firstCellIdx + 8];
+
+    return cellsArray;
+}
+
+function onAddRowCB_Retail(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+    cellsArray [0] = "<span class='thead'>" + (rowId +1) + "<\/span>";
+    cellsArray [1] = "<input type='radio' name='SelIdx' value='" + rowId + "' />";
+
+    // Terry 20120109, translate space characters to HTML code.
+    cellsArray [2] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 0]));
+
+    cellsArray [3] = tags[firstCellIdx + 1] + ": " + tags[firstCellIdx + 2];
+    if (parseInt(tags[firstCellIdx + 3]) != 0 && tags[firstCellIdx + 3] != tags[firstCellIdx + 2])
+    {
+        cellsArray [3] = cellsArray [3] + " ~ " + tags[firstCellIdx + 3];
+    }
+    cellsArray [4] = tags[firstCellIdx + 4];
+    cellsArray [5] = tags[firstCellIdx + 1] + ": " + tags[firstCellIdx + 5];
+    if (parseInt(tags[firstCellIdx + 6]) != 0 && tags[firstCellIdx + 6] != tags[firstCellIdx + 5])
+    {
+        cellsArray [5] = cellsArray [5] + " ~ " + tags[firstCellIdx + 6];
+    }
+    cellsArray [6] = tags[firstCellIdx + 7];
+
+    return cellsArray;
+}
+
+function InitPfTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    total = tagValues[0];
+    if(isRetail)
+    {
+        drawTable('pfTable', tagValues, onAddRowCB_Retail);
+    }
+    else
+    {
+        drawTable('pfTable', tagValues, onAddRowCB);
+    }
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitPfTableUpdateView(InitPfTableTagValue());
+    updateSchList();
+    updateSchListIdx();
+}
+function checkOverTotalNumber()
+{
+    if(total == portForwardingListTotal)
+    {
+        alert("Invalid Data. Port Forwarding List is full.  Remove an entry before adding new entry.");
+        return true;
+    }
+    return false;
+}
+
+function changeIpType()
+{
+    if(document.getElementById("ip_type_ipv4").checked == true)
+    {
+        document.getElementById("SV_IPv4_span").removeAttribute("style");
+        document.getElementById("SV_IPv6_span").style.display="none";
+    }
+    if(document.getElementById("ip_type_ipv6").checked == true)
+    {
+        document.getElementById("SV_IPv4_span").style.display="none";
+        document.getElementById("SV_IPv6_span").removeAttribute("style");
+    }
+}
+//-->
+
+</script>
+</head>
+<body onload="BodyInit();init();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="formname" method="POST" action='/goform/PortForwarding?id=1160479146'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Port Forwarding / Port Triggering
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle" id="button_tr" style="display:none">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Apply" onclick="buttonClick(this,'Apply');Check(4);" type="submit" name="srvApply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Cancel');reset();BodyInit();init();" type="button" name="cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a><b>Please select the service type.</b></a>
+                                        <br>
+                                        <input type="radio" checked="checked" name="serv_type" value="pf" onClick="doTypeChange(0)">
+                                        Port Forwarding
+                                        <br>
+                                        <input type="radio" name="serv_type" value="pt" onClick="doTypeChange(1)">
+                                        Port Triggering
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr id="portforwarding_option" style="display:none">
+                                    <td colspan="2" style="height:18px">
+                                        <a href="javascript:loadhelp('PortForwarding','port_frwrd')"><b>Port Forwarding</b></a>
+                                        <br>
+                                        <input type="radio" name="skeyword" value="never" onclick="updateSchList()">
+                                        Never
+                                        <br>
+                                        <span id="perschedule_option" style="display:none">
+                                            <input type="radio" name="skeyword" value="perschedule" onclick="updateSchList()">
+                                            Per Schedule&nbsp;&nbsp;
+                                            <select name="sch_list" size="1" onchange="updateSchListIdx()">
+                                                <option>
+                                                </option>
+                                            </select>
+                                            <br>
+                                        </span>
+                                        <input type="radio" name="skeyword" value="always" onclick="updateSchList()">
+                                        Always
+                                    </td>
+                                </tr>
+                                <tr id="portforwarding_option_line" style="display:none">
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap;width:50%" valign="top">
+                                        <a href="javascript:loadhelp('PortForwarding','setup')"><b>Service Name</b></a>
+                                    </td>
+                                    <td style="white-space: nowrap;width:50%">
+                                        <a href="javascript:loadhelp('PortForwarding','setup')"><b>Server IP Address</b></a>
+                                    </td>
+                                </tr>
+                                <tr id="IPTYPE">
+                                    <td>
+                                        &nbsp;
+                                    </td>
+                                    <td>
+                                        IPv4<input type="radio" name="ip_type" id="ip_type_ipv4" value="ipv4" onclick="changeIpType()" checked="">
+                                        &nbsp;
+                                        IPv6<input type="radio" name="ip_type" id="ip_type_ipv6" value="ipv6" onclick="changeIpType()">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td valign="top">
+                                        <select name="svs_gm" size="1" onChange="javascript:showIP()">
+                                            <option value="FTP">
+                                                FTP
+                                            </option>
+                                            <option value="HTTP">
+                                                HTTP
+                                            </option>
+                                            <option value="ICUII">
+                                                ICUII
+                                            </option>
+                                            <option value="IP Phone">
+                                                IP Phone
+                                            </option>
+                                            <option value="NetMeeting/H.323">
+                                                NetMeeting/H.323
+                                            </option>
+                                            <option value="News">
+                                                News
+                                            </option>
+                                            <option value="Quake II & III">
+                                                Quake II & III
+                                            </option>
+                                            <option value="Real Audio">
+                                                Real Audio
+                                            </option>
+                                            <option value="Telnet">
+                                                Telnet
+                                            </option>
+                                            <option value="VPN-PPTP">
+                                                VPN-PPTP
+                                            </option>
+                                        </SELECT>
+                                    </td>
+                                    <td style="white-space: nowrap;">
+                                        <span id="SV_IPv4_span">
+                                            <input type="text" name="SV_IP1" class="num" size="4" maxlength="3" value="" onFocus="this.select();" onkeydown="bscheck(event,this,1)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="SV_IP2" class="num" size="4" maxlength="3" value="" onFocus="this.select();" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="SV_IP3" class="num" size="4" maxlength="3" value="" onFocus="this.select();" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,0)">
+                                            .
+                                            <input type="text" name="SV_IP4" class="num" size="4" maxlength="3" value="" onFocus="this.select();" onkeydown="bscheck(event,this,0)" onkeyup="jumpcheck(this,1)">
+                                        </span>
+                                        <span id="SV_IPv6_span" style="display:none">
+                                            <input type="text" name="SV_IPv6" value="" maxlength="39" size="39">
+                                        </span>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Add " name="svAdd" class="button-rule" onclick="buttonClick(this,'Add');if(checkOverTotalNumber()) return false;if(!validIp()) return false; Check(0); updateServiceInfo();">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <b>
+                                            Port Forwarding Portmap Table
+                                        </b>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="2" cellspacing="0" width="100%" class="TableStyle" id="pfTable">
+                                            <tr>
+                                                <td style="white-space: nowrap;width:3%;text-align:center">
+                                                    <span class="thead">
+                                                        &nbsp;
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;width:3%;text-align:center">
+                                                    <span class="thead">
+                                                        #
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;width:5%;text-align:center;display:none" id="enable_pfTable">
+                                                    <span class="thead">
+                                                        Enable
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span class="thead">
+                                                        Service Name
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span class="thead">
+                                                        External Port
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span class="thead">
+                                                        External IP Address
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span class="thead">
+                                                        Internal Port
+                                                    </span>
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span class="thead">
+                                                        Internal IP Address
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="text-align:center;height:35px" valign="bottom">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Edit Service" name="Edit" class="button-rule" onclick="buttonClick(this,'Edit Service');Check(1);">
+                                            <span class="roundleft_button">
+                                                <span class="edit-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Edit Service
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Delete Service" name="Delete" class="button-rule" onclick="buttonClick(this,'Delete Service');Check(2);">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Delete Service
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Add Custom Service" name="Add" class="button-rule" onclick="buttonClick(this,'Add Custom Service');if(checkOverTotalNumber()) return false;Check(3);">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add Custom Service
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="PortForwarding_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="selectService" value="">
+            <input type="hidden" name="lanIP" value="">
+            <input type="hidden" name="action" value="init">
+            <input type="hidden" name="selectEntry" value="">
+            <input type="hidden" name="inputIP" value="">
+            <input type="hidden" name="entryData" value="">
+            <input type="hidden" name="fwpf_enable">
+            <input type="hidden" name="startGlobalPort">
+            <input type="hidden" name="endGlobalPort">
+            <input type="hidden" name="protocolType">
+            <input type="hidden" name="SchListIdx" value="0">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

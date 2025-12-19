@@ -11,6 +11,7 @@ isps:
   - Cox
   - CableOne
 source: https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/
+source_code: https://help.motorolanetwork.com/kb/general/gpl-code-center # MB8600 v8.6.1.1.19 (443 MB)
 
 # Parser status (for fixtures without parser code yet)
 status: in_progress

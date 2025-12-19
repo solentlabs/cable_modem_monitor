@@ -1,0 +1,518 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+<!--
+var serv_array = [["0","","","","0"],
+                            ["2","1","65535","ALL","1"],
+                            ["0","1","65535","Any(TCP)","1"],
+                            ["1","1","65535","Any(UDP)","1"],
+                            ["0","5190","5190","AIM","1"],
+                            ["1","47624","47624","AgeofEmpire","1"],
+                            ["0","179","179","BGP","1"],
+                            ["1","68","68","BOOTPCLIENT","1"],
+                            ["1","67","67","BOOTPSERVER","1"],
+                            ["2","7648","7648","CU-SEEME(7648)","1"],
+                            ["2","24032","24032","CU-SEEME(24032)","1"],
+                            ["2","53","53","DNS","1"],
+                            ["0","79","79","FINGER","1"],
+                            ["0","20","21","FTP","1"],
+                            ["0","80","80","HTTP","1"],
+                            ["0","443","443","HTTPS","1"],
+                            ["0","23566","23566","ICUII","1"],
+                            ["0","113","113","IDENT","1"],
+                            ["0","6670","6670","IPPhone","1"],
+                            ["2","6667","6667","IRC","1"],
+                            ["0","1720","1720","NetMeeting/H.323","1"],
+                            ["1","2049","2049","NFS","1"],
+                            ["0","119","119","News","1"],
+                            ["2","27960","27960","QuakeII&III","1"],
+                            ["0","512","512","RCMD","1"],
+                            ["2","6970","7170","RealAudio","1"],
+                            ["0","514","514","REXEC","1"],
+                            ["0","513","513","RLOGIN","1"],
+                            ["0","107","107","RTELNET","1"],
+                            ["2","554","554","RTSP","1"],
+                            ["0","115","115","SFTP","1"],
+                            ["0","25","25","SMTP","1"],
+                            ["2","161","161","SNMP","1"],
+                            ["2","162","162","SN: ***REDACTED***","1"],
+                            ["0","1521","1521","SQL-NET","1"],
+                            ["2","22","22","SSH","1"],
+                            ["1","1558","1558","STRMWORKS","1"],
+                            ["1","49","49","TACACS","1"],
+                            ["0","23","23","Telnet","1"],
+                            ["1","69","69","TFTP","1"],
+                            ["0","7000","7000","VDOLIVE","1"],
+                            ["1","500","500","VPN-IPSEC","1"],
+                            ["1","1701","1701","VPN-L2TP","1"],
+                            ["0","1723","1723","VPN-PPTP","1"]];
+var total = 0;
+var BlockServiceListTotal = 30;
+    $(document).ready(function()
+    {
+//        $('.scroll-pane').jScrollPane('scrollbarMargin:5px');
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+
+
+    function loadhelp(fname,anchname)
+    {
+                var pane = window.frames["helpframe"].$('#content');
+                var imgSrc=document.getElementById('help-button');
+                if(imgSrc.src.search("up")<0)
+                {
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+
+                        if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                                $(".help-frame-div").show();
+                        }
+                        else
+                        {
+                                window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                                $(".help-frame-div").show();
+                        }
+
+                        $(".help-frame-div").show();
+                        pane.jScrollPane({showArrows:true});
+
+                }
+    }
+
+
+
+function chgSel(index)
+{
+ document.forms[0].select.value = index;
+ return true;
+}
+
+/*
+function chSession(newsession)
+{
+    if(newsession == 2)
+        top.formframe.location.href = "BKS_service_ppp2.htm";
+    else if(newsession == 1)
+        top.formframe.location.href = "BKS_service.htm";
+}
+*/
+
+// Terry 20110926, update schedule list and index.
+function updateSchList()
+{
+    document.getElementsByName("sch_list")[0].disabled = !(document.getElementsByName("skeyword")[1].checked);
+}
+
+function updateSchListIdx()
+{
+    document.getElementsByName("SchListIdx")[0].value = document.getElementsByName("sch_list")[0].selectedIndex;
+}
+
+// Nick Implement ASP Tag display on GUI
+function InitTagValue()
+{
+/*
+  Services Blocking Type(combobox) | Selected Schedule (text) | Schedule List Size (text) | Schedule List option 1 | Schedule List option 2 | ...
+*/
+//    var tagValueList = "2|0|4|***WIFI_CRED***|Test2|aabc|MySche";
+//    var tagValueList = "1|3|4|***WIFI_CRED***|Test2|aabc|MySche";
+      var tagValueList = '0|0|0|';
+
+    return tagValueList.split("|");
+}
+
+function drawSelectOptions(SelectName, tags)
+{
+    for (i = 0; i < tags.length; i++)
+    {
+        if (tags[i].length == 0)
+        {
+            // Skip null string
+            continue;
+        }
+        drawSelectOption(SelectName, i, piplineDecode(tags[i]));
+    }
+}
+
+function drawSelectOption(SelectName, index, tag)
+{
+    var Select =  document.getElementsByName(SelectName)[0];
+
+    var Opt = document.createElement('option');
+    Opt.text = tag;
+    Opt.value = index;
+
+    try {
+       Select.add(Opt, SelectName[null]); // standards compliant; doesn't work in IE
+    }
+    catch(ex) {
+       Select.add(Opt, null); // IE only
+    }
+}
+
+function InitUpdateView(tagValues)
+{
+    /* Keyword Blocking */
+    document.getElementsByName("skeyword")[parseInt(tagValues[0])].checked = true;
+
+    var selSch = new Array();
+    for (i = 0; i < parseInt(tagValues[2]); i++)
+    {
+        selSch.push(tagValues[3+i]);
+    }
+    document.getElementsByName("sch_list")[0].options.remove(document.getElementsByName("sch_list")[0].options[0]);
+    drawSelectOptions("sch_list", selSch);
+
+    if (parseInt(tagValues[2]) == 0)
+    {
+        document.getElementsByName("skeyword")[1].disabled = true;
+        document.getElementsByName("sch_list")[0].disabled = true;
+    }
+    else
+    {
+        document.getElementsByName("sch_list")[0].selectedIndex = parseInt(tagValues[1]);
+    }
+}
+
+function InitBsTableTagValue()
+{
+/*
+  Enabled (checkbox) | Service Name (td) | Protocol (text) | Start Port (td) | End Port (td) | Start IP Address (td) | End IP Address (td)
+*/
+    var TableTagValueList = '0|';
+/*
+    var TableTagValueList = "4" +
+                    "|0|FTP|0|20|25|192.168.0.1|***PRIVATE_IP***" +
+                    "|0|HTTP|0|80|80|***PRIVATE_IP***|***PRIVATE_IP***" +
+                    "|1|TELNET|1|23|23|all|0.0.0.0" +
+                    "|1|USER DEFINED|1|443|443|***PRIVATE_IP***|***PRIVATE_IP***";
+*/
+    return TableTagValueList.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var cellsArray = new Array();
+    cellsArray [0] = "<span class='thead'>" + (rowId +1) + "<\/span>";
+    cellsArray [1] = "<input type='radio' name='SelIdx' value='" + rowId + "' " + ((rowId == 0)? "checked" : "") + " />";
+    cellsArray [2] = "<input type='checkbox' name='BsEnable' value='" + rowId + "' " + ((tags[firstCellIdx + 0] == 1)? "checked" : "") + " />";
+    cellsArray [3] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 1]));
+    if (parseInt(tags[firstCellIdx + 2]) == 0)
+        cellsArray [4] = "TCP: " + tags[firstCellIdx + 3];
+    else if (parseInt(tags[firstCellIdx + 2]) == 1)
+        cellsArray [4] = "UDP: " + tags[firstCellIdx + 3];
+    else
+        cellsArray [4] = "BOTH: " + tags[firstCellIdx + 3];
+
+    if (parseInt(tags[firstCellIdx + 4]) != 0 && tags[firstCellIdx + 4] != tags[firstCellIdx + 3])
+    {
+        cellsArray [4] = cellsArray [4] + " ~ " + tags[firstCellIdx + 4];
+    }
+
+    cellsArray [5] = tags[firstCellIdx + 5];
+    if (tags[firstCellIdx + 6] != "" && tags[firstCellIdx + 6] != tags[firstCellIdx + 5] && tags[firstCellIdx + 5] != "all")
+    {
+        cellsArray [5] = cellsArray [5] + " ~ " + tags[firstCellIdx + 6];
+    }
+/*
+    for (i = 0 ; i < serv_array.length ; i++)
+    {
+        if (serv_array[i][0] == tags[firstCellIdx + 2] && serv_array[i][1] == tags[firstCellIdx + 3]
+                && serv_array[i][2] == tags[firstCellIdx + 4])
+        {
+            cellsArray [3] = serv_array[i][3];
+            break;
+        }
+    }
+*/
+    return cellsArray;
+}
+
+function InitBSTableUpdateView(tagValues)
+{
+    /* draw table and insert content value */
+    total = tagValues[0];
+    drawTable('BlockSiteTable', tagValues, onAddRowCB);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitBSTableUpdateView(InitBsTableTagValue());
+    updateSchList();
+    updateSchListIdx();
+}
+function checkOverTotalNumber()
+{
+    if(total == BlockServiceListTotal)
+    {
+        alert("Invalid Data. Service List is full.  Remove an entry before adding new entry.");
+        return true;
+    }
+    return false;
+}
+// Nick Implement ASP Tag display on GUI
+//-->
+</script>
+</head>
+<body onload="BodyInit();changeContentSize()" onResize="changeContentSize()" class="page-body">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form id="target" name="frmService" method="POST" action='/goform/BlockServices?id=1160479146'>
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Block Services
+            </div>
+            <table border="0" style="height:370px" class="subhead2-table">
+                <tr align="left" valign="middle">
+                    <td style="padding-top:10px;padding-bottom:10px" align="center" colspan="2" class="table-seperate-border">
+                        &nbsp;&nbsp;&nbsp;
+                        <button value='Apply' onclick="buttonClick(this,'Apply');" type="submit" name="apply" class="button-apply">
+                            <span class="roundleft_apply">
+                                Apply&nbsp;
+                                <span class="apply-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                </span>
+                            </span>
+                            <span class="roundright_apply">
+                                &nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value='Cancel' onclick="buttonClick(this,'Cancel');reset();BodyInit();" type="button" name="cancel" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="cancel-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp;Cancel
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:365px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <TR>
+                                    <TD align="left" colspan="2">
+                                        <a href="javascript:loadhelp('BlockServices','block')"><b>Services Blocking</b></a>
+                                        <br>
+                                        <input type="radio" name="skeyword" value="never" onclick="updateSchList()">
+                                        Never
+                                        <br>
+                                        <input type="radio" name="skeyword" value="perschedule" onclick="updateSchList()">
+                                        Per Schedule&nbsp;&nbsp;
+                                        <select name="sch_list" size="1" onchange="updateSchListIdx()">
+                                            <option>
+                                            </option>
+                                        </select>
+                                        <br>
+                                        <input type="radio" name="skeyword" value="always" onclick="updateSchList()">
+                                        Always
+                                    </TD>
+                                </TR>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <a href="javascript:loadhelp('BlockServices','table')"><b>Service Table</b></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="1" cellpadding="2" cellspacing="0" width="100%" id="BlockSiteTable" class="TableStyle">
+                                            <tr>
+                                                <td style="white-space: nowrap;text-align:center;width:3%">
+                                                    &nbsp;
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;width:3%">
+                                                    <span class="thead">
+                                                        #
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;width:5%">
+                                                    <span class="thead">
+                                                        Enable
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        Service Type
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        Port
+                                                    </span>
+                                                </td>
+                                                <td style="white-space: nowrap;text-align:center;">
+                                                    <span class="thead">
+                                                        IP
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" align="center">
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Add " name="Add" class="button-rule" onclick="buttonClick(this,' Add ');if(checkOverTotalNumber()) return false;">
+                                            <span class="roundleft_button">
+                                                <span class="add-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;Add
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value=" Edit " name="Edit" class="button-rule" onclick="buttonClick(this,' Edit ');">
+                                            <span class="roundleft_button">
+                                                <span class="edit-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Edit
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                        &nbsp;&nbsp;&nbsp;
+                                        <button type="Submit" value="Delete" name="Delete" class="button-rule" onclick="buttonClick(this,'Delete');">
+                                            <span class="roundleft_button">
+                                                <span class="cancel-icon">
+                                                    &nbsp;&nbsp;&nbsp;&nbsp; Delete
+                                                </span>
+                                            </span>
+                                            <span class="roundright_button">
+                                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                            </span>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr valign="middle" align="center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="BlockServices_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <input type="hidden" name="select" value="-1">
+            <input type="hidden" name="SchListIdx" value="0">
+            <a name="helpframe-anchor"></a>
+        </form>
+    </div>
+</body>
+</html>

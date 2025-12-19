@@ -1,0 +1,452 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="description" content='C3700-100NAS'>
+<META http-equiv="Content-Style-Type" content="text/css">
+<META http-equiv="Pragma" content="no-cache">
+<META HTTP-equiv="Cache-Control" content="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="Mon, 06 Jan 1990 00:00:01 GMT">
+
+<title>NETGEAR Gateway C3700-100NAS</title>
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/scrollbar.css">
+<link rel="stylesheet" href="css/button.css">
+<style type="text/css" media="screen,print">
+#inputWidth520 {font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;font-size:11px;width:520px;}
+td,input
+{
+ font-size:12px;
+ font-family:Arial,Helvetica,Geneva,Swiss,SunSans-Regular,sans-serif;
+}
+</style>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="script/jquery.mousewheel.js"></script>
+<script type="text/javascript" src="script/jquery.jscrollpane.min.js"></script>
+
+<script type="text/javascript" src="script/script.js"></script>
+<link rel="stylesheet" href="form.css">
+<script type="text/javascript" src="func.js"></script>
+<script type="text/javascript" src="msg.js"></script>
+<script type="text/javascript" src="utility.js"></script>
+<script type="text/javascript" src="browser.js"></script>
+<script type="text/javascript" src="md5.js"></script>
+<script type="text/javascript" src="wep.js"></script>
+
+<script type="text/javascript">
+
+    $(document).ready(function()
+    {
+        BodyInit();
+
+/* Nick 20111027, Workaround to fix help frame can't work in IE6/IE7 */
+                var po;
+                po = $('.help-frame-div').position();
+             if (navigator.appVersion.indexOf("MSIE") != -1 && parseFloat(navigator.appVersion.split("MSIE")[1]) < 8) {
+               $('.help-frame-div').offset({top: 5 + po.top,left:0+ po.left});
+             }
+             else
+             {
+               $('.help-frame-div').offset({top: -10 + po.top,left:0+ po.left});
+             }
+/* Nick 20111027, Workaround to fix help frame can't work in IE6/IE7 */
+        $("#target").submit(function() {
+            buttonFilter();
+        });
+
+    });
+
+
+    function setHelpIframeVisible(){
+        $('.help-frame-div').css("visibility","visible");
+    }
+
+
+    function showHelpIframe() {
+
+
+        var imgSrc=document.getElementById('help-button');
+
+        if(imgSrc.src.search("up")>=0)
+        {
+            $(".help-frame-div").show();
+            imgSrc.src="img/helparrowdown-icon.gif";
+        }
+        else
+        {
+            $(".help-frame-div").hide();
+            imgSrc.src="img/helparrowup-icon.gif";
+            setTimeout(setHelpIframeVisible,500);
+        }
+    }
+    /*
+    function moveToHTMLend()
+    {
+        window.location.href='#helpframe-anchor';
+        setHelpIframeVisible();
+    }
+    */
+
+    function loadhelp(fname,anchname)
+    {
+        /*
+        var pane = window.frames["helpframe"].$('#content');
+        var imgSrc=document.getElementById('help-button');
+        if(imgSrc.src.search("up")<0)
+        {
+
+                $(".help-frame-div").show();
+                pane.jScrollPane({showArrows:true});
+
+
+                if ((loadhelp.arguments.length == 1 ) || (anchname == "" ))
+                {
+                        window.frames["helpframe"].location.href=fname+"_h."+"htm";
+                        $(".help-frame-div").show();
+                }
+                else
+                {
+                        window.frames["helpframe"].location.href=fname+"_h."+"htm#" + anchname;
+                        $(".help-frame-div").show();
+                }
+
+                $(".help-frame-div").show();
+                pane.jScrollPane({showArrows:true});
+
+        }
+        */
+    }
+
+function InitTagValue()
+{
+/*
+  Enable Wireless Gateway Radio(text) | Current Channel(text) | Name (SSID) | Max Channel num (text) | 5G wifi supported
+*/
+    //var tagValueList = "1";
+    //var tagValueList = "9";
+    var tagValueList = '1|1|***WIFI_CRED***|13|1|';
+
+    return tagValueList.split("|");
+}
+
+function InitUpdateView(tagValues)
+{
+    document.getElementsByName("currentChannel")[0].value = tagValues[0];
+    if (tagValues[4] == "1")
+    {
+        $("#wifi5G").show();
+    }
+    else
+    {
+        $("#wifi5G").hide();
+    }
+}
+
+function InitApTableTagValue()
+{
+/*
+  Network Name (text) | Security Mode (text) | Mode (text) | PHY Mode (text) | RSSI (text) |
+  Channel (text) | BSSID (text)
+*/
+    var tagValueList = '20||WPA2-PSK  AES-CCMP |Managed|802.11n|-57|1|XX:XX:XX:XX:XX:XX|***WIFI_CRED***|WPA2-PSK  AES-CCMP |Managed|802.11ac|-67|1|XX:XX:XX:XX:XX:XX|DIRECT-FE-HP ENVY 4520 series|WPA2-PSK  AES-CCMP |Managed|802.11n|-61|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11n|-41|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11n|-41|1|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11ac|-78|1|XX:XX:XX:XX:XX:XX|fbi van|WPA2-PSK  AES-CCMP |Managed|802.11ac|-72|6|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-7|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-7|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-7|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-43|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-43|6|XX:XX:XX:XX:XX:XX||NONE|Managed|802.11ac|-53|6|XX:XX:XX:XX:XX:XX|mitzy|WPA2-PSK  AES-CCMP |Managed|802.11ac|-53|6|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-53|6|XX:XX:XX:XX:XX:XX|SpectrumSetup-5B|WPA2-PSK  AES-CCMP |Managed|802.11ac|-78|6|XX:XX:XX:XX:XX:XX||Unknown-RSN(#8)   AES-CCMP |Unknown|802.11ac|-43|6|XX:XX:XX:XX:XX:XX|***WIFI_CRED***|WPA2-PSK  AES-CCMP |Managed|802.11ac|-79|9|XX:XX:XX:XX:XX:XX||WPA2-PSK  AES-CCMP |Managed|802.11ac|-77|9|XX:XX:XX:XX:XX:XX|SpectrumSetup-1B|WPA2-PSK  AES-CCMP |Managed|802.11ac|-80|11|XX:XX:XX:XX:XX:XX';
+/*
+    var tagValueList = "4" +
+        "|ike2.4GHz|WPA-PSK  AES-CCMP|Managed|802.11n|-81 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|voice|WPA-PSK  AES-CCMP |Managed|802.11b/g|-81 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|0CG2003D4E|WPA-PSK  AES-CCMP  TKIP |Managed|802.11n|-80 dBm|1|XX:XX:XX:XX:XX:XX" +
+        "|telenet-398948|WEP|Unknown|802.11b/g|-88 dBm|1|XX:XX:XX:XX:XX:XX";
+*/
+
+    //Terry 20120315, Sort by Power Level.
+    var tagValueListArray = tagValueList.split("|");
+    var tagValueListArrayStr = tagValueListArray[0] + "|";
+
+    for (i = 5; i > 0; i--)
+    {
+        for (j = 0; j < parseInt(tagValueListArray[0]); j++)
+        {
+            var addToList = false;
+            var firstCellIdx = 1 + (j * 7);
+            var ssid = tagValueListArray[firstCellIdx + 0];
+            var security = tagValueListArray[firstCellIdx + 1];
+            var wifiMode = tagValueListArray[firstCellIdx + 2];
+            var wifiMode2 = tagValueListArray[firstCellIdx + 3];
+            var rssi = parseInt(tagValueListArray[firstCellIdx + 4]);
+            var channel = tagValueListArray[firstCellIdx + 5];
+            var bssid = tagValueListArray[firstCellIdx + 6];
+
+            if (parseInt(rssi) > -60)
+            {
+                if (i == 5)
+                {
+                    addToList = true;
+                }
+            }
+            else if (parseInt(rssi) > -70 && parseInt(rssi) <= -60)
+            {
+                if (i == 4)
+                {
+                    addToList = true;
+                }
+            }
+            else if (parseInt(rssi) > -80 && parseInt(rssi) <= -70)
+            {
+                if (i == 3)
+                {
+                    addToList = true;
+                }
+            }
+            else if (parseInt(rssi) > -90 && parseInt(rssi) <= -80)
+            {
+                if (i == 2)
+                {
+                    addToList = true;
+                }
+            }
+            else
+            {
+                if (i == 1)
+                {
+                    addToList = true;
+                }
+            }
+
+            if (addToList == true)
+            {
+                tagValueListArrayStr = tagValueListArrayStr + ssid + "|";
+                tagValueListArrayStr = tagValueListArrayStr + security + "|";
+                tagValueListArrayStr = tagValueListArrayStr + wifiMode + "|";
+                tagValueListArrayStr = tagValueListArrayStr + wifiMode2 + "|";
+                tagValueListArrayStr = tagValueListArrayStr + rssi + "|";
+                tagValueListArrayStr = tagValueListArrayStr + channel + "|";
+                tagValueListArrayStr = tagValueListArrayStr + bssid + "|";
+            }
+        }
+    }
+
+    return tagValueListArrayStr.split("|");
+}
+
+function onAddRowCB(newRow, rowId, firstCellIdx, tags)
+{
+    var ssid = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 0]));
+    var security = tags[firstCellIdx + 1];
+    var wifiMode = tags[firstCellIdx + 2];
+    var rssi = tags[firstCellIdx + 4];
+    var channel = tags[firstCellIdx + 5];
+
+	var cellsArray = new Array(); // No used
+
+    var cellA = newRow.insertCell(-1);
+    cellA.width = "50";
+    cellA.align = "center";
+    if (wifiMode == "Managed")
+    {
+        cellA.innerHTML = "<span class='thead'><img src='img/AP.png'><\/span>";
+    }
+    else
+    {
+        cellA.innerHTML = "<span class='thead'><img src='img/ADHoc.png'><\/span>";
+    }
+
+    var cellB = newRow.insertCell(-1);
+    var secText;
+    if (security == "NONE")
+    {
+        secText = "Security-not-enabled";
+    }
+    else
+    {
+        // Remove last space.
+        security = security.replace(/\s+$/,"");
+
+        secText = "<img src='img/Secured.png'> Security-enabled (" + security + ")";
+    }
+    cellB.align = "left";
+    cellB.innerHTML = "<span class='thead'><table border='0' cellpadding='5' cellspacing='0' width='100%' class='TableStyle'><tr><td align='left'><span class='thead'>" + ssid + "<\/span><\/td><\/tr><tr><td align='left'><span class='thead'>" + secText + "<\/span><\/td><\/tr><\/table><\/span>";
+
+    var cellC = newRow.insertCell(-1);
+    var pwrLevel;
+
+    if (parseInt(rssi) > -60)
+    {
+        pwrLevel = 5;
+    }
+    else if (parseInt(rssi) > -70)
+    {
+        pwrLevel = 4;
+    }
+    else if (parseInt(rssi) > -80)
+    {
+        pwrLevel = 3;
+    }
+    else if (parseInt(rssi) > -90)
+    {
+        pwrLevel = 2;
+    }
+    else
+    {
+        pwrLevel = 1;
+    }
+
+    cellC.width = "20";
+    cellC.align = "center";
+    cellC.innerHTML = "<span class='thead'><img src='img/Power-" + pwrLevel + ".png'><\/span>";
+
+    if ((rowId % 2) != 0)
+    {
+        // newRow.bgColor = "#E8E8E8";
+    }
+    else
+    {
+        newRow.bgColor = "white";
+    }
+    newRow.height = 60;
+    /*
+	cellsArray [0] = encodeHtmlEntities(piplineDecode(tags[firstCellIdx + 0]));
+	cellsArray [1] = tags[firstCellIdx + 1];
+	cellsArray [2] = tags[firstCellIdx + 2];
+	cellsArray [3] = tags[firstCellIdx + 3];
+	cellsArray [4] = tags[firstCellIdx + 4] + " dBm";
+	cellsArray [5] = tags[firstCellIdx + 5];
+	cellsArray [6] = tags[firstCellIdx + 6];
+    */
+
+	return cellsArray;
+}
+
+
+function InitApTableUpdateView(tagValues)
+{
+	  document.getElementById("apTable").deleteRow(0);
+    /* draw table and insert content value */
+    drawTable('apTable', tagValues, onAddRowCB);
+}
+
+function BodyInit()
+{
+    InitUpdateView(InitTagValue());
+    InitApTableUpdateView(InitApTableTagValue());
+}
+// Nick Implement ASP Tag display on GUI
+</script>
+</head>
+<body class="page-body" onload="changeContentSize()" onResize="changeContentSize()">
+	<img alt="" id="bodyBackgroundImg" src="img/subhead2-background.jpg" style="width:650px;height:445px;position: absolute;top:31px">
+    <div id="full-page-container">
+        <form action='/goform/WirelessRadar?id=1280103083' method="POST" name="WirelessRadar">
+            <input type="hidden" name="buttonHit">
+            <input type="hidden" name="buttonValue">
+            <div class="subhead2">
+                Wireless AP
+            </div>
+            <table border="0" style="height:360px" class="subhead2-table">
+                <tr style="text-align:left;vertical-align: middle;">
+                    <td style="padding-top:10px;padding-bottom:10px;text-align:right" colspan="2" class="table-seperate-border">
+                        <span id='wifi5G'>
+                            <input type="radio" name="wirelessswitch" value="wifi24G" onclick="location.href='WirelessRadarApList.htm';" checked="checked">
+                            <b>
+                                2.4GHz b/g/n
+                            </b>
+                            <input type="radio" name="wirelessswitch" value="wifi5G" onclick="location.href='WirelessRadarApList_an.htm';">
+                            <b>
+                                5GHz a/n
+                            </b>
+                        </span>
+                        &nbsp;&nbsp;&nbsp;
+                        <button value="Cancel" onclick="buttonClick(this,'Refresh');location.href='WirelessRadarApList.htm'" type="button" name="Refresh" class="button-rule">
+                            <span class="roundleft_button">
+                                <span class="refresh-icon">
+                                    &nbsp;&nbsp;&nbsp;&nbsp; Refresh
+                                </span>
+                            </span>
+                            <span class="roundright_button">
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="scrollpane-table-seperate-border" colspan="2">
+                        <div class="scroll-pane" style="height:355px;width:620px;overflow:auto;scrolling:auto">
+                            <table style="border-collapse:collapse;width:600px">
+                                <tr>
+                                    <td colspan="2" style="height:12px">
+                                        <div style="background-image:url('liteblue.gif');width:100%;background-repeat: repeat-x;">
+                                            &nbsp;
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <table border="0" cellpadding="4" cellspacing="0" width="100%" id="apTable" class="TableStyle">
+                                            <tr>
+                                                <td>
+                                                </td>
+                                            </tr>
+                                            <!--tr>
+                                            <td nowrap="" width="50" align="center"><span class="thead"><img src="img/AP.png"></span></td>
+                                            <td nowrap="" width="*" align="left"><span class="thead">
+                                            <table border="0" cellpadding="5" cellspacing="0" width="100%" class="TableStyle">
+                                            <tr><span class="thead"><td align="left"><b>CGD3700BM_GUEST_0_2</b></td></span></tr>
+                                            <tr><span class="thead"><td align="left"><img src="img/Secured.png"> Security-enabled(WPA2-PSK)</td></span></tr>
+                                            </table>
+                                            </span></td>
+                                            <td nowrap="" width="20" align="center"><span class="thead"><img src="img/Power-4.png"></span></td>
+                                            </tr>
+                                            <tr bgcolor="#E8E8E8">
+                                            <td nowrap="" width="50" align="center"><span class="thead"><img src="img/AP.png"></span></td>
+                                            <td nowrap="" width="*" align="left"><span class="thead">
+                                            <table border="0" cellpadding="5" cellspacing="0" width="100%" class="TableStyle">
+                                            <tr><span class="thead"><td align="left"><b>77777888888</b></td></span></tr>
+                                            <tr><span class="thead"><td align="left">Security-not-enabled</td></span></tr>
+                                            </table>
+                                            </span></td>
+                                            <td nowrap="" width="20" align="center"><span class="thead"><img src="img/Power-2.png"></span></td>
+                                            </tr>
+                                            <tr>
+                                            <td nowrap="" width="50" align="center"><span class="thead"><img src="img/ADHoc.png"></span></td>
+                                            <td nowrap="" width="*" align="left"><span class="thead">
+                                            <table border="0" cellpadding="5" cellspacing="0" width="100%" class="TableStyle">
+                                            <tr><span class="thead"><td align="left"><b>CGD3700BM_GUEST_0_2</b></td></span></tr>
+                                            <tr><span class="thead"><td align="left"><img src="img/Secured.png"> Security-enabled(WPA2-PSK)</td></span></tr>
+                                            </table>
+                                            </span></td>
+                                            <td nowrap="" width="20" align="center"><span class="thead"><img src="img/Power-5.png"></span></td>
+                                            </tr-->
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr style="vertical-align: middle;text-align:center">
+                    <td class="table-seperate-border" colspan="2" style="padding-left:0px">
+                        <div class="help-frame-div">
+                            <iframe src="WirelessRadarApList_h.htm" class="help-iframe" scrolling="no" name="helpframe" frameborder="0">
+                            </iframe>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div class="subhead2-bottom">
+                <span style="float:left;padding-left:10px;padding-top:5px">
+                    <img alt="" src="img/help-icon.gif" onmouseover="changeCursorPointer();" onclick="showHelpIframe();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="float:left;padding-left:3px;" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Help Center
+                </span>
+                <span class="button-help-arrow">
+                    <img alt="" src="img/helparrowdown-icon.gif" id="help-button" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                </span>
+                <span class="subhead2-text" style="text-decoration:underline;float:right;padding-right:10px" onclick="showHelpIframe();" onmouseover="changeCursorPointer();" onmouseout="changeCursorDefault();">
+                    Show/Hide Help Center
+                </span>
+            </div>
+            <!--a name="helpframe-anchor"></a-->
+            <input type="hidden" name="currentChannel" value="1">
+        </form>
+    </div>
+</body>
+</html>
