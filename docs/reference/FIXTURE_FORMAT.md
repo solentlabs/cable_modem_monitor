@@ -31,6 +31,21 @@ isps:                       # Known compatible ISPs
   - Spectrum
   - Cox
 source: https://example.com/datasheet.pdf  # URL to official specs
+
+# Fixture capture info (optional but recommended)
+firmware_tested: "1.0.3"    # Firmware version from modem
+captured_from_issue: 77     # GitHub issue number
+
+# Attribution (optional - for crediting contributors and references)
+attribution:
+  data_contributors:             # GitHub users who provided captures
+    - username: "@username"
+      issue: 77                  # GitHub issue number
+      contribution: "HTML page captures"  # What they provided
+  external_references:           # External code/docs we learned from
+    - name: "project/repo"
+      url: "https://github.com/..."
+      contribution: "What we learned from it"
 ```
 
 ### Finding Release Date

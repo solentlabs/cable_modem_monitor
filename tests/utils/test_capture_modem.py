@@ -41,10 +41,10 @@ class TestBloatFiltering:
 class TestFilterAndCompressHar:
     """Tests for filter_and_compress_har function."""
 
-    def _create_har_entry(self, url: str, content: str = "test") -> dict:
+    def _create_har_entry(self, url: str, content: str = "test", method: str = "GET") -> dict:
         """Helper to create a HAR entry."""
         return {
-            "request": {"url": url},
+            "request": {"url": url, "method": method},
             "response": {"content": {"text": content, "mimeType": "text/html"}},
         }
 
@@ -97,7 +97,7 @@ class TestFilterAndCompressHar:
         assert stats["removed_entries"] == 2
 
     def test_removes_duplicate_urls(self):
-        """Duplicate URLs should be removed (keep first)."""
+        """Duplicate URLs with same method should be removed (keep first)."""
         from capture_modem import filter_and_compress_har
 
         har = self._create_har(
@@ -114,6 +114,24 @@ class TestFilterAndCompressHar:
 
         assert stats["original_entries"] == 3
         assert stats["filtered_entries"] == 1
+
+    def test_preserves_get_and_post_to_same_url(self):
+        """GET and POST to same URL should both be preserved (login form flow)."""
+        from capture_modem import filter_and_compress_har
+
+        har = self._create_har(
+            [
+                self._create_har_entry("http://modem/login", "form", method="GET"),
+                self._create_har_entry("http://modem/login", "submit", method="POST"),
+            ]
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".har", delete=False) as f:
+            self._write_har(har, Path(f.name))
+            _, stats = filter_and_compress_har(Path(f.name))
+
+        assert stats["original_entries"] == 2
+        assert stats["filtered_entries"] == 2  # Both preserved
 
     def test_preserves_html_pages(self):
         """HTML pages should be preserved."""

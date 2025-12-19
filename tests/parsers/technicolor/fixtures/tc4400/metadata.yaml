@@ -14,3 +14,14 @@ isps:
   - Shaw
   - Videotron
 source: https://techinfodepot.shoutwiki.com/wiki/Technicolor_TC4400
+
+# Attribution
+attribution:
+  data_contributors:
+    - username: "@Mar1usW3"
+      issue: 1
+      contribution: "HTML samples and compatibility testing"
+  external_references:
+    - name: "philfry/check_tc4400"
+      url: "https://github.com/philfry/check_tc4400"
+      contribution: "Related prior art for TC4400 web interface monitoring"
