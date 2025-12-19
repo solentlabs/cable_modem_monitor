@@ -509,6 +509,8 @@ def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: 
         info["status"] = metadata["status"]
     if metadata.get("tracking_issue"):
         info["tracking_issue"] = metadata["tracking_issue"]
+    if metadata.get("source_code"):
+        info["source_code"] = metadata["source_code"]
 
 
 def extract_fixture_info(
@@ -753,9 +755,15 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         chipset = str(m.get("chipset", "") or "")
         chipset_linked = chipset_to_link(chipset)
 
+        # Add source code icon if available
+        model_link = f"[{m.get('model', '')}]({m['path']}/README.md)"
+        source_code = m.get("source_code")
+        if source_code:
+            model_link += f' [📦]({source_code} "GPL source code")'
+
         lines.append(
             f"| {m.get('manufacturer', '')} | "
-            f"[{m.get('model', '')}]({m['path']}/README.md) | "
+            f"{model_link} | "
             f"{m.get('docsis', '')} | "
             f"{protocol} | "
             f"{chipset_linked} | "
@@ -777,6 +785,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "- **Protocol**: ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping |"
             " **[HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)** ="
             " [SOAP](https://www.w3.org/TR/soap/)-based, requires auth",
+            "- **📦**: GPL source code available (firmware uses open source components)",
             "",
         ]
     )

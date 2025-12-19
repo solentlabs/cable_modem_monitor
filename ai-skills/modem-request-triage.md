@@ -60,7 +60,53 @@ Create `RAW_DATA/{MODEL}/ISSUE.md`:
 
 ## Phase 2: Triage (Go/No-Go)
 
-### 2.1 Scan for completeness
+### 2.1 Auth Feasibility Check (DO THIS FIRST)
+
+**Before analyzing data completeness, verify we can actually authenticate.**
+
+For modems requiring login, check what the integration's diagnostics actually captured:
+
+```bash
+# Check raw_html_capture in diagnostics JSON
+cat RAW_DATA/{MODEL}/config_entry.json | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+urls = d.get('data', {}).get('raw_html_capture', {}).get('urls', [])
+print('Integration captured these URLs:')
+for entry in urls:
+    url = entry.get('url', 'unknown')
+    size = entry.get('size_bytes', 0)
+    print(f'  {url}: {size} bytes')
+"
+```
+
+| Auth Type | Integration Capture Shows | Can Proceed? |
+|-----------|---------------------------|--------------|
+| **None** | Status pages with data | ✅ Yes |
+| **HTTP Basic** | Status pages (after 401 → retry with creds) | ✅ Yes |
+| **Form-based** | Only login page | ❌ **STOP - Need HAR** |
+| **HNAP/API** | Only login or empty responses | ❌ **STOP - Need HAR** |
+
+**Key question:** Did the integration capture authenticated pages, or just the login page?
+
+- If `raw_html_capture.urls` only shows `/`, `/login`, `/logon.html` → Integration couldn't authenticate
+- If user provided manual browser "Save As" files → We have page structure but **NOT the auth flow**
+
+**For form-based auth, we need to see:**
+1. POST request to login endpoint (with form fields)
+2. Response (Set-Cookie, redirect, session token)
+3. Subsequent authenticated requests
+
+**Without the auth flow, we cannot build authentication support.** Static HTML captures don't show how the browser established the session.
+
+**If auth feasibility fails:**
+→ STOP here
+→ Request HAR capture via `scripts/capture_modem.py`
+→ Do NOT proceed to data analysis (waste of time without auth)
+
+---
+
+### 2.2 Scan for completeness
 
 Check if submission includes:
 
@@ -71,7 +117,21 @@ Check if submission includes:
 | Auth flow (if needed) | Login page + authenticated pages |
 | Event log (optional) | `EventLog.htm` or similar - useful for future outage detection features |
 
-### 2.2 Scan for PII
+**Auth flow verification (if modem requires login):**
+
+For modems requiring authentication, verify the HAR/capture includes:
+1. The login request (POST with credentials or auth headers)
+2. The session mechanism (cookies, tokens)
+3. Authenticated page responses
+
+```bash
+# Check HAR for login-related requests
+grep -i "login\|auth\|credential\|session" RAW_DATA/{MODEL}/*.har | head -20
+```
+
+**RED FLAG:** If user describes auth flow but says "I don't see it in the capture" or similar, STOP and request re-capture. Do not proceed with auth implementation based on description alone.
+
+### 2.3 Scan for PII
 
 Search artifacts for:
 
@@ -86,7 +146,7 @@ grep -riE "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" RAW_DATA/{MODEL}/ | grep -v "00:0
 grep -ri "serial" RAW_DATA/{MODEL}/
 ```
 
-### 2.3 Check capture method
+### 2.4 Check capture method
 
 | Method | Risk | Action |
 |--------|------|--------|
@@ -95,22 +155,24 @@ grep -ri "serial" RAW_DATA/{MODEL}/
 | Chrome HAR export | Medium | Review carefully, may need re-capture |
 | Manual HTML save | High | Likely needs re-capture |
 
-### 2.4 Decision Gate
+### 2.5 Decision Gate
 
 **RED FLAGS (stop, request more data):**
+- [ ] **Form-based auth without HAR** (can't build auth from static HTML)
 - [ ] Missing status/channel pages
 - [ ] PII detected (real WiFi creds, MACs, serials)
 - [ ] Only login page captured (auth blocking)
 - [ ] Manual capture with no sanitization
+- [ ] Auth described but not captured (e.g., "I don't see the login POST in the HAR")
 
 **GREEN LIGHT (proceed):**
 - [ ] Status pages with channel data present
 - [ ] No PII detected or properly sanitized
-- [ ] Auth flow captured (if modem requires login)
+- [ ] Auth flow captured AND visible in HAR (if modem requires login)
 
 If RED FLAGS → Draft response using "Need more data" template, STOP here.
 
-### 2.5 Update issue status
+### 2.6 Update issue status
 
 If proceeding:
 ```bash
@@ -515,6 +577,67 @@ verified → close issue
 
 ---
 
+## Protocol-Specific Capture Methods
+
+**CRITICAL:** Identify modem protocol BEFORE analyzing artifacts. The protocol determines which capture method is valid.
+
+### HNAP Modems (MB8611, S33, etc.)
+
+HNAP modems make JSON API calls to `/HNAP1/`. Browser HAR captures are **unreliable** due to aggressive caching.
+
+| Capture Method | Reliability | Why |
+|----------------|-------------|-----|
+| Browser HAR | ❌ Poor | Browser caches HNAP responses - often only 1 of 5+ calls captured |
+| Integration HTML Capture | ✅ Good | Captures parser's actual HNAP requests via `CapturingSession` |
+
+**How to identify HNAP:**
+- `/HNAP1/` URLs in HAR or diagnostics
+- JSON payloads with `GetMultipleHNAPs`, `GetMoto*`, `GetCustomer*` actions
+- Arris/Motorola modems with login pages
+
+**If user provides browser HAR for HNAP modem:**
+→ Check if it has the HNAP calls you need (channel data, connection info)
+→ If missing (browser cached), request Integration HTML Capture instead
+
+### HTML-Scraping Modems (SB6190, TC4400, etc.)
+
+Standard modems serve static HTML pages with channel data in tables.
+
+| Capture Method | Reliability | Why |
+|----------------|-------------|-----|
+| Browser HAR | ✅ Good | HTML pages aren't cached as aggressively |
+| Integration HTML Capture | ✅ Good | Works well for static pages |
+| Manual "Save As" | ⚠️ Okay | Structure visible, but no auth flow |
+
+---
+
+## Artifact Freshness
+
+**Artifacts age out.** Data captured before a parser shipped is often useless for debugging issues with the working parser.
+
+### Before Analyzing Old Artifacts, Check:
+
+1. **When was it captured?** Compare dates to parser release
+2. **What parser version?** Look for `fallback mode`, `limited`, `Unknown Modem` in diagnostics
+3. **Did auth work?** Check if `raw_html_capture` only shows login page
+
+### Freshness Decision Matrix
+
+| Artifact Age | Parser State When Captured | Action |
+|--------------|---------------------------|--------|
+| Pre-parser release | Fallback mode (no auth) | ❌ Useless - request fresh capture |
+| Post-parser release | Parser working | ✅ Analyze |
+| Post-parser release | Parser broken (the bug) | ✅ Analyze - contains error state |
+
+### When User Offers to Help
+
+If user says "Let me know what you would need" or similar:
+→ **Ask for fresh data immediately** rather than analyzing stale artifacts
+→ Request Integration Diagnostics with HTML Capture from current working (or broken) state
+→ This captures both HNAP responses AND recent logs
+
+---
+
 ## Checklist Summary
 
 ```
@@ -524,6 +647,7 @@ verified → close issue
   □ Create ISSUE.md with context
 
 □ Phase 2: Triage
+  □ **Auth feasibility check FIRST** (form-based auth? need HAR?)
   □ Scan for completeness (status pages present?)
   □ Scan for PII (WiFi creds, MACs, serials?)
   □ Check capture method

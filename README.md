@@ -2,7 +2,7 @@
 
 <!-- Status & Installation -->
 [![GitHub Release](https://img.shields.io/github/v/release/solentlabs/cable_modem_monitor)](https://github.com/solentlabs/cable_modem_monitor/releases)
-[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <!-- Build Status -->
@@ -12,7 +12,7 @@
 
 <!-- Meta -->
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
-[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen)](./docs/MODEM_REQUEST.md)
+[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen.svg)](./docs/MODEM_REQUEST.md)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
@@ -171,16 +171,10 @@ If your modem isn't supported or you'd like to help expand compatibility, we'd l
 **Installing Cable Modem Monitor via HACS:**
 
 1. Open **HACS** from the Home Assistant sidebar
-2. Click the **Integrations** tab
-3. Click the **three dots (⋮)** in the top-right corner
-4. Select **"Custom repositories"**
-5. Add this repository URL: `https://github.com/solentlabs/cable_modem_monitor`
-6. Category: **Integration**
-7. Click **"Add"**
-8. Search for **"Cable Modem Monitor"** in HACS
-9. Click **"Download"**
-10. **Restart Home Assistant**
-11. Add the integration: **Settings → Devices & Services → Add Integration → Cable Modem Monitor**
+2. Search for **"Cable Modem Monitor"**
+3. Click **"Download"**
+4. **Restart Home Assistant**
+5. Add the integration: **Settings → Devices & Services → Add Integration → Cable Modem Monitor**
 
 ### Method 2: Manual Installation
 

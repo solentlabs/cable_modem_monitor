@@ -56,11 +56,12 @@ body:
     attributes:
       label: Authentication Details (if required)
       description: |
-        If authentication is required, what type of login does your modem use?
-        DO NOT share your actual password - just describe the login type.
+        If authentication is required, describe the login type below.
+
+        ⚠️ **Never share your actual credentials.**
       placeholder: |
         Login type: Form-based login page / HTTP Basic Auth popup / Other
-        Default username: admin (check modem label)
+        Default username: admin (from modem label)
         Notes: Login page at /login.html
     validations:
       required: false
