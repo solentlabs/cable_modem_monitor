@@ -235,6 +235,11 @@ class NetgearC7000v2Parser(ModemParser):
         # Parse system info from RouterStatus.htm
         system_info = self.parse_system_info(router_soup)
 
+        # Extract actual model from HTML
+        model_name = self._extract_model(docsis_soup)
+        if model_name:
+            system_info["model_name"] = model_name
+
         return {
             "downstream": downstream_channels,
             "upstream": upstream_channels,
@@ -606,3 +611,37 @@ class NetgearC7000v2Parser(ModemParser):
         except Exception as e:
             _LOGGER.debug("C7000v2: Could not calculate boot time from '%s': %s", uptime_str, e)
             return None
+
+    def _extract_model(self, soup: BeautifulSoup) -> str | None:
+        """Extract actual model name from HTML meta or title.
+
+        The C7000v2 includes model info in:
+        - <META name="description" content='C7000v2'>
+        - <title>NETGEAR Gateway C7000v2</title>
+
+        Args:
+            soup: BeautifulSoup object of the page
+
+        Returns:
+            Model name (e.g., "C7000v2") or None if not found
+        """
+        # Try meta description first
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta:
+            content = meta.get("content")
+            if isinstance(content, str) and content.strip():
+                _LOGGER.debug("C7000v2: Extracted model from meta description: %s", content.strip())
+                return content.strip()
+
+        # Fallback to title tag
+        title = soup.find("title")
+        if title and title.string:
+            # Extract model from "NETGEAR Gateway C7000v2"
+            match = re.search(r"Gateway\s+(\S+)", title.string)
+            if match:
+                model = match.group(1)
+                _LOGGER.debug("C7000v2: Extracted model from title: %s", model)
+                return model
+
+        _LOGGER.debug("C7000v2: Could not extract model name from HTML")
+        return None

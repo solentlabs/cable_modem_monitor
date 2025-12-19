@@ -20,6 +20,8 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_ACTUAL_MODEL,
+    CONF_DETECTED_MODEM,
     CONF_HOST,
     DOMAIN,
 )
@@ -75,31 +77,33 @@ async def async_setup_entry(
     # Add per-channel downstream sensors
     if coordinator.data.get("cable_modem_downstream"):
         for idx, channel in enumerate(coordinator.data["cable_modem_downstream"]):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to index+1 if neither exists (shouldn't happen in practice)
-            channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
+            # v3.11+ uses channel_type for disambiguation and channel_id for stability
+            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
+            channel_type = channel.get("channel_type", "qam").lower()
+            channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
             entities.extend(
                 [
-                    ModemDownstreamPowerSensor(coordinator, entry, channel_num),
-                    ModemDownstreamSNRSensor(coordinator, entry, channel_num),
-                    ModemDownstreamFrequencySensor(coordinator, entry, channel_num),
+                    ModemDownstreamPowerSensor(coordinator, entry, channel_type, channel_id),
+                    ModemDownstreamSNRSensor(coordinator, entry, channel_type, channel_id),
+                    ModemDownstreamFrequencySensor(coordinator, entry, channel_type, channel_id),
                 ]
             )
             # Only add error sensors if the data includes them
             if "corrected" in channel:
-                entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_num))
+                entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_type, channel_id))
             if "uncorrected" in channel:
-                entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_num))
+                entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_type, channel_id))
 
     # Add per-channel upstream sensors
     if coordinator.data.get("cable_modem_upstream"):
         _LOGGER.debug("Creating entities for %s upstream channels", len(coordinator.data["cable_modem_upstream"]))
         for idx, channel in enumerate(coordinator.data["cable_modem_upstream"]):
-            # v2.0+ parsers return 'channel_id', older versions used 'channel'
-            # Fallback to index+1 if neither exists (shouldn't happen in practice)
-            channel_num = int(channel.get("channel_id", channel.get("channel", idx + 1)))
-            power_sensor = ModemUpstreamPowerSensor(coordinator, entry, channel_num)
-            freq_sensor = ModemUpstreamFrequencySensor(coordinator, entry, channel_num)
+            # v3.11+ uses channel_type for disambiguation and channel_id for stability
+            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
+            channel_type = channel.get("channel_type", "atdma").lower()
+            channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
+            power_sensor = ModemUpstreamPowerSensor(coordinator, entry, channel_type, channel_id)
+            freq_sensor = ModemUpstreamFrequencySensor(coordinator, entry, channel_type, channel_id)
             entities.extend([power_sensor, freq_sensor])
 
     # Add LAN stats sensors
@@ -132,15 +136,19 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._entry = entry
 
-        # Get detected modem info from config entry, with fallback to generic values
+        # Get modem info from config entry
+        # NOTE: Device name is kept as "Cable Modem" for entity ID stability.
+        # Changing device name would change all entity IDs since has_entity_name=True.
+        # Users can rename the device in the UI if desired.
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
-        model = entry.data.get("detected_modem", "Cable Modem Monitor")
+        actual_model = entry.data.get(CONF_ACTUAL_MODEL)
+        detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "Cable Modem",
             "manufacturer": manufacturer,
-            "model": model,
+            "model": actual_model or detected_modem,
             "configuration_url": f"http://{entry.data[CONF_HOST]}",
         }
 
@@ -347,12 +355,19 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
 class ModemDownstreamPowerSensor(ModemSensorBase):
     """Sensor for downstream channel power."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator,
+        entry: ConfigEntry,
+        channel_type: str,
+        channel_id: int,
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"DS Ch {channel} Power"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_power"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Power"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -362,20 +377,38 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        if self._channel in channel_map:
-            return float(channel_map[self._channel].get("power"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return float(channel_map[key].get("power"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            ch = channel_map[key]
+            return {
+                "channel_id": self._channel_id,
+                "channel_type": self._channel_type,
+                "frequency": ch.get("frequency"),
+            }
+        return {}
 
 
 class ModemDownstreamSNRSensor(ModemSensorBase):
     """Sensor for downstream channel SNR."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"DS Ch {channel} SNR"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_snr"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} SNR"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_snr"
         self._attr_native_unit_of_measurement = "dB"
         self._attr_icon = "mdi:signal-variant"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -385,20 +418,38 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        if self._channel in channel_map:
-            return float(channel_map[self._channel].get("snr"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return float(channel_map[key].get("snr"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            ch = channel_map[key]
+            return {
+                "channel_id": self._channel_id,
+                "channel_type": self._channel_type,
+                "frequency": ch.get("frequency"),
+            }
+        return {}
 
 
 class ModemDownstreamFrequencySensor(ModemSensorBase):
     """Sensor for downstream channel frequency."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"DS Ch {channel} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_frequency"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Frequency"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -409,20 +460,32 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        if self._channel in channel_map:
-            return int(channel_map[self._channel].get("frequency"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return int(channel_map[key].get("frequency"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        return {
+            "channel_id": self._channel_id,
+            "channel_type": self._channel_type,
+        }
 
 
 class ModemDownstreamCorrectedSensor(ModemSensorBase):
     """Sensor for downstream channel corrected errors."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"DS Ch {channel} Corrected"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_corrected"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Corrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_corrected"
         self._attr_icon = "mdi:check-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -431,20 +494,38 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        if self._channel in channel_map:
-            return int(channel_map[self._channel].get("corrected"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return int(channel_map[key].get("corrected"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            ch = channel_map[key]
+            return {
+                "channel_id": self._channel_id,
+                "channel_type": self._channel_type,
+                "frequency": ch.get("frequency"),
+            }
+        return {}
 
 
 class ModemDownstreamUncorrectedSensor(ModemSensorBase):
     """Sensor for downstream channel uncorrected errors."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"DS Ch {channel} Uncorrected"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_{channel}_uncorrected"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Uncorrected"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_uncorrected"
         self._attr_icon = "mdi:alert-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -453,20 +534,38 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        if self._channel in channel_map:
-            return int(channel_map[self._channel].get("uncorrected"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return int(channel_map[key].get("uncorrected"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        channel_map = self.coordinator.data.get("_downstream_by_id", {})
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            ch = channel_map[key]
+            return {
+                "channel_id": self._channel_id,
+                "channel_type": self._channel_type,
+                "frequency": ch.get("frequency"),
+            }
+        return {}
 
 
 class ModemUpstreamPowerSensor(ModemSensorBase):
     """Sensor for upstream channel power."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"US Ch {channel} Power"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_power"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"US {channel_type.upper()} Ch {channel_id} Power"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_us_{channel_type}_ch_{channel_id}_power"
         self._attr_native_unit_of_measurement = "dBmV"
         self._attr_icon = "mdi:signal"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -476,20 +575,38 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_upstream_by_id", {})
-        if self._channel in channel_map:
-            return float(channel_map[self._channel].get("power"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return float(channel_map[key].get("power"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        channel_map = self.coordinator.data.get("_upstream_by_id", {})
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            ch = channel_map[key]
+            return {
+                "channel_id": self._channel_id,
+                "channel_type": self._channel_type,
+                "frequency": ch.get("frequency"),
+            }
+        return {}
 
 
 class ModemUpstreamFrequencySensor(ModemSensorBase):
     """Sensor for upstream channel frequency."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel: int) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, entry)
-        self._channel = channel
-        self._attr_name = f"US Ch {channel} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_{channel}_frequency"
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._attr_name = f"US {channel_type.upper()} Ch {channel_id} Frequency"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_us_{channel_type}_ch_{channel_id}_frequency"
         self._attr_native_unit_of_measurement = "Hz"
         self._attr_icon = "mdi:sine-wave"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -500,9 +617,18 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
         """Return the state of the sensor."""
         # Use indexed lookup for O(1) performance instead of O(n) linear search
         channel_map = self.coordinator.data.get("_upstream_by_id", {})
-        if self._channel in channel_map:
-            return int(channel_map[self._channel].get("frequency"))
+        key = (self._channel_type, self._channel_id)
+        if key in channel_map:
+            return int(channel_map[key].get("frequency"))
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional channel attributes."""
+        return {
+            "channel_id": self._channel_id,
+            "channel_type": self._channel_type,
+        }
 
 
 class ModemDownstreamChannelCountSensor(ModemSensorBase):

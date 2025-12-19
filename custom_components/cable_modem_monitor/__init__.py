@@ -20,11 +20,13 @@ from homeassistant.helpers import (
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_DOCSIS_VERSION,
     CONF_HOST,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
@@ -35,10 +37,63 @@ from .const import (
 from .core.health_monitor import ModemHealthMonitor
 from .core.modem_scraper import ModemScraper
 from .parsers import get_parser_by_name, get_parsers
+from .utils.entity_migration import migrate_docsis30_entities
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
+
+
+def _normalize_channel_type(channel: dict[str, Any], direction: str) -> str:
+    """Normalize channel type from parser data.
+
+    Maps raw parser values to standardized types:
+    - Downstream: 'qam' (DOCSIS 3.0) or 'ofdm' (DOCSIS 3.1)
+    - Upstream: 'atdma' (DOCSIS 3.0) or 'ofdma' (DOCSIS 3.1)
+
+    Falls back to 'qam'/'atdma' if modulation not specified.
+    """
+    modulation = channel.get("modulation", "").lower()
+
+    if direction == "downstream":
+        if "ofdm" in modulation:
+            return "ofdm"
+        return "qam"  # Default for DOCSIS 3.0 or unspecified
+    else:  # upstream
+        if "ofdma" in modulation:
+            return "ofdma"
+        return "atdma"  # Default for DOCSIS 3.0 or unspecified
+
+
+def _normalize_channels(channels: list[dict[str, Any]], direction: str) -> dict[tuple[str, int], dict[str, Any]]:
+    """Normalize and index channels by (type, id) tuple.
+
+    Groups channels by type, sorts by frequency within each type,
+    and assigns stable indices based on frequency order.
+
+    Returns dict mapping (channel_type, channel_id) -> channel data with added metadata.
+    """
+    from collections import defaultdict
+
+    # Group channels by type
+    by_type: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for idx, ch in enumerate(channels):
+        ch_type = _normalize_channel_type(ch, direction)
+        ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+        by_type[ch_type].append({**ch, "_channel_type": ch_type, "_channel_id": ch_id})
+
+    # Sort each type by frequency and assign index
+    result: dict[tuple[str, int], dict[str, Any]] = {}
+    for _channel_type, group in by_type.items():
+        # Sort by frequency (use 0 if not present)
+        sorted_group = sorted(group, key=lambda x: float(x.get("frequency", 0) or 0))
+        for index, ch in enumerate(sorted_group):
+            ch["_index"] = index + 1  # 1-based index
+            key = (ch["_channel_type"], ch["_channel_id"])
+            result[key] = ch
+
+    return result
+
 
 SERVICE_CLEAR_HISTORY = "clear_history"
 SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
@@ -59,6 +114,8 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("include_status_card", default=True): cv.boolean,
         vol.Optional("graph_hours", default=24): cv.positive_int,
         vol.Optional("short_titles", default=False): cv.boolean,
+        vol.Optional("channel_label", default="auto"): vol.In(["auto", "full", "id_only", "type_id"]),
+        vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
     }
 )
 
@@ -99,16 +156,15 @@ async def _create_health_monitor(hass: HomeAssistant):
     return ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
 
 
-def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str):
+def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str, supports_icmp: bool = True):
     """Create the async update function for the coordinator."""
 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
         base_url = f"http://{host}"
 
-        # Check if parser supports ICMP ping (skip if not)
-        detection_info = scraper.get_detection_info()
-        supports_icmp = detection_info.get("supports_icmp", True)
+        # Use config-based ICMP setting (auto-detected during setup/options flow)
+        # This allows different IPs of the same modem to have different ICMP behavior
         health_result = await health_monitor.check_health(base_url, skip_ping=not supports_icmp)
 
         try:
@@ -126,16 +182,11 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
 
             # Create indexed lookups for O(1) channel access (performance optimization)
             # This prevents O(n) linear searches in each sensor's native_value property
+            # Keys are (channel_type, channel_id) tuples for DOCSIS 3.1 disambiguation
             if "cable_modem_downstream" in data:
-                data["_downstream_by_id"] = {
-                    int(ch.get("channel_id", ch.get("channel", idx + 1))): ch
-                    for idx, ch in enumerate(data["cable_modem_downstream"])
-                }
+                data["_downstream_by_id"] = _normalize_channels(data["cable_modem_downstream"], "downstream")
             if "cable_modem_upstream" in data:
-                data["_upstream_by_id"] = {
-                    int(ch.get("channel_id", ch.get("channel", idx + 1))): ch
-                    for idx, ch in enumerate(data["cable_modem_upstream"])
-                }
+                data["_upstream_by_id"] = _normalize_channels(data["cable_modem_upstream"], "upstream")
 
             # Add parser metadata for sensor attributes (works without re-adding integration)
             detection_info = scraper.get_detection_info()
@@ -176,24 +227,33 @@ async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
 
 
 def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
-    """Update device registry with detected modem info."""
+    """Update device registry with detected modem info.
+
+    NOTE: Device name is kept as "Cable Modem" (without host) for entity ID stability.
+    With has_entity_name=True, entity IDs are generated from device name.
+    Users can rename the device in the UI if desired.
+    """
     device_registry = dr.async_get(hass)
+
+    # Use detected_modem for model field (shown in device info)
+    actual_model = entry.data.get("actual_model")
+    detected_modem = entry.data.get("detected_modem")
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name=f"Cable Modem {host}",
+        name="Cable Modem",
     )
 
     device_registry.async_update_device(
         device.id,
         manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
-        model=entry.data.get("detected_modem", "Cable Modem Monitor"),
+        model=actual_model or detected_modem or "Cable Modem Monitor",
     )
     _LOGGER.debug(
         "Updated device registry: manufacturer=%s, model=%s",
         entry.data.get("detected_manufacturer"),
-        entry.data.get("detected_modem"),
+        actual_model or detected_modem,
     )
 
 
@@ -249,31 +309,87 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     }
 
 
-def _get_channel_ids(coordinator) -> tuple[list[int], list[int]]:
-    """Extract downstream and upstream channel IDs from coordinator data."""
-    downstream_ids: list[int] = []
-    upstream_ids: list[int] = []
+def _format_title_with_type(base_title: str, channel_type: str | None, short_titles: bool) -> str:
+    """Format a title with optional channel type.
+
+    For single-type directions, includes the channel type in the title.
+    E.g., "Downstream Power Levels (dBmV)" -> "Downstream QAM Power Levels (dBmV)"
+    """
+    if not channel_type:
+        return base_title
+
+    type_upper = channel_type.upper()
+
+    if short_titles:
+        # "DS Power (dBmV)" -> "DS QAM Power (dBmV)"
+        if base_title.startswith("DS "):
+            return f"DS {type_upper} {base_title[3:]}"
+        elif base_title.startswith("US "):
+            return f"US {type_upper} {base_title[3:]}"
+    else:
+        # "Downstream Power Levels (dBmV)" -> "Downstream QAM Power Levels (dBmV)"
+        if base_title.startswith("Downstream "):
+            return f"Downstream {type_upper} {base_title[11:]}"
+        elif base_title.startswith("Upstream "):
+            return f"Upstream {type_upper} {base_title[9:]}"
+
+    return base_title
+
+
+def _get_channel_info(
+    coordinator,
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+    """Extract downstream and upstream channel info from coordinator data.
+
+    Returns tuples of (channel_type, channel_id) for each direction.
+    """
+    downstream_info: list[tuple[str, int]] = []
+    upstream_info: list[tuple[str, int]] = []
 
     if not coordinator.data:
-        return downstream_ids, upstream_ids
+        return downstream_info, upstream_info
 
     if "_downstream_by_id" in coordinator.data:
-        downstream_ids = sorted(coordinator.data["_downstream_by_id"].keys())
+        # Keys are already (channel_type, channel_id) tuples
+        downstream_info = sorted(coordinator.data["_downstream_by_id"].keys())
     elif "cable_modem_downstream" in coordinator.data:
         for idx, ch in enumerate(coordinator.data["cable_modem_downstream"]):
+            ch_type = _normalize_channel_type(ch, "downstream")
             ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
-            downstream_ids.append(ch_id)
-        downstream_ids = sorted(downstream_ids)
+            downstream_info.append((ch_type, ch_id))
+        downstream_info = sorted(downstream_info)
 
     if "_upstream_by_id" in coordinator.data:
-        upstream_ids = sorted(coordinator.data["_upstream_by_id"].keys())
+        # Keys are already (channel_type, channel_id) tuples
+        upstream_info = sorted(coordinator.data["_upstream_by_id"].keys())
     elif "cable_modem_upstream" in coordinator.data:
         for idx, ch in enumerate(coordinator.data["cable_modem_upstream"]):
+            ch_type = _normalize_channel_type(ch, "upstream")
             ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
-            upstream_ids.append(ch_id)
-        upstream_ids = sorted(upstream_ids)
+            upstream_info.append((ch_type, ch_id))
+        upstream_info = sorted(upstream_info)
 
-    return downstream_ids, upstream_ids
+    return downstream_info, upstream_info
+
+
+def _group_channels_by_type(
+    channel_info: list[tuple[str, int]],
+) -> dict[str, list[tuple[str, int]]]:
+    """Group channels by their type.
+
+    Returns dict mapping channel_type -> list of (channel_type, channel_id) tuples.
+    """
+    from collections import defaultdict
+
+    grouped: dict[str, list[tuple[str, int]]] = defaultdict(list)
+    for ch_type, ch_id in channel_info:
+        grouped[ch_type].append((ch_type, ch_id))
+    return dict(grouped)
+
+
+def _get_channel_types(channel_info: list[tuple[str, int]]) -> set[str]:
+    """Get unique channel types from channel info."""
+    return {ch_type for ch_type, _ in channel_info}
 
 
 def _build_status_card_yaml() -> list[str]:
@@ -311,17 +427,46 @@ def _build_status_card_yaml() -> list[str]:
     ]
 
 
-def _build_channel_graph_yaml(title: str, hours: int, channel_ids: list[int], entity_pattern: str) -> list[str]:
-    """Build YAML for a channel history graph."""
+def _format_channel_label(ch_type: str, ch_id: int, label_format: str) -> str:
+    """Format channel label based on user preference.
+
+    label_format options:
+    - 'full': 'QAM Ch 32' or 'OFDM Ch 1'
+    - 'id_only': 'Ch 32'
+    - 'type_id': 'QAM 32' or 'OFDM 1'
+    """
+    if label_format == "id_only":
+        return f"Ch {ch_id}"
+    elif label_format == "type_id":
+        return f"{ch_type.upper()} {ch_id}"
+    else:  # 'full' (default)
+        return f"{ch_type.upper()} Ch {ch_id}"
+
+
+def _build_channel_graph_yaml(
+    title: str,
+    hours: int,
+    channel_info: list[tuple[str, int]],
+    entity_pattern: str,
+    channel_label: str = "full",
+) -> list[str]:
+    """Build YAML for a channel history graph.
+
+    channel_info: list of (channel_type, channel_id) tuples
+    entity_pattern: pattern with {ch_type} and {ch_id} placeholders
+    channel_label: 'full', 'id_only', or 'type_id'
+    """
     yaml_parts = [
         "  - type: history-graph",
         f"    title: {title}",
         f"    hours_to_show: {hours}",
         "    entities:",
     ]
-    for ch_id in channel_ids:
-        yaml_parts.append(f"      - entity: {entity_pattern.format(ch_id=ch_id)}")
-        yaml_parts.append(f"        name: Ch {ch_id}")
+    for ch_type, ch_id in channel_info:
+        entity_id = entity_pattern.format(ch_type=ch_type, ch_id=ch_id)
+        label = _format_channel_label(ch_type, ch_id, channel_label)
+        yaml_parts.append(f"      - entity: {entity_id}")
+        yaml_parts.append(f"        name: {label}")
     return yaml_parts
 
 
@@ -357,6 +502,50 @@ def _build_latency_graph_yaml() -> list[str]:
     ]
 
 
+def _add_channel_graphs(
+    yaml_parts: list[str],
+    channel_info: list[tuple[str, int]],
+    base_title: str,
+    entity_pattern: str,
+    graph_hours: int,
+    channel_label: str,
+    channel_grouping: str,
+    short_titles: bool,
+) -> None:
+    """Add channel graph cards based on grouping and labeling options.
+
+    Modifies yaml_parts in place.
+    """
+    if not channel_info:
+        return
+
+    channel_types = _get_channel_types(channel_info)
+    is_single_type = len(channel_types) == 1
+
+    if channel_grouping == "by_type":
+        # Separate cards per channel type
+        grouped = _group_channels_by_type(channel_info)
+        for ch_type in sorted(grouped.keys()):
+            channels = grouped[ch_type]
+            title = _format_title_with_type(base_title, ch_type, short_titles)
+            # With by_type, labels should be id_only (type is in title)
+            effective_label = "id_only" if channel_label == "auto" else channel_label
+            yaml_parts.extend(_build_channel_graph_yaml(title, graph_hours, channels, entity_pattern, effective_label))
+    else:
+        # by_direction: all channels in one card
+        if is_single_type:
+            # Single type: put type in title, use id_only labels
+            single_type = next(iter(channel_types))
+            title = _format_title_with_type(base_title, single_type, short_titles)
+            effective_label = "id_only" if channel_label == "auto" else channel_label
+        else:
+            # Mixed types: keep base title, need type in labels
+            title = base_title
+            effective_label = "full" if channel_label == "auto" else channel_label
+
+        yaml_parts.extend(_build_channel_graph_yaml(title, graph_hours, channel_info, entity_pattern, effective_label))
+
+
 def _create_generate_dashboard_handler(hass: HomeAssistant):
     """Create the generate dashboard service handler."""
 
@@ -373,15 +562,18 @@ def _create_generate_dashboard_handler(hass: HomeAssistant):
             "status": call.data.get("include_status_card", True),
         }
         graph_hours = call.data.get("graph_hours", 24)
-        titles = _get_dashboard_titles(call.data.get("short_titles", False))
+        short_titles = call.data.get("short_titles", False)
+        titles = _get_dashboard_titles(short_titles)
+        channel_label = call.data.get("channel_label", "auto")
+        channel_grouping = call.data.get("channel_grouping", "by_direction")
 
-        # Get coordinator data to find actual channel IDs
+        # Get coordinator data to find actual channel info
         if DOMAIN not in hass.data or not hass.data[DOMAIN]:
             return {"yaml": "# Error: No cable modem configured"}
 
         entry_id = next(iter(hass.data[DOMAIN]))
         coordinator = hass.data[DOMAIN][entry_id]
-        downstream_ids, upstream_ids = _get_channel_ids(coordinator)
+        downstream_info, upstream_info = _get_channel_info(coordinator)
 
         # Build YAML
         yaml_parts = [
@@ -394,44 +586,52 @@ def _create_generate_dashboard_handler(hass: HomeAssistant):
         if opts["status"]:
             yaml_parts.extend(_build_status_card_yaml())
 
-        if opts["ds_power"] and downstream_ids:
-            yaml_parts.extend(
-                _build_channel_graph_yaml(
-                    titles["ds_power"],
-                    graph_hours,
-                    downstream_ids,
-                    "sensor.cable_modem_ds_ch_{ch_id}_power",
-                )
+        if opts["ds_power"]:
+            _add_channel_graphs(
+                yaml_parts,
+                downstream_info,
+                titles["ds_power"],
+                "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power",
+                graph_hours,
+                channel_label,
+                channel_grouping,
+                short_titles,
             )
 
-        if opts["ds_snr"] and downstream_ids:
-            yaml_parts.extend(
-                _build_channel_graph_yaml(
-                    titles["ds_snr"],
-                    graph_hours,
-                    downstream_ids,
-                    "sensor.cable_modem_ds_ch_{ch_id}_snr",
-                )
+        if opts["ds_snr"]:
+            _add_channel_graphs(
+                yaml_parts,
+                downstream_info,
+                titles["ds_snr"],
+                "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr",
+                graph_hours,
+                channel_label,
+                channel_grouping,
+                short_titles,
             )
 
-        if opts["us_power"] and upstream_ids:
-            yaml_parts.extend(
-                _build_channel_graph_yaml(
-                    titles["us_power"],
-                    graph_hours,
-                    upstream_ids,
-                    "sensor.cable_modem_us_ch_{ch_id}_power",
-                )
+        if opts["us_power"]:
+            _add_channel_graphs(
+                yaml_parts,
+                upstream_info,
+                titles["us_power"],
+                "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power",
+                graph_hours,
+                channel_label,
+                channel_grouping,
+                short_titles,
             )
 
-        if opts["us_freq"] and upstream_ids:
-            yaml_parts.extend(
-                _build_channel_graph_yaml(
-                    titles["us_freq"],
-                    graph_hours,
-                    upstream_ids,
-                    "sensor.cable_modem_us_ch_{ch_id}_frequency",
-                )
+        if opts["us_freq"]:
+            _add_channel_graphs(
+                yaml_parts,
+                upstream_info,
+                titles["us_freq"],
+                "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency",
+                graph_hours,
+                channel_label,
+                channel_grouping,
+                short_titles,
             )
 
         if opts["errors"]:
@@ -563,8 +763,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create health monitor
     health_monitor = await _create_health_monitor(hass)
 
+    # Get ICMP support setting (auto-detected during setup, re-tested on options change)
+    supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
+
     # Create coordinator
-    async_update_data = _create_update_function(hass, scraper, health_monitor, host)
+    async_update_data = _create_update_function(hass, scraper, health_monitor, host, supports_icmp)
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
@@ -583,6 +786,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store coordinator
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
+    # Must run before platform setup so sensors don't create duplicates
+    docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
+    migrated = migrate_docsis30_entities(hass, entry, docsis_version)
+    if migrated > 0:
+        _LOGGER.info("Entity migration complete: %d entities updated", migrated)
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

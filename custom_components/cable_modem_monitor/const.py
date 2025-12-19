@@ -29,8 +29,11 @@ VERIFY_SSL = False
 CONF_PARSER_NAME = "parser_name"  # Cached parser class name for quick lookup
 CONF_DETECTED_MODEM = "detected_modem"  # Display name for UI
 CONF_DETECTED_MANUFACTURER = "detected_manufacturer"  # Display manufacturer for UI
+CONF_DOCSIS_VERSION = "docsis_version"  # DOCSIS version (3.0, 3.1) for entity migration
 CONF_WORKING_URL = "working_url"  # Last successful URL
 CONF_LAST_DETECTION = "last_detection"  # Timestamp of last detection
+CONF_SUPPORTS_ICMP = "supports_icmp"  # Auto-detected ICMP ping support for configured host
+CONF_ACTUAL_MODEL = "actual_model"  # Actual model name extracted from modem (e.g., "C3700-100NAS")
 
 # Polling interval defaults based on industry best practices
 # References:

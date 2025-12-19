@@ -326,10 +326,10 @@ class TestEntityNaming:
         assert error_sensor.name == "Total Corrected Errors"
         assert error_sensor.unique_id == "test_cable_modem_total_corrected"
 
-        # Test channel sensor
-        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel=5)
-        assert channel_sensor.name == "DS Ch 5 Power"
-        assert channel_sensor.unique_id == "test_cable_modem_downstream_5_power"
+        # Test channel sensor (v3.11+ uses channel_type and channel_id)
+        channel_sensor = ModemDownstreamPowerSensor(mock_coordinator, entry, channel_type="qam", channel_id=5)
+        assert channel_sensor.name == "DS QAM Ch 5 Power"
+        assert channel_sensor.unique_id == "test_cable_modem_ds_qam_ch_5_power"
 
 
 class TestLastBootTimeSensor:
@@ -653,3 +653,124 @@ class TestFallbackModeSensorCreation:
 
         # Fallback mode with responsive health = Operational
         assert sensor.native_value == "Operational"
+
+
+class TestChannelTypeNormalization:
+    """Test that channel_type is normalized to lowercase for sensor creation.
+
+    This is critical because:
+    - Parsers return channel_type as-is from modem HTML (e.g., "ATDMA", "QAM256")
+    - _normalize_channel_type() in __init__.py normalizes to lowercase ("atdma", "qam")
+    - Sensors must use lowercase to match the _upstream_by_id/_downstream_by_id keys
+
+    Bug discovered on Netgear C3700: modem returns "ATDMA" (uppercase), but
+    _upstream_by_id was keyed by ("atdma", 41). Sensors couldn't find their data.
+    """
+
+    @pytest.fixture
+    def mock_entry(self):
+        """Create mock config entry."""
+        entry = Mock()
+        entry.entry_id = "test_entry_id"
+        entry.data = {"host": "192.168.100.1"}
+        return entry
+
+    @pytest.fixture
+    def mock_coordinator_with_uppercase_channel_types(self):
+        """Create coordinator with uppercase channel_type values (as returned by C3700)."""
+        coordinator = Mock()
+        coordinator.data = {
+            "cable_modem_connection_status": "online",
+            "cable_modem_downstream": [
+                {
+                    "channel_id": "1",
+                    "channel_type": "QAM256",  # Uppercase from modem
+                    "power": 3.0,
+                    "snr": 45.5,
+                    "frequency": 345000000,
+                }
+            ],
+            "cable_modem_upstream": [
+                {
+                    "channel_id": "41",
+                    "channel_type": "ATDMA",  # Uppercase from C3700 modem
+                    "power": 54.3,
+                    "frequency": 17800000,
+                }
+            ],
+            # Normalized data uses lowercase keys
+            "_downstream_by_id": {
+                ("qam", 1): {"power": 3.0, "snr": 45.5, "frequency": 345000000},
+            },
+            "_upstream_by_id": {
+                ("atdma", 41): {"power": 54.3, "frequency": 17800000},
+            },
+            "cable_modem_fallback_mode": False,
+            "_parser_capabilities": ["downstream_channels", "upstream_channels"],
+        }
+        coordinator.last_update_success = True
+        return coordinator
+
+    @pytest.mark.asyncio
+    async def test_upstream_sensors_created_with_lowercase_channel_type(
+        self, mock_coordinator_with_uppercase_channel_types, mock_entry
+    ):
+        """Test that upstream sensors are created with lowercase channel_type.
+
+        Even though the raw data has "ATDMA", the sensor should use "atdma"
+        to match the normalized _upstream_by_id keys.
+        """
+        from custom_components.cable_modem_monitor.const import DOMAIN
+        from custom_components.cable_modem_monitor.sensor import async_setup_entry
+
+        mock_hass = Mock()
+        mock_hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator_with_uppercase_channel_types}}
+
+        added_entities = []
+
+        def mock_add_entities(entities):
+            added_entities.extend(entities)
+
+        await async_setup_entry(mock_hass, mock_entry, mock_add_entities)
+
+        # Find upstream power sensor
+        us_power_sensors = [e for e in added_entities if "us_" in e._attr_unique_id and "power" in e._attr_unique_id]
+        assert len(us_power_sensors) == 1
+
+        sensor = us_power_sensors[0]
+        # Verify the sensor was created with lowercase channel_type
+        assert sensor._channel_type == "atdma"  # NOT "ATDMA"
+        assert sensor._channel_id == 41
+
+        # Verify the sensor can read its value (this would fail with uppercase)
+        assert sensor.native_value == 54.3
+
+    @pytest.mark.asyncio
+    async def test_downstream_sensors_created_with_lowercase_channel_type(
+        self, mock_coordinator_with_uppercase_channel_types, mock_entry
+    ):
+        """Test that downstream sensors normalize channel_type to lowercase.
+
+        Tests the fix for modems that return uppercase channel types like "QAM256".
+        """
+        from custom_components.cable_modem_monitor.const import DOMAIN
+        from custom_components.cable_modem_monitor.sensor import async_setup_entry
+
+        mock_hass = Mock()
+        mock_hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator_with_uppercase_channel_types}}
+
+        added_entities = []
+
+        def mock_add_entities(entities):
+            added_entities.extend(entities)
+
+        await async_setup_entry(mock_hass, mock_entry, mock_add_entities)
+
+        # Find downstream power sensor
+        ds_power_sensors = [e for e in added_entities if "ds_" in e._attr_unique_id and "power" in e._attr_unique_id]
+        assert len(ds_power_sensors) == 1
+
+        sensor = ds_power_sensors[0]
+        # Verify the sensor was created with lowercase channel_type
+        assert sensor._channel_type == "qam256"  # Lowercase version of "QAM256"
+        assert sensor._channel_id == 1

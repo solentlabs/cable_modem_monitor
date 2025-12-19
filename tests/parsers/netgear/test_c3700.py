@@ -184,6 +184,14 @@ def test_parsing_upstream(c3700_docsis_status_html):
     assert "power" in first_us
     assert "channel_type" in first_us
 
+    # Verify actual values from fixture (channel 41, ATDMA, 17.8 MHz, 54.3 dBmV)
+    # IMPORTANT: Parser returns uppercase "ATDMA" as-is from modem HTML
+    # sensor.py must normalize to lowercase for _upstream_by_id lookup
+    assert first_us["channel_id"] == "41"
+    assert first_us["channel_type"] == "ATDMA"  # Raw value from modem (uppercase)
+    assert first_us["frequency"] == 17800000
+    assert first_us["power"] == 54.3
+
 
 def test_multi_page_parsing_with_session(c3700_index_html, c3700_docsis_status_html, c3700_router_status_html):
     """Test that parser fetches DocsisStatus.htm and RouterStatus.htm when session and base_url are provided.
@@ -270,10 +278,11 @@ def test_empty_data_when_offline():
     soup = BeautifulSoup(html, "html.parser")
     data = parser.parse(soup)
 
-    # Should return empty structures without crashing
+    # Should return empty channel structures without crashing
+    # Model name is still extracted from static page content
     assert data["downstream"] == []
     assert data["upstream"] == []
-    assert data["system_info"] == {}
+    assert data["system_info"].get("model_name") == "C3700-100NAS"
 
 
 class TestAuthentication:

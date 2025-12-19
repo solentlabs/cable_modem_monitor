@@ -157,9 +157,9 @@ class TestValidateInput:
             mock_scraper_class.return_value = mock_scraper
             await validate_input(mock_hass, valid_input)
 
-        # Assert that requests.head was called with a timeout of 10
+        # Assert that requests.head was called with quick timeout (3s)
         # The check will try https first
-        mock_requests_head.assert_called_with("https://192.168.100.1", timeout=10, verify=False, allow_redirects=True)
+        mock_requests_head.assert_called_with("https://192.168.100.1", timeout=3, verify=False, allow_redirects=True)
 
     @pytest.mark.asyncio
     @patch("requests.get")
@@ -204,8 +204,8 @@ class TestValidateInput:
 
         # Assert that requests.head was tried first
         mock_requests_head.assert_called()
-        # Assert that requests.get was called as fallback with timeout of 10
-        mock_requests_get.assert_called_with("https://192.168.100.1", timeout=10, verify=False, allow_redirects=True)
+        # Assert that requests.get was called as fallback with quick timeout (3s)
+        mock_requests_get.assert_called_with("https://192.168.100.1", timeout=3, verify=False, allow_redirects=True)
 
     def test_requires_host(self, valid_input):
         """Test that host is required."""

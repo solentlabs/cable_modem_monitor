@@ -18,6 +18,10 @@ Authentication: HTTP Basic Auth
 
 Note: The C3700 is a combo modem/router device, unlike the modem-only CM600.
 Page extensions are .htm instead of .asp.
+
+IP Addressing: Combo modem/routers have two interfaces:
+- 192.168.100.1 (cable modem interface) - Faster, but ICMP ping blocked
+- 192.168.0.1 (router LAN gateway) - Slower, separate auth session
 """
 
 from __future__ import annotations
@@ -70,6 +74,9 @@ class NetgearC3700Parser(ModemParser):
         ModemCapability.LAST_BOOT_TIME,
         ModemCapability.RESTART,
     }
+
+    # Session management - C3700 only allows single session, logout releases for user access
+    logout_endpoint = "/Logout.htm"
 
     # URL patterns to try for modem data
     url_patterns = [
@@ -230,6 +237,13 @@ class NetgearC3700Parser(ModemParser):
 
         # Parse system info from RouterStatus.htm
         system_info = self.parse_system_info(router_soup)
+
+        # Extract actual model from DocsisStatus.htm
+        # Format: <META name="description" content='C3700-100NAS'>
+        # or: <title>NETGEAR Gateway C3700-100NAS</title>
+        model_name = self._extract_model(docsis_soup)
+        if model_name:
+            system_info["model_name"] = model_name
 
         return {
             "downstream": downstream_channels,
@@ -602,3 +616,37 @@ class NetgearC3700Parser(ModemParser):
         except Exception as e:
             _LOGGER.debug("C3700: Could not calculate boot time from '%s': %s", uptime_str, e)
             return None
+
+    def _extract_model(self, soup: BeautifulSoup) -> str | None:
+        """Extract actual model name from HTML meta or title.
+
+        The C3700 includes model info in:
+        - <META name="description" content='C3700-100NAS'>
+        - <title>NETGEAR Gateway C3700-100NAS</title>
+
+        Args:
+            soup: BeautifulSoup object of the DocsisStatus.htm page
+
+        Returns:
+            Model name (e.g., "C3700-100NAS") or None if not found
+        """
+        # Try meta description first (most reliable)
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta:
+            content = meta.get("content")
+            if isinstance(content, str) and content.strip():
+                _LOGGER.debug("C3700: Extracted model from meta description: %s", content.strip())
+                return content.strip()
+
+        # Fallback to title tag
+        title = soup.find("title")
+        if title and title.string:
+            # Extract model from "NETGEAR Gateway C3700-100NAS"
+            match = re.search(r"Gateway\s+(\S+)", title.string)
+            if match:
+                model = match.group(1)
+                _LOGGER.debug("C3700: Extracted model from title: %s", model)
+                return model
+
+        _LOGGER.debug("C3700: Could not extract model name from HTML")
+        return None

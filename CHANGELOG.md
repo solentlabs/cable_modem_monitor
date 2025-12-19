@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.11.0] - 2025-12-24
+
+### ⚠️ BREAKING CHANGE: Channel Sensor Entity IDs
+
+Channel sensor entity IDs now include channel type for DOCSIS 3.1 disambiguation.
+
+**Before:**
+```
+sensor.cable_modem_ds_ch_32_power
+sensor.cable_modem_us_ch_3_power
+```
+
+**After:**
+```
+sensor.cable_modem_ds_qam_ch_32_power
+sensor.cable_modem_ds_ofdm_ch_1_power
+sensor.cable_modem_us_atdma_ch_3_power
+sensor.cable_modem_us_ofdma_ch_1_power
+```
+
+**Why:** DOCSIS 3.1 modems can have overlapping Channel IDs across different channel types (QAM vs OFDM). Adding the channel type to the entity ID prevents collisions and makes entities unambiguous.
+
+**Migration for DOCSIS 3.0 users:**
+1. Go to Settings → Integrations → Cable Modem Monitor → Configure
+2. Click Submit (no changes needed)
+3. Entities are automatically migrated on reload, preserving history
+
+**Migration for DOCSIS 3.1 users:**
+1. Go to Developer Tools → Services
+2. Call `cable_modem_monitor.generate_dashboard`
+3. Copy the YAML output and replace your existing dashboard cards
+
+### Added
+- **Automatic Entity Migration for DOCSIS 3.0** - Existing entities are automatically migrated to the new naming scheme for DOCSIS 3.0 modems. Since DOCSIS 3.0 only has one channel type per direction (QAM downstream, ATDMA upstream), the migration is unambiguous and preserves entity history. Trigger migration by opening the integration's Configure dialog and clicking Submit.
+- **Channel Type in Entity IDs** - All channel sensors now include channel type (qam, ofdm, atdma, ofdma) for DOCSIS 3.1 compatibility
+- **Dashboard Channel Grouping** - `generate_dashboard` service now accepts `channel_grouping` parameter:
+  - `by_direction` (default) - All downstream channels in one card, all upstream in another
+  - `by_type` - Separate cards for each channel type (QAM, OFDM, ATDMA, OFDMA)
+- **Smart Channel Labels** - `generate_dashboard` service now accepts `channel_label` parameter:
+  - `auto` (default) - Smart labeling: type in title when single type, type in labels when mixed
+  - `full` - Labels like "QAM Ch 32"
+  - `id_only` - Labels like "Ch 32"
+  - `type_id` - Labels like "QAM 32"
+- **Channel Attributes** - Each channel sensor now exposes `channel_id`, `channel_type`, and `frequency` as state attributes
+
+### Changed
+- **Entity ID Format** - Channel sensors use `ds_{type}_ch_{id}` format instead of `ds_ch_{id}`
+- **Sensor Names** - Channel sensors now display type in name (e.g., "DS QAM Ch 32 Power")
+
+### Technical
+- **Channel Normalization** - Coordinator normalizes channel_type from parser data (is_ofdm, modulation, channel_type fields)
+- **Frequency-Based Indexing** - Channels are sorted by frequency within each type for stable index assignment
+
 ## [3.10.2] - 2025-12-18
 
 ### CRITICAL HOTFIX
