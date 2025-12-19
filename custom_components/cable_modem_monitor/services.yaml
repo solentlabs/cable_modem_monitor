@@ -35,6 +35,12 @@ generate_dashboard:
       default: true
       selector:
         boolean:
+    include_downstream_frequency:
+      name: Downstream Frequency Graph
+      description: Frequency for all downstream channels
+      default: true
+      selector:
+        boolean:
     include_upstream_power:
       name: Upstream Power Graph
       description: Power levels for all upstream channels

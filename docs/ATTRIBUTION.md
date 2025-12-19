@@ -8,11 +8,31 @@ This project builds on the work of the open source community. We acknowledge and
 
 ### Modem Compatibility Research
 
-**Technicolor TC4400 Support**
-- **Project:** check_tc4400 by philfry
-- **Repository:** https://github.com/philfry/check_tc4400
-- **Contribution:** Helped identify TC4400 web interface structure, `/cmconnectionstatus.html` endpoint, and table-based HTML parsing approach
-- **License:** (See their repository)
+<!-- AUTO-GENERATED FROM fixtures - DO NOT EDIT BELOW -->
+
+### Data Contributors (Auto-Generated)
+
+Users who provided modem captures for parser development:
+
+| Contributor | Modem | Contribution | Issue |
+|-------------|-------|--------------|-------|
+| @captain-coredump | ARRIS SB6141 | HTML samples and compatibility testing (Community Forum) | — |
+| @dlindnegm | Motorola MB8611 | Original HTML page captures | [#4](https://github.com/solentlabs/cable_modem_monitor/issues/4) |
+| @cvonk | Motorola MB8611 | HAR captures, debug logs, iterative testing | [#6](https://github.com/solentlabs/cable_modem_monitor/issues/6) |
+| @Mar1usW3 | Technicolor TC4400 | HTML samples and compatibility testing | [#1](https://github.com/solentlabs/cable_modem_monitor/issues/1) |
+
+### External References (Auto-Generated)
+
+Open source projects that informed our parser implementations:
+
+| Project | Used For | Contribution |
+|---------|----------|--------------|
+| [BowlesCR/MB8600_Login](https://github.com/BowlesCR/MB8600_Login) | Motorola MB8611 | HNAP HMAC-MD5 challenge-response authentication |
+| [Tatsh/mb8611](https://github.com/Tatsh/mb8611) | Motorola MB8611 | HNAP action names and response field definitions (StatusSoftwareSfVer, etc.) |
+| [xNinjaKittyx/mb8600](https://github.com/xNinjaKittyx/mb8600) | Motorola MB8611 | Protocol reference and prior art for understanding HNAP flow |
+| [philfry/check_tc4400](https://github.com/philfry/check_tc4400) | Technicolor TC4400 | Related prior art for TC4400 web interface monitoring |
+
+<!-- END AUTO-GENERATED ATTRIBUTION -->
 
 ### Polling Interval Research
 
