@@ -103,6 +103,13 @@ grep -ri "serial" RAW_DATA/{MODEL}/
 - [ ] Only login page captured (auth blocking)
 - [ ] Manual capture with no sanitization
 
+**YELLOW FLAGS (note limitation, decide if data is still useful):**
+- [ ] **Missing frequency data** - modem UI doesn't expose channel frequencies
+- [ ] **Missing codeword counts** - no error correction stats available
+- [ ] **No uptime/system info** - limited diagnostic capabilities
+
+If YELLOW FLAGS: Document the limitation in ISSUE.md. Consider whether the available data (SNR, power, modulation) is still valuable for signal monitoring. Most users care about SNR/power trends - frequency is nice-to-have. Proceed if core metrics are available.
+
 **GREEN LIGHT (proceed):**
 - [ ] Status pages with channel data present
 - [ ] No PII detected or properly sanitized
