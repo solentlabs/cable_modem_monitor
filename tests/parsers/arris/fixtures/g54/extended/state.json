@@ -1,0 +1,1 @@
+{"firewall": {"level": "Medium"}, "ethernet": {"enabled": 1, "connected_devices": 1}, "wifi": {"enabled": 0, "connected_devices": 0}, "internet": {"lan_ip": "10.0.10.1", "connected": 1}}
