@@ -51,8 +51,8 @@ class NetgearCM2000Parser(ModemParser):
     models = ["CM2000"]
     priority = 50  # Standard priority
 
-    # Parser status - awaiting user confirmation
-    status = ParserStatus.AWAITING_VERIFICATION
+    # Parser status - verified by user
+    status = ParserStatus.VERIFIED
     verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/38"
 
     # Device metadata

@@ -1,0 +1,856 @@
+{
+  "cm": {
+    "cmmac": "00:11:22:33:44:51",
+    "serialnumber": "SNTLABS123456789",
+    "cmip": ""
+  },
+  "leases": [],
+  "leases6": [],
+  "wan6": [
+    {
+      "linklocal": "***REDACTED_IPV6***"
+    }
+  ],
+  "dhcpstatus": {
+    "dhcpv6": "Enabled",
+    "dhcpv4": "Enabled"
+  },
+  "uptime": 50221,
+  "docsis": {
+    "ofdmachannel": {
+      "ofdmachannel": [
+        {
+          "modulation": "QAM2048",
+          "activeSubcarrierNumber": 1760,
+          "digitalBackoffDB": "0.2285",
+          "lastFrequency": "84.4750",
+          "ofdmaID": 0,
+          "status": 1,
+          "errorMessage": "",
+          "firstFrequency": "40.5000",
+          "fftSize": "4K",
+          "reportPower1_6": "41.5000",
+          "reportPower": "55.8933",
+          "digitalAtt": "3.3019",
+          "symbolRate": "12 KSym/sec",
+          "centerFrequency": "36.8000",
+          "channelBandwidth": "44.0000",
+          "power": "ON",
+          "state": 2
+        },
+        {
+          "modulation": "ZERO",
+          "activeSubcarrierNumber": 0,
+          "digitalBackoffDB": "0.0000",
+          "lastFrequency": "0.0000",
+          "ofdmaID": 1,
+          "status": 0,
+          "errorMessage": "",
+          "firstFrequency": "0.0000",
+          "fftSize": "2K",
+          "reportPower1_6": "0.0000",
+          "reportPower": "0.0000",
+          "digitalAtt": "0.0000",
+          "symbolRate": "0 KSym/sec",
+          "centerFrequency": "0.0000",
+          "channelBandwidth": "0.0000",
+          "power": "OFF",
+          "state": 0
+        }
+      ]
+    },
+    "dschannel": {
+      "dschannel": [
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.299999",
+          "octets": 2490822217,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 21,
+          "frequency": "855000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-6.599998",
+          "octets": 83560416,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 1,
+          "frequency": "735000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.400002",
+          "octets": 83461816,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 2,
+          "frequency": "741000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-8.000000",
+          "octets": 66460293,
+          "lockStatus": "Locked",
+          "SNRLevel": "37.636276",
+          "channelID": 3,
+          "frequency": "747000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-10.200001",
+          "octets": 66400197,
+          "lockStatus": "Locked",
+          "SNRLevel": "35.247456",
+          "channelID": 4,
+          "frequency": "753000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-9.900002",
+          "octets": 87039877,
+          "lockStatus": "Locked",
+          "SNRLevel": "34.773209",
+          "channelID": 5,
+          "frequency": "759000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-10.099998",
+          "octets": 86685505,
+          "lockStatus": "Locked",
+          "SNRLevel": "33.486542",
+          "channelID": 6,
+          "frequency": "765000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-8.400002",
+          "octets": 87989442,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 7,
+          "frequency": "771000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.700001",
+          "octets": 87874332,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 8,
+          "frequency": "777000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.200001",
+          "octets": 97103778,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 9,
+          "frequency": "783000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.900002",
+          "octets": 98090599,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 10,
+          "frequency": "789000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-8.000000",
+          "octets": 98888336,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 11,
+          "frequency": "795000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.500000",
+          "octets": 99301866,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 12,
+          "frequency": "801000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-8.299999",
+          "octets": 88555747,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 13,
+          "frequency": "807000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.700001",
+          "octets": 98133858,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 14,
+          "frequency": "813000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.599998",
+          "octets": 98547020,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 15,
+          "frequency": "819000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.900002",
+          "octets": 98838452,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 16,
+          "frequency": "825000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.799999",
+          "octets": 102099743,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 17,
+          "frequency": "831000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.000000",
+          "octets": 102459151,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 18,
+          "frequency": "837000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.299999",
+          "octets": 102309234,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 19,
+          "frequency": "843000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.900002",
+          "octets": 102799893,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 20,
+          "frequency": "849000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.200001",
+          "octets": 102673381,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 22,
+          "frequency": "861000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.400002",
+          "octets": 104522811,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 23,
+          "frequency": "867000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.400002",
+          "octets": 104793857,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 24,
+          "frequency": "873000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "",
+          "octets": 0,
+          "lockStatus": "NotLocked",
+          "SNRLevel": "",
+          "channelID": 0,
+          "frequency": ""
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-6.900002",
+          "octets": 95431855,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 42,
+          "frequency": "219000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-6.900002",
+          "octets": 97607488,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 43,
+          "frequency": "225000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-6.900002",
+          "octets": 97782188,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 44,
+          "frequency": "231000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.099998",
+          "octets": 87407013,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 45,
+          "frequency": "237000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.000000",
+          "octets": 103815429,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 46,
+          "frequency": "243000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.099998",
+          "octets": 106044506,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.605377",
+          "channelID": 47,
+          "frequency": "249000000"
+        },
+        {
+          "modulation": "QAM256",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.099998",
+          "octets": 106288865,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 48,
+          "frequency": "255000000"
+        },
+        {
+          "modulation": "UNSUPPORTED",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-7.299999",
+          "octets": 2490855616,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 159,
+          "frequency": "300000000"
+        },
+        {
+          "modulation": "UNSUPPORTED",
+          "correctableCodewords": 0,
+          "uncorrectableCodewords": 0,
+          "powerLevel": "-6.599998",
+          "octets": 83560416,
+          "lockStatus": "Locked",
+          "SNRLevel": "38.983261",
+          "channelID": 160,
+          "frequency": "950000000"
+        }
+      ]
+    },
+    "errcodeword": {
+      "errcodeword": [
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 21,
+          "uncorrectableCodewords": 44,
+          "ChannelID": 21,
+          "unerroredCodewords": 1426314467
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 3,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 1,
+          "unerroredCodewords": 1425369486
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 43,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 2,
+          "unerroredCodewords": 1425374001
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 927954,
+          "uncorrectableCodewords": 6783160,
+          "ChannelID": 3,
+          "unerroredCodewords": 997846667
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 102069,
+          "uncorrectableCodewords": 1119440,
+          "ChannelID": 4,
+          "unerroredCodewords": 996858962
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 43378,
+          "uncorrectableCodewords": 4260,
+          "ChannelID": 5,
+          "unerroredCodewords": 1010180591
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 44907,
+          "uncorrectableCodewords": 66997,
+          "ChannelID": 6,
+          "unerroredCodewords": 997354645
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 20,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 7,
+          "unerroredCodewords": 1425397001
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 13,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 8,
+          "unerroredCodewords": 1425387975
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 9,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 9,
+          "unerroredCodewords": 1425401570
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 11,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 10,
+          "unerroredCodewords": 1425406281
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 18,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 11,
+          "unerroredCodewords": 1425411070
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 14,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 12,
+          "unerroredCodewords": 1425415660
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 11,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 13,
+          "unerroredCodewords": 1425424849
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 47,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 14,
+          "unerroredCodewords": 1425433895
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 12,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 15,
+          "unerroredCodewords": 1425438483
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 42,
+          "uncorrectableCodewords": 16,
+          "ChannelID": 16,
+          "unerroredCodewords": 1194192072
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 135,
+          "uncorrectableCodewords": 1087,
+          "ChannelID": 17,
+          "unerroredCodewords": 1425441928
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 2,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 18,
+          "unerroredCodewords": 1425447617
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 8,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 19,
+          "unerroredCodewords": 1425447704
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 5,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 20,
+          "unerroredCodewords": 1425452235
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 7,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 22,
+          "unerroredCodewords": 1425456859
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 9,
+          "uncorrectableCodewords": 0,
+          "ChannelID": 23,
+          "unerroredCodewords": 1425420560
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 49693,
+          "uncorrectableCodewords": 1475,
+          "ChannelID": 24,
+          "unerroredCodewords": 1260404698
+        },
+        {
+          "LockStatus": "NotLocked",
+          "correctableCodewords": 20374753,
+          "uncorrectableCodewords": 520370,
+          "ChannelID": 41,
+          "unerroredCodewords": 762279714
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 3261,
+          "uncorrectableCodewords": 2103,
+          "ChannelID": 42,
+          "unerroredCodewords": 1012651773
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 2318,
+          "uncorrectableCodewords": 459,
+          "ChannelID": 43,
+          "unerroredCodewords": 1011361298
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 2044,
+          "uncorrectableCodewords": 2647,
+          "ChannelID": 44,
+          "unerroredCodewords": 1011814109
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 9816,
+          "uncorrectableCodewords": 6223,
+          "ChannelID": 45,
+          "unerroredCodewords": 1068944914
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 80076,
+          "uncorrectableCodewords": 1157,
+          "ChannelID": 46,
+          "unerroredCodewords": 1072316514
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 70330,
+          "uncorrectableCodewords": 810,
+          "ChannelID": 47,
+          "unerroredCodewords": 1109019538
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 28081,
+          "uncorrectableCodewords": 239,
+          "ChannelID": 48,
+          "unerroredCodewords": 1269677072
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 1660420,
+          "uncorrectableCodewords": 3,
+          "ChannelID": 159,
+          "unerroredCodewords": 16973491
+        },
+        {
+          "LockStatus": "Locked",
+          "correctableCodewords": 16150451,
+          "uncorrectableCodewords": 13403,
+          "ChannelID": 160,
+          "unerroredCodewords": 162043540
+        }
+      ]
+    },
+    "cmdhcp6info": {
+      "IPv6TimeServer": "0:0:0:0:0:0:0:0",
+      "IPv6LeaseTimeRemaining": 0,
+      "IPv6TFTPServer": "0:0:0:0:0:0:0:0",
+      "IPv6BootFileName": "^1/20C6D92B/503/001",
+      "IPv6TimeOffset": 0,
+      "IPv6Prefix": "",
+      "IPv6Router": "0:0:0:0:0:0:0:0",
+      "IPv6RebindTimeRemaining": 0,
+      "IPv6RenewTimeRemaining": 0,
+      "IPv6Address": "0:0:0:0:0:0:0:0"
+    },
+    "mddipmodeoverride": {
+      "mddIPModeOverride": "HONOR"
+    },
+    "cmstatus": {
+      "cmStatParamsStatusDescription": "DOCSIS_CM_STAT_PARAMS_OPERATIONAL",
+      "cmStatParamsStatus": 12,
+      "cmStatus": 7,
+      "cmStatusDescription": "Registration"
+    },
+    "cmdhcpinfo": {
+      "bootFileName": "^1/20C6D92B/503/001",
+      "IPAddress": "***REDACTED_IP***",
+      "subnetMask": "255.255.224.0",
+      "DOCSISDHCPStatus": "COMPLETE",
+      "TFTPServer": "***REDACTED_IP***",
+      "MACAddress": "00:11:22:33:44:51",
+      "timeServer": "***REDACTED_IP***",
+      "rebindTimeRemaining": "0",
+      "gateway": "***REDACTED_IP***",
+      "renewTimeRemaining": "0",
+      "leaseTimeRemaining": 0,
+      "timeOffset": -21600
+    },
+    "uschannel": {
+      "uschannel": [
+        {
+          "modulation": "64QAM",
+          "t3TimeoutsExceeded": "0",
+          "channelBandwidth": "6400000",
+          "equalizationDataTime": "1766200485",
+          "t3Timeouts": "0",
+          "channelType": "US_TYPE_ATDMA",
+          "symbolRate": "5120 KSym/sec",
+          "t4Timeouts": "0",
+          "lockStatus": "Locked",
+          "powerLevel": "45.770599",
+          "channelID": 2,
+          "frequency": "24000000"
+        },
+        {
+          "modulation": "64QAM",
+          "t3TimeoutsExceeded": "0",
+          "channelBandwidth": "6400000",
+          "equalizationDataTime": "1766200505",
+          "t3Timeouts": "1",
+          "channelType": "US_TYPE_ATDMA",
+          "symbolRate": "5120 KSym/sec",
+          "t4Timeouts": "0",
+          "lockStatus": "Locked",
+          "powerLevel": "46.020599",
+          "channelID": 4,
+          "frequency": "36800000"
+        },
+        {
+          "modulation": "64QAM",
+          "t3TimeoutsExceeded": "0",
+          "channelBandwidth": "6400000",
+          "equalizationDataTime": "1766200465",
+          "t3Timeouts": "1",
+          "channelType": "US_TYPE_ATDMA",
+          "symbolRate": "5120 KSym/sec",
+          "t4Timeouts": "0",
+          "lockStatus": "Locked",
+          "powerLevel": "46.520599",
+          "channelID": 3,
+          "frequency": "30400000"
+        },
+        {
+          "modulation": "64QAM",
+          "t3TimeoutsExceeded": "0",
+          "channelBandwidth": "6400000",
+          "equalizationDataTime": "1766200425",
+          "t3Timeouts": "1",
+          "channelType": "US_TYPE_ATDMA",
+          "symbolRate": "5120 KSym/sec",
+          "t4Timeouts": "0",
+          "lockStatus": "Locked",
+          "powerLevel": "45.520599",
+          "channelID": 1,
+          "frequency": "17600000"
+        },
+        {
+          "modulation": "QPSK",
+          "t3TimeoutsExceeded": "0",
+          "channelBandwidth": "44000000",
+          "equalizationDataTime": "0",
+          "t3Timeouts": "0",
+          "channelType": "UNSUPPORTED",
+          "symbolRate": "0 KSym/sec",
+          "t4Timeouts": "0",
+          "lockStatus": "Locked",
+          "powerLevel": "-inf",
+          "channelID": 6,
+          "frequency": "0"
+        }
+      ]
+    },
+    "ofdmchannel": {
+      "ofdmchannel": [
+        {
+          "modulation": "QAM4096",
+          "PLCSubcarriersAverageRxMER": "40",
+          "activeSubcarrierNumber": "7528",
+          "lastFrequency": " 448975000",
+          "MDC1Lock": "YES",
+          "status": 1,
+          "NCPLocked": "YES",
+          "firstFrequency": " 259000000",
+          "ofdmFrequency": " 251600000",
+          "powerLevel": " -7.400002",
+          "fftType": "8K",
+          "scatteredPilotAverageRxMER": "46",
+          "DataSubcarriersAverageRxMER": "40",
+          "PLCLocked": "YES",
+          "errorMessage": "",
+          "channelBandwidth": "188",
+          "ofdmID": 0
+        },
+        {
+          "modulation": "QAM4096",
+          "PLCSubcarriersAverageRxMER": "39",
+          "activeSubcarrierNumber": "3712",
+          "lastFrequency": " 970975000",
+          "MDC1Lock": "YES",
+          "status": 1,
+          "NCPLocked": "YES",
+          "firstFrequency": " 877000000",
+          "ofdmFrequency": " 821600000",
+          "powerLevel": " -8.500000",
+          "fftType": "8K",
+          "scatteredPilotAverageRxMER": "45",
+          "DataSubcarriersAverageRxMER": "39",
+          "PLCLocked": "YES",
+          "errorMessage": "",
+          "channelBandwidth": "92",
+          "ofdmID": 1
+        }
+      ]
+    }
+  },
+  "hostname": "ARRISGW",
+  "release": {
+    "DOCSISOperatingMode": "",
+    "sn": "SNTLABS123456789",
+    "serialNumber": "-",
+    "customer": "ARRIS Group, Inc.",
+    "coreVersion": "0.0.0.0",
+    "bootVersion": "",
+    "version": "AC01.02.012_022625_G5X.04.20.122",
+    "downloadVersion": "",
+    "product": "G54_COMMSCOPE",
+    "manufacturer": "CommScope",
+    "flashPart": "",
+    "model": "G54",
+    "docsis_operating_mode": "3.1",
+    "hwversion": "v0",
+    "puma_boot_ver": "703059",
+    "puma_hw_ver": "v1"
+  },
+  "localtime": "2025/10/30 17:55:01",
+  "wan": [],
+  "wanmac": "00:11:22:33:44:52"
+}
