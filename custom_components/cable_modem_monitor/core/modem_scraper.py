@@ -1060,7 +1060,7 @@ class ModemScraper:
             **prefixed_system_info,
         }
 
-    def get_detection_info(self) -> dict[str, str | bool | None]:
+    def get_detection_info(self) -> dict[str, str | bool | list[str] | None]:
         """Get information about detected modem and successful URL.
 
         Returns parser metadata including:
@@ -1074,7 +1074,7 @@ class ModemScraper:
         - verified: Whether parser has been verified by users
         """
         if self.parser:
-            info: dict[str, str | bool | None] = {
+            info: dict[str, str | bool | list[str] | None] = {
                 "modem_name": self.parser.name,
                 "manufacturer": self.parser.manufacturer,
                 "successful_url": self.last_successful_url,
@@ -1092,6 +1092,9 @@ class ModemScraper:
                     info["fixtures_url"] = fixtures_url
             info["verified"] = self.parser.verified
             info["supports_icmp"] = self.parser.supports_icmp
+            info["logout_endpoint"] = self.parser.logout_endpoint
+            # Expose capabilities for sensor creation
+            info["capabilities"] = [cap.value for cap in self.parser.capabilities]
             return info
         return {}
 

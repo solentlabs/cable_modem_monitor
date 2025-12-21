@@ -153,9 +153,14 @@ class TestS33ParserCapabilities:
         """Test upstream channels capability."""
         assert ArrisS33HnapParser.has_capability(ModemCapability.UPSTREAM_CHANNELS)
 
-    def test_has_uptime_capability(self):
-        """Test system uptime capability."""
-        assert ArrisS33HnapParser.has_capability(ModemCapability.SYSTEM_UPTIME)
+    def test_no_uptime_capability(self):
+        """Test S33 does NOT have uptime capability.
+
+        The S33 only provides CustomerCurSystemTime (current clock time),
+        not actual uptime. The Arris UI misleadingly displays this in a
+        "SystemUpTime" element, but it's just the current time.
+        """
+        assert not ArrisS33HnapParser.has_capability(ModemCapability.SYSTEM_UPTIME)
 
     def test_has_version_capability(self):
         """Test software version capability."""
@@ -435,8 +440,9 @@ class TestS33SystemInfoParsing:
         system_info = parser._parse_system_info_from_hnap(hnap_data)
 
         # Connection info
-        assert "system_uptime" in system_info
-        assert system_info["system_uptime"] == "7 days 12:34:56"
+        # Note: S33 does NOT provide system uptime. CustomerCurSystemTime is the
+        # current clock time, not uptime. We intentionally don't extract it.
+        assert "system_uptime" not in system_info
         assert system_info["network_access"] == "Allowed"
         assert system_info["model_name"] == "S33"
 
