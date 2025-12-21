@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title data-i18n="adv_st_docsis_status">DOCSIS Status</title>
+  <link href="DOCSIS%20Status_files/bootstrap.min.css" rel="stylesheet">
+  <script src="DOCSIS%20Status_files/jquery.min.js"></script>
+  <!--[if IE]>
+   <script src="html5shiv.min.js"></script>
+   <script src="respond.min.js"></script>
+  <![endif]-->
+  <script>
+   var mask_statusDocsisStatus = "1";
+   $(document).ready(function ()
+   {
+    if(mask_statusDocsisStatus == 0)
+    {
+     $('#main_page').hide();
+    }
+   });
+  </script>
+ </head>
+ <body>
+  <script>tch_addLoadEvent2(tch_idle_logout,600000);</script>
+  <div class="navbar navbar-default" id="main_navbar" role="navigation"><div class="container-fluid"><div class=""><a href="http://www.technicolor.com/" title="Technicolor Company Website"><img src="DOCSIS%20Status_files/logo.png" alt="Company logo"></a><span class="hidden-xs"><strong>&nbsp;<span data-i18n="model">CGA2121</span>&nbsp;</strong></span><span class="hidden-xs hidden-sm" data-i18n="modeldesc">DOCSIS 3.0 Wireless Gateway</span><div class="btn-group navbar-right" aria-label="Choose Basic or Advanced configuration mode." role="group"><a class="btn btn-link " type="button" id="i_nav_wiz_link" href="http://192.168.100.1/setup_wizard.html"><span class="glyphicon glyphicon-flash"> </span><span class="hidden-xs" data-i18n="nav_setup">Setup Wizard</span></a><a class="btn btn-link" type="button" href="http://192.168.100.1/basicUX.html"><span class="glyphicon glyphicon-th-large"> </span><span class="hidden-xs" data-i18n="nav_basic">Basic</span></a><a class="btn btn-link" type="button" href="http://192.168.100.1/ad_wan_settings.html" id="i_nav_adv_link"><span class="glyphicon glyphicon-list"> </span><span class="hidden-xs" data-i18n="nav_advanced">Advanced</span></a><a class="btn btn-link" id="btn_logout" type="button" href="http://192.168.100.1/logout.html"><span class="glyphicon glyphicon-log-out"></span><span class="hidden-xs" data-i18n="nav_logout">Log Out</span></a></div></div></div></div>
+  <div class="container-fluid">
+   <div class="row-fluid">
+    <div class="col-xs-12 col-sm-3" id="adv_navbar_container">
+     <script src="DOCSIS%20Status_files/adv_navbar.js"></script><div class="visible-xs">          <button class="btn btn-link" id="toggle_adv_navbar" data-toggle="collapse" data-target="#adv_navbar">            <span class="glyphicon glyphicon-menu-hamburger"></span>                                                     </button>                                                                                                    </div>
+                                                                        
+                                                                        
+                                                                        <div class="panel-group collapse in" id="adv_navbar" role="navigation">
+                                                                        
+                                                                        
+         <div class="panel panel-default" id="lgi_nav_wireless">                                                          <div class="panel-heading">                                                                                      <h4 class="panel-title">                                                                                            <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_wireless">                                        <span class="glyphicon glyphicon-signal"></span>                                                               <span data-i18n="adv_wireless">Wireless</span>                                                                       </a>                                                                                                         </h4>                                                                                                     </div>                                                                                                         <div id="nav_wireless" class="panel-collapse collapse">                                                       <ul class="list-group">                                                                                          <li class="list-group-item " id="lgi_wi_radio_settings">                                                         <a href="http://192.168.100.1/wi_radio_settings.html"><span class="glyphicon glyphicon-chevron-right"></span>                            <span data-i18n="adv_wi_radio_settings">Radio Settings</span>                                                              </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_primary_network">                                                       <a href="http://192.168.100.1/wi_primary_network.html"><span class="glyphicon glyphicon-chevron-right"></span>                           <span data-i18n="adv_wi_primary_network">Primary Network</span>                                                             </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_guest_network" style="display: none;">                                                       <a href="http://192.168.100.1/wi_guest_network.html"><span class="glyphicon glyphicon-chevron-right"></span>                             <span data-i18n="adv_wi_guest_network">Guest Network</span>                                                               </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_access_control">                                                         <a href="http://192.168.100.1/wi_access_control.html"><span class="glyphicon glyphicon-chevron-right"></span>                            <span data-i18n="adv_wi_access_control">Access Control</span>                                                              </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_advanced_settings">                                                       <a href="http://192.168.100.1/wi_advanced_settings.html"><span class="glyphicon glyphicon-chevron-right"></span>                         <span data-i18n="adv_wi_advanced_settings">Advanced Settings</span>                                                           </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_insight">                                                                 <a href="http://192.168.100.1/wi_insight.html"><span class="glyphicon glyphicon-chevron-right"></span>                                   <span data-i18n="adv_wi_insight">Wifi Insight</span>                                                                     </a>                                                                                                      </li>                                                                                                          <li class="list-group-item" id="lgi_wi_band_steering_exclusion" style="display: none;">                                                 <a href="http://192.168.100.1/wi_band_steering_exclusion.html"><span class="glyphicon glyphicon-chevron-right"></span>                             <span data-i18n="adv_wi_band_steering_exclusion">Band Steering Exclusion List</span>                                                     </a>                                                                                                      </li>                                                                                                        </ul>                                                                                                        </div>                                                                                                       </div>
+                                                                        
+                                                                        
+                                                                        <div class="panel panel-default" id="lgi_nav_homenetwork" style="display: none;">                                                       <div class="panel-heading">                                                                                   <h4 class="panel-title">                                                                                         <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_homenetwork">                                  <span class="glyphicon glyphicon-home"></span>                                                              <span data-i18n="adv_home_network">Home Network</span>                                                                </a>                                                                                                      </h4>                                                                                                  </div>                                                                                                      <div id="nav_homenetwork" class="panel panel-collapse collapse">                                              <ul class="list-group">                                                                                       <li class="list-group-item" id="lgi_hn_home_topology">                                                        <a href="http://192.168.100.1/hn_home_topology.html"><span class="glyphicon glyphicon-chevron-right"></span>                          <span data-i18n="adv_hn_home_topology">Home Topology</span>                                                            </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_lan_dhcp">                                                             <a href="http://192.168.100.1/hn_lan_dhcp.html"><span class="glyphicon glyphicon-chevron-right"></span>                               <span data-i18n="adv_hn_lan_dhcp">LAN &amp; DHCP Settings</span>                                                                 </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_media_server" style="display: none;">                                                         <a href="http://192.168.100.1/hn_media_server.html"><span class="glyphicon glyphicon-chevron-right"></span>                           <span data-i18n="adv_hn_media_server">Media Server</span>                                                             </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_firewall">                                                                <a href="http://192.168.100.1/hn_firewall.html"><span class="glyphicon glyphicon-chevron-right"></span>                               <span data-i18n="adv_hn_firewall">Firewall</span>                                                                 </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_port_filtering">                                                          <a href="http://192.168.100.1/hn_port_filtering.html"><span class="glyphicon glyphicon-chevron-right"></span>                      <span data-i18n="adv_hn_port_filtering">Port Filtering</span>                                                              </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_ip_filtering">                                                          <a href="http://192.168.100.1/hn_ip_filtering.html"><span class="glyphicon glyphicon-chevron-right"></span>                        <span data-i18n="adv_hn_ip_filtering">IP Filtering</span>                                                                </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_mac_filtering">                                                          <a href="http://192.168.100.1/hn_mac_filtering.html"><span class="glyphicon glyphicon-chevron-right"></span>                          <span data-i18n="adv_hn_mac_filtering">MAC Filtering</span>                                                            </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_apps_gaming">                                                             <a href="http://192.168.100.1/hn_apps_gaming.html"><span class="glyphicon glyphicon-chevron-right"></span>                            <span data-i18n="adv_hn_apps_gaming">Applications &amp; Gaming</span>                                                              </a>                                                                                                   </li>                                                                                                       <li class="list-group-item" id="lgi_hn_advanced_settings">                                                       <a href="http://192.168.100.1/hn_advanced_settings.html"><span class="glyphicon glyphicon-chevron-right"></span>                        <span data-i18n="adv_hn_advanced_settings">Advanced Settings</span>                                                        </a>                                                                                                   </li>                                                                                                     </ul>                                                                                                     </div>                                                                                                    </div>
+                                                                        
+                                                                        
+                                                                  <div class="panel panel-default" id="lgi_nav_parentalcontrol" style="display: none;">                                                <div class="panel-heading">                                                                                  <h4 class="panel-title">                                                                                        <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_parentalcontrols">                            <span class="glyphicon glyphicon-time"></span>                                                             <span data-i18n="adv_parental_controls">Parental Controls</span>                                                          </a>                                                                                                     </h4>                                                                                                 </div>                                                                                                     <div id="nav_parentalcontrols" class="panel panel-collapse collapse">                                        <ul class="list-group">                                                                                      <li class="list-group-item" id="lgi_pc_managed_rules">                                                       <a href="http://192.168.100.1/pc_managed_rules.html"><span class="glyphicon glyphicon-chevron-right"></span>                         <span data-i18n="adv_pc_managed_rules">Access Rules</span>                                                           </a>                                                                                                  </li>                                                                                                      <li class="list-group-item" id="lgi_pc_managed_devices">                                                     <a href="http://192.168.100.1/pc_managed_devices.html"><span class="glyphicon glyphicon-chevron-right"></span>                         <span data-i18n="adv_pc_managed_devices">Devices and Users</span>                                                         </a>                                                                                                  </li>                                                                                                      <li class="list-group-item" id="lgi_pc_reports">                                                             <a href="http://192.168.100.1/pc_reports.html"><span class="glyphicon glyphicon-chevron-right"></span>                               <span data-i18n="adv_pc_reports">Reports</span>                                                                 </a>                                                                                                  </li>                                                                                                    </ul>                                                                                                    </div>                                                                                                   </div>
+                                                                        
+                                                                        
+                                                                <div class="panel panel-default" id="lgi_nav_administration">                                                <div class="panel-heading">                                                                                <h4 class="panel-title">                                                                                      <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_administration">                            <span class="glyphicon glyphicon-cog"></span>                                                            <span data-i18n="adv_administration">Administration</span>                                                           </a>                                                                                                   </h4>                                                                                               </div>                                                                                                   <div id="nav_administration" class="panel panel-collapse collapse">                                        <ul class="list-group">                                                                                    <li class="list-group-item" id="lgi_ad_wan_settings">                                                      <a href="http://192.168.100.1/ad_wan_settings.html"><span class="glyphicon glyphicon-chevron-right"></span>                          <span data-i18n="adv_ad_wan_settings">WAN Settings</span>                                                          </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_change_password">                                                       <a href="http://192.168.100.1/ad_change_password.html"><span class="glyphicon glyphicon-chevron-right"></span>                         <span data-i18n="adv_ad_change_password">Change Password</span>                                                       </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_diagnostics">                                                       <a href="http://192.168.100.1/ad_diagnostics.html"><span class="glyphicon glyphicon-chevron-right"></span>                         <span data-i18n="adv_ad_diagnostics">Diagnostics</span>                                                                                             </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_remote_management">                                                 <a href="http://192.168.100.1/ad_remote_management.html"><span class="glyphicon glyphicon-chevron-right"></span>                                           <span data-i18n="adv_ad_remote_management">Remote Management</span>                                                                                       </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_backup_restore">                                                                               <a href="http://192.168.100.1/ad_backup_restore.html"><span class="glyphicon glyphicon-chevron-right"></span>                                           <span data-i18n="adv_ad_backup_restore">Backup/Restore Settings</span>                                                                                 </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_restart_gateway">                                                                               <a href="http://192.168.100.1/ad_restart_gateway.html"><span class="glyphicon glyphicon-chevron-right"></span>                                           <span data-i18n="adv_ad_restart_gateway">Restart Gateway</span>                                                                                         </a>                                                                                                </li>                                                                                                    <li class="list-group-item" id="lgi_ad_spectrum_analyzer">                                                                               <a href="http://192.168.100.1/spectrum_analyzer.html"><span class="glyphicon glyphicon-chevron-right"></span>                                           <span data-i18n="adv_spectrum_analyzer">Spectrum Analyzer</span>                                                                                         </a>                                                                                                </li>                                                                                                  </ul>                                                                                                  </div>                                                                                                 </div>
+                                                                        
+                                                                        
+                                                            <div class="panel panel-default" id="lgi_nav_voice">                                                                          <div class="panel-heading">                                                                                <h4 class="panel-title">                                                                                      <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_voice">                                     <span class="glyphicon glyphicon-earphone"></span>                                                       <span data-i18n="adv_voice">Voice</span>                                                                                                   </a>                                                                                                   </h4>                                                                                               </div>            <div id="nav_voice" class="panel panel-collapse collapse">              <ul class="list-group">                <li class="list-group-item" id="lgi_vo_diagnostics">                  <a href="http://192.168.100.1/vo_diagnostics.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_vo_diagnostics">Diagnostics</span>                      </a>                </li>                <li class="list-group-item" id="lgi_vo_mta_configuration">                  <a href="http://192.168.100.1/vo_mta_configuration.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_vo_mta_configuration">MTA Configuration</span>                      </a>                </li>                <li class="list-group-item" id="lgi_vo_logs">                  <a href="http://192.168.100.1/vo_logs.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_vo_logs">Logs</span>                      </a>                </li>                <li class="list-group-item" id="lgi_vo_nosip">                  <a href="http://192.168.100.1/vo_sip.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_vo_sip">SIP Provisioning &amp; Features</span>                      </a>                </li>              </ul>            </div>          </div>          <div class="panel panel-default" id="lgi_nav_status">            <div class="panel-heading">              <h4 class="panel-title">                   <a data-toggle="collapse" data-parent="#adv_navbar" href="#nav_status">                     <span class="glyphicon glyphicon-dashboard"></span>                     <span data-i18n="adv_status">Status</span>                    </a>                 </h4>            </div>            <div id="nav_status" class="panel panel-collapse collapse in">              <ul class="list-group">                <li class="list-group-item" id="lgi_st_gateway">                  <a href="http://192.168.100.1/st_gateway.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_gateway_internet">Gateway &amp; Internet Connection</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_home_network">                  <a href="http://192.168.100.1/st_home_network.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_home_network">Home Network</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_wireless">                  <a href="http://192.168.100.1/st_wireless.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_wireless_network">Wireless Network</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_voice">                  <a href="http://192.168.100.1/st_voice.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_voice">Voice</span>                      </a>                </li>                <li class="list-group-item active" id="lgi_st_docsis">                  <a href="http://192.168.100.1/st_docsis.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_docsis_status">DOCSIS Status</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_docsis_event">                  <a href="http://192.168.100.1/st_docsis_event.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_docsis_event_log">DOCSIS Event Log</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_channel_selection">                  <a href="http://192.168.100.1/st_channel_selection.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="st_channel_select">Channel Selection</span>                      </a>                </li>                <li class="list-group-item" id="lgi_st_band_steering_event" style="display: none;">                  <a href="http://192.168.100.1/st_band_steering_event.html"><span class="glyphicon glyphicon-chevron-right"></span>                       <span data-i18n="adv_st_band_steering_event_log">Band Steering Event Log</span>                      </a>                </li>              </ul>            </div>          </div>        </div>
+    </div>
+    <div class="col-xs-12 col-sm-9" id="main_page">
+     <h1 class="page-header" data-i18n="adv_st_docsis_status">DOCSIS Status</h1>
+
+     <div class="panel panel-default">
+      <div class="panel-heading" role="tab">
+       <h2 class="h4">
+        <a data-toggle="collapse" aria-expanded="false" aria-controls="">
+         <span data-i18n="voice_state_header">Provisioning Status</span>
+        </a>
+       </h2>
+      </div>
+      <table class="table table-bordered">
+       <caption class="text-muted text-right" data-i18n="ds_prov_about">Status of connection to your service provider.</caption>
+       <tbody>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_prov_downstream_scanning">Downstream Scanning</th>
+         <th class="col-xs-2" scope="row" data-i18n="ds_prov_upstream_ranging">Upstream Ranging</th>
+         <th class="col-xs-2" scope="row" data-i18n="ds_prov_dhcp">DHCP</th>
+         <th class="col-xs-2" scope="row" data-i18n="ds_prov_tftp">TFTP</th>
+         <th class="col-xs-2" scope="row" data-i18n="ds_prov_registration">Registration</th>
+        </tr>
+        <tr>
+         <td class="success"><span class="glyphicon glyphicon-ok"></span></td>
+         <td class="success"><span class="glyphicon glyphicon-ok"></span></td>
+         <td class="success"><span class="glyphicon glyphicon-ok"></span></td>
+         <td class="success"><span class="glyphicon glyphicon-ok"></span></td>
+         <td class="success"><span class="glyphicon glyphicon-ok"></span></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+
+     <div class="panel panel-default">
+      <div class="panel-heading" role="tab">
+       <h2 class="h4">
+        <a data-toggle="collapse" aria-expanded="false" aria-controls="">
+         <span data-i18n="ds_link_header">DOCSIS Link Information</span>
+        </a>
+       </h2>
+      </div>
+      <table class="table table-bordered">
+       <caption class="text-muted text-right" data-i18n="ds_link_about">Information about your broadband cable connection.</caption>
+       <tbody>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_link_operational_status">Operational Status</th>
+         <td class="col-xs-2" scope="row"><span data-i18n="Operational">Operational</span></td>
+        </tr>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_link_downstream_channels">Downstream Channels</th>
+         <td class="col-xs-2" scope="row">24</td>
+        </tr>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_link_upstream_channels">Upstream Channels</th>
+         <td class="col-xs-2" scope="row">4</td>
+        </tr>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_link_bpi">Baseline Privacy</th>
+         <td class="col-xs-2" scope="row"><span data-i18n="Installed">Installed</span></td>
+        </tr>
+       </tbody>
+      </table>
+     </div>
+
+     <div class="panel panel-default">
+      <div class="panel-heading" role="tab">
+       <h2 class="h4">
+        <a data-toggle="collapse" aria-expanded="false" aria-controls="">
+         <span data-i18n="ds_link_downstream_channels">Downstream Channels</span>
+        </a>
+       </h2>
+      </div>
+      <div class="modal-body">
+       <div class="table-responsive">
+<!--
+        <table class="table table-condensed table-striped rsp-table">
+         <thead>
+          <tr>
+           <th scope="col" data-i18n="ds_link_ds_ch_id"></th>
+           <th scope="col" data-i18n="ds_link_ds_lo_sta"></th>
+           <th scope="col" data-i18n="ds_link_ds_ch_type"></th>
+           <th scope="col" data-i18n="ds_link_ds_ce_freq"></th>
+           <th scope="col" data-i18n="ds_link_ds_band"></th>
+           <th scope="col" data-i18n="ds_link_ds_modu"></th>
+           <th scope="col" data-i18n="ds_link_ds_pw_lv"></th>
+           <th scope="col" data-i18n="ds_link_ds_snr"></th>
+           <th scope="col">DS Frequencies</th>
+          </tr>
+         </thead>
+         <tbody>
+          <table class="table table-condensed table-striped rsp-table">
+<thead>
+<tr>
+<th scope="col" data-i18n="ds_link_ds_ch_id"></th>
+<th scope="col" data-i18n="ds_link_ds_modu"></th>
+<th scope="col" data-i18n="ds_link_ds_snr"></th>
+<th scope="col" data-i18n="ds_link_ds_pw_lv"></th>
+</tr>
+</thead>
+<tbody>
+<tr><td scope="col">1</td><td scope="col">QAM256</td><td scope="col">42.3</td><td scope="col">10.5</td></tr><tr><td scope="col">2</td><td scope="col">QAM256</td><td scope="col">42.1</td><td scope="col">10.3</td></tr><tr><td scope="col">3</td><td scope="col">QAM256</td><td scope="col">41.6</td><td scope="col"> 9.6</td></tr><tr><td scope="col">4</td><td scope="col">QAM256</td><td scope="col">41.5</td><td scope="col"> 9.7</td></tr><tr><td scope="col">5</td><td scope="col">QAM256</td><td scope="col">41.0</td><td scope="col"> 9.8</td></tr><tr><td scope="col">6</td><td scope="col">QAM256</td><td scope="col">41.3</td><td scope="col"> 9.3</td></tr><tr><td scope="col">7</td><td scope="col">QAM256</td><td scope="col">40.6</td><td scope="col"> 8.5</td></tr><tr><td scope="col">8</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.1</td></tr><tr><td scope="col">9</td><td scope="col">QAM256</td><td scope="col">37.2</td><td scope="col"> 8.1</td></tr><tr><td scope="col">10</td><td scope="col">QAM256</td><td scope="col">40.7</td><td scope="col"> 8.6</td></tr><tr><td scope="col">11</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.3</td></tr><tr><td scope="col">12</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.4</td></tr><tr><td scope="col">13</td><td scope="col">QAM256</td><td scope="col">40.3</td><td scope="col"> 8.1</td></tr><tr><td scope="col">14</td><td scope="col">QAM256</td><td scope="col">40.7</td><td scope="col"> 8.8</td></tr><tr><td scope="col">15</td><td scope="col">QAM256</td><td scope="col">40.3</td><td scope="col"> 8.1</td></tr><tr><td scope="col">16</td><td scope="col">QAM256</td><td scope="col">40.2</td><td scope="col"> 8.2</td></tr><tr><td scope="col">17</td><td scope="col">QAM256</td><td scope="col">35.9</td><td scope="col"> 5.6</td></tr><tr><td scope="col">18</td><td scope="col">QAM256</td><td scope="col">37.9</td><td scope="col"> 7.4</td></tr><tr><td scope="col">19</td><td scope="col">QAM256</td><td scope="col">37.8</td><td scope="col"> 7.1</td></tr><tr><td scope="col">20</td><td scope="col">QAM256</td><td scope="col">38.2</td><td scope="col"> 7.6</td></tr><tr><td scope="col">21</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 8.3</td></tr><tr><td scope="col">22</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 7.7</td></tr><tr><td scope="col">23</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 7.5</td></tr><tr><td scope="col">24</td><td scope="col">QAM256</td><td scope="col">39.4</td><td scope="col"> 7.7</td></tr></tbody>
+</table>
+
+         </tbody>
+        </table>
+-->
+        <table class="table table-condensed table-striped rsp-table">
+<thead>
+<tr>
+<th scope="col" data-i18n="ds_link_ds_ch_id">DS Channel ID</th>
+<th scope="col" data-i18n="ds_link_ds_modu">DS Channel Modulation</th>
+<th scope="col" data-i18n="ds_link_ds_snr">DS Signal to Noise Ratio</th>
+<th scope="col" data-i18n="ds_link_ds_pw_lv">DS Power Level</th>
+</tr>
+</thead>
+<tbody>
+<tr><td scope="col">1</td><td scope="col">QAM256</td><td scope="col">42.3</td><td scope="col">10.4</td></tr><tr><td scope="col">2</td><td scope="col">QAM256</td><td scope="col">42.1</td><td scope="col">10.3</td></tr><tr><td scope="col">3</td><td scope="col">QAM256</td><td scope="col">41.6</td><td scope="col"> 9.6</td></tr><tr><td scope="col">4</td><td scope="col">QAM256</td><td scope="col">41.4</td><td scope="col"> 9.6</td></tr><tr><td scope="col">5</td><td scope="col">QAM256</td><td scope="col">40.9</td><td scope="col"> 9.8</td></tr><tr><td scope="col">6</td><td scope="col">QAM256</td><td scope="col">41.3</td><td scope="col"> 9.3</td></tr><tr><td scope="col">7</td><td scope="col">QAM256</td><td scope="col">40.6</td><td scope="col"> 8.5</td></tr><tr><td scope="col">8</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.1</td></tr><tr><td scope="col">9</td><td scope="col">QAM256</td><td scope="col">37.2</td><td scope="col"> 8.0</td></tr><tr><td scope="col">10</td><td scope="col">QAM256</td><td scope="col">40.7</td><td scope="col"> 8.6</td></tr><tr><td scope="col">11</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.3</td></tr><tr><td scope="col">12</td><td scope="col">QAM256</td><td scope="col">40.4</td><td scope="col"> 8.4</td></tr><tr><td scope="col">13</td><td scope="col">QAM256</td><td scope="col">40.3</td><td scope="col"> 8.1</td></tr><tr><td scope="col">14</td><td scope="col">QAM256</td><td scope="col">40.7</td><td scope="col"> 8.8</td></tr><tr><td scope="col">15</td><td scope="col">QAM256</td><td scope="col">40.3</td><td scope="col"> 8.1</td></tr><tr><td scope="col">16</td><td scope="col">QAM256</td><td scope="col">40.2</td><td scope="col"> 8.2</td></tr><tr><td scope="col">17</td><td scope="col">QAM256</td><td scope="col">35.9</td><td scope="col"> 5.6</td></tr><tr><td scope="col">18</td><td scope="col">QAM256</td><td scope="col">37.9</td><td scope="col"> 7.4</td></tr><tr><td scope="col">19</td><td scope="col">QAM256</td><td scope="col">37.8</td><td scope="col"> 7.1</td></tr><tr><td scope="col">20</td><td scope="col">QAM256</td><td scope="col">38.2</td><td scope="col"> 7.6</td></tr><tr><td scope="col">21</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 8.3</td></tr><tr><td scope="col">22</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 7.8</td></tr><tr><td scope="col">23</td><td scope="col">QAM256</td><td scope="col">39.0</td><td scope="col"> 7.6</td></tr><tr><td scope="col">24</td><td scope="col">QAM256</td><td scope="col">39.4</td><td scope="col"> 7.7</td></tr></tbody>
+</table>
+
+       </div>
+      </div>
+     </div>
+
+     <div class="panel panel-default">
+      <div class="panel-heading" role="tab">
+       <h2 class="h4">
+        <a data-toggle="collapse" aria-expanded="false" aria-controls="">
+         <span data-i18n="ds_link_upstream_channels">Upstream Channels</span>
+        </a>
+       </h2>
+      </div>
+      <div class="modal-body">
+       <div class="table-responsive">
+<!--
+        <table class="table table-condensed table-striped rsp-table">
+         <thead>
+          <tr>
+           <td scope="col" data-i18n="ds_link_us_ch_id"></td>
+           <td scope="col" data-i18n="ds_link_us_lo_sta"></td>
+           <td scope="col" data-i18n="ds_link_us_ch_type"></td>
+           <td scope="col" data-i18n="ds_link_us_cen_freq"></td>
+           <td scope="col" data-i18n="ds_link_us_band"></td>
+           <td scope="col" data-i18n="ds_link_us_modu"></td>
+           <td scope="col" data-i18n="ds_link_us_snr"></td>
+           <td scope="col" data-i18n="ds_link_us_pw_lv"></td>
+           <td scope="col" data-i18n="ds_link_us_fec_cor"></td>
+           <td scope="col" data-i18n="ds_link_us_fec_unc"></td>
+           <td scope="col">US Frequencies</td>
+          </tr>
+         </thead>
+         <tbody>
+          <table class="table table-condensed table-striped rsp-table">
+<thead>
+<tr>
+<td scope="col" data-i18n="ds_link_us_ch_id"></td>
+<td scope="col" data-i18n="ds_link_us_modu"></td>
+<td scope="col" data-i18n="ds_link_us_pw_lv"></td>
+</tr>
+</thead>
+<tbody>
+<tr><td scope="col">1</td><td scope="col">QAM64</td><td scope="col">43.7</td></tr><tr><td scope="col">2</td><td scope="col">QAM64</td><td scope="col">44.0</td></tr><tr><td scope="col">3</td><td scope="col">QAM64</td><td scope="col">44.0</td></tr><tr><td scope="col">4</td><td scope="col">QAM64</td><td scope="col">43.5</td></tr></tbody>
+</table>
+
+         </tbody>
+        </table>
+-->
+       <table class="table table-condensed table-striped rsp-table">
+<thead>
+<tr>
+<td scope="col" data-i18n="ds_link_us_ch_id">US Channel ID</td>
+<td scope="col" data-i18n="ds_link_us_modu">US Modulation</td>
+<td scope="col" data-i18n="ds_link_us_pw_lv">US Power Level</td>
+</tr>
+</thead>
+<tbody>
+<tr><td scope="col">1</td><td scope="col">QAM64</td><td scope="col">43.7</td></tr><tr><td scope="col">2</td><td scope="col">QAM64</td><td scope="col">44.0</td></tr><tr><td scope="col">3</td><td scope="col">QAM64</td><td scope="col">44.0</td></tr><tr><td scope="col">4</td><td scope="col">QAM64</td><td scope="col">43.5</td></tr></tbody>
+</table>
+
+       </div>
+      </div>
+     </div>
+        
+          <!--
+     <div class="panel panel-default">
+      <div class="panel-heading" role="tab">
+       <h2 class="h4">
+        <a data-toggle="collapse" aria-expanded="false" aria-controls="">
+         <span data-i18n="ds_cm_configuration_file"></span>
+        </a>
+       </h2>
+      </div>
+      <table class="table table-bordered">
+       <tbody>
+        <tr>
+         <th class="col-xs-2" scope="row" data-i18n="ds_cm_provisioning_file"></th>
+         <th class="col-xs-2" scope="row"></th>
+        </tr>
+       </tbody>
+      </table>
+      <table class="table">
+       <tbody>
+        <pre id="st_cm_config_contents"></pre>
+       </tbody>
+      </table>
+     </div>
+
+          -->
+    </div>
+   </div>
+   <script type="text/javascript">foot();</script><footer class="footer" id="copyright">  <p class="text-muted"><span data-i18n="copyright">Technicolor,
+ Technicolor Systems, and the Technicolor Systems logo are registered 
+trademarks of Technicolor Systems, Inc. and/or its affiliates in the 
+U.S. and certain other countries.<br>© 2015 Technicolor Systems, Inc. All rights reserved. © 2015 Broadcom, Inc. All rights reserved.</span></p></footer>
+   <script>
+document.getElementById("lgi_nav_homenetwork").style.display = "none";
+document.getElementById("lgi_nav_parentalcontrol").style.display = "none";
+document.getElementById("lgi_hn_media_server").style.display = "none";
+document.getElementById("lgi_wi_guest_network").style.display = "none";
+document.getElementById("lgi_wi_band_steering_exclusion").style.display = "none";
+document.getElementById("lgi_st_band_steering_event").style.display = "none";
+</script>
+  
+ 
+</div></body></html>
