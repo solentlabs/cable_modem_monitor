@@ -481,6 +481,119 @@ class TestLanStatsSensors:
         assert sensor.native_value == 395114324
 
 
+class TestCapabilityBasedSensorCreation:
+    """Test that sensors are conditionally created based on parser capabilities."""
+
+    @pytest.fixture
+    def mock_entry(self):
+        """Create mock config entry."""
+        entry = Mock()
+        entry.entry_id = "test_entry"
+        entry.data = {"host": "192.168.100.1"}
+        return entry
+
+    def test_has_capability_returns_true_when_present(self):
+        """Test _has_capability returns True when capability is in list."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+        from custom_components.cable_modem_monitor.sensor import _has_capability
+
+        coordinator = Mock()
+        coordinator.data = {"_parser_capabilities": ["system_uptime", "downstream_channels", "upstream_channels"]}
+
+        assert _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME) is True
+
+    def test_has_capability_returns_false_when_missing(self):
+        """Test _has_capability returns False when capability is not in list."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+        from custom_components.cable_modem_monitor.sensor import _has_capability
+
+        coordinator = Mock()
+        coordinator.data = {"_parser_capabilities": ["downstream_channels", "upstream_channels"]}
+
+        assert _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME) is False
+
+    def test_has_capability_handles_missing_key(self):
+        """Test _has_capability returns False when _parser_capabilities key is missing."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+        from custom_components.cable_modem_monitor.sensor import _has_capability
+
+        coordinator = Mock()
+        coordinator.data = {}  # No _parser_capabilities key
+
+        assert _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME) is False
+
+    def test_uptime_sensors_created_when_capability_present(self, mock_entry):
+        """Test uptime/last boot sensors ARE created when SYSTEM_UPTIME capability is present."""
+        from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability
+        from custom_components.cable_modem_monitor.sensor import (
+            ModemLastBootTimeSensor,
+            ModemSystemUptimeSensor,
+            _create_system_sensors,
+        )
+
+        coordinator = Mock()
+        coordinator.data = {
+            "_parser_capabilities": [ModemCapability.SYSTEM_UPTIME.value],
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
+        }
+
+        sensors = _create_system_sensors(coordinator, mock_entry)
+        sensor_types = [type(s) for s in sensors]
+
+        assert ModemSystemUptimeSensor in sensor_types
+        assert ModemLastBootTimeSensor in sensor_types
+
+    def test_uptime_sensors_not_created_when_capability_missing(self, mock_entry):
+        """Test uptime/last boot sensors are NOT created when SYSTEM_UPTIME capability is missing."""
+        from custom_components.cable_modem_monitor.sensor import (
+            ModemLastBootTimeSensor,
+            ModemSystemUptimeSensor,
+            _create_system_sensors,
+        )
+
+        coordinator = Mock()
+        coordinator.data = {
+            "_parser_capabilities": ["downstream_channels", "upstream_channels"],
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
+        }
+
+        sensors = _create_system_sensors(coordinator, mock_entry)
+        sensor_types = [type(s) for s in sensors]
+
+        assert ModemSystemUptimeSensor not in sensor_types
+        assert ModemLastBootTimeSensor not in sensor_types
+
+    def test_base_sensors_always_created(self, mock_entry):
+        """Test that base sensors (errors, channel counts, version) are always created."""
+        from custom_components.cable_modem_monitor.sensor import (
+            ModemDownstreamChannelCountSensor,
+            ModemSoftwareVersionSensor,
+            ModemTotalCorrectedSensor,
+            ModemTotalUncorrectedSensor,
+            ModemUpstreamChannelCountSensor,
+            _create_system_sensors,
+        )
+
+        coordinator = Mock()
+        coordinator.data = {
+            "_parser_capabilities": [],  # No capabilities
+            "cable_modem_downstream": [],
+            "cable_modem_upstream": [],
+        }
+
+        sensors = _create_system_sensors(coordinator, mock_entry)
+        sensor_types = [type(s) for s in sensors]
+
+        # These should always be created regardless of capabilities
+        assert ModemTotalCorrectedSensor in sensor_types
+        assert ModemTotalUncorrectedSensor in sensor_types
+        assert ModemDownstreamChannelCountSensor in sensor_types
+        assert ModemUpstreamChannelCountSensor in sensor_types
+        assert ModemSoftwareVersionSensor in sensor_types
+
+
 class TestFallbackModeSensorCreation:
     """Test that sensors are conditionally created based on fallback mode."""
 
@@ -520,6 +633,8 @@ class TestFallbackModeSensorCreation:
             "health_status": "responsive",
             "ping_latency_ms": 2.5,
             "http_latency_ms": 45.0,
+            # Parser capabilities (modem supports uptime)
+            "_parser_capabilities": ["system_uptime", "downstream_channels", "upstream_channels"],
         }
         return coordinator
 
