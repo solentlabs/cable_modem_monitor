@@ -108,14 +108,14 @@ class TestCM2000Metadata:
         assert "CM2000" in NetgearCM2000Parser.models
 
     def test_parser_verified_status(self):
-        """Test parser verified status - pending user confirmation of v3.8.1 fixes."""
+        """Test parser verified status - confirmed working in v3.8.1."""
         from custom_components.cable_modem_monitor.parsers.base_parser import ParserStatus
 
-        # Issue #38: awaiting confirmation of software version and restart
-        assert NetgearCM2000Parser.status == ParserStatus.AWAITING_VERIFICATION
+        # Issue #38: confirmed working by user
+        assert NetgearCM2000Parser.status == ParserStatus.VERIFIED
         # Also test the verified property via an instance
         parser = NetgearCM2000Parser()
-        assert parser.verified is False
+        assert parser.verified is True
 
     def test_auth_config(self):
         """Test authentication configuration is set correctly."""
