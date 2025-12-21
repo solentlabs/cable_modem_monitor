@@ -26,8 +26,38 @@ from .const import (
     DOMAIN,
 )
 from .lib.utils import parse_uptime_to_seconds
+from .parsers.base_parser import ModemCapability
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _has_capability(coordinator: DataUpdateCoordinator, capability: ModemCapability) -> bool:
+    """Check if the parser has a specific capability."""
+    capabilities = coordinator.data.get("_parser_capabilities", [])
+    return capability.value in capabilities
+
+
+def _create_system_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
+    """Create system-level sensors (error totals, channel counts, version, uptime)."""
+    entities: list[SensorEntity] = []
+
+    # Error totals
+    entities.append(ModemTotalCorrectedSensor(coordinator, entry))
+    entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
+
+    # Channel counts
+    entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
+    entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
+
+    # Software version
+    entities.append(ModemSoftwareVersionSensor(coordinator, entry))
+
+    # Uptime sensors (only if parser has capability)
+    if _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME):
+        entities.append(ModemSystemUptimeSensor(coordinator, entry))
+        entities.append(ModemLastBootTimeSensor(coordinator, entry))
+
+    return entities
 
 
 async def async_setup_entry(
@@ -59,18 +89,8 @@ async def async_setup_entry(
     is_fallback_mode = coordinator.data.get("cable_modem_fallback_mode", False)
 
     if not is_fallback_mode:
-        # Add total error sensors (not available in fallback mode)
-        entities.append(ModemTotalCorrectedSensor(coordinator, entry))
-        entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
-
-        # Add channel count sensors (not available in fallback mode)
-        entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
-        entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
-
-        # Add software version and uptime sensors (not available in fallback mode)
-        entities.append(ModemSoftwareVersionSensor(coordinator, entry))
-        entities.append(ModemSystemUptimeSensor(coordinator, entry))
-        entities.append(ModemLastBootTimeSensor(coordinator, entry))
+        # Add system-level sensors (not available in fallback mode)
+        entities.extend(_create_system_sensors(coordinator, entry))
     else:
         _LOGGER.info("Fallback mode detected - skipping sensors that require channel/system data")
 

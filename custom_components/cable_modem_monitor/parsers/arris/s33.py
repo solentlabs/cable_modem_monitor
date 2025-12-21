@@ -68,10 +68,12 @@ class ArrisS33HnapParser(ModemParser):
     ]
 
     # Capabilities - S33 HNAP parser
+    # Note: S33 does NOT provide system uptime. The HNAP field CustomerCurSystemTime
+    # contains the current clock time, not uptime duration. The Arris UI confusingly
+    # displays this in an element called "SystemUpTime", but it's just the current time.
     capabilities = {
         ModemCapability.DOWNSTREAM_CHANNELS,
         ModemCapability.UPSTREAM_CHANNELS,
-        ModemCapability.SYSTEM_UPTIME,
         ModemCapability.SOFTWARE_VERSION,
         ModemCapability.RESTART,  # Uses SetArrisConfigurationInfo Action="reboot"
     }
@@ -171,6 +173,17 @@ class ArrisS33HnapParser(ModemParser):
 
             # Check if failure is due to authentication
             auth_failure = self._is_auth_failure(json_error)
+
+            # Log unusual pattern: login succeeded (we have a builder) but parse failed
+            # This helps diagnose post-reboot session issues
+            if self._json_builder is not None:
+                _LOGGER.warning(
+                    "S33: Parse failed after successful login - possible session invalidation. "
+                    "Cookies: %s, Has private_key: %s, Error: %s",
+                    list(session.cookies.keys()) if session else "no session",
+                    self._json_builder._private_key is not None,
+                    str(json_error)[:100],
+                )
 
             result: dict[str, list | dict] = {"downstream": [], "upstream": [], "system_info": {}}
 
@@ -290,12 +303,19 @@ class ArrisS33HnapParser(ModemParser):
                     modulation = fields[2].strip()
 
                     # Frequency - could be Hz or need conversion
+                    # S33 HNAP returns frequencies already in Hz without suffix
+                    # (e.g., "537000000" for 537 MHz)
                     freq_str = fields[4].strip()
                     if "Hz" in freq_str:
                         frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
                     else:
-                        # Assume MHz, convert to Hz
-                        frequency = int(round(float(freq_str) * 1_000_000))
+                        freq_val = float(freq_str)
+                        # If value > 1,000,000 it's already in Hz (e.g., 537000000 Hz)
+                        # If value < 1000 it's likely MHz (e.g., 537 MHz)
+                        if freq_val > 1_000_000:
+                            frequency = int(freq_val)
+                        else:
+                            frequency = int(round(freq_val * 1_000_000))
 
                     # Power - strip units if present
                     power_str = fields[5].strip().replace(" dBmV", "").replace("dBmV", "")
@@ -374,12 +394,18 @@ class ArrisS33HnapParser(ModemParser):
                     symbol_rate = fields[4].strip()  # Keep as string, may have units
 
                     # Frequency - could be Hz or need conversion
+                    # S33 HNAP returns frequencies already in Hz without suffix
                     freq_str = fields[5].strip()
                     if "Hz" in freq_str:
                         frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
                     else:
-                        # Assume MHz, convert to Hz
-                        frequency = int(round(float(freq_str) * 1_000_000))
+                        freq_val = float(freq_str)
+                        # If value > 1,000,000 it's already in Hz (e.g., 22800000 Hz)
+                        # If value < 1000 it's likely MHz (e.g., 22.8 MHz)
+                        if freq_val > 1_000_000:
+                            frequency = int(freq_val)
+                        else:
+                            frequency = int(round(freq_val * 1_000_000))
 
                     # Power - strip units if present
                     power_str = fields[6].strip().replace(" dBmV", "").replace("dBmV", "")
@@ -425,7 +451,9 @@ class ArrisS33HnapParser(ModemParser):
         if not conn_info:
             return
 
-        self._set_if_present(conn_info, "CustomerCurSystemTime", system_info, "system_uptime")
+        # Note: CustomerCurSystemTime is the current clock time, NOT uptime.
+        # The Arris UI displays this in an element called "SystemUpTime" which is misleading.
+        # We intentionally do NOT map it to system_uptime since it's not a duration.
         self._set_if_present(conn_info, "CustomerConnNetworkAccess", system_info, "network_access")
         self._set_if_present(conn_info, "StatusSoftwareModelName", system_info, "model_name")
 
