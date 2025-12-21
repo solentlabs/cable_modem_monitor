@@ -109,7 +109,7 @@ repos:
         name: Check fixtures for PII and metadata
         entry: scripts/dev/run-python.sh scripts/dev/check-fixture-pii.py
         language: script
-        files: ^tests/parsers/.*/fixtures/.*\.(html|yaml)$
+        files: ^tests/parsers/.*/fixtures/.*\.(html|htm|json|yaml)$
         pass_filenames: false
         stages: [pre-commit]
 

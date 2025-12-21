@@ -15,13 +15,13 @@ class TestCheckForPii:
 
     def test_detects_mac_address(self):
         """Test detection of MAC addresses."""
-        content = "Device MAC: AA:BB:CC:DD:EE:FF"
+        content = "Device MAC: DE:AD:BE:EF:CA:FE"
         findings = check_for_pii(content)
 
         # MAC addresses may also match IPv6 pattern due to colon format
         mac_findings = [f for f in findings if f["pattern"] == "mac_address"]
         assert len(mac_findings) == 1
-        assert mac_findings[0]["match"] == "AA:BB:CC:DD:EE:FF"
+        assert mac_findings[0]["match"] == "DE:AD:BE:EF:CA:FE"
 
     def test_detects_email(self):
         """Test detection of email addresses."""
@@ -74,7 +74,7 @@ class TestCheckForPii:
 
     def test_returns_line_numbers(self):
         """Test that line numbers are correctly reported."""
-        content = "Line 1\nLine 2\nMAC: AA:BB:CC:DD:EE:FF on line 3"
+        content = "Line 1\nLine 2\nMAC: DE:AD:BE:EF:CA:FE on line 3"
         findings = check_for_pii(content)
 
         # Filter to MAC pattern specifically
@@ -84,7 +84,7 @@ class TestCheckForPii:
 
     def test_includes_filename(self):
         """Test that filename is included in findings."""
-        content = "MAC: AA:BB:CC:DD:EE:FF"
+        content = "MAC: DE:AD:BE:EF:CA:FE"
         findings = check_for_pii(content, filename="test.html")
 
         # Filter to MAC pattern specifically
@@ -95,7 +95,7 @@ class TestCheckForPii:
     def test_multiple_findings(self):
         """Test detection of multiple PII instances."""
         content = """
-        MAC1: AA:BB:CC:DD:EE:FF
+        MAC1: DE:AD:BE:EF:CA:FE
         MAC2: 11:22:33:44:55:66
         Email: test@example.com
         """

@@ -195,6 +195,7 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
                 data["_parser_docsis_version"] = detection_info.get("docsis_version")
                 data["_parser_fixtures_url"] = detection_info.get("fixtures_url")
                 data["_parser_verified"] = detection_info.get("verified", False)
+                data["_parser_capabilities"] = detection_info.get("capabilities", [])
 
             return data
         except Exception as err:
