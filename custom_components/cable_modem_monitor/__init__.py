@@ -20,6 +20,7 @@ from homeassistant.helpers import (
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_DOCSIS_VERSION,
     CONF_HOST,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
@@ -35,6 +36,7 @@ from .const import (
 from .core.health_monitor import ModemHealthMonitor
 from .core.modem_scraper import ModemScraper
 from .parsers import get_parser_by_name, get_parsers
+from .utils.entity_migration import migrate_docsis30_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -773,6 +775,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store coordinator
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
+    # Must run before platform setup so sensors don't create duplicates
+    docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
+    migrated = migrate_docsis30_entities(hass, entry, docsis_version)
+    if migrated > 0:
+        _LOGGER.info("Entity migration complete: %d entities updated", migrated)
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

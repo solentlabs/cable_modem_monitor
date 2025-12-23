@@ -29,12 +29,18 @@ sensor.cable_modem_us_ofdma_ch_1_power
 
 **Why:** DOCSIS 3.1 modems can have overlapping Channel IDs across different channel types (QAM vs OFDM). Adding the channel type to the entity ID prevents collisions and makes entities unambiguous.
 
-**Migration:** Use the `generate_dashboard` service to rebuild your dashboards:
+**Migration for DOCSIS 3.0 users:**
+1. Go to Settings → Integrations → Cable Modem Monitor → Configure
+2. Click Submit (no changes needed)
+3. Entities are automatically migrated on reload, preserving history
+
+**Migration for DOCSIS 3.1 users:**
 1. Go to Developer Tools → Services
 2. Call `cable_modem_monitor.generate_dashboard`
 3. Copy the YAML output and replace your existing dashboard cards
 
 ### Added
+- **Automatic Entity Migration for DOCSIS 3.0** - Existing entities are automatically migrated to the new naming scheme for DOCSIS 3.0 modems. Since DOCSIS 3.0 only has one channel type per direction (QAM downstream, ATDMA upstream), the migration is unambiguous and preserves entity history. Trigger migration by opening the integration's Configure dialog and clicking Submit.
 - **Channel Type in Entity IDs** - All channel sensors now include channel type (qam, ofdm, atdma, ofdma) for DOCSIS 3.1 compatibility
 - **Dashboard Channel Grouping** - `generate_dashboard` service now accepts `channel_grouping` parameter:
   - `by_direction` (default) - All downstream channels in one card, all upstream in another

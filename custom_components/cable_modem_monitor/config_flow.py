@@ -13,6 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import (
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
+    CONF_DOCSIS_VERSION,
     CONF_HOST,
     CONF_LAST_DETECTION,
     CONF_MODEM_CHOICE,
@@ -479,6 +480,7 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             user_input[CONF_PARSER_NAME] = detected_modem_name  # Cache parser name
             user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
             user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+            user_input[CONF_DOCSIS_VERSION] = detection_info.get("docsis_version")  # For entity migration
             user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
             from datetime import datetime
 
@@ -578,6 +580,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             user_input[CONF_PARSER_NAME] = detected_modem_name
             user_input[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
             user_input[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
+            user_input[CONF_DOCSIS_VERSION] = detection_info.get("docsis_version")  # For entity migration
             user_input[CONF_WORKING_URL] = detection_info.get("successful_url")
             from datetime import datetime
 
@@ -595,6 +598,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             user_input[CONF_PARSER_NAME] = self.config_entry.data.get(CONF_PARSER_NAME)
             user_input[CONF_DETECTED_MODEM] = self.config_entry.data.get(CONF_DETECTED_MODEM, "Unknown")
             user_input[CONF_DETECTED_MANUFACTURER] = self.config_entry.data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
+            user_input[CONF_DOCSIS_VERSION] = self.config_entry.data.get(CONF_DOCSIS_VERSION)
             user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
             user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
 
