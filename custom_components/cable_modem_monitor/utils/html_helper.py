@@ -260,7 +260,14 @@ PII_PATTERNS = {
 # Allowlist of patterns that are OK to have in fixtures (redacted placeholders)
 PII_ALLOWLIST = [
     "XX:XX:XX:XX:XX:XX",
+    "AA:BB:CC:DD:EE:FF",  # Common test/sanitized MAC placeholder
     "***REDACTED***",
+    "***REDACTED_IP***",
+    "***REDACTED_IPV6***",
+    "***REDACTED_SESSION***",
+    "***REDACTED_TOKEN***",
+    "***REDACTED_SSID***",
+    "***REDACTED_SSID_GUEST***",
     "***PRIVATE_IP***",
     "***PUBLIC_IP***",
     "***IPv6***",

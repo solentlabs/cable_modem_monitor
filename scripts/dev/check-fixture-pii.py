@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Pre-commit hook to check for PII in test fixtures.
 
-Scans HTML/HTM fixture files for potential personally identifiable information:
+Scans HTML/HTM/JSON fixture files for potential personally identifiable information:
 - MAC addresses (not anonymized with XX:XX:XX:XX:XX:XX)
-- Public IP addresses (non-private ranges)
+- IP addresses (only 192.168.100.x allowed in fixtures)
 - Serial numbers
-- WiFi credentials in tagValueList (Netgear modem format)
+- WiFi SSIDs and credentials
+- Session tokens and CSRF tokens
 - Email addresses
 - Other sensitive patterns
 
@@ -48,6 +49,25 @@ MOTO_PASSWORD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# SSID patterns (HTML and JSON)
+SSID_PATTERNS = [
+    re.compile(r'class="[^"]*ssidValue[^"]*"[^>]*>([^<]+)<', re.IGNORECASE),
+    re.compile(r'"ssid"\s*:\s*"([^"]+)"', re.IGNORECASE),
+    re.compile(r'"SSID"\s*:\s*"([^"]+)"', re.IGNORECASE),
+    re.compile(r'"networkName"\s*:\s*"([^"]+)"', re.IGNORECASE),
+]
+
+# Session/CSRF token patterns
+SESSION_TOKEN_PATTERNS = [
+    re.compile(r'"sessionid"\s*:\s*"([a-f0-9]{16,})"', re.IGNORECASE),
+    re.compile(r'"token"\s*:\s*"([a-f0-9]{16,})"', re.IGNORECASE),
+    re.compile(r'"csrf[_-]?token"\s*:\s*"([^"]+)"', re.IGNORECASE),
+    re.compile(r'"auth[_-]?token"\s*:\s*"([^"]+)"', re.IGNORECASE),
+]
+
+# IP address pattern for JSON/text content
+IP_PATTERN = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
+
 # Known safe values (anonymized placeholders)
 SAFE_VALUES = set(PII_ALLOWLIST) | {
     "00:00:00:00:00:00",
@@ -55,41 +75,44 @@ SAFE_VALUES = set(PII_ALLOWLIST) | {
     "0.0.0.0",
 }
 
-# Safe MAC addresses (zeroed, broadcast, documentation)
+# Safe MAC addresses (zeroed, broadcast, documentation, test patterns)
 SAFE_MACS = {
     "00:00:00:00:00:00",
     "ff:ff:ff:ff:ff:ff",
+    # Common test/example MAC ranges
+    "00:11:22:33:44:51",
+    "00:11:22:33:44:52",
+    "00:11:22:33:44:53",
+    "00:11:22:33:44:54",
+    "00:11:22:33:44:55",
+    # Sanitized placeholders
+    "aa:bb:cc:dd:ee:ff",
 }
 
-# Private/documentation IP ranges (safe to include)
-# Includes RFC 5737 TEST-NET ranges for documentation
+# Safe IP prefixes for fixture files
+# RESTRICTIVE: Only allow modem LAN IPs and special addresses
+# ISP-assigned IPs (even private ranges like 10.x) should be redacted
 SAFE_IP_PREFIXES = (
-    "192.168.",
-    "10.",
-    "172.16.",
-    "172.17.",
-    "172.18.",
-    "172.19.",
-    "172.20.",
-    "172.21.",
-    "172.22.",
-    "172.23.",
-    "172.24.",
-    "172.25.",
-    "172.26.",
-    "172.27.",
-    "172.28.",
-    "172.29.",
-    "172.30.",
-    "172.31.",
-    "127.",
-    "0.0.0.0",
-    "255.255.255.",
+    "192.168.100.",  # Standard cable modem LAN IP
+    "192.168.0.",  # Common router LAN
+    "192.168.1.",  # Common router LAN
+    "127.",  # Localhost
+    "0.0.0.0",  # Unspecified
+    "255.",  # Subnet masks and broadcast addresses
     # RFC 5737 TEST-NET ranges (documentation IPs - safe)
     "192.0.2.",  # TEST-NET-1
     "198.51.100.",  # TEST-NET-2
     "203.0.113.",  # TEST-NET-3
 )
+
+# Safe SSIDs (redacted placeholders or test values)
+SAFE_SSID_VALUES = {
+    "***redacted***",
+    "***redacted_ssid***",
+    "***redacted_ssid_guest***",
+    "test_network",
+    "test_ssid",
+}
 
 # Safe values for tagValueList (status values, device names, not credentials)
 TAGVALUE_SAFE_PATTERNS = {
@@ -217,6 +240,70 @@ def check_tagvaluelist_credentials(content: str, filepath: Path) -> list[str]:
     return issues
 
 
+def check_ssids(content: str, filepath: Path) -> list[str]:
+    """Check for WiFi SSIDs that haven't been redacted."""
+    issues = []
+
+    for pattern in SSID_PATTERNS:
+        for match in pattern.finditer(content):
+            ssid = match.group(1).strip()
+            ssid_lower = ssid.lower()
+
+            # Skip already-redacted or safe values
+            if ssid_lower in SAFE_SSID_VALUES or ssid.startswith("***"):
+                continue
+
+            # Skip empty or whitespace-only
+            if not ssid or ssid.isspace():
+                continue
+
+            issues.append(f"  WiFi SSID found: '{ssid}'")
+
+    return issues
+
+
+def check_session_tokens(content: str, filepath: Path) -> list[str]:
+    """Check for session tokens and CSRF tokens that should be redacted."""
+    issues = []
+
+    for pattern in SESSION_TOKEN_PATTERNS:
+        for match in pattern.finditer(content):
+            token = match.group(1)
+
+            # Skip already-redacted values
+            if token.startswith("***"):
+                continue
+
+            issues.append(f"  Session/auth token found: '{token[:20]}...'")
+
+    return issues
+
+
+def check_ips_in_content(content: str, filepath: Path) -> list[str]:
+    """Check for IP addresses that aren't in the safe list."""
+    issues = []
+    seen_ips: set[str] = set()
+
+    for match in IP_PATTERN.finditer(content):
+        ip = match.group(1)
+
+        # Skip duplicates
+        if ip in seen_ips:
+            continue
+        seen_ips.add(ip)
+
+        # Skip safe IPs
+        if is_safe_ip(ip):
+            continue
+
+        # Validate it's a real IP (each octet 0-255)
+        octets = ip.split(".")
+        if all(0 <= int(o) <= 255 for o in octets):
+            issues.append(f"  Non-allowed IP address: {ip}")
+
+    return issues
+
+
 def check_html_file(filepath: Path) -> list[str]:
     """Check a single HTML file for PII."""
     issues = []
@@ -225,7 +312,7 @@ def check_html_file(filepath: Path) -> list[str]:
     # Use the comprehensive check_for_pii function
     findings = check_for_pii(content, str(filepath))
     for finding in findings:
-        # Skip safe IPs (private + documentation ranges)
+        # Skip safe IPs
         if finding["pattern"] == "public_ip" and is_safe_ip(finding["match"]):
             continue
         # Skip safe MAC addresses
@@ -240,6 +327,53 @@ def check_html_file(filepath: Path) -> list[str]:
     # Check for Motorola password variables
     moto_issues = check_motorola_passwords(content, filepath)
     issues.extend(moto_issues)
+
+    # Check for WiFi SSIDs
+    ssid_issues = check_ssids(content, filepath)
+    issues.extend(ssid_issues)
+
+    # Check for session tokens
+    token_issues = check_session_tokens(content, filepath)
+    issues.extend(token_issues)
+
+    # Check for non-allowed IPs
+    ip_issues = check_ips_in_content(content, filepath)
+    issues.extend(ip_issues)
+
+    return issues
+
+
+def check_json_file(filepath: Path) -> list[str]:
+    """Check a single JSON file for PII."""
+    issues = []
+
+    try:
+        content = filepath.read_text(errors="ignore")
+    except Exception as e:
+        return [f"  Failed to read file: {e}"]
+
+    # Check for WiFi SSIDs
+    ssid_issues = check_ssids(content, filepath)
+    issues.extend(ssid_issues)
+
+    # Check for session tokens
+    token_issues = check_session_tokens(content, filepath)
+    issues.extend(token_issues)
+
+    # Check for non-allowed IPs
+    ip_issues = check_ips_in_content(content, filepath)
+    issues.extend(ip_issues)
+
+    # Use comprehensive check_for_pii for other patterns
+    findings = check_for_pii(content, str(filepath))
+    for finding in findings:
+        # Skip safe IPs
+        if finding["pattern"] == "public_ip" and is_safe_ip(finding["match"]):
+            continue
+        # Skip safe MAC addresses
+        if finding["pattern"] == "mac_address" and is_safe_mac(finding["match"]):
+            continue
+        issues.append(f"  {finding['pattern']}: {finding['match']} (line {finding['line']})")
 
     return issues
 
@@ -326,6 +460,21 @@ def main() -> int:  # noqa: C901
                     print(f"\n❌ Missing metadata.yaml in {fixture_dir}")
                     print("  → See docs/reference/FIXTURE_FORMAT.md for template")
                     exit_code = 1
+
+    # Find all JSON files in fixture directories
+    for json_file in fixtures_root.rglob("fixtures/**/*.json"):
+        # Skip state.json files (internal pytest state)
+        if json_file.name == "state.json":
+            continue
+
+        files_checked += 1
+        issues = check_json_file(json_file)
+        if issues:
+            print(f"\n⚠️  Potential PII in {json_file}:")
+            for issue in issues:
+                print(issue)
+            print("  → Please redact IPs, SSIDs, and tokens with ***REDACTED_*** patterns")
+            exit_code = 1
 
     # Find all HAR files
     for har_file in fixtures_root.rglob("fixtures/**/*.har"):
