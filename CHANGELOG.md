@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.11.0] - 2025-12-27
+
 ## [3.11.0] - 2025-12-24
 
 ### ⚠️ BREAKING CHANGE: Channel Sensor Entity IDs
