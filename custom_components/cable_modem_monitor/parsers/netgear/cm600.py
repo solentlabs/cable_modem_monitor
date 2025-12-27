@@ -203,6 +203,11 @@ class NetgearCM600Parser(ModemParser):
         router_system_info = self._parse_router_system_info(router_soup)
         system_info.update(router_system_info)
 
+        # Extract actual model from HTML
+        model_name = self._extract_model(docsis_soup)
+        if model_name:
+            system_info["model_name"] = model_name
+
         return {
             "downstream": downstream_channels,
             "upstream": upstream_channels,
@@ -484,6 +489,40 @@ class NetgearCM600Parser(ModemParser):
         except Exception as e:
             _LOGGER.error("Error calculating boot time from '%s': %s", uptime_str, e)
             return None
+
+    def _extract_model(self, soup: BeautifulSoup) -> str | None:
+        """Extract actual model name from HTML meta or title.
+
+        The CM600 includes model info in:
+        - <META name="description" content='CM600-100NAS'>
+        - <title>NETGEAR Gateway CM600</title>
+
+        Args:
+            soup: BeautifulSoup object of the page
+
+        Returns:
+            Model name (e.g., "CM600-100NAS") or None if not found
+        """
+        # Try meta description first (most reliable)
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta:
+            content = meta.get("content")
+            if isinstance(content, str) and content.strip():
+                _LOGGER.debug("CM600: Extracted model from meta description: %s", content.strip())
+                return content.strip()
+
+        # Fallback to title tag
+        title = soup.find("title")
+        if title and title.string:
+            # Extract model from "NETGEAR Gateway CM600"
+            match = re.search(r"Gateway\s+(\S+)", title.string)
+            if match:
+                model = match.group(1)
+                _LOGGER.debug("CM600: Extracted model from title: %s", model)
+                return model
+
+        _LOGGER.debug("CM600: Could not extract model name from HTML")
+        return None
 
     def parse_system_info(self, soup: BeautifulSoup) -> dict:
         """Parse system information from DocsisStatus.asp.

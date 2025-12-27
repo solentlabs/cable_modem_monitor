@@ -20,6 +20,8 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_ACTUAL_MODEL,
+    CONF_DETECTED_MODEM,
     CONF_HOST,
     DOMAIN,
 )
@@ -96,7 +98,8 @@ async def async_setup_entry(
     if coordinator.data.get("cable_modem_downstream"):
         for idx, channel in enumerate(coordinator.data["cable_modem_downstream"]):
             # v3.11+ uses channel_type for disambiguation and channel_id for stability
-            channel_type = channel.get("channel_type", "qam")
+            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
+            channel_type = channel.get("channel_type", "qam").lower()
             channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
             entities.extend(
                 [
@@ -116,7 +119,8 @@ async def async_setup_entry(
         _LOGGER.debug("Creating entities for %s upstream channels", len(coordinator.data["cable_modem_upstream"]))
         for idx, channel in enumerate(coordinator.data["cable_modem_upstream"]):
             # v3.11+ uses channel_type for disambiguation and channel_id for stability
-            channel_type = channel.get("channel_type", "atdma")
+            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
+            channel_type = channel.get("channel_type", "atdma").lower()
             channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
             power_sensor = ModemUpstreamPowerSensor(coordinator, entry, channel_type, channel_id)
             freq_sensor = ModemUpstreamFrequencySensor(coordinator, entry, channel_type, channel_id)
@@ -152,15 +156,19 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._entry = entry
 
-        # Get detected modem info from config entry, with fallback to generic values
+        # Get modem info from config entry
+        # NOTE: Device name is kept as "Cable Modem" for entity ID stability.
+        # Changing device name would change all entity IDs since has_entity_name=True.
+        # Users can rename the device in the UI if desired.
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
-        model = entry.data.get("detected_modem", "Cable Modem Monitor")
+        actual_model = entry.data.get(CONF_ACTUAL_MODEL)
+        detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "Cable Modem",
             "manufacturer": manufacturer,
-            "model": model,
+            "model": actual_model or detected_modem,
             "configuration_url": f"http://{entry.data[CONF_HOST]}",
         }
 

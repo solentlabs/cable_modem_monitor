@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -11,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
+    CONF_ACTUAL_MODEL,
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
     CONF_DOCSIS_VERSION,
@@ -20,6 +22,7 @@ from .const import (
     CONF_PARSER_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
@@ -178,7 +181,9 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
     _LOGGER.info("Starting connectivity check for %s (trying %d URL(s))", host, len(test_urls))
 
     diagnostic_info = []
-    timeout_value = 10
+    # Short timeout for local network devices - modems should respond quickly
+    # 3 seconds is enough for LAN, prevents long waits when HTTPS isn't supported
+    timeout_value = 3
 
     for test_url in test_urls:
         protocol = "HTTPS" if test_url.startswith("https://") else "HTTP"
@@ -260,6 +265,40 @@ def _do_quick_connectivity_check(host: str) -> tuple[bool, str | None]:
     return False, error_msg
 
 
+async def _test_icmp_ping(host: str) -> bool:
+    """Test if ICMP ping works for the given host.
+
+    Auto-detects ICMP support during setup. Result is stored in config entry
+    so health monitoring can skip ping for hosts that block ICMP.
+
+    Args:
+        host: IP address or hostname to ping
+
+    Returns:
+        True if ping succeeds, False if blocked or times out
+    """
+    try:
+        # Use system ping command: -c 1 = 1 packet, -W 1 = 1 second timeout
+        # Keep timeout short since this runs in parallel with other setup work
+        proc = await asyncio.create_subprocess_exec(
+            "ping",
+            "-c",
+            "1",
+            "-W",
+            "1",
+            host,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        success = proc.returncode == 0
+        _LOGGER.info("ICMP ping test for %s: %s", host, "success" if success else "blocked/timeout")
+        return success
+    except Exception as e:
+        _LOGGER.debug("ICMP ping test exception for %s: %s", host, e)
+        return False
+
+
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     # Validate host format
@@ -296,16 +335,29 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     # Connect and validate
     _LOGGER.warning("Attempting to connect to modem at %s", host)
-    await _connect_to_modem(hass, scraper)
+    modem_data = await _connect_to_modem(hass, scraper)
 
     # Get detection info and create title
     detection_info = scraper.get_detection_info()
+
+    # Extract actual model from parsed modem data
+    if scraper.parser:
+        actual_model = scraper.parser.get_actual_model(modem_data)
+        if actual_model:
+            detection_info["actual_model"] = actual_model
+            _LOGGER.info("Actual model extracted from modem: %s", actual_model)
+
     _LOGGER.warning("Detection successful: %s", detection_info)
     title = _create_title(detection_info, host)
+
+    # Test ICMP ping support AFTER discovery succeeds (for health monitoring)
+    # Some hosts (especially combo modem/routers) block ICMP on certain interfaces
+    supports_icmp = await _test_icmp_ping(host)
 
     return {
         "title": title,
         "detection_info": detection_info,
+        "supports_icmp": supports_icmp,
     }
 
 
@@ -473,6 +525,9 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         user_input.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         # Note: VERIFY_SSL is now a hardcoded constant (see const.py)
 
+        # Store ICMP support from validation (for health monitoring)
+        user_input[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+
         # Store detection info from validation
         detection_info = info.get("detection_info", {})
         if detection_info:
@@ -485,6 +540,10 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
             from datetime import datetime
 
             user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+
+            # Store actual model if extracted from modem
+            if detection_info.get("actual_model"):
+                user_input[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
 
             # If user selected "auto", update the choice to show what was detected
             if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
@@ -574,6 +633,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     def _update_detection_info(self, user_input: dict[str, Any], info: dict) -> None:
         """Update user input with detection info from validation."""
+        # Always update ICMP support - it's re-tested on every validation
+        user_input[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+
         detection_info = info.get("detection_info", {})
         if detection_info:
             detected_modem_name = detection_info.get("modem_name")
@@ -585,6 +647,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             from datetime import datetime
 
             user_input[CONF_LAST_DETECTION] = datetime.now().isoformat()
+
+            # Store actual model if extracted from modem
+            if detection_info.get("actual_model"):
+                user_input[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
 
             # If user selected "auto", update choice to show what was detected
             if user_input.get(CONF_MODEM_CHOICE) == "auto" and detected_modem_name:
@@ -601,6 +667,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             user_input[CONF_DOCSIS_VERSION] = self.config_entry.data.get(CONF_DOCSIS_VERSION)
             user_input[CONF_WORKING_URL] = self.config_entry.data.get(CONF_WORKING_URL)
             user_input[CONF_LAST_DETECTION] = self.config_entry.data.get(CONF_LAST_DETECTION)
+            user_input[CONF_ACTUAL_MODEL] = self.config_entry.data.get(CONF_ACTUAL_MODEL)
 
     def _create_config_message(self, user_input: dict[str, Any]) -> str:
         """Create configuration message from detected modem info."""
@@ -663,8 +730,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 # Update detection info from validation
                 self._update_detection_info(user_input, info)
 
-                # Update the config entry with all settings
-                self.hass.config_entries.async_update_entry(self.config_entry, data=user_input)
+                # Construct new title from detected modem info
+                detection_info = {
+                    "modem_name": user_input.get(CONF_DETECTED_MODEM, "Cable Modem"),
+                    "manufacturer": user_input.get(CONF_DETECTED_MANUFACTURER, ""),
+                }
+                new_title = _create_title(detection_info, user_input.get(CONF_HOST, ""))
+
+                # Update the config entry with all settings and refreshed title
+                self.hass.config_entries.async_update_entry(self.config_entry, title=new_title, data=user_input)
 
                 # Create notification with detected modem info
                 message = self._create_config_message(user_input)

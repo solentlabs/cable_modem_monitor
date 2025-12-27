@@ -26,6 +26,7 @@ from .const import (
     CONF_PARSER_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
@@ -156,16 +157,15 @@ async def _create_health_monitor(hass: HomeAssistant):
     return ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
 
 
-def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str):
+def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str, supports_icmp: bool = True):
     """Create the async update function for the coordinator."""
 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
         base_url = f"http://{host}"
 
-        # Check if parser supports ICMP ping (skip if not)
-        detection_info = scraper.get_detection_info()
-        supports_icmp = detection_info.get("supports_icmp", True)
+        # Use config-based ICMP setting (auto-detected during setup/options flow)
+        # This allows different IPs of the same modem to have different ICMP behavior
         health_result = await health_monitor.check_health(base_url, skip_ping=not supports_icmp)
 
         try:
@@ -229,24 +229,33 @@ async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
 
 
 def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
-    """Update device registry with detected modem info."""
+    """Update device registry with detected modem info.
+
+    NOTE: Device name is kept as "Cable Modem" (without host) for entity ID stability.
+    With has_entity_name=True, entity IDs are generated from device name.
+    Users can rename the device in the UI if desired.
+    """
     device_registry = dr.async_get(hass)
+
+    # Use detected_modem for model field (shown in device info)
+    actual_model = entry.data.get("actual_model")
+    detected_modem = entry.data.get("detected_modem")
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name=f"Cable Modem {host}",
+        name="Cable Modem",
     )
 
     device_registry.async_update_device(
         device.id,
         manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
-        model=entry.data.get("detected_modem", "Cable Modem Monitor"),
+        model=actual_model or detected_modem or "Cable Modem Monitor",
     )
     _LOGGER.debug(
         "Updated device registry: manufacturer=%s, model=%s",
         entry.data.get("detected_manufacturer"),
-        entry.data.get("detected_modem"),
+        actual_model or detected_modem,
     )
 
 
@@ -733,8 +742,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create health monitor
     health_monitor = await _create_health_monitor(hass)
 
+    # Get ICMP support setting (auto-detected during setup, re-tested on options change)
+    supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
+
     # Create coordinator
-    async_update_data = _create_update_function(hass, scraper, health_monitor, host)
+    async_update_data = _create_update_function(hass, scraper, health_monitor, host, supports_icmp)
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,

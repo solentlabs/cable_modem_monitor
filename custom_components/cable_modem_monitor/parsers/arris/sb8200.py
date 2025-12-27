@@ -82,6 +82,11 @@ class ArrisSB8200Parser(ModemParser):
             except Exception as e:
                 _LOGGER.debug("Failed to fetch cmswinfo.html: %s", e)
 
+        # Extract actual model from HTML
+        model_name = self._extract_model(soup)
+        if model_name:
+            system_info["model_name"] = model_name
+
         return {
             "downstream": downstream_channels,
             "upstream": upstream_channels,
@@ -333,3 +338,25 @@ class ArrisSB8200Parser(ModemParser):
         except (ValueError, AttributeError) as e:
             _LOGGER.debug("Error parsing uptime '%s': %s", uptime_str, e)
             return None
+
+    def _extract_model(self, soup: BeautifulSoup) -> str | None:
+        """Extract actual model name from HTML.
+
+        The SB8200 includes model info in:
+        - <span id="thisModelNumberIs">SB8200</span>
+
+        Args:
+            soup: BeautifulSoup object of the page
+
+        Returns:
+            Model name (e.g., "SB8200") or None if not found
+        """
+        model_span = soup.find("span", {"id": "thisModelNumberIs"})
+        if model_span:
+            model = model_span.get_text(strip=True)
+            if model:
+                _LOGGER.debug("SB8200: Extracted model from thisModelNumberIs: %s", model)
+                return str(model)
+
+        _LOGGER.debug("SB8200: Could not extract model name from HTML")
+        return None
