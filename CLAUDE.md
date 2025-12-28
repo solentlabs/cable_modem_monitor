@@ -35,6 +35,18 @@ Examples of irreversible operations requiring verification:
 - Tag deletions
 - Any git operation with `--force`
 
+## Branch Management - Rebase Over Cherry-Pick
+
+When applying a fix to multiple feature branches (e.g., v3.11.0 and v3.12.0):
+
+1. **Commit the fix to the base branch first** (e.g., v3.11.0)
+2. **Rebase the child branch** onto the updated parent: `git checkout feature/v3.12.0 && git rebase feature/v3.11.0`
+3. **Force push the rebased branch**: `git push --force-with-lease`
+
+**Why not cherry-pick?** Cherry-pick creates duplicate commits with different SHAs. When branches merge to main, you get duplicate history or merge conflicts.
+
+**Exception:** Cherry-pick is fine for backporting to unrelated branches (e.g., hotfix to an old release).
+
 ## Release Checklist - Verify ALL Before Saying "Ready"
 
 1. [ ] Run `scripts/release.py <version>` to bump versions
