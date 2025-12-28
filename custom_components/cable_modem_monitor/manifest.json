@@ -1,6 +1,7 @@
 {
   "domain": "cable_modem_monitor",
   "name": "Cable Modem Monitor",
+  "after_dependencies": ["recorder"],
   "codeowners": [
     "@kwschulz"
   ],

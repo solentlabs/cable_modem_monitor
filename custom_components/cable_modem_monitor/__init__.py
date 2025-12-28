@@ -37,7 +37,7 @@ from .const import (
 from .core.health_monitor import ModemHealthMonitor
 from .core.modem_scraper import ModemScraper
 from .parsers import get_parser_by_name, get_parsers
-from .utils.entity_migration import migrate_docsis30_entities
+from .utils.entity_migration import async_migrate_docsis30_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -773,7 +773,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
     # Must run before platform setup so sensors don't create duplicates
     docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
-    migrated = migrate_docsis30_entities(hass, entry, docsis_version)
+    # Fallback: get docsis_version from parser if not in config entry (pre-v3.11 installs)
+    if not docsis_version and hasattr(selected_parser, "docsis_version"):
+        docsis_version = selected_parser.docsis_version
+        _LOGGER.debug("Using parser docsis_version for migration: %s", docsis_version)
+    migrated = await async_migrate_docsis30_entities(hass, entry, docsis_version)
     if migrated > 0:
         _LOGGER.info("Entity migration complete: %d entities updated", migrated)
 
