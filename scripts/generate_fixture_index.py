@@ -278,6 +278,25 @@ def isps_to_badges(isps: list[str] | str) -> str:
     return " ".join(isp_to_badge(isp) for _, _, isp in matched_isps)
 
 
+def protocol_to_badge(protocol: str) -> str:
+    """Convert a protocol name to a badge or formatted text.
+
+    Args:
+        protocol: Protocol name (e.g., "HTML", "LuCI", "HNAP")
+
+    Returns:
+        Markdown badge or formatted text for the protocol
+    """
+    # HTML gets official orange badge, LuCI gets OpenWrt cyan, HNAP stays bold black
+    if protocol == "HTML":
+        return '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
+    if protocol == "LuCI":
+        return '![LuCI](https://img.shields.io/badge/-LuCI-00B5E2?style=flat-square "OpenWrt web interface")'
+    if protocol == "HNAP":
+        return "**HNAP**"
+    return protocol
+
+
 def chipset_to_link(chipset: str) -> str:
     """Convert a chipset name to a linked reference.
 
@@ -745,13 +764,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
 
         # Get protocol and chipset, with sensible defaults
         protocol_raw = str(m.get("protocol", "HTML") or "HTML")
-        # HTML gets official orange badge, HNAP stays bold black (no official branding)
-        if protocol_raw == "HTML":
-            protocol = '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
-        elif protocol_raw == "HNAP":
-            protocol = "**HNAP**"
-        else:
-            protocol = protocol_raw
+        protocol = protocol_to_badge(protocol_raw)
         chipset = str(m.get("chipset", "") or "")
         chipset_linked = chipset_to_link(chipset)
 
@@ -783,6 +796,8 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "- **Files**: Number of fixture files (excludes README.md, metadata.yaml)",
             "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | ❌ Broken | ❓ No parser",
             "- **Protocol**: ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping |"
+            " ![LuCI](https://img.shields.io/badge/-LuCI-00B5E2?style=flat-square) ="
+            " [OpenWrt](https://openwrt.org/docs/guide-user/luci/start) web interface |"
             " **[HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)** ="
             " [SOAP](https://www.w3.org/TR/soap/)-based, requires auth",
             "- **📦**: GPL source code available (firmware uses open source components)",
