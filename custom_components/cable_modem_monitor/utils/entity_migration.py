@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import logging
 import re
+import sqlite3
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -26,6 +28,137 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _migrate_recorder_history_sync(db_path: str) -> int:
+    """Migrate recorder history from old entity IDs to new naming scheme.
+
+    This is a synchronous function meant to be run via executor.
+    It updates the states_meta table to rename old entity_ids to new ones,
+    preserving all historical data under the new entity names.
+
+    For each old entity:
+    - If new entity already exists in states_meta: merge states into new, delete old
+    - If new entity doesn't exist: rename old entity_id to new
+
+    Args:
+        db_path: Path to the Home Assistant SQLite database.
+
+    Returns:
+        Number of entities migrated.
+    """
+    # Check if database exists
+    if not Path(db_path).exists():
+        _LOGGER.debug("Recorder database not found at %s, skipping migration", db_path)
+        return 0
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Find old-style entity IDs in states_meta
+        cursor.execute(
+            "SELECT metadata_id, entity_id FROM states_meta "
+            "WHERE entity_id LIKE 'sensor.cable_modem_ds_ch_%' "
+            "OR entity_id LIKE 'sensor.cable_modem_us_ch_%'"
+        )
+        old_entities = cursor.fetchall()
+
+        if not old_entities:
+            conn.close()
+            return 0
+
+        migrated = 0
+        for old_id, old_name in old_entities:
+            # Build new entity name (skip false positives from SQL LIKE pattern)
+            # SQL _ is a single-char wildcard, so ds_ch_% also matches ds_channel_count
+            if "_ds_ch_" in old_name:
+                new_name = old_name.replace("_ds_ch_", "_ds_qam_ch_")
+            elif "_us_ch_" in old_name:
+                new_name = old_name.replace("_us_ch_", "_us_atdma_ch_")
+            else:
+                # False positive (e.g., ds_channel_count) - skip
+                continue
+
+            # Check if new entity already exists in states_meta
+            cursor.execute(
+                "SELECT metadata_id FROM states_meta WHERE entity_id = ?",
+                (new_name,),
+            )
+            row = cursor.fetchone()
+
+            if row:
+                # New entity exists - merge old states into new, then delete old
+                new_id = row[0]
+                cursor.execute(
+                    "UPDATE states SET metadata_id = ? WHERE metadata_id = ?",
+                    (new_id, old_id),
+                )
+                count = cursor.rowcount
+                cursor.execute(
+                    "DELETE FROM states_meta WHERE metadata_id = ?",
+                    (old_id,),
+                )
+                _LOGGER.debug(
+                    "Merged recorder history: %s -> %s (%d states)",
+                    old_name,
+                    new_name,
+                    count,
+                )
+            else:
+                # New entity doesn't exist - just rename old entity
+                cursor.execute(
+                    "UPDATE states_meta SET entity_id = ? WHERE metadata_id = ?",
+                    (new_name, old_id),
+                )
+                _LOGGER.debug(
+                    "Renamed recorder history: %s -> %s",
+                    old_name,
+                    new_name,
+                )
+
+            migrated += 1
+
+        conn.commit()
+        conn.close()
+
+        if migrated > 0:
+            _LOGGER.info(
+                "Migrated recorder history for %d entities to new naming scheme",
+                migrated,
+            )
+
+        return migrated
+
+    except sqlite3.Error as err:
+        _LOGGER.error("Failed to migrate recorder history: %s", err)
+        return 0
+
+
+async def _migrate_recorder_history(hass: HomeAssistant) -> int:
+    """Migrate recorder history using recorder's database executor.
+
+    Uses the recorder's dedicated thread pool for database operations,
+    which is the recommended pattern per Home Assistant guidelines.
+
+    Falls back to hass.async_add_executor_job if recorder is not available.
+
+    Returns number of entities migrated.
+    """
+    db_path = hass.config.path("home-assistant_v2.db")
+
+    try:
+        # Try to use recorder's executor (preferred method)
+        from homeassistant.components.recorder import get_instance
+
+        recorder = get_instance(hass)
+        result: int = await recorder.async_add_executor_job(_migrate_recorder_history_sync, db_path)
+        return result
+    except (KeyError, ImportError):
+        # Recorder not available - fall back to general executor
+        _LOGGER.debug("Recorder not available, using general executor for migration")
+        result = await hass.async_add_executor_job(_migrate_recorder_history_sync, db_path)
+        return result
 
 
 def _find_entities_to_migrate(
@@ -51,19 +184,26 @@ def _find_entities_to_migrate(
         if not match:
             continue
 
-        direction = match.group(1)  # "ds" or "us"
+        direction_long = match.group(1)  # "downstream" or "upstream"
         channel_id = match.group(2)  # e.g., "1", "32"
         metric = match.group(3)  # e.g., "power", "snr", "frequency"
 
+        # Map long direction names to short names
+        direction_short = "ds" if direction_long == "downstream" else "us"
+
         # Determine channel type based on direction (DOCSIS 3.0 only has one type per direction)
-        channel_type = "qam" if direction == "ds" else "atdma"
+        channel_type = "qam" if direction_short == "ds" else "atdma"
 
         # Build new unique_id with channel type
-        new_unique_id = f"{entry_id}_cable_modem_{direction}_{channel_type}_ch_{channel_id}_{metric}"
+        # Old: {entry_id}_cable_modem_downstream_1_power
+        # New: {entry_id}_cable_modem_ds_qam_ch_1_power
+        new_unique_id = f"{entry_id}_cable_modem_{direction_short}_{channel_type}_ch_{channel_id}_{metric}"
 
         # Build new entity_id (the user-visible part after sensor.)
-        old_entity_suffix = f"cable_modem_{direction}_ch_{channel_id}_{metric}"
-        new_entity_suffix = f"cable_modem_{direction}_{channel_type}_ch_{channel_id}_{metric}"
+        # Old: sensor.cable_modem_ds_ch_1_power
+        # New: sensor.cable_modem_ds_qam_ch_1_power
+        old_entity_suffix = f"cable_modem_{direction_short}_ch_{channel_id}_{metric}"
+        new_entity_suffix = f"cable_modem_{direction_short}_{channel_type}_ch_{channel_id}_{metric}"
 
         # Only migrate if entity_id follows the expected pattern
         if entity_entry.entity_id.endswith(old_entity_suffix):
@@ -117,7 +257,7 @@ def _migrate_single_entity(
     return True
 
 
-def migrate_docsis30_entities(
+async def async_migrate_docsis30_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
     docsis_version: str | None,
@@ -150,29 +290,40 @@ def migrate_docsis30_entities(
     entity_registry = er_module.async_get(hass)
 
     # Pattern to match old-style entity unique_ids without channel type
-    # Format: {entry_id}_cable_modem_{ds|us}_ch_{id}_{metric}
-    old_pattern = re.compile(rf"^{re.escape(entry.entry_id)}_cable_modem_(ds|us)_ch_(\d+)_(\w+)$")
+    # Old format: {entry_id}_cable_modem_downstream_{id}_{metric}
+    # New format: {entry_id}_cable_modem_ds_qam_ch_{id}_{metric}
+    old_pattern = re.compile(rf"^{re.escape(entry.entry_id)}_cable_modem_(downstream|upstream)_(\d+)_(\w+)$")
 
     entities_to_migrate = _find_entities_to_migrate(entity_registry, entry.entry_id, old_pattern)
 
-    if not entities_to_migrate:
-        _LOGGER.debug("No entities need migration for DOCSIS 3.0 modem")
-        return 0
-
-    _LOGGER.info(
-        "Migrating %d entities to new naming scheme for DOCSIS 3.0 modem",
-        len(entities_to_migrate),
-    )
-
     migrated_count = 0
-    for entity_entry, new_unique_id, new_entity_id in entities_to_migrate:
-        try:
-            if _migrate_single_entity(entity_registry, entity_entry, new_unique_id, new_entity_id):
-                migrated_count += 1
-        except ValueError as err:
-            _LOGGER.warning("Failed to migrate entity %s: %s", entity_entry.entity_id, err)
+    if entities_to_migrate:
+        _LOGGER.info(
+            "Migrating %d entities to new naming scheme for DOCSIS 3.0 modem",
+            len(entities_to_migrate),
+        )
 
-    if migrated_count > 0:
-        _LOGGER.info("Successfully migrated %d entities to new naming scheme", migrated_count)
+        for entity_entry, new_unique_id, new_entity_id in entities_to_migrate:
+            try:
+                if _migrate_single_entity(entity_registry, entity_entry, new_unique_id, new_entity_id):
+                    migrated_count += 1
+            except ValueError as err:
+                _LOGGER.warning("Failed to migrate entity %s: %s", entity_entry.entity_id, err)
 
-    return migrated_count
+        if migrated_count > 0:
+            _LOGGER.info("Successfully migrated %d entities to new naming scheme", migrated_count)
+    else:
+        _LOGGER.debug("No entity registry entries need migration for DOCSIS 3.0 modem")
+
+    # Always migrate recorder history (states_meta table)
+    # This preserves historical data under the new entity IDs
+    # Runs even if entity registry migration found nothing - handles users
+    # who already upgraded but have orphaned history from pre-fix versions
+    recorder_migrated = await _migrate_recorder_history(hass)
+    if recorder_migrated > 0:
+        _LOGGER.info(
+            "Migrated recorder history for %d entities",
+            recorder_migrated,
+        )
+
+    return migrated_count + recorder_migrated

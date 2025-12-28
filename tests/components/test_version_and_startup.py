@@ -65,6 +65,7 @@ class TestVersionLogging:
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
+            patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
             caplog.at_level(logging.INFO),
         ):
@@ -322,6 +323,7 @@ class TestProtocolOptimizationIntegration:
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
+            patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
         ):
             # Setup mocks
