@@ -187,6 +187,21 @@ If your modem isn't supported or you'd like to help expand compatibility, we'd l
 7. Search for "Cable Modem Monitor"
 8. Enter your modem's IP address (typically `192.168.100.1`)
 
+### Testing Unreleased Versions
+
+Already have Cable Modem Monitor installed via HACS? You can switch to any branch, tag, or commit to test new features before they're officially released:
+
+1. Go to **Developer Tools → Actions**
+2. Search for **`update.install`**
+3. Under **Targets**, select your Cable Modem Monitor update entity (e.g., `update.cable_modem_monitor_update`)
+4. In the **version** field, enter the branch name (e.g., `feat/new-modem-parser`)
+5. Click **Perform action**
+6. Restart Home Assistant
+
+The version field accepts branch names, tags, full commit SHAs, or the first 7 characters of a commit SHA.
+
+> 💡 *Thanks to [@ChBi89](https://github.com/ChBi89) for [documenting this workflow](https://github.com/solentlabs/cable_modem_monitor/issues/63#issuecomment-2556672682)!*
+
 ## Configuration
 
 1. **Find your modem's IP address**: Usually `192.168.100.1` or `192.168.0.1`
