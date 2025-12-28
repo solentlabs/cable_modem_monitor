@@ -223,6 +223,11 @@ class ModemParser(ABC):
 
         Parsers should store the model in system_info["model_name"].
 
+        Note:
+            This is called once during setup and stored in config as CONF_ACTUAL_MODEL.
+            Diagnostics includes both this frozen value (config_entry.actual_model) and
+            the live runtime value (modem_data.model_name) to help detect mismatches.
+
         Args:
             data: Parsed modem data dictionary (raw or prefixed format)
 

@@ -38,11 +38,17 @@ class ModemButtonBase(CoordinatorEntity, ButtonEntity):
         actual_model = entry.data.get(CONF_ACTUAL_MODEL)
         detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
 
+        # Use actual_model if available, otherwise fall back to detected_modem
+        # Strip manufacturer prefix to avoid redundancy (e.g., "Motorola MB7621" -> "MB7621")
+        model = actual_model or detected_modem
+        if model and manufacturer and model.lower().startswith(manufacturer.lower()):
+            model = model[len(manufacturer) :].strip()
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "Cable Modem",
             "manufacturer": manufacturer,
-            "model": actual_model or detected_modem,
+            "model": model,
             "configuration_url": f"http://{entry.data[CONF_HOST]}",
         }
 
