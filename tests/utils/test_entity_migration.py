@@ -532,3 +532,213 @@ class TestMigrateRecorderHistory:
         result = _migrate_recorder_history_sync(str(db_path))
 
         assert result == 0
+
+
+class TestMigrateStatisticsMeta:
+    """Tests for statistics_meta migration."""
+
+    @pytest.fixture
+    def temp_db_with_statistics(self, tmp_path):
+        """Create a temporary database with states and statistics tables."""
+        db_path = tmp_path / "test_stats.db"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Create states_meta and states tables
+        cursor.execute(
+            """
+            CREATE TABLE states_meta (
+                metadata_id INTEGER PRIMARY KEY,
+                entity_id TEXT UNIQUE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE states (
+                state_id INTEGER PRIMARY KEY,
+                metadata_id INTEGER,
+                state TEXT
+            )
+        """
+        )
+
+        # Create statistics_meta, statistics, and statistics_short_term tables
+        cursor.execute(
+            """
+            CREATE TABLE statistics_meta (
+                id INTEGER PRIMARY KEY,
+                statistic_id TEXT UNIQUE,
+                source TEXT,
+                unit_of_measurement TEXT
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE statistics (
+                id INTEGER PRIMARY KEY,
+                metadata_id INTEGER,
+                start_ts REAL,
+                mean REAL,
+                UNIQUE(metadata_id, start_ts),
+                FOREIGN KEY (metadata_id) REFERENCES statistics_meta(id)
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE statistics_short_term (
+                id INTEGER PRIMARY KEY,
+                metadata_id INTEGER,
+                start_ts REAL,
+                mean REAL,
+                UNIQUE(metadata_id, start_ts),
+                FOREIGN KEY (metadata_id) REFERENCES statistics_meta(id)
+            )
+        """
+        )
+
+        conn.commit()
+        yield db_path, conn
+        conn.close()
+
+    def test_migrates_statistics_downstream(self, temp_db_with_statistics):
+        """Test migration of downstream statistics."""
+        db_path, conn = temp_db_with_statistics
+        cursor = conn.cursor()
+
+        # Insert old-style statistic
+        cursor.execute(
+            "INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement) VALUES (?, ?, ?)",
+            ("sensor.cable_modem_ds_ch_1_power", "recorder", "dBmV"),
+        )
+        old_id = cursor.lastrowid
+
+        # Insert some statistics
+        cursor.execute(
+            "INSERT INTO statistics (metadata_id, start_ts, mean) VALUES (?, ?, ?)",
+            (old_id, 1000.0, 5.0),
+        )
+        cursor.execute(
+            "INSERT INTO statistics_short_term (metadata_id, start_ts, mean) VALUES (?, ?, ?)",
+            (old_id, 1000.0, 5.5),
+        )
+        conn.commit()
+
+        result = _migrate_recorder_history_sync(str(db_path))
+
+        # Should migrate the statistic
+        assert result == 1
+
+        # Verify statistic was renamed
+        cursor.execute("SELECT statistic_id FROM statistics_meta WHERE id = ?", (old_id,))
+        row = cursor.fetchone()
+        assert row[0] == "sensor.cable_modem_ds_qam_ch_1_power"
+
+    def test_migrates_statistics_upstream(self, temp_db_with_statistics):
+        """Test migration of upstream statistics."""
+        db_path, conn = temp_db_with_statistics
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement) VALUES (?, ?, ?)",
+            ("sensor.cable_modem_us_ch_2_frequency", "recorder", "Hz"),
+        )
+        old_id = cursor.lastrowid
+        conn.commit()
+
+        result = _migrate_recorder_history_sync(str(db_path))
+
+        assert result == 1
+
+        cursor.execute("SELECT statistic_id FROM statistics_meta WHERE id = ?", (old_id,))
+        row = cursor.fetchone()
+        assert row[0] == "sensor.cable_modem_us_atdma_ch_2_frequency"
+
+    def test_merges_statistics_when_new_exists(self, temp_db_with_statistics):
+        """Test that old statistics are merged when new statistic already exists."""
+        db_path, conn = temp_db_with_statistics
+        cursor = conn.cursor()
+
+        # Insert old statistic with data (different timestamps than new)
+        cursor.execute(
+            "INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement) VALUES (?, ?, ?)",
+            ("sensor.cable_modem_ds_ch_1_power", "recorder", "dBmV"),
+        )
+        old_id = cursor.lastrowid
+        cursor.execute("INSERT INTO statistics (metadata_id, start_ts, mean) VALUES (?, ?, ?)", (old_id, 1000.0, 1.0))
+        cursor.execute(
+            "INSERT INTO statistics_short_term (metadata_id, start_ts, mean) VALUES (?, ?, ?)",
+            (old_id, 1000.0, 1.5),
+        )
+
+        # Insert new statistic with data (different timestamps)
+        cursor.execute(
+            "INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement) VALUES (?, ?, ?)",
+            ("sensor.cable_modem_ds_qam_ch_1_power", "recorder", "dBmV"),
+        )
+        new_id = cursor.lastrowid
+        cursor.execute("INSERT INTO statistics (metadata_id, start_ts, mean) VALUES (?, ?, ?)", (new_id, 2000.0, 2.0))
+        cursor.execute(
+            "INSERT INTO statistics_short_term (metadata_id, start_ts, mean) VALUES (?, ?, ?)",
+            (new_id, 2000.0, 2.5),
+        )
+        conn.commit()
+
+        result = _migrate_recorder_history_sync(str(db_path))
+
+        assert result == 1
+
+        # Old statistic should be deleted
+        cursor.execute(
+            "SELECT * FROM statistics_meta WHERE statistic_id = ?",
+            ("sensor.cable_modem_ds_ch_1_power",),
+        )
+        assert cursor.fetchone() is None
+
+        # All statistics should reference new ID (both old and new timestamps merged)
+        cursor.execute("SELECT COUNT(*) FROM statistics WHERE metadata_id = ?", (new_id,))
+        assert cursor.fetchone()[0] == 2
+
+        cursor.execute("SELECT COUNT(*) FROM statistics_short_term WHERE metadata_id = ?", (new_id,))
+        assert cursor.fetchone()[0] == 2
+
+    def test_migrates_both_states_and_statistics(self, temp_db_with_statistics):
+        """Test that both states and statistics are migrated together."""
+        db_path, conn = temp_db_with_statistics
+        cursor = conn.cursor()
+
+        # Insert old state
+        cursor.execute(
+            "INSERT INTO states_meta (entity_id) VALUES (?)",
+            ("sensor.cable_modem_ds_ch_1_power",),
+        )
+
+        # Insert old statistic with data
+        cursor.execute(
+            "INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement) VALUES (?, ?, ?)",
+            ("sensor.cable_modem_ds_ch_1_power", "recorder", "dBmV"),
+        )
+        stat_id = cursor.lastrowid
+        cursor.execute("INSERT INTO statistics (metadata_id, start_ts, mean) VALUES (?, ?, ?)", (stat_id, 1000.0, 5.0))
+        conn.commit()
+
+        result = _migrate_recorder_history_sync(str(db_path))
+
+        # Should migrate both
+        assert result == 2
+
+        # Verify state was renamed
+        cursor.execute(
+            "SELECT entity_id FROM states_meta WHERE entity_id = ?",
+            ("sensor.cable_modem_ds_qam_ch_1_power",),
+        )
+        assert cursor.fetchone() is not None
+
+        # Verify statistic was renamed
+        cursor.execute(
+            "SELECT statistic_id FROM statistics_meta WHERE statistic_id = ?",
+            ("sensor.cable_modem_ds_qam_ch_1_power",),
+        )
+        assert cursor.fetchone() is not None

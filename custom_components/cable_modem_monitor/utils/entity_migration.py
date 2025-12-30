@@ -30,16 +30,110 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
+def _build_new_name(old_name: str) -> str | None:
+    """Build new entity/statistic name from old name.
+
+    Returns None if name doesn't match migration pattern (false positive).
+    """
+    if "_ds_ch_" in old_name:
+        return old_name.replace("_ds_ch_", "_ds_qam_ch_")
+    if "_us_ch_" in old_name:
+        return old_name.replace("_us_ch_", "_us_atdma_ch_")
+    return None
+
+
+def _migrate_states_meta(cursor: sqlite3.Cursor) -> int:
+    """Migrate states_meta table entries to new naming scheme."""
+    cursor.execute(
+        "SELECT metadata_id, entity_id FROM states_meta "
+        "WHERE entity_id LIKE 'sensor.cable_modem_ds_ch_%' "
+        "OR entity_id LIKE 'sensor.cable_modem_us_ch_%'"
+    )
+    old_entities = cursor.fetchall()
+    migrated = 0
+
+    for old_id, old_name in old_entities:
+        new_name = _build_new_name(old_name)
+        if new_name is None:
+            continue
+
+        cursor.execute("SELECT metadata_id FROM states_meta WHERE entity_id = ?", (new_name,))
+        row = cursor.fetchone()
+
+        if row:
+            # Merge old states into new, then delete old
+            cursor.execute("UPDATE states SET metadata_id = ? WHERE metadata_id = ?", (row[0], old_id))
+            count = cursor.rowcount
+            cursor.execute("DELETE FROM states_meta WHERE metadata_id = ?", (old_id,))
+            _LOGGER.debug("Merged recorder history: %s -> %s (%d states)", old_name, new_name, count)
+        else:
+            # Rename old entity
+            cursor.execute("UPDATE states_meta SET entity_id = ? WHERE metadata_id = ?", (new_name, old_id))
+            _LOGGER.debug("Renamed recorder history: %s -> %s", old_name, new_name)
+
+        migrated += 1
+
+    return migrated
+
+
+def _migrate_statistics_meta(cursor: sqlite3.Cursor) -> int:
+    """Migrate statistics_meta table entries to new naming scheme."""
+    # Check if statistics_meta table exists (may not exist in minimal/test DBs)
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='statistics_meta'")
+    if not cursor.fetchone():
+        return 0
+
+    cursor.execute(
+        "SELECT id, statistic_id FROM statistics_meta "
+        "WHERE statistic_id LIKE 'sensor.cable_modem_ds_ch_%' "
+        "OR statistic_id LIKE 'sensor.cable_modem_us_ch_%'"
+    )
+    old_stats = cursor.fetchall()
+    migrated = 0
+
+    for old_id, old_name in old_stats:
+        new_name = _build_new_name(old_name)
+        if new_name is None:
+            continue
+
+        cursor.execute("SELECT id FROM statistics_meta WHERE statistic_id = ?", (new_name,))
+        row = cursor.fetchone()
+
+        if row:
+            # Merge old stats into new, then delete old
+            # First, delete any old entries that conflict with new (same start_ts)
+            new_id = row[0]
+            cursor.execute(
+                "DELETE FROM statistics WHERE metadata_id = ? AND start_ts IN "
+                "(SELECT start_ts FROM statistics WHERE metadata_id = ?)",
+                (old_id, new_id),
+            )
+            cursor.execute(
+                "DELETE FROM statistics_short_term WHERE metadata_id = ? AND start_ts IN "
+                "(SELECT start_ts FROM statistics_short_term WHERE metadata_id = ?)",
+                (old_id, new_id),
+            )
+            # Now merge remaining old entries into new
+            cursor.execute("UPDATE statistics SET metadata_id = ? WHERE metadata_id = ?", (new_id, old_id))
+            cursor.execute("UPDATE statistics_short_term SET metadata_id = ? WHERE metadata_id = ?", (new_id, old_id))
+            cursor.execute("DELETE FROM statistics_meta WHERE id = ?", (old_id,))
+            _LOGGER.debug("Merged statistics: %s -> %s", old_name, new_name)
+        else:
+            # Rename old statistic
+            cursor.execute("UPDATE statistics_meta SET statistic_id = ? WHERE id = ?", (new_name, old_id))
+            _LOGGER.debug("Renamed statistics: %s -> %s", old_name, new_name)
+
+        migrated += 1
+
+    return migrated
+
+
 def _migrate_recorder_history_sync(db_path: str) -> int:
     """Migrate recorder history from old entity IDs to new naming scheme.
 
     This is a synchronous function meant to be run via executor.
-    It updates the states_meta table to rename old entity_ids to new ones,
-    preserving all historical data under the new entity names.
-
-    For each old entity:
-    - If new entity already exists in states_meta: merge states into new, delete old
-    - If new entity doesn't exist: rename old entity_id to new
+    It updates both states_meta and statistics_meta tables to rename old
+    entity_ids to new ones, preserving all historical data.
 
     Args:
         db_path: Path to the Home Assistant SQLite database.
@@ -47,7 +141,6 @@ def _migrate_recorder_history_sync(db_path: str) -> int:
     Returns:
         Number of entities migrated.
     """
-    # Check if database exists
     if not Path(db_path).exists():
         _LOGGER.debug("Recorder database not found at %s, skipping migration", db_path)
         return 0
@@ -56,68 +149,7 @@ def _migrate_recorder_history_sync(db_path: str) -> int:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # Find old-style entity IDs in states_meta
-        cursor.execute(
-            "SELECT metadata_id, entity_id FROM states_meta "
-            "WHERE entity_id LIKE 'sensor.cable_modem_ds_ch_%' "
-            "OR entity_id LIKE 'sensor.cable_modem_us_ch_%'"
-        )
-        old_entities = cursor.fetchall()
-
-        if not old_entities:
-            conn.close()
-            return 0
-
-        migrated = 0
-        for old_id, old_name in old_entities:
-            # Build new entity name (skip false positives from SQL LIKE pattern)
-            # SQL _ is a single-char wildcard, so ds_ch_% also matches ds_channel_count
-            if "_ds_ch_" in old_name:
-                new_name = old_name.replace("_ds_ch_", "_ds_qam_ch_")
-            elif "_us_ch_" in old_name:
-                new_name = old_name.replace("_us_ch_", "_us_atdma_ch_")
-            else:
-                # False positive (e.g., ds_channel_count) - skip
-                continue
-
-            # Check if new entity already exists in states_meta
-            cursor.execute(
-                "SELECT metadata_id FROM states_meta WHERE entity_id = ?",
-                (new_name,),
-            )
-            row = cursor.fetchone()
-
-            if row:
-                # New entity exists - merge old states into new, then delete old
-                new_id = row[0]
-                cursor.execute(
-                    "UPDATE states SET metadata_id = ? WHERE metadata_id = ?",
-                    (new_id, old_id),
-                )
-                count = cursor.rowcount
-                cursor.execute(
-                    "DELETE FROM states_meta WHERE metadata_id = ?",
-                    (old_id,),
-                )
-                _LOGGER.debug(
-                    "Merged recorder history: %s -> %s (%d states)",
-                    old_name,
-                    new_name,
-                    count,
-                )
-            else:
-                # New entity doesn't exist - just rename old entity
-                cursor.execute(
-                    "UPDATE states_meta SET entity_id = ? WHERE metadata_id = ?",
-                    (new_name, old_id),
-                )
-                _LOGGER.debug(
-                    "Renamed recorder history: %s -> %s",
-                    old_name,
-                    new_name,
-                )
-
-            migrated += 1
+        migrated = _migrate_states_meta(cursor) + _migrate_statistics_meta(cursor)
 
         conn.commit()
         conn.close()
