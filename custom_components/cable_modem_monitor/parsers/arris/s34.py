@@ -76,11 +76,12 @@ class ArrisS34HnapParser(ModemParser):
         {"path": "/Login.html", "auth_method": "hnap", "auth_required": False},
     ]
 
-    # MVP Capabilities - only system info for now
-    # Channel data (DOWNSTREAM_CHANNELS, UPSTREAM_CHANNELS) deferred to Phase 4
+    # Full capabilities including channel data
     capabilities = {
         ModemCapability.SOFTWARE_VERSION,
         ModemCapability.RESTART,  # Uses SetArrisConfigurationInfo Action="reboot"
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
     }
 
     @classmethod
@@ -416,7 +417,7 @@ class ArrisS34HnapParser(ModemParser):
     def _parse_with_json_hnap(self, session, base_url: str) -> dict:
         """Parse modem data using JSON-based HNAP requests with SHA256 auth.
 
-        MVP Implementation: Only fetches GetArrisDeviceStatus.
+        Fetches device status and channel data using GetCustomer* actions.
 
         Args:
             session: Authenticated requests.Session
@@ -427,43 +428,47 @@ class ArrisS34HnapParser(ModemParser):
         """
         _LOGGER.debug("S34: Attempting JSON-based HNAP communication with SHA256 auth")
 
-        # MVP: Only fetch GetArrisDeviceStatus for system info
-        # Phase 4 will add: GetArrisStatusDownstreamChannelInfo, GetArrisStatusUpstreamChannelInfo
-        hnap_actions = [
-            "GetArrisDeviceStatus",
-        ]
+        # Fetch device status first
+        _LOGGER.debug("S34: Fetching device status")
+        device_response = self._call_hnap_sha256(session, base_url, ["GetArrisDeviceStatus"])
+        device_data = json.loads(device_response)
 
-        _LOGGER.debug("S34: Fetching modem data via JSON HNAP GetMultipleHNAPs")
-        json_response = self._call_hnap_sha256(session, base_url, hnap_actions)
+        # Fetch downstream channel data (uses GetCustomer* like S33, not GetArris*)
+        _LOGGER.debug("S34: Fetching downstream channel data")
+        downstream_response = self._call_hnap_sha256(session, base_url, ["GetCustomerStatusDownstreamChannelInfo"])
+        downstream_data = json.loads(downstream_response)
 
-        # Parse JSON response
-        response_data = json.loads(json_response)
+        # Fetch upstream channel data
+        _LOGGER.debug("S34: Fetching upstream channel data")
+        upstream_response = self._call_hnap_sha256(session, base_url, ["GetCustomerStatusUpstreamChannelInfo"])
+        upstream_data = json.loads(upstream_response)
 
-        # S34 may return direct JSON or wrapped in GetMultipleHNAPsResponse
-        if "GetMultipleHNAPsResponse" in response_data:
-            hnap_data = response_data["GetMultipleHNAPsResponse"]
-        else:
-            hnap_data = response_data
+        # Merge all responses
+        hnap_data = {**device_data, **downstream_data, **upstream_data}
 
         _LOGGER.debug(
-            "S34: JSON HNAP response received. Top-level keys: %s, response size: %d bytes",
+            "S34: JSON HNAP responses received. Keys: %s",
             list(hnap_data.keys()),
-            len(json_response),
         )
 
         # Parse system info from GetArrisDeviceStatus
         system_info = self._parse_system_info_from_hnap(hnap_data)
 
+        # Parse channel data (same format as S33 - caret-delimited)
+        downstream = self._parse_downstream_from_hnap(hnap_data)
+        upstream = self._parse_upstream_from_hnap(hnap_data)
+
         _LOGGER.info(
-            "S34: Successfully parsed system info (firmware: %s, model: %s)",
+            "S34: Successfully parsed data (firmware: %s, model: %s, DS: %d, US: %d)",
             system_info.get("software_version", "unknown"),
             system_info.get("model_name", "unknown"),
+            len(downstream),
+            len(upstream),
         )
 
-        # MVP: Return empty channel lists (Phase 4 will populate these)
         return {
-            "downstream": [],
-            "upstream": [],
+            "downstream": downstream,
+            "upstream": upstream,
             "system_info": system_info,
         }
 
@@ -525,6 +530,170 @@ class ArrisS34HnapParser(ModemParser):
             _LOGGER.error("S34: Error parsing system info: %s", e)
 
         return system_info
+
+    def _parse_downstream_from_hnap(self, hnap_data: dict) -> list[dict]:
+        """Parse downstream channels from HNAP JSON response.
+
+        Format: "RowIndex^LockStatus^Modulation^ChannelID^Frequency^Power^SNR^Corrected^Uncorrected"
+        Delimiter: ^ (caret) between fields, |+| between channels
+
+        Same format as S33 - uses GetCustomerStatusDownstreamChannelInfo.
+        """
+        channels: list[dict] = []
+
+        try:
+            downstream_response = hnap_data.get("GetCustomerStatusDownstreamChannelInfoResponse", {})
+            channel_data = downstream_response.get("CustomerConnDownstreamChannel", "")
+
+            if not channel_data:
+                _LOGGER.warning(
+                    "S34: No downstream channel data found. Response keys: %s",
+                    list(hnap_data.keys()),
+                )
+                return channels
+
+            # Split by |+| delimiter
+            channel_entries = channel_data.split("|+|")
+
+            for entry in channel_entries:
+                if not entry.strip():
+                    continue
+
+                # Split by ^ delimiter
+                fields = entry.split("^")
+
+                if len(fields) < 9:
+                    _LOGGER.warning("S34: Invalid downstream channel entry: %s", entry)
+                    continue
+
+                try:
+                    # Parse channel fields
+                    # fields[0] = row index (display order only)
+                    # fields[3] = DOCSIS Channel ID
+                    channel_id = int(fields[3])
+                    lock_status = fields[1].strip()
+                    modulation = fields[2].strip()
+
+                    # Frequency - could be Hz or need conversion
+                    freq_str = fields[4].strip()
+                    if "Hz" in freq_str:
+                        frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
+                    else:
+                        freq_val = float(freq_str)
+                        if freq_val > 1_000_000:
+                            frequency = int(freq_val)
+                        else:
+                            frequency = int(round(freq_val * 1_000_000))
+
+                    # Power - strip units if present
+                    power_str = fields[5].strip().replace(" dBmV", "").replace("dBmV", "")
+                    power = float(power_str)
+
+                    # SNR - strip units if present
+                    snr_str = fields[6].strip().replace(" dB", "").replace("dB", "")
+                    snr = float(snr_str)
+
+                    corrected = int(fields[7])
+                    uncorrected = int(fields[8])
+
+                    channel_info = {
+                        "channel_id": channel_id,
+                        "lock_status": lock_status,
+                        "modulation": modulation,
+                        "frequency": frequency,
+                        "power": power,
+                        "snr": snr,
+                        "corrected": corrected,
+                        "uncorrected": uncorrected,
+                    }
+
+                    channels.append(channel_info)
+
+                except (ValueError, IndexError) as e:
+                    _LOGGER.warning("S34: Error parsing downstream channel: %s - %s", entry, e)
+                    continue
+
+        except Exception as e:
+            _LOGGER.error("S34: Error parsing downstream channels: %s", e)
+
+        return channels
+
+    def _parse_upstream_from_hnap(self, hnap_data: dict) -> list[dict]:
+        """Parse upstream channels from HNAP JSON response.
+
+        Format: "ChannelSelect^LockStatus^ChannelType^ChannelID^SymbolRate/Width^Frequency^PowerLevel"
+        Delimiter: ^ (caret) between fields, |+| between channels
+
+        Same format as S33 - uses GetCustomerStatusUpstreamChannelInfo.
+        """
+        channels: list[dict] = []
+
+        try:
+            upstream_response = hnap_data.get("GetCustomerStatusUpstreamChannelInfoResponse", {})
+            channel_data = upstream_response.get("CustomerConnUpstreamChannel", "")
+
+            if not channel_data:
+                _LOGGER.warning(
+                    "S34: No upstream channel data found. Response keys: %s",
+                    list(hnap_data.keys()),
+                )
+                return channels
+
+            # Split by |+| delimiter
+            channel_entries = channel_data.split("|+|")
+
+            for entry in channel_entries:
+                if not entry.strip():
+                    continue
+
+                # Split by ^ delimiter
+                fields = entry.split("^")
+
+                if len(fields) < 7:
+                    _LOGGER.warning("S34: Invalid upstream channel entry: %s", entry)
+                    continue
+
+                try:
+                    # Parse channel fields
+                    channel_id = int(fields[3])
+                    lock_status = fields[1].strip()
+                    modulation = fields[2].strip()
+                    symbol_rate = fields[4].strip()
+
+                    # Frequency
+                    freq_str = fields[5].strip()
+                    if "Hz" in freq_str:
+                        frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
+                    else:
+                        freq_val = float(freq_str)
+                        if freq_val > 1_000_000:
+                            frequency = int(freq_val)
+                        else:
+                            frequency = int(round(freq_val * 1_000_000))
+
+                    # Power - strip units if present
+                    power_str = fields[6].strip().replace(" dBmV", "").replace("dBmV", "")
+                    power = float(power_str)
+
+                    channel_info = {
+                        "channel_id": channel_id,
+                        "lock_status": lock_status,
+                        "modulation": modulation,
+                        "symbol_rate": symbol_rate,
+                        "frequency": frequency,
+                        "power": power,
+                    }
+
+                    channels.append(channel_info)
+
+                except (ValueError, IndexError) as e:
+                    _LOGGER.warning("S34: Error parsing upstream channel: %s - %s", entry, e)
+                    continue
+
+        except Exception as e:
+            _LOGGER.error("S34: Error parsing upstream channels: %s", e)
+
+        return channels
 
     def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
         """Set target[key] if source[source_key] exists and is non-empty.

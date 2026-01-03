@@ -102,20 +102,13 @@ class TestS34ParserCapabilities:
         """Test software version capability (MVP)."""
         assert ArrisS34HnapParser.has_capability(ModemCapability.SOFTWARE_VERSION)
 
-    def test_no_downstream_capability_mvp(self):
-        """Test downstream channels NOT in MVP scope.
+    def test_has_downstream_capability(self):
+        """Test downstream channels capability is declared."""
+        assert ArrisS34HnapParser.has_capability(ModemCapability.DOWNSTREAM_CHANNELS)
 
-        Channel data will be added in Phase 4.
-        """
-        # For MVP, this should be False
-        assert not ArrisS34HnapParser.has_capability(ModemCapability.DOWNSTREAM_CHANNELS)
-
-    def test_no_upstream_capability_mvp(self):
-        """Test upstream channels NOT in MVP scope.
-
-        Channel data will be added in Phase 4.
-        """
-        assert not ArrisS34HnapParser.has_capability(ModemCapability.UPSTREAM_CHANNELS)
+    def test_has_upstream_capability(self):
+        """Test upstream channels capability is declared."""
+        assert ArrisS34HnapParser.has_capability(ModemCapability.UPSTREAM_CHANNELS)
 
     def test_no_uptime_capability(self):
         """Test S34 does NOT have uptime capability.
@@ -329,42 +322,116 @@ class TestS34UrlPatterns:
 
 
 # =============================================================================
-# PHASE 4 TESTS (Placeholder - to be implemented later)
+# CHANNEL PARSING TESTS
 # =============================================================================
 
 
 class TestS34DownstreamParsing:
-    """Test downstream channel parsing (Phase 4).
+    """Test downstream channel parsing."""
 
-    These tests are placeholders for when channel data support is added.
-    """
-
-    @pytest.mark.skip(reason="Phase 4 - Channel data not yet implemented")
     def test_parse_downstream_channels(self):
         """Test parsing downstream channels from HNAP data."""
-        pass
+        parser = ArrisS34HnapParser()
 
-    @pytest.mark.skip(reason="Phase 4 - Channel data not yet implemented")
+        # Sample downstream data in S34 format (caret-delimited, same as S33)
+        hnap_data = {
+            "GetCustomerStatusDownstreamChannelInfoResponse": {
+                "CustomerConnDownstreamChannel": (
+                    "1^Locked^256QAM^17^483000000^7.7^39.0^5^0^|+|2^Locked^256QAM^1^387000000^6.9^39.0^11^35^"
+                ),
+                "GetCustomerStatusDownstreamChannelInfoResult": "OK",
+            }
+        }
+
+        channels = parser._parse_downstream_from_hnap(hnap_data)
+
+        assert len(channels) == 2
+
+        # Check first channel
+        assert channels[0]["channel_id"] == 17
+        assert channels[0]["lock_status"] == "Locked"
+        assert channels[0]["modulation"] == "256QAM"
+        assert channels[0]["frequency"] == 483000000
+        assert channels[0]["power"] == 7.7
+        assert channels[0]["snr"] == 39.0
+        assert channels[0]["corrected"] == 5
+        assert channels[0]["uncorrected"] == 0
+
+        # Check second channel
+        assert channels[1]["channel_id"] == 1
+        assert channels[1]["frequency"] == 387000000
+
     def test_parse_downstream_empty(self):
         """Test parsing empty downstream data."""
-        pass
+        parser = ArrisS34HnapParser()
+
+        hnap_data = {
+            "GetCustomerStatusDownstreamChannelInfoResponse": {
+                "CustomerConnDownstreamChannel": "",
+            }
+        }
+
+        channels = parser._parse_downstream_from_hnap(hnap_data)
+        assert channels == []
+
+    def test_parse_downstream_missing_response(self):
+        """Test parsing when response key is missing."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_downstream_from_hnap({})
+        assert channels == []
 
 
 class TestS34UpstreamParsing:
-    """Test upstream channel parsing (Phase 4).
+    """Test upstream channel parsing."""
 
-    These tests are placeholders for when channel data support is added.
-    """
-
-    @pytest.mark.skip(reason="Phase 4 - Channel data not yet implemented")
     def test_parse_upstream_channels(self):
         """Test parsing upstream channels from HNAP data."""
-        pass
+        parser = ArrisS34HnapParser()
 
-    @pytest.mark.skip(reason="Phase 4 - Channel data not yet implemented")
+        # Sample upstream data in S34 format (caret-delimited, same as S33)
+        hnap_data = {
+            "GetCustomerStatusUpstreamChannelInfoResponse": {
+                "CustomerConnUpstreamChannel": (
+                    "1^Locked^SC-QAM^3^6400000^22800000^37.3^|+|2^Locked^SC-QAM^6^3200000^40400000^37.5^"
+                ),
+                "GetCustomerStatusUpstreamChannelInfoResult": "OK",
+            }
+        }
+
+        channels = parser._parse_upstream_from_hnap(hnap_data)
+
+        assert len(channels) == 2
+
+        # Check first channel
+        assert channels[0]["channel_id"] == 3
+        assert channels[0]["lock_status"] == "Locked"
+        assert channels[0]["modulation"] == "SC-QAM"
+        assert channels[0]["symbol_rate"] == "6400000"
+        assert channels[0]["frequency"] == 22800000
+        assert channels[0]["power"] == 37.3
+
+        # Check second channel
+        assert channels[1]["channel_id"] == 6
+        assert channels[1]["frequency"] == 40400000
+
     def test_parse_upstream_empty(self):
         """Test parsing empty upstream data."""
-        pass
+        parser = ArrisS34HnapParser()
+
+        hnap_data = {
+            "GetCustomerStatusUpstreamChannelInfoResponse": {
+                "CustomerConnUpstreamChannel": "",
+            }
+        }
+
+        channels = parser._parse_upstream_from_hnap(hnap_data)
+        assert channels == []
+
+    def test_parse_upstream_missing_response(self):
+        """Test parsing when response key is missing."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_upstream_from_hnap({})
+        assert channels == []
 
 
 class TestS34Restart:
