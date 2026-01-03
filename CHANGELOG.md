@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Arris S34 Parser (MVP)** - New parser for Arris S34 cable modem using HNAP protocol. MVP provides system info (firmware version, model, connection status). Channel data support coming in Phase 4.
+
 ## [3.11.0] - 2025-12-27
 
 ### ⚠️ BREAKING CHANGE: Channel Sensor Entity IDs

@@ -1,0 +1,10 @@
+{
+  "GetArrisDeviceStatusResponse": {
+    "FirmwareVersion": "AT01.01.010.042324_S3.04.735",
+    "InternetConnection": "Connected",
+    "DownstreamFrequency": "483000000 Hz",
+    "StatusSoftwareModelName": "S34",
+    "StatusSoftwareModelName2": "S34",
+    "GetArrisDeviceStatusResult": "OK"
+  }
+}
