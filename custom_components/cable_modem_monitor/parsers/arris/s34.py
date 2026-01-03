@@ -1,14 +1,11 @@
 """Parser for Arris/CommScope S34 cable modem using HNAP protocol.
 
 The S34 uses HNAP protocol similar to S33, but with key differences:
-- Response format: Pure JSON (not caret-delimited like S33)
-- Firmware pattern: AT01.01.* (vs S33's TB01.03.*)
 - Authentication: Uses HMAC-SHA256 (vs S33's HMAC-MD5)
+- Firmware pattern: AT01.01.* (vs S33's TB01.03.*)
 
-MVP Scope: Authentication + system info only (GetArrisDeviceStatus)
-Channel data deferred to Phase 4.
-
-Reference: https://github.com/solentlabs/cable_modem_monitor/issues/TBD
+Channel data format is caret-delimited (same as S33), using GetCustomer* actions.
+System info uses GetArrisDeviceStatus which returns pure JSON.
 """
 
 from __future__ import annotations
@@ -380,7 +377,7 @@ class ArrisS34HnapParser(ModemParser):
             return result
 
     def _call_hnap_sha256(self, session, base_url: str, actions: list[str]) -> str:
-        """Make HNAP request using SHA256 authentication.
+        """Make HNAP request using SHA256 authentication (GetMultipleHNAPs).
 
         The S34 requires SHA256 for all authenticated requests, not MD5.
 
@@ -410,6 +407,59 @@ class ArrisS34HnapParser(ModemParser):
             timeout=10,
             verify=session.verify,
         )
+
+        response.raise_for_status()
+        return response.text
+
+    def _call_hnap_single_sha256(self, session, base_url: str, action: str, params: dict | None = None) -> str:
+        """Make single HNAP action call using SHA256 authentication.
+
+        The S34 requires SHA256 for all authenticated requests, not MD5.
+        This is used for actions like GetArrisConfigurationInfo and SetArrisConfigurationInfo.
+
+        Args:
+            session: Authenticated requests.Session
+            base_url: Modem base URL
+            action: HNAP action name (e.g., "SetArrisConfigurationInfo")
+            params: Optional parameters for the action
+
+        Returns:
+            JSON response text
+
+        Raises:
+            requests.RequestException: If request fails
+        """
+        endpoint = self.auth_config.hnap_endpoint
+        namespace = self.auth_config.soap_action_namespace
+
+        # Build JSON request
+        request_data = {action: params or {}}
+
+        url = f"{base_url}{endpoint}"
+        headers = {
+            "SOAPAction": f'"{namespace}{action}"',
+            "HNAP_AUTH": self._get_hnap_auth_sha256(action),
+            "Content-Type": "application/json",
+        }
+
+        response = session.post(
+            url,
+            json=request_data,
+            headers=headers,
+            timeout=10,
+            verify=session.verify,
+        )
+
+        # Enhanced error diagnostics for failed HTTP requests
+        if not response.ok:
+            _LOGGER.error(
+                "S34 HNAP call_single failed: action=%s, status=%s, url=%s",
+                action,
+                response.status_code,
+                url,
+            )
+            _LOGGER.error("S34 HNAP call_single request: %s", request_data)
+            _LOGGER.error("S34 HNAP call_single response: %s", response.text[:500] if response.text else "(empty)")
 
         response.raise_for_status()
         return response.text
@@ -708,13 +758,13 @@ class ArrisS34HnapParser(ModemParser):
         if value:
             target[target_key] = value
 
-    def _get_current_config(self, builder, session, base_url: str) -> dict[str, str]:
+    def _get_current_config(self, session, base_url: str) -> dict[str, str]:
         """Get current modem configuration (EEE and LED settings).
 
         The browser fetches this before sending a reboot command to preserve settings.
+        Uses SHA256 authentication (required for S34).
 
         Args:
-            builder: HNAPJsonRequestBuilder instance
             session: Authenticated session
             base_url: Modem base URL
 
@@ -722,7 +772,7 @@ class ArrisS34HnapParser(ModemParser):
             Dict with current config values
         """
         try:
-            response = builder.call_single(session, base_url, "GetArrisConfigurationInfo", {})
+            response = self._call_hnap_single_sha256(session, base_url, "GetArrisConfigurationInfo", {})
             response_data: dict = json.loads(response)
             config_response: dict[str, str] = response_data.get("GetArrisConfigurationInfoResponse", {})
 
@@ -744,28 +794,21 @@ class ArrisS34HnapParser(ModemParser):
         """Restart the S34 modem via HNAP SetArrisConfigurationInfo.
 
         The S34 uses SetArrisConfigurationInfo with Action="reboot" to restart.
-        This is the same mechanism as S33.
+        Uses SHA256 authentication (required for S34, unlike S33 which uses MD5).
 
         Returns:
             True if restart command was sent successfully, False otherwise
         """
-        _LOGGER.info("S34: Sending restart command via SetArrisConfigurationInfo")
+        _LOGGER.info("S34: Sending restart command via SetArrisConfigurationInfo (SHA256 auth)")
 
-        # Use JSON builder if available from login
-        if self._json_builder is not None:
-            builder = self._json_builder
-            _LOGGER.debug("S34: Using stored JSON builder for restart")
-        else:
-            builder = HNAPJsonRequestBuilder(
-                endpoint=self.auth_config.hnap_endpoint,
-                namespace=self.auth_config.soap_action_namespace,
-                empty_action_value="",
-            )
-            _LOGGER.warning("S34: No stored JSON builder for restart - creating new one (may lack auth)")
+        # Verify we have the private key for SHA256 auth
+        if not self._private_key:
+            _LOGGER.error("S34: Cannot restart - no private key available (not logged in?)")
+            return False
 
         try:
             # First, get current configuration values (EEE and LED settings)
-            current_config = self._get_current_config(builder, session, base_url)
+            current_config = self._get_current_config(session, base_url)
 
             # Build restart request with current settings preserved
             restart_data = {
@@ -775,7 +818,7 @@ class ArrisS34HnapParser(ModemParser):
             }
 
             _LOGGER.debug("S34: Sending restart with config: %s", restart_data)
-            response = builder.call_single(session, base_url, "SetArrisConfigurationInfo", restart_data)
+            response = self._call_hnap_single_sha256(session, base_url, "SetArrisConfigurationInfo", restart_data)
 
             # Log response for debugging
             _LOGGER.debug("S34: Restart response: %s", response[:500] if response else "empty")

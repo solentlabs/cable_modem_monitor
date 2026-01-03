@@ -1,11 +1,10 @@
 """Tests for the Arris/CommScope S34 parser.
 
 The S34 uses HNAP protocol like the S33, but with key differences:
-- Response format is pure JSON (not caret-delimited like S33)
+- Authentication: Uses HMAC-SHA256 (vs S33's HMAC-MD5)
 - Firmware pattern: AT01.01.* (vs S33's TB01.03.*)
 
-MVP scope: System info only (firmware, model, connection status).
-Channel data will be added in Phase 4.
+Channel data format is caret-delimited (same as S33).
 """
 
 import json
@@ -438,52 +437,63 @@ class TestS34Restart:
     """Test restart functionality."""
 
     def test_restart_success_with_reboot_action(self):
-        """Test restart succeeds when response has REBOOT action."""
+        """Test restart returns True when modem accepts reboot command."""
         from unittest.mock import MagicMock
 
         parser = ArrisS34HnapParser()
+        # Set private key to simulate logged-in state (required for SHA256 auth)
+        parser._private_key = "test_private_key"
 
-        # Mock the JSON builder to return proper responses
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            # First call: GetArrisConfigurationInfo
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "1", "LedStatus": "1"}}'
-            ),
-            # Second call: SetArrisConfigurationInfo
-            (
-                '{"SetArrisConfigurationInfoResponse": {'
-                '"SetArrisConfigurationInfoResult": "OK", '
-                '"SetArrisConfigurationInfoAction": "REBOOT"}}'
-            ),
-        ]
-        parser._json_builder = mock_builder
+        # Mock session with post method that returns proper responses
+        mock_session = MagicMock()
+        mock_response_1 = MagicMock()
+        mock_response_1.ok = True
+        mock_response_1.text = (
+            '{"GetArrisConfigurationInfoResponse": {'
+            '"GetArrisConfigurationInfoResult": "OK", '
+            '"ethSWEthEEE": "1", "LedStatus": "1"}}'
+        )
+        mock_response_1.raise_for_status = MagicMock()
 
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
+        mock_response_2 = MagicMock()
+        mock_response_2.ok = True
+        mock_response_2.text = (
+            '{"SetArrisConfigurationInfoResponse": {'
+            '"SetArrisConfigurationInfoResult": "OK", '
+            '"SetArrisConfigurationInfoAction": "REBOOT"}}'
+        )
+        mock_response_2.raise_for_status = MagicMock()
+
+        mock_session.post.side_effect = [mock_response_1, mock_response_2]
+
+        result = parser.restart(mock_session, "https://192.168.100.1")
 
         assert result is True
-        assert mock_builder.call_single.call_count == 2
+        assert mock_session.post.call_count == 2
 
     def test_restart_success_on_connection_reset(self):
         """Test restart returns True on connection reset (modem rebooting)."""
         from unittest.mock import MagicMock
 
         parser = ArrisS34HnapParser()
+        # Set private key to simulate logged-in state (required for SHA256 auth)
+        parser._private_key = "test_private_key"
 
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-            ),
-            ConnectionResetError("Connection reset by peer"),
-        ]
-        parser._json_builder = mock_builder
+        # Mock session with post method
+        mock_session = MagicMock()
+        mock_response_1 = MagicMock()
+        mock_response_1.ok = True
+        mock_response_1.text = (
+            '{"GetArrisConfigurationInfoResponse": {'
+            '"GetArrisConfigurationInfoResult": "OK", '
+            '"ethSWEthEEE": "0", "LedStatus": "1"}}'
+        )
+        mock_response_1.raise_for_status = MagicMock()
 
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
+        # Second call raises ConnectionResetError (modem rebooting)
+        mock_session.post.side_effect = [mock_response_1, ConnectionResetError("Connection reset by peer")]
+
+        result = parser.restart(mock_session, "https://192.168.100.1")
 
         assert result is True
 
@@ -492,17 +502,37 @@ class TestS34Restart:
         from unittest.mock import MagicMock
 
         parser = ArrisS34HnapParser()
+        # Set private key to simulate logged-in state (required for SHA256 auth)
+        parser._private_key = "test_private_key"
 
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-            ),
-            '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "ERROR"}}',
-        ]
-        parser._json_builder = mock_builder
+        # Mock session with post method
+        mock_session = MagicMock()
+        mock_response_1 = MagicMock()
+        mock_response_1.ok = True
+        mock_response_1.text = (
+            '{"GetArrisConfigurationInfoResponse": {'
+            '"GetArrisConfigurationInfoResult": "OK", '
+            '"ethSWEthEEE": "0", "LedStatus": "1"}}'
+        )
+        mock_response_1.raise_for_status = MagicMock()
+
+        mock_response_2 = MagicMock()
+        mock_response_2.ok = True
+        mock_response_2.text = '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "ERROR"}}'
+        mock_response_2.raise_for_status = MagicMock()
+
+        mock_session.post.side_effect = [mock_response_1, mock_response_2]
+
+        result = parser.restart(mock_session, "https://192.168.100.1")
+
+        assert result is False
+
+    def test_restart_failure_without_private_key(self):
+        """Test restart returns False when not logged in (no private key)."""
+        from unittest.mock import MagicMock
+
+        parser = ArrisS34HnapParser()
+        # Don't set private key - simulates not being logged in
 
         result = parser.restart(MagicMock(), "https://192.168.100.1")
 

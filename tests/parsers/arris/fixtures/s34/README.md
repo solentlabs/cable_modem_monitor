@@ -18,25 +18,29 @@ protocol for communication, similar to the S33.
 - **Protocol:** HNAP (JSON over HTTP POST)
 - **Endpoint:** `/HNAP1/`
 - **Namespace:** `http://purenetworks.com/HNAP1/`
+- **Authentication:** HMAC-SHA256 challenge-response
 - **Key Actions:**
   - `GetArrisDeviceStatus` - Firmware, connection status, model name
+  - `GetCustomerStatusDownstreamChannelInfo` - Downstream channel data
+  - `GetCustomerStatusUpstreamChannelInfo` - Upstream channel data
 
 ## Key Differences from S33
 
-| Aspect           | S33                   | S34                              |
-| ---------------- | --------------------- | -------------------------------- |
-| Firmware prefix  | `TB01.03.*`           | `AT01.01.*`                      |
-| Response format  | Caret-delimited       | Pure JSON                        |
-| Model identifier | "S33"                 | "S34"                            |
-| Release year     | 2020                  | 2024                             |
+| Aspect           | S33                   | S34                                    |
+| ---------------- | --------------------- | -------------------------------------- |
+| Authentication   | HMAC-MD5              | HMAC-SHA256                            |
+| Firmware prefix  | `TB01.03.*`           | `AT01.01.*`                            |
+| Channel format   | Caret-delimited       | Caret-delimited (same as S33)          |
+| Model identifier | "S33"                 | "S34"                                  |
+| Release year     | 2020                  | 2024                                   |
 
-## MVP Scope
+## Supported Features
 
-This fixture set supports MVP functionality:
 - ✅ Parser detection
 - ✅ System info (firmware version, model name, connection status)
-- ❌ Channel data (Phase 4)
-- ❌ Restart capability verification (TBD)
+- ✅ Downstream channel data (32 channels)
+- ✅ Upstream channel data (5 channels)
+- ✅ Restart modem functionality
 
 ## Attribution
 
@@ -46,7 +50,8 @@ This fixture set supports MVP functionality:
 
 ## Notes
 
-1. S34 uses `GetArrisDeviceStatus` (same action name as S33)
-2. Response format is pure JSON (S33 uses caret-delimited for channel data)
-3. Authentication flow is identical to S33 (HMAC-MD5 challenge-response)
-4. HTTPS required (modem redirects HTTP to HTTPS)
+1. S34 uses `GetArrisDeviceStatus` for system info (same as S33)
+2. S34 uses `GetCustomerStatus*` for channel data (same as S33)
+3. Channel data format is caret-delimited with `|+|` separator (same as S33)
+4. **Authentication uses HMAC-SHA256** (S33 uses HMAC-MD5)
+5. HTTPS required (modem redirects HTTP to HTTPS)
