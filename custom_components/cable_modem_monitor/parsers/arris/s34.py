@@ -659,6 +659,11 @@ class ArrisS34HnapParser(ModemParser):
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
 
+                    # Skip unlocked/placeholder channels (channel_id=0 or Not Locked)
+                    # These create duplicate entity IDs and have no useful data
+                    if channel_id == 0 or lock_status == "Not Locked":
+                        continue
+
                     # Frequency - could be Hz or need conversion
                     freq_str = fields[4].strip()
                     if "Hz" in freq_str:
@@ -743,6 +748,12 @@ class ArrisS34HnapParser(ModemParser):
                     channel_id = int(fields[3])
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
+
+                    # Skip unlocked/placeholder channels (channel_id=0 or Not Locked)
+                    # These create duplicate entity IDs and have no useful data
+                    if channel_id == 0 or lock_status == "Not Locked":
+                        continue
+
                     symbol_rate = fields[4].strip()
 
                     # Frequency
