@@ -6,6 +6,12 @@ The S34 uses HNAP protocol similar to S33, but with key differences:
 
 Channel data format is caret-delimited (same as S33), using GetCustomer* actions.
 System info uses GetArrisDeviceStatus which returns pure JSON.
+
+Known firmware quirks:
+- The S34's web server sends malformed HTTP headers containing debug timing data
+  (e.g., "   4.699997  |Content-type: text/html"). This is a firmware bug that
+  causes urllib3 to log HeaderParsingError warnings. We suppress these warnings
+  since they are cosmetic and don't affect functionality.
 """
 
 from __future__ import annotations
@@ -17,6 +23,35 @@ import logging
 import time
 
 from bs4 import BeautifulSoup
+
+# Suppress urllib3 header parsing warnings caused by S34 firmware bug.
+# The S34's web server sends malformed HTTP headers with debug timing data
+# prepended to the Content-type header (e.g., "   4.699997  |Content-type: text/html").
+# This is cosmetic - requests still succeed. We filter these specific warnings.
+# See: https://github.com/solentlabs/cable_modem_monitor/pull/90
+
+
+class _S34HeaderParsingFilter(logging.Filter):
+    """Filter to suppress S34 modem's malformed header warnings.
+
+    The S34 firmware has a bug where it prepends debug timing data to HTTP headers.
+    This causes urllib3 to log HeaderParsingError warnings, but the requests succeed.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False to suppress S34-related header parsing warnings."""
+        # Suppress warnings about header parsing that mention the S34's typical pattern
+        # or the HNAP endpoint used by S34
+        if "Failed to parse headers" in record.getMessage():
+            msg = record.getMessage()
+            # S34 uses HNAP1 endpoint and shows timing data like "4.699997"
+            if "/HNAP1/" in msg or "Content-type:" in msg:
+                return False
+        return True
+
+
+# Install the filter on urllib3's connection logger
+logging.getLogger("urllib3.connection").addFilter(_S34HeaderParsingFilter())
 
 from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
 from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType

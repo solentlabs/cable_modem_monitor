@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Arris S34 Parser** - Full support for Arris S34 cable modem using HNAP protocol with HMAC-SHA256 authentication. Includes downstream/upstream channel data, system info, and restart functionality.
 
+### Fixed
+- **S34 Header Parsing Warnings** - Suppress urllib3 `HeaderParsingError` warnings caused by S34 firmware bug. The S34's web server sends malformed HTTP headers with debug timing data prepended to the Content-type header. This is cosmetic and doesn't affect functionality.
+
 ## [3.11.0] - 2025-12-27
 
 ### ⚠️ BREAKING CHANGE: Channel Sensor Entity IDs
