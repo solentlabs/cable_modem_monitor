@@ -7,11 +7,13 @@ protocol for communication, similar to the S33.
 
 ## Fixture Files
 
-| File                      | Description                        |
-| ------------------------- | ---------------------------------- |
-| `metadata.yaml`           | Modem metadata and attribution     |
-| `Login.html`              | Login page for parser detection    |
-| `hnap_device_status.json` | GetArrisDeviceStatus HNAP response |
+| File                          | Description                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `metadata.yaml`               | Modem metadata and attribution                   |
+| `Login.html`                  | Login page for parser detection                  |
+| `hnap_device_status.json`     | GetArrisDeviceStatus HNAP response               |
+| `hnap_downstream_channels.json` | GetCustomerStatusDownstreamChannelInfo response |
+| `hnap_upstream_channels.json`   | GetCustomerStatusUpstreamChannelInfo response   |
 
 ## Protocol Details
 
