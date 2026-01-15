@@ -53,11 +53,11 @@ class _S34HeaderParsingFilter(logging.Filter):
 # Install the filter on urllib3's connection logger
 logging.getLogger("urllib3.connection").addFilter(_S34HeaderParsingFilter())
 
-from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
-from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder
+from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig  # noqa: E402
+from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType  # noqa: E402
+from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder  # noqa: E402
 
-from ..base_parser import ModemCapability, ModemParser, ParserStatus
+from ..base_parser import ModemCapability, ModemParser, ParserStatus  # noqa: E402
 
 _LOGGER = logging.getLogger(__name__)
 
