@@ -1,15 +1,20 @@
-"""JSON-based HNAP request builder for MB8611 firmwares that use JSON instead of XML/SOAP.
+"""JSON-based HNAP request builder for modems that use JSON instead of XML/SOAP.
 
 The challenge-response authentication implementation is based on reverse engineering
 work by BowlesCR (Chris Bowles) from Issue #40 and the prior art from xNinjaKittyx's mb8600
-repository. The HMAC-MD5 authentication flow was documented through HAR file analysis
+repository. The HMAC authentication flow was documented through HAR file analysis
 of the modem's Login.js and SOAPAction.js files, captured using our Playwright-based
 HAR capture tool (scripts/capture_modem.py).
+
+Supported HMAC algorithms (specified in modem.yaml):
+- MD5: Most common for HNAP modems
+- SHA256: Used by some newer firmware variants
 
 References:
 - BowlesCR's MB8600 Login PoC: https://github.com/BowlesCR/MB8600_Login
 - xNinjaKittyx's mb8600: https://github.com/xNinjaKittyx/mb8600
 - Issue #40: https://github.com/solentlabs/cable_modem_monitor/issues/40
+- PR #90: https://github.com/solentlabs/cable_modem_monitor/pull/90 (SHA256 support)
 """
 
 from __future__ import annotations
@@ -23,35 +28,56 @@ from typing import cast
 
 import requests
 
+from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
+
 _LOGGER = logging.getLogger(__name__)
 
 
-def _hmac_md5(key: str, message: str) -> str:
-    """Compute HMAC-MD5 and return uppercase hex string.
+# Suppress urllib3 header parsing warnings caused by modem firmware bugs.
+# Some modems send malformed HTTP headers with debug timing data prepended
+# to Content-type. This causes urllib3 to log HeaderParsingError warnings,
+# but requests succeed. Applied globally since it's harmless for modems
+# without the bug.
+class _HNAPHeaderParsingFilter(logging.Filter):
+    """Filter to suppress HNAP modem malformed header warnings."""
 
-    This matches the JavaScript hex_hmac_md5() function used by MB8611.
-    """
-    return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.md5).hexdigest().upper()
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False to suppress HNAP-related header parsing warnings."""
+        if "Failed to parse headers" in record.getMessage():
+            msg = record.getMessage()
+            if "/HNAP1/" in msg or "Content-type:" in msg:
+                return False
+        return True
+
+
+logging.getLogger("urllib3.connection").addFilter(_HNAPHeaderParsingFilter())
 
 
 class HNAPJsonRequestBuilder:
     """Helper for building and executing JSON-based HNAP requests.
 
-    Some MB8611 firmware variants use JSON-formatted HNAP requests instead of XML/SOAP.
-    This builder handles those cases.
+    Some modem firmware variants use JSON-formatted HNAP requests instead of XML/SOAP.
+    This builder handles those cases with configurable HMAC algorithm.
     """
 
-    def __init__(self, endpoint: str, namespace: str, empty_action_value: str | dict | None = None):
+    def __init__(
+        self,
+        endpoint: str,
+        namespace: str,
+        hmac_algorithm: HMACAlgorithm,
+        empty_action_value: str | dict | None = None,
+    ):
         """
         Initialize JSON HNAP request builder.
 
         Args:
             endpoint: HNAP endpoint path (e.g., "/HNAP1/")
             namespace: HNAP namespace (e.g., "http://purenetworks.com/HNAP1/")
+            hmac_algorithm: HMAC algorithm for authentication (from modem.yaml).
             empty_action_value: Value to use for actions without parameters in GetMultipleHNAPs.
                 Different modem firmwares expect different formats:
-                - "" (empty string): S33, observed in HAR captures
-                - {} (empty dict): MB8611, legacy default
+                - "" (empty string): observed in most HAR captures
+                - {} (empty dict): some legacy firmwares
                 Defaults to {} for backwards compatibility.
                 No official HNAP spec exists for JSON format; this is vendor-specific.
                 See: https://github.com/solentlabs/cable_modem_monitor/issues/32
@@ -60,10 +86,32 @@ class HNAPJsonRequestBuilder:
             empty_action_value = {}
         self.endpoint = endpoint
         self.namespace = namespace
+        self.hmac_algorithm = hmac_algorithm
         self.empty_action_value = empty_action_value
         self._private_key: str | None = None  # Stored after successful login for auth headers
         # Store last request/response for diagnostics (passwords redacted)
         self._last_auth_attempt: dict | None = None
+
+    def _hmac(self, key: str, message: str) -> str:
+        """Compute HMAC with configured algorithm and return uppercase hex string.
+
+        This matches the JavaScript hex_hmac_md5() or hex_hmac_sha256() functions
+        used by various modem firmwares.
+
+        Args:
+            key: HMAC key
+            message: Message to authenticate
+
+        Returns:
+            Uppercase hex string of HMAC result
+        """
+        if self.hmac_algorithm == HMACAlgorithm.SHA256:
+            return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest().upper()
+        elif self.hmac_algorithm == HMACAlgorithm.MD5:
+            return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.md5).hexdigest().upper()
+        else:
+            # This shouldn't happen with enum type, but be explicit
+            raise ValueError(f"Unsupported HMAC algorithm: {self.hmac_algorithm}")
 
     def clear_auth_cache(self) -> None:
         """Clear cached authentication.
@@ -85,8 +133,9 @@ class HNAPJsonRequestBuilder:
     def _get_hnap_auth(self, action: str) -> str:
         """Generate HNAP_AUTH header for authenticated requests.
 
-        The MB8611 requires this header for all requests after login.
-        Format: HMAC_MD5(PrivateKey, timestamp + SOAPAction) + " " + timestamp
+        HNAP modems require this header for all requests after login.
+        Format: HMAC(PrivateKey, timestamp + SOAPAction) + " " + timestamp
+        The HMAC algorithm is configured per-modem in modem.yaml.
         """
         if not self._private_key:
             # For login requests, use a default key
@@ -99,7 +148,7 @@ class HNAPJsonRequestBuilder:
         timestamp = str(current_time)
         soap_action_uri = f'"{self.namespace}{action}"'
 
-        auth = _hmac_md5(private_key, timestamp + soap_action_uri)
+        auth = self._hmac(private_key, timestamp + soap_action_uri)
         return f"{auth} {timestamp}"
 
     def call_single(self, session: requests.Session, base_url: str, action: str, params: dict | None = None) -> str:
@@ -166,9 +215,8 @@ class HNAPJsonRequestBuilder:
             requests.RequestException: If request fails
         """
         # Build JSON request with nested action objects
-        # The empty value format is modem-specific (no official HNAP JSON spec exists):
-        # - S33: uses "" (empty string), observed in HAR captures
-        # - MB8611: uses {} (empty dict), legacy behavior
+        # The empty value format is modem-specific (no official HNAP JSON spec exists).
+        # Most modems use "" (empty string), some legacy firmwares use {} (empty dict).
         # Reference: https://github.com/solentlabs/cable_modem_monitor/issues/32
         action_objects = {action: self.empty_action_value for action in actions}
         request_data = {"GetMultipleHNAPs": action_objects}
@@ -206,9 +254,9 @@ class HNAPJsonRequestBuilder:
         """
         Perform JSON-based HNAP login with challenge-response authentication.
 
-        The MB8611 uses a two-step challenge-response protocol:
+        HNAP uses a two-step challenge-response protocol:
         1. Request challenge: Send Action="request" to get Challenge, Cookie, PublicKey
-        2. Compute credentials using HMAC-MD5
+        2. Compute credentials using configured HMAC algorithm
         3. Send login: Send Action="login" with computed LoginPassword
 
         Args:
@@ -229,8 +277,8 @@ class HNAPJsonRequestBuilder:
 
         try:
             # Step 1: Request challenge
-            # Note: PrivateLogin field is required for MB8611 authentication
-            # It tells the modem which field will contain the hashed password
+            # Note: PrivateLogin field is required for HNAP authentication.
+            # It tells the modem which field will contain the hashed password.
             challenge_data = {
                 "Login": {
                     "Action": "request",
@@ -310,8 +358,8 @@ class HNAPJsonRequestBuilder:
             )
 
             # Step 2: Compute credentials
-            # PrivateKey = HMAC_MD5(PublicKey + password, Challenge)
-            private_key = _hmac_md5(public_key + password, challenge)
+            # PrivateKey = HMAC(PublicKey + password, Challenge)
+            private_key = self._hmac(public_key + password, challenge)
             self._private_key = private_key  # Store for subsequent authenticated requests
 
             # Set the session cookies
@@ -322,8 +370,8 @@ class HNAPJsonRequestBuilder:
             session.cookies.set("uid", cookie)
             session.cookies.set("PrivateKey", private_key)
 
-            # LoginPassword = HMAC_MD5(PrivateKey, Challenge)
-            login_password = _hmac_md5(private_key, challenge)
+            # LoginPassword = HMAC(PrivateKey, Challenge)
+            login_password = self._hmac(private_key, challenge)
 
             _LOGGER.debug("JSON HNAP computed credentials, sending login request")
 

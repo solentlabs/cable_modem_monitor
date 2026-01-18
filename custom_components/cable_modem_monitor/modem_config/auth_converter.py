@@ -21,7 +21,7 @@ from custom_components.cable_modem_monitor.core.auth.configs import (
     NoAuthConfig,
     UrlTokenSessionConfig,
 )
-from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
+from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType, HMACAlgorithm
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
@@ -107,11 +107,15 @@ def hnap_config_to_auth_config(hnap: ModemHnapAuthConfig) -> tuple[AuthStrategyT
     Returns:
         Tuple of (AuthStrategyType, HNAPAuthConfig)
     """
+    # Convert string from modem.yaml to enum
+    hmac_algo = HMACAlgorithm(hnap.hmac_algorithm)
+
     return AuthStrategyType.HNAP_SESSION, HNAPAuthConfig(
         strategy=AuthStrategyType.HNAP_SESSION,
         endpoint=hnap.endpoint,
         namespace=hnap.namespace,
         empty_action_value=hnap.empty_action_value,
+        hmac_algorithm=hmac_algo,
     )
 
 

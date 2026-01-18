@@ -43,6 +43,7 @@ auth:
     namespace: "http://purenetworks.com/HNAP1/"
     # S33-specific: uses empty string "" for action values (not {} like MB8611)
     empty_action_value: ""
+    hmac_algorithm: md5
     formats:
       - json
     actions:

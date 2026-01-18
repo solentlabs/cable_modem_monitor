@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 325
+**Total Tests:** 330
 
 ## Test Files
 
@@ -17,7 +17,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
-| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 45 | Tests for JSON-based HNAP Request Builder with challenge-... |
+| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
 | [test_network.py](test_network.py) | 0 | Tests for core/network.py. |
 | [test_parser_utils.py](test_parser_utils.py) | 13 | Tests for core/parser_utils.py. |
 | [test_signal_analyzer.py](test_signal_analyzer.py) | 22 | Tests for Signal Quality Analyzer. |
@@ -635,7 +635,7 @@ Tests for HNAP Request Builder.
 Tests for JSON-based HNAP Request Builder with challenge-response authentication.
 
 **TestHmacMd5** (5 tests)
-: Test the HMAC-MD5 helper function.
+: Test the HMAC method with MD5 algorithm.
 
 - `test_returns_uppercase_hex`: Test that HMAC-MD5 returns uppercase hexadecimal.
 - `test_correct_length`: Test that HMAC-MD5 returns 32 character hex string.
@@ -643,10 +643,23 @@ Tests for JSON-based HNAP Request Builder with challenge-response authentication
 - `test_empty_strings`: Test HMAC-MD5 with empty strings.
 - `test_special_characters`: Test HMAC-MD5 with special characters.
 
+**TestHmacSha256** (3 tests)
+: Test the HMAC method with SHA256 algorithm.
+
+- `test_returns_uppercase_hex`: Test that HMAC-SHA256 returns uppercase hexadecimal.
+- `test_correct_length`: Test that HMAC-SHA256 returns 64 character hex string.
+- `test_different_from_md5`: Test that SHA256 produces different result than MD5.
+
+**TestHmacAlgorithmValidation** (2 tests)
+: Test algorithm type safety in builder initialization.
+
+- `test_enum_value_stored`: Test that enum value is stored correctly.
+- `test_md5_enum_value_stored`: Test that MD5 enum value is stored correctly.
+
 **TestHNAPJsonRequestBuilderInit** (2 tests)
 : Test JSON HNAP builder initialization.
 
-- `test_init`: Test initialization with endpoint and namespace.
+- `test_init`: Test initialization with endpoint, namespace, and algorithm.
 - `test_init_custom_values`: Test initialization with custom endpoint and namespace.
 
 **TestHnapAuth** (3 tests)

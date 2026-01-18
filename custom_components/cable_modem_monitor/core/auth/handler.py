@@ -30,7 +30,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from .base import AuthResult
-from .types import AuthStrategyType
+from .types import AuthStrategyType, HMACAlgorithm
 
 if TYPE_CHECKING:
     import requests
@@ -486,11 +486,16 @@ class AuthHandler:
 
         if strategy == AuthStrategyType.HNAP_SESSION:
             merged = {**DEFAULT_HNAP_CONFIG, **hnap_config}
+            # Convert string to enum if needed
+            hmac_algo = merged.get("hmac_algorithm")
+            if isinstance(hmac_algo, str):
+                hmac_algo = HMACAlgorithm(hmac_algo)
             return HNAPAuthConfig(
                 strategy=strategy,
                 endpoint=merged.get("endpoint", "/HNAP1/"),
                 namespace=merged.get("namespace", "http://purenetworks.com/HNAP1/"),
                 empty_action_value=merged.get("empty_action_value", ""),
+                hmac_algorithm=hmac_algo,
             )
 
         if strategy == AuthStrategyType.URL_TOKEN_SESSION:

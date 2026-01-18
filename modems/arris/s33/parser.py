@@ -20,6 +20,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
+from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.modem_config.adapter import (
     get_auth_adapter_for_parser,
@@ -208,6 +209,7 @@ class ArrisS33HnapParser(ModemParser):
             builder = HNAPJsonRequestBuilder(
                 endpoint=hints["endpoint"],
                 namespace=hints["namespace"],
+                hmac_algorithm=HMACAlgorithm(hints["hmac_algorithm"]),
                 empty_action_value=hints.get("empty_action_value", ""),
             )
             _LOGGER.warning("S33: No stored JSON builder - creating new one (may lack auth)")
@@ -538,6 +540,7 @@ class ArrisS33HnapParser(ModemParser):
             builder = HNAPJsonRequestBuilder(
                 endpoint=hints["endpoint"],
                 namespace=hints["namespace"],
+                hmac_algorithm=HMACAlgorithm(hints["hmac_algorithm"]),
                 empty_action_value=hints.get("empty_action_value", ""),
             )
             _LOGGER.warning("S33: No stored JSON builder for restart - creating new one (may lack auth)")

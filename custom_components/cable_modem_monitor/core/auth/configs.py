@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .types import AuthStrategyType
+from .types import AuthStrategyType, HMACAlgorithm
 
 
 @dataclass
@@ -84,18 +84,26 @@ class RedirectFormAuthConfig(AuthConfig):
 
 @dataclass
 class HNAPAuthConfig(AuthConfig):
-    """HNAP JSON authentication configuration (MB8611, S33).
+    """HNAP JSON authentication configuration.
 
-    Uses HMAC-MD5 challenge-response authentication protocol.
+    Uses HMAC challenge-response authentication protocol.
     The HNAPJsonRequestBuilder is used internally for the authentication flow.
     """
 
     strategy: AuthStrategyType = AuthStrategyType.HNAP_SESSION
     endpoint: str = "/HNAP1/"
     namespace: str = "http://purenetworks.com/HNAP1/"
-    # Modem firmware bug: S33 expects "" for empty action, MB8611 expects {}.
-    # Both should accept {} per HNAP spec, but S33 firmware rejects it.
+    # Some firmware variants expect "" for empty action, others expect {}.
+    # Default to "" as it works with most modems observed in HAR captures.
     empty_action_value: str | dict = ""
+    # HMAC algorithm - required, specified in each modem's modem.yaml
+    # None sentinel triggers validation error if not overridden
+    hmac_algorithm: HMACAlgorithm | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required fields."""
+        if self.hmac_algorithm is None:
+            raise ValueError("hmac_algorithm is required for HNAPAuthConfig")
 
 
 @dataclass

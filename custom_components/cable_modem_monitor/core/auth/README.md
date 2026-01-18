@@ -9,6 +9,13 @@ the modem's response and react accordingly.
 **v3.12.0+ Architecture:** Auth discovery runs BEFORE parser detection during setup.
 Parsers no longer handle authentication - they just parse data.
 
+## Glossary
+
+| Abbreviation | Full Name | Description |
+|--------------|-----------|-------------|
+| **HMAC** | Hash-based Message Authentication Code | Cryptographic authentication using a secret key combined with a hash function (MD5 or SHA256). Defined in [RFC 2104](https://datatracker.ietf.org/doc/html/rfc2104). |
+| **HNAP** | Home Network Administration Protocol | Proprietary SOAP-based protocol developed by Pure Networks (acquired by Cisco). Used by Arris, Motorola, and other cable modems for device management. No public specification exists. |
+
 ## How It Works
 
 ### Discovery Flow (Setup & Reconfigure)

@@ -97,6 +97,7 @@ class TestSyntheticHnapAdapter:
                     namespace="http://example.com/HNAP1/",
                     login_action="Login",
                     empty_action_value="",
+                    hmac_algorithm="md5",
                 ),
             ),
         )
@@ -109,6 +110,7 @@ class TestSyntheticHnapAdapter:
         assert hints["endpoint"] == "/HNAP1/"
         assert hints["namespace"] == "http://example.com/HNAP1/"
         assert hints["empty_action_value"] == ""
+        assert hints["hmac_algorithm"] == "md5"
 
     def test_get_hnap_config(self, hnap_config):
         """Test HNAP config for AuthHandler."""

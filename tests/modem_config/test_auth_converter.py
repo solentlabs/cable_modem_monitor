@@ -17,7 +17,7 @@ from custom_components.cable_modem_monitor.core.auth.configs import (
     NoAuthConfig,
     UrlTokenSessionConfig,
 )
-from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
+from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType, HMACAlgorithm
 from custom_components.cable_modem_monitor.modem_config.auth_converter import (
     form_config_to_auth_config,
     hnap_config_to_auth_config,
@@ -114,7 +114,7 @@ class TestModemConfigToAuthConfig:
             model="TestModem",
             auth=AuthConfig(
                 strategy=AuthStrategy.HNAP,
-                hnap=SchemaHnapAuthConfig(),
+                hnap=SchemaHnapAuthConfig(hmac_algorithm="md5"),
             ),
         )
 
@@ -218,8 +218,8 @@ class TestHnapConfigToAuthConfig:
     """Test hnap_config_to_auth_config conversion."""
 
     def test_hnap_defaults(self):
-        """Test HNAP config with default values."""
-        hnap = SchemaHnapAuthConfig()
+        """Test HNAP config with default values (except required hmac_algorithm)."""
+        hnap = SchemaHnapAuthConfig(hmac_algorithm="md5")
 
         strategy_type, auth_config = hnap_config_to_auth_config(hnap)
 
@@ -227,6 +227,7 @@ class TestHnapConfigToAuthConfig:
         assert auth_config.endpoint == "/HNAP1/"
         assert auth_config.namespace == "http://purenetworks.com/HNAP1/"
         assert auth_config.empty_action_value == ""
+        assert auth_config.hmac_algorithm == HMACAlgorithm.MD5
 
     def test_hnap_custom_values(self):
         """Test HNAP config with custom values."""
@@ -234,6 +235,7 @@ class TestHnapConfigToAuthConfig:
             endpoint="/custom/hnap",
             namespace="http://custom.namespace/",
             empty_action_value="empty",
+            hmac_algorithm="sha256",
         )
 
         _, auth_config = hnap_config_to_auth_config(hnap)
@@ -241,6 +243,7 @@ class TestHnapConfigToAuthConfig:
         assert auth_config.endpoint == "/custom/hnap"
         assert auth_config.namespace == "http://custom.namespace/"
         assert auth_config.empty_action_value == "empty"
+        assert auth_config.hmac_algorithm == HMACAlgorithm.SHA256
 
 
 class TestUrlTokenConfigToAuthConfig:

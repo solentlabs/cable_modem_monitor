@@ -96,8 +96,10 @@ class ModemConfigAuthAdapter:
         - endpoint: HNAP endpoint (standard: "/HNAP1/")
         - namespace: HNAP namespace (standard: "http://purenetworks.com/HNAP1/")
         - empty_action_value: Value for empty actions (usually "")
+        - hmac_algorithm: HMAC algorithm ("md5" or "sha256")
 
-        Note: HNAP values are protocol constants, same across all HNAP modems.
+        Note: Most HNAP values are protocol constants across all HNAP modems.
+        The exception is hmac_algorithm which varies by firmware.
         """
         if self.config.auth.strategy != AuthStrategy.HNAP or not self.config.auth.hnap:
             return {}
@@ -107,6 +109,7 @@ class ModemConfigAuthAdapter:
             "endpoint": hnap.endpoint,
             "namespace": hnap.namespace,
             "empty_action_value": hnap.empty_action_value,
+            "hmac_algorithm": hnap.hmac_algorithm,
         }
 
     def get_hnap_config(self) -> dict[str, str]:

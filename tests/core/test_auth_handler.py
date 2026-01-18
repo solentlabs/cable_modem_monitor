@@ -446,7 +446,14 @@ class TestAuthHandlerHNAP:
 
     def test_hnap_auth_no_credentials(self):
         """Test HNAP strategy returns False without credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.HNAP_SESSION)
+        handler = AuthHandler(
+            strategy=AuthStrategyType.HNAP_SESSION,
+            hnap_config={
+                "endpoint": "/HNAP1/",
+                "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
+            },
+        )
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -467,6 +474,7 @@ class TestAuthHandlerHNAP:
             hnap_config={
                 "endpoint": "/HNAP1/",
                 "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
             },
         )
 

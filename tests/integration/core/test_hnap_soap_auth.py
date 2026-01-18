@@ -208,6 +208,7 @@ class TestHNAPAuthHandler:
             hnap_config={
                 "endpoint": "/HNAP1/",
                 "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
             },
         )
 
@@ -221,6 +222,7 @@ class TestHNAPAuthHandler:
             hnap_config={
                 "endpoint": "/HNAP1/",
                 "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
             },
         )
 

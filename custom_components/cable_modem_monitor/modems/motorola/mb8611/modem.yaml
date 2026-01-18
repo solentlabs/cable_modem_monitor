@@ -52,6 +52,7 @@ auth:
     namespace: "http://purenetworks.com/HNAP1/"
     # MB8611 uses empty string "" for action values (verified from HAR capture)
     empty_action_value: ""
+    hmac_algorithm: md5
     formats:
       - json
       - xml

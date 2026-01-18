@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Configurable HMAC Algorithm** - HNAPJsonRequestBuilder now supports `hmac_algorithm` parameter ("md5" or "sha256") for modems with different authentication requirements
+
 ## [3.12.1] - 2026-01-20
 
 ### Fixed

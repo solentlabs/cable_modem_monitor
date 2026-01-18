@@ -230,6 +230,10 @@ class HnapAuthConfig(BaseModel):
         default="",
         description="Value for empty SOAP actions (modem-specific quirk)",
     )
+    hmac_algorithm: str = Field(
+        ...,  # Required - forces explicit declaration for new HNAP modems
+        description="HMAC algorithm for auth: 'md5' or 'sha256'",
+    )
     formats: list[str] = Field(
         default_factory=lambda: ["json"],
         description="Supported formats in order of preference",

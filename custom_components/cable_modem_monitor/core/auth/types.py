@@ -5,6 +5,21 @@ from __future__ import annotations
 from enum import Enum
 
 
+class HMACAlgorithm(str, Enum):
+    """HMAC algorithm for HNAP authentication.
+
+    Different modem firmwares use different HMAC algorithms for
+    challenge-response authentication. The specific algorithm is
+    declared in each modem's modem.yaml configuration.
+    """
+
+    MD5 = "md5"
+    """HMAC-MD5: Most common algorithm for HNAP modems."""
+
+    SHA256 = "sha256"
+    """HMAC-SHA256: Used by newer firmware variants."""
+
+
 class AuthErrorType(Enum):
     """Classification of authentication errors.
 
@@ -49,7 +64,7 @@ class AuthStrategyType(Enum):
     """Form-based auth with redirect validation."""
 
     HNAP_SESSION = "hnap_session"
-    """HNAP JSON authentication with HMAC challenge-response (MB8611, S33)."""
+    """HNAP JSON authentication with HMAC challenge-response."""
 
     HNAP_SOAP = "hnap_soap"
     """HNAP XML/SOAP authentication (legacy/older firmwares)."""
