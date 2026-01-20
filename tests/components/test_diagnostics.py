@@ -854,22 +854,22 @@ class TestGetHnapAuthAttempt:
 
         assert result["note"] == "Scraper not available"
 
-    def test_returns_note_when_no_parser(self):
-        """Test returns explanatory note when parser not available."""
+    def test_returns_note_when_no_auth_handler(self):
+        """Test returns explanatory note when auth handler not available."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = None
+        coordinator.scraper._auth_handler = None
 
         result = _get_hnap_auth_attempt(coordinator)
 
-        assert result["note"] == "Parser not available (might be using fallback mode)"
+        assert result["note"] == "Auth handler not available (might be using no-auth mode)"
 
     def test_returns_note_when_no_json_builder(self):
         """Test returns explanatory note when no JSON builder (not HNAP modem)."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = None
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = None
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -879,9 +879,10 @@ class TestGetHnapAuthAttempt:
         """Test returns explanatory note when no auth attempt recorded."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = None
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = None
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -891,15 +892,16 @@ class TestGetHnapAuthAttempt:
         """Test returns auth attempt data when available."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = {
             "challenge_request": {"Login": {"Action": "request", "Username": "admin"}},
             "challenge_response": '{"LoginResponse": {"Challenge": "ABC"}}',
             "login_request": {"Login": {"Action": "login", "LoginPassword": "[REDACTED]"}},
             "login_response": '{"LoginResponse": {"LoginResult": "OK"}}',
             "error": None,
         }
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -911,15 +913,16 @@ class TestGetHnapAuthAttempt:
         """Test that auth attempt data is sanitized."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = {
             "challenge_request": {"Login": {"Username": "admin"}},
             "challenge_response": "password=secret123",
             "login_request": None,
             "login_response": None,
             "error": None,
         }
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -931,10 +934,10 @@ class TestGetHnapAuthAttempt:
         """Test that exceptions are handled gracefully."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        # Simulate an exception
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.side_effect = Exception("Something went wrong")
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.side_effect = Exception("Something went wrong")
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 

@@ -56,9 +56,9 @@ Note:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # =============================================================================
 # ENUMS
@@ -152,9 +152,8 @@ class Capability(str, Enum):
         software_version: Firmware/software version
             Parser returns: system_info.software_version
 
-    Actions:
-        restart: Modem supports remote restart
-            Parser implements: restart(session, base_url) -> bool
+    Note: Actions like restart are NOT capabilities. They are defined in the
+    actions section and checked via ActionFactory.supports().
     """
 
     # Channel data (by modulation type)
@@ -168,9 +167,6 @@ class Capability(str, Enum):
     LAST_BOOT_TIME = "last_boot_time"
     HARDWARE_VERSION = "hardware_version"
     SOFTWARE_VERSION = "software_version"
-
-    # Actions
-    RESTART = "restart"
 
 
 # =============================================================================
@@ -497,20 +493,111 @@ class HardwareConfig(BaseModel):
 # =============================================================================
 
 
-class BehaviorsConfig(BaseModel):
-    """Special modem behaviors."""
+# =============================================================================
+# ACTIONS CONFIGURATION
+# =============================================================================
 
-    restart_window_seconds: int = Field(
-        default=0,
-        description="Seconds to ignore zero power during restart",
+
+class RestartActionConfig(BaseModel):
+    """Configuration for restart action (non-HNAP modems).
+
+    Used by HTML form-based and REST API modems to define how to trigger
+    a restart. HNAP modems use auth.hnap.actions.restart instead.
+
+    Example (HTML form):
+        restart:
+          type: html_form
+          pre_fetch_url: "/MotoSecurity.asp"
+          endpoint: "/goform/MotoSecurity"
+          params:
+            MotoSecurityAction: "1"
+    """
+
+    type: Literal["hnap", "html_form", "rest_api"] = Field(
+        default="html_form",
+        description="Action type: hnap, html_form, rest_api",
     )
-    zero_power_during_restart: bool = Field(
+
+    # HNAP-specific
+    action_name: str | None = Field(
+        default=None,
+        description="HNAP action name (e.g., 'Reboot'). Required when type=hnap",
+    )
+
+    # HTML/REST-specific
+    endpoint: str | None = Field(
+        default=None,
+        description="Static endpoint URL for restart action",
+    )
+    endpoint_pattern: str | None = Field(
+        default=None,
+        description="Dynamic endpoint pattern (e.g., '/restart_{session_token}')",
+    )
+    pre_fetch_url: str | None = Field(
+        default=None,
+        description="URL to fetch before executing action (for tokens/cookies)",
+    )
+    params: dict[str, str] = Field(
+        default_factory=dict,
+        description="Form parameters or request body fields",
+    )
+    method: str = Field(
+        default="POST",
+        description="HTTP method (POST, GET)",
+    )
+
+    @model_validator(mode="after")
+    def validate_type_requirements(self) -> RestartActionConfig:
+        """Ensure type-specific required fields are present."""
+        if self.type == "hnap":
+            if not self.action_name:
+                raise ValueError("HNAP restart requires action_name field")
+        elif self.type in ("html_form", "rest_api") and not self.endpoint and not self.endpoint_pattern:
+            raise ValueError(f"{self.type} restart requires endpoint or endpoint_pattern")
+        return self
+
+
+class ActionsConfig(BaseModel):
+    """Top-level actions configuration for non-HNAP modems.
+
+    Contains action definitions for restart and potentially other
+    operations in the future.
+    """
+
+    restart: RestartActionConfig | None = Field(
+        default=None,
+        description="Restart action configuration",
+    )
+
+
+# =============================================================================
+# BEHAVIORS CONFIGURATION
+# =============================================================================
+
+
+class RestartBehaviorsConfig(BaseModel):
+    """Restart-related modem behaviors.
+
+    These affect how the parser interprets data after a restart,
+    not how the restart action is executed.
+    """
+
+    window_seconds: int = Field(
+        default=0,
+        description="Seconds to filter zero-power channels after restart",
+    )
+    zero_power_reported: bool = Field(
         default=False,
         description="Whether modem reports zero power during restart",
     )
-    requires_multi_page_fetch: bool = Field(
-        default=False,
-        description="Whether data requires fetching multiple pages",
+
+
+class BehaviorsConfig(BaseModel):
+    """Special modem behaviors."""
+
+    restart: RestartBehaviorsConfig | None = Field(
+        default=None,
+        description="Restart-related parsing behaviors",
     )
 
 
@@ -690,6 +777,12 @@ class ModemConfig(BaseModel):
         description="Supported capabilities - see Capability enum for valid values",
     )
 
+    # Actions (for non-HNAP modems)
+    actions: ActionsConfig | None = Field(
+        default=None,
+        description="Action configurations (restart, etc.) for HTML/REST modems",
+    )
+
     # Behaviors
     behaviors: BehaviorsConfig | None = Field(default=None)
 
@@ -712,10 +805,8 @@ class ModemConfig(BaseModel):
         description="External documentation links (e.g., {'review': 'https://...', 'gpl_source': 'https://...'})",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
+    # Pydantic v2 config: reject unknown fields to catch typos early
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     @model_validator(mode="after")
     def validate_required_fields_by_status(self) -> ModemConfig:

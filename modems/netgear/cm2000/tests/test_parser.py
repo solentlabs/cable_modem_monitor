@@ -238,46 +238,8 @@ class TestCM2000SoftwareVersion:
         assert version is None
 
 
-class TestCM2000Restart:
-    """Tests for CM2000 restart functionality."""
-
-    def test_restart_capability_declared(self):
-        """Test that RESTART capability is declared."""
-        from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
-
-        assert ModemCapability.RESTART in NetgearCM2000Parser.capabilities
-
-    def test_restart_extracts_form_action(self, requests_mock):
-        """Test that restart extracts dynamic form action from RouterStatus.htm."""
-        import re
-
-        parser = NetgearCM2000Parser()
-        import requests
-
-        session = requests.Session()
-        session.verify = False
-        base_url = "https://192.168.100.1"
-
-        # Load actual RouterStatus.htm fixture
-        router_status_html = load_fixture("netgear", "cm2000", "RouterStatus.htm")
-
-        # Mock RouterStatus.htm
-        requests_mock.get(f"{base_url}/RouterStatus.htm", text=router_status_html)
-
-        # Mock the goform POST endpoint
-        requests_mock.register_uri(
-            "POST",
-            re.compile(r".*/goform/RouterStatus.*"),
-            text="<html><body>Rebooting...</body></html>",
-        )
-
-        result = parser.restart(session, base_url)
-
-        assert result is True
-        # Verify POST was made with buttonSelect=2
-        post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
-        assert len(post_requests) == 1
-        assert "buttonSelect=2" in post_requests[0].text
+# Note: TestCM2000Restart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_html.py for HTML restart action tests
 
 
 class TestCM2000OFDMParsing:

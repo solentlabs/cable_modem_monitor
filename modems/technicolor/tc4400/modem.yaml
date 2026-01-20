@@ -60,9 +60,9 @@ capabilities:
   - software_version
 
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
-  requires_multi_page_fetch: true # Needs cmswinfo.html for system info
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # STATUS

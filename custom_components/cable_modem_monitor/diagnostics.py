@@ -587,16 +587,16 @@ def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
         Dict with auth attempt details or explanatory note if not available
     """
     try:
-        # Navigate: coordinator -> scraper -> parser -> _json_builder
+        # Navigate: coordinator -> scraper -> auth_handler -> hnap_builder
         scraper = getattr(coordinator, "scraper", None)
         if not scraper:
             return {"note": "Scraper not available"}
 
-        parser = getattr(scraper, "parser", None)
-        if not parser:
-            return {"note": "Parser not available (might be using fallback mode)"}
+        auth_handler = getattr(scraper, "_auth_handler", None)
+        if not auth_handler:
+            return {"note": "Auth handler not available (might be using no-auth mode)"}
 
-        json_builder = getattr(parser, "_json_builder", None)
+        json_builder = auth_handler.get_hnap_builder()
         if not json_builder:
             return {"note": "Not an HNAP modem (no JSON builder)"}
 

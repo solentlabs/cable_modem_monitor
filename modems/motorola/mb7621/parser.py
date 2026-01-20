@@ -20,12 +20,12 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number, parse_uptime_to_seconds
+from custom_components.cable_modem_monitor.modem_config.adapter import get_behaviors_for_parser
 
 _LOGGER = logging.getLogger(__name__)
 
-# During modem restart, power readings may be temporarily zero.
-# Ignore zero power readings during the first 5 minutes after boot.
-RESTART_WINDOW_SECONDS = 300
+# Default value if modem.yaml behaviors not found
+_DEFAULT_RESTART_WINDOW_SECONDS = 300
 
 
 class MotorolaMB7621Parser(ModemParser):
@@ -34,6 +34,17 @@ class MotorolaMB7621Parser(ModemParser):
     # Auth handled by AuthDiscovery (v3.12.0+) - form hints now in modem.yaml auth.form
     # MB7621 requires Base64-encoded passwords (configured in modem.yaml)
     # URL patterns now in modem.yaml pages config
+
+    def __init__(self) -> None:
+        """Initialize parser and load behaviors from modem.yaml."""
+        super().__init__()
+        # Load restart window from modem.yaml behaviors config
+        behaviors = get_behaviors_for_parser(self.__class__.__name__)
+        restart_behaviors = behaviors.get("restart") if behaviors else None
+        if restart_behaviors:
+            self._restart_window_seconds = restart_behaviors.get("window_seconds", _DEFAULT_RESTART_WINDOW_SECONDS)
+        else:
+            self._restart_window_seconds = _DEFAULT_RESTART_WINDOW_SECONDS
 
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse all data from pre-fetched resources.
@@ -105,48 +116,24 @@ class MotorolaMB7621Parser(ModemParser):
         }
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
-        """Parse all data from the modem (legacy interface).
+        """Parse data from BeautifulSoup or delegate to parse_resources().
 
-        This method maintains backwards compatibility by building a resources dict
-        and delegating to parse_resources().
+        This method exists for backwards compatibility. New code should use
+        parse_resources() which receives pre-fetched pages via HTMLLoader.
+
+        Note: session and base_url parameters are deprecated. Page fetching
+        is now handled by HTMLLoader based on modem.yaml pages.data config.
+
+        Args:
+            soup: BeautifulSoup object (used as fallback)
+            session: Deprecated - network calls moved to HTMLLoader
+            base_url: Deprecated - network calls moved to HTMLLoader
+
+        Returns:
+            Dict with downstream, upstream, and system_info
         """
+        # Build resources dict and delegate to parse_resources
         resources: dict[str, Any] = {"/": soup}
-
-        # Legacy path: fetch additional pages if session provided
-        if session and base_url:
-            # Check if we need to fetch connection page for channel data
-            has_channel_data = self._has_channel_tables(soup)
-            if not has_channel_data:
-                _LOGGER.debug("No channel tables found, fetching MotoConnection.asp for channel data")
-                try:
-                    conn_response = session.get(f"{base_url}/MotoConnection.asp", timeout=10)
-                    if conn_response.status_code == 200:
-                        conn_soup = BeautifulSoup(conn_response.text, "html.parser")
-                        resources["/MotoConnection.asp"] = conn_soup
-                        _LOGGER.debug("Fetched MotoConnection.asp (%d bytes)", len(conn_response.text))
-                    else:
-                        _LOGGER.warning("Failed to fetch MotoConnection.asp: status %d", conn_response.status_code)
-                except Exception as e:
-                    _LOGGER.error("Failed to fetch MotoConnection.asp: %s", e)
-
-            # Check if we need software version from MotoHome.asp
-            # Parse what we have so far to check for software_version
-            temp_info = self._parse_system_info(soup)
-            if "/MotoConnection.asp" in resources:
-                conn_info = self._parse_system_info(resources["/MotoConnection.asp"])
-                temp_info.update(conn_info)
-
-            if not temp_info.get("software_version"):
-                _LOGGER.debug("Software version not found, fetching MotoHome.asp")
-                try:
-                    home_response = session.get(f"{base_url}/MotoHome.asp", timeout=10)
-                    if home_response.status_code == 200:
-                        home_soup = BeautifulSoup(home_response.text, "html.parser")
-                        resources["/MotoHome.asp"] = home_soup
-                        _LOGGER.debug("Fetched MotoHome.asp (%d bytes)", len(home_response.text))
-                except Exception as e:
-                    _LOGGER.error("Failed to fetch MotoHome.asp: %s", e)
-
         return self.parse_resources(resources)
 
     def _has_channel_tables(self, soup: BeautifulSoup) -> bool:
@@ -239,7 +226,7 @@ class MotorolaMB7621Parser(ModemParser):
     def _parse_downstream(self, soup: BeautifulSoup, system_info: dict) -> list[dict]:
         """Parse downstream channel data."""
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
-        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        is_restarting = uptime_seconds is not None and uptime_seconds < self._restart_window_seconds
         _LOGGER.debug(
             "Uptime: %s, Seconds: %s, Restarting: %s", system_info.get("system_uptime"), uptime_seconds, is_restarting
         )
@@ -280,7 +267,7 @@ class MotorolaMB7621Parser(ModemParser):
         cols[0]   cols[1]       cols[2]        cols[3]      cols[4]      cols[5]      cols[6]
         """
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
-        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        is_restarting = uptime_seconds is not None and uptime_seconds < self._restart_window_seconds
         _LOGGER.debug(
             "Uptime: %s, Seconds: %s, Restarting: %s", system_info.get("system_uptime"), uptime_seconds, is_restarting
         )
@@ -373,45 +360,3 @@ class MotorolaMB7621Parser(ModemParser):
             _LOGGER.error("Error parsing system info: %s", e)
 
         return info
-
-    def restart(self, session, base_url) -> bool:
-        """Restart the modem."""
-        try:
-            security_url = f"{base_url}/MotoSecurity.asp"
-            _LOGGER.debug("Accessing security page: %s", security_url)
-            security_response = session.get(security_url, timeout=10)
-
-            if security_response.status_code != 200:
-                _LOGGER.error("Failed to access security page: %s", security_response.status_code)
-                return False
-
-            restart_url = f"{base_url}/goform/MotoSecurity"
-            _LOGGER.info("Sending restart command to %s", restart_url)
-
-            restart_data = {
-                "UserId": "",
-                "OldPassword": "",
-                "NewUserId": "",
-                "Password": "",
-                "PasswordReEnter": "",
-                "MotoSecurityAction": "1",
-            }
-            response = session.post(restart_url, data=restart_data, timeout=10)
-            _LOGGER.debug("Restart response: status=%s, content_length=%s", response.status_code, len(response.text))
-
-            if response.status_code == 200:
-                _LOGGER.info("Restart command sent successfully")
-                return True
-            else:
-                _LOGGER.error("Restart failed with status code: %s", response.status_code)
-                return False
-
-        except ConnectionResetError:
-            _LOGGER.info("Restart command sent successfully (connection reset by rebooting modem)")
-            return True
-        except Exception as e:
-            if "Connection aborted" in str(e) or "Connection reset" in str(e):
-                _LOGGER.info("Restart command sent successfully (connection reset by rebooting modem)")
-                return True
-            _LOGGER.error("Error sending restart command: %s", e)
-            return False

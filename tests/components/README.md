@@ -215,7 +215,7 @@ Tests for Cable Modem Monitor diagnostics platform.
 : Test _get_hnap_auth_attempt helper function.
 
 - `test_returns_note_when_no_scraper`: Test returns explanatory note when scraper not available.
-- `test_returns_note_when_no_parser`: Test returns explanatory note when parser not available.
+- `test_returns_note_when_no_auth_handler`: Test returns explanatory note when auth handler not available.
 - `test_returns_note_when_no_json_builder`: Test returns explanatory note when no JSON builder (not HNAP modem).
 - `test_returns_note_when_no_auth_attempt`: Test returns explanatory note when no auth attempt recorded.
 - `test_returns_auth_attempt_data`: Test returns auth attempt data when available.
@@ -405,8 +405,8 @@ remain stable as the architecture evolves toward declarative modem configs.
 
 - `test_clear_auth_cache_creates_new_session`: Test that clear_auth_cache creates a fresh session.
 - `test_clear_auth_cache_preserves_verify_setting`: Test that clear_auth_cache preserves SSL verify setting.
-- `test_clear_auth_cache_clears_hnap_builder`: Test that clear_auth_cache clears HNAP builder cache.
-- `test_clear_auth_cache_handles_missing_builder`: Test that clear_auth_cache handles parser without HNAP builder.
+- `test_clear_auth_cache_clears_hnap_builder`: Test that clear_auth_cache clears HNAP builder cache via auth_handler.
+- `test_clear_auth_cache_handles_missing_builder`: Test that clear_auth_cache handles auth handler without HNAP builder.
 
 **TestCaptureResponse** (3 tests)
 : Tests for response capture functionality.

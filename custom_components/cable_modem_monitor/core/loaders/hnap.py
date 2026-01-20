@@ -1,6 +1,6 @@
 """HNAP loader for modem SOAP/HNAP APIs.
 
-Handles loading data from HNAP-based cable modems (S33, MB8611) using
+Handles loading data from HNAP-based cable modems using
 the HNAPJsonRequestBuilder for authenticated API calls.
 """
 
@@ -21,10 +21,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HNAPLoader(ResourceLoader):
-    """Fetcher for HNAP/SOAP-based modem APIs.
+    """Loader for HNAP/SOAP-based modem APIs.
 
-    HNAP modems (S33, MB8611) use SOAP-like JSON requests with HMAC authentication.
-    The HNAPJsonRequestBuilder handles the cryptographic signing, so this fetcher
+    HNAP modems use SOAP-like JSON requests with HMAC authentication.
+    The HNAPJsonRequestBuilder handles the cryptographic signing, so this loader
     just needs to call the configured actions and return the responses.
 
     Attributes:

@@ -74,9 +74,6 @@ capabilities:
   - last_boot_time
   - software_version
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================

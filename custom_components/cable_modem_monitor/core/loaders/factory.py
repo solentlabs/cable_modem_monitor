@@ -64,7 +64,7 @@ class ResourceLoaderFactory:
             parser_format,
         )
 
-        # HNAP modems (S33, MB8611)
+        # HNAP paradigm
         if paradigm == "hnap":
             _LOGGER.debug("ResourceLoaderFactory: Creating HNAPLoader")
             return HNAPLoader(
@@ -75,7 +75,7 @@ class ResourceLoaderFactory:
                 hnap_builder=hnap_builder,
             )
 
-        # REST API modems (SuperHub5)
+        # REST API paradigm
         if paradigm == "rest_api" or parser_format == "json":
             # Check if it's actually HNAP (json format but hnap paradigm)
             # This handles edge cases where parser.format.type is json but paradigm is hnap

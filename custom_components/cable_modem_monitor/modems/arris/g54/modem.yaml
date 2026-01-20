@@ -90,9 +90,6 @@ capabilities:
   - software_version
   - hardware_version
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================

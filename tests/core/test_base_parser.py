@@ -63,11 +63,13 @@ class TestModemCapability:
     """Tests for ModemCapability enum."""
 
     def test_capability_values(self):
-        """Test all capability values exist."""
+        """Test all capability values exist.
+
+        Note: RESTART is not a capability - it's an action checked via ActionFactory.supports()
+        """
         assert ModemCapability.SYSTEM_UPTIME.value == "system_uptime"
         assert ModemCapability.SCQAM_DOWNSTREAM.value == "scqam_downstream"
         assert ModemCapability.OFDM_DOWNSTREAM.value == "ofdm_downstream"
-        assert ModemCapability.RESTART.value == "restart"
 
     def test_capability_is_string(self):
         """Test capability value can be used as string."""
@@ -99,7 +101,8 @@ class TestModemParserHasCapability:
             def parse(self, soup, session=None, base_url=None):
                 return {}
 
-        assert TestParser.has_capability(ModemCapability.RESTART) is False
+        # Test undeclared capabilities return False
+        assert TestParser.has_capability(ModemCapability.SOFTWARE_VERSION) is False
         assert TestParser.has_capability(ModemCapability.OFDM_DOWNSTREAM) is False
 
 

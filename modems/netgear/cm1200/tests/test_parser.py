@@ -452,11 +452,16 @@ class TestCM1200Capabilities:
 
         assert ModemCapability.SYSTEM_UPTIME in NetgearCM1200Parser.capabilities
 
-    def test_no_restart_capability(self):
-        """Test that RESTART capability is NOT declared (not in capture)."""
-        from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
+    def test_no_restart_action(self):
+        """Test that restart action is NOT configured (no actions.restart in modem.yaml)."""
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
 
-        assert ModemCapability.RESTART not in NetgearCM1200Parser.capabilities
+        adapter = get_auth_adapter_for_parser("NetgearCM1200Parser")
+        if adapter:
+            modem_config = adapter.get_modem_config_dict()
+            assert not ActionFactory.supports(ActionType.RESTART, modem_config)
 
     def test_ofdm_capability(self):
         """Test that OFDM capabilities are declared."""

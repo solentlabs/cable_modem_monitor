@@ -44,6 +44,7 @@ pages:
     downstream_channels: "/DocsisStatus.asp"
     upstream_channels: "/DocsisStatus.asp"
     system_info: "/DocsisStatus.asp"
+    software_version: "/RouterStatus.asp"
 
 parser:
   class: NetgearCM600Parser
@@ -70,10 +71,13 @@ capabilities:
   - last_boot_time
   - hardware_version
   - software_version
-  - restart
 
-behaviors:
-  requires_multi_page_fetch: true
+actions:
+  restart:
+    type: html_form
+    endpoint: "/goform/RouterStatus"
+    params:
+      RsAction: "2"
 
 # =============================================================================
 # STATUS

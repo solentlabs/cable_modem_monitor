@@ -50,6 +50,7 @@ from bs4 import BeautifulSoup
 
 from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
+from .actions import ActionFactory
 from .auth.handler import AuthHandler
 from .auth.types import AuthStrategyType
 from .base_parser import ModemParser
@@ -292,14 +293,11 @@ class ModemScraper:
         self.session = req.Session()
         self.session.verify = old_verify
 
-        # Clear parser's HNAP builder cache if present
-        if (
-            hasattr(self, "parser")
-            and self.parser is not None
-            and hasattr(self.parser, "_json_builder")
-            and self.parser._json_builder is not None
-        ):
-            self.parser._json_builder.clear_auth_cache()
+        # Clear HNAP builder auth cache via auth handler (not parser)
+        if self._auth_handler:
+            hnap_builder = self._auth_handler.get_hnap_builder()
+            if hnap_builder:
+                hnap_builder.clear_auth_cache()
 
         _LOGGER.debug("Cleared auth cache and created fresh session")
 
@@ -655,9 +653,7 @@ class ModemScraper:
             )
             auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
 
-            # Transfer HNAP builder to parser for parse() and restart() methods
-            if auth_result.success and self.parser:
-                self._transfer_hnap_builder_to_parser(self._auth_handler)
+            if auth_result.success:
                 return auth_result.success, auth_result.response_html
 
             # Stored strategy failed - try parser hints fallback
@@ -684,13 +680,6 @@ class ModemScraper:
         # This handles modems that don't need login (e.g., status pages are public)
         _LOGGER.debug("No auth strategy or parser hints found, assuming no auth required")
         return (True, None)
-
-    def _transfer_hnap_builder_to_parser(self, handler: AuthHandler) -> None:
-        """Transfer HNAP builder from auth handler to parser for authenticated API calls."""
-        hnap_builder = handler.get_hnap_builder()
-        if hnap_builder and self.parser:
-            self.parser._json_builder = hnap_builder  # type: ignore[attr-defined]
-            _LOGGER.debug("Transferred HNAP builder to parser for authenticated API calls")
 
     def _create_loader(self):
         """Create a resource loader based on parser's modem.yaml config.
@@ -794,14 +783,9 @@ class ModemScraper:
             temp_handler = AuthHandler(strategy="hnap_session", hnap_config=hints)
             auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
             if auth_result.success:
-                # Save handler for subsequent polls
+                # Save handler for subsequent polls (loader will get builder via get_hnap_builder())
                 self._auth_handler = temp_handler
                 _LOGGER.debug("Saved HNAP auth handler for future polls")
-                # Transfer HNAP builder to parser for data fetches
-                hnap_builder = temp_handler.get_hnap_builder()
-                if hnap_builder:
-                    self.parser._json_builder = hnap_builder  # type: ignore[attr-defined]
-                    _LOGGER.debug("Transferred HNAP builder to parser")
             return auth_result.success, auth_result.response_html
 
         # Check for URL token hints (SB8200)
@@ -1838,7 +1822,11 @@ class ModemScraper:
         return True
 
     def _execute_restart(self) -> bool:
-        """Execute the restart command.
+        """Execute the restart command using the action layer.
+
+        Uses ActionFactory to create the appropriate restart action based on
+        modem.yaml configuration. All restart logic is in the action layer,
+        keeping parsers focused on parsing only.
 
         Returns:
             True if restart command succeeded, False otherwise
@@ -1846,17 +1834,29 @@ class ModemScraper:
         if self.parser is None:
             _LOGGER.error("Cannot execute restart: parser is not set")
             return False
-        _LOGGER.info("Attempting to restart modem using %s parser", self.parser.name)
-        # Use getattr to access restart method dynamically (not all parsers support it)
-        restart_method = getattr(self.parser, "restart", None)
-        if restart_method is None:
-            _LOGGER.error("Parser does not support restart functionality")
+
+        _LOGGER.info("Attempting to restart modem using action layer for %s", self.parser.name)
+
+        # Get modem config from adapter
+        adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+        if not adapter:
+            _LOGGER.error("No modem.yaml adapter for %s - restart not supported", self.parser.name)
             return False
-        success: bool = restart_method(self.session, self.base_url)
 
-        if success:
-            _LOGGER.info("Modem restart command sent successfully")
+        modem_config = adapter.get_modem_config_dict()
+
+        # Create restart action
+        action = ActionFactory.create_restart_action(modem_config)
+        if not action:
+            _LOGGER.error("No restart action configured for %s in modem.yaml", self.parser.name)
+            return False
+
+        # Execute the action (action extracts what it needs from auth_handler)
+        result = action.execute(self.session, self.base_url, self._auth_handler)
+
+        if result.success:
+            _LOGGER.info("Modem restart command sent successfully: %s", result.message)
         else:
-            _LOGGER.error("Modem restart command failed")
+            _LOGGER.error("Modem restart command failed: %s", result.message)
 
-        return success
+        return result.success

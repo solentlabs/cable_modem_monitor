@@ -74,10 +74,14 @@ capabilities:
   - last_boot_time
   - hardware_version
   - software_version
-  - restart
 
-behaviors:
-  requires_multi_page_fetch: false
+actions:
+  restart:
+    # Dynamic endpoint: form action contains session ID (e.g., /goform/RouterStatus?id=123456)
+    pre_fetch_url: "/RouterStatus.htm"
+    endpoint_pattern: "RouterStatus"
+    params:
+      buttonSelect: "2"
 
 # =============================================================================
 # STATUS

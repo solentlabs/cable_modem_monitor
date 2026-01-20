@@ -403,12 +403,16 @@ class ModemConfigAuthAdapter:
     def get_modem_config_dict(self) -> dict[str, Any]:
         """Get the raw modem config as a dict.
 
-        Used by FetcherFactory to determine fetcher type and get pages.data.
+        Used by ActionFactory and FetcherFactory to determine action/fetcher
+        type and get configuration.
+
+        Uses mode='json' to serialize enums as their string values, ensuring
+        checks like `"restart" in capabilities` work correctly.
 
         Returns:
-            Modem config dict suitable for FetcherFactory.
+            Modem config dict suitable for ActionFactory and FetcherFactory.
         """
-        result: dict[str, Any] = self.config.model_dump()
+        result: dict[str, Any] = self.config.model_dump(mode="json")
         return result
 
     def get_url_token_config_for_loader(self) -> dict[str, str] | None:
@@ -431,6 +435,24 @@ class ModemConfigAuthAdapter:
             "session_cookie": ut.session_cookie or "sessionId",
             "token_prefix": ut.token_prefix or "ct_",
         }
+
+    def get_behaviors(self) -> dict[str, Any]:
+        """Get modem behaviors from modem.yaml.
+
+        Returns:
+            Dict with behavior settings:
+            - restart.window_seconds: Seconds to filter zero-power channels after restart
+            - restart.zero_power_reported: Whether modem reports zero power during restart
+        """
+        result: dict[str, Any] = {"restart": None}
+
+        if self.config.behaviors and self.config.behaviors.restart:
+            result["restart"] = {
+                "window_seconds": self.config.behaviors.restart.window_seconds,
+                "zero_power_reported": self.config.behaviors.restart.zero_power_reported,
+            }
+
+        return result
 
     def get_url_patterns(self) -> list[dict[str, str | bool]]:
         """Generate url_patterns from pages config.
@@ -624,6 +646,19 @@ def get_detection_hints_for_parser(parser_class_name: str) -> dict[str, str | li
     """
     result = _get_from_adapter(parser_class_name, "get_detection_hints")
     return cast(dict[str, str | list[str] | None] | None, result)
+
+
+def get_behaviors_for_parser(parser_class_name: str) -> dict[str, Any] | None:
+    """Get behaviors config for a parser class from modem.yaml.
+
+    Args:
+        parser_class_name: The parser class name (e.g., "MotorolaMB7621Parser")
+
+    Returns:
+        Dict with restart_window_seconds and zero_power_during_restart, or None if not found.
+    """
+    result = _get_from_adapter(parser_class_name, "get_behaviors")
+    return cast(dict[str, Any] | None, result)
 
 
 def clear_cache() -> None:

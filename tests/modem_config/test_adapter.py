@@ -39,7 +39,6 @@ class TestSyntheticFormAuthAdapter:
         return ModemConfig(
             manufacturer="Synthetic",
             model="FormAuth-1000",
-            parser_class="SyntheticFormAuthParser",
             auth=AuthConfig(
                 strategy=AuthStrategy.FORM,
                 form=FormAuthConfig(
@@ -89,7 +88,6 @@ class TestSyntheticHnapAdapter:
         return ModemConfig(
             manufacturer="Synthetic",
             model="HNAP-2000",
-            parser_class="SyntheticHnapParser",
             auth=AuthConfig(
                 strategy=AuthStrategy.HNAP,
                 hnap=HnapAuthConfig(
@@ -135,7 +133,6 @@ class TestSyntheticUrlTokenAdapter:
         return ModemConfig(
             manufacturer="Synthetic",
             model="URLToken-3000",
-            parser_class="SyntheticUrlTokenParser",
             auth=AuthConfig(
                 strategy=AuthStrategy.URL_TOKEN,
                 url_token=UrlTokenAuthConfig(
@@ -174,7 +171,6 @@ class TestSyntheticUrlTokenAdapter:
         config = ModemConfig(
             manufacturer="Synthetic",
             model="URLToken-DataPage",
-            parser_class="SyntheticUrlTokenDataPageParser",
             auth=AuthConfig(
                 strategy=AuthStrategy.URL_TOKEN,
                 url_token=UrlTokenAuthConfig(
@@ -204,7 +200,6 @@ class TestSyntheticNoAuthAdapter:
         return ModemConfig(
             manufacturer="Synthetic",
             model="NoAuth-4000",
-            parser_class="SyntheticNoAuthParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
         )
 
@@ -428,7 +423,6 @@ class TestUrlPatternPrioritization:
         config = ModemConfig(
             manufacturer="Test",
             model="DataPriority-1000",
-            parser_class="TestDataPriorityParser",
             auth=AuthConfig(strategy=AuthStrategy.BASIC),
             pages=PagesConfig(
                 protected=["/secondary.html", "/primary.html"],
@@ -451,7 +445,6 @@ class TestUrlPatternPrioritization:
         config = ModemConfig(
             manufacturer="Test",
             model="NoData-1000",
-            parser_class="TestNoDataParser",
             auth=AuthConfig(strategy=AuthStrategy.BASIC),
             pages=PagesConfig(
                 protected=["/first.html", "/second.html"],
@@ -595,7 +588,6 @@ def _build_full_config():
     return ModemConfig(
         manufacturer="TestMfr",
         model="TestModel",
-        parser_class="TestParser",
         parser=ParserConfig(**{"class": "TestParser", "module": "test.parser"}),
         auth=AuthConfig(
             strategy=AuthStrategy.FORM,
@@ -638,7 +630,6 @@ def _build_minimal_config():
     return ModemConfig(
         manufacturer="Test",
         model="Minimal",
-        parser_class="TestParser",
         auth=AuthConfig(strategy=AuthStrategy.NONE),
     )
 
@@ -676,7 +667,6 @@ class TestIdentityAccessors:
         return ModemConfig(
             manufacturer="TestMfr",
             model="TestModel",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
             detection=DetectionConfig(
                 pre_auth=["pre_pattern"],
@@ -715,7 +705,6 @@ class TestIdentityAccessors:
         config = ModemConfig(
             manufacturer="Test",
             model="SingleModel",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -734,7 +723,6 @@ class TestIdentityAccessors:
         config = ModemConfig(
             manufacturer="Test",
             model="NoDetection",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -766,7 +754,6 @@ class TestFixturesAccessor:
         config = ModemConfig(
             manufacturer="Test",
             model="WithFixtures",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
             fixtures=FixturesMetadata(path="modems/test/withfixtures/fixtures"),
         )
@@ -778,7 +765,6 @@ class TestFixturesAccessor:
         config = ModemConfig(
             manufacturer="Test",
             model="NoFixtures",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.NONE),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -795,7 +781,6 @@ class TestUrlPatternsWithPublic:
         config = ModemConfig(
             manufacturer="Test",
             model="PublicPages",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.BASIC),
             pages=PagesConfig(
                 public=["/public1.html", "/public2.html"],
@@ -849,7 +834,6 @@ class TestEdgeCases:
         config = ModemConfig(
             manufacturer="Test",
             model="WrongStrategy",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=strategy),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -861,7 +845,6 @@ class TestEdgeCases:
         config = ModemConfig(
             manufacturer="Test",
             model="MinimalUrlToken",
-            parser_class="TestParser",
             auth=AuthConfig(strategy=AuthStrategy.URL_TOKEN),
         )
         adapter = ModemConfigAuthAdapter(config)
