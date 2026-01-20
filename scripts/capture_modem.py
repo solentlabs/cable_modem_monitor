@@ -6,13 +6,16 @@ while you interact with your modem. You log in manually - the browser
 handles authentication perfectly regardless of the method used.
 
 Usage:
-    python scripts/capture_modem.py
-    python scripts/capture_modem.py --ip 192.168.0.1
-    python scripts/capture_modem.py --output my_modem.har
+    # Download and run (no git clone needed!)
+    curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
+    python capture_modem.py --ip 192.168.100.1
+
+    # Or with different IP
+    python capture_modem.py --ip 192.168.0.1
 
 Requirements:
-    pip install playwright
-    playwright install chromium
+    - Python 3.9+
+    - Dependencies auto-install on first run
 """
 
 from __future__ import annotations
@@ -24,13 +27,90 @@ import gzip
 import json
 import os
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-# Add parent directory to path for imports
+# Script date thumbprint - update when making changes
+# Format: YYYY-MM-DD (used in capture metadata for debugging)
+SCRIPT_DATE = "2026-01-15"
+
+# GitHub raw URLs for self-bootstrapping
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main"
+BOOTSTRAP_FILES = [
+    "scripts/utils/__init__.py",
+    "scripts/utils/sanitizer.py",
+]
+
+# Add local paths for imports (when running from repo)
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
+
+
+def _bootstrap_dependencies() -> Path | None:
+    """Download required dependencies from GitHub if not available locally.
+
+    Returns:
+        Path to temp directory with dependencies, or None if local imports work.
+    """
+    # First, try local import (running from repo)
+    try:
+        from utils.sanitizer import sanitize_har_file  # noqa: F401
+
+        return None  # Local imports work, no bootstrap needed
+    except ImportError:
+        pass
+
+    # Need to bootstrap - download from GitHub
+    print("Downloading dependencies from GitHub...")
+
+    tmpdir = tempfile.mkdtemp(prefix="modem_capture_")
+    tmpdir_path = Path(tmpdir)
+    utils_dir = tmpdir_path / "utils"
+    utils_dir.mkdir()
+
+    try:
+        for file_path in BOOTSTRAP_FILES:
+            url = f"{GITHUB_RAW_BASE}/{file_path}"
+            # Extract just the filename relative to scripts/
+            local_name = file_path.replace("scripts/", "")
+            dest = tmpdir_path / local_name
+
+            try:
+                urllib.request.urlretrieve(url, dest)
+            except Exception as e:
+                print(f"  Failed to download {file_path}: {e}")
+                print()
+                print("  Cannot download dependencies. Options:")
+                print("    1. Check your internet connection")
+                print("    2. Clone the repo: git clone https://github.com/solentlabs/cable_modem_monitor.git")
+                print("       Then run: python scripts/capture_modem.py --ip <MODEM_IP>")
+                print()
+                # Clean up partial download
+                import shutil
+
+                shutil.rmtree(tmpdir, ignore_errors=True)
+                sys.exit(1)
+
+        print("  Dependencies ready.")
+        print()
+
+        # Add to path
+        sys.path.insert(0, str(tmpdir_path))
+        return tmpdir_path
+
+    except Exception as e:
+        print(f"  Bootstrap failed: {e}")
+        import shutil
+
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        sys.exit(1)
+
+
+# Bootstrap dependencies if needed (stores temp dir path for cleanup)
+_BOOTSTRAP_TMPDIR = _bootstrap_dependencies()
 
 
 def check_devcontainer() -> bool:
@@ -56,21 +136,55 @@ def check_devcontainer() -> bool:
         print("  DEVCONTAINER DETECTED")
         print("=" * 60)
         print()
-        print("  This task requires a GUI browser and won't work in")
-        print("  the devcontainer. Please run locally instead:")
+        print("  This script requires a GUI browser and won't work in")
+        print("  a container. Please run from your host machine:")
         print()
-        print("  Option 1: Reopen folder locally")
-        print("    F1 → 'Dev Containers: Reopen Folder Locally'")
-        print("    Then run this task again")
-        print()
-        print("  Option 2: Run from host terminal")
-        print("    cd ~/Projects/cable_modem_monitor")
-        print("    .venv/bin/python scripts/capture_modem.py --ip <MODEM_IP>")
+        print("    python capture_modem.py --ip <MODEM_IP>")
         print()
         print("=" * 60)
         return True
 
     return False
+
+
+def check_modem_connectivity(ip: str, timeout: int = 5) -> tuple[bool, str, str | None]:
+    """Check if modem is reachable and determine the correct URL scheme.
+
+    Tries HTTP first, then HTTPS if HTTP fails.
+
+    Returns:
+        Tuple of (reachable, scheme, error_message)
+        - reachable: True if modem responded
+        - scheme: "http" or "https"
+        - error_message: None if reachable, otherwise describes the problem
+    """
+    import ssl
+
+    for scheme in ["http", "https"]:
+        url = f"{scheme}://{ip}/"
+        try:
+            req = urllib.request.Request(url, method="GET")
+            if scheme == "https":
+                # Allow self-signed certs
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                urllib.request.urlopen(req, timeout=timeout, context=ctx)
+            else:
+                urllib.request.urlopen(req, timeout=timeout)
+            return True, scheme, None
+        except urllib.error.HTTPError:
+            # HTTP error means modem is reachable (might need auth, that's fine)
+            return True, scheme, None
+        except urllib.error.URLError as e:
+            # Connection refused, timeout, etc - try next scheme
+            if scheme == "https":
+                return False, "http", f"Cannot connect to modem at {ip}: {e.reason}"
+        except Exception as e:
+            if scheme == "https":
+                return False, "http", f"Cannot connect to modem at {ip}: {e}"
+
+    return False, "http", f"Cannot connect to modem at {ip}"
 
 
 def check_basic_auth(url: str, timeout: int = 5) -> tuple[bool, str | None]:
@@ -79,10 +193,18 @@ def check_basic_auth(url: str, timeout: int = 5) -> tuple[bool, str | None]:
     Returns:
         Tuple of (requires_basic_auth, realm_name)
     """
+    import ssl
+
     try:
-        # Use GET instead of HEAD - some modems reject HEAD requests
         req = urllib.request.Request(url, method="GET")
-        urllib.request.urlopen(req, timeout=timeout)
+        # Handle HTTPS with self-signed certs
+        if url.startswith("https://"):
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            urllib.request.urlopen(req, timeout=timeout, context=ctx)
+        else:
+            urllib.request.urlopen(req, timeout=timeout)
         return False, None  # No auth required
     except urllib.error.HTTPError as e:
         if e.code == 401:
@@ -124,7 +246,7 @@ def check_playwright() -> bool:
 
 
 def install_playwright() -> bool:
-    """Install Playwright and browser automatically."""
+    """Install Playwright and Chromium browser automatically."""
     import subprocess
 
     print("Installing Playwright...")
@@ -144,6 +266,44 @@ def install_playwright() -> bool:
         return True
     except subprocess.CalledProcessError as e:
         print(f"Installation failed: {e}")
+        return False
+
+
+def install_browser_deps() -> bool:
+    """Install browser system dependencies (requires sudo on Linux)."""
+    import platform
+    import subprocess
+
+    if platform.system() != "Linux":
+        return True  # Not needed on macOS/Windows
+
+    print()
+    print("Installing browser dependencies...")
+    deps = [
+        "libnspr4",
+        "libnss3",
+        "libatk1.0-0",
+        "libatk-bridge2.0-0",
+        "libcups2",
+        "libdrm2",
+        "libxkbcommon0",
+        "libxcomposite1",
+        "libxdamage1",
+        "libxfixes3",
+        "libxrandr2",
+        "libgbm1",
+        "libpango-1.0-0",
+        "libcairo2",
+        "libasound2t64",
+    ]
+    try:
+        result = subprocess.run(
+            ["sudo", "apt-get", "install", "-y"] + deps,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception as e:
+        print(f"Failed: {e}")
         return False
 
 
@@ -170,33 +330,24 @@ BLOAT_EXTENSIONS = {
 }
 
 
-def _get_capture_version() -> str:
-    """Get the cable_modem_monitor version for metadata."""
-    try:
-        from custom_components.cable_modem_monitor.const import VERSION
-
-        return VERSION
-    except ImportError:
-        return "unknown"
-
-
 def _add_solent_labs_metadata(har: dict) -> None:
     """Add Solent Labs™ capture metadata to HAR file.
 
     This metadata helps identify:
     - That the HAR was captured with our official tools
-    - Which version of the tools was used
+    - When the script version was last updated (for debugging)
     - When and how it was captured
 
     The metadata is added as a custom '_solentlabs' field in the HAR log.
     """
     har["log"]["_solentlabs"] = {
         "tool": "cable_modem_monitor/capture_modem.py",
-        "version": _get_capture_version(),
+        "script_date": SCRIPT_DATE,
         "captured_at": datetime.now().isoformat(),
         "cache_disabled": True,
         "service_workers_blocked": True,
-        "note": "Captured with Solent Labs™ Cable Modem Monitor HAR capture tool",
+        "bootstrapped": _BOOTSTRAP_TMPDIR is not None,
+        "note": "Captured with Solent Labs Cable Modem Monitor",
     }
 
 
@@ -282,10 +433,10 @@ def _post_capture_processing(output_path: Path, skip_sanitize: bool) -> None:
         removed = stats["removed_entries"]
         orig = stats["original_entries"]
         filt = stats["filtered_entries"]
-        print(f"  Removed {removed} bloat entries ({orig} → {filt})")
+        print(f"  Removed {removed} bloat entries ({orig} -> {filt})")
         orig_mb = stats["original_size"] / 1024 / 1024
         comp_mb = stats["compressed_size"] / 1024 / 1024
-        print(f"  Compressed {orig_mb:.1f} MB → {comp_mb:.1f} MB")
+        print(f"  Compressed {orig_mb:.1f} MB -> {comp_mb:.1f} MB")
     except Exception as e:
         print(f"  Optimization failed (continuing): {e}")
         compressed_path = None
@@ -341,7 +492,7 @@ def _sanitize_capture(output_path: Path) -> None:
         print("Keep the raw (unsanitized) files private.")
     except Exception as e:
         print(f"  Sanitization failed: {e}")
-        print(f"  Run manually: python scripts/sanitize_har.py {output_path}")
+        print("  You can still share the raw HAR file - just review it for credentials first.")
 
 
 def main() -> int:  # noqa: C901
@@ -350,14 +501,14 @@ def main() -> int:  # noqa: C901
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Capture from default modem IP
-    python scripts/capture_modem.py
+    # Capture from default modem IP (192.168.100.1)
+    python capture_modem.py
 
     # Capture from different IP
-    python scripts/capture_modem.py --ip 192.168.0.1
+    python capture_modem.py --ip 192.168.0.1
 
     # Specify output filename
-    python scripts/capture_modem.py --output my_modem.har
+    python capture_modem.py --output my_modem.har
 
 What to do:
     1. Browser will open to your modem's login page
@@ -429,9 +580,14 @@ Why visit all pages and wait?
 
     from playwright.sync_api import sync_playwright
 
-    # Generate output filename in captures/ directory
-    captures_dir = Path(__file__).parent.parent / "captures"
-    captures_dir.mkdir(exist_ok=True)
+    # Generate output filename
+    # When bootstrapped (curl download), use current directory
+    # When running from repo, use captures/ directory
+    if _BOOTSTRAP_TMPDIR is not None:
+        captures_dir = Path.cwd()
+    else:
+        captures_dir = Path(__file__).parent.parent / "captures"
+        captures_dir.mkdir(exist_ok=True)
 
     if args.output:
         output_path = Path(args.output)
@@ -443,20 +599,39 @@ Why visit all pages and wait?
     if output_path.suffix != ".har":
         output_path = output_path.with_suffix(".har")
 
-    modem_url = f"http://{args.ip}/"
-
     print("=" * 60)
     print("MODEM TRAFFIC CAPTURE")
     print("=" * 60)
     print()
-    print(f"  Modem URL:  {modem_url}")
+    print(f"  Modem IP:   {args.ip}")
     print(f"  Browser:    {args.browser}")
     print(f"  Output:     {output_path}")
+    print()
+
+    # Check modem connectivity and detect HTTP/HTTPS
+    print("Checking modem connectivity...")
+    reachable, scheme, error = check_modem_connectivity(args.ip)
+
+    if not reachable:
+        print()
+        print(f"  ERROR: {error}")
+        print()
+        print("  Troubleshooting:")
+        print(f"    1. Verify your modem is at {args.ip}")
+        print("    2. Try opening the modem page in your browser")
+        print("    3. Check if you're on the same network as the modem")
+        print()
+        return 1
+
+    modem_url = f"{scheme}://{args.ip}/"
+    print(f"  Connected:  {modem_url}")
+    if scheme == "https":
+        print("  (HTTPS detected - will accept self-signed certificate)")
 
     # Check for HTTP Basic Auth requirement
     http_credentials = None
     print()
-    print("Checking modem authentication type...")
+    print("Checking authentication type...")
     requires_basic, realm = check_basic_auth(modem_url)
 
     if requires_basic:
@@ -486,7 +661,8 @@ Why visit all pages and wait?
     print("Starting browser (cache disabled for fresh captures)...")
     print()
 
-    try:
+    def launch_browser_and_capture():
+        """Launch browser and capture HAR. Returns True on success."""
         with sync_playwright() as p:
             # Select browser
             if args.browser == "firefox":
@@ -533,14 +709,45 @@ Why visit all pages and wait?
             # Close context to save HAR
             context.close()
             browser.close()
+        return True
 
+    try:
+        launch_browser_and_capture()
     except Exception as e:
-        print(f"Error: {e}")
-        return 1
+        error_str = str(e)
+        # Check if it's a missing deps error
+        if "missing dependencies" in error_str.lower() or "libasound" in error_str.lower():
+            print("Browser dependencies missing. Installing...")
+            if install_browser_deps():
+                print("Dependencies installed. Retrying...")
+                print()
+                try:
+                    launch_browser_and_capture()
+                except Exception as e2:
+                    print(f"Error: {e2}")
+                    return 1
+            else:
+                print("Failed to install dependencies.")
+                print("Run manually: sudo apt-get install -y libasound2t64")
+                return 1
+        else:
+            print(f"Error: {e}")
+            return 1
 
     _post_capture_processing(output_path, args.no_sanitize)
     return 0
 
 
+def _cleanup_bootstrap():
+    """Clean up bootstrapped temp directory if it exists."""
+    if _BOOTSTRAP_TMPDIR is not None:
+        import shutil
+
+        shutil.rmtree(_BOOTSTRAP_TMPDIR, ignore_errors=True)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    finally:
+        _cleanup_bootstrap()

@@ -1,0 +1,22 @@
+# Firmware variant metadata
+# This is the Cox Business variant with HTTPS and URL token auth
+
+firmware_version: "AB01.02.053.05_051921_193.0A.NSH"
+protocol: HTTPS
+auth: url_token
+isp: Cox Business
+captured_from_issue: 81
+capture_date: "2025-12-31"
+contributor: travismolick
+
+# Key differences from Spectrum variant:
+# - Requires HTTPS with legacy SSL ciphers (TLS 1.2 max, no forward secrecy)
+# - Uses URL-based token auth: /cmconnectionstatus.html?login_<base64(user:pass)>
+# - Sets sessionId cookie on login for subsequent requests
+# - Landing page sets empty sessionId cookie (edge case fixed in get_cookie_safe)
+
+notes: |
+  This variant requires LegacySSLAdapter due to outdated TLS cipher support.
+  The modem sets an empty sessionId cookie on the landing page, then a real
+  one on successful login. The get_cookie_safe() function filters empty values
+  to handle this edge case.

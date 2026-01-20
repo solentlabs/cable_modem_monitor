@@ -18,9 +18,8 @@ body:
     id: feature-type
     attributes:
       label: Feature Type
-      description: What type of feature are you requesting?
+      description: What type of feature are you requesting? (For new modem support, use the [New Modem Support Request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) template instead.)
       options:
-        - New modem support
         - New sensor/entity
         - Enhancement to existing feature
         - Performance improvement
@@ -58,24 +57,6 @@ body:
       required: false
 
   - type: textarea
-    id: modem-info
-    attributes:
-      label: Modem Information (if applicable)
-      description: |
-        If requesting support for a new modem, please provide:
-        - Modem make and model
-        - Firmware version
-        - ISP (if relevant)
-        - Whether you can provide HTML samples from the modem's status page
-      placeholder: |
-        Model: Motorola MB8600
-        Firmware: 8.1.2.15
-        ISP: Comcast
-        Can provide samples: Yes
-    validations:
-      required: false
-
-  - type: textarea
     id: use-case
     attributes:
       label: Use Case
@@ -102,7 +83,6 @@ body:
       options:
         - "Yes, I can submit a PR"
         - "Yes, I can help test"
-        - "Yes, I can provide modem HTML samples"
         - "No, but I'd be happy to provide feedback"
         - "Not sure"
     validations:

@@ -10,6 +10,7 @@ Run this on your Home Assistant host (it operates on
 CLI flags and colored output but centralizes logic in the integration
 module so developers can reuse it programmatically.
 """
+
 import argparse
 import json
 import sys
@@ -21,7 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from custom_components.cable_modem_monitor.utils import entity_cleanup as ec
+    from custom_components.cable_modem_monitor.utils import entity_cleanup as ec  # type: ignore[attr-defined]
 except Exception:
     ec = None  # type: ignore[assignment]
 

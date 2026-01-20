@@ -1,0 +1,40 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/compal/ch8978e/modem.yaml
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+# Compal CH8978E - Awaiting user data
+# Issue: https://github.com/solentlabs/cable_modem_monitor/issues/79
+
+manufacturer: Compal
+model: CH8978E
+paradigm: html
+
+hardware:
+  docsis_version: "3.1"
+
+status_info:
+  status: unsupported
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/79"
+
+capabilities: []
+
+# Auth strategy unknown - awaiting user data
+# Parser not yet implemented - using none until fixtures available
+auth:
+  strategy: none
+
+# Known ISPs
+isps:
+  - Pyür
+
+# Notes
+notes: |
+  Hidden status pages may exist at direct URLs (pattern from CH7485E/CH7467CE):
+  - https://192.168.100.1/RgConnect.asp
+  - https://192.168.100.1/RgEventLog.asp
+  - Login: admin/tc
+  Awaiting user confirmation.

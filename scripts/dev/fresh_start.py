@@ -5,6 +5,8 @@ Fresh Start Script - Reset VS Code state to test new developer experience
 This is ONLY needed to test what a brand new developer sees.
 Normal development doesn't require this script.
 
+Note: Windows users should run this inside WSL2. See docs/setup/WSL2_SETUP.md.
+
 Usage:
     python scripts/dev/fresh_start.py
     # OR
@@ -71,22 +73,13 @@ def is_vscode_running() -> bool:
         return False
 
     try:
-        if platform.system() == "Windows":
-            result = subprocess.run(
-                ["tasklist", "/FI", "IMAGENAME eq Code.exe"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            return "Code.exe" in result.stdout
-        else:
-            result = subprocess.run(
-                ["pgrep", "-f", "code"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            return bool(result.stdout.strip())
+        result = subprocess.run(
+            ["pgrep", "-f", "code"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return bool(result.stdout.strip())
     except Exception:
         return False
 
@@ -95,9 +88,7 @@ def get_vscode_cache_path() -> Path:
     """Get VS Code workspace cache path based on OS."""
     system = platform.system()
 
-    if system == "Windows":
-        cache_path = Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "workspaceStorage"
-    elif system == "Darwin":  # macOS
+    if system == "Darwin":  # macOS
         cache_path = Path.home() / "Library" / "Application Support" / "Code" / "User" / "workspaceStorage"
     else:  # Linux
         cache_path = Path.home() / ".config" / "Code" / "User" / "workspaceStorage"
@@ -118,46 +109,9 @@ def is_running_from_venv() -> bool:
     return venv_path == current_prefix or str(venv_path) in str(current_prefix)
 
 
-def _handle_windows_remove(venv_path: Path) -> bool:
-    """Handle .venv removal on Windows with retry logic."""
-    import time
-
-    def handle_remove_readonly(func, path, exc):
-        """Error handler for Windows readonly files."""
-        import stat
-
-        if not os.access(path, os.W_OK):
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise
-
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            shutil.rmtree(venv_path, onerror=handle_remove_readonly)
-            print_success("Removed .venv")
-            return True
-        except PermissionError as e:
-            if attempt < max_retries - 1:
-                print_warning(f"Retry {attempt + 1}/{max_retries}...")
-                time.sleep(1)
-            else:
-                print_error(f"Failed to remove .venv: {e}")
-                print()
-                print("The .venv directory is likely in use.")
-                print()
-                print("To remove it manually:")
-                print("  1. Close VS Code completely")
-                print("  2. Close any Python processes")
-                print("  3. Run: Remove-Item -Recurse -Force .venv")
-                return False
-    return False
-
-
 def remove_venv() -> bool:
     """
-    Safely remove .venv directory with Windows file locking handling.
+    Remove .venv directory.
 
     Returns:
         True if successful, False if failed
@@ -173,30 +127,17 @@ def remove_venv() -> bool:
         print_error("Cannot remove .venv while running from it")
         print()
         print("This happens when:")
-        print("  • VS Code terminal has activated the venv")
-        print("  • You're running this script with .venv/bin/python")
+        print("  - VS Code terminal has activated the venv")
+        print("  - You're running this script with .venv/bin/python")
         print()
         print("Solutions:")
-        if platform.system() == "Windows":
-            print("  1. Close this VS Code window completely")
-            print("  2. Open PowerShell/Command Prompt (NOT VS Code)")
-            print("  3. Run: python scripts/dev/fresh_start.py")
-            print()
-            print("  OR manually remove .venv:")
-            print("  1. Close VS Code completely")
-            print("  2. Run: Remove-Item -Recurse -Force .venv")
-        else:
-            print("  1. Close VS Code")
-            print("  2. Run this script from a regular terminal")
-            print("  OR: rm -rf .venv")
+        print("  1. Close VS Code")
+        print("  2. Run this script from a regular terminal")
+        print("  OR: rm -rf .venv")
         return False
 
     print_info("Removing .venv...")
 
-    if platform.system() == "Windows":
-        return _handle_windows_remove(venv_path)
-
-    # Linux/Mac: Usually no file locking issues
     try:
         shutil.rmtree(venv_path)
         print_success("Removed .venv")
@@ -328,12 +269,7 @@ def main() -> None:
     print_header("Next Steps:")
     print()
     print("If you dismissed Dev Container:")
-    if system_name == "Windows":
-        print("   bash scripts/setup.sh  (in Git Bash)")
-        print("   OR")
-        print("   python scripts/setup.py  (if available)")
-    else:
-        print("   ./scripts/setup.sh")
+    print("   ./scripts/setup.sh")
     print()
     print("Then validate everything works:")
     print("   make validate")

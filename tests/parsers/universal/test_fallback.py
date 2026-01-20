@@ -2,37 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
-
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
 
-
-class TestCanParse:
-    """Test the can_parse method."""
-
-    def test_always_returns_true_for_any_html(self):
-        """Test that can_parse always returns True regardless of HTML content."""
-        # Test with random HTML
-        soup = BeautifulSoup("<html><body><h1>Random Page</h1></body></html>", "html.parser")
-        assert UniversalFallbackParser.can_parse(soup, "http://192.168.1.1", "<html></html>") is True
-
-    def test_returns_true_for_empty_html(self):
-        """Test that can_parse returns True even for empty HTML."""
-        soup = BeautifulSoup("", "html.parser")
-        assert UniversalFallbackParser.can_parse(soup, "http://192.168.1.1", "") is True
-
-    def test_returns_true_for_known_modem_html(self):
-        """Test that can_parse returns True even for HTML from known modems."""
-        html = "<html><title>ARRIS SB6190</title></html>"
-        soup = BeautifulSoup(html, "html.parser")
-        assert UniversalFallbackParser.can_parse(soup, "http://192.168.100.1", html) is True
-
-    def test_returns_true_for_invalid_html(self):
-        """Test that can_parse returns True even for malformed HTML."""
-        soup = BeautifulSoup("<html><body><unclosed>", "html.parser")
-        assert UniversalFallbackParser.can_parse(soup, "http://192.168.1.1", "<html><body><unclosed>") is True
+# Detection is handled by YAML hints (HintMatcher).
+# The fallback parser is manually selected by users when auto-detection fails.
 
 
 class TestParse:
@@ -95,12 +70,12 @@ class TestModelExtraction:
     def test_from_meta_tags(self):
         """Test extracting modem model from meta tags."""
         parser = UniversalFallbackParser()
-        html = '<html><head><meta name="product" content="ARRIS SB8200"/></head></html>'
+        html = '<html><head><meta name="product" content="ACME Modem-5000"/></head></html>'
         soup = BeautifulSoup(html, "html.parser")
 
         result = parser.parse(soup)
 
-        assert result["system_info"]["model"] == "ARRIS SB8200"
+        assert result["system_info"]["model"] == "ACME Modem-5000"
 
     def test_netgear_from_body(self):
         """Test extracting NETGEAR model from HTML body text."""
@@ -143,83 +118,6 @@ class TestModelExtraction:
         assert result["system_info"]["model"] == "Unknown Model"
 
 
-class TestLogin:
-    """Test the login method."""
-
-    def test_returns_true_without_credentials(self):
-        """Test that login succeeds when no credentials are provided."""
-        parser = UniversalFallbackParser()
-        session = Mock()
-
-        success, html = parser.login(session, "http://192.168.1.1", None, None)
-
-        assert success is True
-        assert html is None
-
-    def test_returns_true_with_empty_credentials(self):
-        """Test that login succeeds with empty username/password."""
-        parser = UniversalFallbackParser()
-        session = Mock()
-
-        success, html = parser.login(session, "http://192.168.1.1", "", "")
-
-        assert success is True
-        assert html is None
-
-    @patch("custom_components.cable_modem_monitor.parsers.universal.fallback.AuthFactory")
-    def test_attempts_basic_auth_with_credentials(self, mock_auth_factory):
-        """Test that login attempts HTTP Basic Auth when credentials provided."""
-        parser = UniversalFallbackParser()
-        session = Mock()
-
-        # Mock successful authentication
-        mock_strategy = Mock()
-        mock_strategy.login.return_value = (True, "<html>authenticated</html>")
-        mock_auth_factory.get_strategy.return_value = mock_strategy
-
-        success, html = parser.login(session, "http://192.168.1.1", "admin", "password")
-
-        # Should attempt authentication
-        mock_auth_factory.get_strategy.assert_called_once()
-        mock_strategy.login.assert_called_once_with(
-            session, "http://192.168.1.1", "admin", "password", parser.auth_config
-        )
-        assert success is True
-        assert html == "<html>authenticated</html>"
-
-    @patch("custom_components.cable_modem_monitor.parsers.universal.fallback.AuthFactory")
-    def test_returns_true_even_when_auth_fails(self, mock_auth_factory):
-        """Test that login returns True even if authentication fails."""
-        parser = UniversalFallbackParser()
-        session = Mock()
-
-        # Mock failed authentication
-        mock_strategy = Mock()
-        mock_strategy.login.return_value = (False, None)
-        mock_auth_factory.get_strategy.return_value = mock_strategy
-
-        success, html = parser.login(session, "http://192.168.1.1", "admin", "wrong")
-
-        # Should still return True to allow installation
-        assert success is True
-        assert html is None
-
-    @patch("custom_components.cable_modem_monitor.core.authentication.AuthFactory")
-    def test_returns_true_when_auth_raises_exception(self, mock_auth_factory):
-        """Test that login returns True even if authentication raises exception."""
-        parser = UniversalFallbackParser()
-        session = Mock()
-
-        # Mock exception during authentication
-        mock_auth_factory.get_strategy.side_effect = Exception("Auth error")
-
-        success, html = parser.login(session, "http://192.168.1.1", "admin", "password")
-
-        # Should still return True to allow installation
-        assert success is True
-        assert html is None
-
-
 class TestParserConfiguration:
     """Test parser configuration and properties."""
 
@@ -249,8 +147,6 @@ class TestParserConfiguration:
         paths = [p["path"] for p in UniversalFallbackParser.url_patterns]
         assert any("status" in p.lower() for p in paths if isinstance(p, str))
 
-    def test_uses_basic_auth_config(self):
-        """Test that parser uses BasicAuthConfig."""
-        from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
-
-        assert UniversalFallbackParser.auth_config.strategy == AuthStrategyType.BASIC_HTTP
+    def test_has_auth_hint(self):
+        """Test that parser has auth_hint suggesting basic auth."""
+        assert UniversalFallbackParser.auth_hint == "basic"

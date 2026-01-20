@@ -1,10 +1,6 @@
 clear_history:
-  name: Clear History
-  description: Clear historical data for cable modem sensors older than a specified date
   fields:
     days_to_keep:
-      name: Days to Keep
-      description: Number of days of history to keep (older data will be deleted)
       required: true
       example: 30
       selector:
@@ -14,60 +10,40 @@ clear_history:
           unit_of_measurement: days
 
 generate_dashboard:
-  name: Cable Modem Dashboard Generator
-  description: Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card. Uses your modem's actual channel IDs.
   fields:
     include_status_card:
-      name: Status Card
-      description: Modem status, uptime, channel counts, and restart button
       default: true
       selector:
         boolean:
     include_downstream_power:
-      name: Downstream Power Graph
-      description: Power levels for all downstream channels
       default: true
       selector:
         boolean:
     include_downstream_snr:
-      name: Downstream SNR Graph
-      description: Signal-to-noise ratio for all downstream channels
       default: true
       selector:
         boolean:
     include_downstream_frequency:
-      name: Downstream Frequency Graph
-      description: Frequency for all downstream channels
       default: true
       selector:
         boolean:
     include_upstream_power:
-      name: Upstream Power Graph
-      description: Power levels for all upstream channels
       default: true
       selector:
         boolean:
     include_upstream_frequency:
-      name: Upstream Frequency Graph
-      description: Frequency for all upstream channels
       default: true
       selector:
         boolean:
     include_errors:
-      name: Error Graphs
-      description: Corrected and uncorrected error counts (7-day view)
       default: true
       selector:
         boolean:
     include_latency:
-      name: Latency Graph
-      description: Ping and HTTP response times (6-hour view)
       default: true
       selector:
         boolean:
     graph_hours:
-      name: Graph History (hours)
-      description: Hours of history for power/SNR graphs (errors and latency use fixed timeframes)
       default: 24
       selector:
         number:
@@ -75,8 +51,6 @@ generate_dashboard:
           max: 168
           unit_of_measurement: hours
     short_titles:
-      name: Use Short Titles
-      description: "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'"
       default: true
       selector:
         boolean:

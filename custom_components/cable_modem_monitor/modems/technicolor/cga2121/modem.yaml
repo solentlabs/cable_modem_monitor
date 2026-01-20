@@ -1,0 +1,100 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/technicolor/cga2121/modem.yaml
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+# Technicolor CGA2121 Configuration
+# Source: Diagnostics (Telia Finland ISP modem)
+
+manufacturer: Technicolor
+model: CGA2121
+paradigm: html
+
+hardware:
+  docsis_version: "3.0"
+  release_date: "2015"
+
+# Provenance tracking
+sources:
+  detection_hints: "[Issue #75](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
+
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+auth:
+  strategy: form
+
+  form:
+    action: "/goform/logon"
+    method: POST
+    username_field: username_login
+    password_field: password_login
+    password_encoding: plain
+    hidden_fields: {}
+    success:
+      redirect: "/st_docsis.html"
+
+  session:
+    cookie_name: "sec"
+
+pages:
+  public: []
+
+  protected:
+    - "/st_docsis.html"
+
+  data:
+    downstream_channels: "/st_docsis.html"
+    upstream_channels: "/st_docsis.html"
+
+parser:
+  class: TechnicolorCGA2121Parser
+  module: custom_components.cable_modem_monitor.modems.technicolor.cga2121.parser
+  format:
+    type: html
+    table_layout: standard
+
+detection:
+  pre_auth:
+    - "CGA2121"
+    - "Technicolor"
+    - "/goform/logon"
+  post_auth:
+    - "CGA2121"
+    - "Technicolor CGA2121"
+    - "Technicolor"
+    - "DOCSIS Status"
+    - "Downstream Channels"
+  page_hint: "/st_docsis.html"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+
+behaviors:
+  requires_multi_page_fetch: false
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: verified
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/75"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/technicolor/cga2121/fixtures
+  source: diagnostics
+  firmware_tested: "*"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: TBD
+      contribution: "[Issue #75](https://github.com/solentlabs/cable_modem_monitor/issues/75) fixture data"

@@ -25,7 +25,7 @@ Your captured data becomes a **test fixture** - a frozen snapshot we use to:
 2. **Write tests** - Verify the parser extracts data correctly
 3. **Prevent regressions** - Ensure future changes don't break your modem
 
-You can see existing fixtures at [`tests/parsers/FIXTURES.md`](../tests/parsers/FIXTURES.md).
+You can see existing fixtures at [`modems/README.md`](../modems/README.md).
 
 ---
 
@@ -80,12 +80,12 @@ If you find credentials that weren't automatically redacted:
 [HAR (HTTP Archive)](http://www.softwareishard.com/blog/har-12-spec/) files capture the complete HTTP conversation including authentication and API calls.
 
 ```bash
-# One-time setup
-pip install playwright && playwright install chromium
-
-# Capture
-python scripts/capture_modem.py
+# Download and run (no git clone needed!)
+curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
+python capture_modem.py --ip 192.168.100.1
 ```
+
+The script automatically downloads dependencies on first run.
 
 **During capture:**
 1. Browser opens to your modem
@@ -151,7 +151,12 @@ If anything sensitive remains, either:
 4. **You verify it works** - Test on your actual modem
 5. **Parser ships in next release** - Your modem is now supported!
 
-**Expect 2-3 rounds of interaction.** Most modems have quirks we discover during development. Quick responses to follow-up requests speed up the process.
+**Setting expectations:**
+- This is a solo-maintained project - requests are handled as capacity allows
+- Complete submissions with clean captures get prioritized
+- Parser complexity varies widely - some modems take significantly longer
+- There's no guaranteed timeline, but quality submissions help move things faster
+- Expect 2-3 rounds of interaction; quick responses to follow-ups speed things along
 
 ---
 
@@ -175,4 +180,4 @@ If anything sensitive remains, either:
 
 - Check existing [modem request issues](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22) for examples
 - Open a [GitHub Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions) for questions
-- See [FIXTURES.md](../tests/parsers/FIXTURES.md) for the current modem library
+- See [modems/README.md](../modems/README.md) for the current modem library

@@ -20,6 +20,7 @@ __pycache__/
 .idea/
 .DS_Store
 .claude/
+.aider*
 
 # -----------------------------
 # Logs and temporary files
@@ -42,6 +43,7 @@ ENV/
 # -----------------------------
 # Code quality and linting
 .ruff_cache/
+.mypy_cache/
 
 # -----------------------------
 # Test coverage reports
@@ -71,7 +73,6 @@ codeql-pack.lock.yml
 db-*/
 *.testproj/
 .codeql/
-.aider*
 
 # CodeQL CLI installation (local development only)
 /codeql/
@@ -91,10 +92,24 @@ db-*/
 *.sarif
 
 # -----------------------------
+# Auto-generated files (created by make sync)
+
+# Package init files for synced modems (created during sync for importlib)
+custom_components/cable_modem_monitor/modems/**/__init__.py
+
+# -----------------------------
 # Miscellaneous
 
-# HAR capture artifacts
+# HAR capture artifacts (may contain PII)
 captures/
+**/har/
 
 # Raw data from issue debugging (user-submitted logs, configs, etc.)
 RAW_DATA/
+.hold/
+
+# Claude Code temporary files
+tmpclaude-*
+
+# Windows artifact from /dev/null writes
+nul

@@ -1,0 +1,191 @@
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="moto.css" />
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Motorola Cable Modem : Login</title>
+<script language="javascript">
+<!-- hide me
+
+var UserNameFlag = 0;
+var PasswordFlag = 0;
+var isEncryptPswd = 1;
+
+var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+function encode(Str)
+{
+   Str = escape(Str);
+   var output = "";
+   var chr1, chr2, chr3 = "";
+   var enc1, enc2, enc3, enc4 = "";
+   var i = 0;
+
+   do {
+      chr1 = Str.charCodeAt(i++);
+      chr2 = Str.charCodeAt(i++);
+      chr3 = Str.charCodeAt(i++);
+      enc1 = chr1 >> 2;
+      enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+      enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+      enc4 = chr3 & 63;
+      if (isNaN(chr2))
+      {
+         enc3 = enc4 = 64;
+      }
+      else if (isNaN(chr3))
+      {
+         enc4 = 64;
+      }
+      output = output + keyStr.charAt(enc1) + keyStr.charAt(enc2) + keyStr.charAt(enc3) + keyStr.charAt(enc4);
+      chr1 = chr2 = chr3 = "";
+      enc1 = enc2 = enc3 = enc4 = "";
+   } while (i < Str.length);
+
+   return output;
+}
+
+function loginSubmit()
+{
+if((window.document.login.loginUsername.value == "Username") && (UserNameFlag == 0))
+{
+window.document.login.loginUsername.value = "";
+}
+if((window.document.login.loginPassword.value == "Password") && (PasswordFlag == 0))
+{
+window.document.login.loginPassword.value = "";
+}
+window.document.login.loginText.disabled = true;
+
+if (isEncryptPswd == 1)
+{
+/*window.document.login.loginUsername.value = encode(window.document.login.loginUsername.value);*/
+window.document.login.loginPassword.value = encode(window.document.login.loginPassword.value);
+}
+
+//window.document.login.submit();
+
+}
+
+function onFocusUsername()
+{
+window.document.login.loginUsername.className = "moto-username-input-active";
+window.document.login.loginUsername.value = "";
+}
+
+function onBlurUsername()
+{
+if(window.document.login.loginUsername.value == "")
+{
+window.document.login.loginUsername.className = "moto-username-input";
+window.document.login.loginUsername.value = "Username";
+}
+else
+{
+UserNameFlag = 1;
+}
+}
+
+function onFocusPassword()
+{
+window.document.login.loginText.style.display = 'none';
+window.document.login.loginPassword.style.display = '';
+window.document.login.loginPassword.focus();
+/*
+window.document.login.loginPassword.className = "moto-password-input-active";
+window.document.login.loginPassword.value = "";
+window.document.login.loginPassword.type = "password";
+*/
+}
+
+function onBlurPassword()
+{
+if(window.document.login.loginPassword.value == "")
+{
+window.document.login.loginPassword.style.display = 'none';
+window.document.login.loginText.style.display = '';
+}
+else
+{
+PasswordFlag = 1;
+}
+/*
+if(window.document.login.loginPassword.value == "")
+{
+window.document.login.loginPassword.className = "moto-password-input";
+window.document.login.loginPassword.value = "Password";
+window.document.login.loginPassword.type = "text";
+}
+else
+{
+PasswordFlag = 1;
+}
+*/
+}
+// show me -->
+
+</script>
+</head>
+
+<body>
+
+<!--
+<div id="moto-login-top">
+</div>
+Modem
+#CE0000
+#CE0000
+#CE0000
+"http://www.broadcom.com"
+"logo_new.gif"
+#CE0000
+-->
+
+<form action=/goform/login method=POST name="login" onsubmit="return loginSubmit()">
+<div id="moto-login">
+
+<div id="moto-login-log">
+<img src="motologin.jpg" width='80px' height='80px' />
+</div>
+
+<div id="moto-login-welcome">
+<span class="moto-login-welcome-text">Welcome to Your<br>Motorola Cable Modem</span>
+</div>
+
+<div id="moto-username">
+<input class="moto-username-input" type="text" name="loginUsername" onfocus='onFocusUsername()' onblur='onBlurUsername()' value="Username">
+</div>
+
+<div id="moto-password">
+<input class="moto-password-input" type="text" name="loginText" onfocus='onFocusPassword();' value="Password">
+<input class="moto-password-input-active" type="password" name="loginPassword" onblur='onBlurPassword();' value="" style="display:none">
+</div>
+
+<div id="moto-note">
+<span class="moto-note-text">&nbsp;&nbsp;</span>
+</div>
+
+<div id="moto-button">
+<input type="submit" class="moto-login-button" value="Login"></input>
+</div>
+
+<div id="moto-note">
+<span class="moto-note-text">You can find your username and password on your cable modem's bottom label.</span>
+</div>
+
+<div id="moto-copyright">
+<span class="moto-copyright-text">&copy; MTRLC LLC 2017. All rights reserved.<br>MOTOROLA and the Stylized M Logo are trademarks or registered trademarks of Motorola Trademark Holdings, LLC and are used under license.</span>
+</div>
+
+</div>
+</form>
+
+<!--
+#CE0000
+2001-2015 Broadcom Corporation
+-->
+
+</body>
+</html>

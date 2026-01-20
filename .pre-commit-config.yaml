@@ -5,7 +5,7 @@
 repos:
   # Code formatting with Black
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 26.1.0
     hooks:
       - id: black
         language_version: python3
@@ -28,7 +28,7 @@ repos:
           - types-requests
           - types-PyYAML
           - pytest-socket
-        files: \.py$
+        files: ^custom_components/cable_modem_monitor/.*\.py$
 
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -105,11 +105,35 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: regenerate-test-docs
+        name: Regenerate test documentation
+        entry: scripts/dev/run-python.sh scripts/generate_test_docs.py
+        language: script
+        files: ^tests/.*/test_.*\.py$
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: check-fixture-pii
         name: Check fixtures for PII and metadata
         entry: scripts/dev/run-python.sh scripts/dev/check-fixture-pii.py
         language: script
         files: ^tests/parsers/.*/fixtures/.*\.(html|htm|json|yaml)$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: validate-modem-yaml
+        name: Validate modem.yaml configs
+        entry: scripts/dev/run-python.sh scripts/validate_modem_configs.py
+        language: script
+        files: ^modems/.*/modem\.yaml$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: regenerate-modem-index
+        name: Regenerate modem index.yaml
+        entry: scripts/dev/run-python.sh scripts/generate_modem_index.py
+        language: script
+        files: ^modems/.*/modem\.yaml$
         pass_filenames: false
         stages: [pre-commit]
 

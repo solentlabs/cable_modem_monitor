@@ -8,10 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from custom_components.cable_modem_monitor.core.hnap_json_builder import (
-    HNAPJsonRequestBuilder,
-    _hmac_md5,
-)
+from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
+from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import _hmac_md5
 
 
 class TestHmacMd5:
@@ -167,6 +165,21 @@ class TestCallSingle:
         with pytest.raises(requests.HTTPError):
             builder.call_single(mock_session, "http://192.168.100.1", "TestAction")
 
+    def test_logs_error_on_failed_response(self, builder, mock_session, caplog):
+        """Test that failed responses are logged before raise_for_status."""
+        mock_response = MagicMock()
+        mock_response.ok = False
+        mock_response.status_code = 500
+        mock_response.text = "Internal Server Error"
+        mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_session.post.return_value = mock_response
+
+        with pytest.raises(requests.HTTPError):
+            builder.call_single(mock_session, "http://192.168.100.1", "FailingAction")
+
+        # Verify error logging occurred
+        assert "HNAP call_single failed" in caplog.text
+
 
 class TestCallMultiple:
     """Test batched JSON HNAP action calls."""
@@ -202,7 +215,7 @@ class TestCallMultiple:
     def test_default_empty_action_value_is_empty_dict(self, builder, mock_session):
         """Test that default empty action value is {} for backwards compatibility.
 
-        MB8611 was working with empty dict {}, so we preserve that as default.
+        Some HNAP modems work with empty dict {}, so we preserve that as default.
         Parsers can override this for modems that need empty string "".
         """
         mock_response = MagicMock()
@@ -216,7 +229,7 @@ class TestCallMultiple:
         call_args = mock_session.post.call_args
         request_json = call_args[1]["json"]
 
-        # Default should be empty dict {} for MB8611 compatibility
+        # Default should be empty dict {} for HNAP compatibility
         for action in actions:
             assert action in request_json["GetMultipleHNAPs"]
             assert request_json["GetMultipleHNAPs"][action] == {}, (
@@ -226,14 +239,14 @@ class TestCallMultiple:
             )
 
     def test_configurable_empty_action_value_string(self, mock_session):
-        """Test that empty_action_value can be configured to empty string for S33.
+        """Test that empty_action_value can be configured to empty string.
 
-        S33 requires empty string "" for action values (observed in HAR captures).
-        Using {} causes 500 Internal Server Error on S33.
+        Some HNAP modems require empty string "" for action values (observed in HAR captures).
+        Using {} causes 500 Internal Server Error on those modems.
 
         Reference: https://github.com/solentlabs/cable_modem_monitor/issues/32
         """
-        # Create builder with empty string configuration (like S33 does)
+        # Create builder with empty string configuration (for HNAP modems that need it)
         builder = HNAPJsonRequestBuilder(
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
@@ -344,7 +357,7 @@ class TestLogin:
         assert request_json["Login"]["Action"] == "request"
         assert request_json["Login"]["Username"] == "testuser"
         assert request_json["Login"]["LoginPassword"] == ""
-        # PrivateLogin field is required for MB8611 authentication
+        # PrivateLogin field is required for HNAP authentication
         assert request_json["Login"]["PrivateLogin"] == "LoginPassword"
 
     def test_login_request_format(self, builder, mock_session):
@@ -378,7 +391,7 @@ class TestLogin:
         login_password = request_json["Login"]["LoginPassword"]
         assert len(login_password) == 32
         assert login_password.isupper()
-        # PrivateLogin field is required for MB8611 authentication
+        # PrivateLogin field is required for HNAP authentication
         assert request_json["Login"]["PrivateLogin"] == "LoginPassword"
 
     def test_private_key_computation(self, builder, mock_session):
@@ -520,6 +533,88 @@ class TestLogin:
 
             assert success is True, f"Expected success for LoginResult={result_value}"
 
+    def test_login_http_error_after_challenge(self, builder, mock_session):
+        """Test handling of HTTP error during login step (after successful challenge)."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        # Login returns HTTP error
+        login_response = MagicMock()
+        login_response.status_code = 403
+        login_response.text = "Forbidden"
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "password")
+
+        assert success is False
+        assert builder._private_key is None
+        auth_attempt = builder.get_last_auth_attempt()
+        assert "HTTP 403" in auth_attempt["error"]
+
+    def test_login_invalid_json_but_http_200(self, builder, mock_session):
+        """Test handling of invalid JSON in login response but HTTP 200.
+
+        Some modems return success without valid JSON body.
+        """
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        # Login returns HTTP 200 but invalid JSON (some modems do this on success)
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = "<html>Success page</html>"
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
+        success, response = builder.login(mock_session, "http://192.168.100.1", "admin", "password")
+
+        # Should succeed - HTTP 200 is treated as success even without valid JSON
+        assert success is True
+        assert "Success page" in response
+
+    def test_login_generic_exception(self, builder, mock_session):
+        """Test handling of unexpected exception during login."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        # Second call raises unexpected exception
+        mock_session.post.side_effect = [challenge_response, RuntimeError("Unexpected error")]
+
+        success, _ = builder.login(mock_session, "http://192.168.100.1", "admin", "password")
+
+        assert success is False
+        assert builder._private_key is None
+        auth_attempt = builder.get_last_auth_attempt()
+        assert "Exception" in auth_attempt["error"]
+
 
 class TestAuthenticatedRequests:
     """Test that authenticated requests use stored private key."""
@@ -587,7 +682,7 @@ class TestIntegration:
             {
                 "GetMotoStatusConnectionInfoResponse": {
                     "GetMotoStatusConnectionInfoResult": "OK",
-                    "MotoConnDeviceType": "MB8611",
+                    "MotoConnDeviceType": "TestModem",
                 }
             }
         )
@@ -600,7 +695,7 @@ class TestIntegration:
 
         # Fetch data
         result = builder.call_single(mock_session, "http://192.168.100.1", "GetMotoStatusConnectionInfo")
-        assert "MB8611" in result
+        assert "TestModem" in result
 
 
 class TestClearAuthCache:
@@ -789,7 +884,7 @@ class TestAuthAttemptTracking:
         auth_attempt = builder.get_last_auth_attempt()
         challenge_req = auth_attempt["challenge_request"]
 
-        # Verify PrivateLogin field is present (MB8611 requirement)
+        # Verify PrivateLogin field is present (HNAP requirement)
         assert challenge_req["Login"]["PrivateLogin"] == "LoginPassword"
         assert challenge_req["Login"]["Action"] == "request"
         assert challenge_req["Login"]["Username"] == "testuser"

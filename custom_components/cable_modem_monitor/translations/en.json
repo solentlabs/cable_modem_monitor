@@ -1,4 +1,62 @@
 {
+  "services": {
+    "clear_history": {
+      "name": "Clear History",
+      "description": "Clear historical data for cable modem sensors older than a specified date.",
+      "fields": {
+        "days_to_keep": {
+          "name": "Days to Keep",
+          "description": "Number of days of history to keep (older data will be deleted)."
+        }
+      }
+    },
+    "generate_dashboard": {
+      "name": "Generate Dashboard",
+      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
+      "fields": {
+        "include_status_card": {
+          "name": "Status Card",
+          "description": "Modem status, uptime, channel counts, and restart button."
+        },
+        "include_downstream_power": {
+          "name": "Downstream Power Graph",
+          "description": "Power levels for all downstream channels."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream SNR Graph",
+          "description": "Signal-to-noise ratio for all downstream channels."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream Frequency Graph",
+          "description": "Frequency for all downstream channels."
+        },
+        "include_upstream_power": {
+          "name": "Upstream Power Graph",
+          "description": "Power levels for all upstream channels."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream Frequency Graph",
+          "description": "Frequency for all upstream channels."
+        },
+        "include_errors": {
+          "name": "Error Graphs",
+          "description": "Corrected and uncorrected error counts (7-day view)."
+        },
+        "include_latency": {
+          "name": "Latency Graph",
+          "description": "Ping and HTTP response times (6-hour view)."
+        },
+        "graph_hours": {
+          "name": "Graph History (hours)",
+          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
+        },
+        "short_titles": {
+          "name": "Use Short Titles",
+          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
@@ -19,7 +77,7 @@
       }
     },
     "error": {
-      "invalid_auth": "Authentication failed - modem returned login page.\n\nPlease verify:\n1. Username is correct (typically 'admin', check modem label)\n2. Password is correct (check modem label)\n3. Credentials have not been changed from defaults\n\nTry logging into the modem manually at https://192.168.100.1 to verify credentials work.",
+      "invalid_auth": "Invalid username or password. Please check your credentials and try again.",
       "network_unreachable": "Cannot reach modem - network connectivity issue.\n\nPlease check:\n1. Network connection - Are you on the correct WiFi network?\n2. Guest WiFi - Guest networks often block access to local devices\n3. VPN - Disconnect any active VPN connections\n4. IP address - Verify the modem's IP (typically 192.168.100.1)\n5. Modem web interface - Ensure it's enabled and accessible\n6. Slow response - Some modems take a few seconds to wake up; try submitting again\n\nTry accessing the modem directly in your browser to verify connectivity.",
       "cannot_connect": "Failed to connect to the modem.\n\nPlease verify:\n1. IP address is correct (typically 192.168.100.1)\n2. If modem requires authentication, enter username/password\n3. Modem's web interface is accessible from Home Assistant's network\n\nIf your modem is not supported, select 'Unknown Modem (Fallback Mode)' to enable basic monitoring and HTML capture.",
       "unsupported_modem": "Auto-detection could not identify your modem model.\n\nTo proceed:\n1. Select 'Unknown Modem (Fallback Mode)' from the dropdown below\n2. This enables basic connectivity monitoring (ping/HTTP latency)\n3. After installation, click 'Capture HTML' button\n4. Download diagnostics and share with developers to add full support",

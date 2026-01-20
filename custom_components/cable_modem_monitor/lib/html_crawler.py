@@ -219,6 +219,7 @@ def extract_all_resources_from_html(html: str, base_url: str) -> dict[str, set[s
 
     This goes beyond simple <a href> extraction to find:
     - JavaScript files (<script src>)
+    - Inline JavaScript URL patterns (linkUrl, href, etc.)
     - CSS files (<link href>)
     - jQuery .load() fragment URLs
     - Standard page links (<a href>)
@@ -264,9 +265,23 @@ def extract_all_resources_from_html(html: str, base_url: str) -> dict[str, set[s
                 absolute = make_absolute(src)
                 if is_same_host(absolute):
                     resources[RESOURCE_TYPE_JS].add(absolute)
-                    _LOGGER.debug("Found JS: %s", absolute)
+                    _LOGGER.debug("Found JS file: %s", absolute)
 
-        # 2. Extract CSS files: <link rel="stylesheet" href="...">
+        # 2. Extract URLs from inline JavaScript: <script>...</script>
+        # Many modems define navigation menus in inline JS (linkUrl, href patterns)
+        for script in soup.find_all("script"):
+            # Skip scripts with src attribute (external files handled above)
+            if script.get("src"):
+                continue
+            script_content = script.string
+            if script_content:
+                # Reuse the JavaScript URL extraction logic
+                inline_urls = extract_urls_from_javascript(script_content, base_url)
+                if inline_urls:
+                    resources[RESOURCE_TYPE_HTML].update(inline_urls)
+                    _LOGGER.debug("Found %d URLs in inline script", len(inline_urls))
+
+        # 3. Extract CSS files: <link rel="stylesheet" href="...">
         for link in soup.find_all("link", href=True):
             href = link.get("href", "")
             rel: list[str] | str | None = link.get("rel") or []
@@ -279,7 +294,7 @@ def extract_all_resources_from_html(html: str, base_url: str) -> dict[str, set[s
                     resources[RESOURCE_TYPE_CSS].add(absolute)
                     _LOGGER.debug("Found CSS: %s", absolute)
 
-        # 3. Extract jQuery .load() fragment URLs from inline scripts
+        # 4. Extract jQuery .load() fragment URLs from inline scripts
         # Pattern: .load("something.htm") or .load('something.htm')
         load_pattern = r'\.load\s*\(\s*["\']([^"\']+)["\']'
         for match in re.finditer(load_pattern, html):
@@ -290,7 +305,7 @@ def extract_all_resources_from_html(html: str, base_url: str) -> dict[str, set[s
                     resources[RESOURCE_TYPE_FRAGMENT].add(absolute)
                     _LOGGER.debug("Found jQuery .load() fragment: %s", absolute)
 
-        # 4. Extract standard page links: <a href="...">
+        # 5. Extract standard page links: <a href="...">
         for link_tag in soup.find_all("a", href=True):
             href = link_tag.get("href", "")
             if not isinstance(href, str):

@@ -2,7 +2,7 @@
 """
 List all supported modems and their verification status.
 
-This script parses parser files directly (no imports needed) to extract metadata.
+This script reads from modem.yaml files to extract metadata.
 Useful for AI tools, documentation generation, and release notes.
 
 Usage:
@@ -14,147 +14,88 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 from pathlib import Path
 
-
-def extract_class_attributes(node: ast.ClassDef) -> dict:
-    """Extract class-level attribute assignments from an AST ClassDef node."""
-    attrs = {}
-
-    for item in node.body:
-        if isinstance(item, ast.Assign):
-            for target in item.targets:
-                if isinstance(target, ast.Name):
-                    value = eval_ast_value(item.value)
-                    if value is not None:
-                        attrs[target.id] = value
-        elif isinstance(item, ast.AnnAssign) and item.value and isinstance(item.target, ast.Name):
-            value = eval_ast_value(item.value)
-            if value is not None:
-                attrs[item.target.id] = value
-
-    return attrs
+import yaml
 
 
-def eval_ast_value(node: ast.expr):
-    """Safely evaluate simple AST literals."""
-    if isinstance(node, ast.Constant):
-        return node.value
-    elif isinstance(node, ast.List):
-        return [eval_ast_value(el) for el in node.elts if eval_ast_value(el) is not None]
-    elif isinstance(node, ast.Tuple):
-        return tuple(eval_ast_value(el) for el in node.elts if eval_ast_value(el) is not None)
-    elif isinstance(node, ast.NameConstant):  # Python 3.7 compatibility
-        return node.value
-    elif isinstance(node, ast.Str):  # Python 3.7 compatibility
-        return node.s
-    elif isinstance(node, ast.Num):  # Python 3.7 compatibility
-        return node.n
-    elif isinstance(node, ast.Attribute):
-        # Handle ParserStatus.VERIFIED, ParserStatus.PENDING, etc.
-        return node.attr.lower()  # Returns "verified", "pending", "broken", etc.
-    return None
+def discover_modems() -> list[dict]:
+    """Discover all modems by reading modem.yaml files."""
+    modems = []
 
-
-def discover_parsers() -> list[dict]:  # noqa: C901
-    """Discover all parser classes by parsing Python files directly."""
-    parsers = []
-
-    # Find parsers directory
+    # Find modems directory
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent
-    parsers_dir = project_root / "custom_components" / "cable_modem_monitor" / "parsers"
+    modems_dir = project_root / "modems"
 
-    if not parsers_dir.exists():
-        print(f"Parsers directory not found: {parsers_dir}")
+    if not modems_dir.exists():
+        print(f"Modems directory not found: {modems_dir}")
         return []
 
-    # Walk through manufacturer directories
-    for manufacturer_dir in parsers_dir.iterdir():
-        if not manufacturer_dir.is_dir() or manufacturer_dir.name.startswith("_"):
-            continue
+    # Scan for modem.yaml files
+    for yaml_path in modems_dir.glob("*/*/modem.yaml"):
+        try:
+            with open(yaml_path) as f:
+                config = yaml.safe_load(f)
 
-        # Parse each .py file
-        for py_file in manufacturer_dir.glob("*.py"):
-            if py_file.name.startswith("_"):
+            if not config:
                 continue
 
-            try:
-                source = py_file.read_text()
-                tree = ast.parse(source)
-            except (SyntaxError, UnicodeDecodeError):
+            # Extract parser class name
+            parser_info = config.get("parser", {})
+            parser_class = parser_info.get("class")
+            if not parser_class:
                 continue
 
-            # Find parser classes
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.ClassDef):
-                    continue
+            # Skip fallback parser
+            if "fallback" in parser_class.lower():
+                continue
 
-                # Check if it inherits from a parser base class
-                base_names = []
-                for base in node.bases:
-                    if isinstance(base, ast.Name):
-                        base_names.append(base.id)
-                    elif isinstance(base, ast.Attribute):
-                        base_names.append(base.attr)
+            # Get status from status_info section
+            status_info = config.get("status_info", {})
+            status = status_info.get("status", "awaiting_verification")
 
-                # Skip if not a parser class
-                is_parser = any("Parser" in name and name != "ModemParser" for name in base_names)
-                if not is_parser and "Parser" not in node.name:
-                    continue
+            # Build relative path
+            rel_path = yaml_path.parent.relative_to(modems_dir)
+            path_str = str(rel_path).replace("\\", "/")
 
-                # Extract attributes
-                attrs = extract_class_attributes(node)
+            # Get manufacturer display name
+            manufacturer = config.get("manufacturer", yaml_path.parent.parent.name.title())
 
-                # Skip base/template/generic classes without real metadata
-                name = attrs.get("name", "")
-                if not name or name == "Unknown" or "Generic" in node.name or "Template" in node.name:
-                    continue
+            # Build modem info
+            modem_info = {
+                "name": f"{manufacturer} {config.get('model', yaml_path.parent.name.upper())}",
+                "manufacturer": manufacturer,
+                "models": [config.get("model", yaml_path.parent.name.upper())],
+                "status": status,
+                "verified": status == "verified",
+                "verification_source": status_info.get("verification_source"),
+                "class_name": parser_class,
+                "path": path_str,
+            }
 
-                # Skip fallback parser
-                if "fallback" in node.name.lower():
-                    continue
+            modems.append(modem_info)
 
-                # Handle status field (new) or verified field (legacy)
-                status = attrs.get("status", attrs.get("verified", "pending"))
-                # Normalize: True -> "verified", False -> "pending", string -> as-is
-                if status is True:
-                    status = "verified"
-                elif status is False:
-                    status = "pending"
-
-                parser_info = {
-                    "name": attrs.get("name", node.name),
-                    "manufacturer": attrs.get("manufacturer", manufacturer_dir.name.title()),
-                    "models": attrs.get("models", []),
-                    "status": status,
-                    "verified": status == "verified",  # Backward compat
-                    "verification_source": attrs.get("verification_source"),
-                    "priority": attrs.get("priority", 50),
-                    "class_name": node.name,
-                    "file": str(py_file.relative_to(project_root)),
-                }
-
-                parsers.append(parser_info)
+        except Exception as e:
+            print(f"Error processing {yaml_path}: {e}")
 
     # Sort by manufacturer, then by name
-    parsers.sort(key=lambda p: (p["manufacturer"], p["name"]))
+    modems.sort(key=lambda m: (m["manufacturer"], m["name"]))
 
-    return parsers
+    return modems
 
 
-def print_table(parsers: list[dict]) -> None:
-    """Print parsers as a human-readable table."""
-    if not parsers:
-        print("No parsers found.")
+def print_table(modems: list[dict]) -> None:
+    """Print modems as a human-readable table."""
+    if not modems:
+        print("No modems found.")
         return
 
     # Calculate column widths
-    name_width = max(len(p["name"]) for p in parsers)
-    mfr_width = max(len(p["manufacturer"]) for p in parsers)
-    models_width = max(len(", ".join(p["models"])) for p in parsers) if any(p["models"] for p in parsers) else 5
+    name_width = max(len(m["name"]) for m in modems)
+    mfr_width = max(len(m["manufacturer"]) for m in modems)
+    models_width = max(len(", ".join(m["models"])) for m in modems) if any(m["models"] for m in modems) else 5
 
     # Header
     print(f"{'Modem':<{name_width}}  {'Manufacturer':<{mfr_width}}  {'Models':<{models_width}}  Status")
@@ -167,16 +108,17 @@ def print_table(parsers: list[dict]) -> None:
         "awaiting_verification": "⏳ Awaiting Verification",
         "broken": "✗ Broken",
         "deprecated": "⊘ Deprecated",
+        "unsupported": "✗ Unsupported",
     }
 
     # Rows
     status_counts: dict[str, int] = {}
-    for p in parsers:
-        status = p.get("status", "awaiting_verification")
+    for m in modems:
+        status = m.get("status", "awaiting_verification")
         status_counts[status] = status_counts.get(status, 0) + 1
         display = status_display.get(status, f"? {status}")
-        models = ", ".join(p["models"]) or "-"
-        print(f"{p['name']:<{name_width}}  {p['manufacturer']:<{mfr_width}}  {models:<{models_width}}  {display}")
+        models = ", ".join(m["models"]) or "-"
+        print(f"{m['name']:<{name_width}}  {m['manufacturer']:<{mfr_width}}  {models:<{models_width}}  {display}")
 
     # Summary
     print()
@@ -189,13 +131,13 @@ def print_table(parsers: list[dict]) -> None:
         parts.append(f"{status_counts['broken']} broken")
     if status_counts.get("deprecated"):
         parts.append(f"{status_counts['deprecated']} deprecated")
-    print(f"Total: {len(parsers)} parsers ({', '.join(parts)})")
+    print(f"Total: {len(modems)} modems ({', '.join(parts)})")
 
 
-def print_markdown(parsers: list[dict]) -> None:
-    """Print parsers as a Markdown table."""
-    if not parsers:
-        print("No parsers found.")
+def print_markdown(modems: list[dict]) -> None:
+    """Print modems as a Markdown table."""
+    if not modems:
+        print("No modems found.")
         return
 
     status_display = {
@@ -204,19 +146,20 @@ def print_markdown(parsers: list[dict]) -> None:
         "awaiting_verification": "⏳ Awaiting Verification",
         "broken": "✗ Broken",
         "deprecated": "⊘ Deprecated",
+        "unsupported": "✗ Unsupported",
     }
 
     print("| Modem | Manufacturer | Models | Status | Verification Source |")
     print("|-------|--------------|--------|--------|---------------------|")
 
     status_counts: dict[str, int] = {}
-    for p in parsers:
-        status = p.get("status", "awaiting_verification")
+    for m in modems:
+        status = m.get("status", "awaiting_verification")
         status_counts[status] = status_counts.get(status, 0) + 1
         display = status_display.get(status, f"? {status}")
-        models = ", ".join(p["models"]) or "-"
-        source = p["verification_source"] or "-"
-        print(f"| {p['name']} | {p['manufacturer']} | {models} | {display} | {source} |")
+        models = ", ".join(m["models"]) or "-"
+        source = m["verification_source"] or "-"
+        print(f"| {m['name']} | {m['manufacturer']} | {models} | {display} | {source} |")
 
     # Summary
     print()
@@ -229,12 +172,12 @@ def print_markdown(parsers: list[dict]) -> None:
         parts.append(f"{status_counts['broken']} broken")
     if status_counts.get("deprecated"):
         parts.append(f"{status_counts['deprecated']} deprecated")
-    print(f"**Total:** {len(parsers)} parsers ({', '.join(parts)})")
+    print(f"**Total:** {len(modems)} modems ({', '.join(parts)})")
 
 
-def print_json(parsers: list[dict]) -> None:
-    """Print parsers as JSON."""
-    print(json.dumps(parsers, indent=2))
+def print_json(modems: list[dict]) -> None:
+    """Print modems as JSON."""
+    print(json.dumps(modems, indent=2))
 
 
 def main():
@@ -243,14 +186,14 @@ def main():
     parser.add_argument("--markdown", action="store_true", help="Output as Markdown table")
     args = parser.parse_args()
 
-    parsers = discover_parsers()
+    modems = discover_modems()
 
     if args.json:
-        print_json(parsers)
+        print_json(modems)
     elif args.markdown:
-        print_markdown(parsers)
+        print_markdown(modems)
     else:
-        print_table(parsers)
+        print_table(modems)
 
 
 if __name__ == "__main__":

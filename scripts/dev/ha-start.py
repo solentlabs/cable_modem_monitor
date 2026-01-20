@@ -11,6 +11,7 @@ Options:
 """
 
 import argparse
+import os
 import platform
 import shutil
 import socket
@@ -18,6 +19,20 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+
+def fix_paths_for_docker_in_docker():
+    """Fix volume paths when running inside a devcontainer.
+
+    When running docker-compose inside a devcontainer (docker-in-docker),
+    HOST_WORKSPACE_FOLDER points to the Windows host path, but we need
+    the container path for volume mounts. Unsetting it lets docker-compose
+    fall back to PWD which is correct inside the container.
+    """
+    # Check if we're inside a container
+    if os.path.exists("/.dockerenv") or os.environ.get("REMOTE_CONTAINERS"):
+        os.environ.pop("HOST_WORKSPACE_FOLDER", None)
+
 
 # Color codes
 GREEN = "\033[0;32m"
@@ -190,6 +205,17 @@ def get_container_status() -> tuple[str, bool]:
 def get_port_mapping() -> str:
     """Get the port mapping for the container."""
     try:
+        # First check if container uses host networking (no port mapping needed)
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{.HostConfig.NetworkMode}}", CONTAINER_NAME],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip() == "host":
+            return f"host networking (direct access to port {HA_PORT})"
+
+        # Otherwise check for port mapping
         result = subprocess.run(
             ["docker", "port", CONTAINER_NAME, str(HA_PORT)], capture_output=True, text=True, timeout=10
         )
@@ -233,6 +259,70 @@ def check_integration_mounted() -> bool:
         return False
 
 
+def ensure_dev_config() -> None:
+    """Ensure test-ha-config has a dev-friendly configuration.yaml with logger settings."""
+    config_dir = get_project_dir() / "test-ha-config"
+    config_file = config_dir / "configuration.yaml"
+
+    # Create directory if needed
+    config_dir.mkdir(exist_ok=True)
+
+    # Check if logger section exists in current config
+    needs_update = True
+    if config_file.exists():
+        try:
+            content = config_file.read_text()
+            if "logger:" in content and "cable_modem_monitor" in content:
+                needs_update = False
+        except PermissionError:
+            # File owned by root, will update via docker later if needed
+            pass
+
+    if needs_update:
+        config_content = """\
+# Development configuration for Cable Modem Monitor
+
+# Logger configuration - quiet HA core, verbose for our integration
+logger:
+  default: warning
+  logs:
+    custom_components.cable_modem_monitor: info
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+"""
+        try:
+            config_file.write_text(config_content)
+            print_success("Created configuration.yaml with dev-friendly logger settings")
+        except PermissionError:
+            # File owned by root - update via docker
+            print_info("Updating configuration.yaml via docker (root-owned file)...")
+            subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-v",
+                    f"{config_dir}:/config",
+                    "alpine",
+                    "sh",
+                    "-c",
+                    f"cat > /config/configuration.yaml << 'EOFCONFIG'\n{config_content}EOFCONFIG",
+                ],
+                capture_output=True,
+                timeout=30,
+            )
+            print_success("Updated configuration.yaml with dev-friendly logger settings")
+
+
 def stop_other_ha_containers() -> list[str]:
     """Stop other HA test containers that might be using port 8123."""
     stopped = []
@@ -269,6 +359,9 @@ def run_cleanup():
 
 
 def main():  # noqa: C901
+    # Fix volume paths when running inside devcontainer
+    fix_paths_for_docker_in_docker()
+
     parser = argparse.ArgumentParser(description="Start Home Assistant test environment")
     parser.add_argument("--fresh", action="store_true", help="Remove volumes and start fresh")
     args = parser.parse_args()
@@ -308,7 +401,32 @@ def main():  # noqa: C901
         print_info("Removing volumes (fresh start)")
 
     subprocess.run(down_cmd, capture_output=True, timeout=60)
+
+    # If fresh start, clean test-ha-config using docker (files are owned by root)
+    if args.fresh:
+        config_dir = get_project_dir() / "test-ha-config"
+        if config_dir.exists():
+            print_info("Cleaning test-ha-config (using docker for root-owned files)...")
+            subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-v",
+                    f"{config_dir}:/data",
+                    "alpine",
+                    "rm",
+                    "-rf",
+                    "/data/.",
+                ],
+                capture_output=True,
+                timeout=30,
+            )
+
     print_success("Cleanup complete")
+
+    # Ensure dev-friendly config exists
+    ensure_dev_config()
 
     # Step 3: Start container
     print()

@@ -1,0 +1,768 @@
+<!-- Login_Page -->
+
+
+
+<!DOCTYPE html>
+<style type="text/css">
+#status > li > a > .tooltip {
+	width:max-content;
+}
+</style>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>ARRISGW - Summary - LuCI</title>
+		<!--[if lt IE 9]><script src="/luci-static/commscopestyle/html5.js?v=git-22.123.21346-722675b"></script><![endif]-->
+		<meta name="viewport" content="initial-scale=1.0">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+		<!--link href="/luci-static/commscopestyle/css/fontawesome.min.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/brands.min.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/solid.min.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet"-->
+		<link href="/luci-static/commscopestyle/css/common-min.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/common-new.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/datatable.min.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/jquery.foldertree.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/jquery.inputGroup.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/jquery.password.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/jquery.radioswitch.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link href="/luci-static/commscopestyle/css/jquery.sliderbar.css?v=git-25.057.40490-f1ecbd1" rel="stylesheet">
+		<link rel="shortcut icon" href="/luci-static/commscopestyle/favicon.ico">
+		<script src="/luci-static/commscopestyle/js/jquery-3.6.3.min.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script src="/luci-static/commscopestyle/js/jquery.validate.min.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/arris.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/utilityFunctions.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/jquery.inputGroup.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/jquery.radioswitch.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/jquery.alerts.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/datatable.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script type="text/javascript" src="/luci-static/commscopestyle/js/jQuery.print.js?v=git-25.057.40490-f1ecbd1"></script>
+		<script src="/luci-static/resources/xhr.js?v=git-25.057.40490-f1ecbd1"></script>
+	</head>
+	<body class="lang_en Summary">
+		<div id="loadingBox" style="display: none;" class="loading-indicator-overlay">
+			<div class="loading-indicator"></div>
+			<div class="loading-indicator-text"></div>
+		</div>
+		<!--CBN_S 20230223 zihhsien: Add loading box and text for wizard last page-->
+		<div id="loadingBox_login" style="display: none;" class="loading-indicator-overlay">
+			<div class="loading-indicator"></div>
+			<div class="loading-indicator-text">Changes saved successfully. You will need to login.<br /> Please wait while you are redirected...</div>
+		</div>
+		<!--CBN_E 20230223 zihhsien: Add loading box and text for wizard last page-->
+
+		<!--Main Container - Centers Everything-->
+		<div id="container">
+			<!--Header-->
+			<div id="header">
+				<p style="margin: 0">&nbsp;</p>
+				<div id="logo">
+					<img src="/luci-static/commscopestyle/logo.png" alt="logo" title="Logo">
+				</div>
+				<div id="connection_lost_warning"><strong>Gateway connection lost!</strong></div>
+			</div> <!-- end #header -->
+			<div id='div-skip-to' style="display: none;">
+				<a id="skip-link" name="skip-link" href="#content">Skip to content</a>
+			</div>
+			<div id="sub-header">
+				<ul id="userToolbar" class="on">
+
+
+					<select id="languageSelector">
+						<option value="en" selected="selected">English</option>
+						<option value="es" >Español</option>
+					</select>
+				</ul>
+
+				<ul id="status">
+					<li id="status_inet" class="internet">
+						<span class="value on-off sprite_cont">
+							<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png"/>
+						</span>
+						<a href="javascript: void(0);" tabindex="0">
+							<label>Internet</label>
+							<div class="tooltip"></div>
+						</a>
+					</li>
+
+					<li id="status_enet" class="ethernet">
+						<span class="value on-off sprite_cont">
+							<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png"/>
+						</span>
+						<a href="javascript: void(0);" tabindex="0">
+							<label>Ethernet</label>
+							<div class="tooltip"></div>
+						</a>
+					</li>
+
+					<li id="status_wifi" class="wifi">
+						<span class="value on-off sprite_cont">
+							<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png"/>
+						</span>
+						<a href="javascript: void(0);" tabindex="0">
+							<label>Wi-Fi</label>
+							<div class="tooltip"></div>
+						</a>
+					</li>
+
+					<li id="status_firewall" class="security">
+						<span class="value on-off sprite_cont">
+							<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png"/>
+						</span>
+						<a href="javascript: void(0);" tabindex="0">
+							<label></label>
+							<div class="tooltip">Loading...</div>
+						</a>
+					</li>
+				</ul>
+			</div>
+			<!--Main Content-->
+			<!--div id="main-content"-->
+			<div id="maincontent" class="container">
+			<div id="promotion_text">
+				<a>We recommend using our Mobile Application - SURFboard Central - for better experience configuring and accessing new features customized for your device</a>
+			</div>
+			<section>
+
+			<article>
+
+
+
+
+		<script type="text/javascript">
+			document.body.style.overflow = "visible";
+			function setupEducationalTip() {
+				if($("#educational-tip:has(.hidden)").length > 0) {
+					var closed = true;
+					var $link = $("<a href=\"javascript:;\" class=\"tip-more\">" + 'more' + "</a>").click(function() {
+						if(closed) {
+							$("#educational-tip .hidden").fadeIn();
+							closed = false;
+							$(this).html('less');
+						} else {
+							$("#educational-tip .hidden").fadeOut();
+							closed = true;
+							$(this).html('more');
+						}
+					}).appendTo("#educational-tip");
+				}
+			}
+
+			function setupTooltipInHeader() {
+				$("#status li").mouseenter(function() {
+					$(".tooltip", this).fadeIn();
+				}).mouseleave(function() {
+					$(".tooltip", this).fadeOut();
+				});
+			}
+
+			function refreshUserbar(state) {
+				refreshInternet(state.internet);
+				refreshEthernet(state.ethernet);
+				refreshWifi(state.wifi);
+				refreshFirewall(state.firewall);
+			}
+
+			function checkNetID(ipaddr1, ipaddr2, subnetmask){
+				var res1 = [], res2 = [];
+				for(var k = 0,ilen = ipaddr1.length; k < ilen ; k += 1) {
+					res1.push(parseInt(ipaddr1[k]) & parseInt(subnetmask[k]));
+					res2.push(parseInt(ipaddr2[k]) & parseInt(subnetmask[k]));
+				}
+				if(res1.join(".") == res2.join(".")){
+					return true;
+				}
+			}
+
+			function refreshInternet(internetState) {
+				// CBN 20230210 Roger : [G54CBN-104] [G54][GUI]Status_Internet always show green tick
+				// turnOnUserbarElement("status_inet", internetState.connected);
+				turnOnUserbarElement("status_inet", ((internetState.ip != null) && (internetState.ip != "")));
+
+				if (internetState.ip != null) {
+					// if (internetState.connected) {
+					if (internetState.ip != "") {
+						$("#status_inet .tooltip").html("Connected<br>WAN IP: " + internetState.ip);
+						if (internetState.lan_ip != "") {
+							var split_ip = internetState.ip[0].split(".");
+							var split_lanip = internetState.lan_ip.split(".");
+							var split_lannm = internetState.lan_mask.split(".");
+							var split_wangw = internetState.wan_gateway.split(".");
+							var split_wannm = internetState.wan_mask.split(".");
+
+							if ((checkNetID(split_ip, split_lanip, split_wannm) == true || checkNetID(split_ip, split_lanip, split_lannm) == true)) {
+								$("#status_inet .tooltip").html("Connected<br>WAN IP: " + internetState.ip + "<br>Wired client can get LAN IP but can't access internet.");
+								$("#status_inet").addClass("alert");
+
+							} else if ((checkNetID(split_wangw, split_lanip, split_wannm) == true || checkNetID(split_wangw, split_lanip, split_lannm) == true)){
+								$("#status_inet .tooltip").html("Connected<br>WAN IP: " + internetState.ip + "<br>Wired client can get LAN IP but can't access internet.");
+								$("#status_inet").addClass("alert");
+
+							}
+						}
+					} else {
+						$("#status_inet .tooltip").html("Not Connected");
+					}
+				} else {
+					$("#status_inet .tooltip").html("Loading...");
+				}
+			}
+
+			function refreshEthernet(ethernetState) {
+				turnOnUserbarElement("status_enet", ethernetState.enabled);
+				if (ethernetState.connected_devices != null) {
+					if (ethernetState.enabled) {
+						$("#status_enet .tooltip").html("Active<br>" + $.validator.format("{0} device(s) connected", ethernetState.connected_devices));
+					} else {
+						$("#status_enet .tooltip").html("Inactive");
+					}
+				} else {
+					$("#status_enet .tooltip").html("Loading...");
+				}
+			}
+
+			function refreshWifi(wifiState) {
+				turnOnUserbarElement("status_wifi", wifiState.enabled);
+				if (wifiState.connected_devices != null) {
+					if (wifiState.enabled) {
+						$("#status_wifi .tooltip").html("Enabled<br>" + $.validator.format("{0} device(s) connected", wifiState.connected_devices));
+					} else {
+						$("#status_wifi .tooltip").html("Disabled");
+					}
+				} else {
+					$("#status_wifi .tooltip").html("Loading...");
+				}
+			}
+
+			function refreshFirewall(firewallState) {
+				turnOnUserbarElement("status_firewall", firewallState.level == "Medium" || firewallState.level == "High");
+
+				/*
+				//	deprecated
+				var firewallDisplayLevel = "";
+				if (firewallState.level == "High") {
+					firewallDisplayLevel = "High";
+				} else if (firewallState.level == "Medium") {
+					firewallDisplayLevel = "Medium";
+				} else if (firewallState.level == "Low") {
+					firewallDisplayLevel = "Low";
+				} else if (firewallState.level == "Custom") {
+					firewallDisplayLevel = "Custom";
+				} else {
+					firewallDisplayLevel = "Disabled";
+				}
+				*/
+
+				//	deprecated
+				//	$("#status_firewall a label").text($.validator.format("{0} Security", firewallDisplayLevel));
+				//	$("#status_firewall .tooltip").html($.validator.format("Firewall is set to {0}", firewallDisplayLevel));
+				$("#status_firewall a label").text($.validator.format("{0} Security", firewallState.level));
+				$("#status_firewall .tooltip").html($.validator.format("Firewall is set to {0}", firewallState.level));
+			}
+
+			function turnOnUserbarElement(element, isOn) {
+				if (isOn) {
+					$("#" + element).removeClass("off");
+				} else {
+					$("#" + element).addClass("off");
+				}
+			}
+
+			function updateUserbar() {
+				//	Assign handlers immediately after making the request,
+				//	and remember the jqxhr object for this request
+				var jqxhr = $.getJSON( "/cgi-bin/luci/state",
+					{ status: 1 },
+					function(data) {
+						//	success
+						//	console.log(data);
+						$("#connection_lost_warning").css('display', 'none');
+						if (data != null) {
+							refreshUserbar(data);
+						}
+					}).done( function() {
+						//	second success
+					}).fail( function() {
+						//	error
+						$("#connection_lost_warning").css('display', 'inline-block');
+					}).always( function() {
+						//	finished
+					});
+				// Perform other work here ...
+				// Set another completion function for the request above
+				jqxhr.always( function() {
+					//	second finished
+				});
+			}
+
+			//CBN_S 20230224 zihhsien: if the user had been registered the app, hide the promotion text
+			if("11" != "0"){
+				document.getElementById("promotion_text").style.display="none";
+			}else{
+				document.getElementById("promotion_text").style.display="";
+			}
+			//CBN_E 20230224 zihhsien: if the user had been registered the app, hide the promotion text
+
+			$(document).ready(function() {
+				$( "#educational-tip p" ).each(function( index ) { $(this).html($(this).text());});
+				$(".dropdown-menu>.dropdown>a").click(function (e) {
+						e.preventDefault();
+						$(this).toggleClass("active");
+						$(this).siblings(".dropdown-menu").slideToggle();
+				});
+
+				$("#menu-summary").siblings(".dropdown-menu").attr("style","display: block;");
+				$("#menu-summary").addClass("active");
+				$("#menu-summary").addClass("selected");
+
+				$("#menu-summary").parents().find(">.dropdown-menu").attr("style","display: block;");
+				$("#menu-summary").parents().find(">.menu").addClass("active");
+
+
+				$("#statusTip li").mouseenter(function() {
+					$(".tooltip", this).fadeIn();
+				}).mouseleave(function() {
+					$(".tooltip", this).fadeOut();
+				});
+
+				if( $(".nav > .dropdown > .menu:first-child").hasClass("selected"))
+					$("#menu-summary").parent().find("> ul > li:first-child > a").addClass("selected");
+
+				$(".rs_radiolist a").click(function (e) {
+					e.preventDefault();
+					var s = $(this).find("input");
+					s[0].setAttribute("checked", "");
+					$(this).find("li").addClass("rs_selected");
+					var ss = $(this).siblings().find("input");
+					ss[0].removeAttribute("checked");
+					$(this).siblings().find("li").removeClass("rs_selected");
+				});
+
+				setupTooltipInHeader();
+				setupEducationalTip();
+				updateUserbar();
+				setInterval(updateUserbar, 1000 * 30); //refresh status bar every 30 seconds
+
+				// focus current page link, must after page.init()
+				//$('#nav [href="'+location.href.replace(/^.*\//g, '')+'"]').focus();   // need a "skip nav" function
+				$("#skip-link").click(function () {
+					$('#content').attr('tabIndex', -1).focus();  //this is to fix skip-link doesn't work on webkit-based Chrome
+				});
+				// change radio-btn status and do ajax when press "enter"
+				$(".radio-btns a").keypress(function(event) {
+					var keycode = (event.keyCode ? event.keyCode : event.which);
+					if (13 == keycode) {
+						if (!$(this).parent(".radio-btns").find("li").hasClass("selected"))  {
+							return;   // do nothing if has disabled class, don't detect disabled attr for radio-btn
+						}
+						// console.log($(this).find(":radio").hasClass("disabled"));
+						$(this).find(":radio").trigger('click');
+						$(this).find(":radio").trigger('change');
+						$(this).parent(".radio-btns").radioToButton();
+					}
+				});
+				// press Esc to skip menu and goto first control of content
+				// Esc:keypress:which is zero in FF, Esc:keypress is not work in Chrome
+				$("#nav").keydown(function(event) {
+					var keycode = (event.keyCode ? event.keyCode : event.which);
+					if (27 == keycode) {
+						$("#content textarea:eq(0)").focus();
+						$("#content input:eq(0)").focus();
+						$("#content a:eq(0)").focus();      // high priority element to focus
+					}
+				});
+				/* changes for high contrast mode */
+				/*
+				$("#logout").click(function() {
+					updateServerRecord("actionHandler/ajaxSet_logout.php", null, null, BACKGROUND_OPERATION, function() {location.href = "login.php";});
+				});
+				*/
+
+				// show pop-up info when focus
+				$("#status a").focus(function() {
+					$(this).mouseenter();
+				});
+				// disappear previous pop-up
+				$("#status a").blur(function() {
+					$(".tooltip").hide();
+				});
+
+				// Add shortcut links if logged in.
+				$("#status_inet a").attr("href", "/cgi-bin/luci/admin/gateway/connection/wan/");
+				$("#status_enet a").attr("href", "/cgi-bin/luci/admin/connecteddevice/devices/");
+				$("#status_wifi a").attr("href", "/cgi-bin/luci/admin/gateway/connection/wifi/networks/");
+				$("#status_firewall a").attr("href", "/cgi-bin/luci/admin/gateway/firewall/firewall_ipv4/");
+
+				$("#languageSelector").change( function() {
+					//	console.log($(this).val());
+					let lang = $(this).val();
+					//	console.log(data);
+					//	console.log(JSON.parse(data));
+					$("#loadingBox").show();
+					L.post('/cgi-bin/luci/language', {lang: lang},
+						function(x, info) {
+							$("#loadingBox").hide();
+							location.reload();
+						}
+					);
+				});
+
+				/*
+				//	deprecated
+				$("#logout").click(function() {
+					//	updateServerRecord("actionHandler/ajaxSet_logout.php", null, null, BACKGROUND_OPERATION, function() {location.href = "login.php";});
+					L.get('/cgi-bin/luci/admin/logout', null,
+					function(x, info)
+					{
+						if (x.status != 200)
+							return;
+						//	console.log("++++++++++");
+						//	console.log(info);
+						//	console.log("----------");
+						window.location.href = "";
+					});
+				});
+				*/
+			});
+		</script>
+
+
+<script type="text/javascript" src="/luci-static/resources/promis.min.js?v=git-25.057.40490-f1ecbd1"></script>
+<script type="text/javascript" src="/luci-static/resources/cbi.js?v=git-25.057.40490-f1ecbd1"></script>
+<script type="text/javascript" src="/luci-static/resources/luci.js?v=git-25.057.40490-f1ecbd1"></script>
+<script type="text/javascript">
+	L = new LuCI({"apply_rollback":90,"resource":"\/luci-static\/resources","media":"\/luci-static\/commscopestyle","documentroot":"\/www","pollinterval":5,"apply_display":1.5,"requestpath":[],"ubuspath":"\/ubus\/","scriptname":"\/cgi-bin\/luci","dispatchpath":[],"apply_timeout":5,"apply_holdoff":4,"nodespec":{"satisfied":true,"action":{"path":"admin_gateway\/connection_summary","type":"template"},"order":1,"children":{"set_ssid_split_mode":{"action":{"module":"luci.controller.admin.gateway","type":"call","function":"set_ssid_split_mode","parameters":[]},"satisfied":true}},"title":"Summary"}});
+</script>
+
+
+<form method="post" action="/cgi-bin/luci/">
+	<div class="wrapper-main">
+		<div class="holder-main">
+			<div class="box-content" name="login">
+				<div class="f-row">
+					<div class="f-wrap Usernameframe">
+						<b class="label" for="Username">Email Address:</b>
+						<input class="input" type="text" name="luci_username" value="***EMAIL***" style="width: 175px; margin: 3px 0px 3px 0px"/>
+					</div>
+				</div>
+				<div class="f-row">
+					<div class="f-wrap Passwordframe">
+						<b class="label" for="Password">Password:</b>
+						<input class="input" type="password" name="luci_password" autocomplete="" id="myInput" style="width: 175px; margin: 3px 0px 3px 0px"/>
+					</div>
+				</div>
+				<div class="f-row">
+					<input type="submit" name="apply" class="btn" id="loginbtn" style="margin-top: 12px" value="Login">
+				</div>
+			</div>
+
+			<!--CBN_S 20230215 zihhsien: If login error times larger than try_to_lock , it will make user to wait for locktime.-->
+			<div class="type_error_check"><br />
+				<!--CBN_S 20230224 zihhsien: If the user had been registered,show some information in login page-->
+				<div class="error" id="notice" >
+					<strong><font style="color:#39baf1;">Notice: In case you have setup this device through the SURFboard Central App, the login password can be located in the "Access Web Interface" option under the hamburger menu of the app.</font></strong><br />
+				</div>
+				<!--CBN_E 20230224 zihhsien: If the user had been registered,show some information in login page-->
+				<div class="error">
+					<input type="hidden" id="invalid_password" value="not_show_window">
+				</div>
+				<div class="error" id="failed_times"  style="display: none;">
+					<br /><strong><span id="waitingtime"></span></strong><br />
+				</div>
+			</div>
+			<!--CBN_E 20230215 zihhsien: If login error times larger than try_to_lock , it will make user to wait for locktime.-->
+		</div>
+	</div>
+</form>
+<!-- Login_Page END -->
+
+<!--error window-->
+<div id="__vdialLiveCont" aria-live="true" aria-atomic="true" aria-relevant="additions" style="position: absolute; z-index: 80000; top: 0px; left: 0px; padding: 0px; margin: 0px; width: 90%; height: 757px; display:none;">
+	<div id="vpop_mask" style="position: fixed; z-index: 80001; top: 0px; left: 0px; height: 100%; width: 100%; opacity: 0.5;"></div>
+	<div id="vpop_container" style="position: fixed; z-index: 80002; border: 8px solid rgb(255, 255, 255); top: 50%; left: 36%; margin: 0px ; min-width: 300px; max-width: 640px; margin-top:-130px;">
+		<div id="vpop_title">
+			<div class="title_content">Alert</div>
+		</div>
+		<div id="vpop_content">
+			<div class="content_content">
+				<div id="password_fail" class="content_message" style="display: block;">
+				  <p id="fail_error"></p>
+				</div>
+			</div>
+		</div>
+		<div id="vpop_footer"><div class="footer_content" style="text-align: right;">
+			<input id="okButton" type="button" class="btn alt" value="OK">
+		</div>
+	</div>
+	</div>
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+	var input = document.getElementsByName('luci_password')[0];
+	if (input)
+		input.focus();
+	function PasswordVisibility() {
+		var x = document.getElementById("myInput");
+		var eyeimg = document.getElementById("eye_btn");
+		if (x.type === "password") {
+			x.type = "text";
+			eyeimg.src="/luci-static/commscopestyle/svg/icon_eye_open.svg"
+		} else {
+			x.type = "password";
+			eyeimg.src="/luci-static/commscopestyle/svg/icon_eye_close.svg"
+		}
+	}
+/*
+	if (document.location.protocol != 'https:') {
+		var url = 'https://' + window.location.hostname + ':' + '' + window.location.pathname;
+		var img=new Image;
+		img.onload=function(){window.location = url};
+		img.src='https://' + window.location.hostname + ':' + '' + '/luci-static/resources/cbi/up.gif?' + Math.random();;
+		setTimeout(function(){
+			img.src=''
+		}, 5000);
+	}
+*/
+	$(document).ready(function(){
+		function openEditDialog() {
+			$(__vdialLiveCont).attr("style","display:block");
+		}
+        $("#okButton").on("click", function() {
+			$(__vdialLiveCont).attr("style","display:none");
+		});
+        if(document.getElementById("invalid_password").value == "show_window"){
+            openEditDialog()
+        }
+	});
+
+	//CBN_S 20230215 zihhsien: If login error times larger than try_to_lock , it will make user to wait for locktime.
+	if(0 >= 5)
+	{
+		var y= document.getElementById("waitingtime");
+		/* CBN_S 20231207 June: After 10 consecutive lockout periods the user will need to reboot before any further login attempts are made. */
+		if(0
+ >= 2)
+		{
+			var dialog="The maximum number of login lockouts have been reached.<br><br>The device must be restarted to continue.";
+			$("#fail_error").html(dialog.replaceAll('<br>', ' '));
+			y.innerHTML = dialog;
+			document.forms[0].apply.disabled=true;
+			document.forms[0].apply.type="button";
+			document.getElementById("failed_times").style.display="";
+			document.getElementById("invalid_password").value="show_window";
+		}
+		/* CBN_E 20231207 June: After 10 consecutive lockout periods the user will need to reboot before any further login attempts are made. */
+		else{
+			document.forms[0].apply.disabled=true;
+			document.forms[0].apply.type="button";
+			//CBN_S 20230215 zihhsien: For dynamic show waiting time
+			var number=600;
+			var dialog = String.format('The maximum number of login attempts reached. Login will be locked for %s seconds. Please try again later.',number)
+			$("#fail_error").html(dialog);
+			document.getElementById("invalid_password").value="show_window";
+			document.getElementById("failed_times").style.display="";
+			setInterval(function(){
+				//CBN_S 20230329 zihhsien: write lock time to tmp and read
+				L.get('/cgi-bin/luci/locktime', null,
+					function(x, info)
+						{
+							if (x.status != 200)
+								return;
+							number=info.locktimer;
+						}
+					);
+				//CBN_E 20230329 zihhsien: write lock time to tmp and read
+				if(number <=0){
+					number=0;
+					y.textContent = '';
+					document.forms[0].apply.disabled=false;
+					document.forms[0].apply.type="submit";
+					//CBN_S 20230329 zihhsien: if remaining lock time <= 0 , reset the time of login error and the time of weblock
+					L.get('/cgi-bin/luci/reset_weblock', null,
+					function(x, info)
+						{
+							if (x.status != 200)
+								return;
+						}
+					);
+					//CBN_E 20230329 zihhsien: if remaining lock time <= 0 , reset the time of login error and the time of weblock
+					window.location.replace(window.location.href);
+				}else{
+					y.innerHTML = 'The maximum number of login attempts reached.' + '<br><br>' + 'Please try again after '+ number +' secs.';
+					dialog = String.format('The maximum number of login attempts reached. Login will be locked for %s seconds. Please try again later.',number)
+					$("#fail_error").html(dialog);
+				}
+			},1000);
+			//CBN_E 20230215 zihhsien: For dynamic show waiting time
+		}
+	}
+	else
+	{
+		//document.getElementById("failed_times").style.display="none";
+		$("#fail_error").html("Invalid login credentials, please try again.");
+		if(0 == 0)
+			document.getElementById("invalid_password").value="not_show_window";
+		else
+			document.getElementById("invalid_password").value="show_window";
+	}
+	//CBN_E 20230215 zihhsien: If login error times larger than try_to_lock , it will make user to wait for locktime.
+
+//]]>
+	//CBN_S 20230224 zihhsien: If the user had been registered,show some information in login page
+	if("11" != "0"){
+		document.getElementById("notice").style.display="";
+	}else{
+		document.getElementById("notice").style.display="none";
+	}
+	//CBN_E 20230224 zihhsien: If the user had been registered,show some information in login page
+</script>
+
+
+</article>
+<article>
+		<div id="educational-tip">
+			<p class="tip">Please login to view your Wi-Fi password or to view and edit detailed network settings.</p>
+		</div>
+		<!-- Device Info -->
+		  <div class="module forms" id="device-info">
+			<div>
+			  <h2>Device Info</h2>
+			  <div class="form-row">
+				<span style="text-align: left" class="readonlyLabel">Software Image Name:</span>
+				<span class="value">AC01.02.012_022625_G5X.04.20.122</span>
+			  </div>
+			</div>
+		  </div>
+		  <!-- Wi-Fi Status -->
+		<div class="module forms block" id="wifi-status">
+		<div>
+			<h2>Wi-Fi Status</h2>
+		</div>
+		<div class="form-row even">
+			<span style="text-align: left" class="readonlyLabel">
+			<u>Primary Home</u>
+			</span>
+		</div>
+
+				<div class="form-row even">
+
+						<span class="off">
+
+					<span class="on-off sprite_cont">
+						<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" />
+					</span>
+				</span>
+				<span class="locks locked">
+					<img src="/luci-static/commscopestyle/images/common_imgs/locks.png" />
+				</span>
+				<span class="readonlyLabel ssidLabel">SSID:</span>
+				<span class="value ssidValue">***REDACTED_SSID***</span>
+			</div>
+
+		<div class="form-row even">
+			<span style="text-align: left" class="readonlyLabel">
+				<u>Guest</u>
+			</span>
+		</div>
+
+				<div class="form-row even">
+
+						<span class="off">
+
+					<span class="on-off sprite_cont">
+						<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" />
+					</span>
+				</span>
+				<span class="locks locked">
+					<img src="/luci-static/commscopestyle/images/common_imgs/locks.png" />
+				</span>
+				<span class="readonlyLabel ssidLabel">SSID:</span>
+				<span class="value ssidValue">***REDACTED_SSID_GUEST***</span>
+			</div>
+
+		</div>
+		<div class="module block" id="home-network">
+			<div>
+				<h2>Home Network</h2>
+				<div class="form-row">
+					<span class="on-off sprite_cont">
+						<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" />
+					</span>
+					<span class="readonlyLabel">Ethernet</span>
+				</div>
+				<div class="form-row odd">
+					<span class="on-off sprite_cont">
+						<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" />
+					</span>
+					<span class="readonlyLabel">Wi-Fi</span>
+				</div>
+				<div class="form-row">
+					<span class="readonlyLabel">Firewall Security Level:</span>
+					<span class="value">Medium</span>
+				</div>
+			</div>
+		</div> <!-- end .module -->
+</article>
+	</section>
+	</div> <!-- end #main-content-->
+	<!--Footer-->
+	<div id="unsupported_browser_note"></div>
+	<footer id="footer">
+		<ul id="footer-links">
+			<li class="first-child">
+				<a href="http://www.arris.com/surfboard/" target="_blank">SURFboard®</a>
+			</li>
+			<li style="list-style:none outside none; margin-left:10px">
+				&#8226;&nbsp;&nbsp;
+				<a href="http://www.arris.com/surfboard/support/" target="_blank">Product Documentation and Support</a>
+			</li>
+			<li style="list-style:none outside none; margin-left:10px">
+				&#8226;&nbsp;&nbsp;
+				<a href="/cgi-bin/luci/open_source" title="Details about Open Source Software used in this product" target="_blank">Open Source</a>
+			</li>
+		</ul>
+   </footer>
+ </body>
+</html>
+
+
+
+
+<script type="text/javascript">
+L.get("/cgi-bin/luci/state", { status: 1 },
+		function(x, state)
+		{
+			var ss = document.getElementById('home-network');
+			var s = String.format(
+					'<div>'+
+						'<h2>Home Network</h2>'+
+						'<div class="form-row %s">'+
+							'<span class="on-off sprite_cont">'+
+								'<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" alt="Ethernet On"></span>'+
+								'<span class="readonlyLabel">Ethernet</span>'+
+						'</div>'+
+						'<div class="form-row odd %s">'+
+							'<span class="on-off sprite_cont">'+
+								'<img src="/luci-static/commscopestyle/images/common_imgs/icn_on_off.png" alt="WiFi On">'+
+							'</span>'+
+							'<span class="readonlyLabel">Wi-Fi</span>'+
+						'</div>'+
+						'<div class="form-row">'+
+							'<span class="readonlyLabel">Firewall Security Level:</span>'+
+							'<span class="value"> %s</span>'+
+						'</div>'+
+					'</div>',
+					state.ethernet.enabled ? "" : "off",
+					state.wifi.enabled ? "" : "off",
+					state.firewall.level ? state.firewall.level : ""
+				);
+			ss.innerHTML = String.format('%s', s);
+		}
+	);
+	$( document ).ready(function() {
+		/*
+		var article1 = document.getElementsByTagName("article");
+		article1[0].setAttribute("style","flex:1");
+		*/
+	})
+</script>

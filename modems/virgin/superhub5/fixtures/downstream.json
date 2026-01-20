@@ -1,0 +1,116 @@
+{
+    "downstream": {
+        "channels": [
+            {
+                "channelType": "sc_qam",
+                "channelId": 1,
+                "frequency": 139000000,
+                "power": 8.5,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 84,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 2,
+                "frequency": 147000000,
+                "power": 8.3,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 74,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 3,
+                "frequency": 155000000,
+                "power": 8.1,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 80,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 4,
+                "frequency": 163000000,
+                "power": 7.9,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 65,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 5,
+                "frequency": 171000000,
+                "power": 7.7,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 85,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 6,
+                "frequency": 179000000,
+                "power": 7.6,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 87,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 7,
+                "frequency": 187000000,
+                "power": 7.5,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 76,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "sc_qam",
+                "channelId": 8,
+                "frequency": 195000000,
+                "power": 7.5,
+                "modulation": "qam_256",
+                "snr": 41,
+                "rxMer": 41,
+                "correctedErrors": 84,
+                "uncorrectedErrors": 0,
+                "lockStatus": true
+            },
+            {
+                "channelType": "ofdm",
+                "channelId": 159,
+                "channelWidth": 94000000,
+                "fftType": "4K",
+                "numberOfActiveSubCarriers": 1840,
+                "modulation": "qam_4096",
+                "firstActiveSubcarrier": 1108,
+                "lockStatus": true,
+                "rxMer": 38.5,
+                "power": 5.3,
+                "correctedErrors": 3121853777,
+                "uncorrectedErrors": 0
+            }
+        ]
+    }
+}

@@ -2,9 +2,9 @@
 """Generate a fixture index from multiple sources.
 
 Data sources (in priority order):
-1. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps
-2. Parser classes - verified status, manufacturer
-3. README.md - model name, contributor (fallback only)
+1. modem.yaml - manufacturer, model, status, hardware (source of truth)
+2. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps (legacy)
+3. README.md - model name (fallback only)
 
 This separation allows:
 - Contributors to focus on parser code, not research
@@ -13,7 +13,7 @@ This separation allows:
 
 Usage:
     python scripts/generate_fixture_index.py
-    python scripts/generate_fixture_index.py --output tests/parsers/FIXTURES.md
+    python scripts/generate_fixture_index.py --output modems/README.md
 """
 
 from __future__ import annotations
@@ -48,6 +48,11 @@ ISP_ORDER = [
     "shaw",
     "videotron",  # Canadian ISPs
     "volia",  # Ukrainian ISP
+    "pyür",  # German ISPs
+    "vodafone",
+    "unitymedia",
+    "virgin",  # UK ISP
+    "telia",  # Nordic/Baltic ISP
 ]
 
 # Chipset reference data for documentation
@@ -155,19 +160,19 @@ ISP_INFO: dict[str, tuple[str, str, str, str]] = {
     "rogers": (
         "Rogers",
         "Canada",
-        "",
+        "https://www.rogers.com/",
         "No BYOM; Rogers equipment required",
     ),
     "shaw": (
         "Shaw Communications",
         "Canada (Western)",
-        "",
+        "https://www.shaw.ca/",
         "Merged with Rogers (2023)",
     ),
     "videotron": (
         "Vidéotron",
         "Canada (Quebec)",
-        "",
+        "https://www.videotron.com/",
         "Helix service requires leased equipment",
     ),
     "volia": (
@@ -175,6 +180,36 @@ ISP_INFO: dict[str, tuple[str, str, str, str]] = {
         "Ukraine",
         "https://en.wikipedia.org/wiki/Volia_(ISP)",
         "Acquired by Datagroup (2021)",
+    ),
+    "pyür": (
+        "Pyür",
+        "Germany",
+        "https://www.pyur.com/",
+        "Formerly Tele Columbus",
+    ),
+    "virgin": (
+        "Virgin Media",
+        "UK",
+        "https://www.virginmedia.com/",
+        "No BYOM; modem mode available",
+    ),
+    "vodafone": (
+        "Vodafone Kabel",
+        "Germany",
+        "https://www.vodafone.de/",
+        "BYOM allowed since 2016; absorbed Unitymedia",
+    ),
+    "unitymedia": (
+        "Unitymedia",
+        "Germany (West)",
+        "",
+        "Merged into Vodafone (2019)",
+    ),
+    "telia": (
+        "Telia",
+        "Nordic/Baltic",
+        "https://www.teliacompany.com/",
+        "Sweden, Finland, Norway, Baltics",
     ),
 }
 
@@ -202,6 +237,12 @@ ISP_COLORS: dict[str, tuple[str, str, str]] = {
     "videotron": ("VID", "Vidéotron", "779988"),
     "volia": ("VOLY", "Volia", "5599aa"),
     "volya": ("VOLY", "Volia", "5599aa"),  # Alternative spelling
+    "pyür": ("PYÜR", "Pyür", "aa6699"),
+    "pyur": ("PYÜR", "Pyür", "aa6699"),  # Without umlaut
+    "virgin": ("VM", "Virgin Media", "aa4466"),
+    "vodafone": ("VDF", "Vodafone Kabel", "aa6666"),
+    "unitymedia": ("UM", "Unitymedia", "778899"),  # Merged into Vodafone
+    "telia": ("TEL", "Telia", "9966aa"),
 }
 
 
@@ -282,26 +323,38 @@ def protocol_to_badge(protocol: str) -> str:
     """Convert a protocol name to a badge or formatted text.
 
     Args:
-        protocol: Protocol name (e.g., "HTML", "LuCI", "HNAP")
+        protocol: Protocol name (e.g., "HTML", "LuCI", "REST_API", "HNAP")
 
     Returns:
         Markdown badge or formatted text for the protocol
     """
-    # HTML gets official orange badge, LuCI gets OpenWrt cyan, HNAP stays bold black
+    # HTML gets official orange badge, LuCI gets OpenWrt cyan, REST_API gets green, HNAP stays bold black
     if protocol == "HTML":
         return '![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping")'
     if protocol == "LuCI":
         return '![LuCI](https://img.shields.io/badge/-LuCI-00B5E2?style=flat-square "OpenWrt web interface")'
+    if protocol == "REST_API":
+        return '![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square "JSON REST API")'
     if protocol == "HNAP":
-        return "**HNAP**"
+        return '![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth")'
     return protocol
+
+
+# Alternate patterns that map to canonical CHIPSET_INFO keys
+# Handles variations like "Broadcom 3390S" -> "bcm3390"
+CHIPSET_ALIASES: dict[str, str] = {
+    "3390": "bcm3390",
+    "3384": "bcm3384",
+    "3383": "bcm3383",
+    "3380": "bcm3380",
+}
 
 
 def chipset_to_link(chipset: str) -> str:
     """Convert a chipset name to a linked reference.
 
     Args:
-        chipset: Chipset name (e.g., "Broadcom BCM3390", "Intel Puma 6")
+        chipset: Chipset name (e.g., "Broadcom BCM3390", "Intel Puma 6", "Broadcom 3390S")
 
     Returns:
         Markdown link to chipset reference section, or plain text if unknown
@@ -311,11 +364,18 @@ def chipset_to_link(chipset: str) -> str:
 
     chipset_lower = chipset.lower()
 
-    # Find matching chipset in our reference data
+    # Find matching chipset in our reference data (direct match)
     for key in CHIPSET_INFO:
         if key in chipset_lower:
             display_name, _, _, _, _ = CHIPSET_INFO[key]
             anchor = key.replace(" ", "-")
+            return f"[{display_name}](#{anchor})"
+
+    # Try alias patterns (e.g., "3390" in "Broadcom 3390S")
+    for pattern, canonical_key in CHIPSET_ALIASES.items():
+        if pattern in chipset_lower:
+            display_name, _, _, _, _ = CHIPSET_INFO[canonical_key]
+            anchor = canonical_key.replace(" ", "-")
             return f"[{display_name}](#{anchor})"
 
     # Unknown chipset - return as plain text
@@ -382,40 +442,43 @@ repo_root = script_dir.parent
 sys.path.insert(0, str(repo_root))
 
 
-def load_parser_metadata() -> dict[str, dict]:
-    """Load status from parser classes.
-
-    Returns:
-        Dict mapping fixtures_path to parser metadata (status, verified, manufacturer)
-    """
-    from custom_components.cable_modem_monitor.parsers import get_parsers
-    from custom_components.cable_modem_monitor.parsers.base_parser import ParserStatus
-
-    parser_map = {}
-    for parser_class in get_parsers():
-        if parser_class.fixtures_path:
-            fixtures_path = parser_class.fixtures_path.rstrip("/")
-            # Access status class attribute directly (works on class, unlike property)
-            status = getattr(parser_class, "status", ParserStatus.AWAITING_VERIFICATION)
-            parser_map[fixtures_path] = {
-                "name": parser_class.name,
-                "manufacturer": parser_class.manufacturer,
-                "status": status.value if hasattr(status, "value") else str(status),
-                "verified": status == ParserStatus.VERIFIED,
-            }
-    return parser_map
-
-
-def load_fixture_metadata(fixture_dir: Path) -> dict:
-    """Load metadata from metadata.yaml file.
+def load_modem_yaml(modem_dir: Path) -> dict:
+    """Load configuration from modem.yaml file.
 
     Args:
-        fixture_dir: Path to fixture directory
+        modem_dir: Path to modem directory (modems/{mfr}/{model}/)
+
+    Returns:
+        Dict with manufacturer, model, status_info, hardware, etc.
+    """
+    modem_yaml = modem_dir / "modem.yaml"
+    if modem_yaml.exists():
+        with open(modem_yaml) as f:
+            return yaml.safe_load(f) or {}
+    return {}
+
+
+def load_fixture_metadata(modem_dir: Path) -> dict:
+    """Load metadata from metadata.yaml file.
+
+    Searches in order:
+    1. {modem_dir}/fixtures/metadata.yaml (new structure)
+    2. {modem_dir}/metadata.yaml (legacy fallback)
+
+    Args:
+        modem_dir: Path to modem directory (modems/{mfr}/{model}/)
 
     Returns:
         Dict with release_date, end_of_life, docsis_version, isps
     """
-    metadata_file = fixture_dir / "metadata.yaml"
+    # New structure: metadata in fixtures/ subdirectory
+    metadata_file = modem_dir / "fixtures" / "metadata.yaml"
+    if metadata_file.exists():
+        with open(metadata_file) as f:
+            return yaml.safe_load(f) or {}
+
+    # Legacy fallback: metadata at modem root
+    metadata_file = modem_dir / "metadata.yaml"
     if metadata_file.exists():
         with open(metadata_file) as f:
             return yaml.safe_load(f) or {}
@@ -427,12 +490,12 @@ README_START_MARKER = "<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELO
 README_END_MARKER = "<!-- END AUTO-GENERATED -->"
 
 
-def generate_quick_facts(metadata: dict, parser_info: dict | None) -> str:
+def generate_quick_facts(metadata: dict, modem_config: dict | None) -> str:
     """Generate Quick Facts markdown table from metadata.
 
     Args:
         metadata: Dict from metadata.yaml
-        parser_info: Dict from parser class (verified, manufacturer)
+        modem_config: Dict from modem.yaml (status_info, hardware)
 
     Returns:
         Markdown string with Quick Facts table
@@ -460,10 +523,12 @@ def generate_quick_facts(metadata: dict, parser_info: dict | None) -> str:
             isps = ", ".join(isps)
         lines.append(f"| **ISPs** | {isps} |")
 
-    if parser_info:
-        verified = parser_info.get("verified", False)
-        status = "✅ Verified" if verified else "⏳ Pending"
-        lines.append(f"| **Parser** | {status} |")
+    if modem_config:
+        status_info = modem_config.get("status_info", {})
+        status = status_info.get("status", "awaiting_verification")
+        verified = status == "verified"
+        status_display = "✅ Verified" if verified else "⏳ Pending"
+        lines.append(f"| **Parser** | {status_display} |")
 
     lines.append("")
     lines.append(README_END_MARKER)
@@ -471,13 +536,13 @@ def generate_quick_facts(metadata: dict, parser_info: dict | None) -> str:
     return "\n".join(lines)
 
 
-def update_readme_quick_facts(fixture_dir: Path, metadata: dict, parser_info: dict | None) -> bool:
+def update_readme_quick_facts(fixture_dir: Path, metadata: dict, modem_config: dict | None) -> bool:
     """Update README.md with auto-generated Quick Facts section.
 
     Args:
         fixture_dir: Path to fixture directory
         metadata: Dict from metadata.yaml
-        parser_info: Dict from parser class
+        modem_config: Dict from modem.yaml
 
     Returns:
         True if README was updated, False otherwise
@@ -487,7 +552,7 @@ def update_readme_quick_facts(fixture_dir: Path, metadata: dict, parser_info: di
         return False
 
     content = readme_path.read_text()
-    quick_facts = generate_quick_facts(metadata, parser_info)
+    quick_facts = generate_quick_facts(metadata, modem_config)
 
     # Check if markers exist
     if README_START_MARKER in content and README_END_MARKER in content:
@@ -532,52 +597,86 @@ def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: 
         info["source_code"] = metadata["source_code"]
 
 
-def extract_fixture_info(
-    fixture_dir: Path, base_dir: Path, parser_map: dict[str, dict]
-) -> dict[str, str | int | bool | None]:
-    """Extract modem info from metadata.yaml, parser, and README.
+def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
+    """Apply modem.yaml configuration to fixture info dict."""
+    info["manufacturer"] = modem_config.get("manufacturer") or info["manufacturer"]
+    info["model"] = modem_config.get("model") or info["model"]
+
+    # Get status from status_info section
+    status_info = modem_config.get("status_info", {})
+    status = status_info.get("status", "awaiting_verification")
+    info["status"] = status
+    info["verified"] = status == "verified"
+
+    # Get hardware info
+    hardware = modem_config.get("hardware", {})
+    if hardware.get("docsis_version"):
+        info["docsis_version"] = hardware["docsis_version"]
+    if hardware.get("chipset"):
+        info["chipset"] = hardware["chipset"]
+    if hardware.get("release_date"):
+        info["release_date"] = hardware["release_date"]
+        # Extract year for timeline
+        release_str = str(hardware["release_date"])
+        if release_str:
+            info["release_year"] = int(release_str[:4])
+    if hardware.get("end_of_life"):
+        info["end_of_life"] = hardware["end_of_life"]
+
+    # Get paradigm for protocol display
+    if modem_config.get("paradigm"):
+        info["paradigm"] = modem_config["paradigm"]
+
+
+def extract_fixture_info(fixture_dir: Path, base_dir: Path) -> dict[str, str | int | bool | None]:
+    """Extract modem info from modem.yaml, metadata.yaml, and README.
 
     Priority:
-    1. metadata.yaml - release_date, end_of_life, docsis_version, isps
-    2. Parser - verified, manufacturer
+    1. modem.yaml - manufacturer, model, status, hardware (source of truth)
+    2. metadata.yaml - release_date, end_of_life, docsis_version, isps (legacy research data)
     3. README.md - model name (fallback)
-    """
-    fixture_path_from_repo = str(fixture_dir.relative_to(base_dir.parent.parent))
 
+    Args:
+        fixture_dir: Path to modem directory (modems/{mfr}/{model}/)
+        base_dir: Path to modems/ directory
+    """
     info: dict[str, str | int | bool | None] = {
         "path": str(fixture_dir.relative_to(base_dir)),
         "model": fixture_dir.name.upper(),
         # ARRIS is officially all caps; others use title case
         "manufacturer": (
-            "ARRIS"
-            if fixture_dir.parent.parent.name.lower() == "arris"
-            else fixture_dir.parent.parent.name.capitalize()
+            "ARRIS" if fixture_dir.parent.name.lower() == "arris" else fixture_dir.parent.name.capitalize()
         ),
     }
 
-    # 1. Load from metadata.yaml (source of truth for research data)
+    # 1. Load from modem.yaml (source of truth for modem configuration)
+    modem_config = load_modem_yaml(fixture_dir)
+    if modem_config:
+        _apply_modem_config_to_info(info, modem_config)
+
+    # 2. Load from metadata.yaml (legacy research data - supplements modem.yaml)
     metadata = load_fixture_metadata(fixture_dir)
     if metadata:
         _apply_metadata_to_info(info, metadata)
 
-    # 2. Load from parser (source of truth for code-related data) - overrides metadata
-    parser_meta = parser_map.get(fixture_path_from_repo)
-    if parser_meta:
-        info["manufacturer"] = parser_meta.get("manufacturer") or info["manufacturer"]
-        info["status"] = parser_meta.get("status", info.get("status", ""))
-        info["verified"] = parser_meta.get("verified", False)
-
-    # 3. Fallback to README.md for model name
-    readme_path = fixture_dir / "README.md"
+    # 3. Fallback to README.md for model name (check fixtures/ first, then root)
+    readme_path = fixture_dir / "fixtures" / "README.md"
+    if not readme_path.exists():
+        readme_path = fixture_dir / "README.md"
     if readme_path.exists():
         content = readme_path.read_text()
         model_match = re.search(r"\*\*Model\*\*\s*\|\s*([^|]+)", content, re.IGNORECASE)
         if model_match:
             info["model"] = model_match.group(1).strip()
 
-    # Count fixture files
+    # Count fixture files (in fixtures/ subdirectory)
     exclude_files = {"README.md", "diagnostics.json", "metadata.yaml"}
-    fixture_files = [f for f in fixture_dir.iterdir() if f.is_file() and f.name not in exclude_files]
+    fixtures_subdir = fixture_dir / "fixtures"
+    if fixtures_subdir.exists():
+        fixture_files = [f for f in fixtures_subdir.iterdir() if f.is_file() and f.name not in exclude_files]
+    else:
+        # Legacy fallback: files at modem root
+        fixture_files = [f for f in fixture_dir.iterdir() if f.is_file() and f.name not in exclude_files]
     info["file_count"] = len(fixture_files)
 
     return info
@@ -652,22 +751,23 @@ def generate_timeline(modems: list[dict]) -> list[str]:
     return lines
 
 
-def _format_status_summary(modems: list[dict]) -> str:
+def _format_status_summary(modems: list[dict], exclude_unsupported: bool = True) -> str:
     """Calculate and format status breakdown for modems.
 
     Args:
         modems: List of modem info dicts with 'status' field
+        exclude_unsupported: If True, don't count unsupported modems
 
     Returns:
         Formatted string like " (10 ✅ verified, 2 ⏳ awaiting)" or empty string
     """
-    status_counts = {"verified": 0, "awaiting_verification": 0, "in_progress": 0, "broken": 0}
+    status_counts = {"verified": 0, "awaiting_verification": 0, "in_progress": 0, "unsupported": 0}
     for m in modems:
         status = str(m.get("status", ""))
         if status in status_counts:
             status_counts[status] += 1
 
-    # Format status summary (only show non-zero counts)
+    # Format status summary (only show non-zero counts, exclude unsupported from main count)
     status_parts = []
     if status_counts["verified"]:
         status_parts.append(f"{status_counts['verified']} ✅ verified")
@@ -675,8 +775,6 @@ def _format_status_summary(modems: list[dict]) -> str:
         status_parts.append(f"{status_counts['awaiting_verification']} ⏳ awaiting")
     if status_counts["in_progress"]:
         status_parts.append(f"{status_counts['in_progress']} 🔧 in progress")
-    if status_counts["broken"]:
-        status_parts.append(f"{status_counts['broken']} ❌ broken")
 
     return f" ({', '.join(status_parts)})" if status_parts else ""
 
@@ -685,34 +783,36 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
     """Generate the fixture index markdown and optionally update READMEs.
 
     Args:
-        output_path: Path to write FIXTURES.md (None for no write)
+        output_path: Path to write modems/README.md (None for no write)
         update_readmes: If True, update Quick Facts in each README.md
     """
-    parsers_dir = repo_root / "tests" / "parsers"
-
-    # Load parser metadata (for verified status)
-    parser_map = load_parser_metadata()
+    modems_dir = repo_root / "modems"
 
     modems = []
     readmes_updated = 0
 
-    for fixture_dir in sorted(parsers_dir.glob("*/fixtures/*/")):
-        if (fixture_dir / "README.md").exists():
-            # Get fixture path for parser lookup
-            fixture_path_from_repo = str(fixture_dir.relative_to(repo_root))
-            parser_info = parser_map.get(fixture_path_from_repo)
+    for fixture_dir in sorted(modems_dir.glob("*/*/")):
+        # Check for README.md in fixtures/ subdirectory or modem root
+        has_readme = (fixture_dir / "fixtures" / "README.md").exists() or (fixture_dir / "README.md").exists()
+        if has_readme:
+            # Load modem.yaml configuration (source of truth)
+            modem_config = load_modem_yaml(fixture_dir)
 
             # Load metadata and update README
             metadata = load_fixture_metadata(fixture_dir)
-            if update_readmes and metadata and update_readme_quick_facts(fixture_dir, metadata, parser_info):
+            if update_readmes and metadata and update_readme_quick_facts(fixture_dir, metadata, modem_config):
                 readmes_updated += 1
 
-            modems.append(extract_fixture_info(fixture_dir, parsers_dir, parser_map))
+            modems.append(extract_fixture_info(fixture_dir, modems_dir))
 
     if update_readmes and readmes_updated > 0:
         print(f"Updated {readmes_updated} README files with Quick Facts")
 
-    status_summary = _format_status_summary(modems)
+    # Split modems into supported and unsupported
+    supported_modems = [m for m in modems if m.get("status") != "unsupported"]
+    unsupported_modems = [m for m in modems if m.get("status") == "unsupported"]
+
+    status_summary = _format_status_summary(supported_modems)
 
     lines = [
         "# Modem Fixture Library",
@@ -724,21 +824,25 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "- Parser classes - Verified status, manufacturer",
         "- `README.md` - Model name, contributor notes",
         "",
-        f"**Total Modems:** {len(modems)}{status_summary}",
+        f"**Supported Modems:** {len(supported_modems)}{status_summary}",
         "",
-        "## Fixture Organization Guidelines",
+        "## Directory Structure",
         "",
-        "All fixture directories should follow this structure:",
+        "Each modem has a self-contained directory:",
         "",
         "```",
-        "{model}/",
-        "├── metadata.yaml            # Modem specs (can be backfilled)",
-        "├── README.md                # Human-friendly notes",
-        "├── DocsisStatus.htm         # Channel data (required)",
-        "├── RouterStatus.htm         # System info",
-        "├── index.htm                # Detection/navigation",
-        "└── extended/                # Reference files (optional)",
+        "modems/",
+        "└── {manufacturer}/",
+        "    └── {model}/",
+        "        ├── modem.yaml           # REQUIRED: Configuration and auth hints",
+        "        ├── fixtures/            # OPTIONAL: Extracted HTML/JSON responses",
+        "        │   ├── {page_name}.html",
+        "        │   └── metadata.yaml    # Fixture metadata (firmware, capture date)",
+        "        └── har/                 # OPTIONAL: Sanitized HAR captures",
+        "            └── modem.har        # Primary capture",
         "```",
+        "",
+        "See [docs/specs/MODEM_DIRECTORY_SPEC.md](../docs/specs/MODEM_DIRECTORY_SPEC.md) for full specification.",
         "",
         "## Supported Modems",
         "",
@@ -750,11 +854,11 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "verified": "✅ Verified",
         "in_progress": "🔧 In Progress",
         "awaiting_verification": "⏳ Awaiting",
-        "broken": "❌ Broken",
+        "unsupported": "🚫 Unsupported",
         "deprecated": "⊘ Deprecated",
     }
 
-    for m in modems:
+    for m in supported_modems:
         status = str(m.get("status", ""))
         status_display = status_icons.get(status, "❓ Unknown")
 
@@ -785,8 +889,34 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             f"{status_display} |"
         )
 
+    # Add unsupported modems section if any exist
+    if unsupported_modems:
+        lines.extend(
+            [
+                "",
+                "## Unsupported Modems",
+                "",
+                "Modems we're aware of but cannot currently support (ISP lockdown, missing data, etc.).",
+                "",
+                "| Manufacturer | Model | DOCSIS | ISP | Notes |",
+                "|--------------|-------|--------|-----|-------|",
+            ]
+        )
+        for m in unsupported_modems:
+            model_link = f"[{m.get('model', '')}]({m['path']}/README.md)"
+            isps_raw = m.get("isps", [])
+            isps_list = isps_raw if isinstance(isps_raw, list | str) else []
+            isps_badges = isps_to_badges(isps_list)
+            lines.append(
+                f"| {m.get('manufacturer', '')} | "
+                f"{model_link} | "
+                f"{m.get('docsis', '')} | "
+                f"{isps_badges} | "
+                f"🚫 Unsupported |"
+            )
+
     lines.extend(["", "## Model Timeline", ""])
-    lines.extend(generate_timeline(modems))
+    lines.extend(generate_timeline(modems))  # Include all modems with release dates
 
     lines.extend(
         [
@@ -794,11 +924,13 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
             "## Legend",
             "",
             "- **Files**: Number of fixture files (excludes README.md, metadata.yaml)",
-            "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | ❌ Broken | ❓ No parser",
+            "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification | 🚫 Unsupported",
             "- **Protocol**: ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping |"
             " ![LuCI](https://img.shields.io/badge/-LuCI-00B5E2?style=flat-square) ="
             " [OpenWrt](https://openwrt.org/docs/guide-user/luci/start) web interface |"
-            " **[HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol)** ="
+            " ![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square) = JSON REST API |"
+            " [![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square)]"
+            "(https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) ="
             " [SOAP](https://www.w3.org/TR/soap/)-based, requires auth",
             "- **📦**: GPL source code available (firmware uses open source components)",
             "",
@@ -833,8 +965,8 @@ def main():
         "--output",
         "-o",
         type=Path,
-        default=Path("tests/parsers/FIXTURES.md"),
-        help="Output file path (default: tests/parsers/FIXTURES.md)",
+        default=Path("modems/README.md"),
+        help="Output file path (default: modems/README.md)",
     )
     parser.add_argument(
         "--print",

@@ -7,20 +7,14 @@
       "command": "bash",
       "args": [
         "-c",
-        "if [ -f .venv/bin/activate ]; then cat scripts/dev/next_steps.txt; else cat scripts/dev/welcome_message.txt; fi"
+        "if [ -n \"$REMOTE_CONTAINERS\" ]; then exit 0; elif [ -f .venv/bin/activate ]; then cat scripts/dev/next_steps.txt; else cat scripts/dev/welcome_message.txt; fi"
       ],
-      "windows": {
-        "command": "powershell",
-        "args": [
-          "-Command",
-          "if (Test-Path .venv\\Scripts\\activate) { Get-Content scripts\\dev\\next_steps.txt } else { Get-Content scripts\\dev\\welcome_message.txt }"
-        ]
-      },
       "presentation": {
-        "reveal": "always",
+        "reveal": "silent",
         "panel": "dedicated",
         "clear": true,
-        "focus": false
+        "focus": false,
+        "close": true
       },
       "problemMatcher": [],
       "runOptions": {
@@ -75,12 +69,21 @@
       "problemMatcher": []
     },
     {
+      "label": "🔄 Sync Modems",
+      "type": "shell",
+      "command": "make sync",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": [],
+      "detail": "Sync modem.yaml and parser.py from modems/ to custom_components/"
+    },
+    {
       "label": "Check Docker Status",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/check-docker.py",
-      "windows": {
-        "command": "python ${workspaceFolder}/scripts/dev/check-docker.py"
-      },
       "presentation": {
         "reveal": "always",
         "panel": "shared",
@@ -93,9 +96,6 @@
       "label": "HA: Start (Fresh)",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py --fresh",
-      "windows": {
-        "command": "python ${workspaceFolder}/scripts/dev/ha-start.py --fresh"
-      },
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
@@ -110,9 +110,6 @@
       "label": "HA: Start (Keep Data)",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py",
-      "windows": {
-        "command": "python ${workspaceFolder}/scripts/dev/ha-start.py"
-      },
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
@@ -166,7 +163,7 @@
     {
       "label": "HA: Clean All Data (Reset)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.test.yml down -v && rm -rf test-ha-config/* && echo '✅ All Home Assistant data cleaned'",
+      "command": "docker compose -f docker-compose.test.yml down -v && docker run --rm -v \"$(pwd)/test-ha-config:/data\" alpine rm -rf /data/* /data/.[!.]* 2>/dev/null; echo '✅ All Home Assistant data cleaned'",
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
@@ -244,10 +241,7 @@
     {
       "label": "🚀 Quick Validation (Pre-commit)",
       "type": "shell",
-      "command": "python scripts/dev/validate.py",
-      "windows": {
-        "command": "python scripts/dev/validate.py"
-      },
+      "command": "python3 scripts/dev/validate.py",
       "group": {
         "kind": "test",
         "isDefault": false
@@ -259,7 +253,7 @@
         "focus": false
       },
       "problemMatcher": [],
-      "detail": "Cross-platform lint & format check (auto-installs tools if missing)"
+      "detail": "Lint & format check (auto-installs tools if missing)"
     },
     {
       "label": "🔍 Full CI Validation",
@@ -289,31 +283,8 @@
       "label": "🔄 Fresh Start (Reset VS Code State)",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/fresh_start.py",
-      "windows": {
-        "command": "python ${workspaceFolder}/scripts/dev/fresh_start.py"
-      },
       "options": {
-        "cwd": "${workspaceFolder}",
-        "shell": {
-          "executable": "cmd.exe",
-          "args": ["/c"]
-        }
-      },
-      "linux": {
-        "options": {
-          "shell": {
-            "executable": "/bin/bash",
-            "args": ["-c"]
-          }
-        }
-      },
-      "osx": {
-        "options": {
-          "shell": {
-            "executable": "/bin/bash",
-            "args": ["-c"]
-          }
-        }
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -328,9 +299,6 @@
       "label": "🔒 Reconfigure Git Email Privacy",
       "type": "shell",
       "command": "./scripts/dev/setup-git-email.sh",
-      "windows": {
-        "command": "bash ./scripts/dev/setup-git-email.sh"
-      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -357,30 +325,6 @@
       "label": "⚙️ Setup Local Python Environment",
       "type": "shell",
       "command": "./scripts/setup.sh",
-      "windows": {
-        "command": ".\\scripts\\setup.ps1",
-        "options": {
-          "shell": {
-            "executable": "powershell.exe"
-          }
-        }
-      },
-      "linux": {
-        "options": {
-          "shell": {
-            "executable": "/bin/bash",
-            "args": ["-c"]
-          }
-        }
-      },
-      "osx": {
-        "options": {
-          "shell": {
-            "executable": "/bin/bash",
-            "args": ["-c"]
-          }
-        }
-      },
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -391,15 +335,12 @@
         "focus": true
       },
       "problemMatcher": [],
-      "detail": "Create .venv and install all dependencies (Option 1: Local Python)"
+      "detail": "Create .venv and install all dependencies"
     },
     {
       "label": "🚀 Create Release",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/release.py ${input:releaseVersion}",
-      "windows": {
-        "command": "python ${workspaceFolder}/scripts/release.py ${input:releaseVersion}"
-      },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -412,9 +353,9 @@
     {
       "label": "📹 Capture Modem Traffic",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python ${workspaceFolder}/scripts/capture_modem.py --ip ${input:modemIP}",
-      "windows": {
-        "command": "${workspaceFolder}\\.venv\\Scripts\\python ${workspaceFolder}\\scripts\\capture_modem.py --ip ${input:modemIP}"
+      "command": "${workspaceFolder}/.venv/bin/python3 ${workspaceFolder}/scripts/capture_modem.py --ip ${input:modemIP}",
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -423,7 +364,7 @@
         "focus": true
       },
       "problemMatcher": [],
-      "detail": "Launch browser to capture modem traffic for parser development (run locally, not in devcontainer)"
+      "detail": "Launch browser to capture modem traffic"
     }
   ],
   "inputs": [

@@ -1,8 +1,13 @@
-"""Tests for Cable Modem Monitor config flow."""
+"""Tests for Cable Modem Monitor config flow.
+
+TEST DATA TABLES
+================
+This module uses table-driven tests for parameterized test cases.
+Tables are defined at the top of the file with ASCII box-drawing comments.
+"""
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,9 +15,14 @@ from homeassistant import config_entries
 
 from custom_components.cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
-    CannotConnectError,
     OptionsFlowHandler,
+)
+from custom_components.cable_modem_monitor.config_flow_helpers import (
     validate_input,
+)
+from custom_components.cable_modem_monitor.core.discovery.pipeline import DiscoveryPipelineResult
+from custom_components.cable_modem_monitor.core.exceptions import (
+    CannotConnectError,
 )
 
 # Mock constants to avoid ImportError in tests
@@ -23,6 +33,85 @@ CONF_SCAN_INTERVAL = "scan_interval"
 DEFAULT_SCAN_INTERVAL = 600
 MIN_SCAN_INTERVAL = 60
 MAX_SCAN_INTERVAL = 1800
+
+# =============================================================================
+# Table-Driven Test Data
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Title Formatting Cases - modem name + manufacturer -> expected title
+# -----------------------------------------------------------------------------
+# ┌─────────────────┬──────────────┬────────────────────────────────────┬──────────────────────────────┐
+# │ modem_name      │ manufacturer │ expected_title                     │ description                  │
+# ├─────────────────┼──────────────┼────────────────────────────────────┼──────────────────────────────┤
+# │ "[MFG] [Model]" │ "[MFG]"      │ "[MFG] [Model] (192.168.100.1)"    │ no duplicate when mfg in name│
+# │ "[Model]"       │ "[MFG]"      │ "[MFG] [Model] (192.168.100.1)"    │ prepend when mfg not in name │
+# │ "Generic Modem" │ "Unknown"    │ "Generic Modem (192.168.100.1)"    │ skip "Unknown" manufacturer  │
+# │ "Cable Modem"   │ "Unknown"    │ "Cable Modem (192.168.100.1)"      │ default case                 │
+# └─────────────────┴──────────────┴────────────────────────────────────┴──────────────────────────────┘
+#
+# fmt: off
+TITLE_FORMATTING_CASES = [
+    # (modem_name,       manufacturer, expected_title,                        description)
+    ("[MFG] [Model]",    "[MFG]",      "[MFG] [Model] (192.168.100.1)",       "no dup when mfg in name"),
+    ("[Model]",          "[MFG]",      "[MFG] [Model] (192.168.100.1)",       "prepend mfg"),
+    ("Generic Modem",    "Unknown",    "Generic Modem (192.168.100.1)",       "skip unknown mfg"),
+    ("Cable Modem",      "Unknown",    "Cable Modem (192.168.100.1)",         "default case"),
+    ("Arris SB8200",     "Arris",      "Arris SB8200 (192.168.100.1)",        "real modem example"),
+    ("MB8611",           "Motorola",   "Motorola MB8611 (192.168.100.1)",     "model only, prepend mfg"),
+]
+# fmt: on
+
+# -----------------------------------------------------------------------------
+# Scan Interval Validation Cases
+# -----------------------------------------------------------------------------
+# ┌───────────┬──────────┬─────────────────────────────┐
+# │ interval  │ valid?   │ description                 │
+# ├───────────┼──────────┼─────────────────────────────┤
+# │ 60        │ True     │ minimum boundary            │
+# │ 180       │ True     │ 3 minutes                   │
+# │ 300       │ True     │ 5 minutes                   │
+# │ 600       │ True     │ 10 minutes (default)        │
+# │ 900       │ True     │ 15 minutes                  │
+# │ 1800      │ True     │ maximum boundary            │
+# └───────────┴──────────┴─────────────────────────────┘
+#
+# fmt: off
+SCAN_INTERVAL_VALID_CASES = [
+    # (interval, description)
+    (60,   "minimum boundary"),
+    (180,  "3 minutes"),
+    (300,  "5 minutes"),
+    (600,  "10 minutes (default)"),
+    (900,  "15 minutes"),
+    (1800, "maximum boundary"),
+]
+# fmt: on
+
+
+def _create_success_result(
+    modem_name: str = "Cable Modem",
+    manufacturer: str = "Unknown",
+    working_url: str = "https://192.168.100.1",
+) -> DiscoveryPipelineResult:
+    """Create a successful discovery pipeline result for tests."""
+    mock_parser = Mock()
+    mock_parser.manufacturer = manufacturer
+    mock_parser.get_actual_model.return_value = None
+
+    return DiscoveryPipelineResult(
+        success=True,
+        working_url=working_url,
+        auth_strategy="no_auth",
+        auth_form_config=None,
+        parser_name=modem_name,
+        legacy_ssl=False,
+        modem_data={"cable_modem_connection_status": "online"},
+        parser_instance=mock_parser,
+        session=Mock(),
+        error=None,
+        failed_step=None,
+    )
 
 
 class TestConfigFlow:
@@ -68,30 +157,16 @@ class TestValidateInput:
         }
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_success(self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input):
+    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
+    async def test_success(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
         """Test successful validation."""
-        # Mock connectivity check to succeed
-        mock_connectivity_check.return_value = (True, None)
+        # Mock pipeline to return success
+        mock_pipeline.return_value = _create_success_result()
+        mock_icmp_ping.return_value = True
 
-        # Mock scraper to return valid data
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.return_value = {
-            "cable_modem_software_version": "1.0.0",
-            "cable_modem_connection_status": "online",
-        }
-        # Mock detection info with proper dictionary
-        mock_scraper.get_detection_info.return_value = {
-            "modem_name": "Cable Modem",
-            "manufacturer": "Unknown",
-        }
-        mock_scraper_class.return_value = mock_scraper
-
-        # Mock async_add_executor_job to return the data
+        # Mock async_add_executor_job to call the function
         async def mock_executor_job(func, *args):
-            if func == mock_connectivity_check:
-                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -101,18 +176,17 @@ class TestValidateInput:
         assert result["title"] == "Cable Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow.get_parsers")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_connection_failure(self, mock_scraper_class, mock_get_parsers, mock_hass, valid_input):
+    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
+    async def test_connection_failure(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
         """Test validation fails when cannot connect to modem."""
-        # Mock get_parsers to return a mock parser
-        mock_parser = Mock()
-        mock_get_parsers.return_value = [mock_parser]
-
-        # Mock scraper to raise exception
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.side_effect = Exception("Connection failed")
-        mock_scraper_class.return_value = mock_scraper
+        # Mock pipeline to return failure
+        mock_pipeline.return_value = DiscoveryPipelineResult(
+            success=False,
+            error="Connection failed",
+            failed_step="connectivity",
+        )
+        mock_icmp_ping.return_value = False
 
         # Mock async_add_executor_job to call the function
         async def mock_executor_job(func, *args):
@@ -122,90 +196,6 @@ class TestValidateInput:
 
         with pytest.raises(CannotConnectError):
             await validate_input(mock_hass, valid_input)
-
-    @pytest.mark.asyncio
-    @patch("requests.head")
-    async def test_quick_connectivity_check_timeout(self, mock_requests_head, mock_hass, valid_input):
-        """Test that the quick connectivity check uses the correct timeout."""
-        # Mock requests.head to simulate a successful connection
-        mock_requests_head.return_value.status_code = 200
-
-        # Mock async_add_executor_job to call the function
-        async def mock_executor_job(func, *args):
-            # Since we are in an async context, we need to handle both coroutines and regular functions
-            if asyncio.iscoroutinefunction(func):
-                return await func(*args)
-            else:
-                return func(*args)
-
-        mock_hass.async_add_executor_job = mock_executor_job
-
-        # We need to patch the rest of the validation to isolate the connectivity check
-        with (
-            patch("custom_components.cable_modem_monitor.config_flow.get_parsers"),
-            patch("custom_components.cable_modem_monitor.config_flow.ModemScraper") as mock_scraper_class,
-        ):
-            mock_scraper = Mock()
-            mock_scraper.get_modem_data.return_value = {
-                "cable_modem_software_version": "1.0.0",
-                "cable_modem_connection_status": "online",
-            }
-            mock_scraper.get_detection_info.return_value = {
-                "modem_name": "Cable Modem",
-                "manufacturer": "Unknown",
-            }
-            mock_scraper_class.return_value = mock_scraper
-            await validate_input(mock_hass, valid_input)
-
-        # Assert that requests.head was called with quick timeout (3s)
-        # The check will try https first
-        mock_requests_head.assert_called_with("https://192.168.100.1", timeout=3, verify=False, allow_redirects=True)
-
-    @pytest.mark.asyncio
-    @patch("requests.get")
-    @patch("requests.head")
-    async def test_quick_connectivity_check_get_fallback(
-        self, mock_requests_head, mock_requests_get, mock_hass, valid_input
-    ):
-        """Test that connectivity check falls back to GET if HEAD times out."""
-        # Mock requests.head to timeout
-        import requests
-
-        mock_requests_head.side_effect = requests.exceptions.Timeout("HEAD timeout")
-
-        # Mock requests.get to succeed
-        mock_requests_get.return_value.status_code = 200
-
-        # Mock async_add_executor_job to call the function
-        async def mock_executor_job(func, *args):
-            if asyncio.iscoroutinefunction(func):
-                return await func(*args)
-            else:
-                return func(*args)
-
-        mock_hass.async_add_executor_job = mock_executor_job
-
-        # We need to patch the rest of the validation to isolate the connectivity check
-        with (
-            patch("custom_components.cable_modem_monitor.config_flow.get_parsers"),
-            patch("custom_components.cable_modem_monitor.config_flow.ModemScraper") as mock_scraper_class,
-        ):
-            mock_scraper = Mock()
-            mock_scraper.get_modem_data.return_value = {
-                "cable_modem_software_version": "1.0.0",
-                "cable_modem_connection_status": "online",
-            }
-            mock_scraper.get_detection_info.return_value = {
-                "modem_name": "Cable Modem",
-                "manufacturer": "Unknown",
-            }
-            mock_scraper_class.return_value = mock_scraper
-            await validate_input(mock_hass, valid_input)
-
-        # Assert that requests.head was tried first
-        mock_requests_head.assert_called()
-        # Assert that requests.get was called as fallback with quick timeout (3s)
-        mock_requests_get.assert_called_with("https://192.168.100.1", timeout=3, verify=False, allow_redirects=True)
 
     def test_requires_host(self, valid_input):
         """Test that host is required."""
@@ -232,23 +222,22 @@ class TestScanIntervalValidation:
         assert MIN_SCAN_INTERVAL == 60
         assert MAX_SCAN_INTERVAL == 1800
 
-    def test_scan_interval_common_values_valid(self):
-        """Test common interval values are within range."""
-        common_intervals = [
-            60,  # 1 minute
-            180,  # 3 minutes
-            300,  # 5 minutes (default)
-            600,  # 10 minutes
-            900,  # 15 minutes
-            1800,  # 30 minutes
-        ]
-
-        for interval in common_intervals:
-            assert MIN_SCAN_INTERVAL <= interval <= MAX_SCAN_INTERVAL
+    @pytest.mark.parametrize(
+        "interval,desc",
+        SCAN_INTERVAL_VALID_CASES,
+        ids=[c[1] for c in SCAN_INTERVAL_VALID_CASES],
+    )
+    def test_scan_interval_valid_values(self, interval, desc):
+        """Test valid scan interval values via table-driven cases."""
+        assert MIN_SCAN_INTERVAL <= interval <= MAX_SCAN_INTERVAL, f"Failed: {desc}"
 
 
 class TestModemNameFormatting:
-    """Test modem name and manufacturer formatting in titles."""
+    """Test modem name and manufacturer formatting in titles.
+
+    Uses table-driven tests for title formatting cases.
+    See TITLE_FORMATTING_CASES at top of file.
+    """
 
     @pytest.fixture
     def mock_hass(self):
@@ -266,124 +255,52 @@ class TestModemNameFormatting:
         }
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_without_duplicate_manufacturer(
-        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
+    @pytest.mark.parametrize(
+        "modem_name,manufacturer,expected_title,desc",
+        TITLE_FORMATTING_CASES,
+        ids=[c[3] for c in TITLE_FORMATTING_CASES],
+    )
+    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
+    async def test_title_formatting(
+        self,
+        mock_icmp_ping,
+        mock_pipeline,
+        mock_hass,
+        valid_input,
+        modem_name,
+        manufacturer,
+        expected_title,
+        desc,
     ):
-        """Test that manufacturer name is not duplicated when modem name includes it."""
-        mock_connectivity_check.return_value = (True, None)
-
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.return_value = {
-            "cable_modem_connection_status": "online",
-        }
-        # Modem name already starts with manufacturer
-        mock_scraper.get_detection_info.return_value = {
-            "modem_name": "Motorola MB7621",
-            "manufacturer": "Motorola",
-        }
-        mock_scraper_class.return_value = mock_scraper
+        """Test title formatting via table-driven cases."""
+        mock_pipeline.return_value = _create_success_result(
+            modem_name=modem_name,
+            manufacturer=manufacturer,
+        )
+        mock_icmp_ping.return_value = True
 
         async def mock_executor_job(func, *args):
-            if func == mock_connectivity_check:
-                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
 
         result = await validate_input(mock_hass, valid_input)
 
-        # Should NOT be "Motorola Motorola MB7621 (192.168.100.1)"
-        assert result["title"] == "Motorola MB7621 (192.168.100.1)"
+        assert result["title"] == expected_title, f"Failed: {desc}"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_with_manufacturer_prepended(
-        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
-    ):
-        """Test that manufacturer is prepended when not in modem name."""
-        mock_connectivity_check.return_value = (True, None)
-
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.return_value = {
-            "cable_modem_connection_status": "online",
-        }
-        # Modem name does NOT include manufacturer
-        mock_scraper.get_detection_info.return_value = {
-            "modem_name": "XB7",
-            "manufacturer": "Technicolor",
-        }
-        mock_scraper_class.return_value = mock_scraper
-
-        async def mock_executor_job(func, *args):
-            if func == mock_connectivity_check:
-                return mock_connectivity_check(*args)
-            return func(*args)
-
-        mock_hass.async_add_executor_job = mock_executor_job
-
-        result = await validate_input(mock_hass, valid_input)
-
-        # Should prepend manufacturer
-        assert result["title"] == "Technicolor XB7 (192.168.100.1)"
-
-    @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_without_manufacturer(
-        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
-    ):
-        """Test title when manufacturer is Unknown."""
-        mock_connectivity_check.return_value = (True, None)
-
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.return_value = {
-            "cable_modem_connection_status": "online",
-        }
-        mock_scraper.get_detection_info.return_value = {
-            "modem_name": "Generic Modem",
-            "manufacturer": "Unknown",
-        }
-        mock_scraper_class.return_value = mock_scraper
-
-        async def mock_executor_job(func, *args):
-            if func == mock_connectivity_check:
-                return mock_connectivity_check(*args)
-            return func(*args)
-
-        mock_hass.async_add_executor_job = mock_executor_job
-
-        result = await validate_input(mock_hass, valid_input)
-
-        # Should NOT include "Unknown"
-        assert result["title"] == "Generic Modem (192.168.100.1)"
-
-    @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.config_flow._do_quick_connectivity_check")
-    @patch("custom_components.cable_modem_monitor.config_flow.ModemScraper")
-    async def test_title_detection_info_included(
-        self, mock_scraper_class, mock_connectivity_check, mock_hass, valid_input
-    ):
+    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
+    async def test_title_detection_info_included(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
         """Test that detection_info is included in result."""
-        mock_connectivity_check.return_value = (True, None)
-
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.return_value = {
-            "cable_modem_connection_status": "online",
-        }
-        detection_info = {
-            "modem_name": "MB8611",
-            "manufacturer": "Motorola",
-            "successful_url": "http://192.168.100.1/someurl",
-        }
-        mock_scraper.get_detection_info.return_value = detection_info
-        mock_scraper_class.return_value = mock_scraper
+        mock_pipeline.return_value = _create_success_result(
+            modem_name="[Model]",
+            manufacturer="[MFG]",
+        )
+        mock_icmp_ping.return_value = True
 
         async def mock_executor_job(func, *args):
-            if func == mock_connectivity_check:
-                return mock_connectivity_check(*args)
             return func(*args)
 
         mock_hass.async_add_executor_job = mock_executor_job
@@ -392,7 +309,8 @@ class TestModemNameFormatting:
 
         # Detection info should be in result
         assert "detection_info" in result
-        assert result["detection_info"] == detection_info
+        assert result["detection_info"]["modem_name"] == "[Model]"
+        assert result["detection_info"]["manufacturer"] == "[MFG]"
 
 
 class TestConfigConstants:

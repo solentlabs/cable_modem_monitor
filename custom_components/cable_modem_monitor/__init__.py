@@ -1,4 +1,26 @@
-"""The Cable Modem Monitor integration."""
+"""The Cable Modem Monitor integration.
+
+Home Assistant integration for monitoring cable modem signal quality and health.
+Supports DOCSIS 3.0 and 3.1 modems from various manufacturers.
+
+Entry Points:
+    async_setup_entry: Called by HA when integration is configured
+    async_unload_entry: Called when integration is removed/reloaded
+
+Services:
+    cable_modem_monitor.clear_history: Clear historical sensor data
+    cable_modem_monitor.generate_dashboard: Generate Lovelace dashboard YAML
+
+Key Components:
+    DataUpdateCoordinator: Polls modem every scan_interval (default 30s)
+    ModemScraper: Fetches and parses modem data
+    ModemHealthMonitor: Tracks ICMP latency to modem
+
+See Also:
+    - config_flow.py: Setup wizard UI
+    - sensor.py: Sensor entity definitions
+    - core/modem_scraper.py: Data fetching logic
+"""
 
 from __future__ import annotations
 
@@ -6,7 +28,10 @@ import logging
 import sqlite3
 import ssl
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .core.base_parser import ModemParser
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -20,8 +45,13 @@ from homeassistant.helpers import (
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_AUTH_FORM_CONFIG,
+    CONF_AUTH_HNAP_CONFIG,
+    CONF_AUTH_STRATEGY,
+    CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DOCSIS_VERSION,
     CONF_HOST,
+    CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
     CONF_PASSWORD,
@@ -36,12 +66,25 @@ from .const import (
 )
 from .core.health_monitor import ModemHealthMonitor
 from .core.modem_scraper import ModemScraper
+from .entity_migration import async_migrate_docsis30_entities
+from .modem_config.adapter import get_auth_adapter_for_parser
 from .parsers import get_parser_by_name, get_parsers
-from .utils.entity_migration import async_migrate_docsis30_entities
 
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
+
+
+def _log_missing_auth_config(
+    auth_strategy: str | None,
+    auth_hnap_config: dict | None,
+    auth_url_token_config: dict | None,
+) -> None:
+    """Log debug message for entries upgraded from pre-v3.12 without stored auth configs."""
+    if auth_strategy == "hnap_session" and not auth_hnap_config:
+        _LOGGER.debug("HNAP config not stored in entry (pre-v3.12.0 entry), using defaults")
+    if auth_strategy == "url_token_session" and not auth_url_token_config:
+        _LOGGER.debug("URL token config not stored in entry (pre-v3.12.0 entry), using defaults")
 
 
 def _normalize_channel_type(channel: dict[str, Any], direction: str) -> str:
@@ -125,40 +168,34 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
 )
 
 
-def _select_parser(parsers: list, modem_choice: str):
-    """Select appropriate parser based on user choice.
+async def _create_health_monitor(hass: HomeAssistant, legacy_ssl: bool = False):
+    """Create health monitor with SSL context.
 
-    Returns either a single parser instance or list of all parsers.
+    Args:
+        hass: Home Assistant instance
+        legacy_ssl: Use legacy SSL ciphers (SECLEVEL=0) for older modem firmware
     """
-    if not modem_choice or modem_choice == "auto":
-        # Auto mode - return all parsers
-        return parsers
 
-    # Strip " *" suffix used to mark unverified parsers in the UI
-    modem_choice_clean = modem_choice.rstrip(" *")
-
-    # User selected specific parser - find and instantiate it
-    for parser_class in parsers:
-        if parser_class.name == modem_choice_clean:
-            _LOGGER.info("Using user-selected parser: %s", parser_class.name)
-            return parser_class()
-
-    _LOGGER.warning("Parser '%s' not found, falling back to auto", modem_choice)
-    return parsers
-
-
-async def _create_health_monitor(hass: HomeAssistant):
-    """Create health monitor with SSL context."""
-
-    def create_ssl_context():
+    def create_ssl_context(use_legacy: bool):
         """Create SSL context (runs in executor to avoid blocking)."""
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
+
+        # Enable legacy ciphers for older modem firmware
+        if use_legacy:
+            context.set_ciphers("DEFAULT:@SECLEVEL=0")
+            _LOGGER.info("Legacy SSL cipher support enabled (SECLEVEL=0) for health monitor")
+
         return context
 
-    ssl_context = await hass.async_add_executor_job(create_ssl_context)
-    return ModemHealthMonitor(max_history=100, verify_ssl=VERIFY_SSL, ssl_context=ssl_context)
+    ssl_context = await hass.async_add_executor_job(create_ssl_context, legacy_ssl)
+    return ModemHealthMonitor(
+        max_history=100,
+        verify_ssl=VERIFY_SSL,
+        ssl_context=ssl_context,
+        legacy_ssl=legacy_ssl,
+    )
 
 
 def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str, supports_icmp: bool = True):
@@ -207,8 +244,10 @@ def _create_update_function(hass: HomeAssistant, scraper, health_monitor, host: 
             # If scraper fails but health check succeeded, return partial data
             if health_result.is_healthy:
                 _LOGGER.warning("Scraper failed but modem is responding to health checks: %s", err)
+                # Use "degraded" status to indicate partial connectivity
+                # This allows ping/http sensors to report while other sensors show unavailable
                 return {
-                    "cable_modem_connection_status": "offline",
+                    "cable_modem_connection_status": "degraded",
                     "health_status": health_result.status,
                     "health_diagnosis": health_result.diagnosis,
                     "ping_success": health_result.ping_success,
@@ -244,6 +283,12 @@ def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) 
     # Use detected_modem for model field (shown in device info)
     actual_model = entry.data.get("actual_model")
     detected_modem = entry.data.get("detected_modem")
+    manufacturer = entry.data.get("detected_manufacturer", "Unknown")
+
+    # Strip manufacturer prefix from model name (e.g., "Motorola MB7621" -> "MB7621")
+    model = actual_model or detected_modem or "Cable Modem Monitor"
+    if model and manufacturer and model.lower().startswith(manufacturer.lower()):
+        model = model[len(manufacturer) :].strip()
 
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
@@ -253,13 +298,13 @@ def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) 
 
     device_registry.async_update_device(
         device.id,
-        manufacturer=entry.data.get("detected_manufacturer", "Unknown"),
-        model=actual_model or detected_modem or "Cable Modem Monitor",
+        manufacturer=manufacturer,
+        model=model,
     )
     _LOGGER.debug(
         "Updated device registry: manufacturer=%s, model=%s",
-        entry.data.get("detected_manufacturer"),
-        actual_model or detected_modem,
+        manufacturer,
+        model,
     )
 
 
@@ -701,7 +746,7 @@ def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> 
     return stats_deleted
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901
     """Set up Cable Modem Monitor from a config entry."""
     _LOGGER.info("Cable Modem Monitor version %s is starting", VERSION)
 
@@ -713,11 +758,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")
 
     # Optimization: Only do full parser discovery if needed
+    # selected_parser can be: instance (user selected), or list of classes (auto mode)
+    selected_parser: ModemParser | list[type[ModemParser]]
+    parser_name_hint: str | None
+
     if modem_choice and modem_choice != "auto":
         # User selected specific parser - load only that one (fast path)
         parser_class = await hass.async_add_executor_job(get_parser_by_name, modem_choice)
         if parser_class:
-            _LOGGER.info("Loaded specific parser: %s (skipped full discovery)", modem_choice)
+            _LOGGER.info("Loaded parser: %s", modem_choice)
             selected_parser = parser_class()
             parser_name_hint = None
         else:
@@ -733,6 +782,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         parser_name_hint = entry.data.get(CONF_PARSER_NAME)
 
     # Create scraper
+    legacy_ssl = entry.data.get(CONF_LEGACY_SSL, False)
+    auth_strategy = entry.data.get(CONF_AUTH_STRATEGY)
+    auth_form_config = entry.data.get(CONF_AUTH_FORM_CONFIG)
+    auth_hnap_config = entry.data.get(CONF_AUTH_HNAP_CONFIG)
+    auth_url_token_config = entry.data.get(CONF_AUTH_URL_TOKEN_CONFIG)
+
+    # Auto-recover from "unknown" auth strategy (failed discovery from previous attempts)
+    # Clear it so scraper uses modem.yaml hints for authentication
+    # Also persist the cleared value so we don't repeat this message every restart
+    if auth_strategy == "unknown":
+        _LOGGER.info("Auth strategy was 'unknown' (previous discovery failed), " "clearing to use modem.yaml hints")
+        auth_strategy = None
+        # Persist the cleared strategy so this only happens once
+        new_data = dict(entry.data)
+        new_data[CONF_AUTH_STRATEGY] = None
+        hass.config_entries.async_update_entry(entry, data=new_data)
+
+    # Log for entries upgraded from pre-v3.12 that don't have stored auth configs
+    # AuthHandler will use defaults for these cases
+    _log_missing_auth_config(auth_strategy, auth_hnap_config, auth_url_token_config)
+
     scraper = ModemScraper(
         host,
         username,
@@ -741,10 +811,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         cached_url=entry.data.get(CONF_WORKING_URL),
         parser_name=parser_name_hint,
         verify_ssl=VERIFY_SSL,
+        legacy_ssl=legacy_ssl,
+        auth_strategy=auth_strategy,
+        auth_form_config=auth_form_config,
+        auth_hnap_config=auth_hnap_config,
+        auth_url_token_config=auth_url_token_config,
     )
 
     # Create health monitor
-    health_monitor = await _create_health_monitor(hass)
+    health_monitor = await _create_health_monitor(hass, legacy_ssl=legacy_ssl)
 
     # Get ICMP support setting (auto-detected during setup, re-tested on options change)
     supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
@@ -773,10 +848,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
     # Must run before platform setup so sensors don't create duplicates
     docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
-    # Fallback: get docsis_version from parser if not in config entry (pre-v3.11 installs)
-    if not docsis_version and hasattr(selected_parser, "docsis_version"):
-        docsis_version = selected_parser.docsis_version
-        _LOGGER.debug("Using parser docsis_version for migration: %s", docsis_version)
+    # Fallback: get docsis_version from modem.yaml if not in config entry (pre-v3.11 installs)
+    # Run in executor to avoid blocking I/O in event loop (modem.yaml file reads)
+    if not docsis_version and scraper.parser:
+        adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, scraper.parser.__class__.__name__)
+        if adapter:
+            docsis_version = adapter.get_docsis_version()
+            _LOGGER.debug("Using modem.yaml docsis_version for migration: %s", docsis_version)
     migrated = await async_migrate_docsis30_entities(hass, entry, docsis_version)
     if migrated > 0:
         _LOGGER.info("Entity migration complete: %d entities updated", migrated)

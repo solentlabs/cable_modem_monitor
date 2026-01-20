@@ -1,4 +1,62 @@
 {
+  "services": {
+    "clear_history": {
+      "name": "Clear History",
+      "description": "Clear historical data for cable modem sensors older than a specified date.",
+      "fields": {
+        "days_to_keep": {
+          "name": "Days to Keep",
+          "description": "Number of days of history to keep (older data will be deleted)."
+        }
+      }
+    },
+    "generate_dashboard": {
+      "name": "Generate Dashboard",
+      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
+      "fields": {
+        "include_status_card": {
+          "name": "Status Card",
+          "description": "Modem status, uptime, channel counts, and restart button."
+        },
+        "include_downstream_power": {
+          "name": "Downstream Power Graph",
+          "description": "Power levels for all downstream channels."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream SNR Graph",
+          "description": "Signal-to-noise ratio for all downstream channels."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream Frequency Graph",
+          "description": "Frequency for all downstream channels."
+        },
+        "include_upstream_power": {
+          "name": "Upstream Power Graph",
+          "description": "Power levels for all upstream channels."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream Frequency Graph",
+          "description": "Frequency for all upstream channels."
+        },
+        "include_errors": {
+          "name": "Error Graphs",
+          "description": "Corrected and uncorrected error counts (7-day view)."
+        },
+        "include_latency": {
+          "name": "Latency Graph",
+          "description": "Ping and HTTP response times (6-hour view)."
+        },
+        "graph_hours": {
+          "name": "Graph History (hours)",
+          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
+        },
+        "short_titles": {
+          "name": "Use Short Titles",
+          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
@@ -19,7 +77,7 @@
       }
     },
     "error": {
-      "invalid_auth": "Помилка автентифікації - модем повернув сторінку входу.\n\nБудь ласка, перевірте:\n1. Ім'я користувача правильне (зазвичай 'admin', див. етикетку модему)\n2. Пароль правильний (див. етикетку модему)\n3. Облікові дані не були змінені з налаштувань за замовчуванням\n\nСпробуйте увійти в модем вручну за адресою https://192.168.100.1, щоб переконатися, що облікові дані працюють.",
+      "invalid_auth": "Невірне ім'я користувача або пароль. Перевірте облікові дані та спробуйте ще раз.",
       "network_unreachable": "Не вдається зв'язатися з модемом - проблема мережевого з'єднання.\n\nБудь ласка, перевірте:\n1. Мережеве з'єднання - Ви підключені до правильної мережі WiFi?\n2. Гостьовий WiFi - Гостьові мережі часто блокують доступ до локальних пристроїв\n3. VPN - Від'єднайте активні VPN-з'єднання\n4. IP-адреса - Перевірте IP модему (зазвичай 192.168.100.1)\n5. Веб-інтерфейс модему - Переконайтеся, що він увімкнений та доступний\n6. Повільна відповідь - Деякі модеми потребують кілька секунд для пробудження; спробуйте надіслати знову\n\nСпробуйте отримати доступ до модему безпосередньо в браузері, щоб перевірити з'єднання.",
       "cannot_connect": "Не вдалося підключитися до модему.\n\nБудь ласка, перевірте:\n1. IP-адреса правильна (зазвичай 192.168.100.1)\n2. Якщо модем вимагає автентифікації, введіть ім'я користувача/пароль\n3. Веб-інтерфейс модему доступний з мережі Home Assistant\n\nЯкщо ваш модем не підтримується, виберіть 'Невідомий модем (резервний режим)', щоб увімкнути базовий моніторинг та захоплення HTML.",
       "unsupported_modem": "Автоматичне визначення не змогло ідентифікувати модель вашого модему.\n\nЩоб продовжити:\n1. Виберіть 'Невідомий модем (резервний режим)' зі спадного списку нижче\n2. Це вмикає базовий моніторинг з'єднання (затримка ping/HTTP)\n3. Після встановлення натисніть кнопку 'Захопити HTML'\n4. Завантажте діагностику та поділіться з розробниками для додавання повної підтримки",

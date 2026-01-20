@@ -4,9 +4,20 @@
 
 This guide helps you set up your development environment and start contributing to Cable Modem Monitor.
 
+> **Windows Users:** Native Windows development is not supported. Please follow [WSL2_SETUP.md](WSL2_SETUP.md) first, then return to this guide. WSL2 provides a real Linux environment on Windows.
+
 ---
 
 ## TL;DR (30 seconds)
+
+### Hitting permission or setup errors?
+```bash
+./scripts/verify-setup.sh    # Checks and fixes common issues
+```
+
+This script verifies Docker permissions, Python installation, venv, and pre-commit hooks. Run it if you're seeing "sudo required" or "command not found" errors.
+
+---
 
 ### Want the fastest setup?
 ```bash
@@ -97,9 +108,7 @@ Do you have dependency or environment issues?
 
 2. **Run the setup script:**
    ```bash
-   ./scripts/setup.sh    # Linux/Mac
-   # OR
-   bash scripts/setup.sh  # Windows (Git Bash)
+   ./scripts/setup.sh
    ```
 
    This automatically:
@@ -265,8 +274,7 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) → **"Tasks: Run Task"**:
 1. Press `F1` → "Dev Containers: Reopen Folder Locally"
 2. Activate virtual environment:
    ```bash
-   source .venv/bin/activate  # Linux/Mac
-   .venv\Scripts\activate     # Windows
+   source .venv/bin/activate
    ```
 3. Your code is unchanged, now running locally
 
@@ -433,34 +441,25 @@ Ask yourself:
 
 ### Windows
 
-**Local Python:**
-- Use Git Bash or Windows Terminal
-- Run: `bash scripts/setup.sh`
-- Activate venv: `.venv\Scripts\activate`
-
-**Dev Container:**
-- ✅ Works perfectly
-- ⚠️ Ensure WSL2 backend is enabled in Docker Desktop settings
+See [WSL2_SETUP.md](WSL2_SETUP.md) - native Windows development is not supported.
 
 ### macOS
 
 **Local Python:**
-- ✅ Works perfectly
-- Use Terminal or iTerm2
+- Works perfectly with Terminal or iTerm2
 
 **Dev Container:**
-- ✅ Works perfectly
-- ⚠️ Apple Silicon (M1/M2) may be slower on first build
+- Works perfectly
+- Apple Silicon (M1/M2) may be slower on first build
 
 ### Linux
 
 **Local Python:**
-- ✅ Works perfectly (fastest)
-- Use your preferred terminal
+- Works perfectly (fastest option)
 
 **Dev Container:**
-- ✅ Works perfectly
-- ⚠️ Ensure your user is in the `docker` group:
+- Works perfectly
+- Ensure your user is in the `docker` group:
   ```bash
   sudo usermod -aG docker $USER
   # Log out and back in
@@ -492,7 +491,7 @@ Ask yourself:
 | Open in VS Code | `code .` |
 | Reopen in container | `F1` → "Dev Containers: Reopen in Container" |
 | **Development** | |
-| Activate venv (local) | `source .venv/bin/activate` (Linux/Mac)<br>`.venv\Scripts\activate` (Windows) |
+| Activate venv (local) | `source .venv/bin/activate` |
 | Run quick tests | `make test-quick` |
 | Run all tests | `make test` |
 | Format code | `make format` |

@@ -1,0 +1,107 @@
+# Arris/CommScope G54 Gateway Configuration
+# Source: Diagnostics export from issue #72
+
+manufacturer: Arris/CommScope
+model: G54
+paradigm: html
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2023"
+
+# Provenance tracking
+sources:
+  chipset: "Inferred from puma_hw_ver fields in firmware"
+  hardware: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+  detection_hints: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
+
+protocol: http
+default_host: "192.168.0.1"
+default_port: 80
+
+auth:
+  strategy: form
+
+  form:
+    action: "/cgi-bin/luci"
+    method: POST
+    username_field: luci_username
+    password_field: luci_password
+    password_encoding: plain
+    hidden_fields: {}
+    success:
+      redirect: "/cgi-bin/luci/admin/gateway/wan_status"
+
+  session:
+    cookie_name: "sysauth"
+
+pages:
+  public:
+    - "/cgi-bin/luci/"
+
+  protected:
+    - "/cgi-bin/luci/admin/gateway/wan_status"
+
+  data:
+    downstream_channels: "/cgi-bin/luci/admin/gateway/wan_status"
+    upstream_channels: "/cgi-bin/luci/admin/gateway/wan_status"
+    system_info: "/cgi-bin/luci/admin/gateway/wan_status"
+
+parser:
+  class: ArrisG54Parser
+  module: custom_components.cable_modem_monitor.modems.arris.g54.parser
+  format:
+    type: json
+
+detection:
+  pre_auth:
+    - "ARRISGW"
+    - "luci"
+    - "commscope"
+    - "/cgi-bin/luci"
+  post_auth:
+    - "G54"
+    - "G5X"
+    - "G54_COMMSCOPE"
+    - "ARRISGW"
+    - "luci"
+    - "arris"
+    - "commscope"
+  page_hint: "/cgi-bin/luci/admin/gateway/wan_status"
+  model_aliases:
+    - "G54_COMMSCOPE"
+    - "G5X"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - system_uptime
+  - software_version
+  - hardware_version
+
+behaviors:
+  requires_multi_page_fetch: false
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/72"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/arris/g54/fixtures
+  source: diagnostics
+  firmware_tested: "*"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: unknown
+      contribution: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72) diagnostics"

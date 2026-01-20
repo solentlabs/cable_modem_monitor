@@ -11,17 +11,16 @@
     // YAML support (required for HA configs)
     "redhat.vscode-yaml",
 
-    // Dev Container support (only needed if using containers)
-    "ms-vscode-remote.remote-containers",
+    // Documentation
     "yzhang.markdown-all-in-one",
     "christoph.mermaid-preview"
   ],
 
   // Optional extensions (useful but not required)
   // Install these manually if you want them - they won't auto-prompt
+  // - ms-vscode-remote.remote-containers (Dev Container support - requires Docker/WSL on Windows)
   // - eamodio.gitlens (enhanced Git features)
   // - github.vscode-codeql (security analysis)
-  // - yzhang.markdown-all-in-one (markdown editing)
 
 
   // Extensions that are not needed or conflict with project setup

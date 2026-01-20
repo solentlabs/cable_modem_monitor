@@ -6,8 +6,10 @@ This guide provides step-by-step instructions for adding support for a new cable
 
 - Python 3.9+
 - Access to the modem's web interface (or HTML captures)
-- Understanding of the modem's authentication mechanism
 - Knowledge of BeautifulSoup and HTML parsing
+
+**Note:** As of v3.12.0, parsers no longer handle authentication. Auth is auto-detected
+by the `AuthDiscovery` system before parser detection runs.
 
 ## Overview
 
@@ -24,29 +26,34 @@ Adding a new parser involves:
 
 ### 1.1 Choose Directory Structure
 
-Parsers are organized by manufacturer:
+Parsers are organized by manufacturer in the `modems/` directory (source of truth):
 
 ```
-custom_components/cable_modem_monitor/parsers/
+modems/
 ├── arris/
-│   ├── __init__.py
-│   ├── sb6141.py
-│   └── sb6190.py
+│   ├── sb8200/
+│   │   ├── modem.yaml      # Modem configuration
+│   │   ├── parser.py       # Parser implementation
+│   │   ├── fixtures/       # Test fixtures
+│   │   └── tests/          # Unit tests
+│   └── s33/
+│       └── ...
 ├── motorola/
-│   ├── __init__.py
-│   ├── mb8611_hnap.py
-│   └── mb8611_static.py
-├── netgear/
-│   ├── __init__.py
-│   └── cm600.py
+│   └── mb8611/
+│       └── ...
 └── [your_manufacturer]/
-    ├── __init__.py
-    └── [model].py
+    └── [model]/
+        ├── modem.yaml
+        ├── parser.py
+        ├── fixtures/
+        └── tests/
 ```
+
+**Note:** Run `make sync` to copy modem.yaml and parser.py to `custom_components/modems/` for deployment.
 
 ### 1.2 Create Parser File
 
-**File:** `custom_components/cable_modem_monitor/parsers/[manufacturer]/[model].py`
+**File:** `modems/[manufacturer]/[model]/parser.py`
 
 ```python
 """Parser for [Manufacturer] [Model] cable modem.
@@ -59,7 +66,8 @@ Key pages:
 - /: Main page
 - /status.html: Channel status page
 
-Authentication: HTTP Basic Auth / Form-based / [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) / None
+Note: Authentication is auto-detected by AuthDiscovery (v3.12.0+).
+No auth_config or login() method needed unless non-standard form fields.
 
 Related: Issue #[number] (if applicable)
 """
@@ -69,9 +77,7 @@ from __future__ import annotations
 import logging
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
-from ..base_parser import ModemParser
+from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,38 +85,23 @@ _LOGGER = logging.getLogger(__name__)
 class [Manufacturer][Model]Parser(ModemParser):
     """Parser for [Manufacturer] [Model] cable modem."""
 
+    # Identity fields - used for detection and display
     name = "[Manufacturer] [Model]"
     manufacturer = "[Manufacturer]"
     models = ["[MODEL]"]  # List of model numbers this parser supports
-    priority = 50  # Standard priority (1-100, higher = preferred)
 
-    # Authentication configuration
-    auth_config = BasicAuthConfig(
-        strategy=AuthStrategyType.BASIC_HTTP,
-        # Add other auth parameters as needed
-    )
+    # Capabilities - what this parser can extract (implementation detail)
+    capabilities = {
+        ModemCapability.DOWNSTREAM_CHANNELS,
+        ModemCapability.UPSTREAM_CHANNELS,
+    }
 
-    # URL patterns to try for modem data
-    url_patterns = [
-        {"path": "/", "auth_method": "basic", "auth_required": False},
-        {"path": "/status.html", "auth_method": "basic", "auth_required": False},
-    ]
-
-    def login(self, session, base_url, username, password) -> bool:
-        """Perform login to the modem.
-
-        Args:
-            session: Requests session object
-            base_url: Base URL of the modem (e.g., http://192.168.100.1)
-            username: Username for authentication
-            password: Password for authentication
-
-        Returns:
-            True if login successful or not required, False otherwise
-        """
-        # Implement authentication logic
-        # For HTTP Basic Auth, this may be a no-op as session handles it
-        return True
+    # NOTE: As of v3.12.0, the following are configured in modem.yaml, NOT here:
+    # - url_patterns (pages.public, pages.protected)
+    # - auth_form_hints (auth.form)
+    # - hnap_hints (auth.hnap)
+    # - js_auth_hints (auth.url_token)
+    # See: modems/{manufacturer}/{model}/modem.yaml
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Parse all data from the modem.
@@ -129,32 +120,21 @@ class [Manufacturer][Model]Parser(ModemParser):
             "system_info": self.parse_system_info(soup),
         }
 
-    @classmethod
-    def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
-        """Detect if this parser can handle the given HTML.
-
-        This method is called during auto-detection to determine which
-        parser should be used for a particular modem.
-
-        Args:
-            soup: BeautifulSoup object of the page
-            url: URL that was fetched
-            html: Raw HTML string
-
-        Returns:
-            True if this parser can handle the page, False otherwise
-        """
-        # Implement detection logic
-        # Example: Check for specific text in title or meta tags
-        title = soup.find("title")
-        if title and "[MODEL]" in title.text.upper():
-            return True
-
-        # Check for manufacturer name in HTML
-        if "[MANUFACTURER]" in html.upper() and "[MODEL]" in html.upper():
-            return True
-
-        return False
+    # NOTE: can_parse() is DEPRECATED - do NOT implement it!
+    # Detection is now handled by YAML hints in modem.yaml (v3.12+).
+    #
+    # In your modem.yaml, define:
+    #
+    #   auth:
+    #     login_markers:           # Phase 1: Pre-auth detection (login page)
+    #       - "[MANUFACTURER]"     # Brand name
+    #       - "[MODEL]"            # Model string visible pre-auth
+    #
+    #   detection:
+    #     model_strings:           # Phase 2: Post-auth detection (data pages)
+    #       - "[MODEL]-VARIANT"    # Model variants visible after login
+    #
+    # The HintMatcher will use these patterns to auto-detect your modem.
 
     def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
         """Parse downstream channel data.
@@ -165,9 +145,16 @@ class [Manufacturer][Model]Parser(ModemParser):
             - frequency: Frequency in Hz (int)
             - power: Power level in dBmV (float)
             - snr: Signal-to-noise ratio in dB (float)
-            - modulation: Modulation type (string, e.g., "QAM256")
+            - modulation: Modulation type (string, e.g., "QAM256", "OFDM PLC")
+            - channel_type: Channel technology - "qam" or "ofdm" (REQUIRED for DOCSIS 3.1)
             - corrected: Corrected error count (int)
             - uncorrected: Uncorrected error count (int)
+
+        Note on channel_type vs modulation:
+            - channel_type: The DOCSIS transport technology (qam/ofdm for downstream)
+            - modulation: The encoding scheme (QAM256, QAM4096, etc.)
+            An OFDM channel uses QAM4096 modulation internally. The channel_type
+            is used for entity naming (sensor.cable_modem_ds_ofdm_ch_1_power).
         """
         channels = []
 
@@ -211,7 +198,8 @@ class [Manufacturer][Model]Parser(ModemParser):
             - channel_id: Channel identifier (string)
             - frequency: Frequency in Hz (int)
             - power: Power level in dBmV (float)
-            - modulation: Modulation type (string)
+            - modulation: Modulation type (string, e.g., "64QAM", "ATDMA")
+            - channel_type: Channel technology - "atdma" or "ofdma" (REQUIRED for DOCSIS 3.1)
             - symbol_rate: Symbol rate in Ksym/sec (int)
         """
         channels = []
@@ -240,61 +228,75 @@ class [Manufacturer][Model]Parser(ModemParser):
         return info
 ```
 
-## Step 2: Handle Authentication
+## Step 2: Authentication (Simplified in v3.12+)
 
-### Common Authentication Types
+**Parsers no longer handle authentication.** The `AuthDiscovery` system automatically
+detects and handles auth before parser detection runs.
 
-#### HTTP Basic Auth
-```python
-from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType
+### What Parsers DON'T Need
 
-auth_config = BasicAuthConfig(
-    strategy=AuthStrategyType.BASIC_HTTP,
-)
+- No `auth_config` attribute
+- No `login()` method
+- No auth strategy selection
+- No auth hints on the parser class (these go in modem.yaml)
 
-def login(self, session, base_url, username, password) -> bool:
-    # HTTP Basic Auth is handled automatically by the session
-    return True
+### Auth Configuration in modem.yaml
+
+Auth hints are now configured in `modems/{manufacturer}/{model}/modem.yaml`:
+
+#### Form Field Hints
+
+If your modem's login form uses non-standard field names:
+
+```yaml
+# In modem.yaml
+auth:
+  strategy: form_plain
+  form:
+    login_url: "/"
+    action: "/goform/login"
+    username_field: webUserName  # Non-standard field name
+    password_field: webPassKey   # Non-standard field name
 ```
 
-#### Form-Based Auth
-```python
-from custom_components.cable_modem_monitor.core.auth_config import FormAuthConfig
+#### HNAP Hints (S33, MB8611)
 
-auth_config = FormAuthConfig(
-    strategy=AuthStrategyType.FORM_POST,
-    login_url="/login.html",
-    username_field="username",
-    password_field="password",
-)
+For HNAP/SOAP modems:
 
-def login(self, session, base_url, username, password) -> bool:
-    response = session.post(
-        f"{base_url}/login.html",
-        data={"username": username, "password": password}
-    )
-    return response.status_code == 200
+```yaml
+# In modem.yaml
+auth:
+  strategy: hnap_session
+  hnap:
+    endpoint: "/HNAP1/"
+    namespace: "http://purenetworks.com/HNAP1/"
+    empty_action_value: ""  # All known HNAP modems use ""
 ```
 
-#### [HNAP](https://en.wikipedia.org/wiki/Home_Network_Administration_Protocol) (Home Network Administration Protocol)
+#### URL Token Hints (SB8200)
 
-HNAP is a [SOAP](https://www.w3.org/TR/soap/)-based protocol used by some Motorola and Arris modems. Originally developed by Pure Networks (acquired by Cisco), it's still used for local device management despite being abandoned by its original stewards.
+For modems using JavaScript-based URL token authentication:
 
-```python
-from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig
-
-auth_config = HNAPAuthConfig(
-    strategy=AuthStrategyType.HNAP_SESSION,
-    login_url="/Login.html",
-    hnap_endpoint="/HNAP1/",
-    soap_action_namespace="http://purenetworks.com/HNAP1/",
-)
-
-def login(self, session, base_url, username, password) -> bool:
-    # HNAP authentication is handled by the auth framework
-    return True
+```yaml
+# In modem.yaml
+auth:
+  strategy: url_token_session
+  url_token:
+    login_page: "/cmconnectionstatus.html"
+    login_prefix: "login_"
+    token_prefix: "ct_"
+    session_cookie: "credential"
 ```
+
+### How Auth Detection Works
+
+1. `AuthDiscovery` fetches the modem page anonymously
+2. Inspects the response (200 + data, 401, form, redirect, etc.)
+3. Auto-detects the appropriate strategy
+4. Reads auth hints from modem.yaml via adapter
+5. Stores strategy in config entry for polling
+
+For details, see `core/auth/README.md`.
 
 ## Step 3: Add Test Fixtures
 
@@ -703,11 +705,12 @@ def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
 
 ### Issue: Authentication fails
 
-**Solution:**
-- Verify auth_config is correct for your modem type
-- Check if credentials are being passed correctly
-- Add logging to `login()` method to debug
-- Test authentication manually with curl/Postman
+**Solution (v3.12+):**
+- Auth is auto-detected - check if your modem's login form uses non-standard fields
+- If auto-detection fails, add `auth_form_hints` to your parser
+- Check diagnostics export for `auth_discovery` section to see detected strategy
+- Test authentication manually with curl/Postman to understand the flow
+- For complex JS-based auth, capture HAR file and open an issue
 
 ### Issue: Parsing returns empty data
 

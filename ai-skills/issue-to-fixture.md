@@ -66,8 +66,8 @@ python scripts/generate_fixture_index.py
 ```
 
 This updates:
-- `tests/parsers/FIXTURES.md` - Main fixture index
-- Individual `README.md` files in fixture directories (Quick Facts section)
+- `modems/README.md` - Main fixture index
+- Individual `README.md` files in modem directories (Quick Facts section)
 
 ### 5. Show Changes for Review
 

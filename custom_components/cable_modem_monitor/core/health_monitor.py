@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 
-from ..utils.host_validation import is_valid_host
+from ..lib.host_validation import is_valid_host
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,16 +75,24 @@ class ModemHealthMonitor:
     to distinguish between network issues, web server issues, and firewall blocks.
     """
 
-    def __init__(self, max_history: int = 100, verify_ssl: bool = False, ssl_context=None):
+    def __init__(
+        self,
+        max_history: int = 100,
+        verify_ssl: bool = False,
+        ssl_context=None,
+        legacy_ssl: bool = False,
+    ):
         """Initialize health monitor.
 
         Args:
             max_history: Maximum number of health check results to retain
             verify_ssl: Enable SSL certificate verification (default: False for self-signed certs)
             ssl_context: Pre-created SSL context (optional, to avoid blocking I/O in event loop)
+            legacy_ssl: Use legacy SSL ciphers (SECLEVEL=0) for older modem firmware
         """
         self.max_history = max_history
         self.verify_ssl = verify_ssl
+        self.legacy_ssl = legacy_ssl
         self.history: list[HealthCheckResult] = []
         self.consecutive_failures = 0
         self.total_checks = 0
@@ -99,6 +107,12 @@ class ModemHealthMonitor:
             if not verify_ssl:
                 self._ssl_context.check_hostname = False
                 self._ssl_context.verify_mode = ssl.CERT_NONE
+
+            # Enable legacy ciphers for older modem firmware (same pattern as ssl_adapter.py)
+            if legacy_ssl:
+                self._ssl_context.set_ciphers("DEFAULT:@SECLEVEL=0")
+                _LOGGER.info("Legacy SSL cipher support enabled (SECLEVEL=0) for health monitor")
+
             _LOGGER.debug(
                 "SSL certificate verification is disabled for this modem connection. "
                 "This is common for cable modems with self-signed certificates."

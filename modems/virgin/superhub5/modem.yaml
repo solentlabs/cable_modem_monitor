@@ -1,0 +1,146 @@
+# =============================================================================
+# VIRGIN MEDIA HUB 5 CABLE MODEM CONFIGURATION
+# =============================================================================
+# DOCSIS 3.1 gateway with REST API interface
+#
+# OEM: Sagemcom F3896LG-VMB
+# Chipset: Broadcom BCM3390
+#
+# Note: Virgin Media has used both "Super Hub 5" and "Hub 5" in their marketing.
+# The bootFilename shows "vmdg660" which may be Virgin's internal designation.
+
+manufacturer: Virgin Media
+model: Hub 5
+paradigm: rest_api
+
+# =============================================================================
+# HARDWARE
+# =============================================================================
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2021-10"
+
+# Provenance tracking
+sources:
+  hardware: "[ISPreview](https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html)"
+  detection_hints: "[Issue #82](https://github.com/solentlabs/cable_modem_monitor/issues/82)"
+
+# =============================================================================
+# NETWORK
+# =============================================================================
+# REST API over HTTP, no authentication required
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+# =============================================================================
+# AUTHENTICATION
+# =============================================================================
+# No authentication required - all endpoints are public
+auth:
+  strategy: rest_api
+
+  rest_api:
+    base_path: "/rest/v1/cablemodem"
+    endpoints:
+      state: "/state_"
+      downstream: "/downstream"
+      upstream: "/upstream"
+      serviceflows: "/serviceflows"
+# =============================================================================
+# PAGES
+# =============================================================================
+# Gateway HTML UI (for detection) + REST API endpoints (for data)
+
+pages:
+  public:
+    - "/" # Gateway HTML UI - for detection
+    - "/rest/v1/cablemodem/state_"
+    - "/rest/v1/cablemodem/downstream"
+    - "/rest/v1/cablemodem/upstream"
+    - "/rest/v1/cablemodem/serviceflows"
+  protected: []
+  data:
+    downstream_channels: "/rest/v1/cablemodem/downstream"
+    upstream_channels: "/rest/v1/cablemodem/upstream"
+    system_info: "/rest/v1/cablemodem/state_"
+
+# =============================================================================
+# PARSER
+# =============================================================================
+parser:
+  class: VirginSuperHub5Parser
+  module: custom_components.cable_modem_monitor.modems.virgin.superhub5.parser
+  format:
+    type: json
+
+# =============================================================================
+# DETECTION
+# =============================================================================
+# HTML detection (gateway UI) + JSON markers (REST API verification)
+detection:
+  pre_auth:
+    - "Virgin Media"
+    - "Hub 5"
+    - "Sagemcom"
+    - "F3896"
+  post_auth:
+    - "Hub 5"
+    - "SuperHub 5"
+    - "F3896"
+    - "VMDG660"
+    - "Virgin Media"
+    - "Sagemcom"
+  page_hint: "/rest/v1/cablemodem/state_"
+  json_markers:
+    - "cablemodem"
+    - "docsisVersion"
+    - "sc_qam"
+    - "atdma"
+  model_aliases:
+    - "SuperHub 5"
+    - "VMDG660"
+    - "F3896LG-VMB"
+# =============================================================================
+# CAPABILITIES
+# =============================================================================
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - system_uptime
+  # Note: software_version not available via REST API
+  # bootFilename contains config file version (e.g., "bbt076-b"), not firmware
+
+# =============================================================================
+# BEHAVIORS
+# =============================================================================
+behaviors:
+  requires_multi_page_fetch: true # Needs separate downstream/upstream/state endpoints
+
+# =============================================================================
+# METADATA
+# =============================================================================
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/82"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/virgin/superhub5/fixtures
+  source: diagnostics
+  firmware_tested: "bbt076-b"
+  last_validated: "2026-01-05"
+  captured_from_issue: 82
+
+attribution:
+  contributors:
+    - github: Dinth
+      contribution: "Initial Hub 5 support and fixture capture"

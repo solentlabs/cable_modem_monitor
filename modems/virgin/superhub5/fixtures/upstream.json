@@ -1,0 +1,45 @@
+{
+    "upstream": {
+        "channels": [
+            {
+                "channelId": 9,
+                "frequency": 49600000,
+                "lockStatus": true,
+                "power": 43.8,
+                "symbolRate": 5120,
+                "modulation": "qam_64",
+                "t1Timeout": 0,
+                "t2Timeout": 30,
+                "t3Timeout": 1,
+                "t4Timeout": 0,
+                "channelType": "atdma"
+            },
+            {
+                "channelId": 10,
+                "frequency": 43100000,
+                "lockStatus": true,
+                "power": 43.5,
+                "symbolRate": 5120,
+                "modulation": "qam_64",
+                "t1Timeout": 0,
+                "t2Timeout": 30,
+                "t3Timeout": 0,
+                "t4Timeout": 0,
+                "channelType": "atdma"
+            },
+            {
+                "channelType": "ofdma",
+                "channelId": 14,
+                "channelWidth": 10000000,
+                "lockStatus": true,
+                "power": 37.2,
+                "fftType": "2K",
+                "modulation": "qam_256",
+                "numberOfActiveSubCarriers": 200,
+                "firstActiveSubcarrier": 74,
+                "t3Timeout": 2,
+                "t4Timeout": 0
+            }
+        ]
+    }
+}

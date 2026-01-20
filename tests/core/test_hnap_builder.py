@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, fromstring
 import pytest
 import requests
 
-from custom_components.cable_modem_monitor.core.hnap_builder import HNAPRequestBuilder
+from custom_components.cable_modem_monitor.core.auth import HNAPRequestBuilder
 
 
 @pytest.fixture

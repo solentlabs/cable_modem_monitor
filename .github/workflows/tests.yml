@@ -31,12 +31,12 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          pytest tests/ -v --tb=short
+          pytest -v --tb=short
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.12'
         run: |
-          pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=xml --cov-report=term --cov-fail-under=60
+          pytest --cov=custom_components/cable_modem_monitor --cov-report=xml --cov-report=term --cov-fail-under=60
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy types-requests pytest-socket
+          pip install ruff black mypy types-requests pytest-socket pydantic types-cryptography requests-mock
 
       - name: Lint with ruff
         run: |

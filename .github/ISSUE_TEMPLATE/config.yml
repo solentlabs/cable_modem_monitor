@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: 📊 Check Supported Modems First
+    url: https://github.com/solentlabs/cable_modem_monitor/blob/main/tests/parsers/FIXTURES.md
+    about: See if your modem is listed before opening an issue
   - name: Question or Support
     url: https://github.com/solentlabs/cable_modem_monitor/discussions
     about: Ask questions or get help from the community

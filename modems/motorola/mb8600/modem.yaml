@@ -1,0 +1,32 @@
+# Motorola MB8600 - Parser in progress
+# Issue: https://github.com/solentlabs/cable_modem_monitor/issues/40
+
+manufacturer: Motorola
+model: MB8600
+paradigm: html
+
+hardware:
+  docsis_version: "3.1"
+  # chipset: Broadcom BCM3390  # TODO: Verify via FCC ID Z8H-MB8600 internal photos
+
+status_info:
+  status: in_progress
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/40"
+
+capabilities: []
+
+# Auth strategy - likely similar to MB7621 (form-based)
+# Parser not yet implemented - using none until fixtures available
+auth:
+  strategy: none
+
+# Known ISPs
+isps:
+  - Comcast
+  - Cox
+  - CableOne
+
+# References
+references:
+  review: https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/
+  gpl_source: https://help.motorolanetwork.com/kb/general/gpl-code-center

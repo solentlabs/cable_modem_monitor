@@ -1,0 +1,572 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/netgear/cm1200/parser.py
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+"""Parser for Netgear CM1200 cable modem.
+
+The Netgear CM1200 is a DOCSIS 3.1 cable modem with multi-gigabit capability.
+
+Key pages:
+- / or /index.htm: Main page (requires auth)
+- /DocsisStatus.htm: DOCSIS channel data (REQUIRED for parsing, auth required)
+
+Authentication: HTTP Basic Auth
+- Default username: admin
+- Password: User-configured
+
+Data format (tagValueList):
+Same JavaScript-embedded format as CM2000, but with slightly different upstream
+field order (Symbol Rate comes before Frequency).
+
+Channel data:
+- Up to 32 downstream (DOCSIS 3.0, QAM256)
+- Up to 8 upstream (DOCSIS 3.0, ATDMA)
+- OFDM support may vary by ISP configuration
+
+Related: Issue #63 (Netgear CM1200 Support Request)
+Contributor: @DeFlanko
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from typing import Any
+
+from bs4 import BeautifulSoup
+
+from custom_components.cable_modem_monitor.core.base_parser import ModemParser
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class NetgearCM1200Parser(ModemParser):
+    """Parser for Netgear CM1200 cable modem."""
+
+    # Auth handled by AuthDiscovery (v3.12.0+) - no auth_config needed
+    # BasicAuth will be auto-detected via 401 response
+
+    # URL patterns now in modem.yaml pages config
+
+    # login() not needed - uses base class default (AuthDiscovery handles auth)
+
+    def parse_resources(self, resources: dict[str, Any]) -> dict:
+        """Parse modem data from pre-fetched resources.
+
+        Args:
+            resources: Dictionary mapping paths to BeautifulSoup objects
+
+        Returns:
+            Dictionary with downstream, upstream, and system_info
+        """
+        # Get DocsisStatus page soup (channel data)
+        docsis_soup = resources.get("/DocsisStatus.htm")
+        if docsis_soup is None:
+            # Fallback to any available soup
+            for value in resources.values():
+                if isinstance(value, BeautifulSoup):
+                    docsis_soup = value
+                    break
+
+        if docsis_soup is None:
+            return {"downstream": [], "upstream": [], "system_info": {}}
+
+        # Parse channel data from DocsisStatus.htm
+        downstream_channels = self.parse_downstream(docsis_soup)
+        upstream_channels = self.parse_upstream(docsis_soup)
+
+        # Parse system info from DocsisStatus.htm (uptime, current time)
+        system_info = self.parse_system_info(docsis_soup)
+
+        # Extract actual model from HTML
+        model_name = self._extract_model(docsis_soup)
+        if model_name:
+            system_info["model_name"] = model_name
+
+        return {
+            "downstream": downstream_channels,
+            "upstream": upstream_channels,
+            "system_info": system_info,
+        }
+
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+        """Parse all data from the modem (legacy interface).
+
+        Args:
+            soup: BeautifulSoup object of the page
+            session: Requests session (optional, for multi-page parsing)
+            base_url: Base URL of the modem (optional)
+
+        Returns:
+            Dictionary with downstream, upstream, and system_info
+        """
+        # Build resources dict
+        resources: dict[str, Any] = {"/": soup}
+
+        if session and base_url:
+            try:
+                _LOGGER.debug("CM1200: Fetching DocsisStatus.htm for channel data")
+                docsis_url = f"{base_url}/DocsisStatus.htm"
+                docsis_response = session.get(docsis_url, timeout=10)
+
+                if docsis_response.status_code == 200:
+                    resources["/DocsisStatus.htm"] = BeautifulSoup(docsis_response.text, "html.parser")
+                    _LOGGER.debug("CM1200: Successfully fetched DocsisStatus.htm (%d bytes)", len(docsis_response.text))
+                else:
+                    _LOGGER.warning(
+                        "CM1200: Failed to fetch DocsisStatus.htm, status %d - using provided page",
+                        docsis_response.status_code,
+                    )
+            except Exception as e:
+                _LOGGER.warning("CM1200: Error fetching DocsisStatus.htm: %s - using provided page", e)
+
+        return self.parse_resources(resources)
+
+    def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse downstream channel data from DocsisStatus.htm.
+
+        The CM1200 embeds channel data in JavaScript variables.
+        Format:
+        - InitDsTableTagValue() function contains tagValueList (DOCSIS 3.0 QAM channels)
+        - InitDsOfdmTableTagValue() function contains OFDM channels (DOCSIS 3.1)
+
+        Returns:
+            List of downstream channel dictionaries
+        """
+        channels: list[dict] = []
+
+        try:
+            # Parse DOCSIS 3.0 QAM channels
+            qam_channels = self._parse_downstream_from_js(soup)
+            channels.extend(qam_channels)
+            _LOGGER.info("CM1200: Parsed %d downstream QAM channels", len(qam_channels))
+
+            # Parse DOCSIS 3.1 OFDM channels
+            ofdm_channels = self._parse_ofdm_downstream(soup)
+            channels.extend(ofdm_channels)
+            _LOGGER.info("CM1200: Parsed %d downstream OFDM channels", len(ofdm_channels))
+
+        except Exception as e:
+            _LOGGER.error("Error parsing CM1200 downstream channels: %s", e, exc_info=True)
+
+        return channels
+
+    def _extract_tagvaluelist(self, soup: BeautifulSoup, func_name: str) -> list[str] | None:
+        """Extract tagValueList values from a JavaScript function.
+
+        Args:
+            soup: BeautifulSoup object
+            func_name: Name of the JS function (e.g., "InitDsTableTagValue")
+
+        Returns:
+            List of pipe-separated values or None if not found
+        """
+        regex_pattern = re.compile(func_name)
+        for script in soup.find_all("script"):
+            if not script.string or not regex_pattern.search(script.string):
+                continue
+
+            func_match = re.search(rf"function {func_name}\(\)[^{{]*\{{(.*?)\n\s*\}}", script.string, re.DOTALL)
+            if not func_match:
+                continue
+
+            func_body = func_match.group(1)
+            func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+
+            match = re.search(r"var tagValueList = [\"']([^\"']+)[\"']", func_body_clean)
+            if match:
+                return match.group(1).split("|")
+
+        return None
+
+    def _parse_downstream_from_js(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse downstream QAM channels from InitDsTableTagValue().
+
+        Note: channel_type is hardcoded to "qam" because this method exclusively
+        parses InitDsTableTagValue(), which only contains QAM channel data.
+        The CM1200 uses separate JS functions for each channel type - see README.
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitDsTableTagValue")
+            if not values or len(values) < 10:
+                return channels
+
+            _LOGGER.debug("CM1200 Downstream JS: Found %d values", len(values))
+
+            channel_count = int(values[0])
+            fields_per_channel = 9
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_downstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM1200: JS downstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_downstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single downstream channel from tagValueList values."""
+        try:
+            freq_str = values[idx + 4].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(values[idx + 5]),
+                "snr": float(values[idx + 6]),
+                "modulation": values[idx + 2],
+                "channel_type": "qam",
+                "corrected": int(values[idx + 7]),
+                "uncorrected": int(values[idx + 8]),
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM1200 Downstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
+
+    def _parse_ofdm_downstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse OFDM downstream channels from InitDsOfdmTableTagValue().
+
+        Note: channel_type is hardcoded to "ofdm" because this method exclusively
+        parses InitDsOfdmTableTagValue(), which only contains OFDM channel data.
+
+        OFDM format: count|num|lock|profile|id|freq|power|snr|range|unerrored|correctable|uncorrectable
+        (11 fields per channel)
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitDsOfdmTableTagValue")
+            if not values or len(values) < 12:
+                return channels
+
+            channel_count = int(values[0])
+            # 11 fields: ch|lock|profile|id|freq|power|snr|range|unerrored|correctable|uncorrectable
+            fields_per_channel = 11
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_ofdm_downstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM1200: OFDM downstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_ofdm_downstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single OFDM downstream channel."""
+        try:
+            freq_str = values[idx + 4].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            power_str = values[idx + 5].replace(" dBmV", "").strip()
+            snr_str = values[idx + 6].replace(" dB", "").strip()
+
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(power_str),
+                "snr": float(snr_str),
+                "modulation": "OFDM",
+                "channel_type": "ofdm",
+                "is_ofdm": True,
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM1200 OFDM Downstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
+
+    def parse_upstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse upstream channel data from DocsisStatus.htm.
+
+        Returns:
+            List of upstream channel dictionaries
+        """
+        channels: list[dict] = []
+
+        try:
+            # Parse DOCSIS 3.0 ATDMA channels
+            atdma_channels = self._parse_upstream_from_js(soup)
+            channels.extend(atdma_channels)
+            _LOGGER.info("CM1200: Parsed %d upstream ATDMA channels", len(atdma_channels))
+
+            # Parse DOCSIS 3.1 OFDMA channels
+            ofdma_channels = self._parse_ofdma_upstream(soup)
+            channels.extend(ofdma_channels)
+            _LOGGER.info("CM1200: Parsed %d upstream OFDMA channels", len(ofdma_channels))
+
+        except Exception as e:
+            _LOGGER.error("Error parsing CM1200 upstream channels: %s", e, exc_info=True)
+
+        return channels
+
+    def _parse_upstream_from_js(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse upstream ATDMA channels from InitUsTableTagValue().
+
+        Note: channel_type comes from the data itself (values[idx+2] = "ATDMA")
+        unlike downstream where we hardcode it.
+
+        Format: count|num|lock|type|channel_id|symbol_rate|frequency|power
+        (7 fields per channel, Symbol Rate before Frequency - different from CM2000)
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitUsTableTagValue")
+            if not values or len(values) < 8:
+                return channels
+
+            _LOGGER.debug("CM1200 Upstream JS: Found %d values", len(values))
+
+            channel_count = int(values[0])
+            fields_per_channel = 7
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_upstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM1200: JS upstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_upstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single upstream channel from tagValueList values."""
+        try:
+            # CM1200: Symbol Rate at idx+4, Frequency at idx+5
+            freq_str = values[idx + 5].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            power_str = values[idx + 6].replace(" dBmV", "").strip()
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(power_str),
+                "channel_type": values[idx + 2],
+                "symbol_rate": int(values[idx + 4]),
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM1200 Upstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
+
+    def _parse_ofdma_upstream(self, soup: BeautifulSoup) -> list[dict]:
+        """Parse OFDMA upstream channels from InitUsOfdmaTableTagValue().
+
+        Note: channel_type is hardcoded to "OFDMA" because this method exclusively
+        parses InitUsOfdmaTableTagValue(), which only contains OFDMA channel data.
+
+        Format: count|num|lock|profile|id|frequency|power
+        (6 fields per channel)
+        """
+        channels: list[dict] = []
+
+        try:
+            values = self._extract_tagvaluelist(soup, "InitUsOfdmaTableTagValue")
+            if not values or len(values) < 7:
+                return channels
+
+            channel_count = int(values[0])
+            fields_per_channel = 6
+            idx = 1
+
+            for i in range(channel_count):
+                if idx + fields_per_channel > len(values):
+                    break
+
+                channel = self._parse_ofdma_upstream_channel(values, idx, i)
+                if channel:
+                    channels.append(channel)
+                idx += fields_per_channel
+
+        except Exception as e:
+            _LOGGER.debug("CM1200: OFDMA upstream parsing failed: %s", e)
+
+        return channels
+
+    def _parse_ofdma_upstream_channel(self, values: list[str], idx: int, channel_num: int) -> dict | None:
+        """Parse a single OFDMA upstream channel."""
+        try:
+            freq_str = values[idx + 4].replace(" Hz", "").strip()
+            freq = int(freq_str)
+            lock_status = values[idx + 1]
+
+            if freq == 0 or lock_status != "Locked":
+                return None
+
+            power_str = values[idx + 5].replace(" dBmV", "").strip()
+
+            return {
+                "channel_id": values[idx + 3],
+                "frequency": freq,
+                "power": float(power_str),
+                "channel_type": "OFDMA",
+                "is_ofdm": True,
+            }
+        except (ValueError, IndexError) as e:
+            _LOGGER.warning("CM1200 OFDMA Upstream: Error parsing channel %d: %s", channel_num + 1, e)
+            return None
+
+    def parse_system_info(self, soup: BeautifulSoup) -> dict:
+        """Parse system information from DocsisStatus.htm.
+
+        Returns:
+            Dictionary with available system info
+        """
+        info: dict = {}
+
+        try:
+            # Try to extract from JavaScript InitTagValue function
+            script_tags = [
+                tag for tag in soup.find_all("script") if tag.string and re.search("InitTagValue", tag.string)
+            ]
+
+            for script in script_tags:
+                if not script.string:
+                    continue
+
+                # Look for InitTagValue function
+                func_match = re.search(r"function InitTagValue\(\)[^{]*\{(.*?)\n\s*\}", script.string, re.DOTALL)
+                if not func_match:
+                    continue
+
+                func_body = func_match.group(1)
+                # Remove block comments and line comments
+                func_body_clean = re.sub(r"/\*.*?\*/", "", func_body, flags=re.DOTALL)
+                func_body_clean = re.sub(r"//.*$", "", func_body_clean, flags=re.MULTILINE)
+
+                match = re.search(r"var tagValueList = [\"']([^\"']+)[\"']", func_body_clean)
+                if match:
+                    values = match.group(1).split("|")
+                    # Extract current system time (index 10)
+                    if len(values) > 10 and values[10] and values[10] != "&nbsp;":
+                        info["current_time"] = values[10]
+                        _LOGGER.debug("CM1200: Parsed current time: %s", values[10])
+
+                    # Extract system uptime (index 14)
+                    if len(values) > 14 and values[14] and values[14] != "&nbsp;":
+                        info["system_uptime"] = values[14]
+                        _LOGGER.debug("CM1200: Parsed system uptime: %s", values[14])
+
+                        # Calculate last boot time from uptime
+                        boot_time = self._calculate_boot_time(values[14])
+                        if boot_time:
+                            info["last_boot_time"] = boot_time
+                            _LOGGER.debug("CM1200: Calculated last boot time: %s", boot_time)
+
+                    _LOGGER.debug("CM1200: Parsed system info from InitTagValue")
+                    break
+
+        except Exception as e:
+            _LOGGER.error("Error parsing CM1200 system info: %s", e)
+
+        return info
+
+    def _calculate_boot_time(self, uptime_str: str) -> str | None:
+        """Calculate boot time from uptime string.
+
+        Args:
+            uptime_str: Uptime string like "39 days 15:47:33" (days HH:MM:SS format)
+
+        Returns:
+            ISO format datetime string of boot time or None if parsing fails
+        """
+        from datetime import datetime, timedelta
+
+        try:
+            total_seconds = 0
+
+            # Parse days (e.g., "39 days")
+            days_match = re.search(r"(\d+)\s*days?", uptime_str, re.IGNORECASE)
+            if days_match:
+                total_seconds += int(days_match.group(1)) * 86400
+
+            # Parse HH:MM:SS format (e.g., "15:47:33")
+            time_match = re.search(r"(\d{1,2}):(\d{2}):(\d{2})", uptime_str)
+            if time_match:
+                hours = int(time_match.group(1))
+                minutes = int(time_match.group(2))
+                seconds = int(time_match.group(3))
+                total_seconds += hours * 3600 + minutes * 60 + seconds
+
+            if total_seconds == 0:
+                return None
+
+            # Calculate boot time: current time - uptime
+            uptime_delta = timedelta(seconds=total_seconds)
+            boot_time = datetime.now() - uptime_delta
+
+            return boot_time.isoformat()
+
+        except Exception as e:
+            _LOGGER.error("Error calculating boot time from '%s': %s", uptime_str, e)
+            return None
+
+    def _extract_model(self, soup: BeautifulSoup) -> str | None:
+        """Extract actual model name from HTML meta or title.
+
+        The CM1200 includes model info in:
+        - <META name="description" content='CM1200'>
+        - <title>NETGEAR Modem CM1200</title>
+
+        Args:
+            soup: BeautifulSoup object of the page
+
+        Returns:
+            Model name (e.g., "CM1200") or None if not found
+        """
+        # Try meta description first
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta:
+            content = meta.get("content")
+            if isinstance(content, str) and content.strip():
+                _LOGGER.debug("CM1200: Extracted model from meta description: %s", content.strip())
+                return content.strip()
+
+        # Fallback to title tag
+        title = soup.find("title")
+        if title and title.string:
+            # Extract model from "NETGEAR Modem CM1200"
+            match = re.search(r"(?:Modem|Gateway)\s+(\S+)", title.string)
+            if match:
+                model = match.group(1)
+                _LOGGER.debug("CM1200: Extracted model from title: %s", model)
+                return model
+
+        _LOGGER.debug("CM1200: Could not extract model name from HTML")
+        return None

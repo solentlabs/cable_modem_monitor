@@ -40,7 +40,7 @@ class TestNormalizeChannelType:
 
     # Upstream ATDMA cases
     def test_upstream_atdma_from_channel_type(self):
-        """ATDMA upstream with explicit channel_type (CM1200 format)."""
+        """ATDMA upstream with explicit channel_type from modem."""
         channel = {"channel_type": "ATDMA", "symbol_rate": 5120}
         assert _normalize_channel_type(channel, "upstream") == "atdma"
 
@@ -56,9 +56,9 @@ class TestNormalizeChannelType:
 
     # Upstream OFDMA cases - these were failing before the fix!
     def test_upstream_ofdma_from_channel_type(self):
-        """OFDMA upstream with explicit channel_type (CM1200 format).
+        """OFDMA upstream with explicit channel_type from modem.
 
-        This was the bug: CM1200 outputs channel_type='OFDMA' but the old
+        This was the bug: some modems output channel_type='OFDMA' but the old
         code only checked modulation field, causing OFDMA to be classified as ATDMA.
         """
         channel = {"channel_type": "OFDMA", "is_ofdm": True}

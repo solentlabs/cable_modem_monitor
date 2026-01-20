@@ -15,8 +15,20 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.cable_modem_monitor.modem_config.adapter import get_url_patterns_for_parser
 from custom_components.cable_modem_monitor.parsers import get_parsers
 from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+
+
+def _get_url_patterns(parser_class) -> list[dict]:
+    """Get URL patterns from modem.yaml (preferred) or parser class (fallback)."""
+    patterns = get_url_patterns_for_parser(parser_class.__name__)
+    if patterns:
+        return patterns
+    # Fallback for parsers without modem.yaml (e.g., tests, fallback parser)
+    if hasattr(parser_class, "url_patterns") and parser_class.url_patterns:
+        return list(parser_class.url_patterns)  # type: ignore[return-value]
+    return []
 
 
 class TestParserDetectionContract:
@@ -36,7 +48,8 @@ class TestParserDetectionContract:
         violations = []
 
         for parser_class in all_parsers:
-            for i, pattern in enumerate(parser_class.url_patterns):
+            url_patterns = _get_url_patterns(parser_class)
+            for i, pattern in enumerate(url_patterns):
                 if "auth_required" not in pattern:
                     violations.append(
                         f"{parser_class.name} url_patterns[{i}] ({pattern.get('path', '?')}) "
@@ -54,7 +67,8 @@ class TestParserDetectionContract:
         missing = []
 
         for parser_class in all_parsers:
-            if not parser_class.url_patterns:
+            url_patterns = _get_url_patterns(parser_class)
+            if not url_patterns:
                 missing.append(parser_class.name)
 
         assert not missing, (
@@ -76,7 +90,8 @@ class TestParserDetectionContract:
             if parser_class == UniversalFallbackParser:
                 continue
 
-            anon_patterns = [p for p in parser_class.url_patterns if not p.get("auth_required", True)]
+            url_patterns = _get_url_patterns(parser_class)
+            anon_patterns = [p for p in url_patterns if not p.get("auth_required", True)]
 
             if anon_patterns:
                 auto_detectable.append(parser_class.name)
@@ -105,10 +120,11 @@ class TestParserDetectionContract:
             if parser_class == UniversalFallbackParser:
                 continue
 
-            anon_patterns = [p for p in parser_class.url_patterns if not p.get("auth_required", True)]
+            url_patterns = _get_url_patterns(parser_class)
+            anon_patterns = [p for p in url_patterns if not p.get("auth_required", True)]
 
-            if anon_patterns and parser_class.url_patterns:
-                first_pattern = parser_class.url_patterns[0]
+            if anon_patterns and url_patterns:
+                first_pattern = url_patterns[0]
                 if first_pattern.get("auth_required", True):
                     warnings.append(
                         f"{parser_class.name}: First URL pattern requires auth, "

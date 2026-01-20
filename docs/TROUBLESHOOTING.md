@@ -4,7 +4,9 @@ Common issues and solutions for Cable Modem Monitor integration.
 
 ## Table of Contents
 - [Connection and Authentication Issues](#connection-and-authentication-issues)
-  - [Combo Modem/Routers (Two IP Addresses)](#5-combo-modemrouters-two-ip-addresses)
+  - [Degraded Mode (Ping Works, HTTP Doesn't)](#2b-degraded-mode-ping-works-http-doesnt)
+  - [Auth Discovery Issues (v3.12+)](#4-auth-discovery-issues-v312)
+  - [Combo Modem/Routers (Two IP Addresses)](#6-combo-modemrouters-two-ip-addresses)
 - [Upstream Sensors Not Appearing](#upstream-sensors-not-appearing)
 - [Orphaned Channel Sensors](#orphaned-channel-sensors)
 - [Duplicate Entities](#duplicate-entities)
@@ -69,6 +71,55 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
 - **Unresponsive**: Check modem power, cables, and network connection
 - **Parser Error**: Modem reachable but data format changed - report issue with diagnostics
 
+#### 2b. Degraded Mode (Ping Works, HTTP Doesn't)
+
+**Symptoms:**
+- Status sensor shows "Degraded"
+- Ping Latency sensor shows a value (e.g., 1-5ms)
+- HTTP Latency sensor shows "Unavailable"
+- All channel sensors show "Unavailable"
+- Modem web interface doesn't load in browser either
+
+**What's Happening:**
+
+The modem's embedded web server has hung while the underlying network stack continues working. This is a known behavior with consumer cable modem firmware - the modem's DOCSIS functions (internet connectivity) remain operational, but the status web server becomes unresponsive.
+
+Common causes:
+- Memory leak in the modem's web server accumulating over days/weeks
+- Session table exhaustion from stale connections
+- Internal resource deadlock
+
+**What You'll See in Logs:**
+```
+WARNING: Scraper failed but modem is responding to health checks: [timeout error]
+DEBUG: Health check: degraded (ping=True, http=False)
+```
+
+**Available Sensors in Degraded Mode:**
+| Sensor | Status | Notes |
+|--------|--------|-------|
+| Ping Latency | ✅ Available | Shows ICMP response time |
+| HTTP Latency | ❌ Unavailable | Web server not responding |
+| Status | ✅ Available | Shows "Degraded" |
+| Channel sensors | ❌ Unavailable | Require HTTP to fetch data |
+
+**Recovery Options:**
+
+1. **Wait for internal watchdog** (often works within hours)
+   - Most modems have internal monitoring that will restart the hung web server
+   - Your internet connection continues working during this time
+   - The integration will automatically recover once HTTP responds
+
+2. **Power cycle the modem** (immediate fix)
+   - Unplug modem for 30 seconds, then reconnect
+   - Will briefly interrupt internet connectivity
+
+3. **Reload integration after recovery**
+   - Once HTTP is working again, reload the integration to recreate all sensors
+   - Settings → Devices & Services → Cable Modem Monitor → ⋮ → Reload
+
+**Note:** If you only see 11 sensors instead of 100+, this means the integration started while in degraded mode. Reload the integration after HTTP recovers to get all channel sensors.
+
 #### 3. Wrong Credentials
 
 **Symptoms:**
@@ -83,7 +134,52 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
    - Settings → Devices & Services → Cable Modem Monitor
    - Click Configure → Update credentials
 
-#### 4. Incorrect IP Address or Port
+#### 4. Auth Discovery Issues (v3.12+)
+
+**Symptoms:**
+- Setup shows "Unknown authentication pattern"
+- Diagnostics shows `auth_strategy: unknown`
+- Modem works in browser but not in integration
+
+**What's Happening:**
+
+As of v3.12.0, the integration automatically detects your modem's authentication method
+by inspecting the login page response. If detection fails, the integration captures
+the response for debugging.
+
+**Solution:**
+
+1. **Check diagnostics export** - Look for `auth_discovery` section:
+   ```json
+   {
+     "auth_discovery": {
+       "status": "unknown_pattern",
+       "strategy": "unknown",
+       "captured_response": { ... }
+     }
+   }
+   ```
+
+2. **Share diagnostics** - Open an issue with your diagnostics export. The captured
+   response helps developers add support for your modem's auth pattern.
+
+3. **Capture HAR file** - For fastest fix, capture a browser HAR file during login:
+   - Open browser Developer Tools → Network tab
+   - Log into your modem
+   - Right-click → Save all as HAR
+   - Attach to GitHub issue
+
+**Common Auth Patterns:**
+
+| Pattern | Detection | Notes |
+|---------|-----------|-------|
+| NO_AUTH | 200 + data | Modem allows anonymous access |
+| BASIC_HTTP | 401 response | HTTP Basic Auth |
+| FORM_PLAIN | HTML form with password | Standard login form |
+| HNAP_SESSION | SOAPAction.js script | Arris S33, Motorola MB8611 |
+| URL_TOKEN | JS-based form | Arris SB8200 |
+
+#### 5. Incorrect IP Address or Port
 
 **Symptoms:**
 - Connection errors every poll
@@ -100,7 +196,7 @@ The integration performs both ICMP ping and HTTP checks to diagnose connectivity
    - Windows: `ipconfig | findstr "Default Gateway"`
    - Linux/Mac: `ip route | grep default`
 
-#### 5. Combo Modem/Routers (Two IP Addresses)
+#### 6. Combo Modem/Routers (Two IP Addresses)
 
 **Symptoms:**
 - Health status shows `icmp_blocked` but modem works
@@ -137,7 +233,7 @@ If you see `icmp_blocked` status:
 
 **Note:** This only applies to combo modem/router devices. Standalone modems (like Arris SB8200, Netgear CM2000) only have one interface.
 
-#### 6. ISP Disabled Web Interface
+#### 7. ISP Disabled Web Interface
 
 **Symptoms:**
 - Cannot access modem web interface from ANY device
