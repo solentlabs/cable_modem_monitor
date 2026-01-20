@@ -175,6 +175,48 @@ Extracted to shared module `core/parser_utils.py`:
 
 ---
 
+### 20. CI/Local Environment Synchronization Gap
+
+**Problem:** CI workflows and local pre-commit hooks use different tool versions and validation paths, causing CI failures that pass locally. Discovered during v3.12.0 release (January 2026).
+
+**Specific Issues:**
+1. **Version drift:** CI installs `black` without version pinning (`.github/workflows/tests.yml:66`) while pre-commit pins to specific version
+2. **Missing CI simulation:** `make validate-ci` references non-existent `scripts/ci-check.sh`
+3. **Workflow drift:** `release.yml` and `tests.yml` had different pytest configurations (one used `pytest tests/`, other used `pytest`)
+4. **CodeQL not locally testable:** Pre-commit hook requires CodeQL CLI which isn't installed
+5. **Pre-commit staged-only:** Hooks only check staged files, not full project
+
+**Impact:**
+- CI failures after "all green" local checks
+- Embarrassing release delays
+- Loss of confidence in local validation
+
+**Remediation:**
+1. **Create `scripts/ci-check.sh`** - Mirror CI environment locally:
+   - Install exact CI tool versions in temp venv
+   - Run same commands as CI (ruff, black --check, mypy, pytest)
+   - Check CodeQL alerts via GitHub API or skip with warning
+2. **Pin tool versions in CI** - Add explicit versions in tests.yml:
+   ```yaml
+   pip install ruff==0.8.2 black==26.1.0 mypy==1.11.2 ...
+   ```
+3. **Add pre-push hook** - Run full project checks (not just staged files)
+4. **Single source of truth** - Create `requirements-ci.txt` used by both CI and local simulation
+5. **Remove or document CodeQL hook** - Either install CLI or mark as optional
+
+**Effort:** Medium (2 sessions)
+
+**Source:** v3.12.0 post-release review (January 2026)
+
+**Files:**
+- `.github/workflows/tests.yml` (add version pins)
+- `.github/workflows/release.yml` (keep in sync with tests.yml)
+- `scripts/ci-check.sh` (create)
+- `.pre-commit-config.yaml` (add pre-push hook)
+- `Makefile` (fix validate-ci target)
+
+---
+
 ## P2 - Medium Priority
 
 ### 7. ~~HNAP/SOAP Builder Complexity~~ ✅ COMPLETED
