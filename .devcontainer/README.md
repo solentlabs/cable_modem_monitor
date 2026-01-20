@@ -2,6 +2,8 @@
 
 This directory contains the VS Code Dev Container configuration for developing the Cable Modem Monitor integration inside a Home Assistant container.
 
+> **Windows Users:** We recommend [WSL2](../docs/setup/WSL2_SETUP.md) for the best development experience on Windows. WSL2 provides native Linux performance without Docker-in-Docker complexity. Dev Container remains available as an alternative.
+
 ## What is a Dev Container?
 
 A Dev Container is a Docker container configured for development. It provides:

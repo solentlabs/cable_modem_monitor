@@ -1,0 +1,14 @@
+# Project-specific ignores (global patterns in ~/Projects/.claudeignore)
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test HA instance (runtime data, not source)
+test-ha-config/
+
+# Coverage artifacts
+htmlcov/
+.coverage
+coverage.xml

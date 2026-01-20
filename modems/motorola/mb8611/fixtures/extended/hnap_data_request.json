@@ -1,0 +1,11 @@
+{
+  "_source": "Extracted from HAR capture provided in issue #4",
+  "_note": "MB8611 uses empty string for action values, same as S33",
+  "GetMultipleHNAPs": {
+    "GetMotoStatusStartupSequence": "",
+    "GetMotoStatusConnectionInfo": "",
+    "GetMotoStatusDownstreamChannelInfo": "",
+    "GetMotoStatusUpstreamChannelInfo": "",
+    "GetMotoLagStatus": ""
+  }
+}

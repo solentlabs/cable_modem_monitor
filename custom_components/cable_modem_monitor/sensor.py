@@ -1,4 +1,22 @@
-"""Sensor platform for Cable Modem Monitor."""
+"""Sensor platform for Cable Modem Monitor.
+
+This module creates Home Assistant sensor entities from modem data provided by
+the DataUpdateCoordinator. It does NOT handle authentication or data fetching -
+those responsibilities belong to __init__.py and ModemScraper.
+
+Entity Types:
+    - Status/Info: ModemStatusSensor, ModemInfoSensor
+    - Latency: ModemPingLatencySensor, ModemHttpLatencySensor
+    - System: channel counts, software version, uptime, last boot time
+    - Per-channel: power, SNR, frequency, corrected/uncorrected errors
+    - LAN stats: bytes, packets, errors, drops per interface
+
+Architecture:
+    - All sensors inherit from ModemSensorBase (device info, availability)
+    - Per-channel sensors use O(1) indexed lookups (_downstream_by_id, _upstream_by_id)
+    - Capability-gated sensors only created if parser reports the capability
+    - Fallback mode: only connectivity sensors when modem is unsupported
+"""
 
 from __future__ import annotations
 
@@ -25,8 +43,8 @@ from .const import (
     CONF_HOST,
     DOMAIN,
 )
+from .core.base_parser import ModemCapability
 from .lib.utils import parse_uptime_to_seconds
-from .parsers.base_parser import ModemCapability
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,13 +67,72 @@ def _create_system_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntr
     entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
     entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
 
-    # Software version
-    entities.append(ModemSoftwareVersionSensor(coordinator, entry))
+    # Software version (only if parser has capability)
+    if _has_capability(coordinator, ModemCapability.SOFTWARE_VERSION):
+        entities.append(ModemSoftwareVersionSensor(coordinator, entry))
 
     # Uptime sensors (only if parser has capability)
     if _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME):
         entities.append(ModemSystemUptimeSensor(coordinator, entry))
         entities.append(ModemLastBootTimeSensor(coordinator, entry))
+
+    return entities
+
+
+def _create_downstream_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
+    """Create per-channel downstream sensors."""
+    entities: list[SensorEntity] = []
+    downstream_by_id = coordinator.data.get("_downstream_by_id", {})
+
+    for (channel_type, channel_id), channel in downstream_by_id.items():
+        entities.append(ModemDownstreamPowerSensor(coordinator, entry, channel_type, channel_id))
+        entities.append(ModemDownstreamSNRSensor(coordinator, entry, channel_type, channel_id))
+
+        if "frequency" in channel:
+            entities.append(ModemDownstreamFrequencySensor(coordinator, entry, channel_type, channel_id))
+        if "corrected" in channel:
+            entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_type, channel_id))
+        if "uncorrected" in channel:
+            entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_type, channel_id))
+
+    return entities
+
+
+def _create_upstream_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
+    """Create per-channel upstream sensors."""
+    entities: list[SensorEntity] = []
+    upstream_by_id = coordinator.data.get("_upstream_by_id", {})
+
+    _LOGGER.debug("Creating entities for %s upstream channels", len(upstream_by_id))
+    for (channel_type, channel_id), channel in upstream_by_id.items():
+        entities.append(ModemUpstreamPowerSensor(coordinator, entry, channel_type, channel_id))
+        if "frequency" in channel:
+            entities.append(ModemUpstreamFrequencySensor(coordinator, entry, channel_type, channel_id))
+
+    return entities
+
+
+def _create_lan_stats_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
+    """Create LAN stats sensors for each interface."""
+    entities: list[SensorEntity] = []
+    lan_stats = coordinator.data.get("cable_modem_lan_stats")
+
+    if not lan_stats:
+        return entities
+
+    for interface in lan_stats:
+        entities.extend(
+            [
+                ModemLanReceivedBytesSensor(coordinator, entry, interface),
+                ModemLanReceivedPacketsSensor(coordinator, entry, interface),
+                ModemLanReceivedErrorsSensor(coordinator, entry, interface),
+                ModemLanReceivedDropsSensor(coordinator, entry, interface),
+                ModemLanTransmittedBytesSensor(coordinator, entry, interface),
+                ModemLanTransmittedPacketsSensor(coordinator, entry, interface),
+                ModemLanTransmittedErrorsSensor(coordinator, entry, interface),
+                ModemLanTransmittedDropsSensor(coordinator, entry, interface),
+            ]
+        )
 
     return entities
 
@@ -66,81 +143,31 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Cable Modem Monitor sensors."""
-    _LOGGER.info("async_setup_entry called for %s", entry.entry_id)
+    _LOGGER.debug("async_setup_entry called for %s", entry.entry_id)
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.debug("Coordinator data has %s upstream channels", len(coordinator.data.get("cable_modem_upstream", [])))
 
     entities: list[SensorEntity] = []
 
-    # Add unified status sensor
+    # Core sensors (always created)
     entities.append(ModemStatusSensor(coordinator, entry))
-
-    # Add modem info sensor (device metadata)
     entities.append(ModemInfoSensor(coordinator, entry))
-
-    # Add latency sensors
     entities.append(ModemHttpLatencySensor(coordinator, entry))
-    # Add ping latency sensor only if modem supports ICMP (default True)
-    entities.extend([ModemPingLatencySensor(coordinator, entry)] if coordinator.data.get("supports_icmp", True) else [])
+    if coordinator.data.get("supports_icmp", True):
+        entities.append(ModemPingLatencySensor(coordinator, entry))
 
-    # Check if we're in fallback mode (unsupported modem)
-    # In fallback mode, only connectivity sensors have data
-    # Note: system_info keys are prefixed with cable_modem_ in the coordinator data
+    # System and channel sensors (not in fallback mode)
     is_fallback_mode = coordinator.data.get("cable_modem_fallback_mode", False)
-
     if not is_fallback_mode:
-        # Add system-level sensors (not available in fallback mode)
         entities.extend(_create_system_sensors(coordinator, entry))
     else:
-        _LOGGER.info("Fallback mode detected - skipping sensors that require channel/system data")
+        _LOGGER.info("Fallback mode - skipping channel/system sensors")
 
-    # Add per-channel downstream sensors
-    if coordinator.data.get("cable_modem_downstream"):
-        for idx, channel in enumerate(coordinator.data["cable_modem_downstream"]):
-            # v3.11+ uses channel_type for disambiguation and channel_id for stability
-            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
-            channel_type = channel.get("channel_type", "qam").lower()
-            channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
-            entities.extend(
-                [
-                    ModemDownstreamPowerSensor(coordinator, entry, channel_type, channel_id),
-                    ModemDownstreamSNRSensor(coordinator, entry, channel_type, channel_id),
-                    ModemDownstreamFrequencySensor(coordinator, entry, channel_type, channel_id),
-                ]
-            )
-            # Only add error sensors if the data includes them
-            if "corrected" in channel:
-                entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_type, channel_id))
-            if "uncorrected" in channel:
-                entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_type, channel_id))
+    # Per-channel sensors
+    entities.extend(_create_downstream_sensors(coordinator, entry))
+    entities.extend(_create_upstream_sensors(coordinator, entry))
 
-    # Add per-channel upstream sensors
-    if coordinator.data.get("cable_modem_upstream"):
-        _LOGGER.debug("Creating entities for %s upstream channels", len(coordinator.data["cable_modem_upstream"]))
-        for idx, channel in enumerate(coordinator.data["cable_modem_upstream"]):
-            # v3.11+ uses channel_type for disambiguation and channel_id for stability
-            # Normalize to lowercase to match _normalize_channel_type() in __init__.py
-            channel_type = channel.get("channel_type", "atdma").lower()
-            channel_id = int(channel.get("channel_id", channel.get("channel", idx + 1)))
-            power_sensor = ModemUpstreamPowerSensor(coordinator, entry, channel_type, channel_id)
-            freq_sensor = ModemUpstreamFrequencySensor(coordinator, entry, channel_type, channel_id)
-            entities.extend([power_sensor, freq_sensor])
-
-    # Add LAN stats sensors
-    if coordinator.data.get("cable_modem_lan_stats"):
-        for interface, _stats in coordinator.data["cable_modem_lan_stats"].items():
-            entities.extend(
-                [
-                    ModemLanReceivedBytesSensor(coordinator, entry, interface),
-                    ModemLanReceivedPacketsSensor(coordinator, entry, interface),
-                    ModemLanReceivedErrorsSensor(coordinator, entry, interface),
-                    ModemLanReceivedDropsSensor(coordinator, entry, interface),
-                    ModemLanTransmittedBytesSensor(coordinator, entry, interface),
-                    ModemLanTransmittedPacketsSensor(coordinator, entry, interface),
-                    ModemLanTransmittedErrorsSensor(coordinator, entry, interface),
-                    ModemLanTransmittedDropsSensor(coordinator, entry, interface),
-                ]
-            )
+    # LAN stats sensors
+    entities.extend(_create_lan_stats_sensors(coordinator, entry))
 
     _LOGGER.info("Created %s total sensor entities", len(entities))
     async_add_entities(entities)
@@ -223,12 +250,13 @@ class ModemStatusSensor(ModemSensorBase):
         """Return the unified modem status.
 
         Priority order (most to least concerning):
-        1. Unresponsive - can't reach modem via HTTP
-        2. Parser Error - reached modem but can't parse data
-        3. Not Locked - DOCSIS not locked to ISP
-        4. Partial Lock - some downstream channels unlocked
-        5. ICMP Blocked - HTTP works but ping fails (parser expects ping)
-        6. Operational - all good
+        1. Unresponsive - can't reach modem via ping OR HTTP
+        2. Degraded - ping works but HTTP doesn't (web server hung)
+        3. Parser Error - reached modem but can't parse data
+        4. Not Locked - DOCSIS not locked to ISP
+        5. Partial Lock - some downstream channels unlocked
+        6. ICMP Blocked - HTTP works but ping fails (parser expects ping)
+        7. Operational - all good
         """
         data = self.coordinator.data
 
@@ -239,6 +267,11 @@ class ModemStatusSensor(ModemSensorBase):
 
         # Check connection status - did parsing work?
         connection_status = data.get("cable_modem_connection_status", "unknown")
+
+        # Degraded = ping works but HTTP/scraper failed (web server hung)
+        if connection_status == "degraded":
+            return "Degraded"
+
         if connection_status in ("offline", "unreachable"):
             return "Unresponsive"
         if connection_status == "parser_issue":
@@ -356,9 +389,10 @@ class ModemTotalCorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        return int(self.coordinator.data.get("cable_modem_total_corrected", 0))
+        value = self.coordinator.data.get("cable_modem_total_corrected")
+        return int(value) if value is not None else None
 
 
 class ModemTotalUncorrectedSensor(ModemSensorBase):
@@ -373,9 +407,10 @@ class ModemTotalUncorrectedSensor(ModemSensorBase):
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int:
+    def native_value(self) -> int | None:
         """Return the state of the sensor."""
-        return int(self.coordinator.data.get("cable_modem_total_uncorrected", 0))
+        value = self.coordinator.data.get("cable_modem_total_uncorrected")
+        return int(value) if value is not None else None
 
 
 class ModemDownstreamPowerSensor(ModemSensorBase):
@@ -405,7 +440,8 @@ class ModemDownstreamPowerSensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return float(channel_map[key].get("power"))
+            value = channel_map[key].get("power")
+            return float(value) if value is not None else None
         return None
 
     @property
@@ -446,7 +482,8 @@ class ModemDownstreamSNRSensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return float(channel_map[key].get("snr"))
+            value = channel_map[key].get("snr")
+            return float(value) if value is not None else None
         return None
 
     @property
@@ -488,7 +525,8 @@ class ModemDownstreamFrequencySensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return int(channel_map[key].get("frequency"))
+            value = channel_map[key].get("frequency")
+            return int(value) if value is not None else None
         return None
 
     @property
@@ -522,7 +560,8 @@ class ModemDownstreamCorrectedSensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return int(channel_map[key].get("corrected"))
+            value = channel_map[key].get("corrected")
+            return int(value) if value is not None else None
         return None
 
     @property
@@ -562,7 +601,8 @@ class ModemDownstreamUncorrectedSensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_downstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return int(channel_map[key].get("uncorrected"))
+            value = channel_map[key].get("uncorrected")
+            return int(value) if value is not None else None
         return None
 
     @property
@@ -603,7 +643,8 @@ class ModemUpstreamPowerSensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_upstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return float(channel_map[key].get("power"))
+            value = channel_map[key].get("power")
+            return float(value) if value is not None else None
         return None
 
     @property
@@ -645,7 +686,8 @@ class ModemUpstreamFrequencySensor(ModemSensorBase):
         channel_map = self.coordinator.data.get("_upstream_by_id", {})
         key = (self._channel_type, self._channel_id)
         if key in channel_map:
-            return int(channel_map[key].get("frequency"))
+            value = channel_map[key].get("frequency")
+            return int(value) if value is not None else None
         return None
 
     @property
@@ -771,7 +813,8 @@ class ModemLanStatsSensor(ModemSensorBase):
         """Return the state of the sensor."""
         lan_stats = self.coordinator.data.get("cable_modem_lan_stats", {})
         if self._interface in lan_stats:
-            return int(lan_stats[self._interface].get(self._sensor_type))
+            value = lan_stats[self._interface].get(self._sensor_type)
+            return int(value) if value is not None else None
         return None
 
 
@@ -857,6 +900,20 @@ class ModemPingLatencySensor(ModemSensorBase):
         # No device_class - latency measurements don't have a standard class
 
     @property
+    def available(self) -> bool:
+        """Ping sensor is available if we have ping data, independent of HTTP status.
+
+        This allows ping metrics to be reported even when the modem's HTTP
+        server is unresponsive (degraded mode).
+        """
+        if not self.coordinator.last_update_success:
+            return False
+        if self.coordinator.data is None:
+            return False
+        # Available if we have ping data (ping_success can be True or False)
+        return self.coordinator.data.get("ping_success") is not None
+
+    @property
     def native_value(self) -> int | None:
         """Return the ping latency in milliseconds."""
         ping_latency = self.coordinator.data.get("ping_latency_ms")
@@ -877,6 +934,20 @@ class ModemHttpLatencySensor(ModemSensorBase):
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
         # No device_class - latency measurements don't have a standard class
+
+    @property
+    def available(self) -> bool:
+        """HTTP sensor is available if we have HTTP check data.
+
+        This allows HTTP metrics to be reported based on health check results,
+        independent of full modem data scraping success.
+        """
+        if not self.coordinator.last_update_success:
+            return False
+        if self.coordinator.data is None:
+            return False
+        # Available if we have HTTP data (http_success can be True or False)
+        return self.coordinator.data.get("http_success") is not None
 
     @property
     def native_value(self) -> int | None:

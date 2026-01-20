@@ -1,0 +1,106 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/netgear/c3700/modem.yaml
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+# Netgear C3700 Cable Modem/Router Configuration
+# Source: Maintainer verified (kwschulz)
+
+manufacturer: Netgear
+model: C3700
+paradigm: html
+
+hardware:
+  docsis_version: "3.0"
+  release_date: "2014-09"
+  end_of_life: "2020"
+
+# Provenance tracking
+sources:
+  detection_hints: "Maintainer verified"
+
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+auth:
+  strategy: basic
+
+  basic: {}
+
+  session:
+    cookie_name: "session"
+    max_concurrent: 1
+    logout_endpoint: "/Logout.htm"
+    logout_required: true
+
+pages:
+  public:
+    - "/index.htm"
+
+  protected:
+    - "/DocsisStatus.htm"
+    - "/DashBoard.htm"
+    - "/RouterStatus.htm"
+
+  data:
+    downstream_channels: "/DocsisStatus.htm"
+    upstream_channels: "/DocsisStatus.htm"
+    system_info: "/RouterStatus.htm"
+
+parser:
+  class: NetgearC3700Parser
+  module: custom_components.cable_modem_monitor.modems.netgear.c3700.parser
+  format:
+    type: html
+    table_layout: javascript_embedded
+
+detection:
+  pre_auth:
+    - "NETGEAR Gateway C3700"
+    - "C3700"
+    - "NETGEAR"
+  post_auth:
+    - "C3700"
+    - "C3700-100NAS"
+    - "NETGEAR C3700"
+    - "InitDsTableTagValue"
+  page_hint: "/DocsisStatus.htm"
+  model_aliases:
+    - "C3700-100NAS"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - hardware_version
+  - software_version
+  - system_uptime
+  - last_boot_time
+  - restart
+
+behaviors:
+  requires_multi_page_fetch: true
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: verified
+  verification_source: "kwschulz (maintainer)"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/netgear/c3700/fixtures
+  source: diagnostics
+  firmware_tested: "V1.0.0.42_1.0.11"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer verified"

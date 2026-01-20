@@ -349,8 +349,11 @@ class TestHealthCheckHTTP:
         connector_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.TCPConnector"
         session_patch = "custom_components.cable_modem_monitor.core.health_monitor.aiohttp.ClientSession"
 
+        # Use a generator to handle arbitrary number of time.time() calls (including from logging)
+        time_values = iter([1000.0 + i * 0.005 for i in range(20)])
+
         with (
-            patch(time_patch, side_effect=[1000.0, 1000.005, 1000.020]),
+            patch(time_patch, side_effect=lambda: next(time_values)),
             patch(timeout_patch),
             patch(connector_patch),
             patch(session_patch) as mock_session_class,

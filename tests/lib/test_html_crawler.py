@@ -403,6 +403,50 @@ class TestExtractAllResourcesFromHtml:
         assert "http://192.168.100.1/app.js" in resources[RESOURCE_TYPE_JS]
         assert len(resources[RESOURCE_TYPE_JS]) == 1
 
+    def test_extracts_urls_from_inline_javascript(self):
+        """Test that URLs are extracted from inline JavaScript menus.
+
+        Many modems define navigation menus in inline JS using linkUrl patterns.
+        This test verifies we capture those URLs for comprehensive crawling.
+        """
+        # Simulates ARRIS-style inline menu definition (e.g., SB6190)
+        html = """
+        <html>
+        <head><title>Status</title></head>
+        <body>
+        <script type='text/javascript'>
+            var menuItem = [
+                {name:'STATUS', subMenu: [
+                    {name:'null',
+                     linkUrl:'status',
+                     menuID:'menu3e'}
+                ]},
+                {name:'PRODUCT INFORMATION', subMenu: [
+                    {name:'null',
+                     linkUrl:'swinfo',
+                     menuID:'menu21'}
+                ]},
+                {name:'EVENT LOG', subMenu: [
+                    {name:'null',
+                     linkUrl:'eventlog',
+                     menuID:'menu43'}
+                ]}
+            ];
+        </script>
+        <a href="/home.htm">Home</a>
+        </body>
+        </html>
+        """
+        resources = extract_all_resources_from_html(html, "http://192.168.100.1")
+
+        # Should extract URLs from inline JavaScript linkUrl patterns
+        html_resources = resources[RESOURCE_TYPE_HTML]
+        assert "http://192.168.100.1/status" in html_resources
+        assert "http://192.168.100.1/swinfo" in html_resources
+        assert "http://192.168.100.1/eventlog" in html_resources
+        # Also extracts the standard <a href>
+        assert "http://192.168.100.1/home.htm" in html_resources
+
     def test_handles_css_link_without_rel(self):
         """Test CSS detection by file extension when rel is missing."""
         html = '<link href="/styles.css">'

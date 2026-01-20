@@ -1,0 +1,26 @@
+{
+    "serviceFlows": [
+        {
+            "serviceFlow": {
+                "serviceFlowId": 17779,
+                "direction": "downstream",
+                "maxTrafficRate": 1200000450,
+                "maxTrafficBurst": 42600,
+                "minReservedRate": 0,
+                "maxConcatenatedBurst": 0,
+                "scheduleType": "undefined"
+            }
+        },
+        {
+            "serviceFlow": {
+                "serviceFlowId": 17772,
+                "direction": "upstream",
+                "maxTrafficRate": 110000274,
+                "maxTrafficBurst": 42600,
+                "minReservedRate": 0,
+                "maxConcatenatedBurst": 42600,
+                "scheduleType": "best_effort"
+            }
+        }
+    ]
+}

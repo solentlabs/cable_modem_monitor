@@ -1,0 +1,122 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/motorola/mb7621/modem.yaml
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+# Motorola MB7621 Configuration
+# Source: Diagnostics export from maintainer hardware
+
+manufacturer: Motorola
+model: MB7621
+paradigm: html
+
+hardware:
+  docsis_version: "3.0"
+  chipset: Broadcom BCM3384
+  release_date: "2017"
+
+# Provenance tracking
+sources:
+  chipset: "[DeviWiki](https://deviwiki.com/wiki/Motorola_MB7621)"
+  auth_config: "Maintainer hardware HAR capture"
+  detection_hints: "Maintainer verified"
+
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+auth:
+  strategy: form
+
+  form:
+    action: "/goform/login"
+    method: POST
+    username_field: loginUsername
+    password_field: loginPassword
+    password_encoding: base64
+    hidden_fields: {}
+    success:
+      redirect: "/MotoHome.asp"
+      indicator: "10000"
+
+  session:
+    cookie_name: "session"
+    max_concurrent: 1
+    logout_endpoint: "/logout.asp"
+    logout_required: true
+
+pages:
+  public:
+    - "/" # Login page - shows login form even after auth (MB7621 quirk)
+    - "/moto.css"
+    - "/motolog.jpg"
+    - "/motohelp.jpg"
+
+  protected:
+    - "/MotoSwInfo.asp" # Requires auth - redirects to login otherwise
+    - "/MotoConnection.asp"
+    - "/MotoHome.asp"
+
+  data:
+    downstream_channels: "/MotoConnection.asp"
+    upstream_channels: "/MotoConnection.asp"
+    system_info: "/MotoHome.asp"
+    software_version: "/MotoSwInfo.asp"
+
+parser:
+  class: MotorolaMB7621Parser
+  module: custom_components.cable_modem_monitor.modems.motorola.mb7621.parser
+  format:
+    type: html
+    table_layout: standard
+
+detection:
+  pre_auth:
+    - "Motorola Cable Modem"
+    - "moto.css"
+    - "/goform/login"
+  post_auth:
+    - "MB7621"
+    - "MB 7621"
+    - "2480-MB7621"
+    - "MotoConnection"
+    - "moto.css"
+    - "/goform/login"
+  page_hint: "/MotoSwInfo.asp"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - system_uptime
+  - hardware_version
+  - software_version
+  - restart
+
+behaviors:
+  restart_window_seconds: 300
+  zero_power_during_restart: true
+  requires_multi_page_fetch: true
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: verified
+  verification_source: "kwschulz (maintainer)"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/motorola/mb7621/fixtures
+  source: diagnostics
+  firmware_tested: "7621-*"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer hardware, initial parser"

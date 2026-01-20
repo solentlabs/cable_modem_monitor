@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+*.egg-info/
+.eggs/
+
+# Dev artifacts
+.git/
+.vscode/
+*.log
+.coverage
+htmlcov/
+
+# Test HA instance
+test-ha-config/

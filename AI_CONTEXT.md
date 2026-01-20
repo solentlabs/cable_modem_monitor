@@ -26,7 +26,7 @@ The integration uses a **fallback parser** system that allows installation even 
 
 1. **User installs with Unknown Modem (Fallback Mode)**
    - Integration detects no specific parser matches
-   - Falls back to `UniversalFallbackParser` (priority 1, always matches)
+   - Falls back to `UniversalFallbackParser` (always matches as last resort)
    - Installation succeeds with limited functionality (ping/HTTP latency only)
    - User sees helpful message guiding them to capture HTML
 
@@ -59,13 +59,19 @@ The integration uses a **fallback parser** system that allows installation even 
 
 | Purpose | File |
 |---------|------|
-| Fallback Parser | `parsers/universal/fallback.py` |
-| HTML Crawler | `lib/html_crawler.py` |
-| Diagnostics Capture | `core/modem_scraper.py` |
-| Parser Template | `parsers/parser_template.py` |
-| Authentication | `core/authentication.py`, `core/auth_config.py` |
+| Modem Config (source of truth) | `modems/{manufacturer}/{model}/modem.yaml` |
+| Parser Code (source of truth) | `modems/{manufacturer}/{model}/parser.py` |
+| Parser Base Class | `custom_components/.../core/base_parser.py` |
+| Parser Discovery | `custom_components/.../parsers/__init__.py` |
+| Fallback Parser | `custom_components/.../parsers/universal/fallback.py` |
+| HTML Crawler | `custom_components/.../lib/html_crawler.py` |
+| Diagnostics Capture | `custom_components/.../core/modem_scraper.py` |
+| Parser Template | `custom_components/.../parsers/parser_template.py` |
+| Authentication | `custom_components/.../core/auth/` |
+| Config Adapter | `custom_components/.../modem_config/adapter.py` |
 
-*All paths relative to `custom_components/cable_modem_monitor/`*
+**Note:** Run `make sync` to copy modem.yaml and parser.py from `modems/` to `custom_components/modems/`.
+*`...` = `cable_modem_monitor`*
 
 ### Authentication Methods
 
@@ -98,7 +104,7 @@ The integration uses a **fallback parser** system that allows installation even 
 2. **Check alternative URLs** - Many modems have both HNAP and static pages
 3. **Only implement HNAP if necessary** - And only with working test fixtures
 
-**Reference Implementation:** `parsers/motorola/mb8611_hnap.py`
+**Reference Implementation:** `modems/motorola/mb8611/parser.py` (synced to `custom_components/modems/motorola/mb8611/parser.py`)
 
 ## Development Rules
 
@@ -131,6 +137,8 @@ ssh <host> "cd /tmp && tar xzf cmm.tar.gz && sudo cp -rf cable_modem_monitor/* /
 
 | Topic | Location |
 |-------|----------|
+| **Architecture & Discovery** | `docs/reference/ARCHITECTURE.md` |
+| **modem.yaml Schema** | `docs/specs/MODEM_YAML_SPEC.md` |
 | Development setup | `docs/setup/GETTING_STARTED.md` |
 | Contributing guide | `CONTRIBUTING.md` |
 | Release history | `CHANGELOG.md` |

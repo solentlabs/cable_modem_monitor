@@ -155,6 +155,69 @@ Feel free to close this issue, or leave it open if you notice any other problems
 
 ---
 
+## Part 3: Existing Parser Bug Reports
+
+For bug reports where a verified parser isn't working for a user (e.g., "works for contributor, not for me").
+
+### 3a: Request diagnostic data
+
+```markdown
+Thanks for the report. The [MODEL] parser is verified working, so I need to see what your integration is actually receiving.
+
+Could you grab fresh diagnostics with HTML capture enabled?
+
+1. **Enable debug logging** (optional but helpful):
+   - Add to `configuration.yaml`:
+     ```yaml
+     logger:
+       logs:
+         custom_components.cable_modem_monitor: debug
+     ```
+   - Restart Home Assistant
+
+2. **Trigger a fresh poll:**
+   - Go to **Settings → Devices & Services → Cable Modem Monitor**
+   - Click **⋮** → **Configure** → **Submit**
+
+3. **Capture the HTML:**
+   - Go to your modem device page
+   - Click **"Capture HTML"** button
+   - Wait for confirmation
+
+4. **Download diagnostics:**
+   - Click **⋮** → **Download diagnostics**
+   - Attach the JSON file here
+
+This shows me exactly what the integration receives vs what the parser expects. Browser captures (HAR) don't help here since the issue is what Home Assistant sees, not what your browser sees.
+```
+
+### 3b: After receiving data - same HTML structure
+
+```markdown
+I compared your HTML to our fixtures and the structure is identical. The parser works correctly on your data when I test it locally.
+
+This points to something in the integration layer rather than the parser itself. Could you try:
+
+1. **Update to the latest version** (v[X.X.X])
+2. **Remove and re-add the integration**
+3. **Let it run for one poll cycle**
+
+If you still see the issue, check the logs for any errors during the poll and share them here.
+```
+
+### 3c: After receiving data - different HTML structure
+
+```markdown
+Found it. Your HTML structure differs from our fixture:
+
+**Expected:** [describe expected structure]
+**Yours:** [describe difference]
+
+This is likely a firmware variant. I'll update the parser to handle both formats. Will tag you when the fix is ready for testing.
+```
+
+---
+
 ## Notes
 
 - **Engaged users are gold** - prioritize requests where users respond quickly

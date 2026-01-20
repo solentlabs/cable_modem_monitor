@@ -68,6 +68,21 @@ query-filters:
       # Handled via paths-ignore for parser_template.py (intentional examples).
       # Other instances are format documentation like "# cells[0] = Channel number"
       # which are column mappings, not dead code.
+  - exclude:
+      id: py/polluting-import
+      # Rationale: conftest.py files use `from X import *` to make pytest fixtures
+      # available to test modules. This is standard pytest practice - fixtures must
+      # be importable by name and `import *` is the conventional way to re-export them.
+  - exclude:
+      id: py/weak-sensitive-data-hashing
+      # Rationale: Test fixtures simulate HNAP protocol authentication which mandates
+      # HMAC-MD5. We cannot change the algorithm - real modems expect this exact
+      # computation. This is protocol compliance, not a security implementation choice.
+  - exclude:
+      id: py/incomplete-url-substring-sanitization
+      # False positive: The flagged code checks HTML content for brand indicators
+      # (e.g., `"arris.com" in html_lower`), not URL validation. We're detecting
+      # manufacturer from page content, not sanitizing URLs for security purposes.
 
 # Enable all security-related query metadata
 # This ensures comprehensive coverage of CWE categories

@@ -1,103 +1,19 @@
 #!/bin/bash
 # Clean up any processes or containers blocking Home Assistant ports
+# Designed to work without sudo in WSL2/Linux environments
 
 set -e
 
 echo "🧹 Cleaning up Home Assistant environment..."
 echo ""
 
-# Function to check if port 8123 is in use
-check_port_in_use() {
-    # Try multiple methods to check port usage
-    if command -v lsof &> /dev/null; then
-        if lsof -i :8123 &> /dev/null || sudo lsof -i :8123 &> /dev/null 2>&1; then
-            return 0
-        fi
-    fi
-
-    if command -v netstat &> /dev/null; then
-        if netstat -tuln 2>/dev/null | grep -q ":8123 " || sudo netstat -tulpn 2>/dev/null | grep -q ":8123 "; then
-            return 0
-        fi
-    fi
-
-    if command -v ss &> /dev/null; then
-        if ss -tuln 2>/dev/null | grep -q ":8123 " || sudo ss -tulpn 2>/dev/null | grep -q ":8123 "; then
-            return 0
-        fi
-    fi
-
-    return 1
-}
-
-# Function to kill processes using port 8123
-kill_port_processes() {
-    local killed=0
-
-    # Try fuser first - most reliable method
-    if command -v fuser &> /dev/null; then
-        if fuser -k 8123/tcp 2>/dev/null || sudo fuser -k 8123/tcp 2>/dev/null; then
-            echo "   Killed process using port 8123 (via fuser)"
-            killed=1
-        fi
-    fi
-
-    # Try lsof as fallback
-    if [ $killed -eq 0 ] && command -v lsof &> /dev/null; then
-        PIDS=$(lsof -ti :8123 2>/dev/null || sudo lsof -ti :8123 2>/dev/null || true)
-        if [ -n "$PIDS" ]; then
-            echo "   Found processes: $PIDS"
-            for PID in $PIDS; do
-                echo "   Killing process $PID..."
-                kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
-                killed=1
-            done
-        fi
-    fi
-
-    # Try ss as last resort (handles 127.0.0.1:8123 format)
-    if [ $killed -eq 0 ] && command -v ss &> /dev/null; then
-        PIDS=$(sudo ss -tlnp 2>/dev/null | grep -E ":8123\b" | grep -oP 'pid=\K[0-9]+' | sort -u || true)
-        if [ -n "$PIDS" ]; then
-            echo "   Found processes: $PIDS"
-            for PID in $PIDS; do
-                if [ -n "$PID" ]; then
-                    echo "   Killing process $PID..."
-                    kill -9 $PID 2>/dev/null || sudo kill -9 $PID 2>/dev/null || true
-                    killed=1
-                fi
-            done
-        fi
-    fi
-
-    return $killed
-}
-
-# Check if port 8123 is in use
-if check_port_in_use; then
-    echo "⚠️  Port 8123 is in use. Finding and stopping processes..."
-
-    if kill_port_processes; then
-        echo "✅ Stopped processes using port 8123"
-        # Give the OS a moment to fully release the port
-        sleep 1
-    else
-        echo "❌ Could not find/kill processes using port 8123"
-        echo "   Attempting to continue anyway..."
-    fi
-else
-    echo "✅ Port 8123 is free"
-fi
-
-echo ""
-
-# Stop any running HA containers
+# Stop any running HA containers first (most common case)
 echo "🐳 Checking for running Home Assistant containers..."
 HA_CONTAINERS=$(docker ps -q --filter "name=ha-cable-modem" 2>/dev/null || true)
 
 if [ -n "$HA_CONTAINERS" ]; then
     echo "   Found running containers, stopping..."
-    docker stop $HA_CONTAINERS
+    docker stop $HA_CONTAINERS 2>/dev/null || true
     docker rm -f $HA_CONTAINERS 2>/dev/null || true
     echo "✅ Stopped Home Assistant containers"
 else
@@ -106,44 +22,29 @@ fi
 
 echo ""
 
-# Clean up ALL HA containers (running, stopped, created, etc.)
+# Clean up ALL HA containers (stopped, created, etc.)
 echo "🗑️  Removing all Home Assistant containers..."
 ALL_CONTAINERS=$(docker ps -aq --filter "name=ha-cable-modem" 2>/dev/null || true)
 
 if [ -n "$ALL_CONTAINERS" ]; then
     docker rm -f $ALL_CONTAINERS 2>/dev/null || true
     echo "✅ Removed all Home Assistant containers"
-
-    # Wait for Docker to fully release port 8123
-    echo "   Waiting for port 8123 to be released..."
-    max_wait=10
-    for i in $(seq 1 $max_wait); do
-        # Check if port is free using multiple methods
-        port_free=true
-
-        if command -v lsof &> /dev/null && (lsof -i :8123 &> /dev/null || sudo lsof -i :8123 &> /dev/null 2>&1); then
-            port_free=false
-        elif command -v netstat &> /dev/null && (netstat -tuln 2>/dev/null | grep -q ":8123 " || sudo netstat -tulpn 2>/dev/null | grep -q ":8123 "); then
-            port_free=false
-        elif command -v ss &> /dev/null && (ss -tuln 2>/dev/null | grep -q ":8123 " || sudo ss -tulpn 2>/dev/null | grep -q ":8123 "); then
-            port_free=false
-        fi
-
-        if [ "$port_free" = true ]; then
-            echo "   ✅ Port 8123 is free (waited ${i}s)"
-            break
-        fi
-
-        if [ $i -eq $max_wait ]; then
-            echo "   ⚠️  Port 8123 still in use after ${max_wait}s, proceeding anyway..."
-        else
-            sleep 1
-        fi
-    done
 else
     echo "✅ No containers to remove"
 fi
 
 echo ""
-echo "✅ Cleanup complete! Port 8123 and containers are ready."
+
+# Quick port check (no sudo needed)
+echo "🔍 Checking port 8123..."
+if ss -tuln 2>/dev/null | grep -q ":8123 "; then
+    echo "⚠️  Port 8123 still in use (may be another process)"
+    echo "   If startup fails, check what's using port 8123:"
+    echo "   ss -tulpn | grep 8123"
+else
+    echo "✅ Port 8123 is free"
+fi
+
+echo ""
+echo "✅ Cleanup complete!"
 echo ""

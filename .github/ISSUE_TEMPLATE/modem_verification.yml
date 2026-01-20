@@ -1,16 +1,23 @@
 name: ✅ Verify Working Modem
-description: Report that an unverified modem parser is working for you
+description: Confirm a listed modem (marked ⏳ Awaiting) works correctly
 title: "[Verification] Modem Model Name"
 labels: ["verification", "modem-support", "community-feedback"]
 body:
+  - type: checkboxes
+    id: model_listed
+    attributes:
+      label: Is your exact model listed?
+      description: Check the [Modem Fixture Library](https://github.com/solentlabs/cable_modem_monitor/blob/main/tests/parsers/FIXTURES.md). If your model isn't listed, use [New Modem Support Request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) instead.
+      options:
+        - label: "Yes, my exact model is listed in FIXTURES.md"
+          required: true
+
   - type: markdown
     attributes:
       value: |
-        ## Thank you for helping verify modem support! 🎉
+        ## Verify modem support
 
-        If you successfully installed Cable Modem Monitor with a modem marked with an asterisk (*) during setup, please help verify it works!
-
-        Your feedback helps other users with the same modem know it's reliable.
+        This form is for modems marked **⏳ Awaiting** in the fixture library. Your report helps confirm the parser works reliably.
 
   - type: input
     id: modem_model
@@ -116,6 +123,5 @@ body:
         ### What Happens Next?
 
         - A maintainer will review your report
-        - If verified, your modem will be moved to "✅ Verified Working" in the README
-        - The asterisk (*) will be removed in a future release
+        - If verified, your modem status will be updated to ✅ Verified
         - Other users will know this parser is reliable!

@@ -1,0 +1,89 @@
+# Netgear CM600 Configuration
+# Source: Diagnostics export from issue #3 (@chairstacker)
+
+manufacturer: Netgear
+model: CM600
+paradigm: html
+
+hardware:
+  docsis_version: "3.0"
+  chipset: Broadcom BCM3384
+  release_date: "2016-03"
+
+# Provenance tracking
+sources:
+  chipset: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
+  hardware: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
+  detection_hints: "[Issue #3](https://github.com/solentlabs/cable_modem_monitor/issues/3)"
+
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+auth:
+  strategy: basic
+
+pages:
+  public:
+    - "/index.html"
+
+  protected:
+    - "/DocsisStatus.asp"
+    - "/DashBoard.asp"
+    - "/RouterStatus.asp"
+
+  data:
+    downstream_channels: "/DocsisStatus.asp"
+    upstream_channels: "/DocsisStatus.asp"
+    system_info: "/DocsisStatus.asp"
+
+parser:
+  class: NetgearCM600Parser
+  module: custom_components.cable_modem_monitor.modems.netgear.cm600.parser
+  format:
+    type: html
+    table_layout: standard
+
+detection:
+  pre_auth:
+    - "NETGEAR Gateway CM600"
+    - "CM600"
+    - "NETGEAR"
+  post_auth:
+    - "CM600"
+    - "NETGEAR CM600"
+    - "dsTable"
+  page_hint: "/DocsisStatus.asp"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - system_uptime
+  - last_boot_time
+  - hardware_version
+  - software_version
+  - restart
+
+behaviors:
+  requires_multi_page_fetch: true
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: verified
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/3"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/netgear/cm600/fixtures
+  source: diagnostics
+  firmware_tested: "V1.01.22"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: chairstacker
+      contribution: "[Issue #3](https://github.com/solentlabs/cable_modem_monitor/issues/3) diagnostics"

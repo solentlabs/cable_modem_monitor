@@ -1,0 +1,31 @@
+name: Devcontainer CI
+
+on:
+  push:
+    paths:
+      - ".devcontainer/**"
+      - "docker-compose.test.yml"
+      - "scripts/dev/**"
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - "docker-compose.test.yml"
+      - "scripts/dev/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: |
+            echo "=== Devcontainer Smoke Test ==="
+            docker info
+            docker pull --quiet alpine:latest
+            pytest --collect-only -q 2>/dev/null | tail -3
+            ruff --version
+            python scripts/dev/ha-start.py --help
+            echo "=== All checks passed ==="

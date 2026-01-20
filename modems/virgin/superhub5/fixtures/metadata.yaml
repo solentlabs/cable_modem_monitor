@@ -1,0 +1,27 @@
+# Modem metadata
+release_date: "2021" # Hub 5 launched October 2021
+end_of_life: null # Still current
+docsis_version: "3.1"
+protocol: REST_API
+isps:
+  - Virgin Media UK
+
+# OEM info (sourced from ISPreview, eBay listings)
+# Source: https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html
+manufacturer_oem: "Sagemcom"
+model_oem: "F3896LG-VMB"
+chipset: "BCM3390" # Broadcom DOCSIS 3.1 SoC (source listed "3390S" variant)
+
+# Note: User's bootFilename shows "vmdg660" which may be Virgin's internal
+# designation. Linkage to F3896LG-VMB is inferred, not directly confirmed.
+# bootFilename: "cmreg-vmdg660-bbt076-b.cm"
+
+# Fixture capture info
+firmware_tested: "bbt076-b" # Extracted from bootFilename
+captured_from_issue: 82
+captured_by: "@Dinth"
+# REST API endpoints (fixtures named after endpoint path)
+# /rest/v1/cablemodem/downstream -> downstream.json
+# /rest/v1/cablemodem/upstream -> upstream.json
+# /rest/v1/cablemodem/state_ -> state.json
+# /rest/v1/cablemodem/serviceflows -> serviceflows.json

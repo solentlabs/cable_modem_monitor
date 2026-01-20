@@ -1,0 +1,13 @@
+{
+    "cablemodem": {
+        "bootFilename": "cmreg-vmdg660-bbt076-b.cm",
+        "docsisVersion": "3.1",
+        "macAddress": "00:11:22:33:44:55",
+        "serialNumber": "ABC123456789",
+        "upTime": 1471890,
+        "accessAllowed": true,
+        "status": "operational",
+        "maxCPEs": 1,
+        "baselinePrivacyEnabled": true
+    }
+}

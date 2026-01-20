@@ -10,6 +10,10 @@ body:
 
         Thank you for helping expand modem support! This template will guide you through providing the information needed to add support for your modem.
 
+        > **Please Note:** This project is maintained by a single developer in spare time. Modem requests are handled as capacity allows, with priority given to submissions that include complete, well-sanitized captures. There's no guaranteed timeline for new parser development.
+
+        **New here?** Read [Improving the Modem Request Process](https://github.com/solentlabs/cable_modem_monitor/discussions/88) to understand what makes a complete submission.
+
         **The easiest way:** Install the integration with your modem's IP address. Even if your modem isn't supported, it will enter **Fallback Mode** which lets you capture data safely.
 
   - type: input
@@ -114,19 +118,12 @@ body:
         HAR capture records the full authentication flow, which helps us understand login requirements.
 
         ```bash
-        # Clone the repo first
-        git clone https://github.com/solentlabs/cable_modem_monitor.git
-        cd cable_modem_monitor
-
-        # Install playwright and run capture
-        pip install playwright
-        playwright install chromium
-        python scripts/capture_modem.py
+        # Download and run (no git clone needed!)
+        curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
+        python capture_modem.py --ip 192.168.100.1
         ```
 
-        The script **automatically sanitizes** passwords and sensitive data before saving.
-
-        See [HAR Capture Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/HAR_CAPTURE_GUIDE.md) for detailed instructions.
+        The script **automatically downloads dependencies and sanitizes** passwords and sensitive data.
 
         ---
 
@@ -192,7 +189,7 @@ body:
           required: true
         - label: I have searched my capture file for my WiFi SSID and password to verify they're not present
           required: true
-        - label: I understand this may take time as it requires developing a custom parser
+        - label: I understand this is a solo-maintained project with no guaranteed timeline for new parsers
           required: true
         - label: I'm willing to test the parser once it's developed
           required: false

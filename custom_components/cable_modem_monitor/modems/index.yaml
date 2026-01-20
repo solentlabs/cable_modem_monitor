@@ -1,0 +1,346 @@
+# Modem Index - Generated file, do not edit manually
+# Regenerate with: python scripts/generate_modem_index.py
+
+version: 1
+generated: "2026-01-20T14:48:20.245123+00:00"
+auth_patterns:
+  form:
+    username_fields:
+      - loginName
+      - loginUsername
+      - luci_username
+      - username
+      - username_login
+    password_fields:
+      - loginPassword
+      - luci_password
+      - password
+      - password_login
+    actions:
+      - /cgi-bin/login
+      - /cgi-bin/luci
+      - /check.jst
+      - /goform/Login
+      - /goform/login
+      - /goform/logon
+    encodings:
+      - detect: isEncryptPswd\s*=\s*1
+        type: base64
+      - detect: keyStr\s*=\s*["\']ABCDEFGHIJKLMNOPQRSTUVWXYZ
+        type: base64
+      - detect: btoa\s*\(
+        type: base64
+  hnap:
+    endpoints:
+      - /HNAP1/
+    namespaces:
+      - http://purenetworks.com/HNAP1/
+  url_token:
+    indicators:
+      - login_
+      - sessionId
+modems:
+  ArrisCM820BParser:
+    path: arris/cm820b
+    name: ARRIS CM820B
+    manufacturer: ARRIS
+    model: CM820B
+    verified: true
+    detection:
+      pre_auth:
+        - CM820B
+        - ARRIS
+      post_auth:
+        - CM820B
+        - ARRIS CM820B
+      page_hint: /cgi-bin/status_cgi
+  ArrisG54Parser:
+    path: arris/g54
+    name: Arris/CommScope G54
+    manufacturer: Arris/CommScope
+    model: G54
+    verified: false
+    detection:
+      pre_auth:
+        - ARRISGW
+        - luci
+        - commscope
+        - /cgi-bin/luci
+      post_auth:
+        - G54
+        - G5X
+        - G54_COMMSCOPE
+        - ARRISGW
+        - luci
+        - arris
+        - commscope
+      page_hint: /cgi-bin/luci/admin/gateway/wan_status
+  ArrisS33HnapParser:
+    path: arris/s33
+    name: Arris/CommScope S33
+    manufacturer: Arris/CommScope
+    model: S33
+    verified: true
+    detection:
+      pre_auth:
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+        - /Login.html
+      post_auth:
+        - S33
+        - ARRIS S33
+        - CommScope S33
+        - ARRIS
+        - CommScope
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+      page_hint: /HNAP1/
+  ArrisSB6141Parser:
+    path: arris/sb6141
+    name: ARRIS SB6141
+    manufacturer: ARRIS
+    model: SB6141
+    verified: true
+    detection:
+      pre_auth:
+        - SB6141
+        - ARRIS
+        - Startup Procedure
+      post_auth:
+        - SB6141
+        - ARRIS SB6141
+        - Startup Procedure
+      page_hint: /cmSignalData.htm
+  ArrisSB6190Parser:
+    path: arris/sb6190
+    name: ARRIS SB6190
+    manufacturer: ARRIS
+    model: SB6190
+    verified: true
+    detection:
+      pre_auth:
+        - SB6190
+        - ARRIS
+        - Downstream Bonded Channels
+      post_auth:
+        - SB6190
+        - ARRIS SB6190
+        - Downstream Bonded Channels
+      page_hint: /cgi-bin/status
+  ArrisSB8200Parser:
+    path: arris/sb8200
+    name: ARRIS SB8200
+    manufacturer: ARRIS
+    model: SB8200
+    verified: true
+    detection:
+      pre_auth:
+        - SB8200
+        - ARRIS
+        - Downstream Bonded Channels
+        - cmconnectionstatus.html
+      post_auth:
+        - SB8200
+        - ARRIS SB8200
+        - Downstream Bonded Channels
+      page_hint: /cmswinfo.html
+  MotorolaMB7621Parser:
+    path: motorola/mb7621
+    name: Motorola MB7621
+    manufacturer: Motorola
+    model: MB7621
+    verified: true
+    detection:
+      pre_auth:
+        - Motorola Cable Modem
+        - moto.css
+        - /goform/login
+      post_auth:
+        - MB7621
+        - MB 7621
+        - 2480-MB7621
+        - MotoConnection
+        - moto.css
+        - /goform/login
+      page_hint: /MotoSwInfo.asp
+  MotorolaMB8611HnapParser:
+    path: motorola/mb8611
+    name: Motorola MB8611
+    manufacturer: Motorola
+    model: MB8611
+    verified: true
+    detection:
+      pre_auth:
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SOAPAction
+        - /Login.html
+      post_auth:
+        - MB8611
+        - MB 8611
+        - 2251-MB8611
+        - MB8612
+        - Motorola
+        - HNAP
+        - purenetworks.com/HNAP1
+      page_hint: /HNAP1/
+  NetgearC3700Parser:
+    path: netgear/c3700
+    name: Netgear C3700
+    manufacturer: Netgear
+    model: C3700
+    verified: true
+    detection:
+      pre_auth:
+        - NETGEAR Gateway C3700
+        - C3700
+        - NETGEAR
+      post_auth:
+        - C3700
+        - C3700-100NAS
+        - NETGEAR C3700
+        - InitDsTableTagValue
+      page_hint: /DocsisStatus.htm
+  NetgearC7000v2Parser:
+    path: netgear/c7000v2
+    name: Netgear C7000v2
+    manufacturer: Netgear
+    model: C7000v2
+    verified: false
+    detection:
+      pre_auth:
+        - NETGEAR Gateway C7000v2
+        - C7000v2
+        - NETGEAR
+      post_auth:
+        - C7000v2
+        - C7000-100NAS
+        - NETGEAR C7000v2
+        - InitDsTableTagValue
+      page_hint: /DocsisStatus.htm
+  NetgearCM1200Parser:
+    path: netgear/cm1200
+    name: Netgear CM1200
+    manufacturer: Netgear
+    model: CM1200
+    verified: true
+    detection:
+      pre_auth:
+        - NETGEAR Modem CM1200
+        - CM1200
+        - NETGEAR
+      post_auth:
+        - CM1200
+        - NETGEAR CM1200
+        - InitDsTableTagValue
+      page_hint: /DocsisStatus.htm
+  NetgearCM2000Parser:
+    path: netgear/cm2000
+    name: Netgear CM2000
+    manufacturer: Netgear
+    model: CM2000
+    verified: true
+    detection:
+      pre_auth:
+        - NETGEAR
+        - Nighthawk
+        - /goform/Login
+      post_auth:
+        - CM2000
+        - Nighthawk CM2000
+        - Nighthawk
+        - InitDsTableTagValue
+      page_hint: /DocsisStatus.htm
+  NetgearCM600Parser:
+    path: netgear/cm600
+    name: Netgear CM600
+    manufacturer: Netgear
+    model: CM600
+    verified: true
+    detection:
+      pre_auth:
+        - NETGEAR Gateway CM600
+        - CM600
+        - NETGEAR
+      post_auth:
+        - CM600
+        - NETGEAR CM600
+        - dsTable
+      page_hint: /DocsisStatus.asp
+  TechnicolorCGA2121Parser:
+    path: technicolor/cga2121
+    name: Technicolor CGA2121
+    manufacturer: Technicolor
+    model: CGA2121
+    verified: true
+    detection:
+      pre_auth:
+        - CGA2121
+        - Technicolor
+        - /goform/logon
+      post_auth:
+        - CGA2121
+        - Technicolor CGA2121
+        - Technicolor
+        - DOCSIS Status
+        - Downstream Channels
+      page_hint: /st_docsis.html
+  TechnicolorTC4400Parser:
+    path: technicolor/tc4400
+    name: Technicolor TC4400
+    manufacturer: Technicolor
+    model: TC4400
+    verified: true
+    detection:
+      pre_auth:
+        - TC4400
+        - Technicolor
+        - Downstream Channel Status
+      post_auth:
+        - TC4400
+        - Technicolor TC4400
+        - "Board ID:"
+        - "Build Timestamp:"
+        - Downstream Channel Status
+      page_hint: /cmconnectionstatus.html
+  TechnicolorXB7Parser:
+    path: technicolor/xb7
+    name: Technicolor XB7
+    manufacturer: Technicolor
+    model: XB7
+    verified: true
+    detection:
+      pre_auth:
+        - Technicolor
+        - XB7
+        - CGM4331COM
+        - /check.jst
+        - netWidth
+      post_auth:
+        - XB7
+        - CGM4331COM
+        - Channel Bonding Value
+        - netWidth
+      page_hint: /network_setup.jst
+  VirginSuperHub5Parser:
+    path: virgin/superhub5
+    name: Virgin Media Hub 5
+    manufacturer: Virgin Media
+    model: Hub 5
+    verified: false
+    detection:
+      pre_auth:
+        - Virgin Media
+        - Hub 5
+        - Sagemcom
+        - F3896
+      post_auth:
+        - Hub 5
+        - SuperHub 5
+        - F3896
+        - VMDG660
+        - Virgin Media
+        - Sagemcom
+      page_hint: /rest/v1/cablemodem/state_

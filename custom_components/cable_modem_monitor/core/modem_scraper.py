@@ -1,7 +1,46 @@
-"""Web scraper for cable modem data."""
+"""Web scraper for cable modem data.
+
+This module provides the ModemScraper class for fetching and parsing data from
+cable modem web interfaces. It handles authentication, parser detection, and
+multi-page data collection.
+
+Architecture:
+    ModemScraper is used in two contexts:
+
+    1. **Polling (every 30s)** - Uses stored config from discovery:
+       - auth_strategy, auth_form_config, etc. from config entry
+       - parser_name to load cached parser directly
+       - cached_url for fast path (skip URL discovery)
+
+    2. **Discovery (config_flow)** - Full auto-detection:
+       - Tiered URL probing (Tier 1: cached, Tier 2: index, Tier 3: fallback)
+       - Parser detection via login_markers and model_strings
+       - Auth discovery via AuthHandler
+
+URL Discovery Tiers:
+    Tier 1: Cached URL + parser (instant, from previous success)
+    Tier 2: Index-driven (modem.yaml URL patterns for detected parser)
+    Tier 3: Fallback paths (/index.html, /home.html, etc.)
+
+Parser Detection:
+    1. Instant detection - Use authenticated_html from auth discovery
+    2. Login markers - Match pre-auth HTML against modem.yaml markers
+    3. Model strings - Match post-auth HTML for disambiguation
+    4. Heuristics - Last resort pattern matching
+
+Key Classes:
+    ModemScraper: Main scraper class
+    CapturingSession: Session wrapper for diagnostics capture
+
+See Also:
+    - core/discovery/pipeline.py: Discovery orchestration (runs before scraper)
+    - core/auth/handler.py: Authentication execution
+    - core/base_parser.py: Parser base class
+"""
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
@@ -9,17 +48,59 @@ from typing import TYPE_CHECKING, Any, cast
 import requests
 from bs4 import BeautifulSoup
 
-from ..parsers.base_parser import ModemParser
+from ..const import DEFAULT_TIMEOUT
+from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
+from .auth.handler import AuthHandler
+from .auth.types import AuthStrategyType
+from .base_parser import ModemParser
 from .discovery_helpers import (
     DiscoveryCircuitBreaker,
+    HintMatcher,
     ParserHeuristics,
     ParserNotFoundError,
 )
+from .loaders import ResourceLoaderFactory
+
+# Import ssl_adapter to ensure SSL warning suppression is active.
+# The suppression is centralized there - see ssl_adapter.py docstring.
+from .ssl_adapter import LegacySSLAdapter  # noqa: F401
 
 if TYPE_CHECKING:
-    from ..parsers.base_parser import ModemParser
+    from .base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _get_parser_url_patterns(parser_or_class: ModemParser | type[ModemParser]) -> list[dict]:
+    """Get URL patterns from modem.yaml (preferred) or parser class (fallback).
+
+    Args:
+        parser_or_class: Parser instance or class
+
+    Returns:
+        List of URL pattern dicts, or empty list if none found.
+    """
+    # Get class name - handle Mock objects in tests
+    try:
+        if isinstance(parser_or_class, type):
+            class_name = parser_or_class.__name__
+        else:
+            class_name = parser_or_class.__class__.__name__
+    except AttributeError:
+        # Mock objects may not have __name__
+        class_name = None
+
+    # Try modem.yaml first (skip if we couldn't get class name)
+    if class_name:
+        patterns = get_url_patterns_for_parser(class_name)
+        if patterns:
+            return patterns
+
+    # Fall back to parser class attribute
+    if hasattr(parser_or_class, "url_patterns") and parser_or_class.url_patterns:
+        return list(parser_or_class.url_patterns)
+
+    return []
 
 
 class CapturingSession(requests.Session):
@@ -64,7 +145,18 @@ class CapturingSession(requests.Session):
 
 
 class ModemScraper:
-    """Scrape data from cable modem web interface."""
+    """Scrape data from cable modem web interface.
+
+    This class handles the complete data fetch cycle:
+    1. Authentication (via AuthHandler with stored strategy)
+    2. Page fetching (base page + additional pages from modem.yaml)
+    3. Data parsing (via detected/cached ModemParser)
+
+    For polling, construct with stored config entry values (fast path).
+    For discovery, construct with minimal params and call get_modem_data().
+
+    Main entry point: get_modem_data() -> dict with downstream/upstream channels
+    """
 
     def __init__(
         self,
@@ -75,6 +167,13 @@ class ModemScraper:
         cached_url: str | None = None,
         parser_name: str | None = None,
         verify_ssl: bool = False,
+        legacy_ssl: bool = False,
+        auth_strategy: str | None = None,
+        auth_form_config: dict[str, Any] | None = None,
+        auth_hnap_config: dict[str, Any] | None = None,
+        auth_url_token_config: dict[str, Any] | None = None,
+        authenticated_html: str | None = None,
+        session_pre_authenticated: bool = False,
     ):
         """
         Initialize the modem scraper.
@@ -87,6 +186,13 @@ class ModemScraper:
             cached_url: Previously successful URL (optimization)
             parser_name: Name of cached parser to use (skips auto-detection)
             verify_ssl: Enable SSL certificate verification (default: False for compatibility with self-signed certs)
+            legacy_ssl: Use legacy SSL ciphers (SECLEVEL=0) for older modem firmware
+            auth_strategy: Discovered auth strategy type (from config entry)
+            auth_form_config: Form configuration for form-based auth (from config entry)
+            auth_hnap_config: HNAP configuration (endpoint, namespace) from config entry
+            auth_url_token_config: URL token configuration (login_prefix, etc.) from config entry
+            authenticated_html: Pre-fetched HTML from auth discovery (for instant parser detection)
+            session_pre_authenticated: Session is already authenticated from auth discovery (skip _login)
         """
         self.host = host
         # Support both plain IP addresses and full URLs (http:// or https://)
@@ -103,19 +209,20 @@ class ModemScraper:
         self.username = username
         self.password = password
         self.verify_ssl = verify_ssl
+        self.legacy_ssl = legacy_ssl
         self.session = requests.Session()
 
-        # Configure SSL verification with security warnings
-        if not self.verify_ssl:
-            # Disable SSL warnings for the session only (not globally)
-            import urllib3
+        # Mount legacy SSL adapter for HTTPS if needed (older modem firmware)
+        if legacy_ssl and self.base_url.startswith("https://"):
+            self.session.mount("https://", LegacySSLAdapter())
+            _LOGGER.info("Legacy SSL cipher support enabled (SECLEVEL=0) for older modem firmware")
 
+        # Configure SSL verification
+        # Note: SSL warning suppression is handled globally by ssl_adapter.py
+        if not self.verify_ssl:
             self.session.verify = False
-            # Disable warnings only for this session
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            _LOGGER.info(
-                "SSL certificate verification is disabled for this modem connection. "
-                "This is common for cable modems with self-signed certificates."
+            _LOGGER.debug(
+                "SSL certificate verification disabled (common for cable modems with self-signed certificates)"
             )
         else:
             self.session.verify = True
@@ -144,6 +251,28 @@ class ModemScraper:
         self._failed_urls: list[dict[str, Any]] = []  # Track failed fetches for diagnostics
         self._capture_enabled: bool = False  # Flag to enable HTML capture
 
+        # Auth strategy from config entry
+        # This enables response-driven auth during polling
+        self._auth_handler = AuthHandler(
+            strategy=auth_strategy,
+            form_config=auth_form_config,
+            hnap_config=auth_hnap_config,
+            url_token_config=auth_url_token_config,
+        )
+        self._auth_strategy = auth_strategy
+
+        # Pre-fetched HTML from auth discovery for instant parser detection
+        self._authenticated_html = authenticated_html
+
+        # Flag to skip _login() when session was pre-authenticated by auth discovery
+        self._session_pre_authenticated = session_pre_authenticated
+
+        _LOGGER.debug(
+            "Scraper initialized with auth strategy: %s, pre-fetched HTML: %s",
+            self._auth_handler.strategy.value if self._auth_handler else "none",
+            "yes" if authenticated_html else "no",
+        )
+
     def clear_auth_cache(self) -> None:
         """Clear cached authentication and create fresh session.
 
@@ -153,8 +282,13 @@ class ModemScraper:
         """
         import requests as req
 
-        # Create fresh session (clears cookies)
+        # Close old session to release connections
+        # This is critical for single-session modems that reject concurrent connections
         old_verify = self.session.verify if hasattr(self.session, "verify") else not self.verify_ssl
+        with contextlib.suppress(Exception):
+            self.session.close()
+
+        # Create fresh session
         self.session = req.Session()
         self.session.verify = old_verify
 
@@ -280,13 +414,14 @@ class ModemScraper:
             _LOGGER.debug("No parser available, skipping parser URL pattern fetch")
             return
 
-        if not hasattr(self.parser, "url_patterns") or not self.parser.url_patterns:
+        url_patterns = _get_parser_url_patterns(self.parser)
+        if not url_patterns:
             _LOGGER.debug("Parser %s has no url_patterns defined", self.parser.name)
             return
 
-        _LOGGER.info("Fetching all %d URL patterns from parser: %s", len(self.parser.url_patterns), self.parser.name)
+        _LOGGER.info("Fetching all %d URL patterns from parser: %s", len(url_patterns), self.parser.name)
 
-        for pattern in self.parser.url_patterns:
+        for pattern in url_patterns:
             path = pattern.get("path", "")
             if not path:
                 continue
@@ -303,8 +438,7 @@ class ModemScraper:
 
             normalized_url = normalize_url(url)
             if any(normalize_url(item["url"]) == normalized_url for item in self._captured_urls):
-                _LOGGER.debug("Skipping already captured URL: %s", url)
-                continue
+                continue  # Already captured, skip silently
 
             try:
                 _LOGGER.debug("Fetching parser URL pattern: %s", url)
@@ -320,7 +454,7 @@ class ModemScraper:
                     auth = (self.username, self.password)
                     _LOGGER.debug("Using basic auth for %s", url)
 
-                response = self.session.get(url, timeout=10, auth=auth)
+                response = self.session.get(url, timeout=DEFAULT_TIMEOUT, auth=auth)
 
                 if response.status_code == 200:
                     self._capture_response(response, f"Parser URL pattern: {path}")
@@ -431,7 +565,7 @@ class ModemScraper:
 
                 try:
                     _LOGGER.debug("Fetching %s: %s", resource_type, url)
-                    response = self.session.get(url, timeout=10)
+                    response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
 
                     if response.status_code == 200:
                         # Capture with resource type info
@@ -484,9 +618,12 @@ class ModemScraper:
             iteration,
         )
 
-    def _login(self) -> tuple[bool, str | None]:
+    def _login(self) -> tuple[bool, str | None]:  # noqa: C901
         """
         Log in to the modem web interface.
+
+        Uses the auth handler with the stored strategy.
+        Falls back to parser hints or parser.login() for old config entries.
 
         Returns:
             tuple[bool, str | None]: (success, authenticated_html)
@@ -497,19 +634,235 @@ class ModemScraper:
             _LOGGER.debug("No credentials provided, skipping login")
             return (True, None)
 
-        if not self.parser:
-            _LOGGER.error("No parser detected, cannot log in")
-            return (False, None)
+        # Skip login if session was pre-authenticated by auth discovery
+        # This avoids redundant authentication during config flow validation
+        if self._session_pre_authenticated:
+            _LOGGER.debug("Session pre-authenticated by auth discovery, skipping login")
+            # Clear flag after first use (subsequent polls need re-auth)
+            self._session_pre_authenticated = False
+            return (True, None)
 
-        return self.parser.login(self.session, self.base_url, self.username, self.password)
+        # Use auth handler if we have a stored strategy
+        if self._auth_handler and self._auth_strategy:
+            # If strategy is UNKNOWN but parser has hints, use hints instead of logging warning
+            result = self._try_parser_hints_for_unknown_strategy()
+            if result is not None:
+                return result
+
+            _LOGGER.debug(
+                "Using auth handler with strategy: %s",
+                self._auth_handler.strategy.value,
+            )
+            auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
+
+            # Transfer HNAP builder to parser for parse() and restart() methods
+            if auth_result.success and self.parser:
+                self._transfer_hnap_builder_to_parser(self._auth_handler)
+                return auth_result.success, auth_result.response_html
+
+            # Stored strategy failed - try parser hints fallback
+            # This handles cases where discovery found form_plain but parser needs form_base64
+            if not auth_result.success and self.parser:
+                _LOGGER.info(
+                    "Stored auth strategy %s failed (error: %s), trying parser hints fallback",
+                    self._auth_handler.strategy.value,
+                    auth_result.error_type.value if auth_result.error_type else "unknown",
+                )
+                result = self._login_with_parser_hints()
+                if result is not None:
+                    return result
+
+            return auth_result.success, auth_result.response_html
+
+        # No auth strategy stored - try parser hints fallback
+        if self.parser:
+            result = self._login_with_parser_hints()
+            if result is not None:
+                return result
+
+        # No auth strategy or parser hints - assume no authentication required
+        # This handles modems that don't need login (e.g., status pages are public)
+        _LOGGER.debug("No auth strategy or parser hints found, assuming no auth required")
+        return (True, None)
+
+    def _transfer_hnap_builder_to_parser(self, handler: AuthHandler) -> None:
+        """Transfer HNAP builder from auth handler to parser for authenticated API calls."""
+        hnap_builder = handler.get_hnap_builder()
+        if hnap_builder and self.parser:
+            self.parser._json_builder = hnap_builder  # type: ignore[attr-defined]
+            _LOGGER.debug("Transferred HNAP builder to parser for authenticated API calls")
+
+    def _create_loader(self):
+        """Create a resource loader based on parser's modem.yaml config.
+
+        Returns:
+            ResourceLoader instance, or None if config not available.
+        """
+        if not self.parser:
+            return None
+
+        adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+        if not adapter:
+            _LOGGER.debug("No modem.yaml adapter for %s, using legacy parse path", self.parser.name)
+            return None
+
+        try:
+            modem_config = adapter.get_modem_config_dict()
+            url_token_config = adapter.get_url_token_config_for_loader()
+            hnap_builder = self._auth_handler.get_hnap_builder() if self._auth_handler else None
+
+            fetcher = ResourceLoaderFactory.create(
+                session=self.session,
+                base_url=self.base_url,
+                modem_config=modem_config,
+                verify_ssl=self.verify_ssl,
+                hnap_builder=hnap_builder,
+                url_token_config=url_token_config,
+            )
+            _LOGGER.debug("Created %s for %s", fetcher.__class__.__name__, self.parser.name)
+            return fetcher
+        except Exception as e:
+            _LOGGER.warning("Failed to create loader for %s: %s", self.parser.name, e)
+            return None
+
+    def _load_resources(self, loader) -> dict[str, Any]:
+        """Fetch all resources using the loader.
+
+        Args:
+            loader: ResourceLoader instance
+
+        Returns:
+            Dict of resources, or empty dict on failure.
+        """
+        try:
+            resources: dict[str, Any] = loader.fetch()
+            _LOGGER.debug(
+                "Fetched %d resources: %s",
+                len(resources),
+                list(resources.keys())[:5],  # Log first 5 keys
+            )
+            return resources
+        except Exception as e:
+            _LOGGER.warning("Loader failed: %s", e)
+            return {}
+
+    def _try_parser_hints_for_unknown_strategy(self) -> tuple[bool, str | None] | None:
+        """Try parser hints when auth strategy is UNKNOWN.
+
+        Returns:
+            tuple[bool, str | None] if hints were found and auth succeeded
+            None if strategy is not UNKNOWN, no hints, or auth failed (caller continues)
+        """
+        if not self._auth_handler or self._auth_handler.strategy != AuthStrategyType.UNKNOWN:
+            return None
+
+        if not self.parser:
+            return None
+
+        _LOGGER.debug("Auth strategy is UNKNOWN, checking for parser hints first")
+        result = self._login_with_parser_hints()
+        if result is not None:
+            return result
+
+        # No hints found - return None to fall through to unknown strategy handling
+        return None
+
+    def _login_with_parser_hints(self) -> tuple[bool, str | None] | None:  # noqa: C901
+        """
+        Attempt login using auth hints from modem.yaml or parser class.
+
+        Prefers modem.yaml hints (via adapter) over parser class attributes.
+
+        Returns:
+            tuple[bool, str | None] if hints were found and auth was attempted
+            None if no hints were found (caller should try legacy path)
+        """
+        if not self.parser:
+            return None
+
+        # Get adapter for modem.yaml hints (preferred source)
+        adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+
+        # Check for HNAP hints (S33, MB8611)
+        # HNAP config is in modem.yaml auth.hnap section
+        hints = None
+        if adapter:
+            hints = adapter.get_hnap_hints()
+            if hints:
+                _LOGGER.debug("Using modem.yaml hnap_hints for HNAP authentication")
+        if hints:
+            temp_handler = AuthHandler(strategy="hnap_session", hnap_config=hints)
+            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
+            if auth_result.success:
+                # Save handler for subsequent polls
+                self._auth_handler = temp_handler
+                _LOGGER.debug("Saved HNAP auth handler for future polls")
+                # Transfer HNAP builder to parser for data fetches
+                hnap_builder = temp_handler.get_hnap_builder()
+                if hnap_builder:
+                    self.parser._json_builder = hnap_builder  # type: ignore[attr-defined]
+                    _LOGGER.debug("Transferred HNAP builder to parser")
+            return auth_result.success, auth_result.response_html
+
+        # Check for URL token hints (SB8200)
+        # URL token config is in modem.yaml auth.url_token section
+        hints = None
+        if adapter:
+            hints = adapter.get_js_auth_hints()
+            if hints:
+                _LOGGER.debug("Using modem.yaml js_auth_hints for URL token authentication")
+        if hints:
+            url_token_config = {
+                "login_page": hints.get("login_page", "/cmconnectionstatus.html"),
+                "login_prefix": hints.get("login_prefix", "login_"),
+                "session_cookie_name": hints.get("session_cookie_name", "credential"),
+                "data_page": hints.get("data_page", "/cmconnectionstatus.html"),
+                "token_prefix": hints.get("token_prefix", "ct_"),
+                "success_indicator": hints.get("success_indicator", "Downstream"),
+            }
+            temp_handler = AuthHandler(strategy="url_token_session", url_token_config=url_token_config)
+            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
+            if auth_result.success:
+                self._auth_handler = temp_handler
+                _LOGGER.debug("Saved URL token auth handler for future polls")
+            return auth_result.success, auth_result.response_html
+
+        # Check for form hints (MB7621, CGA2121, G54, CM2000)
+        # Try modem.yaml first, fall back to parser class
+        hints = None
+        if adapter:
+            hints = adapter.get_auth_form_hints()
+            if hints:
+                _LOGGER.debug("Using modem.yaml auth_form_hints for form authentication")
+        if not hints and hasattr(self.parser, "auth_form_hints") and self.parser.auth_form_hints:
+            hints = self.parser.auth_form_hints
+            _LOGGER.debug("Using parser's auth_form_hints for form authentication")
+        if hints:
+            # Build form_config from hints (password_encoding controls encoding behavior)
+            form_config = {
+                "action": hints.get("login_url", ""),
+                "method": "POST",
+                "username_field": hints.get("username_field", "username"),
+                "password_field": hints.get("password_field", "password"),
+                "password_encoding": hints.get("password_encoding", "plain"),
+            }
+
+            temp_handler = AuthHandler(strategy="form_plain", form_config=form_config)
+            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
+            if auth_result.success:
+                self._auth_handler = temp_handler
+                _LOGGER.debug("Saved form auth handler (strategy=form_plain) for future polls")
+            return auth_result.success, auth_result.response_html
+
+        return None  # No hints found
 
     def _get_tier1_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 1: User explicitly selected a parser."""
         if self.parser is None:
             raise RuntimeError("Tier 1 URLs requested but parser is None")
-        _LOGGER.info("Tier 1: Using explicitly selected parser: %s", self.parser.name)
+        _LOGGER.debug("Tier 1: Using explicitly selected parser: %s", self.parser.name)
         urls = []
-        for pattern in self.parser.url_patterns:
+        for pattern in _get_parser_url_patterns(self.parser):
             url = f"{self.base_url}{pattern['path']}"
             urls.append((url, str(pattern["auth_method"]), type(self.parser)))
         return urls
@@ -522,45 +875,27 @@ class ModemScraper:
                 return cast(type[ModemParser], parser_class)
         return None
 
-    def _find_matching_pattern(self, url_patterns: list[dict], cached_url: str) -> dict | None:
-        """Find pattern that matches cached URL, or return first pattern as fallback."""
-        for pattern in url_patterns:
-            path = pattern.get("path")
-            if isinstance(path, str) and path in cached_url:
-                return pattern
-        return url_patterns[0] if url_patterns else None
-
-    def _add_cached_url_if_matching(self, urls: list, cached_parser: type[ModemParser], cached_url: str) -> None:
-        """Add cached URL to list if a matching pattern is found."""
-        cached_pattern = self._find_matching_pattern(cached_parser.url_patterns, cached_url)
-        if cached_pattern:
-            urls.append((cached_url, cached_pattern["auth_method"], cached_parser))
-
-    def _add_parser_urls(self, urls: list, parser_class: type[ModemParser], exclude_url: str | None = None) -> None:
-        """Add URLs from a parser to the list, optionally excluding a specific URL."""
-        for pattern in parser_class.url_patterns:
+    def _add_parser_urls(self, urls: list, parser_class: type[ModemParser]) -> None:
+        """Add URLs from a parser to the list in priority order (data page first)."""
+        for pattern in _get_parser_url_patterns(parser_class):
             url = f"{self.base_url}{pattern['path']}"
-            if exclude_url is None or url != exclude_url:
-                urls.append((url, pattern["auth_method"], parser_class))
+            urls.append((url, pattern["auth_method"], parser_class))
 
     def _get_tier2_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 2: Cached parser from previous detection."""
-        _LOGGER.info("Tier 2: Looking for cached parser: %s", self.parser_name)
+        _LOGGER.debug("Tier 2: Looking for cached parser: %s", self.parser_name)
         cached_parser = self._find_cached_parser()
         if not cached_parser:
             return []
 
         # Cast to type[ModemParser] to satisfy type checker after None check
         parser = cached_parser
-        _LOGGER.info("Found cached parser: %s", parser.name)
+        _LOGGER.debug("Found cached parser: %s", parser.name)
         urls: list[tuple[str, str, type[ModemParser]]] = []
 
-        # Try cached URL first if available
-        if self.cached_url:
-            self._add_cached_url_if_matching(urls, parser, self.cached_url)
-
-        # Add other URLs from cached parser
-        self._add_parser_urls(urls, parser, exclude_url=self.cached_url)
+        # Add URLs from parser in priority order (data page first)
+        # Note: cached_url is only used for protocol detection, not page selection
+        self._add_parser_urls(urls, parser)
 
         # Add other parsers as fallback (excluding fallback parser itself)
         for parser_class in self.parsers:
@@ -578,34 +913,22 @@ class ModemScraper:
 
         Note: Excludes fallback parser (Unknown manufacturer) from URL discovery.
         Fallback parser should only be tried as last resort during detection phases.
+        URLs are returned in priority order (data page first for each parser).
         """
-        _LOGGER.info("Tier 3: Auto-detection mode - trying all parsers")
+        _LOGGER.debug("Tier 3: Auto-detection mode - trying all parsers")
         urls = []
 
-        # Try cached URL first with any compatible parser (excluding fallback)
-        if self.cached_url:
-            for parser_class in self.parsers:
-                # Skip fallback parser - it should only be tried as last resort
-                if parser_class.manufacturer == "Unknown":
-                    continue
-
-                for pattern in parser_class.url_patterns:
-                    path = pattern.get("path")
-                    if isinstance(path, str) and path in self.cached_url:
-                        urls.append((self.cached_url, str(pattern["auth_method"]), parser_class))
-                        break
-
-        # Add all parser URLs (excluding fallback)
+        # Add all parser URLs in priority order (excluding fallback)
+        # Note: cached_url is only used for protocol detection, not page selection
         for parser_class in self.parsers:
             # Skip fallback parser - it should only be tried as last resort during detection
             if parser_class.manufacturer == "Unknown":
                 _LOGGER.debug("Skipping fallback parser in URL discovery: %s", parser_class.name)
                 continue
 
-            for pattern in parser_class.url_patterns:
+            for pattern in _get_parser_url_patterns(parser_class):
                 url = f"{self.base_url}{pattern['path']}"
-                if url != self.cached_url:
-                    urls.append((url, str(pattern["auth_method"]), parser_class))
+                urls.append((url, str(pattern["auth_method"]), parser_class))
 
         return urls
 
@@ -672,15 +995,13 @@ class ModemScraper:
                         auth = (self.username, self.password)
 
                     # Use configured SSL verification setting
-                    response = self.session.get(target_url, timeout=10, auth=auth, verify=self.verify_ssl)
+                    response = self.session.get(target_url, timeout=DEFAULT_TIMEOUT, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
-                        parser_name = parser_class.name if parser_class else "unknown"
-                        _LOGGER.info(
-                            "Successfully connected to %s (HTML: %s bytes, parser: %s)",
+                        _LOGGER.debug(
+                            "Successfully fetched %s (%s bytes)",
                             target_url,
                             len(response.text),
-                            parser_name,
                         )
                         self.last_successful_url = target_url
 
@@ -703,9 +1024,11 @@ class ModemScraper:
     def _try_anonymous_probing(self, circuit_breaker, attempted_parsers: list) -> ModemParser | None:
         """Try anonymous probing for modems with public pages.
 
+        Fetches public URLs defined in modem.yaml and uses HintMatcher for detection.
         Note: Excludes fallback parser - only tries real modem parsers.
         """
-        _LOGGER.info("Phase 1: Attempting anonymous probing before authentication")
+        _LOGGER.debug("Phase 1: Attempting anonymous probing before authentication")
+        hint_matcher = HintMatcher.get_instance()
 
         for parser_class in self.parsers:
             # Skip fallback parser - it should only be used as last resort
@@ -721,12 +1044,13 @@ class ModemScraper:
                 )
                 if anon_result:
                     anon_html, anon_url = anon_result
-                    anon_soup = BeautifulSoup(anon_html, "html.parser")
                     circuit_breaker.record_attempt(parser_class.name)
 
-                    if parser_class.can_parse(anon_soup, anon_url, anon_html):
-                        _LOGGER.info(
-                            "✓ Detected modem via anonymous probing: %s (%s)",
+                    # Use HintMatcher for detection
+                    matches = hint_matcher.match_login_markers(anon_html)
+                    if any(m.parser_name == parser_class.__name__ for m in matches):
+                        _LOGGER.debug(
+                            "Detected modem via anonymous probing: %s (%s)",
                             parser_class.name,
                             parser_class.manufacturer,
                         )
@@ -738,10 +1062,57 @@ class ModemScraper:
 
         return None
 
+    def _try_authenticated_probing(self, circuit_breaker, attempted_parsers: list) -> ModemParser | None:
+        """Try authenticated probing for modems that require auth for all content pages.
+
+        This is called after anonymous probing fails. Uses the authenticated session
+        to fetch protected pages and uses HintMatcher for detection.
+
+        Note: Excludes fallback parser - only tries real modem parsers.
+        """
+        _LOGGER.debug("Phase 1b: Attempting authenticated probing (session has auth cookies)")
+        hint_matcher = HintMatcher.get_instance()
+
+        for parser_class in self.parsers:
+            # Skip fallback parser
+            if parser_class.manufacturer == "Unknown":
+                continue
+
+            if not circuit_breaker.should_continue():
+                break
+
+            try:
+                auth_result = ParserHeuristics.check_authenticated_access(
+                    self.base_url, parser_class, self.session, self.verify_ssl
+                )
+                if auth_result:
+                    auth_html, auth_url = auth_result
+                    circuit_breaker.record_attempt(parser_class.name)
+
+                    # Use HintMatcher for detection (model_strings for post-auth pages)
+                    matches = hint_matcher.match_model_strings(auth_html)
+                    if any(m.parser_name == parser_class.__name__ for m in matches):
+                        _LOGGER.debug(
+                            "Detected modem via authenticated probing: %s (%s)",
+                            parser_class.name,
+                            parser_class.manufacturer,
+                        )
+                        return cast(type[ModemParser], parser_class)()
+                    else:
+                        if parser_class.name not in attempted_parsers:
+                            attempted_parsers.append(parser_class.name)
+            except Exception as e:
+                _LOGGER.debug("Authenticated probing failed for %s: %s", parser_class.name, e)
+
+        return None
+
     def _try_suggested_parser(
         self, soup, url: str, html: str, suggested_parser, circuit_breaker, attempted_parsers: list
     ) -> ModemParser | None:
-        """Try the suggested parser from URL pattern matching."""
+        """Try the suggested parser from URL pattern matching.
+
+        Uses HintMatcher to verify the suggested parser matches the HTML.
+        """
         if not suggested_parser:
             return None
 
@@ -754,8 +1125,14 @@ class ModemScraper:
         try:
             circuit_breaker.record_attempt(suggested_parser.name)
             _LOGGER.debug("Testing suggested parser: %s", suggested_parser.name)
-            if suggested_parser.can_parse(soup, url, html):
-                _LOGGER.info(
+
+            # Use HintMatcher for detection (try both login_markers and model_strings)
+            hint_matcher = HintMatcher.get_instance()
+            login_matches = hint_matcher.match_login_markers(html)
+            model_matches = hint_matcher.match_model_strings(html)
+
+            if any(m.parser_name == suggested_parser.__name__ for m in login_matches + model_matches):
+                _LOGGER.debug(
                     "Detected modem using suggested parser: %s (%s)",
                     suggested_parser.name,
                     suggested_parser.manufacturer,
@@ -763,7 +1140,7 @@ class ModemScraper:
                 return cast(type[ModemParser], suggested_parser)()
             else:
                 attempted_parsers.append(suggested_parser.name)
-                _LOGGER.debug("Suggested parser %s returned False for can_parse", suggested_parser.name)
+                _LOGGER.debug("Suggested parser %s did not match via HintMatcher", suggested_parser.name)
         except Exception as e:
             _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
             attempted_parsers.append(suggested_parser.name)
@@ -777,12 +1154,18 @@ class ModemScraper:
 
         Note: Excludes fallback parser - only tries real modem parsers.
         """
-        _LOGGER.info("Phase 3: Using parser heuristics to prioritize likely parsers")
+        _LOGGER.debug("Phase 3: Using parser heuristics to prioritize likely parsers")
         prioritized_parsers = ParserHeuristics.get_likely_parsers(
             self.base_url, self.parsers, self.session, self.verify_ssl
         )
 
         _LOGGER.debug("Attempting to detect parser from %s available parsers (prioritized)", len(prioritized_parsers))
+        hint_matcher = HintMatcher.get_instance()
+
+        # Pre-compute matches once for efficiency
+        login_matches = hint_matcher.match_login_markers(html)
+        model_matches = hint_matcher.match_model_strings(html)
+        all_matched_parsers = {m.parser_name for m in login_matches + model_matches}
 
         for parser_class in prioritized_parsers:
             # Skip fallback parser - it should only be used as last resort
@@ -799,16 +1182,147 @@ class ModemScraper:
             try:
                 circuit_breaker.record_attempt(parser_class.name)
                 _LOGGER.debug("Testing parser: %s", parser_class.name)
-                if parser_class.can_parse(soup, url, html):
-                    _LOGGER.info("✓ Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
+                if parser_class.__name__ in all_matched_parsers:
+                    _LOGGER.debug("Detected modem: %s (%s)", parser_class.name, parser_class.manufacturer)
                     return parser_class()
                 else:
                     attempted_parsers.append(parser_class.name)
-                    _LOGGER.debug("Parser %s returned False for can_parse", parser_class.name)
+                    _LOGGER.debug("Parser %s did not match via HintMatcher", parser_class.name)
             except Exception as e:
                 _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
                 attempted_parsers.append(parser_class.name)
 
+        return None
+
+    def _try_instant_detection(self) -> None:
+        """Use pre-fetched HTML from auth discovery for instant parser detection.
+
+        This is a fast path optimization: auth discovery already fetched HTML,
+        so we can detect the parser without making additional HTTP requests.
+        """
+        if not self._authenticated_html or self.parser:
+            return
+
+        _LOGGER.debug("Attempting instant parser detection using pre-fetched HTML from auth discovery")
+        hint_matcher = HintMatcher.get_instance()
+        parser = self._try_login_markers_detection(self._authenticated_html, hint_matcher)
+
+        if parser:
+            self.parser = parser
+            _LOGGER.info(
+                "Instant parser detection successful: %s (skipping HTTP probing)",
+                parser.name,
+            )
+        else:
+            _LOGGER.debug("Pre-fetched HTML did not match any parser, falling back to HTTP probing")
+
+        # Clear pre-fetched HTML after use (one-time optimization)
+        self._authenticated_html = None
+
+    def _try_login_markers_detection(self, html: str, hint_matcher: HintMatcher) -> ModemParser | None:
+        """Phase 0a: Try detection via login_markers.
+
+        Returns parser if single confident match or best match after disambiguation.
+        """
+        login_matches = hint_matcher.match_login_markers(html)
+        if not login_matches:
+            return None
+
+        _LOGGER.debug(
+            "Phase 0a: Found %d login_markers matches: %s",
+            len(login_matches),
+            [m.parser_name for m in login_matches[:3]],
+        )
+
+        # Single confident match - use it directly
+        if len(login_matches) == 1:
+            match = login_matches[0]
+            parser = self._get_parser_by_name(match.parser_name)
+            if parser:
+                _LOGGER.info(
+                    "Detected modem via login_markers: %s (%s) - matched: %s",
+                    match.parser_name,
+                    match.manufacturer,
+                    match.matched_markers[:3],
+                )
+                return parser
+
+        # Multiple matches - try model_strings disambiguation (Phase 0b)
+        parser = self._disambiguate_with_model_strings(html, login_matches, hint_matcher)
+        if parser:
+            return parser
+
+        # Use best login match if no model match disambiguation
+        best_match = login_matches[0]
+        parser = self._get_parser_by_name(best_match.parser_name)
+        if parser:
+            _LOGGER.info(
+                "Detected modem via best login_markers match: %s (%s) - %d markers matched",
+                best_match.parser_name,
+                best_match.manufacturer,
+                len(best_match.matched_markers),
+            )
+        return parser
+
+    def _disambiguate_with_model_strings(
+        self, html: str, login_matches: list, hint_matcher: HintMatcher
+    ) -> ModemParser | None:
+        """Phase 0b: Disambiguate login_markers matches using model_strings."""
+        _LOGGER.debug("Phase 0b: Disambiguating with model_strings")
+        model_matches = hint_matcher.match_model_strings(html)
+
+        if not model_matches:
+            return None
+
+        # Find intersection: matches that appear in both login and model
+        login_names = {m.parser_name for m in login_matches}
+        for model_match in model_matches:
+            if model_match.parser_name in login_names:
+                parser = self._get_parser_by_name(model_match.parser_name)
+                if parser:
+                    _LOGGER.info(
+                        "Detected modem via model_strings: %s (%s) - matched: %s",
+                        model_match.parser_name,
+                        model_match.manufacturer,
+                        model_match.matched_markers,
+                    )
+                    return parser
+        return None
+
+    def _try_quick_detection(self, soup, html: str, url: str) -> ModemParser | None:
+        """Phase 0: Quick detection using HintMatcher.
+
+        Uses index-driven detection for O(1) lookups:
+        - Phase 0a: login_markers for pre-auth page detection
+        - Phase 0b: model_strings for exact model identification
+
+        Args:
+            soup: Parsed HTML as BeautifulSoup object
+            html: Raw HTML content
+            url: URL that returned this HTML
+
+        Returns:
+            Parser instance if detected, None otherwise.
+        """
+        # Phase 0a/0b: HintMatcher-based detection
+        _LOGGER.debug("Phase 0a: HintMatcher login_markers detection")
+        hint_matcher = HintMatcher.get_instance()
+
+        return self._try_login_markers_detection(html, hint_matcher)
+
+    def _get_parser_by_name(self, parser_name: str) -> ModemParser | None:
+        """Get a parser instance by class name.
+
+        Args:
+            parser_name: Parser class name (e.g., "MotorolaMB7621Parser")
+
+        Returns:
+            Parser instance or None if not found
+        """
+        for parser_class in self.parsers:
+            if parser_class.__name__ == parser_name:
+                return cast(type[ModemParser], parser_class)()
+        _LOGGER.debug("Parser %s not found in available parsers", parser_name)
         return None
 
     def _detect_parser(
@@ -832,15 +1346,26 @@ class ModemScraper:
             return self.parser
 
         soup = BeautifulSoup(html, "html.parser")
-        circuit_breaker = DiscoveryCircuitBreaker(max_attempts=15, timeout_seconds=90)
+        # Increased max_attempts to handle anonymous + authenticated probing phases
+        circuit_breaker = DiscoveryCircuitBreaker(max_attempts=40, timeout_seconds=90)
         attempted_parsers: list[str] = []
 
-        # Try anonymous probing first
+        # Phase 0: Quick detection via YAML hints (HintMatcher)
+        parser = self._try_quick_detection(soup, html, url)
+        if parser:
+            return parser
+
+        # Phase 1: Anonymous probing (public URLs) - only if quick detection failed
         parser = self._try_anonymous_probing(circuit_breaker, attempted_parsers)
         if parser:
             return parser
 
-        # Try suggested parser from URL matching
+        # Phase 1b: Authenticated probing (protected URLs with session cookies)
+        parser = self._try_authenticated_probing(circuit_breaker, attempted_parsers)
+        if parser:
+            return parser
+
+        # Phase 2: Try suggested parser from URL matching
         parser = self._try_suggested_parser(soup, url, html, suggested_parser, circuit_breaker, attempted_parsers)
         if parser:
             return parser
@@ -866,13 +1391,34 @@ class ModemScraper:
         raise ParserNotFoundError(modem_info=modem_info, attempted_parsers=attempted_parsers)
 
     def _parse_data(self, html: str) -> dict:
-        """Parse data from the modem."""
+        """Parse data from the modem.
+
+        Uses the Loader architecture:
+        1. Creates a loader based on modem.yaml config
+        2. Fetches all resources (HTML pages, HNAP actions, REST endpoints)
+        3. Calls parser.parse_resources() with the fetched resources
+
+        If fetcher is unavailable (no modem.yaml), falls back to single-page parsing.
+        """
         if self.parser is None:
             raise RuntimeError("Cannot parse data: parser is not set")
+
+        # Create loader based on modem.yaml config
+        fetcher = self._create_loader()
+        if fetcher:
+            resources = self._load_resources(fetcher)
+            if resources:
+                # Add the initial HTML as a resource for parsers that need it
+                soup = BeautifulSoup(html, "html.parser")
+                resources["/"] = soup
+                _LOGGER.debug("Fetched %d resources via loader", len(resources))
+                return self.parser.parse_resources(resources)
+
+        # No loader available - parse single page via parse()
+        # This calls parse_resources({"/": soup}) via base class
+        _LOGGER.debug("No loader available, using single-page parse")
         soup = BeautifulSoup(html, "html.parser")
-        # Pass session and base_url to parser in case it needs to fetch additional pages
-        data = self.parser.parse(soup, session=self.session, base_url=self.base_url)
-        return data
+        return self.parser.parse(soup)
 
     def get_modem_data(self, capture_raw: bool = False) -> dict:
         """Fetch and parse modem data.
@@ -895,7 +1441,13 @@ class ModemScraper:
             self.session = CapturingSession(self._capture_response)
             # Copy SSL verification settings to capturing session
             self.session.verify = original_session.verify
+            # Copy legacy SSL adapter if needed (fixes capture for older modem firmware)
+            if self.legacy_ssl and self.base_url.startswith("https://"):
+                self.session.mount("https://", LegacySSLAdapter())
             _LOGGER.debug("Enabled HTML capture mode with CapturingSession")
+
+        # Fast path: Use pre-fetched HTML from auth discovery for instant parser detection
+        self._try_instant_detection()
 
         try:
             fetched_data = self._fetch_data(capture_raw=capture_raw)
@@ -911,7 +1463,7 @@ class ModemScraper:
             # Login and get authenticated HTML
             html_or_none = self._handle_login_result(html)
             if html_or_none is None:
-                return self._create_error_response("unreachable")
+                return self._create_error_response("auth_failed")
             html = html_or_none
 
             # Parse data and build response
@@ -968,11 +1520,29 @@ class ModemScraper:
         Some modems (e.g., Netgear C7000v2) only allow one authenticated session
         at a time. If the integration holds the session, users can't access the
         modem's web interface. Calling the logout endpoint frees the session.
+
+        Checks modem.yaml config first, falls back to parser attribute.
         """
         if not self.parser:
             return
 
-        logout_endpoint = getattr(self.parser, "logout_endpoint", None)
+        # Check modem.yaml first (preferred source of truth)
+        logout_endpoint = None
+        try:
+            from custom_components.cable_modem_monitor.modem_config.adapter import (
+                get_auth_adapter_for_parser,
+            )
+
+            adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+            if adapter:
+                logout_endpoint = adapter.get_logout_endpoint()
+        except Exception:
+            pass  # Fall through to parser attribute
+
+        # Fall back to parser attribute (legacy)
+        if not logout_endpoint:
+            logout_endpoint = getattr(self.parser, "logout_endpoint", None)
+
         if not logout_endpoint:
             return
 
@@ -1034,8 +1604,9 @@ class ModemScraper:
         upstream = data.get("upstream", [])
         system_info = data.get("system_info", {})
 
-        total_corrected = sum(ch.get("corrected") or 0 for ch in downstream)
-        total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in downstream)
+        # Only calculate totals if we have channel data - None indicates unavailable, not 0
+        total_corrected = sum(ch.get("corrected") or 0 for ch in downstream) if downstream else None
+        total_uncorrected = sum(ch.get("uncorrected") or 0 for ch in downstream) if downstream else None
 
         # Determine connection status
         # If fallback mode is active (unsupported modem), use "limited" status
@@ -1093,6 +1664,55 @@ class ModemScraper:
             **prefixed_system_info,
         }
 
+    def _get_modem_config_adapter(self):
+        """Get the modem config adapter for the current parser, or None if unavailable."""
+        try:
+            from custom_components.cable_modem_monitor.modem_config.adapter import (
+                get_auth_adapter_for_parser,
+            )
+
+            return get_auth_adapter_for_parser(self.parser.__class__.__name__)
+        except Exception:
+            return None
+
+    def _populate_detection_info_from_yaml(self, info: dict, adapter, parser: ModemParser) -> None:
+        """Populate detection info from modem.yaml via adapter."""
+        # Fields from modem.yaml (source of truth) with legacy parser fallback for release_date
+        if release_date := adapter.get_release_date() or parser.release_date:
+            info["release_date"] = release_date
+        if docsis_version := adapter.get_docsis_version():
+            info["docsis_version"] = docsis_version
+
+        # Status and verification
+        status = adapter.get_status()
+        info["verified"] = status == "verified"
+        info["status"] = status
+        if verification_source := adapter.get_verification_source():
+            info["verification_source"] = verification_source
+
+        # Fields from modem.yaml (no fallback to parser - yaml is source of truth)
+        info["logout_endpoint"] = adapter.get_logout_endpoint()
+        info["capabilities"] = adapter.get_capabilities() or []
+
+        # Fixtures path from modem.yaml
+        if fixtures_path := adapter.get_fixtures_path():
+            info["fixtures_path"] = fixtures_path
+            info["fixtures_url"] = f"{ModemParser.GITHUB_REPO_URL}/tree/main/{fixtures_path}"
+
+    def _populate_detection_info_from_parser(self, info: dict, parser: ModemParser) -> None:
+        """Populate detection info from parser class attributes only.
+
+        DEPRECATED: This is a legacy fallback for modems without modem.yaml.
+        All modems should have modem.yaml as the source of truth.
+        Only release_date and capabilities are still available from parser.
+        """
+        if parser.release_date:
+            info["release_date"] = parser.release_date
+        # Status fields now only in modem.yaml - default for legacy modems
+        info["verified"] = False
+        info["logout_endpoint"] = None
+        info["capabilities"] = [cap.value for cap in parser.capabilities]
+
     def get_detection_info(self) -> dict[str, str | bool | list[str] | None]:
         """Get information about detected modem and successful URL.
 
@@ -1105,31 +1725,25 @@ class ModemScraper:
         - fixtures_path: Path to test fixtures in repo
         - fixtures_url: GitHub URL to fixtures directory
         - verified: Whether parser has been verified by users
+
+        Reads from modem.yaml first, falls back to parser class attributes.
         """
-        if self.parser:
-            info: dict[str, str | bool | list[str] | None] = {
-                "modem_name": self.parser.name,
-                "manufacturer": self.parser.manufacturer,
-                "successful_url": self.last_successful_url,
-            }
-            # Add device metadata from parser class
-            if self.parser.release_date:
-                info["release_date"] = self.parser.release_date
-            if self.parser.docsis_version:
-                info["docsis_version"] = self.parser.docsis_version
-            if self.parser.fixtures_path:
-                info["fixtures_path"] = self.parser.fixtures_path
-                # Generate GitHub URL for fixtures
-                fixtures_url = self.parser.__class__.get_fixtures_url()
-                if fixtures_url:
-                    info["fixtures_url"] = fixtures_url
-            info["verified"] = self.parser.verified
-            info["supports_icmp"] = self.parser.supports_icmp
-            info["logout_endpoint"] = self.parser.logout_endpoint
-            # Expose capabilities for sensor creation
-            info["capabilities"] = [cap.value for cap in self.parser.capabilities]
-            return info
-        return {}
+        if not self.parser:
+            return {}
+
+        info: dict[str, str | bool | list[str] | None] = {
+            "modem_name": self.parser.name,
+            "manufacturer": self.parser.manufacturer,
+            "successful_url": self.last_successful_url,
+        }
+
+        # Populate from modem.yaml or fallback to parser
+        if adapter := self._get_modem_config_adapter():
+            self._populate_detection_info_from_yaml(info, adapter, self.parser)
+        else:
+            self._populate_detection_info_from_parser(info, self.parser)
+
+        return info
 
     def restart_modem(self) -> bool:
         """Restart the cable modem."""
