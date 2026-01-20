@@ -432,6 +432,59 @@ ruff check . && pytest
 
 ---
 
+### 21. HNAP Authentication Logic Duplication
+
+**Problem:** The v3.13.0 HNAP discovery fix (#102) introduced parallel auth paths:
+
+1. **Discovery-time auth** (`core/auth/discovery.py:_handle_hnap_auth`):
+   - Creates `HNAPJsonRequestBuilder`
+   - Performs challenge-response login
+   - Tries MD5 → SHA256 algorithm fallback
+   - Returns authenticated builder
+
+2. **Runtime auth** (`core/auth/handler.py` + `strategies/hnap_json.py`):
+   - Also creates `HNAPJsonRequestBuilder`
+   - Also performs challenge-response login
+   - Uses stored `hmac_algorithm` from config
+
+**Impact:**
+- Duplicated HNAP auth logic in two places
+- Discovery builder is thrown away after validation
+- Runtime recreates builder from scratch
+- Algorithm fallback logic only in discovery, not runtime
+
+**Current behavior:**
+```
+Discovery: Create builder → login() → validate → discard builder
+Runtime:   Create NEW builder → login() → fetch data
+```
+
+**Ideal behavior:**
+```
+Discovery: Create builder → login() → validate → store builder
+Runtime:   Reuse stored builder (or refresh if expired)
+```
+
+**Remediation options:**
+1. **Share builder between discovery and runtime** - Store builder in config entry (serializable?)
+2. **Extract common auth logic** - Create `HNAPAuthenticator` class used by both paths
+3. **Accept the duplication** - Document as intentional (discovery validates, runtime authenticates fresh)
+
+**Related issues:**
+- HNAP requires `selected_parser` - can't auto-detect without HTML (UX friction)
+- Algorithm fallback at discovery time adds latency for SHA256 modems
+
+**Effort:** Medium (2-3 sessions if pursuing option 2)
+
+**Source:** v3.13.0 HNAP fix (#102, January 2026)
+
+**Files:**
+- `custom_components/cable_modem_monitor/core/auth/discovery.py` - `_handle_hnap_auth()`
+- `custom_components/cable_modem_monitor/core/auth/handler.py` - `_do_authenticate()`
+- `custom_components/cable_modem_monitor/core/auth/strategies/hnap_json.py`
+
+---
+
 ## P3 - Low Priority
 
 ### 15. Test Socket Patching Complexity
