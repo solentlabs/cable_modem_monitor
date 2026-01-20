@@ -68,6 +68,7 @@ from .const import (
     DOMAIN,
     VERSION,
 )
+from .core.log_buffer import get_log_entries
 from .lib.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
@@ -161,10 +162,9 @@ def _no_logs_available_entry() -> list[dict[str, Any]]:
             "level": "INFO",
             "logger": "diagnostics",
             "message": (
-                "No logs available in diagnostics. "
-                "Note: system_log only captures errors/warnings, not INFO/DEBUG logs. "
-                "For full logs: 1) Check HA logs UI, 2) Use 'journalctl -u home-assistant' (supervised), "
-                "or 3) Check container logs (Docker/dev environments)."
+                "No logs captured yet. The integration's log buffer may not have "
+                "been initialized (happens on first setup). Try reloading the "
+                "integration and capturing diagnostics again."
             ),
         }
     ]
@@ -371,9 +371,9 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     """Get recent log records for cable_modem_monitor.
 
     Attempts multiple methods to retrieve logs:
-    1. system_log integration via handler.records (modern HA)
-    2. system_log.records directly (older HA versions)
-    3. Reading from home-assistant.log file
+    1. Our own log buffer (captures INFO+ since integration start)
+    2. system_log integration (WARNING/ERROR only)
+    3. home-assistant.log file (if enabled, removed in HA 2025.11+ by default)
 
     Args:
         hass: Home Assistant instance
@@ -382,7 +382,13 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     Returns:
         List of log record dicts with timestamp, level, logger, and message
     """
-    # Method 1: Try system_log integration
+    # Method 1: Our own log buffer (most reliable, captures INFO+)
+    logs = get_log_entries(hass)
+    if logs:
+        _LOGGER.debug("Retrieved %d logs from internal buffer", len(logs))
+        return logs[-max_records:]
+
+    # Method 2: Try system_log integration (WARNING/ERROR only)
     try:
         if "system_log" in hass.data:
             system_log = hass.data["system_log"]
@@ -406,7 +412,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     except Exception as err:
         _LOGGER.warning("Could not retrieve logs from system_log: %s", err, exc_info=True)
 
-    # Method 2: Try reading from log file
+    # Method 3: Try reading from log file (removed in HA 2025.11+ by default)
     try:
         log_file_path = Path(hass.config.path("home-assistant.log"))
         logs = _get_logs_from_file(log_file_path)

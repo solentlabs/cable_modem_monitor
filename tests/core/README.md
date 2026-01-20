@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 340
+**Total Tests:** 346
 
 ## Test Files
 
@@ -19,6 +19,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
 | [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
+| [test_log_buffer.py](test_log_buffer.py) | 6 | Tests for the log buffer module. |
 | [test_network.py](test_network.py) | 0 | Tests for core/network.py. |
 | [test_parser_utils.py](test_parser_utils.py) | 13 | Tests for core/parser_utils.py. |
 | [test_signal_analyzer.py](test_signal_analyzer.py) | 22 | Tests for Signal Quality Analyzer. |
@@ -767,6 +768,28 @@ Tests for JSON-based HNAP Request Builder with challenge-response authentication
 - `test_auth_attempt_contains_redacted_password`: Test that stored login request has password redacted.
 - `test_auth_attempt_stores_error_on_failed_login`: Test that failed login stores error information.
 - `test_auth_attempt_stores_challenge_request_format`: Test that challenge request includes PrivateLogin field.
+
+### test_log_buffer.py
+
+Tests for the log buffer module.
+
+**TestLogEntry** (1 tests)
+: Tests for LogEntry dataclass.
+
+- `test_to_dict`: Test LogEntry converts to dict correctly.
+
+**TestLogBuffer** (3 tests)
+: Tests for LogBuffer class.
+
+- `test_add_entry`: Test adding entries to buffer.
+- `test_rotation`: Test buffer rotates when full.
+- `test_clear`: Test clearing buffer.
+
+**TestBufferingHandler** (2 tests)
+: Tests for BufferingHandler class.
+
+- `test_captures_logs`: Test handler captures log records to buffer.
+- `test_filters_by_level`: Test handler respects log level filter.
 
 ### test_network.py
 

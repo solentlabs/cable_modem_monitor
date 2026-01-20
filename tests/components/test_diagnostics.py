@@ -1333,7 +1333,7 @@ class TestGetLogsFromFile:
 
         assert len(result) == 1
         assert result[0]["level"] == "INFO"
-        assert "No logs available" in result[0]["message"]
+        assert "No logs captured yet" in result[0]["message"]
 
     def test_parses_cable_modem_monitor_logs(self):
         """Test parses cable_modem_monitor log entries from file."""

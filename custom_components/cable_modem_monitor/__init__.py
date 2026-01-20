@@ -65,6 +65,7 @@ from .const import (
     VERSION,
 )
 from .core.health_monitor import ModemHealthMonitor
+from .core.log_buffer import setup_log_buffer
 from .core.modem_scraper import ModemScraper
 from .entity_migration import async_migrate_docsis30_entities
 from .modem_config.adapter import get_auth_adapter_for_parser
@@ -748,6 +749,10 @@ def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901
     """Set up Cable Modem Monitor from a config entry."""
+    # Set up log buffer early to capture startup logs for diagnostics
+    # This addresses HA 2025.11+ where home-assistant.log was removed
+    setup_log_buffer(hass)
+
     _LOGGER.info("Cable Modem Monitor version %s is starting", VERSION)
 
     # Extract configuration
