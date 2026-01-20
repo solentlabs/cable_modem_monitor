@@ -1444,11 +1444,11 @@ class ModemScraper:
             if not self._ensure_parser(html, successful_url, suggested_parser):
                 return self._create_error_response("offline")
 
-            # Login and get authenticated HTML
-            html_or_none = self._handle_login_result(html)
-            if html_or_none is None:
+            # Authenticate and get usable HTML (re-fetches if session had expired)
+            authenticated = self._authenticate(html, data_url=successful_url)
+            if authenticated is None:
                 return self._create_error_response("auth_failed")
-            html = html_or_none
+            html = authenticated
 
             # Parse data and build response
             data = self._parse_data(html)
@@ -1563,22 +1563,53 @@ class ModemScraper:
 
         return True
 
-    def _handle_login_result(self, html: str) -> str | None:
-        """Handle login result and return authenticated HTML if available.
+    def _authenticate(self, html: str, data_url: str | None = None) -> str | None:
+        """Authenticate and return usable HTML for parsing.
+
+        If the original HTML is a login page (session expired), re-fetches
+        the data URL after successful authentication.
+
+        Args:
+            html: Original HTML from _fetch_data (might be login page if session expired)
+            data_url: URL that was fetched (for re-fetching after auth if needed)
 
         Returns:
-            HTML string (possibly updated from login) or None if login failed
+            Usable HTML for parsing, or None if authentication failed
         """
+        from .auth.detection import is_login_page
+
+        # Check if original HTML is a login page (session had expired)
+        original_was_login_page = is_login_page(html)
+        if original_was_login_page:
+            _LOGGER.info("Session expired - original fetch returned login page, will re-fetch after auth")
+
         success, authenticated_html = self._login()
 
         if not success:
             _LOGGER.error("Failed to log in to modem")
             return None
 
-        # Use authenticated HTML from login if available, otherwise use original
+        # Use authenticated HTML from login if available
         if authenticated_html:
             _LOGGER.debug("Using authenticated HTML from login (%s bytes)", len(authenticated_html))
             return authenticated_html
+
+        # If original was a login page, re-fetch the data URL now that we're authenticated
+        if original_was_login_page and data_url:
+            _LOGGER.debug("Re-fetching data URL after authentication: %s", data_url)
+            try:
+                response = self.session.get(data_url, timeout=DEFAULT_TIMEOUT, verify=self.session.verify)
+                if response.ok:
+                    # Verify we didn't get another login page
+                    if not is_login_page(response.text):
+                        _LOGGER.debug("Re-fetch successful (%s bytes)", len(response.text))
+                        return response.text
+                    else:
+                        _LOGGER.warning("Re-fetch after auth still returned login page - auth may have failed")
+                else:
+                    _LOGGER.warning("Re-fetch failed with status %s", response.status_code)
+            except Exception as e:
+                _LOGGER.warning("Failed to re-fetch data URL after auth: %s", e)
 
         return html
 

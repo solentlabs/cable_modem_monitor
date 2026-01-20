@@ -344,8 +344,17 @@ def check_docker():
     return check_docker_running(system)
 
 
+def print_separator():
+    """Print a visual separator with timestamp for VSCode task panel."""
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"─── {timestamp} ───────────────────────────────────────────────")
+
+
 def main():
     """Main entry point."""
+    print_separator()
     sys.exit(check_docker())
 
 

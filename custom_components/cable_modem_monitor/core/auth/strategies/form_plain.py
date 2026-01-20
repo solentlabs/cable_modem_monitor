@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import quote, urljoin
 
 from ..base import AuthResult, AuthStrategy
+from ..detection import is_login_page
 from ..types import AuthErrorType
 
 if TYPE_CHECKING:
@@ -152,7 +153,7 @@ class FormPlainAuthStrategy(AuthStrategy):
             return self._check_success_indicator(response, config)
 
         # No success indicator - check if response is a login page
-        if self._is_login_page(response.text):
+        if is_login_page(response.text):
             return self._verify_with_base_url(session, base_url, log)
 
         # If response is NOT a login page, consider login successful
@@ -188,11 +189,11 @@ class FormPlainAuthStrategy(AuthStrategy):
             "Post-login base URL: HTTP %d, %d bytes, is_login=%s",
             data_response.status_code,
             len(data_response.text),
-            self._is_login_page(data_response.text),
+            is_login_page(data_response.text),
         )
 
         if data_response.status_code == 200:
-            if self._is_login_page(data_response.text):
+            if is_login_page(data_response.text):
                 _LOGGER.warning("Form auth failed - still on login page after submission")
                 return AuthResult.fail(
                     AuthErrorType.INVALID_CREDENTIALS,
@@ -262,10 +263,3 @@ class FormPlainAuthStrategy(AuthStrategy):
         if path.startswith("http"):
             return path
         return urljoin(base_url + "/", path)
-
-    def _is_login_page(self, html: str | None) -> bool:
-        """Check if HTML appears to be a login page."""
-        if not html:
-            return False
-        lower = html.lower()
-        return 'type="password"' in lower or "type='password'" in lower
