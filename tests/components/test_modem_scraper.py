@@ -703,7 +703,7 @@ class TestLogoutAfterPoll:
 
         # Mock _fetch_data
         mocker.patch.object(scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", None))
-        mocker.patch.object(scraper, "_handle_login_result", return_value="<html></html>")
+        mocker.patch.object(scraper, "_authenticate", return_value="<html></html>")
 
         # Mock session.get to track logout call
         mock_get = mocker.patch.object(scraper.session, "get")
@@ -1271,6 +1271,104 @@ class TestLoginFlow:
 
         # v3.12.0+: Returns (True, None) assuming no auth required
         assert result == (True, None)
+
+
+class TestSessionExpiryHandling:
+    """Tests for session expiry detection and re-fetch."""
+
+    def test_authenticate_detects_session_expiry(self, mocker):
+        """When original HTML is login page, session expiry is detected."""
+        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+
+        # Mock _login to succeed
+        mocker.patch.object(scraper, "_login", return_value=(True, None))
+
+        # Original HTML is a login page (has password field)
+        login_html = '<form><input type="password"></form>'
+
+        # Mock session.get to return authenticated content after re-fetch
+        mock_response = mocker.Mock()
+        mock_response.ok = True
+        mock_response.text = "<h1>Connection Status</h1><table>...</table>"
+        scraper.session.get = mocker.Mock(return_value=mock_response)
+
+        result = scraper._authenticate(login_html, data_url="http://192.168.100.1/status.html")
+
+        # Should have re-fetched and returned the authenticated content
+        scraper.session.get.assert_called_once()
+        assert result == mock_response.text
+
+    def test_authenticate_skips_refetch_when_not_login_page(self, mocker):
+        """When original HTML is NOT a login page, no re-fetch needed."""
+        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+
+        # Mock _login to succeed without returning HTML
+        mocker.patch.object(scraper, "_login", return_value=(True, None))
+
+        # Original HTML is already authenticated content
+        data_html = "<h1>Connection Status</h1><table>...</table>"
+
+        # session.get should NOT be called
+        scraper.session.get = mocker.Mock()
+
+        result = scraper._authenticate(data_html, data_url="http://192.168.100.1/status.html")
+
+        # Should return original HTML without re-fetching
+        scraper.session.get.assert_not_called()
+        assert result == data_html
+
+    def test_authenticate_uses_auth_html_when_provided(self, mocker):
+        """When _login returns authenticated_html, use it directly."""
+        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+
+        # Mock _login to return authenticated HTML
+        auth_html = "<h1>Authenticated Content</h1>"
+        mocker.patch.object(scraper, "_login", return_value=(True, auth_html))
+
+        # Original HTML is a login page
+        login_html = '<form><input type="password"></form>'
+
+        # session.get should NOT be called (we have auth HTML)
+        scraper.session.get = mocker.Mock()
+
+        result = scraper._authenticate(login_html, data_url="http://192.168.100.1/status.html")
+
+        # Should use authenticated HTML from _login, not re-fetch
+        scraper.session.get.assert_not_called()
+        assert result == auth_html
+
+    def test_authenticate_returns_none_on_login_failure(self, mocker):
+        """When _login fails, return None."""
+        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+
+        # Mock _login to fail
+        mocker.patch.object(scraper, "_login", return_value=(False, None))
+
+        login_html = '<form><input type="password"></form>'
+
+        result = scraper._authenticate(login_html, data_url="http://192.168.100.1/status.html")
+
+        assert result is None
+
+    def test_authenticate_handles_refetch_still_login_page(self, mocker):
+        """When re-fetch still returns login page, fall back to original."""
+        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+
+        mocker.patch.object(scraper, "_login", return_value=(True, None))
+
+        # Original is login page
+        login_html = '<form><input type="password"></form>'
+
+        # Re-fetch also returns login page (auth failed silently)
+        mock_response = mocker.Mock()
+        mock_response.ok = True
+        mock_response.text = '<form><input type="password">Still login page</form>'
+        scraper.session.get = mocker.Mock(return_value=mock_response)
+
+        result = scraper._authenticate(login_html, data_url="http://192.168.100.1/status.html")
+
+        # Falls back to original HTML (even though it's login page)
+        assert result == login_html
 
 
 class TestTierUrlGeneration:

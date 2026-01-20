@@ -8,6 +8,7 @@ import pytest
 import requests
 
 from custom_components.cable_modem_monitor.core.auth import AuthStrategyType
+from custom_components.cable_modem_monitor.core.auth.detection import has_login_form
 from custom_components.cable_modem_monitor.core.auth.discovery import (
     AuthDiscovery,
     DiscoveredFormConfig,
@@ -889,16 +890,16 @@ IS_LOGIN_FORM_CASES = [
 
 
 class TestIsLoginForm:
-    """Test login form detection - table-driven."""
+    """Test login form detection - table-driven.
 
-    @pytest.fixture
-    def discovery(self):
-        return AuthDiscovery()
+    Note: Tests now use the shared has_login_form() from detection module.
+    The AuthDiscovery class delegates to this shared function.
+    """
 
     @pytest.mark.parametrize("html,expected,desc", IS_LOGIN_FORM_CASES)
-    def test_is_login_form(self, discovery, html, expected, desc):
+    def test_is_login_form(self, html, expected, desc):
         """Table-driven test for login form detection."""
-        assert discovery._is_login_form(html) is expected, desc
+        assert has_login_form(html) is expected, desc
 
 
 # =============================================================================

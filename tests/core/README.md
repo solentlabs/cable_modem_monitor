@@ -4,12 +4,13 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 330
+**Total Tests:** 340
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
+| [test_auth_detection.py](test_auth_detection.py) | 10 | Tests for auth/detection.py - login page detection. |
 | [test_auth_discovery.py](test_auth_discovery.py) | 48 | Tests for Authentication Discovery. |
 | [test_auth_handler.py](test_auth_handler.py) | 29 | Tests for the AuthHandler class. |
 | [test_authentication.py](test_authentication.py) | 42 | Tests for Authentication Strategies. |
@@ -23,6 +24,41 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_signal_analyzer.py](test_signal_analyzer.py) | 22 | Tests for Signal Quality Analyzer. |
 
 ## Test Details
+
+### test_auth_detection.py
+
+Tests for auth/detection.py - login page detection.
+
+Tests:
+- has_password_field(): Lenient string search
+- has_login_form(): Strict DOM-based check
+- is_login_page(): Smart detection using aggregated hints from all modems
+
+**TestHasPasswordField** (1 tests)
+: Test lenient password field detection.
+
+- `test_has_password_field`: Table-driven test for lenient password detection.
+
+**TestHasLoginForm** (1 tests)
+: Test strict login form detection.
+
+- `test_has_login_form`: Table-driven test for strict form detection.
+
+**TestRealWorldSamples** (4 tests)
+: Test with realistic modem login page HTML.
+
+- `test_netgear_cm_login`: Netgear CM login page pattern.
+- `test_arris_sb_login`: ARRIS Surfboard login page pattern.
+- `test_motorola_status_page`: Motorola modem status page (not a login page).
+- `test_js_template_with_password`: JavaScript template containing password field string (edge case).
+
+**TestIsLoginPage** (4 tests)
+: Test is_login_page() which is an alias for has_password_field().
+
+- `test_login_page_with_password_field`: Page with password field is detected as login page.
+- `test_data_page_without_password_field`: Page without password field is NOT a login page.
+- `test_empty_and_none`: Empty string and None return False.
+- `test_is_alias_for_has_password_field`: is_login_page() returns same result as has_password_field().
 
 ### test_auth_discovery.py
 

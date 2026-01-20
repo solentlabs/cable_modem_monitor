@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 283
+**Total Tests:** 288
 
 ## Test Files
 
@@ -19,7 +19,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_init.py](test_init.py) | 15 | Tests for __init__.py helper functions. |
-| [test_modem_scraper.py](test_modem_scraper.py) | 81 | Tests for Cable Modem Monitor scraper. |
+| [test_modem_scraper.py](test_modem_scraper.py) | 86 | Tests for Cable Modem Monitor scraper. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
@@ -435,6 +435,15 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_login_skipped_without_credentials`: Test that login is skipped when no credentials provided.
 - `test_login_skipped_without_parser`: Test that login assumes no auth required when no parser is set.
 - `test_login_assumes_no_auth_when_parser_has_no_hints`: Test that login assumes no auth required when parser has no hints.
+
+**TestSessionExpiryHandling** (5 tests)
+: Tests for session expiry detection and re-fetch.
+
+- `test_authenticate_detects_session_expiry`: When original HTML is login page, session expiry is detected.
+- `test_authenticate_skips_refetch_when_not_login_page`: When original HTML is NOT a login page, no re-fetch needed.
+- `test_authenticate_uses_auth_html_when_provided`: When _login returns authenticated_html, use it directly.
+- `test_authenticate_returns_none_on_login_failure`: When _login fails, return None.
+- `test_authenticate_handles_refetch_still_login_page`: When re-fetch still returns login page, fall back to original.
 
 **TestTierUrlGeneration** (3 tests)
 : Tests for URL generation in different tiers.

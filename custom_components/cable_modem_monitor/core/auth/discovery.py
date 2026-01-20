@@ -37,6 +37,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from .detection import has_login_form
 from .types import AuthStrategyType
 
 if TYPE_CHECKING:
@@ -348,7 +349,7 @@ class AuthDiscovery:
                 )
 
             # Is it a login form?
-            if self._is_login_form(response.text):
+            if has_login_form(response.text):
                 # Check for JavaScript-based auth (button instead of submit)
                 if self._is_js_form(response.text):
                     return self._handle_js_auth(
@@ -387,7 +388,7 @@ class AuthDiscovery:
         _LOGGER.debug(
             "Unknown auth pattern: status=%d, has_form=%s",
             response.status_code,
-            self._is_login_form(response.text) if response.text else False,
+            has_login_form(response.text) if response.text else False,
         )
         return self._unknown_result(response)
 
@@ -501,7 +502,7 @@ class AuthDiscovery:
         # First check: if form submission response is NOT a login page, auth succeeded
         # MB7621 and similar modems return the home page directly after successful login
         # No need to fetch verification URL - the response itself proves success
-        form_response_is_login = self._is_login_form(response.text)
+        form_response_is_login = has_login_form(response.text)
         _LOGGER.debug(
             "Form submission response: HTTP %d, %d bytes, is_login_form=%s",
             response.status_code,
@@ -559,7 +560,7 @@ class AuthDiscovery:
             # BUT: only fail immediately if we have a reliable verification URL.
             # Some modems (e.g., MB7621) show login forms on root URL even when authenticated.
             # In fallback mode, we use cookies as a secondary indicator.
-            if self._is_login_form(data_response.text):
+            if has_login_form(data_response.text):
                 if using_reliable_verification:
                     _LOGGER.debug("Verification page still shows login form - credentials rejected")
                     return self._error_result("Invalid credentials. Still on login page after form submission.")
@@ -597,7 +598,7 @@ class AuthDiscovery:
             _LOGGER.debug("Post-auth verification fetch failed: %s", e)
 
         # Check if we're still on login page (wrong credentials)
-        if self._is_login_form(response.text):
+        if has_login_form(response.text):
             return self._error_result("Invalid credentials. Login form returned.")
 
         return self._unknown_result(response)
@@ -1178,18 +1179,6 @@ class AuthDiscovery:
             field_name = pwd_input.get("name")
             return str(field_name) if field_name else None
         return None
-
-    def _is_login_form(self, html: str) -> bool:
-        """Detect if HTML contains a login form."""
-        if not html:
-            return False
-        soup = BeautifulSoup(html, "html.parser")
-        # Must have a form with password field
-        form = soup.find("form")
-        if not form:
-            return False
-        # Case-insensitive match for type="password" (some modems use type="Password")
-        return form.find("input", {"type": lambda t: bool(t and t.lower() == "password")}) is not None
 
     def _is_js_form(self, html: str) -> bool:
         """Detect if form uses JavaScript submission instead of normal submit."""

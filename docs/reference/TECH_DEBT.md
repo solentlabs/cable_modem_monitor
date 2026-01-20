@@ -126,29 +126,37 @@ Extracted to shared module `core/parser_utils.py`:
 
 ---
 
-### 5. Duplicate Login Detection (2 implementations)
+### 5. Duplicate Login Detection (RESOLVED)
 
-**Problem:** Login page detection exists in two places with different approaches:
-- `discovery.py:1170` - `_is_login_form()` using BeautifulSoup
-- `strategies/form_plain.py:266` - `_is_login_page()` using string search
+**Resolution:** v3.13.0 (January 2026)
 
-**Impact:**
-- Different implementations may detect different pages
-- Bug fixes may not be applied to both locations
-- Inconsistent behavior across code paths
+Created unified login detection module `core/auth/detection.py` with:
+- `has_password_field()` - Lenient string-based detection (fast)
+- `has_login_form()` - Strict form-based detection (requires `<form>` tag)
+- `is_login_page()` - Alias for `has_password_field()` (for session expiry)
 
-**Remediation:**
-1. Create shared `login_detection.py` module
-2. Single `is_login_page(html, soup=None)` function
-3. Both call sites use the shared implementation
+**Design note:** The modem index `pre_auth`/`post_auth` patterns are for MODEM
+IDENTIFICATION (HintMatcher), NOT for login detection. Those patterns include
+modem names like "ARRIS", "SB8200" which appear on both login AND data pages.
+Login detection uses password field presence - simple and reliable.
 
-**Effort:** Low (1 session)
+**Usage:**
+- Discovery uses `has_login_form()` to detect login pages during initial config
+- `form_plain.py` uses `is_login_page()` for session expiry detection
+- Non-form strategies (HNAP, Basic HTTP, URL token) don't need login detection
 
-**Source:** External code review (Claude, Jan 2026)
+**Files Changed:**
+- Created `custom_components/cable_modem_monitor/core/auth/detection.py`
+- Updated `core/auth/discovery.py` - Uses shared `has_login_form()`
+- Updated `core/auth/strategies/form_plain.py` - Uses `is_login_page()`
+- Updated `core/modem_scraper.py` - Session expiry detection with auto re-fetch
+- Created `tests/core/test_auth_detection.py` - 26 tests for detection
 
-**Files:**
-- `custom_components/cable_modem_monitor/core/auth/discovery.py:1170`
-- `custom_components/cable_modem_monitor/core/auth/strategies/form_plain.py:266`
+**Session Expiry Handling:**
+The scraper now detects when a fetch returns a login page (session expired) and
+automatically re-fetches the data URL after successful re-authentication. This
+prevents the parser from receiving login page HTML when the session has expired.
+See `_authenticate()` in `modem_scraper.py`.
 
 ---
 
