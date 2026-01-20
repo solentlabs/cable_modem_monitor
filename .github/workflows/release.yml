@@ -76,7 +76,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r tests/requirements.txt
-          pytest tests/ -v
+          # Use pytest without path argument to respect pytest.ini testpaths (tests + modems)
+          pytest
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
