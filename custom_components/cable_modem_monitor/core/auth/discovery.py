@@ -43,6 +43,9 @@ from .types import AuthStrategyType
 if TYPE_CHECKING:
     import requests
 
+    from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import (
+        HNAPJsonRequestBuilder,
+    )
     from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
@@ -118,9 +121,11 @@ class DiscoveryResult:
         success: Whether discovery completed and auth strategy was determined
         strategy: The detected AuthStrategyType (may be UNKNOWN if unrecognized)
         form_config: Discovered form configuration (if form-based auth)
-        hnap_config: HNAP config (endpoint, namespace, etc.) for HNAP auth
+        hnap_config: HNAP config (endpoint, namespace, hmac_algorithm) for HNAP auth
+        hnap_builder: Authenticated HNAP builder for data fetches (HNAP only)
         url_token_config: URL token config (login_prefix, etc.) for URL token auth
         response_html: HTML from authenticated page (for parser detection)
+                       Note: HNAP modems return None (data via SOAP API, not HTML)
         error_message: Human-readable error (if failed)
         captured_response: Debug info for unknown patterns (for diagnostics)
     """
@@ -129,6 +134,7 @@ class DiscoveryResult:
     strategy: AuthStrategyType | None = None
     form_config: DiscoveredFormConfig | None = None
     hnap_config: dict[str, Any] | None = None
+    hnap_builder: HNAPJsonRequestBuilder | None = None
     url_token_config: dict[str, Any] | None = None
     response_html: str | None = None
     error_message: str | None = None
@@ -614,28 +620,78 @@ class AuthDiscovery:
     ) -> DiscoveryResult:
         """Handle HNAP/SOAP session authentication.
 
-        HNAP auth is handled by the existing HNAPSessionAuthStrategy.
-        We detect it here and return HNAP_SESSION with the HNAP config
-        for storage in config entry.
+        Actually performs HNAP challenge-response authentication to validate
+        credentials during discovery. This ensures we catch auth failures
+        at setup time, not runtime.
+
+        Algorithm Discovery:
+            Since we don't know which modem this is yet (parser detection
+            happens after auth), we try both HMAC algorithms:
+            1. MD5 first (most common)
+            2. SHA256 if MD5 fails
+
+        Returns:
+            DiscoveryResult with authenticated hnap_builder for data fetches.
+            The hnap_config includes the discovered hmac_algorithm.
         """
+        from .hnap.json_builder import HNAPJsonRequestBuilder
+        from .types import HMACAlgorithm
+
         if not username or not password:
             return self._error_result("HNAP authentication detected. Please provide credentials.")
 
-        # Get HNAP config from modem.yaml via adapter, or use defaults
+        # Get base HNAP config (endpoint, namespace, empty_action_value)
         hnap_config = self._get_hnap_config(parser)
-        _LOGGER.debug("HNAP authentication detected, config: %s", hnap_config)
+        _LOGGER.debug("HNAP authentication detected, base config: %s", hnap_config)
 
-        # HNAP requires the full strategy to execute the challenge-response
-        # We return the strategy type and config; caller stores config in entry
-        return DiscoveryResult(
-            success=True,
-            strategy=AuthStrategyType.HNAP_SESSION,
-            form_config=None,
-            hnap_config=hnap_config,
-            response_html=None,  # Will be fetched by strategy
-            error_message=None,
-            captured_response=None,
-        )
+        # Try authentication with each HMAC algorithm until one works
+        # Most HNAP modems use MD5, but some (e.g., certain firmware versions) use SHA256
+        algorithms_to_try = [HMACAlgorithm.MD5, HMACAlgorithm.SHA256]
+        last_error = None
+
+        for algorithm in algorithms_to_try:
+            _LOGGER.debug("HNAP: trying authentication with %s", algorithm.value)
+
+            builder = HNAPJsonRequestBuilder(
+                endpoint=hnap_config.get("endpoint", "/HNAP1/"),
+                namespace=hnap_config.get("namespace", "http://purenetworks.com/HNAP1/"),
+                hmac_algorithm=algorithm,
+                empty_action_value=hnap_config.get("empty_action_value", ""),
+            )
+
+            try:
+                success, response_text = builder.login(session, base_url, username, password)
+
+                if success:
+                    _LOGGER.info(
+                        "HNAP authentication successful with %s algorithm",
+                        algorithm.value,
+                    )
+                    # Store the working algorithm in config for runtime use
+                    hnap_config["hmac_algorithm"] = algorithm.value
+
+                    return DiscoveryResult(
+                        success=True,
+                        strategy=AuthStrategyType.HNAP_SESSION,
+                        form_config=None,
+                        hnap_config=hnap_config,
+                        hnap_builder=builder,
+                        response_html=None,  # HNAP returns JSON, not HTML
+                        error_message=None,
+                        captured_response=None,
+                    )
+                else:
+                    last_error = f"HNAP {algorithm.value} login failed"
+                    response_preview = response_text[:200] if response_text else "(empty)"
+                    _LOGGER.debug("HNAP %s login failed, response: %s", algorithm.value, response_preview)
+
+            except Exception as e:
+                last_error = f"HNAP {algorithm.value} error: {e}"
+                _LOGGER.debug("HNAP %s auth exception: %s", algorithm.value, e)
+
+        # All algorithms failed
+        _LOGGER.error("HNAP authentication failed with all algorithms")
+        return self._error_result(f"HNAP authentication failed. {last_error or 'Invalid credentials.'}")
 
     def _get_hnap_config(self, parser: ModemParser | None) -> dict[str, Any]:
         """Get HNAP config from modem.yaml or defaults.

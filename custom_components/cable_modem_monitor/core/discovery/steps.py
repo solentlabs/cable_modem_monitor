@@ -252,6 +252,7 @@ def discover_auth(
             html=result.response_html,
             form_config=form_config,
             hnap_config=result.hnap_config,
+            hnap_builder=result.hnap_builder,
             url_token_config=result.url_token_config,
         )
 
@@ -409,11 +410,12 @@ def _get_parser_class_by_name(
 # =============================================================================
 
 
-def validate_parse(
-    html: str,
+def validate_parse(  # noqa: C901
+    html: str | None,
     parser_class: type[ModemParser],
     session: requests.Session,
     base_url: str,
+    hnap_builder: Any | None = None,
 ) -> ValidationResult:
     """Step 4: Validate that parser can extract modem data.
 
@@ -421,17 +423,18 @@ def validate_parse(
     Uses ResourceLoader to fetch any additional pages declared in modem.yaml.
 
     Args:
-        html: HTML content from authenticated page
+        html: HTML content from authenticated page (None for HNAP modems)
         parser_class: Matched parser class from detection step
         session: Authenticated session for fetching additional pages
         base_url: Base URL for relative path resolution
+        hnap_builder: Authenticated HNAP builder (for HNAP modems only)
 
     Returns:
         ValidationResult with parsed modem data
 
     HTTP Behavior:
-        May fetch additional pages if modem.yaml declares multiple resources.
-        Uses ResourceLoader which respects the modem's data_type (html/hnap/rest).
+        - HTML modems: May fetch additional pages declared in modem.yaml
+        - HNAP modems: Uses HNAPLoader with authenticated builder for API calls
 
     Success Criteria:
         Parser must return non-None. Empty data (no channels) is still
@@ -442,15 +445,20 @@ def validate_parse(
     from ...modem_config.adapter import get_auth_adapter_for_parser
     from ..loaders import ResourceLoaderFactory
 
-    if not html:
+    # HNAP modems don't return HTML - they use API calls via the builder
+    is_hnap = hnap_builder is not None
+
+    if not html and not is_hnap:
         return ValidationResult(success=False, error="No HTML provided for validation")
 
     try:
         # Instantiate parser
         parser_instance = parser_class()
 
-        # Parse the initial HTML as the "/" resource
-        soup = BeautifulSoup(html, "html.parser")
+        # Parse the initial HTML as the "/" resource (if available)
+        soup = None
+        if html:
+            soup = BeautifulSoup(html, "html.parser")
 
         # Try to use ResourceLoader for proper resource fetching
         adapter = get_auth_adapter_for_parser(parser_class.__name__)
@@ -464,6 +472,7 @@ def validate_parse(
                     base_url=base_url,
                     modem_config=modem_config,
                     verify_ssl=False,  # SSL verification off during discovery
+                    hnap_builder=hnap_builder,  # Pass HNAP builder for API calls
                     url_token_config=url_token_config,
                 )
 
@@ -474,7 +483,7 @@ def validate_parse(
                     len(resources),
                 )
 
-                # Ensure we have the main page
+                # Ensure we have the main page (for HTML modems)
                 if "/" not in resources and soup:
                     resources["/"] = soup
 
@@ -485,15 +494,27 @@ def validate_parse(
                     "ResourceLoader failed, falling back to single-page parse: %s",
                     loader_error,
                 )
-                # Fallback: just parse the initial HTML
-                modem_data = parser_instance.parse_resources({"/": soup})
+                # Fallback: just parse the initial HTML (only works for HTML modems)
+                if soup:
+                    modem_data = parser_instance.parse_resources({"/": soup})
+                else:
+                    return ValidationResult(
+                        success=False,
+                        error=f"ResourceLoader failed and no HTML fallback: {loader_error}",
+                    )
         else:
             # No modem.yaml config - use single-page parse
-            _LOGGER.debug(
-                "No modem.yaml for %s, using single-page parse",
-                parser_class.__name__,
-            )
-            modem_data = parser_instance.parse_resources({"/": soup})
+            if soup:
+                _LOGGER.debug(
+                    "No modem.yaml for %s, using single-page parse",
+                    parser_class.__name__,
+                )
+                modem_data = parser_instance.parse_resources({"/": soup})
+            else:
+                return ValidationResult(
+                    success=False,
+                    error=f"No modem.yaml config for {parser_class.__name__} and no HTML provided",
+                )
 
         if modem_data is None:
             return ValidationResult(

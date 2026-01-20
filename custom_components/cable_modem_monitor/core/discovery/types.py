@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 
 if TYPE_CHECKING:  # pragma: no cover
+    from ..auth.hnap.json_builder import HNAPJsonRequestBuilder
     from ..base_parser import ModemParser
 
 
@@ -63,8 +64,10 @@ class AuthResult:
         strategy: Auth type: "no_auth", "basic", "form_plain", "hnap", "url_token"
         session: Authenticated requests.Session with cookies/headers set
         html: HTML response from authenticated page (used for parser detection)
+              Note: HNAP modems return html=None (data via SOAP API, not HTML)
         form_config: Form auth config (action URL, field names, encoding)
-        hnap_config: HNAP auth config (endpoint, namespace, SOAPAction)
+        hnap_config: HNAP auth config (endpoint, namespace, hmac_algorithm)
+        hnap_builder: Authenticated HNAP builder for data fetches (HNAP only)
         url_token_config: URL token config (login_prefix, token extraction)
         error: Error message if success=False
     """
@@ -75,6 +78,7 @@ class AuthResult:
     html: str | None = None
     form_config: dict[str, Any] | None = None
     hnap_config: dict[str, Any] | None = None
+    hnap_builder: HNAPJsonRequestBuilder | None = None
     url_token_config: dict[str, Any] | None = None
     error: str | None = None
 
@@ -143,6 +147,7 @@ class DiscoveryPipelineResult:
         modem_data: Parsed channel data for entity creation
         parser_instance: Ready-to-use parser for polling
         session: Authenticated session for immediate data fetch
+        hnap_builder: Authenticated HNAP builder for data fetches (HNAP only)
 
         # Error tracking
         error: Error message if success=False
@@ -164,6 +169,7 @@ class DiscoveryPipelineResult:
     modem_data: dict[str, Any] = field(default_factory=dict)
     parser_instance: Any | None = None
     session: requests.Session | None = None
+    hnap_builder: HNAPJsonRequestBuilder | None = None
 
     # Error info
     error: str | None = None
