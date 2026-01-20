@@ -208,7 +208,23 @@ def run_discovery_pipeline(
         )
     else:
         # Auto-detect from HTML
-        assert auth.html is not None  # Guaranteed by auth.success check above
+        # HNAP modems return html=None (data via SOAP API, not HTML pages)
+        # User must select parser - can't auto-detect without HTML
+        if auth.html is None:
+            error_msg = "HNAP modems require manual parser selection. " "Please select your modem model from the list."
+            _LOGGER.error("Step 3/4: Parser Detection - %s", error_msg)
+            return DiscoveryPipelineResult(
+                success=False,
+                working_url=conn.working_url,
+                auth_strategy=auth.strategy,
+                auth_form_config=auth.form_config,
+                auth_hnap_config=auth.hnap_config,
+                auth_url_token_config=auth.url_token_config,
+                legacy_ssl=conn.legacy_ssl,
+                session=auth.session,
+                error=error_msg,
+                failed_step="parser_detection",
+            )
         parser = detect_parser(html=auth.html)
 
     if not parser.success:
