@@ -233,6 +233,34 @@ def run_discovery_pipeline(
     )
 
     # Step 4: Validation (uses HTML from step 2, session from step 2)
+    # HNAP modems: Skip validation during discovery - auth detection worked but
+    # the HNAP builder (needed for API calls) isn't created until runtime.
+    # Tech debt: Wire up HNAPJsonAuthStrategy during discovery to enable validation.
+    if auth.strategy == "hnap_session":
+        _LOGGER.info("Step 4/4: Validation - SKIPPED for HNAP (validation happens at runtime)")
+        _LOGGER.info(
+            "Discovery pipeline complete: %s at %s (strategy=%s%s)",
+            parser.parser_name,
+            conn.working_url,
+            auth.strategy,
+            encoding,
+        )
+        return DiscoveryPipelineResult(
+            success=True,
+            working_url=conn.working_url,
+            auth_strategy=auth.strategy,
+            auth_form_config=auth.form_config,
+            auth_hnap_config=auth.hnap_config,
+            auth_url_token_config=auth.url_token_config,
+            parser_name=parser.parser_name,
+            legacy_ssl=conn.legacy_ssl,
+            modem_data={},  # HNAP: validated at runtime
+            parser_instance=None,
+            session=auth.session,
+            error=None,
+            failed_step=None,
+        )
+
     _LOGGER.debug("Step 4/4: Validation - parsing modem data")
     assert auth.html is not None
     assert parser.parser_class is not None
