@@ -12,7 +12,7 @@
 
 <!-- Meta -->
 [![AI Assisted](https://img.shields.io/badge/AI-Claude%20Assisted-5A67D8.svg)](https://claude.ai)
-[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen.svg)](./docs/MODEM_REQUEST.md)
+[![Help Add Your Modem](https://img.shields.io/badge/Help-Add%20Your%20Modem-brightgreen.svg)](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md)
 
 A custom Home Assistant integration that monitors cable modem signal quality, power levels, and error rates. Perfect for tracking your internet connection health and identifying potential issues before they cause problems.
 
@@ -137,21 +137,12 @@ If your modem isn't listed, you can still install the integration! It will enter
 - Allows installation to succeed
 - Enables the "Capture HTML" diagnostics button
 - Lets you provide HTML samples to help add support for your modem
-- See [How to Help Add Support](#how-to-help-add-support-for-your-modem) below
 
-## Help Verify Modem Support
+## Help Expand Modem Support
 
-Using a modem marked with asterisk (*)? **[Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml)** to help other users!
+**Modem not listed?** [Request support](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) — see the [Modem Request Guide](./docs/MODEM_REQUEST.md) for details.
 
----
-
-## How to Help Add Support for Your Modem
-
-If your modem isn't supported or you'd like to help expand compatibility, we'd love your help!
-
-**📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for step-by-step instructions on capturing and submitting diagnostic data.
-
-**Want to develop the parser yourself?** See the [Contributing Guide](./CONTRIBUTING.md) for details.
+**Modem listed as ⏳ Awaiting?** [Report it working](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_verification.yml) to help verify support.
 
 
 

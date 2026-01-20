@@ -5,6 +5,8 @@ FROM python:3.12-slim
 WORKDIR /workspaces/cable_modem_monitor
 
 # Install system dependencies
+# procps provides ps/pkill (required for docker-in-docker)
+# iptables required for docker networking
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -12,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     make \
     wget \
     unzip \
+    procps \
+    iptables \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip and install basic dev tools only

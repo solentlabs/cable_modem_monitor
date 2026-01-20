@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Clean up test artifacts from the workspace."""
+
 import shutil
 from pathlib import Path
 

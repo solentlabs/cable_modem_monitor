@@ -119,7 +119,7 @@ class TestParseUptime:
         assert result == expected
 
     def test_days_plus_hms_format(self):
-        """Test parsing 'X days HH:MM:SS' format (e.g., Arris S33)."""
+        """Test parsing 'X days HH:MM:SS' format (common in HNAP modems)."""
         # "7 days 12:34:56" = 7 days + 12 hours + 34 minutes + 56 seconds
         result = parse_uptime_to_seconds("7 days 12:34:56")
         expected = (7 * 86400) + (12 * 3600) + (34 * 60) + 56

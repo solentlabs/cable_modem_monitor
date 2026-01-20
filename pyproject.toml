@@ -112,7 +112,8 @@ files = ["custom_components/cable_modem_monitor/**/*.py"]  # Limit scope to inte
 minversion = "8.0"                 # Ensure compatibility with latest plugins
 addopts = "-v --tb=short --cov=custom_components.cable_modem_monitor --cov-report=term-missing"
 testpaths = [
-    "tests"                        # Discover tests in this folder
+    "tests",                       # Core and integration tests
+    "modems",                      # Modem-specific tests (colocated with config)
 ]
 
 # -------------------------------

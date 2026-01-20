@@ -60,6 +60,32 @@ setup_config_dir() {
     else
         print_info "Test config directory already exists"
     fi
+
+    # Create default configuration.yaml with dev-friendly logger settings if missing
+    local config_file="$TEST_CONFIG_DIR/configuration.yaml"
+    if [ ! -f "$config_file" ]; then
+        cat > "$config_file" << 'EOF'
+# Development configuration for Cable Modem Monitor
+
+# Logger configuration - quiet HA core, verbose for our integration
+logger:
+  default: warning
+  logs:
+    custom_components.cable_modem_monitor: info
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+EOF
+        print_success "Created configuration.yaml with dev-friendly logger settings"
+    fi
 }
 
 start_container() {

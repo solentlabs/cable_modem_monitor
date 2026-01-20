@@ -11,6 +11,8 @@ services:
       - ${HOST_WORKSPACE_FOLDER:-${PWD}}/test-ha-config:/config
       # Mount the integration directly into custom_components
       - ${HOST_WORKSPACE_FOLDER:-${PWD}}/custom_components/cable_modem_monitor:/config/custom_components/cable_modem_monitor
+      # Mount modem configurations (required for modem.yaml discovery)
+      - ${HOST_WORKSPACE_FOLDER:-${PWD}}/modems:/config/modems
       # Mount the entire project for development and testing
       - ${HOST_WORKSPACE_FOLDER:-${PWD}}:/workspace:cached
       # Mount Docker socket for Docker-from-Docker

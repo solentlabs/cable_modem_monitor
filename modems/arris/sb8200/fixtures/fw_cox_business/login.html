@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<script src="jquery-1.7.1.min.js"></script>
+<script src="json2.js"></script>
+<script src="main_arris.js"></script>
+<script src="jquery-2.0.3.min.js"></script>
+
+<script>
+$(document).ready(function(){
+	$("#htmlheader").load("htmlheader.htm");
+});
+</script>
+</head>
+
+<body>
+<div id="htmlheader"></div>
+<div class="header">
+
+<script>
+$(document).ready(function(){
+	$("#pageheaderA").load("pageheaderA.htm");
+});
+</script>
+
+
+         <div id="binnacleWrapper1" class="binnacleItems_hide" style="display:none;">
+            <div id="binnacleWrapper2" class="binnacleItems_hide" style="display:none;">
+                <div id="binnacleWrapperLeft"><img src="px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                <div id="binnacleWrapperRight"><img src="px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                <div id="binnacleWrapperMiddle">
+                    <div id="binnacleInnards">
+                        <div id="binnacleIndicatorWrap"></div>
+                            <div id="binnacleModelName">
+                             <span id="thisModelNumberIs">
+                               <label id="model">SB8200</label></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<div id="pageheaderA"></div>
+
+        <div class="container">
+                <div class="subHeader">
+                        <div class="subHeadcontent">Login</div>
+                </div>
+        <form action="">
+               <br>
+               <b>Username:</b><br>
+               <input type="text" id="username" onkeypress="return checkForActivate(event)">
+               <br>
+               <br>
+               <b>Password:</b><br>
+               <input type="password" id="password" onkeypress="return checkForActivate(event)">
+               <br>
+               <br>
+               <input type="button" id="loginButton" onclick="validate(this.form)" value="Login">
+        </form>
+        </div>
+
+<div class="spacer40" style="text-align: center; color: red; font-weight: bold;"></div>
+<div class="spacer70"></div>
+
+</div>
+<!--gap<div id="bmtg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>-->
+
+<div id="fg1"><div id="fg2"><div id="fg3"><div id="fg4"><div id="fg5"><div id="fg6"><div id="fg7">
+   <div id="logo_bottom"><a href="http://www.arris.com"><img src="px1_Ux.png" alt="ARRIS" title="ARRIS" class="logo_bottom"></a></div>
+   <div id="copyright">
+      <a href="http://www.arris.com">&copy;CommScope, Inc. All rights reserved. ARRIS, SURFBOARD and SURFBOARD MAX are trademarks of CommScope, Inc.<br />All other trademarks are the property of their respective owners.</a>
+   </div>
+</div></div></div></div></div></div></div>
+<!--/div-->
+
+
+<script>
+function authenticateUser(user, password)
+{
+    var token = user + ":" + password;
+
+    // Base64 Encoding -> btoa
+    var hash = btoa(token);
+
+    var auth = hash;
+    sessionStorage.setItem('auth', auth);
+    return auth;
+}
+
+function validate( form )
+{
+        $(".spacer40")[0].innerHTML = "";
+        authenticateUser(form.username.value, form.password.value);
+        localStorage.setItem('username', form.username.value);
+        eraseCookie("sessionId");
+        $.ajax({
+            type: 'GET',
+            url:"/cmconnectionstatus.html?login_" + sessionStorage.getItem('auth'),
+            contentType: 'application/x-www-form-urlencoded; charset=utf-8',
+            xhrFields: {
+                withCredentials: true
+            },
+            headers: {
+                'Authorization': 'Basic ' + sessionStorage.getItem('auth')
+            },
+            success: function (result) {
+                var token = result;
+                sessionStorage.setItem('csrftoken', token);
+                window.location.href = "/cmconnectionstatus.html?ct_" + token;
+            },
+            error: function (req, status, error) {
+                window.location.href = "/index.html";
+            }
+        });
+}
+
+
+function checkForActivate( e )
+{
+   if( e.keyCode == 13 )
+   {
+      document.getElementById("loginButton").click();
+   }
+
+   return true;
+}
+
+</script>
+
+<!--/div-->
+</body>
+</html>

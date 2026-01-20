@@ -7,13 +7,17 @@ This guide explains the technical requirements for test fixtures used in parser 
 ## Fixture Directory Structure
 
 ```
-tests/parsers/<manufacturer>/fixtures/<model>/
-├── metadata.yaml           # Required: modem metadata
-├── <model>_status.html     # Required: main status page
-├── <model>_info.html       # Optional: system info page
-├── <model>_logs.html       # Optional: event logs page
-└── ...                     # Any other relevant pages
+modems/<manufacturer>/<model>/
+├── modem.yaml              # Required: modem configuration
+├── fixtures/               # Required: test data
+│   ├── metadata.yaml       # Required: capture metadata
+│   ├── <page>.html         # Required: main status page(s)
+│   └── README.md           # Optional: contributor notes
+└── har/                    # Optional: HAR captures
+    └── modem.har           # Sanitized HAR file
 ```
+
+See [docs/specs/MODEM_DIRECTORY_SPEC.md](../specs/MODEM_DIRECTORY_SPEC.md) for the full specification.
 
 ## metadata.yaml Template
 
@@ -145,26 +149,37 @@ The script automatically:
 
 If capturing manually (View Page Source → Save):
 
-- [ ] Created fixture directory: `tests/parsers/<mfr>/fixtures/<model>/`
+- [ ] Created modem directory: `modems/<mfr>/<model>/fixtures/`
 - [ ] Saved all relevant HTML pages
-- [ ] Created `metadata.yaml` with all fields
+- [ ] Created `fixtures/metadata.yaml` with all fields
 - [ ] Scrubbed MAC addresses
 - [ ] Scrubbed serial numbers
 - [ ] Scrubbed public IPs
 - [ ] Scrubbed account/subscriber IDs
 - [ ] Verified no other PII remains
 
-## Example: Complete Fixture
+## Example: Complete Modem
 
 ```
-tests/parsers/arris/fixtures/sb6141/
-├── metadata.yaml
-├── sb6141_status.html      # Downstream/upstream channels
-└── sb6141_info.html        # System information
+modems/arris/sb6141/
+├── modem.yaml              # Modem configuration and auth hints
+├── fixtures/
+│   ├── metadata.yaml       # Capture metadata
+│   ├── README.md           # Contributor notes
+│   ├── cmconnectionstatus.html  # Channel data
+│   └── cmswinfo.html       # System information
+└── har/
+    └── modem.har           # Sanitized HAR capture
 ```
 
-**metadata.yaml:**
+**fixtures/metadata.yaml:**
 ```yaml
+firmware_version: "SB6141-9.1.103-GA-00-NOSH"
+captured_date: "2025-01-04"
+contributor: "@username"
+issue: 77
+
+# Modem specs (can be backfilled by maintainers)
 release_date: 2011
 end_of_life: 2019
 docsis_version: "3.0"

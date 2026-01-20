@@ -27,7 +27,7 @@ from pathlib import Path
 
 # Load html_helper directly to avoid Home Assistant dependencies in __init__.py
 _html_helper_path = (
-    Path(__file__).parent.parent.parent / "custom_components" / "cable_modem_monitor" / "utils" / "html_helper.py"
+    Path(__file__).parent.parent.parent / "custom_components" / "cable_modem_monitor" / "lib" / "html_helper.py"
 )
 _spec = importlib.util.spec_from_file_location("html_helper", _html_helper_path)
 assert _spec is not None and _spec.loader is not None

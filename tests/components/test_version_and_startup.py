@@ -53,7 +53,7 @@ class TestVersionLogging:
             CONF_USERNAME: "admin",
             CONF_PASSWORD: "password",
             CONF_SCAN_INTERVAL: 600,
-            CONF_MODEM_CHOICE: "Motorola MB7621",
+            CONF_MODEM_CHOICE: "[MFG] [Model]",
             CONF_WORKING_URL: "http://192.168.100.1/MotoConnection.asp",
         }
         mock_entry.entry_id = "test_entry"
@@ -98,7 +98,7 @@ class TestVersionLogging:
 
     def test_current_version(self):
         """Test that version is the correct current version."""
-        assert VERSION == "3.11.0"
+        assert VERSION == "3.12.0"
 
 
 class TestParserSelectionOptimization:
@@ -129,7 +129,7 @@ class TestParserSelectionOptimization:
         mock_entry = Mock(spec=ConfigEntry)
         mock_entry.data = {
             CONF_HOST: "192.168.100.1",
-            CONF_MODEM_CHOICE: "Motorola MB7621",  # Specific choice
+            CONF_MODEM_CHOICE: "[MFG] [Model]",  # Specific choice
             CONF_WORKING_URL: "http://192.168.100.1/MotoConnection.asp",
         }
         mock_entry.entry_id = "test_entry"
@@ -160,7 +160,7 @@ class TestParserSelectionOptimization:
             await async_setup_entry(hass, mock_entry)
 
             # Verify get_parser_by_name was called (fast path)
-            mock_get_parser_by_name.assert_called_once_with("Motorola MB7621")
+            mock_get_parser_by_name.assert_called_once_with("[MFG] [Model]")
 
             # Verify get_parsers was NOT called (no full discovery)
             mock_get_parsers.assert_not_called()
@@ -311,7 +311,7 @@ class TestProtocolOptimizationIntegration:
         cached_url = "http://192.168.100.1/MotoConnection.asp"
         mock_entry.data = {
             CONF_HOST: "192.168.100.1",
-            CONF_MODEM_CHOICE: "Motorola MB7621",
+            CONF_MODEM_CHOICE: "[MFG] [Model]",
             CONF_WORKING_URL: cached_url,  # Cached URL with protocol
         }
         mock_entry.entry_id = "test_entry"

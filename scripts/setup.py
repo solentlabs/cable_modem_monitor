@@ -10,32 +10,37 @@ import subprocess
 import sys
 
 # ========================================
-# Color Codes
+# Platform-agnostic Console Output
 # ========================================
+# Use plain ASCII for maximum compatibility across all platforms
+# ANSI color codes work on Windows 10+, macOS, Linux, Chrome OS
+
+# ANSI color codes (work on all modern terminals)
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
 RED = "\033[0;31m"
 CYAN = "\033[0;36m"
-NC = "\033[0m"
+NC = "\033[0m"  # No Color
 
 
-# ========================================
-# Helper Functions
-# ========================================
 def print_step(message):
-    print(f"{CYAN}➜{NC} {message}")
+    """Print step message with arrow (ASCII-only)."""
+    print(f"{CYAN}>{NC} {message}")
 
 
 def print_success(message):
-    print(f"{GREEN}✓{NC} {message}")
+    """Print success message with checkmark (ASCII-only)."""
+    print(f"{GREEN}OK{NC} {message}")
 
 
 def print_error(message):
-    print(f"{RED}✗{NC} {message}", file=sys.stderr)
+    """Print error message with X (ASCII-only)."""
+    print(f"{RED}X{NC} {message}", file=sys.stderr)
 
 
 def print_warning(message):
-    print(f"{YELLOW}⚠{NC} {message}")
+    """Print warning message with ! (ASCII-only)."""
+    print(f"{YELLOW}!{NC} {message}")
 
 
 def run_command(command, quiet=False):
@@ -143,9 +148,9 @@ def print_python_install_instructions(required_major, required_minor):
         print(f"    brew install python@{required_major}.{required_minor}")
         print("")
     elif platform.system() == "Windows":
-        print("  Windows - download from python.org:")
+        print("  Windows - use WSL2 for development (native Windows not supported)")
         print("")
-        print(f"    https://www.python.org/downloads/release/python-{required_major}{required_minor}0/")
+        print("    See docs/setup/WSL2_SETUP.md for instructions")
         print("")
     else:
         print("  Install Python 3.12 using your system's package manager or pyenv:")
@@ -254,14 +259,9 @@ def main():  # noqa: C901
         print("")
 
     # 5. Create virtual environment
-    is_windows = platform.system() == "Windows"
-    pip_cmd = os.path.join(".venv", "Scripts", "pip.exe") if is_windows else os.path.join(".venv", "bin", "pip")
-    precommit_cmd = (
-        os.path.join(".venv", "Scripts", "pre-commit.exe") if is_windows else os.path.join(".venv", "bin", "pre-commit")
-    )
-    python_cmd = (
-        os.path.join(".venv", "Scripts", "python.exe") if is_windows else os.path.join(".venv", "bin", "python")
-    )
+    pip_cmd = os.path.join(".venv", "bin", "pip")
+    precommit_cmd = os.path.join(".venv", "bin", "pre-commit")
+    python_cmd = os.path.join(".venv", "bin", "python")
 
     print_step("Creating virtual environment...")
     if os.path.exists(".venv") and os.path.exists(pip_cmd):
@@ -277,15 +277,9 @@ def main():  # noqa: C901
             print("This happens when VS Code or another process is using the venv.")
             print("")
             print("Solutions:")
-            if is_windows:
-                print("  1. Close ALL VS Code windows")
-                print("  2. Open PowerShell/Command Prompt (NOT VS Code)")
-                print("  3. Run: Remove-Item -Recurse -Force .venv")
-                print("  4. Run this setup again")
-            else:
-                print("  1. Close VS Code")
-                print("  2. Run: rm -rf .venv")
-                print("  3. Run this setup again")
+            print("  1. Close VS Code")
+            print("  2. Run: rm -rf .venv")
+            print("  3. Run this setup again")
             print("")
             sys.exit(1)
         run_command(f"{sys.executable} -m venv .venv")
@@ -339,7 +333,35 @@ def main():  # noqa: C901
         print_success("Development dependencies installed")
     print("")
 
-    # 8. Install pre-commit hooks
+    # 8. Install Playwright for HAR capture (optional)
+    print_step("Installing Playwright for modem traffic capture...")
+    try:
+        run_command(f"{pip_cmd} install --quiet playwright", quiet=True)
+        # Use Firefox - only needs libasound2 vs Chromium's 14+ deps
+        run_command(f"{python_cmd} -m playwright install firefox", quiet=True)
+        print_success("Playwright and Firefox browser installed")
+
+        # Install browser system dependencies (requires sudo on Linux)
+        if platform.system() == "Linux":
+            print_step("Installing browser dependency (libasound2)...")
+            try:
+                # Firefox only needs libasound2 - much simpler than Chromium
+                result = subprocess.run(
+                    ["sudo", "apt-get", "install", "-y", "libasound2t64"],
+                    capture_output=False,
+                )
+                if result.returncode == 0:
+                    print_success("Browser dependency installed")
+                else:
+                    print_warning("Run manually: sudo apt-get install -y libasound2t64")
+            except Exception:
+                print_warning("Run manually: sudo apt-get install -y libasound2t64")
+    except Exception as e:
+        print_warning(f"Playwright installation skipped: {e}")
+        print("  Run manually: pip install playwright && playwright install firefox")
+    print("")
+
+    # 9. Install pre-commit hooks
     print_step("Setting up pre-commit hooks...")
     try:
         run_command(f"{pip_cmd} show pre-commit", quiet=True)
@@ -354,7 +376,7 @@ def main():  # noqa: C901
         print("  Run manually: pre-commit install --hook-type pre-commit --hook-type commit-msg")
     print("")
 
-    # 9. Check Docker
+    # 10. Check Docker
     print_step("Checking Docker...")
     if shutil.which("docker"):
         try:
@@ -369,12 +391,12 @@ def main():  # noqa: C901
         print("  Optional: Install Docker Desktop for containerized development")
     print("")
 
-    # 10. Configure git email privacy
+    # 11. Configure git email privacy
     print_step("Checking git email privacy...")
     configure_git_email_privacy()
     print("")
 
-    # 11. Check VS Code extensions (renumbered from 10)
+    # 12. Check VS Code extensions
     print_step("Checking VS Code...")
     if shutil.which("code"):
         try:
@@ -410,7 +432,7 @@ def main():  # noqa: C901
         print("  Optional: Install VS Code for better development experience")
     print("")
 
-    # 12. Run a quick test
+    # 13. Run a quick test
     print_step("Running quick test to verify setup...")
     try:
         run_command(f"{python_cmd} -m pytest tests/parsers/netgear/test_cm600.py::test_fixtures_exist -q", quiet=True)
@@ -424,7 +446,7 @@ def main():  # noqa: C901
     print("Setup Complete!")
     print("==========================================")
     print("")
-    print(f"{GREEN}✓ Your development environment is ready!{NC}")
+    print_success("Your development environment is ready!")
     print("")
     print("What's installed:")
     print("  • Python virtual environment (.venv/)")
@@ -449,7 +471,7 @@ def main():  # noqa: C901
     print("")
     print(f"  {CYAN}4. Open in VS Code:{NC}")
     print("     code .")
-    print("     # Press F1 → 'Dev Containers: Reopen in Container'")
+    print("     # Press F1 -> 'Dev Containers: Reopen in Container'")
     print("")
     print(f"  {CYAN}5. Verify your setup:{NC}")
     print("     ./scripts/verify-setup.sh")

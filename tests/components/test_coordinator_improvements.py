@@ -55,7 +55,8 @@ class TestCoordinatorPartialData:
 
         # Check for partial data return pattern when scraper fails but health succeeds
         assert "cable_modem_connection_status" in source
-        assert "offline" in source
+        # Status is "degraded" to indicate ping works but HTTP/scraper failed
+        assert "degraded" in source
         assert "ping_success or http_success" in source or "health_result" in source
 
 

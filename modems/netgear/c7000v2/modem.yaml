@@ -1,0 +1,97 @@
+# Netgear C7000v2 (Nighthawk AC1900) Cable Modem/Router Configuration
+# Source: [Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) - @Anthranilic
+
+manufacturer: Netgear
+model: C7000v2
+paradigm: html
+
+hardware:
+  docsis_version: "3.0"
+  release_date: "2016"
+
+# Provenance tracking
+sources:
+  detection_hints: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
+
+protocol: http
+default_host: "192.168.100.1"
+default_port: 80
+
+auth:
+  strategy: basic
+
+  basic: {}
+
+  session:
+    cookie_name: "session"
+    max_concurrent: 1
+    logout_endpoint: "/Logout.htm"
+    logout_required: true
+
+pages:
+  public:
+    - "/index.htm"
+
+  protected:
+    - "/DocsisStatus.htm"
+    - "/DashBoard.htm"
+    - "/RouterStatus.htm"
+
+  data:
+    downstream_channels: "/DocsisStatus.htm"
+    upstream_channels: "/DocsisStatus.htm"
+    system_info: "/RouterStatus.htm"
+
+parser:
+  class: NetgearC7000v2Parser
+  module: custom_components.cable_modem_monitor.modems.netgear.c7000v2.parser
+  format:
+    type: html
+    table_layout: javascript_embedded
+
+detection:
+  pre_auth:
+    - "NETGEAR Gateway C7000v2"
+    - "C7000v2"
+    - "NETGEAR"
+  post_auth:
+    - "C7000v2"
+    - "C7000-100NAS"
+    - "NETGEAR C7000v2"
+    - "InitDsTableTagValue"
+  page_hint: "/DocsisStatus.htm"
+  model_aliases:
+    - "C7000-100NAS"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - hardware_version
+  - software_version
+  - system_uptime
+  - last_boot_time
+  - restart
+
+behaviors:
+  requires_multi_page_fetch: true
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/61"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/netgear/c7000v2/fixtures
+  source: diagnostics
+  firmware_tested: "V1.03.08"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: Anthranilic
+      contribution: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) diagnostics"

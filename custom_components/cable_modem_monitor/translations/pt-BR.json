@@ -1,4 +1,62 @@
 {
+  "services": {
+    "clear_history": {
+      "name": "Clear History",
+      "description": "Clear historical data for cable modem sensors older than a specified date.",
+      "fields": {
+        "days_to_keep": {
+          "name": "Days to Keep",
+          "description": "Number of days of history to keep (older data will be deleted)."
+        }
+      }
+    },
+    "generate_dashboard": {
+      "name": "Generate Dashboard",
+      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
+      "fields": {
+        "include_status_card": {
+          "name": "Status Card",
+          "description": "Modem status, uptime, channel counts, and restart button."
+        },
+        "include_downstream_power": {
+          "name": "Downstream Power Graph",
+          "description": "Power levels for all downstream channels."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream SNR Graph",
+          "description": "Signal-to-noise ratio for all downstream channels."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream Frequency Graph",
+          "description": "Frequency for all downstream channels."
+        },
+        "include_upstream_power": {
+          "name": "Upstream Power Graph",
+          "description": "Power levels for all upstream channels."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream Frequency Graph",
+          "description": "Frequency for all upstream channels."
+        },
+        "include_errors": {
+          "name": "Error Graphs",
+          "description": "Corrected and uncorrected error counts (7-day view)."
+        },
+        "include_latency": {
+          "name": "Latency Graph",
+          "description": "Ping and HTTP response times (6-hour view)."
+        },
+        "graph_hours": {
+          "name": "Graph History (hours)",
+          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
+        },
+        "short_titles": {
+          "name": "Use Short Titles",
+          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
@@ -19,7 +77,7 @@
       }
     },
     "error": {
-      "invalid_auth": "Falha na autenticação - o modem retornou página de login.\n\nPor favor, verifique:\n1. O usuário está correto (geralmente 'admin', verifique a etiqueta do modem)\n2. A senha está correta (verifique a etiqueta do modem)\n3. As credenciais não foram alteradas dos padrões\n\nTente fazer login manualmente no modem em https://192.168.100.1 para verificar as credenciais.\n\nPara depuração avançada, habilite o log de depuração em configuration.yaml:\nlogger:\n  logs:\n    custom_components.cable_modem_monitor: debug\n\nEm seguida, procure por 'HNAP request payload' nos logs para comparar com a aba Rede do seu navegador.",
+      "invalid_auth": "Usuário ou senha inválidos. Por favor, verifique suas credenciais e tente novamente.",
       "network_unreachable": "Não é possível alcançar o modem - problema de conectividade de rede.\n\nPor favor, verifique:\n1. Conexão de rede - Você está na rede WiFi correta?\n2. WiFi de convidados - Redes de convidados geralmente bloqueiam acesso a dispositivos locais\n3. VPN - Desconecte qualquer conexão VPN ativa\n4. Endereço IP - Verifique o IP do modem (geralmente 192.168.100.1)\n5. Interface web do modem - Certifique-se de que está habilitada e acessível\n6. Resposta lenta - Alguns modems levam alguns segundos para acordar; tente enviar novamente\n\nTente acessar o modem diretamente no navegador para verificar a conectividade.",
       "cannot_connect": "Falha ao conectar ao modem.\n\nPor favor, verifique:\n1. O endereço IP está correto (geralmente 192.168.100.1)\n2. Se o modem requer autenticação, insira usuário/senha\n3. A interface web do modem está acessível pela rede do Home Assistant\n\nSe o seu modem não for suportado, selecione 'Modem Desconhecido (Modo Fallback)' para habilitar monitoramento básico e captura de HTML.",
       "unsupported_modem": "A detecção automática não conseguiu identificar o modelo do seu modem.\n\nPara continuar:\n1. Selecione 'Modem Desconhecido (Modo Fallback)' no menu abaixo\n2. Isso habilitará monitoramento básico de conectividade (ping/latência HTTP)\n3. Após a instalação, clique no botão 'Capturar HTML'\n4. Baixe os diagnósticos e compartilhe com os desenvolvedores para adicionar suporte completo",

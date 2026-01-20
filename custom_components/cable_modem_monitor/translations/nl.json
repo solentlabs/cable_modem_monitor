@@ -1,4 +1,62 @@
 {
+  "services": {
+    "clear_history": {
+      "name": "Clear History",
+      "description": "Clear historical data for cable modem sensors older than a specified date.",
+      "fields": {
+        "days_to_keep": {
+          "name": "Days to Keep",
+          "description": "Number of days of history to keep (older data will be deleted)."
+        }
+      }
+    },
+    "generate_dashboard": {
+      "name": "Generate Dashboard",
+      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
+      "fields": {
+        "include_status_card": {
+          "name": "Status Card",
+          "description": "Modem status, uptime, channel counts, and restart button."
+        },
+        "include_downstream_power": {
+          "name": "Downstream Power Graph",
+          "description": "Power levels for all downstream channels."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream SNR Graph",
+          "description": "Signal-to-noise ratio for all downstream channels."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream Frequency Graph",
+          "description": "Frequency for all downstream channels."
+        },
+        "include_upstream_power": {
+          "name": "Upstream Power Graph",
+          "description": "Power levels for all upstream channels."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream Frequency Graph",
+          "description": "Frequency for all upstream channels."
+        },
+        "include_errors": {
+          "name": "Error Graphs",
+          "description": "Corrected and uncorrected error counts (7-day view)."
+        },
+        "include_latency": {
+          "name": "Latency Graph",
+          "description": "Ping and HTTP response times (6-hour view)."
+        },
+        "graph_hours": {
+          "name": "Graph History (hours)",
+          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
+        },
+        "short_titles": {
+          "name": "Use Short Titles",
+          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {
@@ -19,7 +77,7 @@
       }
     },
     "error": {
-      "invalid_auth": "Authenticatie mislukt - modem gaf inlogpagina terug.\n\nControleer a.u.b.:\n1. Gebruikersnaam is correct (meestal 'admin', zie modemlabel)\n2. Wachtwoord is correct (zie modemlabel)\n3. Inloggegevens zijn niet gewijzigd van standaard\n\nProbeer handmatig in te loggen op de modem via https://192.168.100.1 om te verifiëren dat de inloggegevens werken.",
+      "invalid_auth": "Ongeldige gebruikersnaam of wachtwoord. Controleer uw inloggegevens en probeer opnieuw.",
       "network_unreachable": "Kan modem niet bereiken - netwerkconnectiviteitsprobleem.\n\nControleer a.u.b.:\n1. Netwerkverbinding - Bent u op het juiste WiFi-netwerk?\n2. Gast-WiFi - Gastnetwerken blokkeren vaak toegang tot lokale apparaten\n3. VPN - Verbreek actieve VPN-verbindingen\n4. IP-adres - Controleer het IP van de modem (meestal 192.168.100.1)\n5. Modem webinterface - Zorg dat deze is ingeschakeld en toegankelijk is\n6. Trage reactie - Sommige modems hebben een paar seconden nodig om wakker te worden; probeer opnieuw\n\nProbeer de modem direct in uw browser te openen om de connectiviteit te verifiëren.",
       "cannot_connect": "Kan niet verbinden met de modem.\n\nControleer a.u.b.:\n1. IP-adres is correct (meestal 192.168.100.1)\n2. Als de modem authenticatie vereist, voer gebruikersnaam/wachtwoord in\n3. De webinterface van de modem is toegankelijk vanaf het Home Assistant-netwerk\n\nAls uw modem niet wordt ondersteund, selecteer 'Onbekende Modem (Terugvalmodus)' om basismonitoring en HTML-capture in te schakelen.",
       "unsupported_modem": "Automatische detectie kon uw modemmodel niet identificeren.\n\nOm door te gaan:\n1. Selecteer 'Onbekende Modem (Terugvalmodus)' uit de dropdown hieronder\n2. Dit schakelt basisconnectiviteitsmonitoring in (ping/HTTP-latentie)\n3. Na installatie, klik op de knop 'HTML Vastleggen'\n4. Download diagnostiek en deel met ontwikkelaars om volledige ondersteuning toe te voegen",

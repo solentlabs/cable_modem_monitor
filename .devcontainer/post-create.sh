@@ -27,8 +27,13 @@ fi
 echo "📦 Installing pre-commit..."
 pip install --root-user-action=ignore --break-system-packages pre-commit
 
-echo "📦 Installing pre-commit hooks..."
-pre-commit install
+# Only install hooks if we're in a git repo (skip in CI builds)
+if git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "📦 Installing pre-commit hooks..."
+    pre-commit install
+else
+    echo "⚠️  Not in a git repo, skipping pre-commit hook installation"
+fi
 
 echo ""
 echo "✅ Dev environment ready!"

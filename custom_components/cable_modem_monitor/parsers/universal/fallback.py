@@ -13,11 +13,8 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.core.auth_config import BasicAuthConfig
-from custom_components.cable_modem_monitor.core.authentication import AuthFactory, AuthStrategyType
+from custom_components.cable_modem_monitor.core.base_parser import ModemCapability, ModemParser, ParserStatus
 from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
-
-from ..base_parser import ModemCapability, ModemParser, ParserStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,14 +22,14 @@ _LOGGER = logging.getLogger(__name__)
 class UniversalFallbackParser(ModemParser):
     """Universal fallback parser that accepts any modem.
 
-    This parser has the LOWEST priority and always returns True in can_parse(),
-    making it a catch-all for unsupported modems. It allows installation to
-    succeed so users can use the "Capture HTML" button to help developers add
-    proper support for their modem.
+    This parser has the LOWEST priority and is manually selected by users
+    when auto-detection fails. It allows installation to succeed so users
+    can use the "Capture HTML" button to help developers add proper support
+    for their modem.
 
     Key features:
-    - Priority 1 (lowest) - only used if no other parser matches
-    - Accepts any modem (can_parse always returns True)
+    - Priority 1 (lowest) - only used as a last resort
+    - Manually selected by users when HintMatcher detection fails
     - Tries HTTP Basic Auth if credentials provided (most common)
     - Returns minimal placeholder data
     - Displays helpful status messages guiding users to capture HTML
@@ -50,11 +47,9 @@ class UniversalFallbackParser(ModemParser):
     # Capabilities - Fallback parser has no data capabilities (diagnostic mode only)
     capabilities: set[ModemCapability] = set()
 
-    # Use HTTP Basic Auth - most common authentication for cable modems
-    # Will be skipped if no credentials provided
-    auth_config = BasicAuthConfig(
-        strategy=AuthStrategyType.BASIC_HTTP,
-    )
+    # Auth hint: Fallback parser suggests basic auth (most common for cable modems)
+    # AuthDiscovery will determine actual auth strategy from modem response
+    auth_hint = "basic"
 
     # Priority seed URLs - generic patterns, not manufacturer-specific
     # Link crawler will discover all other pages automatically
@@ -67,81 +62,23 @@ class UniversalFallbackParser(ModemParser):
     # Convert to url_patterns format
     url_patterns = [{"path": path, "auth_method": "basic", "auth_required": False} for path in _seed_urls]
 
-    @classmethod
-    def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
-        """Accept any modem as a last resort.
+    # Fallback parser is manually selected by users when auto-detection fails.
+    # Detection for other parsers is handled by YAML hints (HintMatcher).
 
-        This method always returns True, making this parser a catch-all
-        for unsupported modems. Due to priority=1, it will only be used
-        if no other parser matches.
-
-        Returns:
-            Always True
-        """
-        _LOGGER.info(
-            "Using fallback parser for unknown modem. "
-            "Integration will install with limited functionality. "
-            "Please use the 'Capture HTML' button to help add support for your modem."
-        )
-        return True
-
-    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
-        """Attempt login using HTTP Basic Auth (most common for cable modems).
-
-        If no credentials provided, skip authentication (many status pages are public).
-        If credentials provided, attempt HTTP Basic Auth which is the most common
-        authentication method for cable modems.
+    def parse_resources(self, resources: dict) -> dict:
+        """Parse modem data from pre-fetched resources.
 
         Args:
-            session: Requests session
-            base_url: Modem base URL
-            username: Username (optional)
-            password: Password (optional)
+            resources: Dict mapping paths to BeautifulSoup objects
 
         Returns:
-            tuple: (success: bool, authenticated_html: str | None)
+            Minimal placeholder data for unknown modems
         """
-        # If no credentials, skip authentication (many modems have public status pages)
-        if not username or not password:
-            _LOGGER.info(
-                "Fallback parser: No credentials provided. Will try to access public pages. "
-                "If your modem requires authentication, please configure username/password."
-            )
-            return True, None
-
-        # Try HTTP Basic Auth (most common for cable modems)
-        _LOGGER.info(
-            "Fallback parser: Attempting HTTP Basic Auth. "
-            "If this fails, your modem may use a different authentication method. "
-            "Please capture HTML and report the modem model in GitHub."
-        )
-
-        try:
-            auth_strategy = AuthFactory.get_strategy(self.auth_config.strategy)
-            success, html = auth_strategy.login(session, base_url, username, password, self.auth_config)
-
-            if success:
-                _LOGGER.info("Fallback parser: HTTP Basic Auth succeeded")
-                return True, html
-            else:
-                _LOGGER.warning(
-                    "Fallback parser: HTTP Basic Auth failed. "
-                    "Your modem may require a different authentication method. "
-                    "You can still try to install without auth - some pages may work. "
-                    "Press 'Capture HTML' after installation to help us add proper support."
-                )
-                # Return True anyway to allow installation - user can capture HTML
-                return True, None
-
-        except Exception as e:
-            _LOGGER.warning(
-                "Fallback parser: Authentication attempt failed: %s. "
-                "Will proceed without auth - some pages may work. "
-                "Press 'Capture HTML' after installation to help us add proper support.",
-                e,
-            )
-            # Return True anyway to allow installation
-            return True, None
+        # Get the main page soup
+        soup = resources.get("/") or next(iter(resources.values()), None)
+        if soup is None:
+            soup = BeautifulSoup("<html></html>", "html.parser")
+        return self.parse(soup)
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
         """Return minimal placeholder data for unknown modems.

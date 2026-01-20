@@ -1,9 +1,11 @@
 {
   "domain": "cable_modem_monitor",
   "name": "Cable Modem Monitor",
-  "after_dependencies": ["recorder"],
+  "after_dependencies": [
+    "recorder"
+  ],
   "codeowners": [
-    "@kwschulz"
+    "@solentlabs"
   ],
   "config_flow": true,
   "documentation": "https://github.com/solentlabs/cable_modem_monitor",
@@ -14,5 +16,5 @@
     "beautifulsoup4==4.12.2",
     "defusedxml==0.7.1"
   ],
-  "version": "3.11.0"
+  "version": "3.12.0"
 }

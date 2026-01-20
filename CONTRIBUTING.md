@@ -32,6 +32,8 @@ Your captured data becomes a test fixture that lets us develop and verify the pa
 
 You can develop using either a **local Python environment** (fastest) or a **VS Code Dev Container** (guaranteed consistency).
 
+> **Windows Users:** Native Windows development is not supported. Please use [WSL2](./docs/setup/WSL2_SETUP.md) for development on Windows.
+
 > **📖 See [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for comprehensive setup instructions, decision tree, and troubleshooting.
 
 ### Docker Development (Recommended)
@@ -187,8 +189,6 @@ mypy custom_components/cable_modem_monitor/
 
 # Or use the comprehensive lint script
 bash scripts/dev/lint.sh
-# On Windows PowerShell:
-# .\scripts\dev\lint.ps1
 ```
 
 **Automated Quality Checks:**
