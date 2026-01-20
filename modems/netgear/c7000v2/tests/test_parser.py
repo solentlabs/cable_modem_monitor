@@ -253,7 +253,7 @@ class TestMetadata:
         assert ModemCapability.SCQAM_DOWNSTREAM in parser.capabilities
         assert ModemCapability.SCQAM_UPSTREAM in parser.capabilities
         assert ModemCapability.SYSTEM_UPTIME in parser.capabilities
-        assert ModemCapability.RESTART in parser.capabilities
+        # Note: RESTART is now an action (check via ActionFactory.supports), not a capability
 
 
 class TestEdgeCases:

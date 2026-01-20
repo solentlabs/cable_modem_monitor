@@ -119,14 +119,33 @@ capabilities:
   - ofdm_downstream
   - ofdma_upstream
   - software_version
-  - restart
+
+# =============================================================================
+# ACTIONS
+# =============================================================================
+actions:
+  restart:
+    type: hnap
+    action_name: "SetArrisConfigurationInfo"
+    # Pre-fetch current config to preserve EEE and LED settings during restart
+    pre_fetch_action: "GetArrisConfigurationInfo"
+    pre_fetch_response_key: "GetArrisConfigurationInfoResponse"
+    params:
+      Action: "reboot"
+      # These use values from pre-fetch response, with defaults if not found
+      SetEEEEnable: "${ethSWEthEEE:0}"
+      LED_Status: "${LedStatus:1}"
+    response_key: "SetArrisConfigurationInfoResponse"
+    result_key: "SetArrisConfigurationInfoResult"
+    success_value: "OK"
 
 # =============================================================================
 # BEHAVIORS
 # =============================================================================
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # STATUS

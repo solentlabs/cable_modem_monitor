@@ -165,6 +165,9 @@ class TestModemScraper:
         """Test that restart_modem falls back from HTTPS to HTTP when connection refused."""
         import requests
 
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
+
         # Using MockTestParser defined at module level
 
         # Create scraper with HTTPS URL
@@ -191,13 +194,21 @@ class TestModemScraper:
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
-        mock_parser_instance.restart = mocker.Mock(return_value=True)
 
         # Mock _detect_parser to return our mock parser instance
         mocker.patch.object(scraper, "_detect_parser", return_value=mock_parser_instance)
 
         # Mock login to return success
         mocker.patch.object(scraper, "_login", return_value=True)
+
+        # Mock adapter and action layer - restart uses adapter + ActionFactory
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        mock_action = mocker.Mock()
+        mock_action.execute.return_value = mocker.Mock(success=True, message="OK")
+        mocker.patch.object(ActionFactory, "create_restart_action", return_value=mock_action)
 
         # Call restart_modem
         result = scraper.restart_modem()
@@ -211,13 +222,15 @@ class TestModemScraper:
 
     def test_restart_modem_calls_login_with_credentials(self, mocker):
         """Test that restart_modem calls login when credentials are provided."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
+
         # Using MockTestParser defined at module level
 
         scraper = ModemScraper("http://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
-        mock_parser_instance.restart = mocker.Mock(return_value=True)
 
         # Mock _fetch_data to return success
         mocker.patch.object(
@@ -236,6 +249,15 @@ class TestModemScraper:
         # Mock login
         mock_login = mocker.patch.object(scraper, "_login", return_value=True)
 
+        # Mock adapter and action layer - restart uses adapter + ActionFactory
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        mock_action = mocker.Mock()
+        mock_action.execute.return_value = mocker.Mock(success=True, message="OK")
+        mocker.patch.object(ActionFactory, "create_restart_action", return_value=mock_action)
+
         # Call restart_modem
         result = scraper.restart_modem()
 
@@ -243,11 +265,14 @@ class TestModemScraper:
         assert result is True
         # Login should have been called
         mock_login.assert_called_once()
-        # Restart should have been called on parser
-        mock_parser_instance.restart.assert_called_once_with(scraper.session, scraper.base_url)
+        # Action execute should have been called
+        mock_action.execute.assert_called_once()
 
     def test_restart_modem_skips_login_without_credentials(self, mocker):
         """Test that restart_modem skips login when no credentials provided."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
+
         # Using MockTestParser defined at module level
 
         # No username/password
@@ -255,7 +280,6 @@ class TestModemScraper:
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
-        mock_parser_instance.restart = mocker.Mock(return_value=True)
 
         # Mock _fetch_data to return success
         mocker.patch.object(
@@ -274,6 +298,15 @@ class TestModemScraper:
         # Mock login
         mock_login = mocker.patch.object(scraper, "_login")
 
+        # Mock adapter and action layer - restart uses adapter + ActionFactory
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        mock_action = mocker.Mock()
+        mock_action.execute.return_value = mocker.Mock(success=True, message="OK")
+        mocker.patch.object(ActionFactory, "create_restart_action", return_value=mock_action)
+
         # Call restart_modem
         result = scraper.restart_modem()
 
@@ -281,18 +314,20 @@ class TestModemScraper:
         assert result is True
         # Login should NOT have been called (no credentials)
         mock_login.assert_not_called()
-        # Restart should have been called on parser
-        mock_parser_instance.restart.assert_called_once()
+        # Action execute should have been called
+        mock_action.execute.assert_called_once()
 
     def test_restart_modem_fails_when_login_fails(self, mocker):
         """Test that restart_modem aborts when login fails."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
+
         # Using MockTestParser defined at module level
 
         scraper = ModemScraper("http://192.168.100.1", "admin", "wrong_password", parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
-        mock_parser_instance.restart = mocker.Mock(return_value=True)
 
         # Mock _fetch_data to return success
         mocker.patch.object(
@@ -311,13 +346,22 @@ class TestModemScraper:
         # Mock login to fail (returns tuple)
         mocker.patch.object(scraper, "_login", return_value=(False, None))
 
+        # Mock adapter and action layer - but action should NOT be called due to login failure
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        mock_action = mocker.Mock()
+        mock_action.execute.return_value = mocker.Mock(success=True, message="OK")
+        mocker.patch.object(ActionFactory, "create_restart_action", return_value=mock_action)
+
         # Call restart_modem
         result = scraper.restart_modem()
 
         # Should fail
         assert result is False
-        # Restart should NOT have been called (login failed)
-        mock_parser_instance.restart.assert_not_called()
+        # Action should NOT have been called (login failed)
+        mock_action.execute.assert_not_called()
 
     def test_restart_modem_fails_when_connection_fails(self, mocker):
         """Test that restart_modem fails gracefully when connection fails."""
@@ -380,6 +424,9 @@ class TestModemScraper:
 
         This is critical to ensure protocol detection (HTTP vs HTTPS) happens on every restart.
         """
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
+
         # Using MockTestParser defined at module level
 
         # Create scraper with HTTPS and pre-set parser (simulating cached state)
@@ -387,7 +434,6 @@ class TestModemScraper:
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
-        mock_parser_instance.restart = mocker.Mock(return_value=True)
         scraper.parser = mock_parser_instance  # Pre-set parser (cached)
 
         # Mock _fetch_data to simulate HTTP fallback with side effect
@@ -405,6 +451,15 @@ class TestModemScraper:
         # Mock login
         mocker.patch.object(scraper, "_login", return_value=True)
 
+        # Mock adapter and action layer - restart uses adapter + ActionFactory
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        mock_action = mocker.Mock()
+        mock_action.execute.return_value = mocker.Mock(success=True, message="OK")
+        mocker.patch.object(ActionFactory, "create_restart_action", return_value=mock_action)
+
         # Call restart_modem
         result = scraper.restart_modem()
 
@@ -414,8 +469,8 @@ class TestModemScraper:
         mock_fetch.assert_called_once()
         # Base URL should be updated to HTTP
         assert scraper.base_url == "http://192.168.100.1"
-        # Restart should have been called on the cached parser
-        mock_parser_instance.restart.assert_called_once_with(scraper.session, scraper.base_url)
+        # Action execute should have been called
+        mock_action.execute.assert_called_once()
 
 
 class TestFallbackParserDetection:
@@ -954,26 +1009,27 @@ class TestClearAuthCache:
         assert scraper.session.verify is True
 
     def test_clear_auth_cache_clears_hnap_builder(self, mocker):
-        """Test that clear_auth_cache clears HNAP builder cache."""
+        """Test that clear_auth_cache clears HNAP builder cache via auth_handler."""
         scraper = ModemScraper("192.168.100.1")
 
-        # Mock parser with HNAP builder
+        # Mock auth handler with HNAP builder
         mock_builder = mocker.Mock()
-        mock_parser = mocker.Mock()
-        mock_parser._json_builder = mock_builder
-        scraper.parser = mock_parser
+        mock_auth_handler = mocker.Mock()
+        mock_auth_handler.get_hnap_builder.return_value = mock_builder
+        scraper._auth_handler = mock_auth_handler
 
         scraper.clear_auth_cache()
 
         mock_builder.clear_auth_cache.assert_called_once()
 
     def test_clear_auth_cache_handles_missing_builder(self, mocker):
-        """Test that clear_auth_cache handles parser without HNAP builder."""
+        """Test that clear_auth_cache handles auth handler without HNAP builder."""
         scraper = ModemScraper("192.168.100.1")
 
-        # Mock parser without HNAP builder
-        mock_parser = mocker.Mock(spec=["parse", "login"])  # No _json_builder
-        scraper.parser = mock_parser
+        # Mock auth handler returning None for HNAP builder (not HNAP modem)
+        mock_auth_handler = mocker.Mock()
+        mock_auth_handler.get_hnap_builder.return_value = None
+        scraper._auth_handler = mock_auth_handler
 
         # Should not raise
         scraper.clear_auth_cache()

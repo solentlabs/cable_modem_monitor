@@ -183,9 +183,20 @@ class TestS33ParserCapabilities:
         """Test software version capability."""
         assert ArrisS33HnapParser.has_capability(ModemCapability.SOFTWARE_VERSION)
 
-    def test_has_restart_capability(self):
-        """Test that restart is supported (experimental - based on MB8611 pattern)."""
-        assert ArrisS33HnapParser.has_capability(ModemCapability.RESTART)
+    def test_has_restart_action(self):
+        """Test that restart is supported via ActionFactory.
+
+        Note: Restart is now an action (actions.restart in modem.yaml), not a capability.
+        Use ActionFactory.supports() to check restart support.
+        """
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
+
+        adapter = get_auth_adapter_for_parser("ArrisS33HnapParser")
+        assert adapter is not None, "S33 should have modem.yaml config"
+        modem_config = adapter.get_modem_config_dict()
+        assert ActionFactory.supports(ActionType.RESTART, modem_config)
 
 
 class TestS33ParserDetection:
@@ -229,38 +240,8 @@ class TestS33ParserDetection:
         assert not any(m.parser_name == "ArrisS33HnapParser" for m in matches)
 
 
-class TestS33AuthFailureDetection:
-    """Test _is_auth_failure method (lines 134-150)."""
-
-    def test_detects_401_error(self):
-        """Test detection of 401 Unauthorized."""
-        parser = ArrisS33HnapParser()
-        assert parser._is_auth_failure(Exception("HTTP 401 Unauthorized"))
-
-    def test_detects_403_error(self):
-        """Test detection of 403 Forbidden."""
-        parser = ArrisS33HnapParser()
-        assert parser._is_auth_failure(Exception("HTTP 403 Forbidden"))
-
-    def test_detects_login_failed(self):
-        """Test detection of login failed message."""
-        parser = ArrisS33HnapParser()
-        assert parser._is_auth_failure(Exception('"loginresult":"failed"'))
-
-    def test_detects_session_timeout(self):
-        """Test detection of session timeout."""
-        parser = ArrisS33HnapParser()
-        assert parser._is_auth_failure(Exception("session timeout"))
-
-    def test_does_not_detect_network_error(self):
-        """Test that network errors are not auth failures."""
-        parser = ArrisS33HnapParser()
-        assert not parser._is_auth_failure(Exception("Connection refused"))
-
-    def test_does_not_detect_parse_error(self):
-        """Test that parse errors are not auth failures."""
-        parser = ArrisS33HnapParser()
-        assert not parser._is_auth_failure(Exception("JSON decode error"))
+# Note: TestS33AuthFailureDetection class removed
+# Auth failure detection is now handled by the auth handler, not the parser
 
 
 class TestS33ParseResources:
@@ -586,186 +567,5 @@ class TestS33UrlPatterns:
         assert len(public_patterns) > 0, "S33 should have at least one public page"
 
 
-class TestS33Restart:
-    """Test restart functionality using SetArrisConfigurationInfo."""
-
-    def test_restart_success_with_reboot_action(self):
-        """Test restart succeeds when response has REBOOT action."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        # Mock the JSON builder to return proper responses for both calls:
-        # 1. GetArrisConfigurationInfo (get current settings)
-        # 2. SetArrisConfigurationInfo (send reboot command)
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            # First call: GetArrisConfigurationInfo
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "1", "LedStatus": "1"}}'
-            ),
-            # Second call: SetArrisConfigurationInfo
-            (
-                '{"SetArrisConfigurationInfoResponse": {'
-                '"SetArrisConfigurationInfoResult": "OK", '
-                '"SetArrisConfigurationInfoAction": "REBOOT"}}'
-            ),
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is True
-        assert mock_builder.call_single.call_count == 2
-
-        # Check the second call (SetArrisConfigurationInfo with reboot)
-        second_call_args = mock_builder.call_single.call_args_list[1]
-        assert second_call_args[0][2] == "SetArrisConfigurationInfo"
-        assert second_call_args[0][3]["Action"] == "reboot"
-        # Should include the EEE and LED settings from GetArrisConfigurationInfo
-        assert second_call_args[0][3]["SetEEEEnable"] == "1"
-        assert second_call_args[0][3]["LED_Status"] == "1"
-
-    def test_restart_success_with_ok_only(self):
-        """Test restart succeeds when response has OK but no specific action."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            # First call: GetArrisConfigurationInfo
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-            ),
-            # Second call: SetArrisConfigurationInfo (OK but no action)
-            '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "OK"}}',
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is True
-
-    def test_restart_success_on_connection_reset(self):
-        """Test restart returns True on connection reset (modem rebooting)."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        # First call succeeds, second call causes connection reset (modem rebooting)
-        mock_builder.call_single.side_effect = [
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-            ),
-            ConnectionResetError("Connection reset by peer"),
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is True
-
-    def test_restart_failure_on_error_response(self):
-        """Test restart returns False on error response."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            # First call: GetArrisConfigurationInfo succeeds
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-            ),
-            # Second call: SetArrisConfigurationInfo returns ERROR
-            '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "ERROR"}}',
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is False
-
-    def test_restart_sends_correct_action_fields(self):
-        """Test that restart sends the correct fields matching configuration.js."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            # First call: GetArrisConfigurationInfo with specific values
-            (
-                '{"GetArrisConfigurationInfoResponse": {'
-                '"GetArrisConfigurationInfoResult": "OK", '
-                '"ethSWEthEEE": "1", "LedStatus": "0"}}'
-            ),
-            # Second call: SetArrisConfigurationInfo
-            (
-                '{"SetArrisConfigurationInfoResponse": {'
-                '"SetArrisConfigurationInfoResult": "OK", '
-                '"SetArrisConfigurationInfoAction": "REBOOT"}}'
-            ),
-        ]
-        parser._json_builder = mock_builder
-
-        parser.restart(MagicMock(), "https://192.168.100.1")
-
-        # Verify the request data matches what configuration.js sends
-        # The second call should have the reboot action with preserved settings
-        second_call_args = mock_builder.call_single.call_args_list[1]
-        request_data = second_call_args[0][3]
-        assert "Action" in request_data
-        assert request_data["Action"] == "reboot"
-        assert "SetEEEEnable" in request_data
-        assert request_data["SetEEEEnable"] == "1"  # From GetArrisConfigurationInfo
-        assert "LED_Status" in request_data
-        assert request_data["LED_Status"] == "0"  # From GetArrisConfigurationInfo
-
-    def test_restart_success_on_connection_aborted(self):
-        """Test restart returns True on 'Connection aborted' (lines 557-564)."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}',
-            Exception("Connection aborted"),
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is True
-
-    def test_restart_failure_on_general_exception(self):
-        """Test restart returns False on unexpected exception."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS33HnapParser()
-
-        mock_builder = MagicMock()
-        mock_builder.call_single.side_effect = [
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}',
-            Exception("Some unexpected error"),
-        ]
-        parser._json_builder = mock_builder
-
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
-
-        assert result is False
+# Note: TestS33Restart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_hnap.py for HNAP restart action tests

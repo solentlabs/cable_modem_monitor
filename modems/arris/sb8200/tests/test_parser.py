@@ -81,9 +81,16 @@ class TestSB8200ParserCapabilities:
         """Test OFDMA upstream capability (DOCSIS 3.1)."""
         assert ArrisSB8200Parser.has_capability(ModemCapability.OFDMA_UPSTREAM)
 
-    def test_no_restart_capability(self):
-        """Test that restart is NOT supported."""
-        assert not ArrisSB8200Parser.has_capability(ModemCapability.RESTART)
+    def test_no_restart_action(self):
+        """Test that restart is NOT supported (no actions.restart in modem.yaml)."""
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
+
+        adapter = get_auth_adapter_for_parser("ArrisSB8200Parser")
+        if adapter:
+            modem_config = adapter.get_modem_config_dict()
+            assert not ActionFactory.supports(ActionType.RESTART, modem_config)
 
     def test_has_uptime_capability(self):
         """Test uptime capability (from cmswinfo.html)."""

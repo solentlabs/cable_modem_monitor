@@ -20,7 +20,7 @@ This document tracks known technical debt, architectural issues, and improvement
 
 ## P1 - High Priority
 
-### 1. `__init__.py` Monolith (864 lines)
+### 1. `__init__.py` Monolith (916 lines)
 
 **Problem:** The main integration file handles too many responsibilities:
 - Async setup and teardown
@@ -48,62 +48,56 @@ This document tracks known technical debt, architectural issues, and improvement
 
 ---
 
-### 2. Parser Selection Logic Duplication
+### 2. Parser Selection Logic Duplication (RESOLVED)
 
-**Problem:** Parser selection exists in two places with subtle differences:
-- `_select_parser()` in `__init__.py` (runtime selection)
-- `_select_parser_for_validation()` in `config_flow.py` (setup-time validation)
+**Resolution:** v3.12.0 (January 2026)
 
-**Impact:**
-- Risk of behavior divergence between setup and runtime
-- Bug fixes may not be applied to both locations
-- Harder to reason about parser selection behavior
+Extracted to shared module `core/parser_utils.py`:
+- `select_parser_for_validation()` - used by config_flow.py
+- Single implementation, properly tested
 
-**Remediation:**
-1. Create shared `parser_selection.py` module
-2. Single `select_parser()` function with mode parameter or shared core logic
-3. Both call sites use the shared implementation
-
-**Effort:** Low (1 session)
-
-**Files:**
-- `custom_components/cable_modem_monitor/__init__.py:_select_parser()`
-- `custom_components/cable_modem_monitor/config_flow.py:_select_parser_for_validation()`
+**Files Changed:**
+- Created `custom_components/cable_modem_monitor/core/parser_utils.py`
+- `tests/core/test_parser_utils.py` - comprehensive tests
 
 ---
 
-### 3. Config Flow Test Coverage Gap (37%)
+### 3. Config Flow Test Coverage Gap
 
-**Problem:** The configuration UI flow has low test coverage. Edge cases in modem detection, auth handling, and error paths may have untested bugs.
+**Problem:** The main config_flow.py has 26% coverage while config_flow_helpers.py has 99% coverage. The HA form step handlers and async coordinator setup remain undertested.
+
+**Current Coverage:**
+- `config_flow.py`: 26% (form steps, async setup)
+- `config_flow_helpers.py`: 99% (validation logic, error classification)
 
 **Impact:**
 - Setup failures may not be caught before release
 - User-facing errors may be unclear or incorrect
 - Regressions can slip through
 
-**Specific Gaps:**
-- ICMP detection during setup
-- Legacy SSL cipher detection and user prompts
+**Specific Gaps in config_flow.py:**
+- `async_step_user`, `async_step_credentials` form handlers
+- `async_step_finish` coordinator setup
 - Error recovery paths (auth failures, connection timeouts)
-- Multi-step form navigation
+- Options flow step handlers
 
 **Remediation:**
-1. Add pytest fixtures for common config flow scenarios
-2. Mock aiohttp and HA config entry machinery
-3. Test each step transition and error path
-4. Target 70%+ coverage
+1. Add pytest fixtures for HA config entry machinery
+2. Test each form step transition
+3. Test options flow
+4. Target 70%+ coverage on config_flow.py
 
-**Effort:** Medium-High (3-4 sessions)
+**Effort:** Medium (2-3 sessions)
 
 **Files:**
-- `custom_components/cable_modem_monitor/config_flow.py`
-- `tests/test_config_flow.py`
+- `custom_components/cable_modem_monitor/config_flow.py` (26%)
+- `tests/components/test_config_flow.py`
 
 ---
 
-### 4. AuthDiscovery Class Too Large (859 lines)
+### 4. AuthDiscovery Class Too Large (1347 lines)
 
-**Problem:** `core/auth/discovery.py` has grown to 859 lines with 7+ responsibilities:
+**Problem:** `core/auth/discovery.py` has grown to 1347 lines with 7+ responsibilities:
 - Form parsing and detection
 - HTML inspection
 - Password encoding detection
@@ -132,31 +126,29 @@ This document tracks known technical debt, architectural issues, and improvement
 
 ---
 
-### 5. Duplicate Login Detection (3 implementations)
+### 5. Duplicate Login Detection (2 implementations)
 
-**Problem:** Login page detection exists in three places:
-- `discovery.py:689` - `_is_login_form()` using BeautifulSoup
-- `handler.py:424` - `_is_login_page()` using string search
-- `modem_scraper.py` - own detection logic
+**Problem:** Login page detection exists in two places with different approaches:
+- `discovery.py:1170` - `_is_login_form()` using BeautifulSoup
+- `strategies/form_plain.py:266` - `_is_login_page()` using string search
 
 **Impact:**
 - Different implementations may detect different pages
-- Bug fixes may not be applied to all locations
+- Bug fixes may not be applied to both locations
 - Inconsistent behavior across code paths
 
 **Remediation:**
 1. Create shared `login_detection.py` module
 2. Single `is_login_page(html, soup=None)` function
-3. All call sites use the shared implementation
+3. Both call sites use the shared implementation
 
 **Effort:** Low (1 session)
 
 **Source:** External code review (Claude, Jan 2026)
 
 **Files:**
-- `custom_components/cable_modem_monitor/core/auth/discovery.py`
-- `custom_components/cable_modem_monitor/core/auth/handler.py`
-- `custom_components/cable_modem_monitor/core/modem_scraper.py`
+- `custom_components/cable_modem_monitor/core/auth/discovery.py:1170`
+- `custom_components/cable_modem_monitor/core/auth/strategies/form_plain.py:266`
 
 ---
 
@@ -236,21 +228,21 @@ _Moved to Completed Items section._
 
 ### 10. Entity Migration Edge Cases
 
-**Problem:** Entity migration (lines 805-807 in `__init__.py`) falls back to parser's `docsis_version` attribute if not in config entry. This assumes the parser instance exists and has the attribute.
+**Problem:** Entity migration (lines 850-858 in `__init__.py`) falls back to modem.yaml's `docsis_version` if not in config entry. This assumes the adapter can be created and modem.yaml has the attribute.
 
 **Impact:**
-- Migration could fail silently if parser isn't instantiated
+- Migration could fail silently if adapter creation fails
 - Edge case during upgrades from older versions
 
 **Remediation:**
-1. Add explicit check for parser instance
-2. Provide sensible default if parser unavailable
+1. Add explicit check for adapter availability
+2. Provide sensible default if unavailable
 3. Log migration decisions for debugging
 
 **Effort:** Low (< 1 session)
 
 **Files:**
-- `custom_components/cable_modem_monitor/__init__.py:805-807`
+- `custom_components/cable_modem_monitor/__init__.py:850-858`
 
 ---
 
@@ -294,14 +286,105 @@ _Moved to Completed Items section._
 **Effort:** Medium (2 sessions)
 
 **Files:**
-- `custom_components/cable_modem_monitor/parsers/base_parser.py`
-- All parser implementations
+- `custom_components/cable_modem_monitor/core/base_parser.py`
+- All parser implementations in `modems/*/parser.py`
+
+---
+
+### 13. Diagnostics Protocol-Specific Logic
+
+**Problem:** `diagnostics.py` contains HNAP-specific logic in `_get_hnap_auth_attempt()` that reaches into protocol implementation details:
+
+```python
+# diagnostics.py knows too much about HNAP internals
+auth_handler = getattr(scraper, "_auth_handler", None)
+json_builder = auth_handler.get_hnap_builder()  # HNAP-specific!
+auth_attempt = json_builder.get_last_auth_attempt()  # HNAP-specific!
+```
+
+**Impact:**
+- Violates separation of concerns
+- Adding debug info for HTML/REST auth requires modifying diagnostics.py
+- Protocol knowledge leaks into a module that should be protocol-agnostic
+
+**Remediation:**
+1. Add `get_auth_debug_info()` method to `AuthHandler` base class
+2. Each auth handler implements protocol-specific debug info:
+   - `HNAPAuthHandler` → returns login request/response
+   - `FormAuthHandler` → returns form submission details
+   - `NoAuthHandler` → returns `{"note": "No auth required"}`
+3. Diagnostics calls generic `auth_handler.get_auth_debug_info()`
+
+**Effort:** Low (1 session)
+
+**Files:**
+- `custom_components/cable_modem_monitor/diagnostics.py`
+- `custom_components/cable_modem_monitor/core/auth/base.py`
+- `custom_components/cable_modem_monitor/core/auth/strategies/*.py`
+
+---
+
+### 14. Rename ModemScraper to DataOrchestrator
+
+**Problem:** The name "ModemScraper" implies web scraping, but the class is now an orchestrator that coordinates:
+- Loaders (data fetching)
+- Parsers (data transformation)
+- Actions (operations like restart)
+
+**Impact:**
+- Name doesn't reflect actual responsibility
+- "Scraper" terminology is dated
+- New contributors may misunderstand the class's role
+
+**Blast Radius:**
+
+| Category | Files | Notes |
+|----------|-------|-------|
+| File renames | 2 | `modem_scraper.py` → `data_orchestrator.py`, `test_modem_scraper.py` → `test_data_orchestrator.py` |
+| Core source | 6 | `__init__.py`, `button.py`, `sensor.py`, `discovery/steps.py`, `discovery/pipeline.py`, `parser_template.py` |
+| Config/adapter | 2 | `modem_config/adapter.py`, `modem_config/loader.py` |
+| Test files | 6 | `test_auth.py`, `test_button.py`, `test_protocol_caching.py`, `test_version_and_startup.py`, `test_scraper_auth_integration.py`, `tests/components/README.md` |
+| Docs | 6 | `AI_CONTEXT.md`, `TECH_DEBT.md`, `TESTING.md`, `ARCHITECTURE.md`, `TROUBLESHOOTING.md`, `v3.13.0-discovery-cleanup.md` |
+
+**Key counts:**
+- ~100+ `ModemScraper` instantiations (mostly in tests)
+- ~15 import statements
+- ~10 patch paths (`"...modem_scraper.ModemScraper"`)
+
+**Leave unchanged:** `CHANGELOG.md` (historical references)
+
+**Execution Steps:**
+```bash
+# 1. Rename files
+git mv custom_components/cable_modem_monitor/core/modem_scraper.py \
+       custom_components/cable_modem_monitor/core/data_orchestrator.py
+git mv tests/components/test_modem_scraper.py \
+       tests/components/test_data_orchestrator.py
+
+# 2. Find/replace class name (case-sensitive)
+# ModemScraper → DataOrchestrator
+
+# 3. Find/replace module references
+# modem_scraper → data_orchestrator
+
+# 4. Update test patch paths
+# "...modem_scraper.ModemScraper" → "...data_orchestrator.DataOrchestrator"
+
+# 5. Verify
+ruff check . && pytest
+```
+
+**Effort:** Low (1 session, mechanical find/replace)
+
+**Files:**
+- `custom_components/cable_modem_monitor/core/modem_scraper.py`
+- See blast radius table above
 
 ---
 
 ## P3 - Low Priority
 
-### 13. Test Socket Patching Complexity
+### 15. Test Socket Patching Complexity
 
 **Problem:** Multiple hook levels in conftest.py (pytest_configure, pytest_runtest_setup, pytest_fixture_setup) repeatedly patch and restore socket.socket. Comments indicate this is a workaround for pytest-socket/Home Assistant conflicts.
 
@@ -322,7 +405,7 @@ _Moved to Completed Items section._
 
 ---
 
-### 14. Parser Template in Production Code
+### 16. Parser Template in Production Code
 
 **Problem:** `parser_template.py` contains TODO comments and placeholder code. It's meant as a starting point for contributors but is visible in the production codebase.
 
@@ -341,7 +424,7 @@ _Moved to Completed Items section._
 
 ---
 
-### 15. Type Safety Relaxation
+### 17. Type Safety Relaxation
 
 **Problem:** Mypy is configured with `disallow_untyped_defs = False` and tests/tools are excluded from type checking.
 
@@ -361,9 +444,9 @@ _Moved to Completed Items section._
 
 ---
 
-### 16. Database Query String Formatting
+### 18. Database Query String Formatting
 
-**Problem:** Lines 666-677 and 705-722 use `# nosec B608` to suppress Bandit SQL injection warnings. The queries are actually safe (using `?` placeholders), but the suppression comments could be clearer.
+**Problem:** Lines 688-742 use `# nosec B608` to suppress Bandit SQL injection warnings. The queries are actually safe (using `?` placeholders), but the suppression comments could be clearer.
 
 **Impact:**
 - Security reviewers may flag these
@@ -376,11 +459,11 @@ _Moved to Completed Items section._
 **Effort:** Trivial
 
 **Files:**
-- `custom_components/cable_modem_monitor/__init__.py:666-677, 705-722`
+- `custom_components/cable_modem_monitor/__init__.py:688-742`
 
 ---
 
-### 17. `__init__.py` File Inconsistency Across Packages
+### 19. `__init__.py` File Inconsistency Across Packages
 
 **Problem:** Package `__init__.py` files have inconsistent structure:
 - Parser manufacturer dirs (arris, motorola, etc.) have docstring + `from __future__ import annotations`
@@ -414,7 +497,7 @@ _Moved to Completed Items section._
 
 ---
 
-### 19. Pre-Selected Modem Path Bypasses Discovery ✅ RESOLVED
+### 20. Pre-Selected Modem Path Bypasses Discovery (RESOLVED)
 
 **Resolution:** v3.12.0 (January 2026)
 
@@ -435,7 +518,7 @@ Both pre-selected and auto-discovery paths now converge through `AuthDiscovery.d
 
 ---
 
-### 18. Unformalised Auth Patterns ✅ RESOLVED
+### 21. Unformalised Auth Patterns (RESOLVED)
 
 **Resolution:** Created `UrlTokenSessionStrategy` for SB8200 HTTPS variant (December 2025).
 
@@ -488,6 +571,47 @@ core/auth/
 - Deleted: `core/auth_config.py`, `core/authentication.py`, `core/hnap_builder.py`, `core/hnap_json_builder.py`
 - Created: `core/auth/` package with 7 strategy implementations
 - Updated: All parser imports (import path changes only)
+
+---
+
+### Parser Separation of Concerns ✅
+
+**Completed:** January 2026 (v3.13.0)
+
+**Problem:** Parsers violated separation of concerns by:
+- Making network calls directly (should only parse pre-fetched data)
+- Containing action logic like `restart()` (should be in an action layer)
+
+**Solution:** Created dedicated action layer in `core/actions/`:
+```
+core/actions/
+├── __init__.py
+├── base.py           # ActionType enum, ActionResult, ModemAction base
+├── factory.py        # ActionFactory creates actions from modem.yaml
+├── hnap.py           # HNAPRestartAction (fully data-driven)
+└── html_form.py      # HTMLFormRestartAction
+```
+
+**Benefits:**
+- Parsers now only parse (pure data transformation)
+- Actions are data-driven from modem.yaml configuration
+- No model-specific code in core components
+- Clear hard boundaries: restart only (no factory reset, no password changes)
+
+**Files Changed:**
+- Created `core/actions/` package
+- Updated `modems/*/modem.yaml` with action configurations
+- Simplified parser `parse()` methods to delegate to `parse_resources()`
+
+---
+
+### 2. Parser Selection Logic Duplication ✅
+
+**Completed:** January 2026 (v3.12.0)
+
+**Solution:** Extracted to shared module `core/parser_utils.py`:
+- `select_parser_for_validation()` - single implementation used by config_flow.py
+- Comprehensive tests in `tests/core/test_parser_utils.py`
 
 ---
 

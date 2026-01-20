@@ -132,14 +132,28 @@ capabilities:
   - system_uptime
   - hardware_version
   - software_version
-  - restart
+
+# =============================================================================
+# ACTIONS
+# =============================================================================
+actions:
+  restart:
+    type: hnap
+    action_name: "SetStatusSecuritySettings"
+    params:
+      MotoStatusSecurityAction: "1"
+      MotoStatusSecXXX: "XXX"
+    response_key: "SetStatusSecuritySettingsResponse"
+    result_key: "SetStatusSecuritySettingsResult"
+    success_value: "OK"
 
 # =============================================================================
 # BEHAVIORS
 # =============================================================================
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # METADATA

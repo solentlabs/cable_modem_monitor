@@ -67,9 +67,6 @@ capabilities:
   - scqam_downstream
   - scqam_upstream
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================

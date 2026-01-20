@@ -1,8 +1,8 @@
 # modem.yaml Schema Specification
 
-**Status:** Draft
+**Status:** Current
 **Created:** 2026-01-05
-**Updated:** 2026-01-06
+**Updated:** 2026-01-18
 **Purpose:** Define the declarative configuration format for self-contained modem definitions.
 
 ---
@@ -10,7 +10,8 @@
 ## Related Documentation
 
 - **[MODEM_DIRECTORY_SPEC.md](./MODEM_DIRECTORY_SPEC.md)** - Directory structure for modem files
-- **[../plans/har-parser-validation.md](../plans/har-parser-validation.md)** - HAR testing plan
+- **[../reference/PARSER_GUIDE.md](../reference/PARSER_GUIDE.md)** - Writing parsers
+- **[../reference/ARCHITECTURE.md](../reference/ARCHITECTURE.md)** - System architecture
 
 ---
 
@@ -23,542 +24,613 @@
 
 ---
 
-## Design Philosophy
-
-**modem.yaml provides hints, not strict rules.**
-
-The auth handler and parser use modem.yaml to prioritize strategies, but retain intelligent fallback behavior. This handles firmware variations and ISP customizations gracefully:
-
-1. **Discovery phase** - Single request identifies the modem
-2. **Config selection** - Detection rules match ONE modem.yaml
-3. **Targeted execution** - Use hints to prioritize, fallback if needed
-4. **Rich diagnostics** - Log enough context to debug failures and request captures
-
-90% of modem behavior is declarative. 10% is edge-case handling with fallbacks.
-
----
-
-## Directory Structure
-
-> **Full specification:** See [MODEM_DIRECTORY_SPEC.md](./MODEM_DIRECTORY_SPEC.md)
-
-```
-modems/
-└── {manufacturer}/
-    └── {model}/
-        ├── modem.yaml        # Config + hints (this spec) - REQUIRED
-        ├── fixtures/         # Extracted HTML responses - OPTIONAL
-        │   ├── {page}.html        # Actual page names from modem
-        │   ├── {page}.asp
-        │   └── metadata.yaml      # Firmware version, contributor, capture date
-        └── har/              # Sanitized HAR captures - OPTIONAL
-            ├── modem.har          # Primary capture (uses $fixture refs)
-            └── modem-{variant}.har  # Variant captures (e.g., modem-basic-auth.har)
-```
-
-**Key principles:**
-- **File naming:** Use actual endpoint names (`MotoStatus.asp`, not `status_page.html`)
-- **HAR format:** Uses `$fixture` references to avoid duplicating HTML content
-- **Variants:** Different auth configs use `modem-{variant}.har` naming
-- **Sanitization:** Happens at capture time, not after
-
----
-
-## Schema Definition
+## Schema Overview
 
 ```yaml
 # =============================================================================
-# MODEM IDENTITY
+# IDENTITY (Required)
 # =============================================================================
-
-manufacturer: string        # Required. e.g., "Motorola", "Arris", "Netgear"
-model: string               # Required. e.g., "MB7621", "S33", "CM1200"
-aliases: [string]           # Optional. Other model names this covers
-
-# =============================================================================
-# DATA PARADIGM (for Discovery Intelligence)
-# =============================================================================
-
-paradigm: string            # Required. How the modem presents data:
-                            #   - "html" (default) - Standard web pages with tables
-                            #   - "hnap" - HNAP/SOAP protocol
-                            #   - "rest_api" - JSON REST API
-                            # Used by Discovery Intelligence to filter candidates
-                            # See: docs/reference/ARCHITECTURE.md#discovery-intelligence
+manufacturer: string        # e.g., "Motorola", "Arris", "Netgear"
+model: string               # e.g., "MB7621", "S33", "CM1200"
+paradigm: string            # "html" | "hnap" | "rest_api"
 
 # =============================================================================
-# HARDWARE INFO
+# NETWORK
 # =============================================================================
-
-hardware:
-  docsis_version: string    # "3.0" | "3.1" | "4.0"
-  release_year: int         # e.g., 2020
-  end_of_life: date | null  # null = still current
-  chipset: string           # Optional. e.g., "Broadcom BCM3390"
-
-# =============================================================================
-# NETWORK PROTOCOL
-# =============================================================================
-
-protocol: string            # Required. "HTTP" | "HTTPS" | "HNAP" | "REST_API"
-default_host: string        # Default IP. Usually "192.168.100.1"
+protocol: string            # "http" | "https"
+default_host: string        # Usually "192.168.100.1"
 default_port: int           # Usually 80 or 443
 
-ssl:
-  required: bool            # true if HTTPS-only
-  legacy_ciphers: bool      # true if needs legacy SSL support
-  verify: bool              # false for self-signed certs (most modems)
+# =============================================================================
+# HARDWARE
+# =============================================================================
+hardware:
+  docsis_version: string    # "3.0" | "3.1"
+  chipset: string           # Optional. e.g., "Broadcom BCM3390"
+  release_date: string      # Optional. "YYYY" or "YYYY-MM"
+  end_of_life: string       # Optional. null = still current
 
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
-
 auth:
-  strategy: string          # Required. One of:
-                            #   - no_auth
-                            #   - basic_http
-                            #   - form_plain
-                            #   - form_base64
-                            #   - form_plain_and_base64
-                            #   - redirect_form
-                            #   - hnap_session
-                            #   - url_token_session
-                            #   - credential_csrf
-
-  # ----- Form-based auth (form_plain, form_base64, redirect_form) -----
-  form:
-    login_url: string       # Page with login form. e.g., "/" or "/login.html"
-    action: string          # Form POST target. e.g., "/goform/login"
-    method: string          # "POST" (default) or "GET"
-    username_field: string  # e.g., "loginUsername"
-    password_field: string  # e.g., "loginPassword"
-    extra_fields: object    # Optional static fields. e.g., {remember: "1"}
-
-    encoding: string        # "plain" | "base64" | "url_then_base64"
-
-    success:
-      indicator: string     # URL fragment or min response size
-      redirect: string      # Expected redirect URL on success
-
-  # ----- HTTP Basic auth -----
-  basic:
-    realm: string           # Optional. Expected realm string
-
-  # ----- HNAP/SOAP auth (S33, S34, MB8611) -----
-  hnap:
-    endpoint: string        # "/HNAP1/"
-    namespace: string       # "http://purenetworks.com/HNAP1/"
-    use_json: bool          # true for JSON HNAP, false for XML SOAP
-    hmac_algorithm: string  # "md5" (S33, MB8611) | "sha256" (S34)
-    empty_action_value: string  # "" for S33/S34/MB8611
-    cookie_name: string     # Session cookie name
-
-  # ----- URL Token auth (SB8200 HTTPS variant) -----
-  url_token:
-    login_page: string      # e.g., "/login.html"
-    login_prefix: string    # e.g., "login_"
-    token_prefix: string    # e.g., "ct_"
-    session_cookie: string  # e.g., "credential"
-    credential_header: string  # Header name for auth
-
-  # ----- Credential CSRF (CM3500B) -----
-  credential_csrf:
-    login_url: string
-    csrf_field: string
-    credential_field: string
+  strategy: string          # "none" | "basic" | "form" | "hnap" | "url_token" | "rest_api"
+  form: { ... }             # Form auth config (if strategy=form)
+  hnap: { ... }             # HNAP auth config (if strategy=hnap)
+  url_token: { ... }        # URL token config (if strategy=url_token)
+  rest_api: { ... }         # REST API config (if strategy=rest_api)
+  session: { ... }          # Session management config
 
 # =============================================================================
-# PARSER CONFIGURATION
+# PAGES
 # =============================================================================
+pages:
+  public: [string]          # Pages that don't require auth
+  protected: [string]       # Pages that require auth
+  data:                     # Data source pages by type
+    downstream_channels: string
+    upstream_channels: string
+    system_info: string
+  hnap_actions:             # HNAP action names (if paradigm=hnap)
+    downstream_channels: string
+    upstream_channels: string
 
+# =============================================================================
+# PARSER
+# =============================================================================
 parser:
-  class: string             # Python class name. e.g., "MotorolaMB7621Parser"
-  module: string            # Optional. Full module path if not in standard location
-
-  data_pages:               # Pages to scrape for channel data
-    - path: string          # e.g., "/MotoStatus.asp"
-      type: string          # "html" | "json" | "hnap"
-
-  hnap_actions:             # For HNAP modems
-    - name: string          # e.g., "GetCustomerStatusDownstreamChannelInfo"
-      value: string         # Usually "" or {}
+  class: string             # Python class name
+  module: string            # Full module path
+  format:
+    type: string            # "html" | "json" | "xml"
+    table_layout: string    # "standard" | "transposed" | "javascript_embedded"
+    delimiters:             # For HNAP field parsing
+      field: string
+      record: string
 
 # =============================================================================
 # DETECTION
 # =============================================================================
-
 detection:
-  # How to identify this modem from an HTTP response
-  title_contains: string    # HTML <title> substring
-  body_contains: [string]   # Strings that must appear in response
-  headers:                  # Response headers to match
-    - name: string
-      contains: string
-  hnap_model_field: string  # For HNAP: field containing model name
+  pre_auth: [string]        # Patterns to match on login page (AND logic)
+  post_auth: [string]       # Patterns to match on data pages (AND logic)
+  page_hint: string         # Path for post_auth matching
+  model_aliases: [string]   # Alternative model names
 
 # =============================================================================
-# ISP COMPATIBILITY
+# CAPABILITIES
 # =============================================================================
+capabilities:               # List of Capability enum values
+  - scqam_downstream        # SC-QAM downstream channels
+  - scqam_upstream          # SC-QAM/ATDMA upstream channels
+  - ofdm_downstream         # OFDM downstream (DOCSIS 3.1)
+  - ofdma_upstream          # OFDMA upstream (DOCSIS 3.1)
+  - system_uptime           # Uptime string
+  - last_boot_time          # Boot timestamp
+  - hardware_version        # Hardware version
+  - software_version        # Firmware version
+  - restart                 # Supports remote restart
 
-isps:
-  verified: [string]        # Known working. e.g., ["Comcast", "Cox"]
-  reported: [string]        # User-reported but unverified
-  blocked: [string]         # ISP-locked, won't work
+# =============================================================================
+# ACTIONS (Optional)
+# =============================================================================
+actions:
+  restart:
+    type: string            # "hnap" | "html_form" | "rest"
+    # Type-specific params...
 
 # =============================================================================
-# FIXTURE & ATTRIBUTION
+# BEHAVIORS (Optional)
 # =============================================================================
+behaviors:
+  restart:                  # Restart-related parsing behaviors
+    window_seconds: int     # Filter zero-power channels for N seconds after restart
+    zero_power_reported: bool  # Whether modem reports zero during restart
+
+# =============================================================================
+# PROVENANCE
+# =============================================================================
+sources:
+  chipset: string           # Source for chipset info
+  hardware: string          # Source for hardware info
+  auth_config: string       # Source for auth config
+  detection_hints: string   # Source for detection patterns
+
+# =============================================================================
+# METADATA
+# =============================================================================
+status_info:
+  status: string            # "in_progress" | "awaiting_verification" | "verified" | "unsupported"
+  verification_source: string  # Link to issue/PR confirming status
 
 fixtures:
-  firmware_tested: string   # Firmware version fixtures were captured from
-  captured_from_issue: int  # GitHub issue number
-  last_validated: date      # When fixtures were last confirmed working
+  path: string              # Relative path to fixtures directory
+  source: string            # "diagnostics" | "har"
+  firmware_tested: string   # Firmware version tested
+  last_validated: string    # Date of last validation
 
 attribution:
   contributors:
     - github: string        # GitHub username
-      issue: int            # Issue number
       contribution: string  # What they provided
 ```
 
 ---
 
-## Examples
+## Section Details
 
-### MB7621 (Form Base64)
+### Authentication (`auth`)
+
+The `auth` section defines how to authenticate with the modem.
+
+**Strategy: `none`**
+```yaml
+auth:
+  strategy: none
+```
+
+**Strategy: `basic`** (HTTP Basic Auth)
+```yaml
+auth:
+  strategy: basic
+  session:
+    cookie_name: "session"
+    logout_endpoint: "/Logout.htm"
+    logout_required: true
+```
+
+**Strategy: `form`** (HTML Form)
+```yaml
+auth:
+  strategy: form
+  form:
+    action: "/goform/login"
+    method: POST
+    username_field: "loginUsername"
+    password_field: "loginPassword"
+    password_encoding: plain  # or "base64"
+    hidden_fields: {}
+    success:
+      redirect: "/MotoHome.asp"
+  session:
+    cookie_name: "session"
+```
+
+**Strategy: `hnap`** (HNAP/SOAP)
+```yaml
+auth:
+  strategy: hnap
+  hnap:
+    endpoint: "/HNAP1/"
+    namespace: "http://purenetworks.com/HNAP1/"
+    hmac_algorithm: md5  # REQUIRED: "md5" or "sha256"
+    empty_action_value: ""
+    formats:
+      - json
+    actions:
+      login: "Login"
+      downstream: "GetCustomerStatusDownstreamChannelInfo"
+      upstream: "GetCustomerStatusUpstreamChannelInfo"
+      restart: "SetArrisConfigurationInfo"
+  session:
+    cookie_name: "uid"
+```
+
+**Strategy: `url_token`** (URL Token Session)
+```yaml
+auth:
+  strategy: url_token
+  url_token:
+    login_page: "/cmconnectionstatus.html"
+    login_prefix: "login_"
+    token_prefix: "ct_"
+    session_cookie: "sessionId"
+    success_indicator: "Downstream Bonded Channels"
+```
+
+**Strategy: `rest_api`** (JSON REST API)
+```yaml
+auth:
+  strategy: rest_api
+  rest_api:
+    base_path: "/rest/v1/cablemodem"
+    endpoints:
+      state: "/state_"
+      downstream: "/downstream"
+      upstream: "/upstream"
+```
+
+### Actions (`actions`)
+
+The `actions` section defines modem operations like restart.
+
+**HNAP Restart:**
+```yaml
+actions:
+  restart:
+    type: hnap
+    # Optional: Pre-fetch current config to preserve settings
+    pre_fetch_action: "GetArrisConfigurationInfo"
+    pre_fetch_response_key: "GetArrisConfigurationInfoResponse"
+    params:
+      Action: "reboot"
+      # Variable substitution from pre-fetch: ${field:default}
+      SetEEEEnable: "${ethSWEthEEE:0}"
+      LED_Status: "${LedStatus:1}"
+    response_key: "SetArrisConfigurationInfoResponse"
+    result_key: "SetArrisConfigurationInfoResult"
+    success_value: "OK"
+```
+
+**HTML Form Restart:**
+```yaml
+actions:
+  restart:
+    type: html_form
+    endpoint: "/goform/RouterStatus"
+    params:
+      RsAction: "2"
+```
+
+### Behaviors (`behaviors`)
+
+The `behaviors` section defines **parsing behaviors**, not actions.
+
+```yaml
+behaviors:
+  restart:
+    window_seconds: 300     # Seconds after restart to filter bad data
+    zero_power_reported: true  # Modem reports 0 power during restart
+```
+
+**When to use behaviors:**
+- Only define `behaviors` if the modem needs special parsing logic
+- If undefined, the parser uses defaults (no filtering)
+- Currently only `restart` behaviors are supported
+
+**How parsers use this:**
+```python
+# Parser reads from modem.yaml via adapter
+behaviors = get_behaviors_for_parser(self.__class__.__name__)
+restart_behaviors = behaviors.get("restart") if behaviors else None
+if restart_behaviors:
+    self._restart_window_seconds = restart_behaviors.get("window_seconds", 0)
+```
+
+### Capabilities (`capabilities`)
+
+Declares what data the parser can extract. The integration uses these to create sensor entities.
+
+| Capability | Description | Parser Returns |
+|------------|-------------|----------------|
+| `scqam_downstream` | SC-QAM downstream channels | `downstream[]` with power, snr, frequency |
+| `scqam_upstream` | SC-QAM/ATDMA upstream channels | `upstream[]` with power, frequency |
+| `ofdm_downstream` | OFDM downstream (DOCSIS 3.1) | `ofdm_downstream[]` |
+| `ofdma_upstream` | OFDMA upstream (DOCSIS 3.1) | `ofdma_upstream[]` |
+| `system_uptime` | Human-readable uptime | `system_info.system_uptime` |
+| `last_boot_time` | Boot timestamp | `system_info.last_boot_time` |
+| `hardware_version` | Hardware version | `system_info.hardware_version` |
+| `software_version` | Firmware version | `system_info.software_version` |
+| `restart` | Supports remote restart | Parser has restart action |
+
+### Detection (`detection`)
+
+Patterns use AND logic - ALL patterns must match for a modem to be a candidate.
+
+```yaml
+detection:
+  pre_auth:                 # Match on login page (before auth)
+    - "NETGEAR"
+    - "/goform/Login"
+  post_auth:                # Match on data pages (after auth)
+    - "CM2000"
+    - "Nighthawk"
+  page_hint: "/DocsisStatus.htm"  # Page to fetch for post_auth
+  model_aliases:
+    - "Nighthawk CM2000"
+```
+
+### Status (`status_info`)
+
+| Status | Meaning | Requirements |
+|--------|---------|--------------|
+| `in_progress` | Actively being developed | `manufacturer`, `model` only |
+| `awaiting_verification` | Released, needs user confirmation | Full config + `parser` |
+| `verified` | Confirmed working | Full config + `parser` |
+| `unsupported` | Locked/incompatible, kept for docs | `manufacturer`, `model` only |
+
+---
+
+## Complete Examples
+
+### MB7621 (Form + Base64 Password)
 
 ```yaml
 manufacturer: Motorola
 model: MB7621
-paradigm: html           # Standard web scraping
+paradigm: html
 
 hardware:
   docsis_version: "3.0"
-  release_year: 2017
+  chipset: Broadcom BCM3384
 
-protocol: HTTP
+protocol: http
 default_host: "192.168.100.1"
+default_port: 80
 
 auth:
-  strategy: form_base64
+  strategy: form
   form:
-    login_url: "/"
     action: "/goform/login"
+    method: POST
     username_field: loginUsername
     password_field: loginPassword
-    encoding: base64
+    password_encoding: base64
     success:
       redirect: "/MotoHome.asp"
 
+pages:
+  public:
+    - "/"
+  protected:
+    - "/MotoConnection.asp"
+    - "/MotoHome.asp"
+  data:
+    downstream_channels: "/MotoConnection.asp"
+    upstream_channels: "/MotoConnection.asp"
+    system_info: "/MotoHome.asp"
+
 parser:
   class: MotorolaMB7621Parser
-  data_pages:
-    - path: "/MotoStatus.asp"
-      type: html
+  module: custom_components.cable_modem_monitor.modems.motorola.mb7621.parser
+  format:
+    type: html
+    table_layout: standard
 
 detection:
-  title_contains: "Motorola Cable Modem"
+  pre_auth:
+    - "MB7621"
+    - "Motorola"
+  post_auth:
+    - "MB7621"
+    - "Downstream Channel Status"
+  page_hint: "/MotoConnection.asp"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - system_uptime
+  - hardware_version
+  - software_version
+
+behaviors:
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
+
+status_info:
+  status: verified
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/XX"
+
+fixtures:
+  path: modems/motorola/mb7621/fixtures
+  source: diagnostics
+  firmware_tested: "8621-19.2.18"
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer"
 ```
 
-### S33 (HNAP Session - MD5)
+### S33 (HNAP + MD5)
 
 ```yaml
-manufacturer: Arris
+manufacturer: Arris/CommScope
 model: S33
-paradigm: hnap           # HNAP/SOAP protocol
+paradigm: hnap
 
 hardware:
   docsis_version: "3.1"
-  release_year: 2021
+  chipset: Broadcom BCM3390
 
-protocol: HTTP           # Note: HNAP uses HTTP transport, paradigm describes data format
+protocol: http
 default_host: "192.168.100.1"
+default_port: 80
 
 auth:
-  strategy: hnap_session
+  strategy: hnap
   hnap:
     endpoint: "/HNAP1/"
     namespace: "http://purenetworks.com/HNAP1/"
-    use_json: true
     hmac_algorithm: md5
     empty_action_value: ""
+    formats:
+      - json
+    actions:
+      login: "Login"
+      downstream: "GetCustomerStatusDownstreamChannelInfo"
+      upstream: "GetCustomerStatusUpstreamChannelInfo"
+      restart: "SetArrisConfigurationInfo"
+  session:
     cookie_name: "uid"
+
+pages:
+  public:
+    - "/Login.html"
+  protected:
+    - "/cmconnectionstatus.html"
+  data:
+    downstream_channels: "/HNAP1/"
+    upstream_channels: "/HNAP1/"
+    system_info: "/HNAP1/"
+  hnap_actions:
+    downstream_channels: "GetCustomerStatusDownstreamChannelInfo"
+    upstream_channels: "GetCustomerStatusUpstreamChannelInfo"
 
 parser:
   class: ArrisS33HnapParser
-  hnap_actions:
-    - name: GetCustomerStatusDownstreamChannelInfo
-      value: ""
-    - name: GetCustomerStatusUpstreamChannelInfo
-      value: ""
+  module: custom_components.cable_modem_monitor.modems.arris.s33.parser
+  format:
+    type: json
+    delimiters:
+      field: "^"
+      record: "|+|"
 
 detection:
-  hnap_model_field: "ModelName"
+  pre_auth:
+    - "HNAP"
+    - "purenetworks.com/HNAP1"
+    - "SURFboard"
+  post_auth:
+    - "S33"
+    - "ARRIS"
+    - "CommScope"
+  page_hint: "/HNAP1/"
+  model_aliases:
+    - "CommScope S33"
+    - "ARRIS S33"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - software_version
+  - restart
+
+actions:
+  restart:
+    type: hnap
+    pre_fetch_action: "GetArrisConfigurationInfo"
+    pre_fetch_response_key: "GetArrisConfigurationInfoResponse"
+    params:
+      Action: "reboot"
+      SetEEEEnable: "${ethSWEthEEE:0}"
+      LED_Status: "${LedStatus:1}"
+    response_key: "SetArrisConfigurationInfoResponse"
+    result_key: "SetArrisConfigurationInfoResult"
+    success_value: "OK"
+
+behaviors:
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
+
+status_info:
+  status: verified
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/87"
+
+fixtures:
+  path: modems/arris/s33/fixtures
+  source: diagnostics
+  last_validated: "2026-01-05"
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer - HNAP implementation from HAR analysis"
 ```
 
-### S34 (HNAP Session - SHA256)
-
-```yaml
-manufacturer: Arris
-model: S34
-
-hardware:
-  docsis_version: "3.1"
-  release_year: 2024
-
-protocol: HNAP
-default_host: "192.168.100.1"
-
-ssl:
-  required: true
-  verify: false
-
-auth:
-  strategy: hnap_session
-  hnap:
-    endpoint: "/HNAP1/"
-    namespace: "http://purenetworks.com/HNAP1/"
-    use_json: true
-    hmac_algorithm: sha256  # Key difference from S33
-    empty_action_value: ""
-    cookie_name: "uid"
-
-parser:
-  class: ArrisS34HnapParser
-  hnap_actions:
-    - name: GetArrisDeviceStatus
-      value: ""
-    - name: GetCustomerStatusDownstreamChannelInfo
-      value: ""
-    - name: GetCustomerStatusUpstreamChannelInfo
-      value: ""
-
-detection:
-  body_contains: ["S34"]
-  hnap_model_field: "StatusSoftwareModelName"
-```
-
-### SB8200 (URL Token Session)
-
-```yaml
-manufacturer: Arris
-model: SB8200
-
-hardware:
-  docsis_version: "3.1"
-  release_year: 2017
-
-protocol: HTTPS
-default_host: "192.168.100.1"
-
-ssl:
-  required: true
-  legacy_ciphers: true
-  verify: false
-
-auth:
-  strategy: url_token_session
-  url_token:
-    login_page: "/login.html"
-    login_prefix: "login_"
-    token_prefix: "ct_"
-    session_cookie: "credential"
-
-parser:
-  class: ArrisSB8200Parser
-  data_pages:
-    - path: "/cmconnectionstatus.html"
-      type: html
-```
-
-### CM1200 (No Auth)
+### CM1200 (Basic Auth, No Behaviors)
 
 ```yaml
 manufacturer: Netgear
 model: CM1200
+paradigm: html
 
 hardware:
   docsis_version: "3.1"
-  release_year: 2019
 
-protocol: HTTP
+protocol: http
 default_host: "192.168.100.1"
+default_port: 80
 
 auth:
-  strategy: no_auth
+  strategy: basic
+
+pages:
+  public: []
+  protected:
+    - "/DocsisStatus.htm"
+  data:
+    downstream_channels: "/DocsisStatus.htm"
+    upstream_channels: "/DocsisStatus.htm"
+    system_info: "/DocsisStatus.htm"
 
 parser:
   class: NetgearCM1200Parser
-  data_pages:
-    - path: "/DocsisStatus.htm"
-      type: html
+  module: custom_components.cable_modem_monitor.modems.netgear.cm1200.parser
+  format:
+    type: html
+    table_layout: javascript_embedded
 
 detection:
-  title_contains: "NETGEAR"
-  body_contains: ["CM1200"]
+  pre_auth:
+    - "NETGEAR"
+    - "CM1200"
+  post_auth:
+    - "CM1200"
+    - "InitDsTableTagValue"
+  page_hint: "/DocsisStatus.htm"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - system_uptime
+  - last_boot_time
+
+# No behaviors section - modem doesn't need special parsing logic
+
+status_info:
+  status: verified
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/63"
 ```
 
 ---
 
-## Testing Architecture
+## Validation
 
-### End-to-End Integration Tests
+All modem.yaml files are validated by the Pydantic schema in `modem_config/schema.py`.
 
-Tests run the **complete workflow** against a mock server powered by fixtures. No unit tests needed—the fixtures ARE the test specification.
-
-```
-┌─────────────────────────────────────────────────────────┐
-│              Mock Modem Server                          │
-│  (Powered by fixtures/auth_flow.json + HTML files)      │
-│                                                         │
-│  GET /              → fixtures/Login.html               │
-│  POST /goform/login → 302 + Set-Cookie                  │
-│  GET /MotoHome.asp  → fixtures/MotoHome.asp             │
-│  GET /MotoStatus.asp→ fixtures/MotoStatus.asp           │
-└─────────────────────────────────────────────────────────┘
-                          ▲
-                          │ HTTP
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Our Actual Code (unchanged)                │
-│                                                         │
-│  1. GET / → Auth discovery detects strategy             │
-│  2. POST login → Auth handler executes strategy         │
-│  3. GET pages → Parser registry matches modem           │
-│  4. Parse HTML → Extract channels + system_info         │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│              Assertions                                 │
-│                                                         │
-│  ✓ Auth strategy detected == modem.yaml.auth.strategy   │
-│  ✓ Parser selected == modem.yaml.parser.class           │
-│  ✓ Downstream channels parsed > 0                       │
-│  ✓ System info has expected fields                      │
-└─────────────────────────────────────────────────────────┘
+**Run validation:**
+```bash
+pytest tests/modem_config/test_modem_yaml_validation.py -v
 ```
 
-### Test Implementation
-
-```python
-# tests/integration/test_modem_workflows.py
-
-@pytest.mark.parametrize("modem_path", discover_all_modems())
-def test_end_to_end(modem_path):
-    """Run entire stack against mock server."""
-
-    with MockModemServer.from_fixtures(modem_path) as server:
-        # Same code path as real Home Assistant usage
-        result = await async_setup_entry(
-            hass=mock_hass,
-            config_entry=ConfigEntry(
-                host=server.host,
-                username="admin",
-                password="test"
-            )
-        )
-
-        assert result is True
-
-        # Verify entities were created with real data
-        state = hass.states.get("sensor.cable_modem_downstream_1_power")
-        assert state is not None
-```
-
-### Fixture Sources
-
-Fixtures can be extracted from:
-
-1. **HAR captures** - Browser network recording during login/navigation
-2. **Diagnostics exports** - Home Assistant diagnostics contain raw HTML responses
-3. **Manual captures** - curl/wget with appropriate auth headers
-
-### auth_flow.json Format
-
-Defines the request/response sequence for the mock server:
-
-```json
-{
-  "auth_pattern": "form_base64",
-  "form_config": {
-    "login_url": "/",
-    "form_action": "/goform/login",
-    "username_field": "loginUsername",
-    "password_field": "loginPassword",
-    "success_redirect": "/MotoHome.asp"
-  },
-  "exchanges": [
-    {
-      "request": {"method": "GET", "path": "/"},
-      "response": {"status": 200, "file": "Login.html"}
-    },
-    {
-      "request": {"method": "POST", "path": "/goform/login"},
-      "response": {"status": 302, "headers": {"Location": "/MotoHome.asp"}}
-    },
-    {
-      "request": {"method": "GET", "path": "/MotoHome.asp"},
-      "response": {"status": 200, "file": "MotoHome.asp"}
-    },
-    {
-      "request": {"method": "GET", "path": "/MotoStatus.asp"},
-      "response": {"status": 200, "file": "MotoStatus.asp"}
-    }
-  ]
-}
-```
-
-### Adding a New Modem
-
-1. Capture fixtures (HAR or diagnostics export)
-2. Create `modems/{manufacturer}/{model}/` directory
-3. Add `modem.yaml` with detection rules and auth config
-4. Add `fixtures/` with HTML pages and `auth_flow.json`
-5. Tests auto-run—no test code to write
-
-**The fixture IS the test specification.**
-
----
-
-## Validation Rules
-
+**Key validation rules:**
 1. `manufacturer` and `model` are required
-2. `auth.strategy` must be one of the defined strategies
-3. Strategy-specific fields are required when that strategy is used
-4. `parser.class` must exist in the codebase
-5. `data_pages` paths should match what the parser expects
+2. `auth.strategy` must match one of the AuthStrategy enum values
+3. HNAP modems MUST specify `hmac_algorithm` (no default)
+4. `verified` and `awaiting_verification` status require `parser.class` and `parser.module`
+5. `capabilities` must be valid Capability enum values
 
 ---
 
-## Migration Path
+## Adding a New Modem
 
-1. **Phase 1:** Create modem.yaml for existing parsers (read-only documentation)
-2. **Phase 2:** Auth handler reads from modem.yaml instead of parser hints
-3. **Phase 3:** Parser registry uses modem.yaml for detection
-4. **Phase 4:** Test runner auto-generates tests from modem.yaml + captures/
+1. Create directory: `modems/{manufacturer}/{model}/`
+2. Create `modem.yaml` following this spec
+3. Add `parser.py` implementing the parser class
+4. Add `fixtures/` with HTML captures
+5. Run validation: `pytest tests/modem_config/test_modem_yaml_validation.py`
+6. Tests auto-discover the new modem
 
----
+**Minimal modem.yaml for development:**
+```yaml
+manufacturer: Acme
+model: CM9000
+paradigm: html
 
-## Open Questions
+auth:
+  strategy: none
 
-1. **Should parser.py be optional?** Some modems with standard HTML tables might be fully declarative. Field mappings in modem.yaml could eliminate custom parsing for simple cases.
+status_info:
+  status: in_progress
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/XXX"
 
-2. **Firmware variations:** Same model, different firmware = different auth. Options:
-   - Separate modem.yaml files: `sb8200.yaml`, `sb8200_no_auth.yaml`
-   - Detection rules specific enough to distinguish variants
-   - Fallback behavior in auth handler (try primary, log if fallback used)
-
-3. **HACS installation:** The `modems/` directory needs to be included in the HACS package. May need manifest.json updates.
-
-4. **Field mapping:** How do we normalize different field names to a standard schema? e.g., "Power Level" vs "power" vs "PowerLevel" → `power`
-
----
-
-## Resolved Decisions
-
-- **Directory location:** `modems/{manufacturer}/{model}/` at repo root
-- **Test approach:** End-to-end integration tests with mock server, no unit tests needed
-- **Fixture naming:** Use actual page names from modem (`MotoStatus.asp` not `status_page.html`)
-- **HAR files:** Development artifacts only, not committed. Extract to fixtures/ for tests.
-- **modem.yaml as hints:** Not strict rules—auth handler retains fallback behavior
+capabilities: []
+```

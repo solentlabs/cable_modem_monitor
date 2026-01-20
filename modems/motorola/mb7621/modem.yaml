@@ -85,12 +85,24 @@ capabilities:
   - system_uptime
   - hardware_version
   - software_version
-  - restart
+
+actions:
+  restart:
+    type: html_form
+    pre_fetch_url: "/MotoSecurity.asp"
+    endpoint: "/goform/MotoSecurity"
+    params:
+      UserId: ""
+      OldPassword: ""
+      NewUserId: ""
+      Password: ""
+      PasswordReEnter: ""
+      MotoSecurityAction: "1"
 
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
-  requires_multi_page_fetch: true
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # STATUS

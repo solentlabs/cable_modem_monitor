@@ -64,9 +64,6 @@ capabilities:
   - hardware_version
   - software_version
 
-behaviors:
-  requires_multi_page_fetch: true
-
 # =============================================================================
 # STATUS
 # =============================================================================
