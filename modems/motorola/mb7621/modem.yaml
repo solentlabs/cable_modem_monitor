@@ -21,18 +21,17 @@ default_host: "192.168.100.1"
 default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/goform/login"
-    method: POST
-    username_field: loginUsername
-    password_field: loginPassword
-    password_encoding: base64
-    hidden_fields: {}
-    success:
-      redirect: "/MotoHome.asp"
-      indicator: "10000"
+  types:
+    form:
+      action: "/goform/login"
+      method: POST
+      username_field: loginUsername
+      password_field: loginPassword
+      password_encoding: base64
+      hidden_fields: {}
+      success:
+        redirect: "/MotoHome.asp"
+        indicator: "10000"
 
   session:
     cookie_name: "session"

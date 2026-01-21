@@ -2,43 +2,18 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-20T14:48:20.245123+00:00"
+generated: "2026-01-21T20:19:04.816793+00:00"
 auth_patterns:
   form:
-    username_fields:
-      - loginName
-      - loginUsername
-      - luci_username
-      - username
-      - username_login
-    password_fields:
-      - loginPassword
-      - luci_password
-      - password
-      - password_login
-    actions:
-      - /cgi-bin/login
-      - /cgi-bin/luci
-      - /check.jst
-      - /goform/Login
-      - /goform/login
-      - /goform/logon
-    encodings:
-      - detect: isEncryptPswd\s*=\s*1
-        type: base64
-      - detect: keyStr\s*=\s*["\']ABCDEFGHIJKLMNOPQRSTUVWXYZ
-        type: base64
-      - detect: btoa\s*\(
-        type: base64
+    username_fields: []
+    password_fields: []
+    actions: []
+    encodings: []
   hnap:
-    endpoints:
-      - /HNAP1/
-    namespaces:
-      - http://purenetworks.com/HNAP1/
+    endpoints: []
+    namespaces: []
   url_token:
-    indicators:
-      - login_
-      - sessionId
+    indicators: []
 modems:
   ArrisCM820BParser:
     path: arris/cm820b

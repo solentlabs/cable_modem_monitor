@@ -54,6 +54,7 @@ from .strategies import (
     UrlTokenSessionStrategy,
 )
 from .types import AuthErrorType, AuthStrategyType
+from .workflow import AUTH_TYPE_LABELS, AuthWorkflow, AuthWorkflowResult
 
 __all__ = [
     # Base
@@ -79,6 +80,10 @@ __all__ = [
     "AuthFactory",
     # Handler
     "AuthHandler",
+    # Workflow
+    "AUTH_TYPE_LABELS",
+    "AuthWorkflow",
+    "AuthWorkflowResult",
     # Request Builders
     "HNAPJsonRequestBuilder",
     "HNAPRequestBuilder",

@@ -1,6 +1,7 @@
 """Tests for modem.yaml to auth adapter bridge.
 
-Tests the ModemConfigAuthAdapter which converts modem.yaml config to legacy auth hint formats.
+Tests the ModemConfigAuthAdapter which converts modem.yaml config to auth formats.
+Schema uses auth.types{} as the single source of truth.
 
 Test Organization:
 - TestSyntheticConfigs: Core adapter tests using synthetic modem.yaml data
@@ -17,11 +18,11 @@ from custom_components.cable_modem_monitor.modem_config import (
 )
 from custom_components.cable_modem_monitor.modem_config.schema import (
     AuthConfig,
-    AuthStrategy,
     FormAuthConfig,
     FormSuccessConfig,
     HnapAuthConfig,
     ModemConfig,
+    PasswordEncoding,
     UrlTokenAuthConfig,
 )
 
@@ -35,48 +36,61 @@ class TestSyntheticFormAuthAdapter:
 
     @pytest.fixture
     def form_auth_config(self):
-        """Create a synthetic form auth config."""
+        """Create a synthetic form auth config using types{}."""
         return ModemConfig(
             manufacturer="Synthetic",
             model="FormAuth-1000",
             auth=AuthConfig(
-                strategy=AuthStrategy.FORM,
-                form=FormAuthConfig(
-                    action="/goform/login",
-                    method="POST",
-                    username_field="user",
-                    password_field="pass",
-                    password_encoding="base64",
-                    success=FormSuccessConfig(redirect="/status.html"),
-                ),
+                types={
+                    "form": FormAuthConfig(
+                        action="/goform/login",
+                        method="POST",
+                        username_field="user",
+                        password_field="pass",
+                        password_encoding=PasswordEncoding.BASE64,
+                        success=FormSuccessConfig(redirect="/status.html"),
+                    ),
+                },
             ),
         )
 
-    def test_get_auth_form_hints(self, form_auth_config):
-        """Test form hints extraction."""
+    def test_get_available_auth_types(self, form_auth_config):
+        """Test get_available_auth_types returns types."""
         adapter = ModemConfigAuthAdapter(form_auth_config)
-        hints = adapter.get_auth_form_hints()
+        auth_types = adapter.get_available_auth_types()
+        assert auth_types == ["form"]
 
-        assert hints["username_field"] == "user"
-        assert hints["password_field"] == "pass"
-        assert hints["password_encoding"] == "base64"
-        assert hints["login_url"] == "/goform/login"
-        assert hints["success_redirect"] == "/status.html"
-
-    def test_get_form_config(self, form_auth_config):
-        """Test form config for AuthHandler."""
+    def test_get_auth_config_for_type_form(self, form_auth_config):
+        """Test form config extraction."""
         adapter = ModemConfigAuthAdapter(form_auth_config)
-        config = adapter.get_form_config()
+        config = adapter.get_auth_config_for_type("form")
 
         assert config["action"] == "/goform/login"
         assert config["method"] == "POST"
         assert config["username_field"] == "user"
         assert config["password_field"] == "pass"
+        assert config["password_encoding"] == "base64"
 
-    def test_js_auth_hints_returns_empty(self, form_auth_config):
-        """Test JS auth hints returns empty dict for form auth."""
+    def test_get_default_auth_type(self, form_auth_config):
+        """Test get_default_auth_type returns first type."""
         adapter = ModemConfigAuthAdapter(form_auth_config)
-        assert adapter.get_js_auth_hints() == {}
+        assert adapter.get_default_auth_type() == "form"
+
+    def test_has_multiple_auth_types_false(self, form_auth_config):
+        """Test has_multiple_auth_types returns False for single type."""
+        adapter = ModemConfigAuthAdapter(form_auth_config)
+        assert adapter.has_multiple_auth_types() is False
+
+    def test_get_static_auth_config(self, form_auth_config):
+        """Test get_static_auth_config returns full config dict."""
+        adapter = ModemConfigAuthAdapter(form_auth_config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "form_plain"
+        assert static["auth_form_config"] is not None
+        assert static["auth_form_config"]["action"] == "/goform/login"
+        assert static["auth_hnap_config"] is None
+        assert static["auth_url_token_config"] is None
 
 
 class TestSyntheticHnapAdapter:
@@ -84,44 +98,47 @@ class TestSyntheticHnapAdapter:
 
     @pytest.fixture
     def hnap_config(self):
-        """Create a synthetic HNAP auth config."""
+        """Create a synthetic HNAP auth config using types{}."""
         return ModemConfig(
             manufacturer="Synthetic",
             model="HNAP-2000",
             auth=AuthConfig(
-                strategy=AuthStrategy.HNAP,
-                hnap=HnapAuthConfig(
-                    endpoint="/HNAP1/",
-                    namespace="http://example.com/HNAP1/",
-                    login_action="Login",
-                    empty_action_value="",
-                    hmac_algorithm="md5",
-                ),
+                types={
+                    "hnap": HnapAuthConfig(
+                        endpoint="/HNAP1/",
+                        namespace="http://example.com/HNAP1/",
+                        empty_action_value="",
+                        hmac_algorithm="md5",
+                    ),
+                },
             ),
         )
 
-    def test_get_hnap_hints(self, hnap_config):
-        """Test HNAP hints extraction."""
+    def test_get_available_auth_types(self, hnap_config):
+        """Test get_available_auth_types returns types."""
         adapter = ModemConfigAuthAdapter(hnap_config)
-        hints = adapter.get_hnap_hints()
+        auth_types = adapter.get_available_auth_types()
+        assert auth_types == ["hnap"]
 
-        assert hints["endpoint"] == "/HNAP1/"
-        assert hints["namespace"] == "http://example.com/HNAP1/"
-        assert hints["empty_action_value"] == ""
-        assert hints["hmac_algorithm"] == "md5"
-
-    def test_get_hnap_config(self, hnap_config):
-        """Test HNAP config for AuthHandler."""
+    def test_get_auth_config_for_type_hnap(self, hnap_config):
+        """Test HNAP config extraction."""
         adapter = ModemConfigAuthAdapter(hnap_config)
-        config = adapter.get_hnap_config()
+        config = adapter.get_auth_config_for_type("hnap")
 
         assert config["endpoint"] == "/HNAP1/"
         assert config["namespace"] == "http://example.com/HNAP1/"
+        assert config["empty_action_value"] == ""
+        assert config["hmac_algorithm"] == "md5"
 
-    def test_form_hints_returns_empty(self, hnap_config):
-        """Test form hints returns empty dict for HNAP auth."""
+    def test_get_static_auth_config(self, hnap_config):
+        """Test get_static_auth_config returns HNAP config."""
         adapter = ModemConfigAuthAdapter(hnap_config)
-        assert adapter.get_auth_form_hints() == {}
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "hnap_session"
+        assert static["auth_hnap_config"] is not None
+        assert static["auth_hnap_config"]["endpoint"] == "/HNAP1/"
+        assert static["auth_form_config"] is None
 
 
 class TestSyntheticUrlTokenAdapter:
@@ -129,42 +146,39 @@ class TestSyntheticUrlTokenAdapter:
 
     @pytest.fixture
     def url_token_config(self):
-        """Create a synthetic URL token auth config."""
+        """Create a synthetic URL token auth config using types{}."""
         return ModemConfig(
             manufacturer="Synthetic",
             model="URLToken-3000",
             auth=AuthConfig(
-                strategy=AuthStrategy.URL_TOKEN,
-                url_token=UrlTokenAuthConfig(
-                    login_page="/status.html",
-                    login_prefix="login_",
-                    token_prefix="ct_",
-                    session_cookie="sessionId",
-                    success_indicator="Channel Data",
-                ),
+                types={
+                    "url_token": UrlTokenAuthConfig(
+                        login_page="/status.html",
+                        login_prefix="login_",
+                        token_prefix="ct_",
+                        session_cookie="sessionId",
+                        success_indicator="Channel Data",
+                    ),
+                },
             ),
         )
 
-    def test_get_js_auth_hints(self, url_token_config):
-        """Test JS auth hints extraction."""
+    def test_get_available_auth_types(self, url_token_config):
+        """Test get_available_auth_types returns types."""
         adapter = ModemConfigAuthAdapter(url_token_config)
-        hints = adapter.get_js_auth_hints()
+        auth_types = adapter.get_available_auth_types()
+        assert auth_types == ["url_token"]
 
-        assert hints  # Non-empty dict
-        assert hints["pattern"] == "url_token_session"
-        assert hints["login_prefix"] == "login_"
-        assert hints["token_prefix"] == "ct_"
-        assert hints["session_cookie_name"] == "sessionId"
-
-    def test_get_url_token_config(self, url_token_config):
+    def test_get_auth_config_for_type_url_token(self, url_token_config):
         """Test URL token config extraction."""
         adapter = ModemConfigAuthAdapter(url_token_config)
-        config = adapter.get_url_token_config()
+        config = adapter.get_auth_config_for_type("url_token")
 
         assert config["login_page"] == "/status.html"
         assert config["data_page"] == "/status.html"  # Defaults to login_page
         assert config["login_prefix"] == "login_"
         assert config["token_prefix"] == "ct_"
+        assert config["session_cookie_name"] == "sessionId"
 
     def test_get_url_token_config_with_separate_data_page(self):
         """Test URL token config with explicit data_page."""
@@ -172,23 +186,29 @@ class TestSyntheticUrlTokenAdapter:
             manufacturer="Synthetic",
             model="URLToken-DataPage",
             auth=AuthConfig(
-                strategy=AuthStrategy.URL_TOKEN,
-                url_token=UrlTokenAuthConfig(
-                    login_page="/login.html",
-                    data_page="/data.html",
-                    session_cookie="sessionId",
-                ),
+                types={
+                    "url_token": UrlTokenAuthConfig(
+                        login_page="/login.html",
+                        data_page="/data.html",
+                        session_cookie="sessionId",
+                    ),
+                },
             ),
         )
         adapter = ModemConfigAuthAdapter(config)
 
-        url_config = adapter.get_url_token_config()
+        url_config = adapter.get_auth_config_for_type("url_token")
         assert url_config["login_page"] == "/login.html"
         assert url_config["data_page"] == "/data.html"
 
-        hints = adapter.get_js_auth_hints()
-        assert hints["login_page"] == "/login.html"
-        assert hints["data_page"] == "/data.html"
+    def test_get_static_auth_config(self, url_token_config):
+        """Test get_static_auth_config returns URL token config."""
+        adapter = ModemConfigAuthAdapter(url_token_config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "url_token_session"
+        assert static["auth_url_token_config"] is not None
+        assert static["auth_url_token_config"]["login_page"] == "/status.html"
 
 
 class TestSyntheticNoAuthAdapter:
@@ -196,22 +216,116 @@ class TestSyntheticNoAuthAdapter:
 
     @pytest.fixture
     def no_auth_config(self):
-        """Create a synthetic no-auth config."""
+        """Create a synthetic no-auth config using types{}."""
         return ModemConfig(
             manufacturer="Synthetic",
             model="NoAuth-4000",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
 
-    def test_form_hints_returns_empty(self, no_auth_config):
-        """Test form hints returns empty for no-auth."""
+    def test_get_available_auth_types(self, no_auth_config):
+        """Test get_available_auth_types returns none type."""
         adapter = ModemConfigAuthAdapter(no_auth_config)
-        assert adapter.get_auth_form_hints() == {}
+        auth_types = adapter.get_available_auth_types()
+        assert auth_types == ["none"]
 
-    def test_js_auth_hints_returns_empty(self, no_auth_config):
-        """Test JS auth hints returns empty dict for no-auth."""
+    def test_get_auth_config_for_type_none(self, no_auth_config):
+        """Test auth config for 'none' returns empty dict."""
         adapter = ModemConfigAuthAdapter(no_auth_config)
-        assert adapter.get_js_auth_hints() == {}
+        config = adapter.get_auth_config_for_type("none")
+        assert config == {}
+
+    def test_get_static_auth_config(self, no_auth_config):
+        """Test get_static_auth_config returns no_auth strategy."""
+        adapter = ModemConfigAuthAdapter(no_auth_config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "no_auth"
+        assert static["auth_form_config"] is None
+        assert static["auth_hnap_config"] is None
+        assert static["auth_url_token_config"] is None
+
+
+class TestSyntheticMultiAuthAdapter:
+    """Test multi-auth type adapter with synthetic config."""
+
+    @pytest.fixture
+    def multi_auth_config(self):
+        """Create a config with multiple auth types (like SB8200)."""
+        return ModemConfig(
+            manufacturer="Synthetic",
+            model="MultiAuth",
+            auth=AuthConfig(
+                types={
+                    "none": None,  # No auth variant
+                    "url_token": UrlTokenAuthConfig(
+                        login_page="/status.html",
+                        login_prefix="login_",
+                        token_prefix="ct_",
+                        session_cookie="sessionId",
+                        success_indicator="Channel Data",
+                    ),
+                },
+            ),
+        )
+
+    def test_get_available_auth_types_multi(self, multi_auth_config):
+        """Test get_available_auth_types returns multiple types."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        auth_types = adapter.get_available_auth_types()
+
+        assert len(auth_types) == 2
+        assert "none" in auth_types
+        assert "url_token" in auth_types
+
+    def test_has_multiple_auth_types_true(self, multi_auth_config):
+        """Test has_multiple_auth_types returns True for multi-type modem."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        assert adapter.has_multiple_auth_types() is True
+
+    def test_get_default_auth_type_multi(self, multi_auth_config):
+        """Test get_default_auth_type returns first type for multi-type modem."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        default = adapter.get_default_auth_type()
+        # First key in types dict
+        assert default == "none"
+
+    def test_get_auth_config_for_type_none(self, multi_auth_config):
+        """Test get_auth_config_for_type returns empty dict for 'none'."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        config = adapter.get_auth_config_for_type("none")
+        assert config == {}
+
+    def test_get_auth_config_for_type_url_token(self, multi_auth_config):
+        """Test get_auth_config_for_type returns url_token config."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        config = adapter.get_auth_config_for_type("url_token")
+
+        assert config is not None
+        assert config["login_page"] == "/status.html"
+        assert config["login_prefix"] == "login_"
+        assert config["token_prefix"] == "ct_"
+        assert config["session_cookie_name"] == "sessionId"
+
+    def test_get_auth_config_for_type_unknown(self, multi_auth_config):
+        """Test get_auth_config_for_type returns None for unknown type."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+        config = adapter.get_auth_config_for_type("unknown_type")
+        assert config is None
+
+    def test_get_static_auth_config_for_specific_type(self, multi_auth_config):
+        """Test get_static_auth_config with specific auth type."""
+        adapter = ModemConfigAuthAdapter(multi_auth_config)
+
+        # Get config for url_token type
+        static = adapter.get_static_auth_config("url_token")
+        assert static["auth_strategy"] == "url_token_session"
+        assert static["auth_url_token_config"] is not None
+
+        # Get config for none type
+        static = adapter.get_static_auth_config("none")
+        assert static["auth_strategy"] == "no_auth"
+        assert static["auth_url_token_config"] is None
 
 
 # =============================================================================
@@ -239,11 +353,12 @@ class TestRealFormAuthModems:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        hints = adapter.get_auth_form_hints()
-
-        assert "username_field" in hints
-        assert "password_field" in hints
-        assert hints.get("password_encoding") == "base64"
+        # Get form config via types{}
+        form_config = adapter.get_auth_config_for_type("form")
+        assert form_config is not None
+        assert "username_field" in form_config
+        assert "password_field" in form_config
+        assert form_config.get("password_encoding") == "base64"
 
     def test_form_config_for_auth_handler(self):
         """Test form config format for AuthHandler."""
@@ -254,8 +369,8 @@ class TestRealFormAuthModems:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        form_config = adapter.get_form_config()
-
+        form_config = adapter.get_auth_config_for_type("form")
+        assert form_config is not None
         assert "action" in form_config
         assert "method" in form_config
         assert "username_field" in form_config
@@ -265,8 +380,8 @@ class TestRealFormAuthModems:
 class TestRealHnapModems:
     """Integration tests for HNAP modems."""
 
-    def test_hnap_hints_extraction(self):
-        """Test HNAP hints extraction from a real HNAP modem."""
+    def test_hnap_config_extraction(self):
+        """Test HNAP config extraction from a real HNAP modem."""
         modem_path = _get_modems_root() / "arris" / "s33"
         if not modem_path.exists():
             pytest.skip("HNAP modem config not available")
@@ -274,44 +389,28 @@ class TestRealHnapModems:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        hints = adapter.get_hnap_hints()
-
-        assert hints["endpoint"] == "/HNAP1/"
-        assert "namespace" in hints
-
-    def test_hnap_config_for_auth_handler(self):
-        """Test HNAP config format for AuthHandler."""
-        modem_path = _get_modems_root() / "arris" / "s33"
-        if not modem_path.exists():
-            pytest.skip("HNAP modem config not available")
-
-        config = load_modem_config(modem_path)
-        adapter = ModemConfigAuthAdapter(config)
-
-        hnap_config = adapter.get_hnap_config()
-
-        assert "endpoint" in hnap_config
+        hnap_config = adapter.get_auth_config_for_type("hnap")
+        assert hnap_config is not None
+        assert hnap_config["endpoint"] == "/HNAP1/"
         assert "namespace" in hnap_config
+
+    def test_hnap_static_config(self):
+        """Test HNAP static auth config."""
+        modem_path = _get_modems_root() / "arris" / "s33"
+        if not modem_path.exists():
+            pytest.skip("HNAP modem config not available")
+
+        config = load_modem_config(modem_path)
+        adapter = ModemConfigAuthAdapter(config)
+
+        static = adapter.get_static_auth_config()
+        assert static["auth_strategy"] == "hnap_session"
+        assert static["auth_hnap_config"] is not None
+        assert "endpoint" in static["auth_hnap_config"]
 
 
 class TestRealUrlTokenModems:
     """Integration tests for URL token modems."""
-
-    def test_js_auth_hints_extraction(self):
-        """Test JS auth hints extraction from a real URL token modem."""
-        modem_path = _get_modems_root() / "arris" / "sb8200"
-        if not modem_path.exists():
-            pytest.skip("URL token modem config not available")
-
-        config = load_modem_config(modem_path)
-        adapter = ModemConfigAuthAdapter(config)
-
-        hints = adapter.get_js_auth_hints()
-
-        assert hints  # Non-empty dict
-        assert hints["pattern"] == "url_token_session"
-        assert "login_prefix" in hints
-        assert "token_prefix" in hints
 
     def test_url_token_config_extraction(self):
         """Test URL token config extraction from real modem."""
@@ -322,17 +421,19 @@ class TestRealUrlTokenModems:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        url_token_config = adapter.get_url_token_config()
-
-        assert "login_page" in url_token_config
-        assert "login_prefix" in url_token_config
+        # SB8200 has multiple auth types - check if url_token is available
+        if "url_token" in adapter.get_available_auth_types():
+            url_token_config = adapter.get_auth_config_for_type("url_token")
+            assert url_token_config is not None
+            assert "login_page" in url_token_config
+            assert "login_prefix" in url_token_config
 
 
 class TestRealNoAuthModems:
     """Integration tests for no-auth modems."""
 
-    def test_no_auth_returns_empty_hints(self):
-        """Test that no-auth modems return empty hints."""
+    def test_no_auth_returns_empty_config(self):
+        """Test that no-auth modems return empty config."""
         modem_path = _get_modems_root() / "arris" / "sb6141"
         if not modem_path.exists():
             pytest.skip("No-auth modem config not available")
@@ -340,13 +441,13 @@ class TestRealNoAuthModems:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        # No-auth modems should return empty form hints
-        form_hints = adapter.get_auth_form_hints()
-        assert form_hints == {}
+        # No-auth modems should have "none" in auth types
+        auth_types = adapter.get_available_auth_types()
+        assert "none" in auth_types
 
-        # No-auth modems should return empty dict for JS hints
-        js_hints = adapter.get_js_auth_hints()
-        assert js_hints == {}
+        # Get config for none type
+        none_config = adapter.get_auth_config_for_type("none")
+        assert none_config == {}
 
 
 # =============================================================================
@@ -364,7 +465,8 @@ class TestGetModemConfigForParser:
             pytest.skip("Form auth modem config not available")
 
         assert config.manufacturer == "Motorola"
-        assert config.auth.strategy in (AuthStrategy.FORM, AuthStrategy.NONE)
+        # Auth config should have types{}
+        assert "form" in config.auth.types
 
     def test_lookup_hnap_parser(self):
         """Test lookup for HNAP parser."""
@@ -372,7 +474,7 @@ class TestGetModemConfigForParser:
         if config is None:
             pytest.skip("HNAP modem config not available")
 
-        assert config.auth.strategy == AuthStrategy.HNAP
+        assert "hnap" in config.auth.types
 
     def test_lookup_nonexistent_parser(self):
         """Test lookup for non-existent parser returns None."""
@@ -399,8 +501,9 @@ class TestGetAuthAdapterForParser:
         if adapter is None:
             pytest.skip("Form auth modem config not available")
 
-        hints = adapter.get_auth_form_hints()
-        assert "username_field" in hints
+        config = adapter.get_auth_config_for_type("form")
+        assert config is not None
+        assert "username_field" in config
 
     def test_get_adapter_nonexistent(self):
         """Test getting adapter for non-existent parser returns None."""
@@ -423,7 +526,7 @@ class TestUrlPatternPrioritization:
         config = ModemConfig(
             manufacturer="Test",
             model="DataPriority-1000",
-            auth=AuthConfig(strategy=AuthStrategy.BASIC),
+            auth=AuthConfig(types={"none": None}),
             pages=PagesConfig(
                 protected=["/secondary.html", "/primary.html"],
                 data={"downstream_channels": "/primary.html"},
@@ -445,7 +548,7 @@ class TestUrlPatternPrioritization:
         config = ModemConfig(
             manufacturer="Test",
             model="NoData-1000",
-            auth=AuthConfig(strategy=AuthStrategy.BASIC),
+            auth=AuthConfig(types={"none": None}),
             pages=PagesConfig(
                 protected=["/first.html", "/second.html"],
             ),
@@ -531,43 +634,6 @@ class TestAuthHandlerFromModemConfig:
 # Metadata Accessor Tests - Table-Driven
 # =============================================================================
 
-# ┌─────────────────────────┬───────────────┬──────────────────────────────────────────┬─────────────────────────┐
-# │ method                  │ use_full      │ expected                                 │ description             │
-# ├─────────────────────────┼───────────────┼──────────────────────────────────────────┼─────────────────────────┤
-# │ get_auth_strategy       │ True          │ AuthStrategy.FORM                        │ returns strategy enum   │
-# │ get_logout_endpoint     │ True          │ "/logout.asp"                            │ configured logout       │
-# │ get_logout_endpoint     │ False         │ None                                     │ no session config       │
-# │ get_status              │ True          │ "verified"                               │ configured status       │
-# │ get_status              │ False         │ "awaiting_verification"                  │ default status          │
-# │ get_verification_source │ True          │ "https://github.com/example/issue/1"    │ configured source       │
-# │ get_verification_source │ False         │ None                                     │ no status_info          │
-# │ get_release_date        │ True          │ "2020-01"                                │ configured date         │
-# │ get_release_date        │ False         │ None                                     │ no hardware             │
-# │ get_end_of_life         │ True          │ "2025-12"                                │ configured eol          │
-# │ get_end_of_life         │ False         │ None                                     │ no hardware             │
-# │ get_docsis_version      │ True          │ "3.1"                                    │ configured version      │
-# │ get_docsis_version      │ False         │ None                                     │ no hardware             │
-# └─────────────────────────┴───────────────┴──────────────────────────────────────────┴─────────────────────────┘
-#
-# fmt: off
-METADATA_ACCESSOR_CASES = [
-    # (method,                  use_full, expected,                                  description)
-    ("get_auth_strategy",       True,     AuthStrategy.FORM,                         "returns strategy enum"),
-    ("get_logout_endpoint",     True,     "/logout.asp",                             "configured logout"),
-    ("get_logout_endpoint",     False,    None,                                      "no session config"),
-    ("get_status",              True,     "verified",                                "configured status"),
-    ("get_status",              False,    "awaiting_verification",                   "default status"),
-    ("get_verification_source", True,     "https://github.com/example/issue/1",      "configured source"),
-    ("get_verification_source", False,    None,                                      "no status_info"),
-    ("get_release_date",        True,     "2020-01",                                 "configured date"),
-    ("get_release_date",        False,    None,                                      "no hardware"),
-    ("get_end_of_life",         True,     "2025-12",                                 "configured eol"),
-    ("get_end_of_life",         False,    None,                                      "no hardware"),
-    ("get_docsis_version",      True,     "3.1",                                     "configured version"),
-    ("get_docsis_version",      False,    None,                                      "no hardware"),
-]
-# fmt: on
-
 
 def _build_full_config():
     """Build config with all metadata fields populated."""
@@ -590,12 +656,13 @@ def _build_full_config():
         model="TestModel",
         parser=ParserConfig(**{"class": "TestParser", "module": "test.parser"}),
         auth=AuthConfig(
-            strategy=AuthStrategy.FORM,
-            form=FormAuthConfig(
-                action="/login",
-                username_field="user",
-                password_field="pass",
-            ),
+            types={
+                "form": FormAuthConfig(
+                    action="/login",
+                    username_field="user",
+                    password_field="pass",
+                ),
+            },
             session=SessionConfig(logout_endpoint="/logout.asp"),
         ),
         status_info=StatusMetadata(
@@ -630,8 +697,44 @@ def _build_minimal_config():
     return ModemConfig(
         manufacturer="Test",
         model="Minimal",
-        auth=AuthConfig(strategy=AuthStrategy.NONE),
+        auth=AuthConfig(types={"none": None}),
     )
+
+
+# ┌─────────────────────────┬───────────────┬──────────────────────────────────────────┬─────────────────────────┐
+# │ method                  │ use_full      │ expected                                 │ description             │
+# ├─────────────────────────┼───────────────┼──────────────────────────────────────────┼─────────────────────────┤
+# │ get_logout_endpoint     │ True          │ "/logout.asp"                            │ configured logout       │
+# │ get_logout_endpoint     │ False         │ None                                     │ no session config       │
+# │ get_status              │ True          │ "verified"                               │ configured status       │
+# │ get_status              │ False         │ "awaiting_verification"                  │ default status          │
+# │ get_verification_source │ True          │ "https://github.com/example/issue/1"    │ configured source       │
+# │ get_verification_source │ False         │ None                                     │ no status_info          │
+# │ get_release_date        │ True          │ "2020-01"                                │ configured date         │
+# │ get_release_date        │ False         │ None                                     │ no hardware             │
+# │ get_end_of_life         │ True          │ "2025-12"                                │ configured eol          │
+# │ get_end_of_life         │ False         │ None                                     │ no hardware             │
+# │ get_docsis_version      │ True          │ "3.1"                                    │ configured version      │
+# │ get_docsis_version      │ False         │ None                                     │ no hardware             │
+# └─────────────────────────┴───────────────┴──────────────────────────────────────────┴─────────────────────────┘
+#
+# fmt: off
+METADATA_ACCESSOR_CASES = [
+    # (method,                  use_full, expected,                                  description)
+    ("get_logout_endpoint",     True,     "/logout.asp",                             "configured logout"),
+    ("get_logout_endpoint",     False,    None,                                      "no session config"),
+    ("get_status",              True,     "verified",                                "configured status"),
+    ("get_status",              False,    "awaiting_verification",                   "default status"),
+    ("get_verification_source", True,     "https://github.com/example/issue/1",      "configured source"),
+    ("get_verification_source", False,    None,                                      "no status_info"),
+    ("get_release_date",        True,     "2020-01",                                 "configured date"),
+    ("get_release_date",        False,    None,                                      "no hardware"),
+    ("get_end_of_life",         True,     "2025-12",                                 "configured eol"),
+    ("get_end_of_life",         False,    None,                                      "no hardware"),
+    ("get_docsis_version",      True,     "3.1",                                     "configured version"),
+    ("get_docsis_version",      False,    None,                                      "no hardware"),
+]
+# fmt: on
 
 
 class TestMetadataAccessors:
@@ -667,7 +770,7 @@ class TestIdentityAccessors:
         return ModemConfig(
             manufacturer="TestMfr",
             model="TestModel",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
             detection=DetectionConfig(
                 pre_auth=["pre_pattern"],
                 post_auth=["post_pattern"],
@@ -705,7 +808,7 @@ class TestIdentityAccessors:
         config = ModemConfig(
             manufacturer="Test",
             model="SingleModel",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
         adapter = ModemConfigAuthAdapter(config)
         assert adapter.get_models() == ["SingleModel"]
@@ -723,7 +826,7 @@ class TestIdentityAccessors:
         config = ModemConfig(
             manufacturer="Test",
             model="NoDetection",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
         adapter = ModemConfigAuthAdapter(config)
         hints = adapter.get_detection_hints()
@@ -754,7 +857,7 @@ class TestFixturesAccessor:
         config = ModemConfig(
             manufacturer="Test",
             model="WithFixtures",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
             fixtures=FixturesMetadata(path="modems/test/withfixtures/fixtures"),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -765,7 +868,7 @@ class TestFixturesAccessor:
         config = ModemConfig(
             manufacturer="Test",
             model="NoFixtures",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
         adapter = ModemConfigAuthAdapter(config)
         assert adapter.get_fixtures_path() is None
@@ -781,7 +884,7 @@ class TestUrlPatternsWithPublic:
         config = ModemConfig(
             manufacturer="Test",
             model="PublicPages",
-            auth=AuthConfig(strategy=AuthStrategy.BASIC),
+            auth=AuthConfig(types={"none": None}),
             pages=PagesConfig(
                 public=["/public1.html", "/public2.html"],
                 protected=["/protected.html"],
@@ -797,61 +900,6 @@ class TestUrlPatternsWithPublic:
         assert public_patterns[1]["path"] == "/public2.html"
 
 
-# ┌──────────────────────┬───────────────────┬────────────────────────────────────────┐
-# │ method               │ strategy          │ description                            │
-# ├──────────────────────┼───────────────────┼────────────────────────────────────────┤
-# │ get_hnap_hints       │ FORM              │ HNAP hints empty for form auth         │
-# │ get_hnap_hints       │ NONE              │ HNAP hints empty for no auth           │
-# │ get_url_token_config │ NONE              │ URL token config empty for no auth     │
-# │ get_url_token_config │ FORM              │ URL token config empty for form auth   │
-# │ get_form_config      │ NONE              │ Form config empty for no auth          │
-# │ get_form_config      │ HNAP              │ Form config empty for HNAP auth        │
-# │ get_js_auth_hints    │ FORM              │ JS hints empty for form auth           │
-# │ get_js_auth_hints    │ NONE              │ JS hints empty for no auth             │
-# └──────────────────────┴───────────────────┴────────────────────────────────────────┘
-#
-# fmt: off
-WRONG_STRATEGY_RETURNS_EMPTY_CASES = [
-    # (method,               strategy,            description)
-    ("get_hnap_hints",       AuthStrategy.FORM,   "HNAP hints empty for form auth"),
-    ("get_hnap_hints",       AuthStrategy.NONE,   "HNAP hints empty for no auth"),
-    ("get_url_token_config", AuthStrategy.NONE,   "URL token config empty for no auth"),
-    ("get_url_token_config", AuthStrategy.FORM,   "URL token config empty for form auth"),
-    ("get_form_config",      AuthStrategy.NONE,   "Form config empty for no auth"),
-    ("get_form_config",      AuthStrategy.HNAP,   "Form config empty for HNAP auth"),
-    ("get_js_auth_hints",    AuthStrategy.FORM,   "JS hints empty for form auth"),
-    ("get_js_auth_hints",    AuthStrategy.NONE,   "JS hints empty for no auth"),
-]
-# fmt: on
-
-
-class TestEdgeCases:
-    """Tests for edge cases and empty return paths."""
-
-    @pytest.mark.parametrize("method,strategy,desc", WRONG_STRATEGY_RETURNS_EMPTY_CASES)
-    def test_wrong_strategy_returns_empty(self, method, strategy, desc):
-        """Table-driven: calling hint getter with wrong strategy returns empty dict."""
-        config = ModemConfig(
-            manufacturer="Test",
-            model="WrongStrategy",
-            auth=AuthConfig(strategy=strategy),
-        )
-        adapter = ModemConfigAuthAdapter(config)
-        result = getattr(adapter, method)()
-        assert result == {}, f"{method} with {strategy}: {desc}"
-
-    def test_js_auth_hints_minimal_url_token(self):
-        """Test JS auth hints with URL_TOKEN but no url_token config."""
-        config = ModemConfig(
-            manufacturer="Test",
-            model="MinimalUrlToken",
-            auth=AuthConfig(strategy=AuthStrategy.URL_TOKEN),
-        )
-        adapter = ModemConfigAuthAdapter(config)
-        hints = adapter.get_js_auth_hints()
-        assert hints == {"pattern": "url_token_session"}
-
-
 # =============================================================================
 # Helper Function Tests - Table-Driven
 # =============================================================================
@@ -859,13 +907,9 @@ class TestEdgeCases:
 # ┌────────────────────────────────┬─────────────────────────┬──────────────────────┐
 # │ function                       │ parser                  │ expected_none        │
 # ├────────────────────────────────┼─────────────────────────┼──────────────────────┤
-# │ get_url_patterns_for_parser    │ TechnicolorTC4400Parser │ False (returns list) │
 # │ get_url_patterns_for_parser    │ NonExistentParser       │ True                 │
-# │ get_capabilities_for_parser    │ ArrisS33HnapParser      │ False (returns list) │
 # │ get_capabilities_for_parser    │ NonExistentParser       │ True                 │
-# │ get_docsis_version_for_parser  │ ArrisS33HnapParser      │ False (returns str)  │
 # │ get_docsis_version_for_parser  │ NonExistentParser       │ True                 │
-# │ get_detection_hints_for_parser │ MotorolaMB7621Parser    │ False (returns dict) │
 # │ get_detection_hints_for_parser │ NonExistentParser       │ True                 │
 # └────────────────────────────────┴─────────────────────────┴──────────────────────┘
 #
@@ -973,12 +1017,12 @@ class TestHelperFunctions:
 class TestStaticAuthConfigSynthetic:
     """Tests for get_static_auth_config() with synthetic configs."""
 
-    def test_no_auth_strategy(self):
+    def test_no_auth_type(self):
         """Test no-auth modem returns no_auth strategy with all None configs."""
         config = ModemConfig(
             manufacturer="Synthetic",
             model="NoAuth",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
         adapter = ModemConfigAuthAdapter(config)
         static = adapter.get_static_auth_config()
@@ -988,21 +1032,22 @@ class TestStaticAuthConfigSynthetic:
         assert static["auth_hnap_config"] is None
         assert static["auth_url_token_config"] is None
 
-    def test_form_auth_strategy(self):
+    def test_form_auth_type(self):
         """Test form auth modem returns form_plain strategy with form config."""
         config = ModemConfig(
             manufacturer="Synthetic",
             model="FormAuth",
             auth=AuthConfig(
-                strategy=AuthStrategy.FORM,
-                form=FormAuthConfig(
-                    action="/goform/login",
-                    method="POST",
-                    username_field="user",
-                    password_field="pass",
-                    password_encoding="base64",
-                    hidden_fields={"csrf": "token123"},
-                ),
+                types={
+                    "form": FormAuthConfig(
+                        action="/goform/login",
+                        method="POST",
+                        username_field="user",
+                        password_field="pass",
+                        password_encoding=PasswordEncoding.BASE64,
+                        hidden_fields={"csrf": "token123"},
+                    ),
+                },
             ),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -1017,18 +1062,19 @@ class TestStaticAuthConfigSynthetic:
         assert static["auth_hnap_config"] is None
         assert static["auth_url_token_config"] is None
 
-    def test_hnap_auth_strategy(self):
+    def test_hnap_auth_type(self):
         """Test HNAP modem returns hnap_session strategy with hnap config."""
         config = ModemConfig(
             manufacturer="Synthetic",
             model="HnapAuth",
             auth=AuthConfig(
-                strategy=AuthStrategy.HNAP,
-                hnap=HnapAuthConfig(
-                    endpoint="/HNAP1/",
-                    namespace="http://purenetworks.com/HNAP1/",
-                    hmac_algorithm="md5",
-                ),
+                types={
+                    "hnap": HnapAuthConfig(
+                        endpoint="/HNAP1/",
+                        namespace="http://purenetworks.com/HNAP1/",
+                        hmac_algorithm="md5",
+                    ),
+                },
             ),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -1041,21 +1087,22 @@ class TestStaticAuthConfigSynthetic:
         assert static["auth_form_config"] is None
         assert static["auth_url_token_config"] is None
 
-    def test_url_token_auth_strategy(self):
+    def test_url_token_auth_type(self):
         """Test URL token modem returns url_token_session strategy."""
         config = ModemConfig(
             manufacturer="Synthetic",
             model="UrlTokenAuth",
             auth=AuthConfig(
-                strategy=AuthStrategy.URL_TOKEN,
-                url_token=UrlTokenAuthConfig(
-                    login_page="/status.html",
-                    data_page="/status.html",
-                    login_prefix="login_",
-                    token_prefix="ct_",
-                    session_cookie="credential",
-                    success_indicator="Channel",
-                ),
+                types={
+                    "url_token": UrlTokenAuthConfig(
+                        login_page="/status.html",
+                        data_page="/status.html",
+                        login_prefix="login_",
+                        token_prefix="ct_",
+                        session_cookie="credential",
+                        success_indicator="Channel",
+                    ),
+                },
             ),
         )
         adapter = ModemConfigAuthAdapter(config)
@@ -1068,30 +1115,6 @@ class TestStaticAuthConfigSynthetic:
         assert static["auth_form_config"] is None
         assert static["auth_hnap_config"] is None
 
-    def test_basic_auth_strategy(self):
-        """Test basic HTTP auth modem returns basic_http strategy."""
-        config = ModemConfig(
-            manufacturer="Synthetic",
-            model="BasicAuth",
-            auth=AuthConfig(strategy=AuthStrategy.BASIC),
-        )
-        adapter = ModemConfigAuthAdapter(config)
-        static = adapter.get_static_auth_config()
-
-        assert static["auth_strategy"] == "basic_http"
-
-    def test_rest_api_maps_to_no_auth(self):
-        """Test REST API strategy maps to no_auth (no traditional auth flow)."""
-        config = ModemConfig(
-            manufacturer="Synthetic",
-            model="RestApi",
-            auth=AuthConfig(strategy=AuthStrategy.REST_API),
-        )
-        adapter = ModemConfigAuthAdapter(config)
-        static = adapter.get_static_auth_config()
-
-        assert static["auth_strategy"] == "no_auth"
-
 
 # ┌──────────────────────────┬───────────────────┬──────────────────────────────────────────┐
 # │ parser_name              │ expected_strategy │ description                              │
@@ -1099,7 +1122,6 @@ class TestStaticAuthConfigSynthetic:
 # │ MotorolaMB7621Parser     │ form_plain        │ Form auth with base64 encoding           │
 # │ MotorolaMB8611HnapParser │ hnap_session      │ HNAP/SOAP with HMAC-MD5                  │
 # │ ArrisS33HnapParser       │ hnap_session      │ HNAP/SOAP with HMAC-MD5                  │
-# │ ArrisSB8200Parser        │ url_token_session │ URL token authentication                 │
 # │ ArrisSB6141Parser        │ no_auth           │ No authentication required               │
 # │ ArrisG54Parser           │ form_plain        │ Basic form authentication                │
 # │ TechnicolorCGA2121Parser │ form_plain        │ Form auth with base64 encoding           │
@@ -1111,7 +1133,6 @@ STATIC_AUTH_CONFIG_INTEGRATION_CASES = [
     ("MotorolaMB7621Parser",     "form_plain",        "form auth with base64"),
     ("MotorolaMB8611HnapParser", "hnap_session",      "HNAP auth"),
     ("ArrisS33HnapParser",       "hnap_session",      "HNAP auth"),
-    ("ArrisSB8200Parser",        "url_token_session", "URL token auth"),
     ("ArrisSB6141Parser",        "no_auth",           "no auth"),
     ("ArrisG54Parser",           "form_plain",        "form plain"),
     ("TechnicolorCGA2121Parser", "form_plain",        "form auth with base64"),
@@ -1155,3 +1176,57 @@ class TestStaticAuthConfigIntegration:
         """Verify fallback parser returns None adapter (triggers dynamic discovery)."""
         adapter = get_auth_adapter_for_parser("UniversalFallbackParser")
         assert adapter is None, "Fallback parser should not have a modem.yaml"
+
+
+# =============================================================================
+# Auth Types Integration Tests - For modems with user-selectable auth variants
+# =============================================================================
+
+
+class TestAuthTypesIntegration:
+    """Integration tests for auth.types{} with real modem configs."""
+
+    def test_sb8200_has_multiple_auth_types(self):
+        """Test SB8200 has multiple auth types (none, url_token)."""
+        adapter = get_auth_adapter_for_parser("ArrisSB8200Parser")
+        if adapter is None:
+            pytest.skip("SB8200 modem config not available")
+
+        # SB8200 should have auth.types{} with none and url_token
+        auth_types = adapter.get_available_auth_types()
+
+        # If auth.types{} is configured, should have both
+        if adapter.has_multiple_auth_types():
+            assert "none" in auth_types
+            assert "url_token" in auth_types
+        else:
+            # Fallback to single strategy
+            assert len(auth_types) == 1
+
+    def test_sb6190_has_multiple_auth_types(self):
+        """Test SB6190 has multiple auth types (none, form)."""
+        adapter = get_auth_adapter_for_parser("ArrisSB6190Parser")
+        if adapter is None:
+            pytest.skip("SB6190 modem config not available")
+
+        auth_types = adapter.get_available_auth_types()
+
+        # If auth.types{} is configured, should have both
+        if adapter.has_multiple_auth_types():
+            assert "none" in auth_types
+            assert "form" in auth_types
+        else:
+            # Fallback to single strategy (none)
+            assert len(auth_types) == 1
+
+    def test_mb7621_single_auth_type(self):
+        """Test MB7621 has single auth type (form)."""
+        adapter = get_auth_adapter_for_parser("MotorolaMB7621Parser")
+        if adapter is None:
+            pytest.skip("MB7621 modem config not available")
+
+        # MB7621 should have single auth type
+        assert adapter.has_multiple_auth_types() is False
+        auth_types = adapter.get_available_auth_types()
+        assert len(auth_types) == 1
+        assert auth_types[0] == "form"

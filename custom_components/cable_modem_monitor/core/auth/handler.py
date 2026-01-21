@@ -126,138 +126,58 @@ class AuthHandler:
         self._hnap_builder: HNAPJsonRequestBuilder | None = None
 
     @classmethod
-    def from_modem_config(cls, config: Any) -> AuthHandler:
+    def from_modem_config(cls, config: Any, auth_type: str | None = None) -> AuthHandler:
         """Create AuthHandler from a modem.yaml config.
 
-        This is the Phase 7 integration point - creates AuthHandler directly
-        from modem.yaml configuration instead of parser class attributes.
-
-        Supports auth.strategies[] for try-until-success pattern.
-        When strategies[] is defined, tries each in order until one succeeds.
+        Uses auth.types{} as the source of truth. Creates AuthHandler with
+        the appropriate strategy and config based on the selected auth type.
 
         Args:
             config: ModemConfig from modem.yaml
+            auth_type: Specific auth type to use, or None for default
 
         Returns:
             AuthHandler configured from modem.yaml
         """
-        from custom_components.cable_modem_monitor.modem_config import (
-            AuthStrategy,
-            ModemConfigAuthAdapter,
-        )
+        from custom_components.cable_modem_monitor.modem_config import ModemConfigAuthAdapter
 
         adapter = ModemConfigAuthAdapter(config)
 
-        # Map modem.yaml AuthStrategy to AuthStrategyType
-        strategy_map = {
-            AuthStrategy.NONE: AuthStrategyType.NO_AUTH,
-            AuthStrategy.BASIC: AuthStrategyType.BASIC_HTTP,
-            AuthStrategy.FORM: AuthStrategyType.FORM_PLAIN,  # Refined below
-            AuthStrategy.HNAP: AuthStrategyType.HNAP_SESSION,
-            AuthStrategy.URL_TOKEN: AuthStrategyType.URL_TOKEN_SESSION,
-            AuthStrategy.REST_API: AuthStrategyType.NO_AUTH,  # REST API = no auth
-        }
+        # Get static auth config for the specified (or default) auth type
+        static_config = adapter.get_static_auth_config(auth_type)
 
-        # Check for auth.strategies[] (v3.12+ try-until-success pattern)
-        if config.auth.strategies:
-            return cls._from_strategies_list(config.auth.strategies, strategy_map)
+        # Map strategy string to AuthStrategyType
+        strategy_str = static_config.get("auth_strategy", "no_auth")
+        strategy = cls._strategy_from_string(strategy_str)
 
-        # Fall back to primary auth.strategy
-        strategy = strategy_map.get(config.auth.strategy, AuthStrategyType.UNKNOWN)
+        _LOGGER.debug(
+            "Created AuthHandler from modem.yaml (strategy=%s, auth_type=%s)",
+            strategy.value,
+            auth_type or adapter.get_default_auth_type(),
+        )
 
         return cls(
             strategy=strategy,
-            form_config=adapter.get_form_config() if config.auth.form else None,
-            hnap_config=adapter.get_hnap_config() if config.auth.hnap else None,
-            url_token_config=adapter.get_url_token_config() if config.auth.url_token else None,
-        )
-
-    @classmethod
-    def _from_strategies_list(cls, strategies: list, strategy_map: dict) -> AuthHandler:
-        """Create AuthHandler from auth.strategies[] list.
-
-        Args:
-            strategies: List of AuthStrategyEntry from modem.yaml
-            strategy_map: Mapping from AuthStrategy enum to AuthStrategyType
-
-        Returns:
-            AuthHandler with primary strategy and fallbacks configured
-        """
-        if not strategies:
-            return cls(strategy=AuthStrategyType.NO_AUTH)
-
-        # Extract primary strategy configs
-        primary = strategies[0]
-        primary_strategy, primary_configs = cls._extract_strategy_config(primary, strategy_map)
-
-        # Build fallback strategies (remaining entries)
-        fallback_strategies = [cls._build_fallback_entry(entry, strategy_map) for entry in strategies[1:]]
-
-        _LOGGER.debug(
-            "Created AuthHandler with %d strategies (primary: %s, fallbacks: %d)",
-            len(strategies),
-            primary_strategy.value,
-            len(fallback_strategies),
-        )
-
-        return cls(
-            strategy=primary_strategy,
-            form_config=primary_configs.get("form_config"),
-            hnap_config=primary_configs.get("hnap_config"),
-            url_token_config=primary_configs.get("url_token_config"),
-            fallback_strategies=fallback_strategies,
+            form_config=static_config.get("auth_form_config"),
+            hnap_config=static_config.get("auth_hnap_config"),
+            url_token_config=static_config.get("auth_url_token_config"),
         )
 
     @staticmethod
-    def _extract_strategy_config(entry: Any, strategy_map: dict) -> tuple[AuthStrategyType, dict[str, Any]]:
-        """Extract strategy type and configs from a strategy entry.
+    def _strategy_from_string(strategy_str: str) -> AuthStrategyType:
+        """Convert strategy string to AuthStrategyType.
+
+        Args:
+            strategy_str: Strategy string (e.g., "form_plain", "hnap_session")
 
         Returns:
-            Tuple of (AuthStrategyType, dict of config dicts)
+            AuthStrategyType enum value
         """
-        from custom_components.cable_modem_monitor.modem_config.schema import AuthStrategy
-
-        strategy = strategy_map.get(entry.strategy, AuthStrategyType.UNKNOWN)
-        configs: dict[str, Any] = {}
-
-        # Extract form config
-        if entry.strategy == AuthStrategy.FORM and entry.form:
-            configs["form_config"] = {
-                "action": entry.form.action,
-                "method": entry.form.method,
-                "username_field": entry.form.username_field,
-                "password_field": entry.form.password_field,
-                "hidden_fields": dict(entry.form.hidden_fields) if entry.form.hidden_fields else {},
-                "password_encoding": entry.form.password_encoding.value if entry.form.password_encoding else "plain",
-            }
-
-        # Extract HNAP config
-        if entry.strategy == AuthStrategy.HNAP and entry.hnap:
-            configs["hnap_config"] = {
-                "endpoint": entry.hnap.endpoint,
-                "namespace": entry.hnap.namespace,
-                "empty_action_value": entry.hnap.empty_action_value,
-            }
-
-        # Extract URL token config
-        if entry.strategy == AuthStrategy.URL_TOKEN and entry.url_token:
-            configs["url_token_config"] = {
-                "login_page": entry.url_token.login_page,
-                "login_prefix": entry.url_token.login_prefix,
-                "session_cookie_name": entry.url_token.session_cookie,
-                "token_prefix": entry.url_token.token_prefix,
-                "success_indicator": entry.url_token.success_indicator,
-            }
-
-        return strategy, configs
-
-    @classmethod
-    def _build_fallback_entry(cls, entry: Any, strategy_map: dict) -> dict[str, Any]:
-        """Build a fallback strategy dict from a strategy entry."""
-        strategy, configs = cls._extract_strategy_config(entry, strategy_map)
-        fallback: dict[str, Any] = {"strategy": strategy.value}
-        fallback.update(configs)
-        return fallback
+        try:
+            return AuthStrategyType(strategy_str.lower())
+        except ValueError:
+            _LOGGER.warning("Unknown auth strategy: %s, defaulting to NO_AUTH", strategy_str)
+            return AuthStrategyType.NO_AUTH
 
     @classmethod
     def from_parser(cls, parser_class_name: str) -> AuthHandler | None:

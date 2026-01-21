@@ -12,7 +12,7 @@ tables at the top, making it easy to see all test cases at a glance and add
 new ones by simply adding a row.
 
 Tables defined below:
-    AUTH_FIELD_REQUIREMENTS - Required fields for each auth strategy
+    AUTH_FIELD_REQUIREMENTS - Required fields for each auth type (via types{})
     SCHEMA_VALIDATION_CASES - ModemConfig validation by status/parser config
 """
 
@@ -30,29 +30,29 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 # =============================================================================
 # AUTH FIELD REQUIREMENTS TABLE
 # =============================================================================
-# Each auth strategy requires specific fields in modem.yaml.
-# This table defines what fields must be present for each strategy.
+# Each auth type requires specific fields in modem.yaml.
+# This table defines what fields must be present for each type in auth.types{}.
 #
-# ┌─────────────┬────────────────┬─────────────────┬──────────────────────┐
-# │ strategy    │ config_path    │ required_field  │ description          │
-# ├─────────────┼────────────────┼─────────────────┼──────────────────────┤
-# │ form        │ auth.form      │ action          │ form action URL      │
-# │ form        │ auth.form      │ username_field  │ username field name  │
-# │ form        │ auth.form      │ password_field  │ password field name  │
-# │ hnap        │ auth.hnap      │ endpoint        │ HNAP endpoint        │
-# │ url_token   │ auth.url_token │ login_page      │ login page URL       │
-# │ url_token   │ auth.url_token │ session_cookie  │ session cookie name  │
-# └─────────────┴────────────────┴─────────────────┴──────────────────────┘
+# ┌─────────────┬─────────────────┬──────────────────────┐
+# │ auth_type   │ required_field  │ description          │
+# ├─────────────┼─────────────────┼──────────────────────┤
+# │ form        │ action          │ form action URL      │
+# │ form        │ username_field  │ username field name  │
+# │ form        │ password_field  │ password field name  │
+# │ hnap        │ endpoint        │ HNAP endpoint        │
+# │ url_token   │ login_page      │ login page URL       │
+# │ url_token   │ session_cookie  │ session cookie name  │
+# └─────────────┴─────────────────┴──────────────────────┘
 #
 # fmt: off
-AUTH_FIELD_REQUIREMENTS: list[tuple[str, str, str, str]] = [
-    # (strategy,     config_path,      required_field,    description)
-    ("form",        "auth.form",      "action",          "form action URL"),
-    ("form",        "auth.form",      "username_field",  "username field name"),
-    ("form",        "auth.form",      "password_field",  "password field name"),
-    ("hnap",        "auth.hnap",      "endpoint",        "HNAP endpoint"),
-    ("url_token",   "auth.url_token", "login_page",      "login page URL"),
-    ("url_token",   "auth.url_token", "session_cookie",  "session cookie name"),
+AUTH_FIELD_REQUIREMENTS: list[tuple[str, str, str]] = [
+    # (auth_type, required_field, description)
+    ("form",        "action",          "form action URL"),
+    ("form",        "username_field",  "username field name"),
+    ("form",        "password_field",  "password field name"),
+    ("hnap",        "endpoint",        "HNAP endpoint"),
+    ("url_token",   "login_page",      "login page URL"),
+    ("url_token",   "session_cookie",  "session cookie name"),
 ]
 # fmt: on
 
@@ -144,10 +144,12 @@ class TestCompleteModemConfigs:
     @pytest.mark.parametrize(
         "config_path", get_complete_modem_configs(), ids=lambda p: str(p.relative_to(PROJECT_ROOT))
     )
-    def test_has_auth_strategy(self, config_path: Path):
-        """Complete configs should have auth strategy."""
+    def test_has_auth_types(self, config_path: Path):
+        """Complete configs should have auth.types{} defined."""
         config = load_config(config_path)
-        assert config.get("auth", {}).get("strategy"), f"{config_path}: missing auth.strategy"
+        auth_types = config.get("auth", {}).get("types")
+        assert auth_types is not None, f"{config_path}: missing auth.types"
+        assert len(auth_types) > 0, f"{config_path}: auth.types is empty"
 
     @pytest.mark.parametrize(
         "config_path", get_complete_modem_configs(), ids=lambda p: str(p.relative_to(PROJECT_ROOT))
@@ -169,54 +171,54 @@ class TestCompleteModemConfigs:
         assert config.get("parser", {}).get("module"), f"{config_path}: missing parser.module"
 
 
-def _get_configs_by_strategy(strategy: str) -> list[Path]:
-    """Get modem configs that use a specific auth strategy."""
+def _get_configs_by_auth_type(auth_type: str) -> list[Path]:
+    """Get modem configs that have a specific auth type in auth.types{}."""
     configs = []
     for path in get_complete_modem_configs():
         config = load_config(path)
-        if config.get("auth", {}).get("strategy") == strategy:
+        types = config.get("auth", {}).get("types", {})
+        if auth_type in types:
             configs.append(path)
     return configs
-
-
-def _get_nested_config(config: dict, path: str) -> dict:
-    """Get nested config value by dot-notation path (e.g., 'auth.form')."""
-    result = config
-    for key in path.split("."):
-        result = result.get(key, {})
-    return result
 
 
 def _generate_auth_field_test_cases() -> list[tuple[Path, str, str, str]]:
     """Generate test cases from AUTH_FIELD_REQUIREMENTS table.
 
-    Returns list of (config_path, config_section_path, required_field, description)
-    for each modem config that uses the specified strategy.
+    Returns list of (config_path, auth_type, required_field, description)
+    for each modem config that has the specified auth type.
     """
     cases = []
-    for strategy, config_path, field, description in AUTH_FIELD_REQUIREMENTS:
-        for modem_path in _get_configs_by_strategy(strategy):
-            cases.append((modem_path, config_path, field, description))
+    for auth_type, field, description in AUTH_FIELD_REQUIREMENTS:
+        for modem_path in _get_configs_by_auth_type(auth_type):
+            cases.append((modem_path, auth_type, field, description))
     return cases
 
 
 class TestAuthFieldRequirements:
-    """Test that auth configs have all required fields.
+    """Test that auth type configs have all required fields.
 
     Uses AUTH_FIELD_REQUIREMENTS table defined at top of file.
-    Each row specifies: (strategy, config_path, required_field, description)
+    Each row specifies: (auth_type, required_field, description)
     """
 
     @pytest.mark.parametrize(
-        "config_path,section_path,required_field,description",
+        "config_path,auth_type,required_field,description",
         _generate_auth_field_test_cases(),
         ids=lambda x: f"{x.parent.parent.name}/{x.parent.name}:{x}" if isinstance(x, Path) else str(x),
     )
-    def test_auth_has_required_field(self, config_path: Path, section_path: str, required_field: str, description: str):
-        """Auth config should have required field."""
+    def test_auth_has_required_field(self, config_path: Path, auth_type: str, required_field: str, description: str):
+        """Auth type config should have required field."""
         config = load_config(config_path)
-        section = _get_nested_config(config, section_path)
-        assert section.get(required_field), f"{config_path}: missing {description} ({section_path}.{required_field})"
+        type_config = config.get("auth", {}).get("types", {}).get(auth_type)
+
+        # Skip if type_config is None (e.g., auth.types.none: null)
+        if type_config is None:
+            pytest.skip(f"Auth type '{auth_type}' has no config (expected for 'none' type)")
+
+        assert type_config.get(
+            required_field
+        ), f"{config_path}: missing {description} (auth.types.{auth_type}.{required_field})"
 
 
 def _load_html_fixture(path: Path) -> str | None:

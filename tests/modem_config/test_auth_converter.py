@@ -11,7 +11,6 @@ from __future__ import annotations
 import pytest
 
 from custom_components.cable_modem_monitor.core.auth.configs import (
-    BasicAuthConfig,
     FormAuthConfig,
     HNAPAuthConfig,
     NoAuthConfig,
@@ -26,7 +25,6 @@ from custom_components.cable_modem_monitor.modem_config.auth_converter import (
 )
 from custom_components.cable_modem_monitor.modem_config.schema import (
     AuthConfig,
-    AuthStrategy,
     FormAuthConfig as SchemaFormAuthConfig,
     FormSuccessConfig,
     HnapAuthConfig as SchemaHnapAuthConfig,
@@ -59,14 +57,14 @@ FORM_AUTH_CASES = [
 
 
 class TestModemConfigToAuthConfig:
-    """Test modem_config_to_auth_config conversion."""
+    """Test modem_config_to_auth_config conversion using types{} schema."""
 
-    def test_none_strategy_returns_no_auth(self):
-        """Test that NONE strategy returns NoAuthConfig."""
+    def test_none_auth_type_returns_no_auth(self):
+        """Test that 'none' auth type returns NoAuthConfig."""
         config = ModemConfig(
             manufacturer="Test",
             model="TestModem",
-            auth=AuthConfig(strategy=AuthStrategy.NONE),
+            auth=AuthConfig(types={"none": None}),
         )
 
         strategy_type, auth_config = modem_config_to_auth_config(config)
@@ -74,31 +72,19 @@ class TestModemConfigToAuthConfig:
         assert strategy_type == AuthStrategyType.NO_AUTH
         assert isinstance(auth_config, NoAuthConfig)
 
-    def test_basic_strategy_returns_basic_auth(self):
-        """Test that BASIC strategy returns BasicAuthConfig."""
-        config = ModemConfig(
-            manufacturer="Test",
-            model="TestModem",
-            auth=AuthConfig(strategy=AuthStrategy.BASIC),
-        )
-
-        strategy_type, auth_config = modem_config_to_auth_config(config)
-
-        assert strategy_type == AuthStrategyType.BASIC_HTTP
-        assert isinstance(auth_config, BasicAuthConfig)
-
-    def test_form_strategy_returns_form_auth(self):
-        """Test that FORM strategy returns FormAuthConfig."""
+    def test_form_auth_type_returns_form_auth(self):
+        """Test that 'form' auth type returns FormAuthConfig."""
         config = ModemConfig(
             manufacturer="Test",
             model="TestModem",
             auth=AuthConfig(
-                strategy=AuthStrategy.FORM,
-                form=SchemaFormAuthConfig(
-                    action="/login",
-                    username_field="user",
-                    password_field="pass",
-                ),
+                types={
+                    "form": SchemaFormAuthConfig(
+                        action="/login",
+                        username_field="user",
+                        password_field="pass",
+                    ),
+                },
             ),
         )
 
@@ -107,14 +93,15 @@ class TestModemConfigToAuthConfig:
         assert strategy_type == AuthStrategyType.FORM_PLAIN
         assert isinstance(auth_config, FormAuthConfig)
 
-    def test_hnap_strategy_returns_hnap_auth(self):
-        """Test that HNAP strategy returns HNAPAuthConfig."""
+    def test_hnap_auth_type_returns_hnap_auth(self):
+        """Test that 'hnap' auth type returns HNAPAuthConfig."""
         config = ModemConfig(
             manufacturer="Test",
             model="TestModem",
             auth=AuthConfig(
-                strategy=AuthStrategy.HNAP,
-                hnap=SchemaHnapAuthConfig(hmac_algorithm="md5"),
+                types={
+                    "hnap": SchemaHnapAuthConfig(hmac_algorithm="md5"),
+                },
             ),
         )
 
@@ -123,17 +110,18 @@ class TestModemConfigToAuthConfig:
         assert strategy_type == AuthStrategyType.HNAP_SESSION
         assert isinstance(auth_config, HNAPAuthConfig)
 
-    def test_url_token_strategy_returns_url_token_auth(self):
-        """Test that URL_TOKEN strategy returns UrlTokenSessionConfig."""
+    def test_url_token_auth_type_returns_url_token_auth(self):
+        """Test that 'url_token' auth type returns UrlTokenSessionConfig."""
         config = ModemConfig(
             manufacturer="Test",
             model="TestModem",
             auth=AuthConfig(
-                strategy=AuthStrategy.URL_TOKEN,
-                url_token=SchemaUrlTokenAuthConfig(
-                    login_page="/login.html",
-                    session_cookie="sessionId",
-                ),
+                types={
+                    "url_token": SchemaUrlTokenAuthConfig(
+                        login_page="/login.html",
+                        session_cookie="sessionId",
+                    ),
+                },
             ),
         )
 
@@ -142,18 +130,47 @@ class TestModemConfigToAuthConfig:
         assert strategy_type == AuthStrategyType.URL_TOKEN_SESSION
         assert isinstance(auth_config, UrlTokenSessionConfig)
 
-    def test_missing_form_config_returns_no_auth(self):
-        """Test that FORM strategy without form config returns NoAuthConfig."""
+    def test_empty_types_returns_no_auth(self):
+        """Test that empty types{} returns NoAuthConfig."""
         config = ModemConfig(
             manufacturer="Test",
             model="TestModem",
-            auth=AuthConfig(strategy=AuthStrategy.FORM, form=None),
+            auth=AuthConfig(types={}),
         )
 
         strategy_type, auth_config = modem_config_to_auth_config(config)
 
         assert strategy_type == AuthStrategyType.NO_AUTH
         assert isinstance(auth_config, NoAuthConfig)
+
+    def test_explicit_auth_type_parameter(self):
+        """Test specifying auth_type parameter with multi-type modem."""
+        config = ModemConfig(
+            manufacturer="Test",
+            model="TestModem",
+            auth=AuthConfig(
+                types={
+                    "none": None,
+                    "url_token": SchemaUrlTokenAuthConfig(
+                        login_page="/status.html",
+                        session_cookie="sessionId",
+                    ),
+                },
+            ),
+        )
+
+        # Default should be first type ("none")
+        strategy_type, auth_config = modem_config_to_auth_config(config)
+        assert strategy_type == AuthStrategyType.NO_AUTH
+
+        # Explicit url_token
+        strategy_type, auth_config = modem_config_to_auth_config(config, auth_type="url_token")
+        assert strategy_type == AuthStrategyType.URL_TOKEN_SESSION
+        assert isinstance(auth_config, UrlTokenSessionConfig)
+
+        # Explicit none
+        strategy_type, auth_config = modem_config_to_auth_config(config, auth_type="none")
+        assert strategy_type == AuthStrategyType.NO_AUTH
 
 
 class TestFormConfigToAuthConfig:

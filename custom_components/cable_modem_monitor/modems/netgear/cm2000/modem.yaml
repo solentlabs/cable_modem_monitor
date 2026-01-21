@@ -26,17 +26,16 @@ default_host: "192.168.100.1"
 default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/goform/Login"
-    method: POST
-    username_field: loginName
-    password_field: loginPassword
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/DocsisStatus.htm"
+  types:
+    form:
+      action: "/goform/Login"
+      method: POST
+      username_field: loginName
+      password_field: loginPassword
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/DocsisStatus.htm"
 
   session:
     cookie_name: "session"

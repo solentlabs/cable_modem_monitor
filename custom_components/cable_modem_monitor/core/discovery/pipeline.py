@@ -64,10 +64,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+import requests
+
+from ..auth.workflow import AuthWorkflow
+from ..ssl_adapter import LegacySSLAdapter
 from .steps import (
     _get_parser_class_by_name,
     check_connectivity,
-    create_authenticated_session,
     detect_parser,
     discover_auth,
     validate_parse,
@@ -98,7 +101,6 @@ __all__ = [
     # Individual steps (for testing/advanced use)
     "check_connectivity",
     "discover_auth",
-    "create_authenticated_session",
     "detect_parser",
     "validate_parse",
     # Internal helper (exported for testing)
@@ -127,7 +129,7 @@ def run_discovery_pipeline(
         parser_hints: Auth hints from modem.yaml (field names, encoding, etc.)
         static_auth_config: Complete auth config from modem.yaml for known modems.
             When provided, skips dynamic auth discovery and uses this config
-            directly via create_authenticated_session(). Format:
+            directly via AuthWorkflow.authenticate_with_static_config(). Format:
             {
                 "auth_strategy": "form_plain" | "hnap_session" | "no_auth" | ...,
                 "auth_form_config": {...} | None,
@@ -146,7 +148,7 @@ def run_discovery_pipeline(
 
     Data Flow:
         Known modem (static_auth_config provided):
-            host -> check_connectivity() -> create_authenticated_session()
+            host -> check_connectivity() -> AuthWorkflow.authenticate_with_static_config()
                  -> detect_parser() [SKIP - user selected]
                  -> validate_parse() -> config_entry_data
 
@@ -188,12 +190,31 @@ def run_discovery_pipeline(
             "Step 2/4: Using static auth config from modem.yaml (strategy=%s)",
             static_auth_config.get("auth_strategy"),
         )
-        auth = create_authenticated_session(
+        # Create session with appropriate SSL settings
+        session = requests.Session()
+        session.verify = False
+        if conn.legacy_ssl and conn.working_url.startswith("https://"):
+            session.mount("https://", LegacySSLAdapter())
+
+        # Use AuthWorkflow for consistent auth handling
+        workflow_result = AuthWorkflow.authenticate_with_static_config(
+            session=session,
             working_url=conn.working_url,
+            static_auth_config=static_auth_config,
             username=username,
             password=password,
-            legacy_ssl=conn.legacy_ssl,
-            static_auth_config=static_auth_config,
+        )
+        # Convert AuthWorkflowResult to AuthResult for pipeline consistency
+        auth = AuthResult(
+            success=workflow_result.success,
+            strategy=workflow_result.strategy,
+            session=workflow_result.session,
+            html=workflow_result.html,
+            form_config=workflow_result.form_config,
+            hnap_config=workflow_result.hnap_config,
+            hnap_builder=workflow_result.hnap_builder,
+            url_token_config=workflow_result.url_token_config,
+            error=workflow_result.error,
         )
     else:
         # Fallback mode: run dynamic auth discovery

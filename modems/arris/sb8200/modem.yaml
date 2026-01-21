@@ -39,9 +39,13 @@ default_port: 80
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
-# URL-based token authentication with session cookie
+# SB8200 has two distinct firmware variants with different auth:
+# - Spectrum LA firmware: No auth required (HTTP, public pages)
+# - Other ISP firmware: URL token auth (HTTPS, requires credentials)
 #
-# Auth flow (when required):
+# User selects their auth type during config flow.
+#
+# URL token auth flow (when required):
 # 1. Credentials are base64-encoded as "username:password"
 # 2. Login URL: /cmconnectionstatus.html?login_<base64_token>
 # 3. Authorization header: Basic <base64_token>
@@ -49,23 +53,19 @@ default_port: 80
 # 5. Subsequent requests use: ?ct_<session_token>
 
 auth:
-  strategy: url_token
-
-  url_token:
-    login_page: "/cmconnectionstatus.html"
-    login_prefix: "login_"
-    token_prefix: "ct_"
-    session_cookie: "sessionId"
-    success_indicator: "Downstream Bonded Channels"
-
-  # Firmware variants
-  variants:
-    - strategy: none
-      condition: "HTTP firmware (Spectrum LA)"
-      fallback: true
-    - strategy: url_token
-      condition: "HTTPS firmware"
-      fallback: false
+  # SB8200 has two distinct firmware variants with different auth:
+  # - Spectrum LA firmware: No auth required (HTTP, public pages)
+  # - Other ISP firmware: URL token auth (HTTPS, requires credentials)
+  #
+  # User selects their auth type during config flow.
+  types:
+    none: null # Spectrum LA firmware - no auth needed
+    url_token: # Other ISP firmware - URL token auth
+      login_page: "/cmconnectionstatus.html"
+      login_prefix: "login_"
+      token_prefix: "ct_"
+      session_cookie: "sessionId"
+      success_indicator: "Downstream Bonded Channels"
 # =============================================================================
 # PAGES
 # =============================================================================

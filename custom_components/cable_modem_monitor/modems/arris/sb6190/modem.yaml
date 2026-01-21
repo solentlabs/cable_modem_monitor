@@ -28,22 +28,20 @@ default_host: "192.168.100.1"
 default_port: 80
 
 auth:
-  # Default: no auth. Discovery overrides if firmware requires login.
+  # SB6190 has two firmware variants with different auth:
   # - Older firmware: No auth required (public status page)
-  # - Newer firmware (9.1.103+): Combined credential form auth
+  # - Newer firmware (9.1.103+): Form-based login required
   # See: https://github.com/solentlabs/cable_modem_monitor/issues/83
-  strategy: none
-
-  # Ordered list of strategies to try (firmware variations)
-  strategies:
-    - strategy: none # Try first (older firmware - public page)
-    - strategy: form # Try if none fails (newer firmware 9.1.103+)
-      form:
-        action: "/cgi-bin/login"
-        method: POST
-        username_field: "username"
-        password_field: "password"
-        password_encoding: plain
+  #
+  # User selects their auth type during config flow.
+  types:
+    none: null # Older firmware - no auth needed
+    form: # Newer firmware (9.1.103+) - form login required
+      action: "/cgi-bin/login"
+      method: POST
+      username_field: "username"
+      password_field: "password"
+      password_encoding: plain
 
 pages:
   public:

@@ -56,7 +56,7 @@ Note:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -288,43 +288,6 @@ class RestApiAuthConfig(BaseModel):
     )
 
 
-class AuthVariant(BaseModel):
-    """Configuration for auth variants (firmware-specific)."""
-
-    strategy: AuthStrategy = Field(description="Auth strategy for this variant")
-    condition: str | None = Field(
-        default=None,
-        description="Condition for this variant (e.g., firmware version)",
-    )
-    fallback: bool = Field(
-        default=False,
-        description="Try this variant if primary fails",
-    )
-
-
-class AuthStrategyEntry(BaseModel):
-    """A single auth strategy configuration for ordered try-until-success.
-
-    Used in `auth.strategies[]` to define multiple auth approaches for modems
-    where firmware variations change auth requirements (e.g., SB6190 with
-    older firmware has no auth, newer firmware requires form auth).
-    """
-
-    strategy: AuthStrategy = Field(description="Auth strategy type")
-    form: FormAuthConfig | None = Field(
-        default=None,
-        description="Form auth config (if strategy=form)",
-    )
-    hnap: HnapAuthConfig | None = Field(
-        default=None,
-        description="HNAP auth config (if strategy=hnap)",
-    )
-    url_token: UrlTokenAuthConfig | None = Field(
-        default=None,
-        description="URL token auth config (if strategy=url_token)",
-    )
-
-
 class SessionConfig(BaseModel):
     """Configuration for session management."""
 
@@ -347,26 +310,46 @@ class SessionConfig(BaseModel):
 
 
 class AuthConfig(BaseModel):
-    """Complete authentication configuration."""
+    """Complete authentication configuration.
 
-    strategy: AuthStrategy = Field(
-        default=AuthStrategy.NONE,
-        description="Primary auth strategy (defaults to none, discovery determines actual)",
+    Auth configuration uses `types{}` as the single source of truth.
+    Each key is an auth type name, and the value is the config for that type.
+
+    Single-type modem example:
+        auth:
+          types:
+            form:
+              action: "/goform/login"
+              username_field: "user"
+              password_field: "pass"
+
+    Multi-type modem example (user selects during config flow):
+        auth:
+          types:
+            none: null  # No auth variant
+            url_token:
+              login_page: "/status.html"
+              token_prefix: "ct_"
+
+    Supported type keys:
+        - none: No authentication (value should be null or empty dict)
+        - form: Form-based login (value is FormAuthConfig fields)
+        - hnap: HNAP/SOAP protocol (value is HnapAuthConfig fields)
+        - url_token: URL token session (value is UrlTokenAuthConfig fields)
+        - rest_api: REST API auth (value is RestApiAuthConfig fields)
+    """
+
+    # types{} is the single source of truth for auth configuration
+    # Key = auth type name (none, form, hnap, url_token, rest_api)
+    # Value = config dict for that type, or null for "none"
+    types: dict[str, FormAuthConfig | HnapAuthConfig | UrlTokenAuthConfig | RestApiAuthConfig | None] = Field(
+        default_factory=dict,
+        description="Auth type configurations. Keys are type names (none, form, url_token, hnap, rest_api), "
+        "values are the config for that type (or null for 'none').",
     )
-    form: FormAuthConfig | None = Field(default=None)
-    basic: dict[str, Any] | None = Field(default=None)
-    hnap: HnapAuthConfig | None = Field(default=None)
-    url_token: UrlTokenAuthConfig | None = Field(default=None)
-    rest_api: RestApiAuthConfig | None = Field(default=None)
-    variants: list[AuthVariant] = Field(default_factory=list)
+
+    # Session management (shared across all auth types)
     session: SessionConfig | None = Field(default=None)
-
-    strategies: list[AuthStrategyEntry] = Field(
-        default_factory=list,
-        description="Ordered list of auth strategies to try until success. "
-        "Used when firmware variations change auth requirements.",
-    )
-    # Note: login_markers moved to detection.pre_auth
 
 
 # =============================================================================
@@ -852,6 +835,5 @@ class ModemConfig(BaseModel):
 
 FormAuthConfig.model_rebuild()
 HnapAuthConfig.model_rebuild()
-AuthStrategyEntry.model_rebuild()
 AuthConfig.model_rebuild()
 ModemConfig.model_rebuild()

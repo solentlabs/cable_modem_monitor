@@ -74,6 +74,16 @@
           "password": "Leave blank if not required",
           "modem_choice": "Select your modem model. Use 'Unknown Modem (Fallback Mode)' if not listed."
         }
+      },
+      "auth_type": {
+        "title": "Authentication Type",
+        "description": "Your {modem_name} has multiple firmware variants with different authentication.\nSelect the type that matches your modem:",
+        "data": {
+          "auth_type": "Authentication Type"
+        },
+        "data_description": {
+          "auth_type": "No Auth: Data pages load without login\nForm Login: Login page with username/password\nURL Token: Uses URL-based session tokens"
+        }
       }
     },
     "error": {

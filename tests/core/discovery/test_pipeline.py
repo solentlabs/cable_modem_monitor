@@ -1247,53 +1247,45 @@ class TestRunDiscoveryPipeline:
 
 
 # =============================================================================
-# CREATE AUTHENTICATED SESSION TESTS - For static auth config architecture
+# AUTH WORKFLOW STATIC CONFIG TESTS - For static auth config architecture
 # =============================================================================
 
 
-class TestCreateAuthenticatedSession:
-    """Test create_authenticated_session function.
+class TestAuthWorkflowAuthenticateWithStaticConfig:
+    """Test AuthWorkflow.authenticate_with_static_config method.
 
-    This function uses static auth config from modem.yaml instead of
+    This method uses static auth config from modem.yaml instead of
     dynamic auth discovery, enabling faster and more reliable setup
     for known modems.
     """
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_no_credentials_no_auth(self, mock_session_class):
+    def test_no_credentials_no_auth(self):
         """Test no credentials returns no_auth success."""
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
         mock_response = MagicMock()
         mock_response.text = "<html>Modem page</html>"
         mock_session.get.return_value = mock_response
 
         static_config = {"auth_strategy": "no_auth"}
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            None,  # No username
-            None,  # No password
-            False,  # No legacy SSL
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username=None,  # No username
+            password=None,  # No password
         )
 
         assert result.success is True
         assert result.strategy == "no_auth"
         assert result.html == "<html>Modem page</html>"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_no_auth_strategy(self, mock_session_class):
+    def test_no_auth_strategy(self):
         """Test no_auth strategy fetches page without auth."""
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
         mock_response = MagicMock()
         mock_response.text = "<html>No auth page</html>"
         mock_session.get.return_value = mock_response
@@ -1304,28 +1296,24 @@ class TestCreateAuthenticatedSession:
             "auth_hnap_config": None,
             "auth_url_token_config": None,
         }
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            "admin",  # Credentials provided but no_auth strategy
-            "password",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",  # Credentials provided but no_auth strategy
+            password="password",
         )
 
         assert result.success is True
         assert result.strategy == "no_auth"
 
     @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_form_auth_with_static_config(self, mock_session_class, mock_authenticate):
+    def test_form_auth_with_static_config(self, mock_authenticate):
         """Test form auth using static config from modem.yaml."""
         from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
 
         mock_authenticate.return_value = BaseAuthResult(
             success=True,
@@ -1344,12 +1332,12 @@ class TestCreateAuthenticatedSession:
             "auth_url_token_config": None,
         }
 
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            "admin",
-            "password",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",
+            password="password",
         )
 
         assert result.success is True
@@ -1357,16 +1345,12 @@ class TestCreateAuthenticatedSession:
         assert result.form_config == static_config["auth_form_config"]
 
     @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_hnap_auth_with_static_config(self, mock_session_class, mock_authenticate):
+    def test_hnap_auth_with_static_config(self, mock_authenticate):
         """Test HNAP auth using static config from modem.yaml."""
         from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
 
         mock_authenticate.return_value = BaseAuthResult(
             success=True,
@@ -1384,12 +1368,12 @@ class TestCreateAuthenticatedSession:
             "auth_url_token_config": None,
         }
 
-        result = create_authenticated_session(
-            "https://192.168.100.1",
-            "admin",
-            "password",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="https://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",
+            password="password",
         )
 
         assert result.success is True
@@ -1397,16 +1381,12 @@ class TestCreateAuthenticatedSession:
         assert result.hnap_config == static_config["auth_hnap_config"]
 
     @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_url_token_auth_with_static_config(self, mock_session_class, mock_authenticate):
+    def test_url_token_auth_with_static_config(self, mock_authenticate):
         """Test URL token auth using static config from modem.yaml."""
         from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
 
         mock_authenticate.return_value = BaseAuthResult(
             success=True,
@@ -1425,12 +1405,12 @@ class TestCreateAuthenticatedSession:
             },
         }
 
-        result = create_authenticated_session(
-            "https://192.168.100.1",
-            "admin",
-            "password",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="https://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",
+            password="password",
         )
 
         assert result.success is True
@@ -1438,16 +1418,12 @@ class TestCreateAuthenticatedSession:
         assert result.url_token_config == static_config["auth_url_token_config"]
 
     @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_auth_failure_returns_error(self, mock_session_class, mock_authenticate):
+    def test_auth_failure_returns_error(self, mock_authenticate):
         """Test authentication failure returns error."""
         from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
 
         mock_authenticate.return_value = BaseAuthResult(
             success=False,
@@ -1459,81 +1435,47 @@ class TestCreateAuthenticatedSession:
             "auth_form_config": {"action": "/login"},
         }
 
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            "admin",
-            "wrongpass",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",
+            password="wrongpass",
         )
 
         assert result.success is False
         assert "Invalid credentials" in result.error
 
-    @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_legacy_ssl_mounts_adapter(self, mock_session_class, mock_adapter_class):
-        """Test legacy SSL mounts the adapter."""
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
-
-        mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
-        mock_response = MagicMock()
-        mock_response.text = "<html>Page</html>"
-        mock_session.get.return_value = mock_response
-
-        static_config = {"auth_strategy": "no_auth"}
-        result = create_authenticated_session(
-            "https://192.168.100.1",
-            None,
-            None,
-            True,  # legacy_ssl=True
-            static_config,
-        )
-
-        mock_session.mount.assert_called_once()
-        assert result.success is True
-
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_connection_failure(self, mock_session_class):
+    def test_connection_failure(self):
         """Test connection failure returns error."""
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
         mock_session.get.side_effect = requests.exceptions.ConnectionError("Failed")
 
         static_config = {"auth_strategy": "no_auth"}
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            None,
-            None,
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username=None,
+            password=None,
         )
 
         assert result.success is False
         assert "Connection failed" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
-    def test_fetches_page_when_auth_response_has_no_html(self, mock_session_class, mock_authenticate):
+    def test_fetches_page_when_auth_response_has_no_html(self, mock_authenticate):
         """Test that page is fetched after auth when auth response has no HTML.
 
         For form auth, the form submission response may not contain the actual
         modem data. In this case, we fetch the working_url to get page content.
         """
         from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
-        from custom_components.cable_modem_monitor.core.discovery.steps import (
-            create_authenticated_session,
-        )
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflow
 
         mock_session = _create_mock_session()
-        mock_session_class.return_value = mock_session
 
         # Auth succeeds but returns no HTML (form submission response)
         mock_authenticate.return_value = BaseAuthResult(
@@ -1551,12 +1493,12 @@ class TestCreateAuthenticatedSession:
             "auth_form_config": {"action": "/login"},
         }
 
-        result = create_authenticated_session(
-            "http://192.168.100.1",
-            "admin",
-            "password",
-            False,
-            static_config,
+        result = AuthWorkflow.authenticate_with_static_config(
+            session=mock_session,
+            working_url="http://192.168.100.1",
+            static_auth_config=static_config,
+            username="admin",
+            password="password",
         )
 
         assert result.success is True
@@ -1578,13 +1520,15 @@ class TestRunDiscoveryPipelineWithStaticConfig:
     """
 
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
     def test_uses_static_config_when_provided(
-        self, mock_connectivity, mock_discover_auth, mock_create_session, mock_validate
+        self, mock_connectivity, mock_discover_auth, mock_workflow_auth, mock_validate
     ):
         """Test pipeline uses static config and skips discover_auth."""
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflowResult
+
         mock_connectivity.return_value = ConnectivityResult(
             success=True,
             working_url="http://192.168.100.1",
@@ -1592,9 +1536,9 @@ class TestRunDiscoveryPipelineWithStaticConfig:
             legacy_ssl=False,
         )
 
-        # Static auth config provided
+        # Static auth config provided - AuthWorkflow returns AuthWorkflowResult
         mock_session = MagicMock()
-        mock_create_session.return_value = AuthResult(
+        mock_workflow_auth.return_value = AuthWorkflowResult(
             success=True,
             strategy="form_plain",
             session=mock_session,
@@ -1624,18 +1568,18 @@ class TestRunDiscoveryPipelineWithStaticConfig:
             static_auth_config=static_config,
         )
 
-        # verify create_authenticated_session was called instead of discover_auth
-        mock_create_session.assert_called_once()
+        # verify AuthWorkflow was called instead of discover_auth
+        mock_workflow_auth.assert_called_once()
         mock_discover_auth.assert_not_called()
         assert result.success is True
         assert result.auth_strategy == "form_plain"
 
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
     def test_uses_discover_auth_when_no_static_config(
-        self, mock_connectivity, mock_discover_auth, mock_create_session, mock_validate
+        self, mock_connectivity, mock_discover_auth, mock_workflow_auth, mock_validate
     ):
         """Test pipeline uses discover_auth when no static config provided."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1671,15 +1615,17 @@ class TestRunDiscoveryPipelineWithStaticConfig:
             static_auth_config=None,  # No static config
         )
 
-        # Verify discover_auth was called instead of create_authenticated_session
+        # Verify discover_auth was called instead of AuthWorkflow
         mock_discover_auth.assert_called_once()
-        mock_create_session.assert_not_called()
+        mock_workflow_auth.assert_not_called()
         assert result.success is True
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
-    def test_static_auth_failure_returns_auth_error(self, mock_connectivity, mock_create_session):
+    def test_static_auth_failure_returns_auth_error(self, mock_connectivity, mock_workflow_auth):
         """Test static auth failure returns proper error with failed_step."""
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflowResult
+
         mock_connectivity.return_value = ConnectivityResult(
             success=True,
             working_url="http://192.168.100.1",
@@ -1687,7 +1633,7 @@ class TestRunDiscoveryPipelineWithStaticConfig:
             legacy_ssl=False,
         )
 
-        mock_create_session.return_value = AuthResult(
+        mock_workflow_auth.return_value = AuthWorkflowResult(
             success=False,
             error="Invalid credentials",
         )
@@ -1706,10 +1652,12 @@ class TestRunDiscoveryPipelineWithStaticConfig:
         assert "Invalid credentials" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
     @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
-    def test_static_config_hnap_success(self, mock_connectivity, mock_create_session, mock_validate):
+    def test_static_config_hnap_success(self, mock_connectivity, mock_workflow_auth, mock_validate):
         """Test HNAP auth with static config succeeds."""
+        from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflowResult
+
         mock_connectivity.return_value = ConnectivityResult(
             success=True,
             working_url="https://192.168.100.1",
@@ -1719,7 +1667,7 @@ class TestRunDiscoveryPipelineWithStaticConfig:
 
         mock_session = MagicMock()
         mock_hnap_builder = MagicMock()
-        mock_create_session.return_value = AuthResult(
+        mock_workflow_auth.return_value = AuthWorkflowResult(
             success=True,
             strategy="hnap_session",
             session=mock_session,

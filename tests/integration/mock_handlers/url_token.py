@@ -51,10 +51,11 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         """
         super().__init__(config, fixtures_path)
 
-        # Extract URL token config (validated as non-None)
-        if not config.auth.url_token:
-            raise ValueError("URL token auth handler requires url_token config")
-        self.url_token_config: UrlTokenAuthConfig = config.auth.url_token
+        # Extract URL token config from auth.types{}
+        url_token_config = config.auth.types.get("url_token")
+        if not url_token_config:
+            raise ValueError("URL token auth handler requires url_token config in auth.types")
+        self.url_token_config: UrlTokenAuthConfig = url_token_config
 
         # Session state
         self.authenticated_sessions: dict[str, str] = {}  # session_id -> username

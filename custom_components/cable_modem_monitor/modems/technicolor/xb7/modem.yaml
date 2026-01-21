@@ -26,17 +26,16 @@ default_host: "10.0.0.1"
 default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/check.jst"
-    method: POST
-    username_field: username
-    password_field: password
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/network_setup.jst"
+  types:
+    form:
+      action: "/check.jst"
+      method: POST
+      username_field: username
+      password_field: password
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/network_setup.jst"
 
   session:
     cookie_name: "session"

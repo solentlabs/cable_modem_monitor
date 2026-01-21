@@ -45,22 +45,21 @@ default_port: 80
 # AUTHENTICATION
 # =============================================================================
 auth:
-  strategy: hnap
-
-  hnap:
-    endpoint: "/HNAP1/"
-    namespace: "http://purenetworks.com/HNAP1/"
-    # MB8611 uses empty string "" for action values (verified from HAR capture)
-    empty_action_value: ""
-    hmac_algorithm: md5
-    formats:
-      - json
-      - xml
-    actions:
-      login: "Login"
-      downstream: "GetMotoStatusDownstreamChannelInfo"
-      upstream: "GetMotoStatusUpstreamChannelInfo"
-      restart: "SetStatusSecuritySettings"
+  types:
+    hnap:
+      endpoint: "/HNAP1/"
+      namespace: "http://purenetworks.com/HNAP1/"
+      # MB8611 uses empty string "" for action values (verified from HAR capture)
+      empty_action_value: ""
+      hmac_algorithm: md5
+      formats:
+        - json
+        - xml
+      actions:
+        login: "Login"
+        downstream: "GetMotoStatusDownstreamChannelInfo"
+        upstream: "GetMotoStatusUpstreamChannelInfo"
+        restart: "SetStatusSecuritySettings"
 
   session:
     cookie_name: "uid"

@@ -38,6 +38,7 @@ CONF_LEGACY_SSL = "legacy_ssl"  # Auto-detected: True if modem requires SECLEVEL
 CONF_DETECTION_METHOD = "detection_method"  # How parser was selected: "auto_detected" or "user_selected"
 
 # Auth discovery fields
+CONF_AUTH_TYPE = "auth_type"  # User-selected auth type (for modems with variants)
 CONF_AUTH_STRATEGY = "auth_strategy"  # Discovered auth strategy type
 CONF_AUTH_FORM_CONFIG = "auth_form_config"  # Discovered form config (for form-based auth)
 CONF_AUTH_HNAP_CONFIG = "auth_hnap_config"  # HNAP config (endpoint, namespace, etc.)

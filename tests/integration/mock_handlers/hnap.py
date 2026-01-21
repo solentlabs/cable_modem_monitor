@@ -57,10 +57,11 @@ class HnapAuthHandler(BaseAuthHandler):
         """
         super().__init__(config, fixtures_path)
 
-        # Extract HNAP config
-        if not config.auth.hnap:
-            raise ValueError("HNAP auth handler requires hnap config")
-        self.hnap_config: HnapAuthConfig = config.auth.hnap
+        # Extract HNAP config from auth.types{}
+        hnap_config = config.auth.types.get("hnap")
+        if not hnap_config:
+            raise ValueError("HNAP auth handler requires hnap config in auth.types")
+        self.hnap_config: HnapAuthConfig = hnap_config
 
         # Session state
         self.pending_challenges: dict[str, dict] = {}  # cookie -> challenge data

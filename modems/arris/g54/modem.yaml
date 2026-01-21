@@ -21,17 +21,16 @@ default_host: "192.168.0.1"
 default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/cgi-bin/luci"
-    method: POST
-    username_field: luci_username
-    password_field: luci_password
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/cgi-bin/luci/admin/gateway/wan_status"
+  types:
+    form:
+      action: "/cgi-bin/luci"
+      method: POST
+      username_field: luci_username
+      password_field: luci_password
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/cgi-bin/luci/admin/gateway/wan_status"
 
   session:
     cookie_name: "sysauth"

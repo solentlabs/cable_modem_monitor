@@ -47,15 +47,14 @@ default_port: 80
 # =============================================================================
 # No authentication required - all endpoints are public
 auth:
-  strategy: rest_api
-
-  rest_api:
-    base_path: "/rest/v1/cablemodem"
-    endpoints:
-      state: "/state_"
-      downstream: "/downstream"
-      upstream: "/upstream"
-      serviceflows: "/serviceflows"
+  types:
+    rest_api:
+      base_path: "/rest/v1/cablemodem"
+      endpoints:
+        state: "/state_"
+        downstream: "/downstream"
+        upstream: "/upstream"
+        serviceflows: "/serviceflows"
 # =============================================================================
 # PAGES
 # =============================================================================

@@ -20,7 +20,8 @@ default_host: "192.168.100.1"
 default_port: 80
 
 auth:
-  strategy: none
+  types:
+    none: null
 
 pages:
   public:

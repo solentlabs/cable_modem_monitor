@@ -18,9 +18,8 @@ default_host: "192.168.100.1"
 default_port: 80
 
 auth:
-  strategy: basic
-
-  basic: {}
+  types:
+    basic: null
 
   session:
     cookie_name: "session"

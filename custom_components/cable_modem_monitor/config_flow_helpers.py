@@ -30,6 +30,7 @@ from .const import (
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
+    CONF_AUTH_TYPE,
     CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_HOST,
     CONF_MODEM_CHOICE,
@@ -125,6 +126,65 @@ async def build_parser_dropdown(hass: HomeAssistant) -> list[str]:
 
 
 # =============================================================================
+# Auth Type Helpers (for modems with user-selectable auth variants)
+# =============================================================================
+
+
+async def get_auth_types_for_parser(hass: HomeAssistant, selected_parser: type[ModemParser] | None) -> list[str]:
+    """Get available auth types for a parser from modem.yaml.
+
+    Args:
+        hass: Home Assistant instance
+        selected_parser: Selected parser class or None
+
+    Returns:
+        List of auth type strings (e.g., ["none", "url_token"]).
+        Returns ["none"] if parser not found or no modem.yaml.
+    """
+    if not selected_parser:
+        return ["none"]
+
+    from .modem_config import get_auth_adapter_for_parser
+
+    adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, selected_parser.__name__)
+    if not adapter:
+        return ["none"]
+
+    auth_types: list[str] = adapter.get_available_auth_types()
+    return auth_types if auth_types else ["none"]
+
+
+async def get_auth_type_dropdown(hass: HomeAssistant, selected_parser: type[ModemParser] | None) -> dict[str, str]:
+    """Get auth type dropdown options with labels.
+
+    Args:
+        hass: Home Assistant instance
+        selected_parser: Selected parser class or None
+
+    Returns:
+        Dict mapping auth type keys to display labels
+    """
+    from .core.auth.workflow import AUTH_TYPE_LABELS
+
+    auth_types = await get_auth_types_for_parser(hass, selected_parser)
+    return {t: AUTH_TYPE_LABELS.get(t, t.title()) for t in auth_types}
+
+
+async def needs_auth_type_selection(hass: HomeAssistant, selected_parser: type[ModemParser] | None) -> bool:
+    """Check if the modem needs auth type selection.
+
+    Args:
+        hass: Home Assistant instance
+        selected_parser: Selected parser class or None
+
+    Returns:
+        True if modem has multiple auth types to choose from
+    """
+    auth_types = await get_auth_types_for_parser(hass, selected_parser)
+    return len(auth_types) > 1
+
+
+# =============================================================================
 # Parser Hints (HA-specific - uses hass.async_add_executor_job)
 # =============================================================================
 
@@ -210,6 +270,56 @@ async def load_static_auth_config(
 # =============================================================================
 
 
+async def _build_static_config_for_auth_type(
+    hass: HomeAssistant, selected_parser: type[ModemParser] | None, auth_type: str
+) -> dict[str, Any] | None:
+    """Build static auth config for a specific auth type.
+
+    When user explicitly selects an auth type (from auth.types{} in modem.yaml),
+    this builds the appropriate config dict for the discovery pipeline.
+
+    Args:
+        hass: Home Assistant instance
+        selected_parser: Selected parser class
+        auth_type: User-selected auth type (e.g., "none", "form", "url_token")
+
+    Returns:
+        Static auth config dict or None if not available
+    """
+    from .core.auth.workflow import AUTH_TYPE_TO_STRATEGY
+    from .modem_config import get_auth_adapter_for_parser
+
+    if not selected_parser:
+        return None
+
+    adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, selected_parser.__name__)
+    if not adapter:
+        return None
+
+    # Get config for this specific auth type
+    type_config = adapter.get_auth_config_for_type(auth_type)
+
+    # Map user-facing auth type to internal strategy string
+    strategy = AUTH_TYPE_TO_STRATEGY.get(auth_type, "no_auth")
+
+    # Build static config in the format expected by discovery pipeline
+    static_config: dict[str, Any] = {
+        "auth_strategy": strategy,
+        "auth_form_config": type_config if auth_type == "form" else None,
+        "auth_hnap_config": type_config if auth_type == "hnap" else None,
+        "auth_url_token_config": type_config if auth_type == "url_token" else None,
+    }
+
+    _LOGGER.info(
+        "Built static auth config for %s type=%s (strategy=%s)",
+        selected_parser.name,
+        auth_type,
+        strategy,
+    )
+
+    return static_config
+
+
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
@@ -221,7 +331,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Args:
         hass: Home Assistant instance
-        data: User input dict with host, username, password, modem_choice
+        data: User input dict with host, username, password, modem_choice, auth_type
 
     Returns:
         Dict with title, detection_info, supports_icmp, working_url, auth config
@@ -251,9 +361,18 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Load parser auth hints if user selected a specific parser
     parser_hints = await load_parser_hints(hass, selected_parser)
 
-    # Get static auth config from modem.yaml for known modems
-    # This allows us to skip dynamic auth discovery for faster, more reliable setup
-    static_auth_config = await load_static_auth_config(hass, selected_parser)
+    # Check if user explicitly selected an auth type (from auth_type step)
+    auth_type = data.get(CONF_AUTH_TYPE)
+    static_auth_config: dict[str, Any] | None = None
+
+    if auth_type:
+        # User explicitly selected auth type - build config from that
+        _LOGGER.info("User selected auth type: %s", auth_type)
+        static_auth_config = await _build_static_config_for_auth_type(hass, selected_parser, auth_type)
+    else:
+        # Get static auth config from modem.yaml for known modems
+        # This allows us to skip dynamic auth discovery for faster, more reliable setup
+        static_auth_config = await load_static_auth_config(hass, selected_parser)
 
     # Run discovery pipeline (single-pass, response-driven)
     result = await hass.async_add_executor_job(

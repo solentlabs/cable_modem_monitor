@@ -40,10 +40,10 @@ class FormAuthHandler(BaseAuthHandler):
         """
         super().__init__(config, fixtures_path)
 
-        # Extract form config
-        self.form_config = config.auth.form
+        # Extract form config from auth.types{}
+        self.form_config = config.auth.types.get("form")
         if not self.form_config:
-            raise ValueError("Form auth handler requires form config")
+            raise ValueError("Form auth handler requires form config in auth.types")
 
     def handle_request(
         self,

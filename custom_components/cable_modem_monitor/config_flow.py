@@ -43,6 +43,8 @@ from homeassistant.helpers import selector
 from .config_flow_helpers import (
     build_parser_dropdown,
     classify_error,
+    get_auth_type_dropdown,
+    needs_auth_type_selection,
     validate_input,
 )
 from .const import (
@@ -52,6 +54,7 @@ from .const import (
     CONF_AUTH_DISCOVERY_STATUS,
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_STRATEGY,
+    CONF_AUTH_TYPE,
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
     CONF_DETECTION_METHOD,
@@ -245,9 +248,10 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
     """Handle initial setup flow for Cable Modem Monitor.
 
     This flow guides users through adding a new modem to Home Assistant:
-    1. Enter modem IP, credentials, and select parser (or auto-detect)
-    2. Validate connectivity and authentication
-    3. Create config entry on success
+    1. Enter modem IP, credentials, and select parser
+    2. Select auth type (only if modem has multiple options)
+    3. Validate connectivity and authentication
+    4. Create config entry on success
     """
 
     VERSION = 1
@@ -256,6 +260,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         """Initialize config flow state."""
         self._progress = ValidationProgressHelper()
         self._modem_choices: list[str] = []
+        self._selected_auth_type: str | None = None
 
     @staticmethod
     @callback
@@ -297,11 +302,63 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
 
         if user_input is not None:
             self._progress.user_input = user_input
+
+            # Check if auth type selection is needed
+            from .parsers import get_parser_by_name
+
+            modem_choice = user_input.get(CONF_MODEM_CHOICE, "")
+            choice_clean = modem_choice.rstrip(" *")
+            selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
+
+            if await needs_auth_type_selection(self.hass, selected_parser):
+                return await self.async_step_auth_type()
+
             return await self.async_step_validate()
 
         return self.async_show_form(
             step_id="user",
             data_schema=self._build_user_schema(),
+        )
+
+    async def async_step_auth_type(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+        """Show auth type selection if modem has multiple types.
+
+        This step is only shown for modems with auth.types{} in modem.yaml
+        that have more than one option (e.g., SB8200 with "none" and "url_token").
+        """
+        from .parsers import get_parser_by_name
+
+        if user_input is not None:
+            # Store selected auth type and proceed to validation
+            self._selected_auth_type = user_input.get(CONF_AUTH_TYPE)
+            if self._progress.user_input:
+                self._progress.user_input[CONF_AUTH_TYPE] = self._selected_auth_type
+            return await self.async_step_validate()
+
+        # Get selected parser to build auth type dropdown
+        saved_input = self._progress.user_input or {}
+        modem_choice = saved_input.get(CONF_MODEM_CHOICE, "")
+        choice_clean = modem_choice.rstrip(" *")
+        selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
+
+        # Get auth type options for dropdown
+        auth_type_options = await get_auth_type_dropdown(self.hass, selected_parser)
+
+        return self.async_show_form(
+            step_id="auth_type",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_AUTH_TYPE): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[selector.SelectOptionDict(value=k, label=v) for k, v in auth_type_options.items()],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={
+                "modem_name": choice_clean,
+            },
         )
 
     async def async_step_validate(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
@@ -349,6 +406,10 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         data.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
+
+        # Store auth type if selected
+        if self._selected_auth_type:
+            data[CONF_AUTH_TYPE] = self._selected_auth_type
 
         detection_info = info.get("detection_info", {})
         if detection_info:

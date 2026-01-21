@@ -19,7 +19,6 @@ from custom_components.cable_modem_monitor.modem_config import load_modem_config
 from custom_components.cable_modem_monitor.modem_config.loader import (
     get_modem_fixtures_path,
 )
-from custom_components.cable_modem_monitor.modem_config.schema import AuthStrategy
 
 from .mock_handlers import (
     FormAuthHandler,
@@ -83,7 +82,7 @@ class MockModemServer:
         self._thread: threading.Thread | None = None
 
     def _create_auth_handler(self) -> BaseAuthHandler:
-        """Create the appropriate auth handler based on strategy.
+        """Create the appropriate auth handler based on auth type.
 
         Returns:
             Auth handler instance.
@@ -92,22 +91,29 @@ class MockModemServer:
         if not self.auth_enabled:
             return NoAuthHandler(self.config, self.fixtures_path)
 
-        strategy = self.config.auth.strategy
-
-        if strategy == AuthStrategy.FORM:
-            return FormAuthHandler(self.config, self.fixtures_path)
-        elif strategy == AuthStrategy.NONE:
+        # Get the default auth type from auth.types{}
+        auth_types = self.config.auth.types
+        if not auth_types:
             return NoAuthHandler(self.config, self.fixtures_path)
-        elif strategy == AuthStrategy.BASIC:
-            return BasicAuthHandler(self.config, self.fixtures_path)
-        elif strategy == AuthStrategy.HNAP:
-            return HnapAuthHandler(self.config, self.fixtures_path)
-        elif strategy == AuthStrategy.URL_TOKEN:
-            return UrlTokenAuthHandler(self.config, self.fixtures_path)
-        elif strategy == AuthStrategy.REST_API:
-            return RestApiHandler(self.config, self.fixtures_path)
+
+        # Get the first (default) auth type
+        auth_type = next(iter(auth_types.keys()))
+
+        # Map auth type string to handler
+        handler_map = {
+            "form": FormAuthHandler,
+            "none": NoAuthHandler,
+            "basic": BasicAuthHandler,
+            "hnap": HnapAuthHandler,
+            "url_token": UrlTokenAuthHandler,
+            "rest_api": RestApiHandler,
+        }
+
+        handler_cls = handler_map.get(auth_type)
+        if handler_cls:
+            return handler_cls(self.config, self.fixtures_path)
         else:
-            raise NotImplementedError(f"Auth strategy not yet implemented: {strategy}")
+            raise NotImplementedError(f"Auth type not yet implemented: {auth_type}")
 
     @property
     def url(self) -> str:

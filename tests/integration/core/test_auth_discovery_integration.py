@@ -410,9 +410,10 @@ class TestVerificationUrlIntegration:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect  # From modem.yaml
+        form_config = config.auth.types.get("form")
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect  # From modem.yaml
 
         session = requests.Session()
         session.verify = False
@@ -437,9 +438,10 @@ class TestVerificationUrlIntegration:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect
+        form_config = config.auth.types.get("form")
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect
 
         session = requests.Session()
         session.verify = False
@@ -495,8 +497,9 @@ class TestModemYamlDrivenAuthDiscovery:
 
         # Get verification URL and form hints from config
         verification_url = None
-        if config.auth.form and config.auth.form.success:
-            verification_url = config.auth.form.success.redirect
+        form_config = config.auth.types.get("form")
+        if form_config and form_config.success:
+            verification_url = form_config.success.redirect
 
         # Create mock parser with form hints from modem.yaml
         mock_parser = MagicMock()
@@ -549,7 +552,7 @@ class TestModemYamlDrivenAuthDiscovery:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        form_config = config.auth.form
+        form_config = config.auth.types.get("form")
         assert form_config is not None, "MB7621 must have form auth"
         assert form_config.success is not None, "MB7621 must have success config"
 

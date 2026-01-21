@@ -36,21 +36,20 @@ default_port: 80
 # AUTHENTICATION
 # =============================================================================
 auth:
-  strategy: hnap
-
-  hnap:
-    endpoint: "/HNAP1/"
-    namespace: "http://purenetworks.com/HNAP1/"
-    # S33-specific: uses empty string "" for action values (not {} like MB8611)
-    empty_action_value: ""
-    hmac_algorithm: md5
-    formats:
-      - json
-    actions:
-      login: "Login"
-      downstream: "GetCustomerStatusDownstreamChannelInfo"
-      upstream: "GetCustomerStatusUpstreamChannelInfo"
-      restart: "SetArrisConfigurationInfo"
+  types:
+    hnap:
+      endpoint: "/HNAP1/"
+      namespace: "http://purenetworks.com/HNAP1/"
+      # S33-specific: uses empty string "" for action values (not {} like MB8611)
+      empty_action_value: ""
+      hmac_algorithm: md5
+      formats:
+        - json
+      actions:
+        login: "Login"
+        downstream: "GetCustomerStatusDownstreamChannelInfo"
+        upstream: "GetCustomerStatusUpstreamChannelInfo"
+        restart: "SetArrisConfigurationInfo"
 
   session:
     cookie_name: "uid"
