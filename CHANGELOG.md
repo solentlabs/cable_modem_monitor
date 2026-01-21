@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.12.1] - 2026-01-20
+
+### Fixed
+
+- **HNAP Modem Setup** - Fixed `AssertionError` during discovery when setting up HNAP modems (MB8611, S33). The discovery pipeline now correctly handles HNAP authentication which returns JSON API responses rather than HTML pages. (#102)
+
 ## [3.12.0] - 2026-01-20
 
 ### ✨ Auth Strategy Discovery

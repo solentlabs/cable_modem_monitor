@@ -1141,3 +1141,100 @@ class TestRunDiscoveryPipeline:
 
         assert result.success is True
         assert result.auth_form_config == {"action": "/login"}
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_hnap_skips_validation(self, mock_connectivity, mock_auth):
+        """Test HNAP modems skip validation (data fetched at runtime via API).
+
+        HNAP modems (MB8611, S33) return html=None from auth because data
+        comes via SOAP/JSON API calls, not HTML pages. The pipeline should
+        skip Step 4 validation and succeed - full validation happens at
+        runtime when AuthHandler creates the HNAP builder.
+
+        Note: HNAP modems require user to select the parser (can't auto-detect
+        without HTML), so we pass selected_parser to skip Step 3 detection.
+
+        Regression test for issue #102.
+        """
+        # Step 1: Connectivity succeeds
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="https://192.168.100.1",
+            protocol="https",
+            legacy_ssl=False,
+        )
+
+        # Step 2: HNAP auth succeeds but returns NO HTML (real HNAP behavior)
+        mock_session = MagicMock()
+        mock_auth.return_value = AuthResult(
+            success=True,
+            strategy="hnap_session",
+            session=mock_session,
+            html=None,  # CRITICAL: Real HNAP returns None, not HTML
+            hnap_config={"endpoint": "/HNAP1/", "namespace": "http://purenetworks.com/HNAP1/"},
+        )
+
+        # Step 3: User selected MB8611 (required for HNAP - no HTML for auto-detect)
+        mock_selected_parser = MagicMock()
+        mock_selected_parser.name = "Motorola MB8611"
+
+        # Step 4: Should be SKIPPED for HNAP - no validate_parse mock needed
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            selected_parser=mock_selected_parser,  # HNAP requires manual selection
+        )
+
+        # Pipeline should succeed without calling validate_parse
+        assert result.success is True
+        assert result.auth_strategy == "hnap_session"
+        assert result.parser_name == "Motorola MB8611"
+        assert result.modem_data == {}  # Empty - validated at runtime
+        assert result.error is None
+        assert result.failed_step is None
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_hnap_without_selected_parser_fails_gracefully(self, mock_connectivity, mock_auth):
+        """Test HNAP without selected parser fails with helpful error, not crash.
+
+        HNAP modems return html=None, so auto-detection (Step 3) cannot work.
+        The pipeline should return a clear error message, not crash with
+        AssertionError at line 211.
+
+        This is the auto-detect path that was missed in the initial fix.
+        """
+        # Step 1: Connectivity succeeds
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="https://192.168.100.1",
+            protocol="https",
+            legacy_ssl=False,
+        )
+
+        # Step 2: HNAP auth succeeds but returns NO HTML
+        mock_session = MagicMock()
+        mock_auth.return_value = AuthResult(
+            success=True,
+            strategy="hnap_session",
+            session=mock_session,
+            html=None,  # No HTML - can't auto-detect
+            hnap_config={"endpoint": "/HNAP1/", "namespace": "http://purenetworks.com/HNAP1/"},
+        )
+
+        # NO selected_parser - user wants auto-detect (which can't work for HNAP)
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            # selected_parser NOT provided - auto-detect mode
+        )
+
+        # Should fail gracefully with helpful error, not crash
+        assert result.success is False
+        assert result.failed_step == "parser_detection"
+        assert "HNAP" in result.error or "select" in result.error.lower()
