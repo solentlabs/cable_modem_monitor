@@ -2,6 +2,9 @@
 
 Auto-discovers all modems in modems/**/modem.yaml and runs
 a complete auth + parse workflow against MockModemServer.
+
+Note: Tests use the repo root modems/ directory (source of truth),
+not custom_components/.../modems/ (deployment sync target).
 """
 
 from __future__ import annotations
@@ -35,6 +38,10 @@ _LOGGER = logging.getLogger(__name__)
 TEST_USERNAME = "admin"
 TEST_PASSWORD = "password"
 
+# Use repo root modems/ directory (has fixtures), not custom_components/.../modems/
+REPO_ROOT = Path(__file__).parent.parent.parent
+MODEMS_ROOT = REPO_ROOT / "modems"
+
 
 def get_modems_with_fixtures() -> list[tuple[str, Path]]:
     """Get all modems that have fixtures for testing.
@@ -43,7 +50,7 @@ def get_modems_with_fixtures() -> list[tuple[str, Path]]:
         List of (modem_id, modem_path) tuples.
     """
     result = []
-    for modem_path, config in discover_modems():
+    for modem_path, config in discover_modems(modems_root=MODEMS_ROOT):
         fixtures = list_modem_fixtures(modem_path)
         if fixtures:
             modem_id = f"{config.manufacturer}_{config.model}"
@@ -329,11 +336,15 @@ class TestModemE2EFullWorkflow:
                 # HNAP uses challenge-response authentication via JSON
                 # Use the HNAPJsonRequestBuilder for authentication
                 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
+                from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import HMACAlgorithm
 
                 hnap_config = config.auth.hnap
+                # Convert string algorithm to enum
+                algorithm = HMACAlgorithm(hnap_config.hmac_algorithm)
                 builder = HNAPJsonRequestBuilder(
                     endpoint=hnap_config.endpoint,
                     namespace=hnap_config.namespace,
+                    hmac_algorithm=algorithm,
                     empty_action_value=hnap_config.empty_action_value,
                 )
 
