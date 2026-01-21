@@ -410,3 +410,136 @@ class TestModemE2EFullWorkflow:
             config.manufacturer,
             config.model,
         )
+
+
+class TestDiscoveryPipelineE2E:
+    """Test the actual discovery pipeline against MockModemServer.
+
+    These tests exercise the REAL code path users experience during setup:
+    config_flow -> validate_input -> run_discovery_pipeline
+
+    This is critical because other E2E tests bypass discovery by using
+    direct auth (HNAPJsonRequestBuilder, form POST, etc.). This class
+    ensures the discovery pipeline works end-to-end.
+
+    Added after issue #102: HNAP discovery returned html=None which
+    caused AssertionError in validation step. Direct auth tests passed
+    but the actual user flow was broken.
+    """
+
+    # Auth strategies fully supported by MockModemServer + AuthDiscovery
+    # Others need mock server improvements before they'll work
+    SUPPORTED_STRATEGIES = {AuthStrategy.FORM, AuthStrategy.HNAP}
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_discovery_pipeline_succeeds(self, modem_path: Path):
+        """Test run_discovery_pipeline against MockModemServer.
+
+        This is THE critical test - it runs the exact same code path
+        that config_flow uses during setup. If this passes, users can
+        successfully add the modem via the UI.
+        """
+        from custom_components.cable_modem_monitor.core.discovery import (
+            run_discovery_pipeline,
+        )
+
+        config = load_modem_config(modem_path)
+
+        # Skip modems with unsupported auth strategies
+        # TODO: Add mock support for NONE, BASIC, URL_TOKEN, REST_API
+        if config.auth.strategy not in self.SUPPORTED_STRATEGIES:
+            pytest.skip(
+                f"Auth strategy {config.auth.strategy.value} not yet supported "
+                f"by MockModemServer + AuthDiscovery integration"
+            )
+
+        # Get the parser class for user-selected flow
+        import importlib
+
+        try:
+            module = importlib.import_module(config.parser.module)
+            parser_class = getattr(module, config.parser.class_name)
+        except Exception as e:
+            pytest.skip(f"Failed to import parser: {e}")
+
+        with MockModemServer.from_modem_path(modem_path) as server:
+            # Run the ACTUAL discovery pipeline - same as config_flow
+            result = run_discovery_pipeline(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+                selected_parser=parser_class,
+            )
+
+            # Pipeline should succeed
+            assert result.success, (
+                f"Discovery pipeline failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have detected the correct strategy
+            assert result.auth_strategy is not None, "No auth strategy detected"
+            _LOGGER.info(
+                "Discovery pipeline succeeded: %s %s (strategy=%s)",
+                config.manufacturer,
+                config.model,
+                result.auth_strategy,
+            )
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_discovery_pipeline_auto_detection(self, modem_path: Path):
+        """Test discovery pipeline with auto-detection (no pre-selected parser).
+
+        This tests the fully automatic flow where users don't select a modem.
+        HNAP modems will fail gracefully (require manual selection).
+        Form-based modems should auto-detect successfully.
+        """
+        from custom_components.cable_modem_monitor.core.discovery import (
+            run_discovery_pipeline,
+        )
+
+        config = load_modem_config(modem_path)
+
+        # Skip HNAP modems - they require manual parser selection
+        # (HNAP returns JSON, not HTML, so can't auto-detect parser)
+        if config.auth.strategy == AuthStrategy.HNAP:
+            pytest.skip("HNAP modems require manual parser selection")
+
+        # Skip modems with unsupported auth strategies
+        if config.auth.strategy not in self.SUPPORTED_STRATEGIES:
+            pytest.skip(
+                f"Auth strategy {config.auth.strategy.value} not yet supported "
+                f"by MockModemServer + AuthDiscovery integration"
+            )
+
+        with MockModemServer.from_modem_path(modem_path) as server:
+            # Run discovery WITHOUT selected_parser (auto-detection)
+            result = run_discovery_pipeline(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+                selected_parser=None,  # Auto-detect
+            )
+
+            # Pipeline should succeed for non-HNAP modems
+            assert result.success, (
+                f"Auto-detection failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have detected the parser
+            assert result.parser_name is not None, "No parser detected"
+            _LOGGER.info(
+                "Auto-detection succeeded: %s %s -> %s",
+                config.manufacturer,
+                config.model,
+                result.parser_name,
+            )
