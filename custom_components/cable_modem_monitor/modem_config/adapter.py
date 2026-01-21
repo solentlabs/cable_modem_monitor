@@ -457,12 +457,18 @@ class ModemConfigAuthAdapter:
     def get_url_patterns(self) -> list[dict[str, str | bool]]:
         """Generate url_patterns from pages config.
 
-        Combines pages.public (auth_required=False) and
-        pages.protected (auth_required=True) with auth.strategy.
+        Combines pages.protected (auth_required=True) and
+        pages.public (auth_required=False) with auth.strategy.
 
-        Protected pages are sorted to prioritize the primary data page
-        (from pages.data.downstream_channels) to ensure the correct page
-        is fetched and cached during polling.
+        Protected pages come FIRST and are sorted to prioritize the primary
+        data page (from pages.data.downstream_channels). This ensures data
+        pages are fetched during polling, avoiding false session expiry
+        detection from public login pages (e.g., MB7621's root URL always
+        shows login form even with valid session).
+
+        Public pages come AFTER protected pages - they're useful for
+        anonymous detection during discovery but shouldn't be used for
+        data fetching.
 
         Returns:
             List of url_pattern dicts with 'path', 'auth_method', 'auth_required'.
@@ -471,16 +477,6 @@ class ModemConfigAuthAdapter:
         auth_method = self.config.auth.strategy.value
 
         if self.config.pages:
-            # Public pages - no auth required
-            for path in self.config.pages.public:
-                patterns.append(
-                    {
-                        "path": path,
-                        "auth_method": "none",
-                        "auth_required": False,
-                    }
-                )
-
             # Get primary data page for prioritization
             primary_data_page = None
             if self.config.pages.data:
@@ -490,7 +486,8 @@ class ModemConfigAuthAdapter:
                     next(iter(self.config.pages.data.values()), None),
                 )
 
-            # Protected pages - auth required, with data page first
+            # Protected pages FIRST - auth required, with data page first
+            # This ensures data pages are fetched during polling
             protected = list(self.config.pages.protected)
             if primary_data_page and primary_data_page in protected:
                 protected.remove(primary_data_page)
@@ -502,6 +499,16 @@ class ModemConfigAuthAdapter:
                         "path": path,
                         "auth_method": auth_method,
                         "auth_required": True,
+                    }
+                )
+
+            # Public pages AFTER protected - for anonymous detection only
+            for path in self.config.pages.public:
+                patterns.append(
+                    {
+                        "path": path,
+                        "auth_method": "none",
+                        "auth_required": False,
                     }
                 )
 
