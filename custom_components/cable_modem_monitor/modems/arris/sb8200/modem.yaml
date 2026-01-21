@@ -150,4 +150,40 @@ fixtures:
 attribution:
   contributors:
     - github: undotcom
-      contribution: "Initial SB8200 support and fixture capture"
+      contribution: "Initial SB8200 support and fixture capture (HTTP variant, Issue #42)"
+    - github: ctravis8892
+      contribution: "HTTPS authentication variant (Issue #81)"
+
+isps:
+  - Comcast
+  - Xfinity
+  - Cox
+  - Spectrum
+
+notes: |
+  Reboot Capability: DISABLED (server-side blocked by ISP firmware)
+
+  In 2015-2016, ARRIS SURFboard modems (particularly SB6141) had a critical
+  security vulnerability: the admin interface required NO authentication,
+  allowing anyone on the local network unrestricted access. The interface
+  was vulnerable to CSRF attacks - attackers could embed malicious image tags
+  like <img src="http://192.168.100.1/reset.htm"> to remotely trigger reboots.
+
+  With 135 million affected modems worldwide, rather than implementing proper
+  auth controls, ARRIS disabled reboot/reset functionality in firmware updates.
+  This persists in modern models like the SB8200.
+
+  Technical: The SB8200 firmware includes a reboot button in cmconfiguration.html
+  with a disabled attribute. Direct POST requests to /cmconfiguration.html with
+  Rebooting=1 are rejected server-side by ISP firmware (tested on Spectrum).
+
+  Parser handles both firmware variants automatically:
+  - No credentials: Assumes HTTP variant, fetches without auth
+  - With credentials: Uses URL Token Session auth
+  - HTTPS auth fails (non-401): Falls back to unauthenticated fetch
+
+references:
+  security_vulnerability: "https://thehackernews.com/2016/04/hack-modem-internet.html"
+  community_letter: "https://community.surfboard.com/sb8200-59/open-letter-to-arris-why-do-you-disable-basic-functionality-e-g-software-reboot-on-the-sb8200-5829"
+  issue_http: "https://github.com/solentlabs/cable_modem_monitor/issues/42"
+  issue_https: "https://github.com/solentlabs/cable_modem_monitor/issues/81"

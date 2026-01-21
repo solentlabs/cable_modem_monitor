@@ -175,9 +175,36 @@ fixtures:
 
 attribution:
   contributors:
+    - github: dlindnegm
+      contribution: "Original HTML page captures (Issue #4, October 2025)"
     - github: cvonk
-      contribution: "Initial verification and testing ([Issue #6](https://github.com/solentlabs/cable_modem_monitor/issues/6))"
+      contribution: "HAR captures, debug logs, iterative testing (Issue #6, November 2025)"
     - github: BowlesCR
-      contribution: "HNAP authentication implementation ([Issue #40](https://github.com/solentlabs/cable_modem_monitor/issues/40))"
+      contribution: "HNAP authentication implementation (Issue #40)"
     - github: kwschulz
       contribution: "Maintainer"
+
+isps:
+  - Comcast
+  - Xfinity
+  - Cox
+  - Spectrum
+
+notes: |
+  HNAP Channel Data Format: Caret-delimited fields, pipe-separated records
+  Format: ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^|+|...
+
+  Default credentials: admin / motorola
+
+  Parser built from:
+  - User captures in RAW_DATA/MB8611/ (diagnostics JSON files)
+  - MotoStatusConnection.html JavaScript analysis revealing HNAP actions
+  - External reference implementations (see references)
+
+references:
+  tatsh_mb8611: "https://github.com/Tatsh/mb8611"
+  johlym_metrics: "https://github.com/johlym/mb8611-metrics"
+  xninjakittyx_mb8600: "https://github.com/xNinjaKittyx/mb8600"
+  bowlescr_login: "https://github.com/BowlesCR/MB8600_Login"
+  issue_fixtures: "https://github.com/solentlabs/cable_modem_monitor/issues/4"
+  issue_verification: "https://github.com/solentlabs/cable_modem_monitor/issues/6"

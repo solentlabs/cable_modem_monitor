@@ -87,3 +87,15 @@ attribution:
   contributors:
     - github: DeFlanko
       contribution: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63) diagnostics"
+
+isps:
+  - Comcast
+  - Spectrum
+  - Cox
+
+notes: |
+  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA support.
+  Channel data embedded in JavaScript functions (NOT HTML tables).
+  Uses HTTP Basic Auth (unlike CM2000's form-based auth).
+  Supports up to 32 SC-QAM downstream, 2 OFDM, 8 ATDMA upstream, 2 OFDMA.
+  Upstream ATDMA symbol rate appears before frequency (differs from CM2000).

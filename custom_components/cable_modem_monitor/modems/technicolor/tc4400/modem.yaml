@@ -93,3 +93,19 @@ attribution:
   contributors:
     - github: Mar1usW3
       contribution: "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1) verification"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Rogers
+  - Shaw
+  - Videotron
+  - Vodafone Germany
+  - Unitymedia
+
+notes: |
+  DOCSIS 3.1 standalone cable modem. Supports SC-QAM and OFDM channel types.
+  System uptime available in cmswinfo.html.
+  Data across multiple pages: cmconnectionstatus.html (channels), cmswinfo.html (system info).
+  Restart reports zero power during reboot window (300 seconds).

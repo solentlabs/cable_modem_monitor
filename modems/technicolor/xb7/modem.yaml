@@ -93,3 +93,16 @@ attribution:
   contributors:
     - github: esand
       contribution: "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2) verification"
+
+isps:
+  - Rogers
+  - Comcast
+  - Xfinity
+
+notes: |
+  DOCSIS 3.1 cable modem + router gateway (CGM4331COM).
+  Transposed table format: rows are metrics, columns are channels.
+  Default IP: 10.0.0.1 (router mode) or 192.168.100.1 (modem mode).
+  Form-based authentication to /check.jst endpoint.
+  System uptime format: "X days Xh: Xm: Xs" (note spaces around colons).
+  May have localized variants (Italian translations found in Rogers/Italian market).

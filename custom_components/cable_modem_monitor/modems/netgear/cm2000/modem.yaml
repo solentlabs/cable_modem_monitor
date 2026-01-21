@@ -110,3 +110,19 @@ attribution:
   contributors:
     - github: m4dh4tt3r-88
       contribution: "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38) diagnostics"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  Nighthawk DOCSIS 3.1 modem with 2.5 Gbps max downstream speed.
+  32 SC-QAM downstream channels plus OFDM (DOCSIS 3.1).
+  Provides system uptime and time data (unlike CM600).
+  Reboot via RouterStatus.htm with buttonSelect values and dynamic session ID.
+
+references:
+  product_page: "https://www.netgear.com/home/wifi/modems/cm2000/"
+  support: "https://www.netgear.com/support/product/cm2000"

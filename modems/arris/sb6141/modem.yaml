@@ -76,4 +76,23 @@ attribution:
     - github: captain-coredump
       contribution: "Original fixture data"
     - github: vreihen
-      contribution: "HA Community verification"
+      contribution: "HA Community verification (October 2025)"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+  - Mediacom
+
+notes: |
+  DOCSIS 3.0 modem (released 2011, EOL 2019).
+  No authentication required for status page.
+  User verified: "57-58 entities working" (October 2025).
+  Known limitations:
+  - Software version not available from web interface
+  - System uptime not exposed
+  HTML tables are transposed (rows = metrics, columns = channels).
+
+references:
+  community_forum: "https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant"

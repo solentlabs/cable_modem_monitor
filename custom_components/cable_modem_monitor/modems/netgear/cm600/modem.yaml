@@ -100,3 +100,19 @@ attribution:
   contributors:
     - github: chairstacker
       contribution: "[Issue #3](https://github.com/solentlabs/cable_modem_monitor/issues/3) diagnostics"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+
+notes: |
+  Standalone cable modem (modem-only, no router). DOCSIS 3.0 with 24x8 channel bonding.
+  Firmware limitation: System Uptime and Current System Time fields NOT populated.
+  EOL year: 2023. Maximum downstream speed: 960 Mbps.
+
+references:
+  product_page: "https://www.netgear.com/home/wifi/modems/cm600/"
+  datasheet: "https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf"
+  quick_start: "https://www.downloads.netgear.com/files/GDC/CM600/CM600_All_MSOs_QSG_EN.pdf"

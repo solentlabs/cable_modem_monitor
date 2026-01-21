@@ -107,3 +107,13 @@ attribution:
   contributors:
     - github: kwschulz
       contribution: "Maintainer verified"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+
+notes: |
+  Combo modem/router device with 24x8 channel bonding (DOCSIS 3.0).
+  Multi-page parsing: DocsisStatus.htm for channel data, RouterStatus.htm for system info.
+  Channel data in pipe-delimited JavaScript: InitDsTableTagValue() and InitUsTableTagValue().

@@ -101,3 +101,19 @@ attribution:
   contributors:
     - github: unknown
       contribution: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72) diagnostics"
+
+isps:
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  Gateway device (modem + router combo) with DOCSIS 3.1.
+  Uses LuCI (OpenWrt-based) web interface with JSON endpoints.
+  Form-based authentication with sysauth cookie.
+  Modem was in Bridge mode during fixture capture (WiFi disabled).
+  puma_hw_ver fields are legacy naming - actual chipset is BCM3390.
+  Default IPs: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+
+references:
+  issue_72: "https://github.com/solentlabs/cable_modem_monitor/issues/72"

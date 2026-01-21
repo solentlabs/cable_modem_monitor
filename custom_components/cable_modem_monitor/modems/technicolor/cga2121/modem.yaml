@@ -94,3 +94,14 @@ attribution:
   contributors:
     - github: TBD
       contribution: "[Issue #75](https://github.com/solentlabs/cable_modem_monitor/issues/75) fixture data"
+
+isps:
+  - Telia
+
+notes: |
+  DOCSIS 3.0 Wireless Gateway (combo modem/router) for Telia Finland.
+  24 downstream channels and 4 upstream channels.
+  Known limitations:
+  - No frequency data exposed in status page
+  - No codeword counts exposed in status page
+  Form-based authentication to /goform/logon endpoint.

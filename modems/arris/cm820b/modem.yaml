@@ -77,3 +77,16 @@ attribution:
   contributors:
     - github: dimkalinux
       contribution: "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57) verification"
+
+isps:
+  - Volya
+
+notes: |
+  EuroDOCSIS 3.0 modem for European markets.
+  Intel Puma 5 chipset (predecessor to problematic Puma 6).
+  No authentication required for status pages.
+  Uses CGI-based URLs with /cgi-bin/ prefix.
+  Known limitation: Software version parsing returns "Unknown".
+
+references:
+  pr_57: "https://github.com/solentlabs/cable_modem_monitor/pull/57"

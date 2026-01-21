@@ -35,7 +35,17 @@ isps:
   - Cox
   - CableOne
 
-# References
+notes: |
+  DOCSIS 3.1 modem with HNAP two-phase challenge-response authentication.
+  Uses HTTPS with self-signed certificate.
+  Shares identical HNAP protocol with MB8611 (GetMoto* action prefix).
+  Max speed: 1 Gbps single ethernet, 2 Gbps with LAG.
+  Multiple failed logins trigger 5-minute lockout.
+  Parser development in progress.
+
 references:
-  review: https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/
-  gpl_source: https://help.motorolanetwork.com/kb/general/gpl-code-center
+  issue_40: "https://github.com/solentlabs/cable_modem_monitor/issues/40"
+  review: "https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/"
+  gpl_source: "https://help.motorolanetwork.com/kb/general/gpl-code-center"
+  bowlescr_login: "https://github.com/BowlesCR/MB8600_Login"
+  xninjakittyx_mb8600: "https://github.com/xNinjaKittyx/mb8600"

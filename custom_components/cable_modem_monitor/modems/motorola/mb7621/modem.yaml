@@ -131,3 +131,23 @@ attribution:
   contributors:
     - github: kwschulz
       contribution: "Maintainer hardware, initial parser"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+  - CableOne
+  - RCN
+
+notes: |
+  DOCSIS 3.0 modem (released 2017).
+  Form-based authentication with base64 password encoding.
+  Session-based with single concurrent login limit; logout required.
+  Supports up to 24 downstream and 8 upstream channels (1 Gbps max).
+  Quirk: Base URL shows login form even after successful auth.
+
+references:
+  motorola_product: "https://www.motorola.com/us/mb7621"
+  motorola_support: "https://motorolanetwork.com/mb7621.html"
+  deviwiki: "https://deviwiki.com/wiki/Motorola_MB7621"

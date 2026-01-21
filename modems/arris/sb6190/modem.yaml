@@ -87,3 +87,22 @@ attribution:
   contributors:
     - github: sfennell
       contribution: "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22) verification"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+
+notes: |
+  Two firmware variants with different auth requirements:
+  - Older firmware: No authentication required
+  - Newer firmware (9.1.103+): Form-based login required
+
+  UNVERIFIED status - no confirmed user reports on real hardware.
+  Parser based on SB6141 code; fixture provenance unknown.
+  URL format differs from SB6141: uses .html extension vs .asp
+
+references:
+  issue_83: "https://github.com/solentlabs/cable_modem_monitor/issues/83"
+  pr_22: "https://github.com/solentlabs/cable_modem_monitor/pull/22"

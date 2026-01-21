@@ -98,3 +98,14 @@ attribution:
   contributors:
     - github: Anthranilic
       contribution: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) diagnostics"
+
+isps:
+  - Comcast
+
+notes: |
+  Nighthawk AC1900 WiFi Cable Modem Router combo. DOCSIS 3.0 with 24x8 channel bonding.
+  Same page structure and parsing logic as C3700.
+  User provided manually redacted diagnostics after sanitization gap was discovered.
+
+references:
+  issue: "https://github.com/solentlabs/cable_modem_monitor/issues/61"

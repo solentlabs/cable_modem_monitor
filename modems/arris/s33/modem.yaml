@@ -166,3 +166,21 @@ attribution:
   contributors:
     - github: kwschulz
       contribution: "Maintainer - HNAP implementation from HAR analysis"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  HNAP protocol uses GetCustomer* action names (vs MB8611's GetMoto*).
+  JavaScript reveals identical protocol structure to MB8611.
+  Session stored in sessionStorage.getItem('PrivateKey').
+  S33 blocks ICMP ping - HTTP-only health checks required.
+  System uptime not available (only current time exposed).
+
+references:
+  issue_32: "https://github.com/solentlabs/cable_modem_monitor/issues/32"
+  modemguides: "https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison"
+  surfboard: "https://www.surfboard.com/products/cable-modems/s33/"
