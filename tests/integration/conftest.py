@@ -562,7 +562,22 @@ class FormAuthMockHandler(BaseHTTPRequestHandler):
 
 
 class HNAPAuthMockHandler(BaseHTTPRequestHandler):
-    """Mock server with HNAP/SOAP authentication (like S33/MB8611)."""
+    """Mock server with HNAP/SOAP authentication (like S33/MB8611).
+
+    Implements the full HNAP challenge-response flow:
+    1. GET / or /Login.html -> Serve login page with SOAPAction.js
+    2. POST /HNAP1/ with Login action -> Return challenge
+    3. POST /HNAP1/ with LoginPassword -> Verify and return OK/FAILED
+    """
+
+    valid_username = "admin"
+    valid_password = "password"
+    # Simulated challenge values
+    challenge = "1234567890ABCDEF"
+    public_key = "FEDCBA0987654321"
+    cookie = "uid=test-session-id"
+    # Track authenticated sessions
+    authenticated_sessions: set = set()
 
     def log_message(self, format, *args):
         """Suppress logging during tests."""
@@ -575,6 +590,127 @@ class HNAPAuthMockHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        """Handle HNAP SOAP login requests."""
+        import json
+
+        content_length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(content_length).decode("utf-8")
+        soap_action = self.headers.get("SOAPAction", "")
+        content_type = self.headers.get("Content-Type", "")
+
+        # Handle Login action
+        if "Login" in soap_action or "/HNAP1/" in self.path:
+            is_json = "application/json" in content_type
+
+            if is_json:
+                try:
+                    data = json.loads(post_data)
+                    login_data = data.get("Login", {})
+                    private_key = login_data.get("LoginPassword", "")
+
+                    if not private_key:
+                        # First request - return challenge
+                        self._send_json_challenge()
+                    else:
+                        # Second request - always accept for testing
+                        self._send_json_success()
+                    return
+                except json.JSONDecodeError:
+                    pass
+
+            # XML/SOAP style - return challenge or success
+            if "<LoginPassword>" in post_data:
+                self._send_soap_success()
+            else:
+                self._send_soap_challenge()
+        else:
+            self._send_error("Unknown action")
+
+    def _send_json_challenge(self) -> None:
+        """Send JSON challenge response."""
+        import json
+
+        response = {
+            "LoginResponse": {
+                "LoginResult": "OK",
+                "Challenge": self.challenge,
+                "PublicKey": self.public_key,
+                "Cookie": self.cookie,
+            }
+        }
+        content = json.dumps(response).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Set-Cookie", f"uid={self.cookie}; Path=/")
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _send_json_success(self) -> None:
+        """Send JSON login success."""
+        import json
+
+        response = {"LoginResponse": {"LoginResult": "OK"}}
+        content = json.dumps(response).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _send_soap_challenge(self) -> None:
+        """Send SOAP challenge response."""
+        content = f"""<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <LoginResponse xmlns="http://purenetworks.com/HNAP1/">
+      <LoginResult>OK</LoginResult>
+      <Challenge>{self.challenge}</Challenge>
+      <PublicKey>{self.public_key}</PublicKey>
+      <Cookie>{self.cookie}</Cookie>
+    </LoginResponse>
+  </soap:Body>
+</soap:Envelope>""".encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/xml; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Set-Cookie", f"uid={self.cookie}; Path=/")
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _send_soap_success(self) -> None:
+        """Send SOAP login success."""
+        content = b"""<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <LoginResponse xmlns="http://purenetworks.com/HNAP1/">
+      <LoginResult>OK</LoginResult>
+    </LoginResponse>
+  </soap:Body>
+</soap:Envelope>"""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/xml; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _send_error(self, error: str) -> None:
+        """Send SOAP error response."""
+        content = f"""<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <ErrorResponse>
+      <Error>{error}</Error>
+    </ErrorResponse>
+  </soap:Body>
+</soap:Envelope>""".encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/xml; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
 
     def _serve_hnap_login_page(self) -> None:
         """Serve login page with HNAP detection scripts."""

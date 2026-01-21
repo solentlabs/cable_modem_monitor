@@ -67,6 +67,7 @@ from typing import TYPE_CHECKING, Any
 from .steps import (
     _get_parser_class_by_name,
     check_connectivity,
+    create_authenticated_session,
     detect_parser,
     discover_auth,
     validate_parse,
@@ -97,6 +98,7 @@ __all__ = [
     # Individual steps (for testing/advanced use)
     "check_connectivity",
     "discover_auth",
+    "create_authenticated_session",
     "detect_parser",
     "validate_parse",
     # Internal helper (exported for testing)
@@ -110,6 +112,7 @@ def run_discovery_pipeline(
     password: str | None = None,
     selected_parser: type[ModemParser] | None = None,
     parser_hints: dict[str, Any] | None = None,
+    static_auth_config: dict[str, Any] | None = None,
 ) -> DiscoveryPipelineResult:
     """Run the complete discovery pipeline.
 
@@ -122,6 +125,15 @@ def run_discovery_pipeline(
         password: Optional password for authentication
         selected_parser: If user selected a specific parser, skip auto-detection
         parser_hints: Auth hints from modem.yaml (field names, encoding, etc.)
+        static_auth_config: Complete auth config from modem.yaml for known modems.
+            When provided, skips dynamic auth discovery and uses this config
+            directly via create_authenticated_session(). Format:
+            {
+                "auth_strategy": "form_plain" | "hnap_session" | "no_auth" | ...,
+                "auth_form_config": {...} | None,
+                "auth_hnap_config": {...} | None,
+                "auth_url_token_config": {...} | None,
+            }
 
     Returns:
         DiscoveryPipelineResult with all data needed for config entry:
@@ -133,22 +145,25 @@ def run_discovery_pipeline(
         - error/failed_step: Error info if failed
 
     Data Flow:
-        host
-          -> check_connectivity()
-          -> working_url
-          -> discover_auth()
-          -> (session, html)
-          -> detect_parser()  [NO HTTP - uses html from auth]
-          -> parser_class
-          -> validate_parse()
-          -> config_entry_data
+        Known modem (static_auth_config provided):
+            host -> check_connectivity() -> create_authenticated_session()
+                 -> detect_parser() [SKIP - user selected]
+                 -> validate_parse() -> config_entry_data
+
+        Fallback mode (no static_auth_config):
+            host -> check_connectivity() -> discover_auth()
+                 -> detect_parser() [NO HTTP - uses html from auth]
+                 -> validate_parse() -> config_entry_data
 
     Example:
-        >>> result = run_discovery_pipeline("192.168.100.1", "admin", "pass")
+        >>> # Known modem with static config
+        >>> result = run_discovery_pipeline(
+        ...     "192.168.100.1", "admin", "pass",
+        ...     selected_parser=MotorolaMB7621Parser,
+        ...     static_auth_config={"auth_strategy": "form_plain", ...}
+        ... )
         >>> if result.success:
         ...     print(f"Found {result.parser_name} at {result.working_url}")
-        ... else:
-        ...     print(f"Failed at {result.failed_step}: {result.error}")
     """
     _LOGGER.info("Starting discovery pipeline for %s", host)
 
@@ -164,16 +179,33 @@ def run_discovery_pipeline(
         )
     _LOGGER.info("Step 1/4: Connectivity - working_url=%s, legacy_ssl=%s", conn.working_url, conn.legacy_ssl)
 
-    # Step 2: Auth discovery (uses working_url from step 1)
-    _LOGGER.debug("Step 2/4: Auth Discovery - detecting auth method")
+    # Step 2: Auth - use static config OR dynamic discovery
     assert conn.working_url is not None  # Guaranteed by success check above
-    auth = discover_auth(
-        working_url=conn.working_url,
-        username=username,
-        password=password,
-        legacy_ssl=conn.legacy_ssl,
-        parser_hints=parser_hints,
-    )
+
+    if static_auth_config:
+        # Known modem: use static auth config from modem.yaml (skip discovery)
+        _LOGGER.info(
+            "Step 2/4: Using static auth config from modem.yaml (strategy=%s)",
+            static_auth_config.get("auth_strategy"),
+        )
+        auth = create_authenticated_session(
+            working_url=conn.working_url,
+            username=username,
+            password=password,
+            legacy_ssl=conn.legacy_ssl,
+            static_auth_config=static_auth_config,
+        )
+    else:
+        # Fallback mode: run dynamic auth discovery
+        _LOGGER.info("Step 2/4: Running dynamic auth discovery")
+        auth = discover_auth(
+            working_url=conn.working_url,
+            username=username,
+            password=password,
+            legacy_ssl=conn.legacy_ssl,
+            parser_hints=parser_hints,
+        )
+
     if not auth.success:
         _LOGGER.error("Step 2/4: Auth Discovery - failed: %s", auth.error)
         return DiscoveryPipelineResult(

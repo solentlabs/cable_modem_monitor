@@ -203,14 +203,8 @@ class ConfigFlowMixin:
         if detection_info.get("actual_model"):
             data[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
 
-        # Track detection method for diagnostics
-        original_choice = data.get(CONF_MODEM_CHOICE)
-        if original_choice == "auto" and detected_modem_name:
-            _LOGGER.info("%sAuto-detection successful: detected '%s'", log_prefix, detected_modem_name)
-            data[CONF_MODEM_CHOICE] = detected_modem_name
-            data[CONF_DETECTION_METHOD] = "auto_detected"
-        else:
-            data[CONF_DETECTION_METHOD] = "user_selected"
+        # Detection method is always user_selected (auto-detection removed)
+        data[CONF_DETECTION_METHOD] = "user_selected"
 
     def _apply_auth_discovery_info(
         self,
@@ -276,7 +270,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         default_host: str = "192.168.100.1",
         default_username: str = "",
         default_password: str = "",
-        default_modem: str = "auto",
+        default_modem: str = "",
     ) -> vol.Schema:
         """Build the form schema for user input step."""
         return vol.Schema(
@@ -382,7 +376,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 default_host=saved_input.get(CONF_HOST, "192.168.100.1"),
                 default_username=saved_input.get(CONF_USERNAME, ""),
                 default_password=saved_input.get(CONF_PASSWORD, ""),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, "auto"),
+                default_modem=saved_input.get(CONF_MODEM_CHOICE, ""),
             ),
             errors=errors,
         )
@@ -443,8 +437,8 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
 
     def _get_current_modem_choice(self) -> str:
         """Get stored modem choice, normalized to current dropdown format."""
-        stored: str = self.config_entry.data.get(CONF_MODEM_CHOICE, "auto")
-        if stored and stored != "auto":
+        stored: str = self.config_entry.data.get(CONF_MODEM_CHOICE, "")
+        if stored:
             # Check if stored name is in current dropdown choices
             if stored in self._modem_choices:
                 return stored
@@ -598,7 +592,7 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
             data_schema=self._build_options_schema(
                 default_host=saved_input.get(CONF_HOST, entry_data.get(CONF_HOST, "192.168.100.1")),
                 default_username=saved_input.get(CONF_USERNAME, entry_data.get(CONF_USERNAME, "")),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, entry_data.get(CONF_MODEM_CHOICE, "auto")),
+                default_modem=saved_input.get(CONF_MODEM_CHOICE, entry_data.get(CONF_MODEM_CHOICE, "")),
                 default_scan_interval=saved_input.get(
                     CONF_SCAN_INTERVAL, entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
                 ),

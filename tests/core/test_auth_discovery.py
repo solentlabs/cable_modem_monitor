@@ -90,6 +90,7 @@ def mock_session():
     """Create a mock requests session."""
     session = MagicMock(spec=requests.Session)
     session.verify = False
+    session.cookies = MagicMock()  # Required for HNAP auth which sets cookies
     return session
 
 
@@ -667,6 +668,29 @@ class TestAuthDiscoveryRedirect:
 class TestAuthDiscoveryHNAP:
     """Test HNAP detection."""
 
+    def _setup_hnap_post_mocks(self, mock_session):
+        """Set up POST response mocks for HNAP two-step authentication."""
+        import json
+
+        # HNAP requires two POST requests: challenge and login
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TESTCHALLENGE1234567890ABCDEF",
+                    "Cookie": "session_cookie_value",
+                    "PublicKey": "TESTPUBLICKEY1234567890ABCDEF",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
     def test_hnap_detected_by_soapaction_script(self, discovery, mock_session, mock_parser):
         """Test HNAP detection via SOAPAction.js script."""
         mock_parser.parse.return_value = {"downstream": [], "upstream": []}
@@ -683,6 +707,9 @@ class TestAuthDiscoveryHNAP:
         """
         mock_response.url = "http://192.168.100.1/Login.html"
         mock_session.get.return_value = mock_response
+
+        # Set up POST mocks for HNAP authentication
+        self._setup_hnap_post_mocks(mock_session)
 
         result = discovery.discover(
             session=mock_session,
@@ -711,6 +738,9 @@ class TestAuthDiscoveryHNAP:
         """
         mock_response.url = "http://192.168.100.1/Login.html"
         mock_session.get.return_value = mock_response
+
+        # Set up POST mocks for HNAP authentication
+        self._setup_hnap_post_mocks(mock_session)
 
         result = discovery.discover(
             session=mock_session,

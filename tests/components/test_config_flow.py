@@ -137,6 +137,9 @@ class TestConfigFlow:
         assert MIN_SCAN_INTERVAL < DEFAULT_SCAN_INTERVAL < MAX_SCAN_INTERVAL
 
 
+CONF_MODEM_CHOICE = "modem_choice"
+
+
 class TestValidateInput:
     """Test input validation."""
 
@@ -148,19 +151,34 @@ class TestValidateInput:
         return hass
 
     @pytest.fixture
+    def mock_parser_class(self):
+        """Create a mock parser class."""
+        parser_class = Mock()
+        parser_class.name = "Cable Modem"
+        parser_class.__name__ = "CableModemParser"
+        return parser_class
+
+    @pytest.fixture
     def valid_input(self):
         """Provide valid input data."""
         return {
             CONF_HOST: "192.168.100.1",
             CONF_USERNAME: "admin",
             CONF_PASSWORD: "password",
+            CONF_MODEM_CHOICE: "Cable Modem",
         }
 
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
-    async def test_success(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
+    async def test_success(
+        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+    ):
         """Test successful validation."""
+        # Mock parser lookup
+        mock_get_parser.return_value = mock_parser_class
+
         # Mock pipeline to return success
         mock_pipeline.return_value = _create_success_result()
         mock_icmp_ping.return_value = True
@@ -178,8 +196,14 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
-    async def test_connection_failure(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
+    async def test_connection_failure(
+        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+    ):
         """Test validation fails when cannot connect to modem."""
+        # Mock parser lookup
+        mock_get_parser.return_value = mock_parser_class
+
         # Mock pipeline to return failure
         mock_pipeline.return_value = DiscoveryPipelineResult(
             success=False,
@@ -246,12 +270,21 @@ class TestModemNameFormatting:
         return hass
 
     @pytest.fixture
+    def mock_parser_class(self):
+        """Create a mock parser class."""
+        parser_class = Mock()
+        parser_class.name = "Test Parser"
+        parser_class.__name__ = "TestParser"
+        return parser_class
+
+    @pytest.fixture
     def valid_input(self):
         """Provide valid input data."""
         return {
             CONF_HOST: "192.168.100.1",
             CONF_USERNAME: "admin",
             CONF_PASSWORD: "password",
+            CONF_MODEM_CHOICE: "Test Parser",
         }
 
     @pytest.mark.asyncio
@@ -262,11 +295,14 @@ class TestModemNameFormatting:
     )
     @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_formatting(
         self,
+        mock_get_parser,
         mock_icmp_ping,
         mock_pipeline,
         mock_hass,
+        mock_parser_class,
         valid_input,
         modem_name,
         manufacturer,
@@ -274,6 +310,7 @@ class TestModemNameFormatting:
         desc,
     ):
         """Test title formatting via table-driven cases."""
+        mock_get_parser.return_value = mock_parser_class
         mock_pipeline.return_value = _create_success_result(
             modem_name=modem_name,
             manufacturer=manufacturer,
@@ -292,8 +329,12 @@ class TestModemNameFormatting:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
-    async def test_title_detection_info_included(self, mock_icmp_ping, mock_pipeline, mock_hass, valid_input):
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
+    async def test_title_detection_info_included(
+        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+    ):
         """Test that detection_info is included in result."""
+        mock_get_parser.return_value = mock_parser_class
         mock_pipeline.return_value = _create_success_result(
             modem_name="[Model]",
             manufacturer="[MFG]",

@@ -1244,3 +1244,512 @@ class TestRunDiscoveryPipeline:
         assert "select" in result.error.lower()
         # Builder should still be in result for potential retry
         assert result.hnap_builder is mock_hnap_builder
+
+
+# =============================================================================
+# CREATE AUTHENTICATED SESSION TESTS - For static auth config architecture
+# =============================================================================
+
+
+class TestCreateAuthenticatedSession:
+    """Test create_authenticated_session function.
+
+    This function uses static auth config from modem.yaml instead of
+    dynamic auth discovery, enabling faster and more reliable setup
+    for known modems.
+    """
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_no_credentials_no_auth(self, mock_session_class):
+        """Test no credentials returns no_auth success."""
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+        mock_response = MagicMock()
+        mock_response.text = "<html>Modem page</html>"
+        mock_session.get.return_value = mock_response
+
+        static_config = {"auth_strategy": "no_auth"}
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            None,  # No username
+            None,  # No password
+            False,  # No legacy SSL
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.strategy == "no_auth"
+        assert result.html == "<html>Modem page</html>"
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_no_auth_strategy(self, mock_session_class):
+        """Test no_auth strategy fetches page without auth."""
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+        mock_response = MagicMock()
+        mock_response.text = "<html>No auth page</html>"
+        mock_session.get.return_value = mock_response
+
+        static_config = {
+            "auth_strategy": "no_auth",
+            "auth_form_config": None,
+            "auth_hnap_config": None,
+            "auth_url_token_config": None,
+        }
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            "admin",  # Credentials provided but no_auth strategy
+            "password",
+            False,
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.strategy == "no_auth"
+
+    @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_form_auth_with_static_config(self, mock_session_class, mock_authenticate):
+        """Test form auth using static config from modem.yaml."""
+        from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+
+        mock_authenticate.return_value = BaseAuthResult(
+            success=True,
+            response_html="<html>Authenticated page</html>",
+        )
+
+        static_config = {
+            "auth_strategy": "form_plain",
+            "auth_form_config": {
+                "action": "/goform/login",
+                "username_field": "user",
+                "password_field": "pass",
+                "password_encoding": "base64",
+            },
+            "auth_hnap_config": None,
+            "auth_url_token_config": None,
+        }
+
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            "admin",
+            "password",
+            False,
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.strategy == "form_plain"
+        assert result.form_config == static_config["auth_form_config"]
+
+    @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_hnap_auth_with_static_config(self, mock_session_class, mock_authenticate):
+        """Test HNAP auth using static config from modem.yaml."""
+        from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+
+        mock_authenticate.return_value = BaseAuthResult(
+            success=True,
+            response_html=None,  # HNAP returns no HTML
+        )
+
+        static_config = {
+            "auth_strategy": "hnap_session",
+            "auth_form_config": None,
+            "auth_hnap_config": {
+                "endpoint": "/HNAP1/",
+                "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
+            },
+            "auth_url_token_config": None,
+        }
+
+        result = create_authenticated_session(
+            "https://192.168.100.1",
+            "admin",
+            "password",
+            False,
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.strategy == "hnap_session"
+        assert result.hnap_config == static_config["auth_hnap_config"]
+
+    @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_url_token_auth_with_static_config(self, mock_session_class, mock_authenticate):
+        """Test URL token auth using static config from modem.yaml."""
+        from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+
+        mock_authenticate.return_value = BaseAuthResult(
+            success=True,
+            response_html="<html>Token auth page</html>",
+        )
+
+        static_config = {
+            "auth_strategy": "url_token_session",
+            "auth_form_config": None,
+            "auth_hnap_config": None,
+            "auth_url_token_config": {
+                "login_page": "/cmconnectionstatus.html",
+                "data_page": "/cmconnectionstatus.html",
+                "login_prefix": "login_",
+                "token_prefix": "ct_",
+            },
+        }
+
+        result = create_authenticated_session(
+            "https://192.168.100.1",
+            "admin",
+            "password",
+            False,
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.strategy == "url_token_session"
+        assert result.url_token_config == static_config["auth_url_token_config"]
+
+    @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_auth_failure_returns_error(self, mock_session_class, mock_authenticate):
+        """Test authentication failure returns error."""
+        from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+
+        mock_authenticate.return_value = BaseAuthResult(
+            success=False,
+            error_message="Invalid credentials",
+        )
+
+        static_config = {
+            "auth_strategy": "form_plain",
+            "auth_form_config": {"action": "/login"},
+        }
+
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            "admin",
+            "wrongpass",
+            False,
+            static_config,
+        )
+
+        assert result.success is False
+        assert "Invalid credentials" in result.error
+
+    @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_legacy_ssl_mounts_adapter(self, mock_session_class, mock_adapter_class):
+        """Test legacy SSL mounts the adapter."""
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+        mock_response = MagicMock()
+        mock_response.text = "<html>Page</html>"
+        mock_session.get.return_value = mock_response
+
+        static_config = {"auth_strategy": "no_auth"}
+        result = create_authenticated_session(
+            "https://192.168.100.1",
+            None,
+            None,
+            True,  # legacy_ssl=True
+            static_config,
+        )
+
+        mock_session.mount.assert_called_once()
+        assert result.success is True
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_connection_failure(self, mock_session_class):
+        """Test connection failure returns error."""
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+        mock_session.get.side_effect = requests.exceptions.ConnectionError("Failed")
+
+        static_config = {"auth_strategy": "no_auth"}
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            None,
+            None,
+            False,
+            static_config,
+        )
+
+        assert result.success is False
+        assert "Connection failed" in result.error
+
+    @patch("custom_components.cable_modem_monitor.core.auth.handler.AuthHandler.authenticate")
+    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    def test_fetches_page_when_auth_response_has_no_html(self, mock_session_class, mock_authenticate):
+        """Test that page is fetched after auth when auth response has no HTML.
+
+        For form auth, the form submission response may not contain the actual
+        modem data. In this case, we fetch the working_url to get page content.
+        """
+        from custom_components.cable_modem_monitor.core.auth.base import AuthResult as BaseAuthResult
+        from custom_components.cable_modem_monitor.core.discovery.steps import (
+            create_authenticated_session,
+        )
+
+        mock_session = _create_mock_session()
+        mock_session_class.return_value = mock_session
+
+        # Auth succeeds but returns no HTML (form submission response)
+        mock_authenticate.return_value = BaseAuthResult(
+            success=True,
+            response_html=None,  # No HTML from auth - this is the key
+        )
+
+        # GET should be called to fetch the page after auth
+        mock_response = MagicMock()
+        mock_response.text = "<html>Modem status page after login</html>"
+        mock_session.get.return_value = mock_response
+
+        static_config = {
+            "auth_strategy": "form_plain",
+            "auth_form_config": {"action": "/login"},
+        }
+
+        result = create_authenticated_session(
+            "http://192.168.100.1",
+            "admin",
+            "password",
+            False,
+            static_config,
+        )
+
+        assert result.success is True
+        assert result.html == "<html>Modem status page after login</html>"
+        # Verify GET was called to fetch the page
+        mock_session.get.assert_called_once_with("http://192.168.100.1", timeout=10)
+
+
+# =============================================================================
+# PIPELINE WITH STATIC AUTH CONFIG TESTS
+# =============================================================================
+
+
+class TestRunDiscoveryPipelineWithStaticConfig:
+    """Test run_discovery_pipeline with static_auth_config parameter.
+
+    These tests verify the "modem.yaml as source of truth" architecture
+    where known modems skip dynamic auth discovery.
+    """
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_uses_static_config_when_provided(
+        self, mock_connectivity, mock_discover_auth, mock_create_session, mock_validate
+    ):
+        """Test pipeline uses static config and skips discover_auth."""
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="http://192.168.100.1",
+            protocol="http",
+            legacy_ssl=False,
+        )
+
+        # Static auth config provided
+        mock_session = MagicMock()
+        mock_create_session.return_value = AuthResult(
+            success=True,
+            strategy="form_plain",
+            session=mock_session,
+            html="<html>Authenticated</html>",
+            form_config={"action": "/login"},
+        )
+
+        mock_selected_parser = MagicMock()
+        mock_selected_parser.name = "Motorola MB7621"
+
+        mock_validate.return_value = ValidationResult(
+            success=True,
+            modem_data={"downstream": [], "upstream": []},
+            parser_instance=MagicMock(),
+        )
+
+        static_config = {
+            "auth_strategy": "form_plain",
+            "auth_form_config": {"action": "/login"},
+        }
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            selected_parser=mock_selected_parser,
+            static_auth_config=static_config,
+        )
+
+        # verify create_authenticated_session was called instead of discover_auth
+        mock_create_session.assert_called_once()
+        mock_discover_auth.assert_not_called()
+        assert result.success is True
+        assert result.auth_strategy == "form_plain"
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_uses_discover_auth_when_no_static_config(
+        self, mock_connectivity, mock_discover_auth, mock_create_session, mock_validate
+    ):
+        """Test pipeline uses discover_auth when no static config provided."""
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="http://192.168.100.1",
+            protocol="http",
+            legacy_ssl=False,
+        )
+
+        # No static auth config - should use discover_auth
+        mock_session = MagicMock()
+        mock_discover_auth.return_value = AuthResult(
+            success=True,
+            strategy="no_auth",
+            session=mock_session,
+            html="<html>Discovered</html>",
+        )
+
+        mock_selected_parser = MagicMock()
+        mock_selected_parser.name = "Fallback Parser"
+
+        mock_validate.return_value = ValidationResult(
+            success=True,
+            modem_data={"downstream": [], "upstream": []},
+            parser_instance=MagicMock(),
+        )
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            selected_parser=mock_selected_parser,
+            static_auth_config=None,  # No static config
+        )
+
+        # Verify discover_auth was called instead of create_authenticated_session
+        mock_discover_auth.assert_called_once()
+        mock_create_session.assert_not_called()
+        assert result.success is True
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_static_auth_failure_returns_auth_error(self, mock_connectivity, mock_create_session):
+        """Test static auth failure returns proper error with failed_step."""
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="http://192.168.100.1",
+            protocol="http",
+            legacy_ssl=False,
+        )
+
+        mock_create_session.return_value = AuthResult(
+            success=False,
+            error="Invalid credentials",
+        )
+
+        static_config = {"auth_strategy": "form_plain"}
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="wrongpass",
+            static_auth_config=static_config,
+        )
+
+        assert result.success is False
+        assert result.failed_step == "auth"
+        assert "Invalid credentials" in result.error
+
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.create_authenticated_session")
+    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    def test_static_config_hnap_success(self, mock_connectivity, mock_create_session, mock_validate):
+        """Test HNAP auth with static config succeeds."""
+        mock_connectivity.return_value = ConnectivityResult(
+            success=True,
+            working_url="https://192.168.100.1",
+            protocol="https",
+            legacy_ssl=False,
+        )
+
+        mock_session = MagicMock()
+        mock_hnap_builder = MagicMock()
+        mock_create_session.return_value = AuthResult(
+            success=True,
+            strategy="hnap_session",
+            session=mock_session,
+            html=None,  # HNAP returns no HTML
+            hnap_config={"endpoint": "/HNAP1/", "hmac_algorithm": "md5"},
+            hnap_builder=mock_hnap_builder,
+        )
+
+        mock_selected_parser = MagicMock()
+        mock_selected_parser.name = "Arris S33"
+
+        mock_validate.return_value = ValidationResult(
+            success=True,
+            modem_data={"downstream": [{"channel": 1}], "upstream": []},
+            parser_instance=MagicMock(),
+        )
+
+        static_config = {
+            "auth_strategy": "hnap_session",
+            "auth_hnap_config": {"endpoint": "/HNAP1/", "hmac_algorithm": "md5"},
+        }
+
+        result = run_discovery_pipeline(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            selected_parser=mock_selected_parser,
+            static_auth_config=static_config,
+        )
+
+        assert result.success is True
+        assert result.auth_strategy == "hnap_session"
+        assert result.hnap_builder is mock_hnap_builder

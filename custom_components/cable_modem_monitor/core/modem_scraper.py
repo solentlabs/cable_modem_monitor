@@ -1578,10 +1578,11 @@ class ModemScraper:
         """
         from .auth.detection import is_login_page
 
-        # Check if original HTML is a login page (session had expired)
+        # Check if original HTML is a login page (no active session)
+        # This is normal on first poll or when logout_required is configured
         original_was_login_page = is_login_page(html)
         if original_was_login_page:
-            _LOGGER.info("Session expired - original fetch returned login page, will re-fetch after auth")
+            _LOGGER.debug("Login page detected - authenticating before data fetch")
 
         success, authenticated_html = self._login()
 

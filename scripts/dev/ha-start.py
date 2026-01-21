@@ -335,8 +335,8 @@ def stop_other_ha_containers() -> list[str]:
             timeout=10,
         )
         if result.returncode == 0 and result.stdout.strip().lower() == "true":
-            print_info(f"Stopping {container}...")
-            subprocess.run(["docker", "stop", container], capture_output=True, timeout=30)
+            print_info(f"Stopping {container} (30s grace period)...")
+            subprocess.run(["docker", "stop", "-t", "30", container], capture_output=True, timeout=60)
             stopped.append(container)
     return stopped
 
@@ -353,8 +353,8 @@ def run_cleanup():
     if cleanup_script.exists() and platform.system() != "Windows":
         subprocess.run(["bash", str(cleanup_script)], cwd=get_project_dir())
     else:
-        # Basic cleanup - just stop containers
-        subprocess.run(["docker", "stop", CONTAINER_NAME], capture_output=True, timeout=30)
+        # Basic cleanup - stop containers with 30s grace period for clean DB shutdown
+        subprocess.run(["docker", "stop", "-t", "30", CONTAINER_NAME], capture_output=True, timeout=60)
         subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True, timeout=30)
 
 

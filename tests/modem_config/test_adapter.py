@@ -963,3 +963,195 @@ class TestHelperFunctions:
         # Should return None without triggering discovery
         config = get_modem_config_for_parser("SomeFallbackParser")
         assert config is None
+
+
+# =============================================================================
+# Static Auth Config Tests - For "modem.yaml as source of truth" architecture
+# =============================================================================
+
+
+class TestStaticAuthConfigSynthetic:
+    """Tests for get_static_auth_config() with synthetic configs."""
+
+    def test_no_auth_strategy(self):
+        """Test no-auth modem returns no_auth strategy with all None configs."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="NoAuth",
+            auth=AuthConfig(strategy=AuthStrategy.NONE),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "no_auth"
+        assert static["auth_form_config"] is None
+        assert static["auth_hnap_config"] is None
+        assert static["auth_url_token_config"] is None
+
+    def test_form_auth_strategy(self):
+        """Test form auth modem returns form_plain strategy with form config."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="FormAuth",
+            auth=AuthConfig(
+                strategy=AuthStrategy.FORM,
+                form=FormAuthConfig(
+                    action="/goform/login",
+                    method="POST",
+                    username_field="user",
+                    password_field="pass",
+                    password_encoding="base64",
+                    hidden_fields={"csrf": "token123"},
+                ),
+            ),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "form_plain"
+        assert static["auth_form_config"] is not None
+        assert static["auth_form_config"]["action"] == "/goform/login"
+        assert static["auth_form_config"]["username_field"] == "user"
+        assert static["auth_form_config"]["password_field"] == "pass"
+        assert static["auth_form_config"]["password_encoding"] == "base64"
+        assert static["auth_hnap_config"] is None
+        assert static["auth_url_token_config"] is None
+
+    def test_hnap_auth_strategy(self):
+        """Test HNAP modem returns hnap_session strategy with hnap config."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="HnapAuth",
+            auth=AuthConfig(
+                strategy=AuthStrategy.HNAP,
+                hnap=HnapAuthConfig(
+                    endpoint="/HNAP1/",
+                    namespace="http://purenetworks.com/HNAP1/",
+                    hmac_algorithm="md5",
+                ),
+            ),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "hnap_session"
+        assert static["auth_hnap_config"] is not None
+        assert static["auth_hnap_config"]["endpoint"] == "/HNAP1/"
+        assert static["auth_hnap_config"]["hmac_algorithm"] == "md5"
+        assert static["auth_form_config"] is None
+        assert static["auth_url_token_config"] is None
+
+    def test_url_token_auth_strategy(self):
+        """Test URL token modem returns url_token_session strategy."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="UrlTokenAuth",
+            auth=AuthConfig(
+                strategy=AuthStrategy.URL_TOKEN,
+                url_token=UrlTokenAuthConfig(
+                    login_page="/status.html",
+                    data_page="/status.html",
+                    login_prefix="login_",
+                    token_prefix="ct_",
+                    session_cookie="credential",
+                    success_indicator="Channel",
+                ),
+            ),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "url_token_session"
+        assert static["auth_url_token_config"] is not None
+        assert static["auth_url_token_config"]["login_page"] == "/status.html"
+        assert static["auth_url_token_config"]["login_prefix"] == "login_"
+        assert static["auth_form_config"] is None
+        assert static["auth_hnap_config"] is None
+
+    def test_basic_auth_strategy(self):
+        """Test basic HTTP auth modem returns basic_http strategy."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="BasicAuth",
+            auth=AuthConfig(strategy=AuthStrategy.BASIC),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "basic_http"
+
+    def test_rest_api_maps_to_no_auth(self):
+        """Test REST API strategy maps to no_auth (no traditional auth flow)."""
+        config = ModemConfig(
+            manufacturer="Synthetic",
+            model="RestApi",
+            auth=AuthConfig(strategy=AuthStrategy.REST_API),
+        )
+        adapter = ModemConfigAuthAdapter(config)
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == "no_auth"
+
+
+# ┌──────────────────────────┬───────────────────┬──────────────────────────────────────────┐
+# │ parser_name              │ expected_strategy │ description                              │
+# ├──────────────────────────┼───────────────────┼──────────────────────────────────────────┤
+# │ MotorolaMB7621Parser     │ form_plain        │ Form auth with base64 encoding           │
+# │ MotorolaMB8611HnapParser │ hnap_session      │ HNAP/SOAP with HMAC-MD5                  │
+# │ ArrisS33HnapParser       │ hnap_session      │ HNAP/SOAP with HMAC-MD5                  │
+# │ ArrisSB8200Parser        │ url_token_session │ URL token authentication                 │
+# │ ArrisSB6141Parser        │ no_auth           │ No authentication required               │
+# │ ArrisG54Parser           │ form_plain        │ Basic form authentication                │
+# │ TechnicolorCGA2121Parser │ form_plain        │ Form auth with base64 encoding           │
+# └──────────────────────────┴───────────────────┴──────────────────────────────────────────┘
+#
+# fmt: off
+STATIC_AUTH_CONFIG_INTEGRATION_CASES = [
+    # (parser_name,              expected_strategy,    description)
+    ("MotorolaMB7621Parser",     "form_plain",        "form auth with base64"),
+    ("MotorolaMB8611HnapParser", "hnap_session",      "HNAP auth"),
+    ("ArrisS33HnapParser",       "hnap_session",      "HNAP auth"),
+    ("ArrisSB8200Parser",        "url_token_session", "URL token auth"),
+    ("ArrisSB6141Parser",        "no_auth",           "no auth"),
+    ("ArrisG54Parser",           "form_plain",        "form plain"),
+    ("TechnicolorCGA2121Parser", "form_plain",        "form auth with base64"),
+]
+# fmt: on
+
+
+class TestStaticAuthConfigIntegration:
+    """Integration tests for get_static_auth_config() with real modem configs."""
+
+    @pytest.mark.parametrize("parser_name,expected_strategy,desc", STATIC_AUTH_CONFIG_INTEGRATION_CASES)
+    def test_static_auth_config_for_parser(self, parser_name, expected_strategy, desc):
+        """Table-driven test: verify static auth config matches expected strategy."""
+        adapter = get_auth_adapter_for_parser(parser_name)
+        if adapter is None:
+            pytest.skip(f"{parser_name} modem config not available")
+
+        static = adapter.get_static_auth_config()
+
+        assert static["auth_strategy"] == expected_strategy, f"Failed for {parser_name}: {desc}"
+
+        # Verify the appropriate config is populated
+        if expected_strategy == "form_plain":
+            assert static["auth_form_config"] is not None, f"{parser_name} should have form config"
+            assert "action" in static["auth_form_config"]
+            assert "username_field" in static["auth_form_config"]
+        elif expected_strategy == "hnap_session":
+            assert static["auth_hnap_config"] is not None, f"{parser_name} should have HNAP config"
+            assert "endpoint" in static["auth_hnap_config"]
+            assert "hmac_algorithm" in static["auth_hnap_config"]
+        elif expected_strategy == "url_token_session":
+            assert static["auth_url_token_config"] is not None, f"{parser_name} should have URL token config"
+            assert "login_page" in static["auth_url_token_config"]
+        elif expected_strategy == "no_auth":
+            # No auth - all configs should be None
+            assert static["auth_form_config"] is None
+            assert static["auth_hnap_config"] is None
+            assert static["auth_url_token_config"] is None
+
+    def test_fallback_parser_has_no_adapter(self):
+        """Verify fallback parser returns None adapter (triggers dynamic discovery)."""
+        adapter = get_auth_adapter_for_parser("UniversalFallbackParser")
+        assert adapter is None, "Fallback parser should not have a modem.yaml"

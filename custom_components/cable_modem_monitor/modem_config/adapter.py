@@ -233,6 +233,63 @@ class ModemConfigAuthAdapter:
         """
         return self.config.auth.strategy
 
+    def get_static_auth_config(self) -> dict[str, Any]:
+        """Get complete auth config for direct use (skip discovery).
+
+        Returns a dict with all auth configuration needed to authenticate
+        without running dynamic auth discovery. This is the key method for
+        the "modem.yaml as source of truth" architecture.
+
+        For known modems (those with modem.yaml), this provides verified auth
+        configuration that can be used directly instead of probing the modem.
+
+        Returns:
+            Dict with keys matching DiscoveryPipelineResult/AuthResult fields:
+            - auth_strategy: str (e.g., "form_plain", "hnap_session", "no_auth")
+            - auth_form_config: dict | None
+            - auth_hnap_config: dict | None
+            - auth_url_token_config: dict | None
+
+        Example:
+            >>> adapter = get_auth_adapter_for_parser("MotorolaMB7621Parser")
+            >>> config = adapter.get_static_auth_config()
+            >>> # config = {
+            >>> #     "auth_strategy": "form_plain",
+            >>> #     "auth_form_config": {"action": "/goform/login", ...},
+            >>> #     "auth_hnap_config": None,
+            >>> #     "auth_url_token_config": None,
+            >>> # }
+        """
+        strategy = self.get_auth_strategy()
+
+        # No auth required - simplest case
+        if strategy == AuthStrategy.NONE:
+            return {
+                "auth_strategy": "no_auth",
+                "auth_form_config": None,
+                "auth_hnap_config": None,
+                "auth_url_token_config": None,
+            }
+
+        # Map modem.yaml AuthStrategy to discovery pipeline strategy strings
+        # These match AuthStrategyType enum values from core/auth/types.py
+        strategy_mapping = {
+            AuthStrategy.BASIC: "basic_http",
+            AuthStrategy.FORM: "form_plain",  # Encoding specified in form_config
+            AuthStrategy.HNAP: "hnap_session",
+            AuthStrategy.URL_TOKEN: "url_token_session",
+            AuthStrategy.REST_API: "no_auth",  # REST API = no traditional auth
+        }
+
+        strategy_str = strategy_mapping.get(strategy, "no_auth")
+
+        return {
+            "auth_strategy": strategy_str,
+            "auth_form_config": self.get_form_config() or None,
+            "auth_hnap_config": self.get_hnap_config() or None,
+            "auth_url_token_config": self.get_url_token_config() or None,
+        }
+
     # =========================================================================
     # DEVICE METADATA
     # =========================================================================

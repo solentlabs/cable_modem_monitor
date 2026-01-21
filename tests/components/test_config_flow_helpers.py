@@ -78,23 +78,24 @@ class TestBuildParserDropdown:
         return hass
 
     @pytest.mark.asyncio
-    async def test_builds_dropdown_with_auto_first(self, mock_hass):
-        """Test dropdown includes 'auto' as first option."""
+    async def test_builds_dropdown_without_auto(self, mock_hass):
+        """Test dropdown does not include 'auto' option (user must select modem)."""
 
         # Mock get_parser_dropdown_from_index to return parser names
         async def mock_executor(func, *args):
-            return ["Test Parser"]
+            return ["Test Parser", "Another Parser"]
 
         mock_hass.async_add_executor_job = mock_executor
 
         choices = await build_parser_dropdown(mock_hass)
 
-        assert choices[0] == "auto"
+        assert "auto" not in choices
         assert "Test Parser" in choices
+        assert "Another Parser" in choices
 
     @pytest.mark.asyncio
-    async def test_empty_parsers_returns_auto_only(self, mock_hass):
-        """Test empty parser list returns just 'auto'."""
+    async def test_empty_parsers_returns_empty_list(self, mock_hass):
+        """Test empty parser list returns empty list (no 'auto')."""
 
         async def mock_executor(func, *args):
             return []
@@ -103,7 +104,7 @@ class TestBuildParserDropdown:
 
         choices = await build_parser_dropdown(mock_hass)
 
-        assert choices == ["auto"]
+        assert choices == []
 
 
 class TestLoadParserHints:
@@ -205,6 +206,14 @@ class TestValidateInput:
         return hass
 
     @pytest.fixture
+    def mock_parser_class(self):
+        """Create a mock parser class."""
+        parser_class = Mock()
+        parser_class.name = "Arris SB8200"
+        parser_class.__name__ = "ArrisSB8200Parser"
+        return parser_class
+
+    @pytest.fixture
     def mock_pipeline_result(self):
         """Create a successful pipeline result."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
@@ -230,14 +239,45 @@ class TestValidateInput:
         )
 
     @pytest.mark.asyncio
-    async def test_successful_validation(self, mock_hass, mock_pipeline_result):
-        """Test successful validation returns expected data."""
-        mock_parser_class = Mock()
-        mock_parser_class.name = "Arris SB8200"
+    async def test_missing_modem_choice_raises_value_error(self, mock_hass):
+        """Test validation fails when modem_choice is missing."""
+        with pytest.raises(ValueError, match="Modem selection is required"):
+            await validate_input(
+                mock_hass,
+                {"host": "192.168.100.1", "username": "", "password": ""},
+            )
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_parser_raises_unsupported(self, mock_hass):
+        """Test validation fails when selected parser doesn't exist."""
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return [mock_parser_class]
+            if func.__name__ == "get_parser_by_name":
+                return None  # Parser not found
+            return None
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        with pytest.raises(UnsupportedModemError, match="Parser 'NonExistent Parser' not found"):
+            await validate_input(
+                mock_hass,
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "NonExistent Parser",
+                },
+            )
+
+    @pytest.mark.asyncio
+    async def test_successful_validation(self, mock_hass, mock_parser_class, mock_pipeline_result):
+        """Test successful validation returns expected data."""
+
+        async def mock_executor(func, *args):
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return mock_pipeline_result
             return None
@@ -250,7 +290,12 @@ class TestValidateInput:
         ):
             result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
         assert result["title"] == "Arris SB8200 (192.168.100.1)"
@@ -262,7 +307,7 @@ class TestValidateInput:
         assert result["detection_info"]["actual_model"] == "SB8200-v2"
 
     @pytest.mark.asyncio
-    async def test_connectivity_failure_raises_cannot_connect(self, mock_hass):
+    async def test_connectivity_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
         """Test connectivity failure raises CannotConnectError."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -275,20 +320,29 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return failed_result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return failed_result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
         with pytest.raises(CannotConnectError, match="Connection refused"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_auth_failure_raises_invalid_auth(self, mock_hass):
+    async def test_auth_failure_raises_invalid_auth(self, mock_hass, mock_parser_class):
         """Test auth failure raises InvalidAuthError."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -301,20 +355,29 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return failed_result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return failed_result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
         with pytest.raises(InvalidAuthError, match="Bad credentials"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "admin", "password": "wrong"},
+                {
+                    "host": "192.168.100.1",
+                    "username": "admin",
+                    "password": "wrong",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_parser_detection_failure_raises_unsupported(self, mock_hass):
+    async def test_parser_detection_failure_raises_unsupported(self, mock_hass, mock_parser_class):
         """Test parser detection failure raises UnsupportedModemError."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -327,20 +390,29 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return failed_result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return failed_result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
         with pytest.raises(UnsupportedModemError, match="No parser matched"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_generic_failure_raises_cannot_connect(self, mock_hass):
+    async def test_generic_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
         """Test generic failure raises CannotConnectError."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -353,28 +425,34 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return failed_result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return failed_result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
         with pytest.raises(CannotConnectError, match="Unknown error"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_validation_with_user_selected_parser(self, mock_hass, mock_pipeline_result):
+    async def test_validation_with_user_selected_parser(self, mock_hass, mock_parser_class, mock_pipeline_result):
         """Test validation with user-selected parser."""
-        mock_parser_class = Mock()
-        mock_parser_class.name = "Arris SB8200"
-        mock_parser_class.__name__ = "ArrisSB8200Parser"
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return [mock_parser_class]
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
             elif func.__name__ == "get_auth_adapter_for_parser":
                 return None  # No adapter, will fall back to parser hints
             elif func.__name__ == "run_discovery_pipeline":
@@ -400,7 +478,7 @@ class TestValidateInput:
         assert result["supports_icmp"] is False
 
     @pytest.mark.asyncio
-    async def test_validation_without_actual_model(self, mock_hass):
+    async def test_validation_without_actual_model(self, mock_hass, mock_parser_class):
         """Test validation when parser doesn't return actual model."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -423,9 +501,13 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
@@ -435,20 +517,29 @@ class TestValidateInput:
         ):
             validation_result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "admin", "password": "pass"},
+                {
+                    "host": "192.168.100.1",
+                    "username": "admin",
+                    "password": "pass",
+                    "modem_choice": "Netgear CM600",
+                },
             )
 
         assert "actual_model" not in validation_result["detection_info"]
         assert validation_result["detection_info"]["modem_name"] == "Netgear CM600"
 
     @pytest.mark.asyncio
-    async def test_validation_stores_auth_discovery_status(self, mock_hass, mock_pipeline_result):
+    async def test_validation_stores_auth_discovery_status(self, mock_hass, mock_parser_class, mock_pipeline_result):
         """Test validation stores auth discovery status in result."""
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return mock_pipeline_result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return mock_pipeline_result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
@@ -458,7 +549,12 @@ class TestValidateInput:
         ):
             result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
         assert result["auth_discovery_status"] == "success"
@@ -466,7 +562,7 @@ class TestValidateInput:
         assert result["auth_discovery_error"] is None
 
     @pytest.mark.asyncio
-    async def test_validation_with_none_parser_instance(self, mock_hass):
+    async def test_validation_with_none_parser_instance(self, mock_hass, mock_parser_class):
         """Test validation handles None parser_instance gracefully."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -486,8 +582,10 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return result
             return None
@@ -500,7 +598,12 @@ class TestValidateInput:
         ):
             validation_result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Unknown Modem",
+                },
             )
 
         # manufacturer should be None when parser_instance is None
@@ -509,7 +612,7 @@ class TestValidateInput:
         assert validation_result["detection_info"]["modem_name"] == "Unknown Modem"
 
     @pytest.mark.asyncio
-    async def test_connectivity_failure_uses_default_message(self, mock_hass):
+    async def test_connectivity_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test connectivity failure uses default message when error is None."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -522,8 +625,10 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return failed_result
             return None
@@ -533,11 +638,16 @@ class TestValidateInput:
         with pytest.raises(CannotConnectError, match="Cannot connect to modem"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_auth_failure_uses_default_message(self, mock_hass):
+    async def test_auth_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test auth failure uses default message when error is None."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -550,8 +660,10 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return failed_result
             return None
@@ -561,11 +673,16 @@ class TestValidateInput:
         with pytest.raises(InvalidAuthError, match="Authentication failed"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "admin", "password": "pass"},
+                {
+                    "host": "192.168.100.1",
+                    "username": "admin",
+                    "password": "pass",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_parser_detection_failure_uses_default_message(self, mock_hass):
+    async def test_parser_detection_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test parser detection failure uses default message when error is None."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -578,8 +695,10 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return failed_result
             return None
@@ -589,11 +708,16 @@ class TestValidateInput:
         with pytest.raises(UnsupportedModemError, match="Could not detect modem type"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_generic_failure_uses_default_message(self, mock_hass):
+    async def test_generic_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test generic failure uses default message when error is None."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -606,8 +730,10 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
             elif func.__name__ == "run_discovery_pipeline":
                 return failed_result
             return None
@@ -617,11 +743,16 @@ class TestValidateInput:
         with pytest.raises(CannotConnectError, match="Discovery failed"):
             await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "", "password": ""},
+                {
+                    "host": "192.168.100.1",
+                    "username": "",
+                    "password": "",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
     @pytest.mark.asyncio
-    async def test_validation_stores_hnap_config(self, mock_hass):
+    async def test_validation_stores_hnap_config(self, mock_hass, mock_parser_class):
         """Test validation stores auth_hnap_config from pipeline result."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -650,9 +781,13 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
@@ -662,14 +797,19 @@ class TestValidateInput:
         ):
             validation_result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "admin", "password": "pass"},
+                {
+                    "host": "192.168.100.1",
+                    "username": "admin",
+                    "password": "pass",
+                    "modem_choice": "Arris SB8200",
+                },
             )
 
         assert validation_result["auth_hnap_config"] == hnap_config
         assert validation_result["auth_strategy"] == "hnap_session"
 
     @pytest.mark.asyncio
-    async def test_validation_stores_url_token_config(self, mock_hass):
+    async def test_validation_stores_url_token_config(self, mock_hass, mock_parser_class):
         """Test validation stores auth_url_token_config from pipeline result."""
         from custom_components.cable_modem_monitor.core.discovery.pipeline import (
             DiscoveryPipelineResult,
@@ -699,9 +839,13 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parsers":
-                return []
-            return result
+            if func.__name__ == "get_parser_by_name":
+                return mock_parser_class
+            elif func.__name__ == "get_auth_adapter_for_parser":
+                return None
+            elif func.__name__ == "run_discovery_pipeline":
+                return result
+            return None
 
         mock_hass.async_add_executor_job = mock_executor
 
@@ -711,7 +855,12 @@ class TestValidateInput:
         ):
             validation_result = await validate_input(
                 mock_hass,
-                {"host": "192.168.100.1", "username": "admin", "password": "pass"},
+                {
+                    "host": "192.168.100.1",
+                    "username": "admin",
+                    "password": "pass",
+                    "modem_choice": "Motorola MB8611",
+                },
             )
 
         assert validation_result["auth_url_token_config"] == url_token_config

@@ -261,6 +261,166 @@ def discover_auth(
         return AuthResult(success=False, error=str(e))
 
 
+def create_authenticated_session(
+    working_url: str,
+    username: str | None,
+    password: str | None,
+    legacy_ssl: bool,
+    static_auth_config: dict[str, Any],
+) -> AuthResult:
+    """Create authenticated session using static auth config from modem.yaml.
+
+    This is a simplified alternative to discover_auth() that applies
+    known auth configuration directly instead of probing the modem to
+    discover it dynamically.
+
+    Used when:
+    - User selected a known modem (has modem.yaml)
+    - modem.yaml contains verified auth configuration
+    - We want to skip dynamic auth discovery for speed and reliability
+
+    Args:
+        working_url: Verified URL from connectivity check
+        username: Login username (None for no-auth modems)
+        password: Login password (None for no-auth modems)
+        legacy_ssl: Whether to use legacy SSL ciphers
+        static_auth_config: Auth config from modem.yaml via get_static_auth_config():
+            - auth_strategy: str (e.g., "form_plain", "hnap_session")
+            - auth_form_config: dict | None
+            - auth_hnap_config: dict | None
+            - auth_url_token_config: dict | None
+
+    Returns:
+        AuthResult with authenticated session and HTML response (if available)
+
+    Example:
+        >>> adapter = get_auth_adapter_for_parser("MotorolaMB7621Parser")
+        >>> static_config = adapter.get_static_auth_config()
+        >>> result = create_authenticated_session(
+        ...     "http://192.168.100.1", "admin", "password", False, static_config
+        ... )
+        >>> if result.success:
+        ...     print(f"Authenticated with strategy: {result.strategy}")
+    """
+    from ..auth.handler import AuthHandler
+
+    # Create session with appropriate SSL settings
+    session = requests.Session()
+    session.verify = False
+
+    if legacy_ssl and working_url.startswith("https://"):
+        session.mount("https://", LegacySSLAdapter())
+
+    strategy = static_auth_config.get("auth_strategy", "no_auth")
+    form_config = static_auth_config.get("auth_form_config")
+    hnap_config = static_auth_config.get("auth_hnap_config")
+    url_token_config = static_auth_config.get("auth_url_token_config")
+
+    _LOGGER.debug(
+        "Creating authenticated session with static config: strategy=%s",
+        strategy,
+    )
+
+    # Handle no credentials case - just fetch the page
+    if not username and not password:
+        _LOGGER.debug("No credentials provided, fetching page without auth")
+        try:
+            resp = session.get(working_url, timeout=10)
+            return AuthResult(
+                success=True,
+                strategy="no_auth",
+                session=session,
+                html=resp.text,
+                form_config=form_config,
+                hnap_config=hnap_config,
+                url_token_config=url_token_config,
+            )
+        except Exception as e:
+            return AuthResult(success=False, error=f"Connection failed: {e}")
+
+    # No auth strategy - just fetch the page
+    if strategy == "no_auth":
+        _LOGGER.debug("No auth required per static config, fetching page")
+        try:
+            resp = session.get(working_url, timeout=10)
+            return AuthResult(
+                success=True,
+                strategy="no_auth",
+                session=session,
+                html=resp.text,
+                form_config=None,
+                hnap_config=None,
+                url_token_config=None,
+            )
+        except Exception as e:
+            return AuthResult(success=False, error=f"Connection failed: {e}")
+
+    # Use AuthHandler with static config
+    try:
+        handler = AuthHandler(
+            strategy=strategy,
+            form_config=form_config,
+            hnap_config=hnap_config,
+            url_token_config=url_token_config,
+        )
+
+        auth_result = handler.authenticate(
+            session=session,
+            base_url=working_url,
+            username=username,
+            password=password,
+            verbose=True,  # Log at INFO level for config flow
+        )
+
+        if not auth_result.success:
+            return AuthResult(
+                success=False,
+                error=auth_result.error_message or "Authentication failed",
+            )
+
+        # Get HNAP builder if this is an HNAP modem
+        hnap_builder = handler.get_hnap_builder()
+
+        # Get HTML content for validation
+        # For HNAP: no HTML (uses SOAP API via hnap_builder)
+        # For form/url_token: use auth response if available, otherwise fetch working_url
+        html_content = auth_result.response_html
+
+        if not html_content and not hnap_builder:
+            # Form auth response may not contain data - fetch the working URL
+            # This is the page the user would see after successful login
+            _LOGGER.debug(
+                "Auth response has no HTML, fetching %s to get page content",
+                working_url,
+            )
+            try:
+                resp = session.get(working_url, timeout=10)
+                html_content = resp.text
+                _LOGGER.debug(
+                    "Fetched %d bytes of HTML from %s",
+                    len(html_content) if html_content else 0,
+                    working_url,
+                )
+            except Exception as e:
+                _LOGGER.warning("Failed to fetch page after auth: %s", e)
+                # Continue without HTML - validation may still work via ResourceLoader
+
+        return AuthResult(
+            success=True,
+            strategy=strategy,
+            session=session,
+            html=html_content,
+            form_config=form_config,
+            hnap_config=hnap_config,
+            hnap_builder=hnap_builder,
+            url_token_config=url_token_config,
+        )
+
+    except Exception as e:
+        _LOGGER.exception("Static auth session creation failed: %s", e)
+        return AuthResult(success=False, error=str(e))
+
+
 # =============================================================================
 # STEP 3: PARSER DETECTION
 # =============================================================================

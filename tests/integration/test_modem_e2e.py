@@ -427,21 +427,31 @@ class TestDiscoveryPipelineE2E:
     but the actual user flow was broken.
     """
 
-    # Auth strategies fully supported by MockModemServer + AuthDiscovery
-    # Others need mock server improvements before they'll work
-    SUPPORTED_STRATEGIES = {AuthStrategy.FORM, AuthStrategy.HNAP}
+    # Auth strategies supported by dynamic discovery
+    # FORM and HNAP work with dynamic auth discovery
+    DYNAMIC_DISCOVERY_STRATEGIES = {AuthStrategy.FORM, AuthStrategy.HNAP}
+
+    # All auth strategies supported via static_auth_config (modem.yaml as source of truth)
+    # MockModemServer has handlers for all of these
+    STATIC_AUTH_STRATEGIES = {
+        AuthStrategy.FORM,
+        AuthStrategy.HNAP,
+        AuthStrategy.NONE,
+        AuthStrategy.BASIC,
+        AuthStrategy.URL_TOKEN,
+        AuthStrategy.REST_API,
+    }
 
     @pytest.mark.parametrize(
         "modem_path",
         [path for _, path in MODEMS_WITH_FIXTURES],
         ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
     )
-    def test_discovery_pipeline_succeeds(self, modem_path: Path):
-        """Test run_discovery_pipeline against MockModemServer.
+    def test_discovery_pipeline_dynamic_auth(self, modem_path: Path):
+        """Test run_discovery_pipeline with dynamic auth discovery.
 
-        This is THE critical test - it runs the exact same code path
-        that config_flow uses during setup. If this passes, users can
-        successfully add the modem via the UI.
+        Tests the legacy path where auth is discovered dynamically.
+        Only FORM and HNAP strategies support dynamic discovery.
         """
         from custom_components.cable_modem_monitor.core.discovery import (
             run_discovery_pipeline,
@@ -449,12 +459,11 @@ class TestDiscoveryPipelineE2E:
 
         config = load_modem_config(modem_path)
 
-        # Skip modems with unsupported auth strategies
-        # TODO: Add mock support for NONE, BASIC, URL_TOKEN, REST_API
-        if config.auth.strategy not in self.SUPPORTED_STRATEGIES:
+        # Skip modems with strategies that don't support dynamic discovery
+        if config.auth.strategy not in self.DYNAMIC_DISCOVERY_STRATEGIES:
             pytest.skip(
-                f"Auth strategy {config.auth.strategy.value} not yet supported "
-                f"by MockModemServer + AuthDiscovery integration"
+                f"Auth strategy {config.auth.strategy.value} requires static auth config "
+                f"(see test_discovery_pipeline_static_auth)"
             )
 
         # Get the parser class for user-selected flow
@@ -513,8 +522,8 @@ class TestDiscoveryPipelineE2E:
         if config.auth.strategy == AuthStrategy.HNAP:
             pytest.skip("HNAP modems require manual parser selection")
 
-        # Skip modems with unsupported auth strategies
-        if config.auth.strategy not in self.SUPPORTED_STRATEGIES:
+        # Skip modems with unsupported auth strategies for dynamic discovery
+        if config.auth.strategy not in self.DYNAMIC_DISCOVERY_STRATEGIES:
             pytest.skip(
                 f"Auth strategy {config.auth.strategy.value} not yet supported "
                 f"by MockModemServer + AuthDiscovery integration"
@@ -542,4 +551,72 @@ class TestDiscoveryPipelineE2E:
                 config.manufacturer,
                 config.model,
                 result.parser_name,
+            )
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_discovery_pipeline_static_auth(self, modem_path: Path):
+        """Test run_discovery_pipeline with static auth config from modem.yaml.
+
+        This tests the NEW "modem.yaml as source of truth" architecture where
+        known modems skip dynamic auth discovery and use verified config directly.
+
+        This enables support for ALL auth strategies (NONE, BASIC, URL_TOKEN,
+        REST_API) that don't work well with dynamic discovery.
+        """
+        from custom_components.cable_modem_monitor.core.discovery import (
+            run_discovery_pipeline,
+        )
+        from custom_components.cable_modem_monitor.modem_config import (
+            get_auth_adapter_for_parser,
+        )
+
+        config = load_modem_config(modem_path)
+
+        # Skip modems with strategies not in our static auth support list
+        if config.auth.strategy not in self.STATIC_AUTH_STRATEGIES:
+            pytest.skip(f"Auth strategy {config.auth.strategy.value} not yet supported")
+
+        # Get the parser class
+        import importlib
+
+        try:
+            module = importlib.import_module(config.parser.module)
+            parser_class = getattr(module, config.parser.class_name)
+        except Exception as e:
+            pytest.skip(f"Failed to import parser: {e}")
+
+        # Get static auth config from modem.yaml adapter
+        adapter = get_auth_adapter_for_parser(parser_class.__name__)
+        if adapter is None:
+            pytest.skip(f"No adapter for {parser_class.__name__}")
+
+        static_auth_config = adapter.get_static_auth_config()
+
+        with MockModemServer.from_modem_path(modem_path) as server:
+            # Run discovery pipeline with static auth config (skip dynamic discovery)
+            result = run_discovery_pipeline(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+                selected_parser=parser_class,
+                static_auth_config=static_auth_config,
+            )
+
+            # Pipeline should succeed
+            assert result.success, (
+                f"Static auth pipeline failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have used the strategy from static config
+            assert result.auth_strategy is not None, "No auth strategy in result"
+            _LOGGER.info(
+                "Static auth pipeline succeeded: %s %s (strategy=%s)",
+                config.manufacturer,
+                config.model,
+                result.auth_strategy,
             )

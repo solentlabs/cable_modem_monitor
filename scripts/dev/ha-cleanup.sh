@@ -12,8 +12,8 @@ echo "🐳 Checking for running Home Assistant containers..."
 HA_CONTAINERS=$(docker ps -q --filter "name=ha-cable-modem" 2>/dev/null || true)
 
 if [ -n "$HA_CONTAINERS" ]; then
-    echo "   Found running containers, stopping..."
-    docker stop $HA_CONTAINERS 2>/dev/null || true
+    echo "   Found running containers, stopping gracefully (30s timeout)..."
+    docker stop -t 30 $HA_CONTAINERS 2>/dev/null || true
     docker rm -f $HA_CONTAINERS 2>/dev/null || true
     echo "✅ Stopped Home Assistant containers"
 else

@@ -4,14 +4,14 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 34
+**Total Tests:** 37
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
-| [test_modem_e2e.py](test_modem_e2e.py) | 6 | End-to-end tests for modems using MockModemServer. |
+| [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
 
 ## Test Details
 
@@ -91,6 +91,9 @@ End-to-end tests for modems using MockModemServer.
 Auto-discovers all modems in modems/**/modem.yaml and runs
 a complete auth + parse workflow against MockModemServer.
 
+Note: Tests use the repo root modems/ directory (source of truth),
+not custom_components/.../modems/ (deployment sync target).
+
 **TestModemE2E** (5 tests)
 : End-to-end tests for modem configurations.
 
@@ -104,6 +107,13 @@ a complete auth + parse workflow against MockModemServer.
 : Full workflow tests: auth -> fetch -> parse.
 
 - `test_complete_workflow`: Test complete workflow: auth, fetch data pages, parse.
+
+**TestDiscoveryPipelineE2E** (3 tests)
+: Test the actual discovery pipeline against MockModemServer.
+
+- `test_discovery_pipeline_dynamic_auth`: Test run_discovery_pipeline with dynamic auth discovery.
+- `test_discovery_pipeline_auto_detection`: Test discovery pipeline with auto-detection (no pre-selected parser).
+- `test_discovery_pipeline_static_auth`: Test run_discovery_pipeline with static auth config from modem.yaml.
 
 ## Fixtures
 

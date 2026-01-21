@@ -118,10 +118,10 @@ async def build_parser_dropdown(hass: HomeAssistant) -> list[str]:
         hass: Home Assistant instance
 
     Returns:
-        List of modem display names including "auto" option
+        List of modem display names (user must select their modem model)
     """
     parser_names: list[str] = await hass.async_add_executor_job(get_parser_dropdown_from_index)
-    return ["auto"] + parser_names
+    return parser_names
 
 
 # =============================================================================
@@ -171,6 +171,40 @@ async def load_parser_hints(hass: HomeAssistant, selected_parser: type[ModemPars
     return fallback_hints
 
 
+async def load_static_auth_config(
+    hass: HomeAssistant, selected_parser: type[ModemParser] | None
+) -> dict[str, Any] | None:
+    """Load static auth config from modem.yaml for known modems.
+
+    This enables the "modem.yaml as source of truth" architecture where
+    known modems skip dynamic auth discovery and use verified config directly.
+
+    Args:
+        hass: Home Assistant instance
+        selected_parser: Selected parser class or None
+
+    Returns:
+        Static auth config dict or None if not a known modem
+    """
+    if not selected_parser:
+        return None
+
+    from .modem_config import get_auth_adapter_for_parser
+
+    adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, selected_parser.__name__)
+    if not adapter:
+        _LOGGER.info("Using dynamic auth discovery for %s (no modem.yaml)", selected_parser.name)
+        return None
+
+    static_config: dict[str, Any] = await hass.async_add_executor_job(adapter.get_static_auth_config)
+    _LOGGER.info(
+        "Using modem.yaml auth config for %s (strategy=%s)",
+        selected_parser.name,
+        static_config.get("auth_strategy"),
+    )
+    return static_config
+
+
 # =============================================================================
 # Input Validation (HA-specific - orchestrates for config flow)
 # =============================================================================
@@ -203,20 +237,23 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     host = data[CONF_HOST]
     _validate_host_format(host)
 
-    # Get selected parser if user chose one (uses index for O(1) lookup)
+    # Get selected parser (mandatory - user must select their modem model)
     modem_choice = data.get(CONF_MODEM_CHOICE)
-    selected_parser = None
-    if modem_choice and modem_choice != "auto":
-        # User selected specific parser - load just that one via index
-        choice_clean = modem_choice.rstrip(" *")
-        selected_parser = await hass.async_add_executor_job(get_parser_by_name, choice_clean)
-        if selected_parser:
-            _LOGGER.info("User selected parser: %s", choice_clean)
-        else:
-            _LOGGER.warning("Parser '%s' not found, using auto-detection", choice_clean)
+    if not modem_choice:
+        raise ValueError("Modem selection is required")
+
+    choice_clean = modem_choice.rstrip(" *")
+    selected_parser = await hass.async_add_executor_job(get_parser_by_name, choice_clean)
+    if not selected_parser:
+        raise UnsupportedModemError(f"Parser '{choice_clean}' not found")
+    _LOGGER.info("User selected parser: %s", choice_clean)
 
     # Load parser auth hints if user selected a specific parser
     parser_hints = await load_parser_hints(hass, selected_parser)
+
+    # Get static auth config from modem.yaml for known modems
+    # This allows us to skip dynamic auth discovery for faster, more reliable setup
+    static_auth_config = await load_static_auth_config(hass, selected_parser)
 
     # Run discovery pipeline (single-pass, response-driven)
     result = await hass.async_add_executor_job(
@@ -226,6 +263,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         data.get(CONF_PASSWORD),
         selected_parser,
         parser_hints,
+        static_auth_config,  # None for fallback = dynamic discovery
     )
 
     # Handle pipeline failures
