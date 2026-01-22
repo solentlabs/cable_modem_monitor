@@ -160,26 +160,28 @@ See `_authenticate()` in `modem_scraper.py`.
 
 ---
 
-### 6. Broad Exception Handling in AuthDiscovery
+### 6. Broad Exception Handling in Core Modules (RESOLVED)
 
-**Problem:** 8 instances of `except Exception as e:` in discovery.py catch all errors indiscriminately. Network errors, parsing errors, and auth errors all get the same generic handling.
+**Resolution:** v3.13.0 (January 2026)
 
-**Impact:**
-- Hard to debug specific failure modes
-- Users see generic "Connection failed" instead of actionable messages
-- Silent failures may mask real issues
+Refactored ~36 `except Exception` blocks across 3 core files:
+- `core/auth/discovery.py` (14 blocks)
+- `core/modem_scraper.py` (15 blocks)
+- `core/discovery/steps.py` (7 blocks)
 
-**Remediation:**
-1. Catch specific exceptions: `requests.RequestException`, `ValueError`, `KeyError`
-2. Add distinct error messages for each failure mode
-3. Preserve exception chains for debugging
+**Approach:**
+- Added `ParsingError` and `ResourceFetchError` to `core/exceptions.py` with context attributes
+- Replaced broad catches with specific exceptions: `requests.RequestException` for HTTP,
+  `(ImportError, FileNotFoundError, AttributeError, KeyError)` for config loading,
+  `(AttributeError, TypeError, KeyError, ValueError)` for parsing
+- Added fallback `Exception` catch with `exc_info=True` for truly unexpected errors
+- Comments mark intentionally broad catches (e.g., strategy exploration)
 
-**Effort:** Low (1 session)
-
-**Source:** External code review (Claude, Jan 2026)
-
-**Files:**
+**Files Changed:**
+- `custom_components/cable_modem_monitor/core/exceptions.py` - Added new exception types
 - `custom_components/cable_modem_monitor/core/auth/discovery.py`
+- `custom_components/cable_modem_monitor/core/modem_scraper.py`
+- `custom_components/cable_modem_monitor/core/discovery/steps.py`
 
 ---
 
