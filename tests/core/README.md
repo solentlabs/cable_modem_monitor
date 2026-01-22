@@ -4,14 +4,14 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 347
+**Total Tests:** 348
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
 | [test_auth_detection.py](test_auth_detection.py) | 10 | Tests for auth/detection.py - login page detection. |
-| [test_auth_discovery.py](test_auth_discovery.py) | 48 | Tests for Authentication Discovery. |
+| [test_auth_discovery.py](test_auth_discovery.py) | 49 | Tests for Authentication Discovery. |
 | [test_auth_handler.py](test_auth_handler.py) | 29 | Tests for the AuthHandler class. |
 | [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
@@ -101,13 +101,14 @@ Tests for Authentication Discovery.
 - `test_login_form_detected`: Test that login form is detected.
 - `test_login_form_without_credentials_returns_error`: Test that login form without credentials returns error.
 
-**TestFormIntrospection** (6 tests)
+**TestFormIntrospection** (7 tests)
 : Test form field detection - table-driven.
 
 - `test_username_field_detection`: Table-driven test for username field detection.
 - `test_form_attributes`: Table-driven test for form action and method extraction.
 - `test_invalid_forms_return_none`: Table-driven test for forms that should return None.
 - `test_find_password_by_type`: Test finding password field by type='password'.
+- `test_find_password_by_type_case_insensitive`: Test finding password field with type='Password' (capital P).
 - `test_hidden_fields_captured`: Test that hidden fields are captured from form.
 - `test_parser_hints_override_detection`: Test that parser hints override generic detection.
 

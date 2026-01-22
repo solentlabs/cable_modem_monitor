@@ -528,6 +528,23 @@ class TestFormIntrospection:
         config = discovery._parse_login_form(html, mock_parser)
         assert config.password_field == "mySecretField"
 
+    def test_find_password_by_type_case_insensitive(self, discovery, mock_parser):
+        """Test finding password field with type='Password' (capital P).
+
+        Regression test for #75: CGA2121 uses type="Password" (capital P) which
+        was not matched by the case-sensitive check. This caused auth discovery
+        to fail.
+        """
+        html = """
+        <form>
+            <input type="text" name="username_login" />
+            <input type="Password" name="password_login" />
+        </form>
+        """
+        config = discovery._parse_login_form(html, mock_parser)
+        assert config is not None, "Form with type='Password' should be parsed"
+        assert config.password_field == "password_login"
+
     def test_hidden_fields_captured(self, discovery, mock_parser):
         """Test that hidden fields are captured from form."""
         html = """

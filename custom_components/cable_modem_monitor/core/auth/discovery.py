@@ -1229,8 +1229,13 @@ class AuthDiscovery:
         return None
 
     def _find_password_field(self, form) -> str | None:
-        """Find password field - type='password' is definitive."""
-        pwd_input = form.find("input", {"type": "password"})
+        """Find password field - type='password' is definitive.
+
+        Uses case-insensitive matching for type attribute since some modems
+        use type="Password" (capital P), e.g., Technicolor CGA2121.
+        """
+        # Case-insensitive match: some modems use type="Password" (capital P)
+        pwd_input = form.find("input", {"type": lambda t: t and t.lower() == "password"})
         if pwd_input:
             field_name = pwd_input.get("name")
             return str(field_name) if field_name else None
