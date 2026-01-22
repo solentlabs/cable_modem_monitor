@@ -20,31 +20,28 @@ This document tracks known technical debt, architectural issues, and improvement
 
 ## P1 - High Priority
 
-### 1. `__init__.py` Monolith (982 lines)
+### 1. `__init__.py` Monolith (RESOLVED)
 
-**Problem:** The main integration file handles too many responsibilities:
-- Async setup and teardown
-- Service registration (dashboard generation, history clearing)
-- Coordinator creation and management
-- Channel normalization logic
-- Entity migration
+**Resolution:** v3.13.0 (January 2026)
 
-**Impact:**
-- Difficult to test individual components
-- Hard to understand data flow
-- Changes risk unintended side effects
-- `__init__.py` coverage at 34.77% reflects this complexity
+Extracted the 982-line `__init__.py` into three focused modules:
+1. `channel_utils.py` - Channel normalization functions (`normalize_channel_type`, `extract_channel_id`, `normalize_channels`, `get_channel_info`, `group_channels_by_type`, `get_channel_types`)
+2. `services.py` - Dashboard generation and history clearing services
+3. `coordinator.py` - Coordinator creation helpers (`create_health_monitor`, `create_update_function`, `perform_initial_refresh`)
 
-**Remediation:**
-1. Extract `services.py` - Dashboard generation and history clearing services
-2. Extract `coordinator.py` - DataUpdateCoordinator subclass and update logic
-3. Extract `channel_utils.py` - Channel normalization and lookup helpers
-4. Keep `__init__.py` as thin orchestration layer
+**Result:**
+- `__init__.py` reduced from 982 lines to ~290 lines (thin orchestration layer)
+- Each module has single responsibility
+- Improved testability (functions can be unit tested in isolation)
 
-**Effort:** Medium (2-3 focused sessions)
-
-**Files:**
-- `custom_components/cable_modem_monitor/__init__.py`
+**Files Changed:**
+- Created `custom_components/cable_modem_monitor/channel_utils.py`
+- Created `custom_components/cable_modem_monitor/services.py`
+- Created `custom_components/cable_modem_monitor/coordinator.py`
+- Simplified `custom_components/cable_modem_monitor/__init__.py`
+- Updated `tests/components/test_init.py` → imports from `channel_utils`
+- Updated `tests/components/test_coordinator_improvements.py` → imports from `coordinator`
+- Updated `tests/components/test_version_and_startup.py` → patch targets
 
 ---
 

@@ -62,10 +62,11 @@ class TestVersionLogging:
         # Mock the necessary components
         with (
             patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
             patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
             caplog.at_level(logging.INFO),
         ):
@@ -73,7 +74,8 @@ class TestVersionLogging:
             mock_parser_class = Mock()
             mock_parser_class.return_value = Mock()
             mock_get_parser.return_value = mock_parser_class
-            mock_health.return_value = Mock()
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -138,9 +140,10 @@ class TestParserSelectionOptimization:
         with (
             patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
             patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
         ):
             # Setup mocks
@@ -148,7 +151,8 @@ class TestParserSelectionOptimization:
             mock_parser_instance = Mock()
             mock_parser_class.return_value = mock_parser_instance
             mock_get_parser_by_name.return_value = mock_parser_class
-            mock_health.return_value = Mock()
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -198,14 +202,16 @@ class TestParserSelectionOptimization:
         with (
             patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
             patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
         ):
             # Setup mocks
             mock_get_parsers.return_value = []
-            mock_health.return_value = Mock()
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -255,16 +261,18 @@ class TestParserSelectionOptimization:
         with (
             patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
             patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
             caplog.at_level(logging.WARNING),
         ):
             # Setup mocks
             mock_get_parser_by_name.return_value = None  # Parser not found
             mock_get_parsers.return_value = []
-            mock_health.return_value = Mock()
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -320,10 +328,11 @@ class TestProtocolOptimizationIntegration:
         with (
             patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
             patch("custom_components.cable_modem_monitor.DataOrchestrator") as mock_scraper_class,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
             patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
         ):
             # Setup mocks
@@ -332,7 +341,8 @@ class TestProtocolOptimizationIntegration:
             mock_parser_class.return_value = mock_parser_instance
             mock_get_parser.return_value = mock_parser_class
             mock_scraper_class.return_value = Mock()
-            mock_health.return_value = Mock()
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()

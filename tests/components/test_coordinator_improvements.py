@@ -14,9 +14,9 @@ class TestCoordinatorSSLContext:
         """Test that SSL context is created in executor to avoid blocking I/O."""
         import inspect
 
-        from custom_components.cable_modem_monitor import _create_health_monitor
+        from custom_components.cable_modem_monitor.coordinator import create_health_monitor
 
-        source = inspect.getsource(_create_health_monitor)
+        source = inspect.getsource(create_health_monitor)
 
         # Verify SSL context creation pattern exists
         assert "create_ssl_context" in source
@@ -49,9 +49,9 @@ class TestCoordinatorPartialData:
         """Test that coordinator returns partial data when scraper fails but health check succeeds."""
         import inspect
 
-        from custom_components.cable_modem_monitor import _create_update_function
+        from custom_components.cable_modem_monitor.coordinator import create_update_function
 
-        source = inspect.getsource(_create_update_function)
+        source = inspect.getsource(create_update_function)
 
         # Check for partial data return pattern when scraper fails but health succeeds
         assert "cable_modem_connection_status" in source
@@ -125,9 +125,9 @@ class TestCoordinatorStateCheck:
         """Test that async_config_entry_first_refresh is used during SETUP_IN_PROGRESS."""
         import inspect
 
-        from custom_components.cable_modem_monitor import _perform_initial_refresh
+        from custom_components.cable_modem_monitor.coordinator import perform_initial_refresh
 
-        source = inspect.getsource(_perform_initial_refresh)
+        source = inspect.getsource(perform_initial_refresh)
 
         # Check for state check pattern
         assert "ConfigEntryState.SETUP_IN_PROGRESS" in source
@@ -138,9 +138,9 @@ class TestCoordinatorStateCheck:
         """Test that async_refresh is used when entry is already LOADED."""
         import inspect
 
-        from custom_components.cable_modem_monitor import _perform_initial_refresh
+        from custom_components.cable_modem_monitor.coordinator import perform_initial_refresh
 
-        source = inspect.getsource(_perform_initial_refresh)
+        source = inspect.getsource(perform_initial_refresh)
 
         # Check that both refresh methods are used conditionally
         assert "else:" in source
