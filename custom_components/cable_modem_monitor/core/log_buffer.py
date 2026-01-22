@@ -108,25 +108,28 @@ class BufferingHandler(logging.Handler):
 def setup_log_buffer(hass: HomeAssistant) -> None:
     """Set up the log buffer and install the handler.
 
-    Should be called once during integration setup.
+    Should be called once during integration setup. On reload, reuses the existing
+    buffer to preserve log history.
 
     Args:
         hass: Home Assistant instance
     """
-    # Create buffer and store in hass.data
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
-
-    buffer = LogBuffer()
-    hass.data[DOMAIN][LOG_BUFFER_KEY] = buffer
 
     # Install handler on our root logger
     logger = logging.getLogger(f"custom_components.{DOMAIN}")
 
-    # Check if we already have a BufferingHandler (avoid duplicates on reload)
+    # Check if we already have a BufferingHandler (reuse on reload)
     for handler in logger.handlers:
         if isinstance(handler, BufferingHandler):
+            # Reuse existing buffer - preserve logs across reloads
+            hass.data[DOMAIN][LOG_BUFFER_KEY] = handler.buffer
             return
+
+    # First setup - create new buffer and handler
+    buffer = LogBuffer()
+    hass.data[DOMAIN][LOG_BUFFER_KEY] = buffer
 
     handler = BufferingHandler(buffer, level=logging.INFO)
     handler.setFormatter(logging.Formatter("%(message)s"))
