@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Test credentials for MockModemServer
+# Test credentials for MockModemServer - use "pw" instead of "password" to avoid
+# browser password managers flagging these as real credentials during development
 TEST_USERNAME = "admin"
 TEST_PASSWORD = "pw"
 

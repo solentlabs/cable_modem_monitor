@@ -34,7 +34,8 @@ from .mock_modem_server import MockModemServer
 
 _LOGGER = logging.getLogger(__name__)
 
-# Test credentials
+# Test credentials - use "pw" instead of "password" to avoid browser password managers
+# flagging these as real credentials during development
 TEST_USERNAME = "admin"
 TEST_PASSWORD = "pw"
 

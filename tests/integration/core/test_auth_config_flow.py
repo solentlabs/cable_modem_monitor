@@ -55,7 +55,7 @@ class TestSetupDiscoveryBasicAuth:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -89,7 +89,7 @@ class TestSetupDiscoveryFormAuth:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -104,7 +104,7 @@ class TestSetupDiscoveryFormAuth:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -123,7 +123,7 @@ class TestSetupDiscoveryFormAuth:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -167,7 +167,7 @@ class TestSetupDiscoveryRedirect:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -189,7 +189,7 @@ class TestSetupDiscoveryHNAP:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -208,7 +208,7 @@ class TestSetupDiscoveryUnknown:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -240,7 +240,7 @@ class TestAuthenticatedSession:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -253,7 +253,7 @@ class TestAuthenticatedSession:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 
@@ -288,7 +288,7 @@ class TestConfigEntryIntegration:
         result = discover_auth(
             working_url=host,
             username="admin",
-            password="password",
+            password="pw",
             legacy_ssl=False,
         )
 

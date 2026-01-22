@@ -62,11 +62,11 @@ class TestE2EBasicAuth:
             session=session,
             base_url=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
         assert html is None  # Basic auth does NOT return HTML
-        assert session.auth == ("admin", "password")
+        assert session.auth == ("admin", "pw")
 
         # Step 3: Multiple polling cycles - now session.auth is set, all requests work
         for i in range(5):
@@ -97,11 +97,11 @@ class TestE2EBasicAuth:
             session=session,
             base_url=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
         assert html is None  # Basic auth does NOT return HTML
-        assert session.auth == ("admin", "password")
+        assert session.auth == ("admin", "pw")
 
         # Verify we can now fetch data
         response = session.get(basic_auth_server.url, timeout=10)
@@ -138,7 +138,7 @@ class TestE2EFormAuth:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
         assert len(session.cookies) > 0, "Should have session cookie"
@@ -204,7 +204,7 @@ class TestE2ERedirectFlow:
         # Step 2: Submit login
         response = session.post(
             f"{http_302_redirect_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -238,7 +238,7 @@ class TestE2EHTTPSWorkflow:
             session=session,
             base_url=https_form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
 
@@ -314,7 +314,7 @@ class TestE2EMultipleModemTypes:
             session=session2,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         r2 = session2.get(f"{form_auth_server.url}/status.html", timeout=10)
         assert "Cable Modem Status" in r2.text
@@ -327,7 +327,7 @@ class TestE2EMultipleModemTypes:
             session=session3,
             base_url=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         r3 = session3.get(basic_auth_server.url, timeout=10)
         assert "Cable Modem Status" in r3.text

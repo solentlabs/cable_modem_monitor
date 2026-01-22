@@ -55,7 +55,7 @@ class TestHTTP302Redirects:
         # Login
         response = session.post(
             f"{http_302_redirect_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=False,
             timeout=10,
         )
@@ -73,7 +73,7 @@ class TestHTTP302Redirects:
         # Login with follow redirects
         response = session.post(
             f"{http_302_redirect_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -141,7 +141,7 @@ class TestMetaRefreshRedirects:
         # Login (session cookies are what matters, not response)
         _ = session.post(
             f"{redirect_auth_server.url}/login",
-            data={"user": "admin", "pass": "password"},
+            data={"user": "admin", "pass": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -165,7 +165,7 @@ class TestRedirectChains:
         # Login (sets cookie) -> redirects to /data
         session.post(
             f"{http_302_redirect_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -193,7 +193,7 @@ class TestRedirectChains:
         # Login
         session.post(
             f"{http_302_redirect_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
