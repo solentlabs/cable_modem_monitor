@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 288
+**Total Tests:** 302
 
 ## Test Files
 
@@ -18,7 +18,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
 | [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
-| [test_init.py](test_init.py) | 15 | Tests for __init__.py helper functions. |
+| [test_init.py](test_init.py) | 29 | Tests for __init__.py helper functions. |
 | [test_modem_scraper.py](test_modem_scraper.py) | 86 | Tests for Cable Modem Monitor scraper. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
@@ -102,6 +102,22 @@ Tests for config_flow_helpers.py.
 
 **TestBuildParserDropdown** (0 tests)
 : Tests for build_parser_dropdown function.
+
+
+**TestGetAuthTypesForParser** (0 tests)
+: Tests for get_auth_types_for_parser function.
+
+
+**TestNeedsAuthTypeSelection** (0 tests)
+: Tests for needs_auth_type_selection function.
+
+
+**TestGetAuthTypeDropdown** (0 tests)
+: Tests for get_auth_type_dropdown function.
+
+
+**TestBuildStaticConfigForAuthType** (0 tests)
+: Tests for _build_static_config_for_auth_type function.
 
 
 **TestLoadParserHints** (0 tests)
@@ -324,6 +340,28 @@ Tests for __init__.py helper functions.
 - `test_upstream_ofdma_from_is_ofdm_flag`: OFDMA upstream detected from is_ofdm flag.
 - `test_empty_channel`: Empty channel defaults correctly.
 - `test_case_insensitivity`: Channel type matching is case-insensitive.
+
+**TestExtractChannelId** (10 tests)
+: Tests for _extract_channel_id function.
+
+- `test_numeric_string`: Numeric string channel ID.
+- `test_numeric_int`: Integer channel ID (already numeric).
+- `test_channel_field_fallback`: Falls back to 'channel' field if 'channel_id' missing.
+- `test_ofdm_prefix`: OFDM-prefixed channel ID from G54 parser.
+- `test_ofdma_prefix`: OFDMA-prefixed channel ID from G54 parser.
+- `test_other_prefixes`: Other prefixed formats should also work.
+- `test_missing_channel_id`: Returns default when no channel_id or channel field.
+- `test_unparseable_string`: Returns default for unparseable strings.
+- `test_none_value`: Returns default when channel_id is None.
+- `test_whitespace_handling`: Handles whitespace in channel IDs.
+
+**TestNormalizeChannels** (4 tests)
+: Tests for _normalize_channels function.
+
+- `test_downstream_normalization`: Test downstream channel normalization.
+- `test_upstream_ofdma_channels`: Test upstream OFDMA channel normalization (G54-style).
+- `test_channels_sorted_by_frequency`: Channels within a type are sorted by frequency.
+- `test_empty_channels`: Empty channel list returns empty dict.
 
 ### test_modem_scraper.py
 

@@ -1,4 +1,4 @@
-.PHONY: help sync test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help sync test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell mock
 
 # Default target - show help
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  make test        - Run full test suite with coverage (creates venv)"
 	@echo "  make test-quick  - Quick test run (assumes venv exists)"
 	@echo "  make test-simple - Simple test without venv (global install)"
+	@echo "  make mock MODEM=g54 - Run mock server (e.g., g54, mb7621, sb8200)"
 	@echo "  make clean       - Remove test artifacts and cache files"
 	@echo ""
 	@echo "Code Quality:"
@@ -53,6 +54,11 @@ test-quick: sync
 # Simple test without venv
 test-simple:
 	@bash scripts/dev/test_simple.sh
+
+# Run mock modem server for manual testing
+# Usage: make mock MODEM=g54
+mock:
+	@python3 scripts/mock_server.py $(MODEM)
 
 # Clean test artifacts
 clean:

@@ -4,16 +4,51 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 37
+**Total Tests:** 44
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
+| [test_config_flow_e2e.py](test_config_flow_e2e.py) | 7 | E2E tests for config flow against mock modem servers. |
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
 
 ## Test Details
+
+### test_config_flow_e2e.py
+
+E2E tests for config flow against mock modem servers.
+
+Tests the full config flow validation pipeline using MockModemServer
+to simulate real modem behavior without hardware.
+
+**TestAuthTypeSelection** (2 tests)
+: Test that auth type dropdown appears for correct modems.
+
+- `test_multi_auth_modem_needs_selection`: Modems with multiple auth types should show dropdown.
+- `test_single_auth_modem_no_selection`: Modems with single auth type should not show dropdown.
+
+**TestStaticAuthConfig** (1 tests)
+: Test that static auth config is built correctly from modem.yaml.
+
+- `test_build_static_auth_config`: Static auth config should have correct strategy.
+
+**TestDiscoveryPipelineE2E** (1 tests)
+: E2E tests running discovery pipeline against mock servers.
+
+- `test_discovery_with_static_auth`: Discovery pipeline should succeed with static auth config.
+
+**TestFormAuthE2E** (2 tests)
+: E2E tests for form-based authentication.
+
+- `test_sb6190_form_auth`: SB6190 form auth should authenticate and parse.
+- `test_sb6190_wrong_credentials`: SB6190 form auth should fail with wrong credentials.
+
+**TestNoAuthE2E** (1 tests)
+: E2E tests for modems without authentication.
+
+- `test_sb6190_no_auth`: SB6190 no-auth variant should work without credentials.
 
 ### test_fixture_validation.py
 
