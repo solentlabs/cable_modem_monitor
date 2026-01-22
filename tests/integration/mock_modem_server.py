@@ -54,21 +54,27 @@ class MockModemServer:
         self,
         modem_path: Path | str,
         port: int | None = None,
+        host: str = "127.0.0.1",
         auth_enabled: bool = True,
         ssl_context: ssl.SSLContext | None = None,
+        auth_type: str | None = None,
     ):
         """Initialize MockModemServer.
 
         Args:
             modem_path: Path to modem directory containing modem.yaml.
             port: Port to listen on. If None, finds a free port.
+            host: Host to bind to. Default 127.0.0.1, use 0.0.0.0 for external access.
             auth_enabled: If False, bypass auth and serve fixtures directly.
             ssl_context: SSL context for HTTPS. If None, uses HTTP.
+            auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
         """
         self.modem_path = Path(modem_path)
         self.port = port or _find_free_port()
+        self.host = host
         self.auth_enabled = auth_enabled
         self.ssl_context = ssl_context
+        self.auth_type_override = auth_type
 
         # Load configuration
         self.config = load_modem_config(self.modem_path)
@@ -91,13 +97,19 @@ class MockModemServer:
         if not self.auth_enabled:
             return NoAuthHandler(self.config, self.fixtures_path)
 
-        # Get the default auth type from auth.types{}
+        # Get the auth type to use
         auth_types = self.config.auth.types
         if not auth_types:
             return NoAuthHandler(self.config, self.fixtures_path)
 
-        # Get the first (default) auth type
-        auth_type = next(iter(auth_types.keys()))
+        # Use override if provided, otherwise use first (default) auth type
+        if self.auth_type_override:
+            if self.auth_type_override not in auth_types:
+                available = list(auth_types.keys())
+                raise ValueError(f"Auth type '{self.auth_type_override}' not in modem.yaml. Available: {available}")
+            auth_type = self.auth_type_override
+        else:
+            auth_type = next(iter(auth_types.keys()))
 
         # Map auth type string to handler
         handler_map = {
@@ -119,7 +131,8 @@ class MockModemServer:
     def url(self) -> str:
         """Get the server URL."""
         scheme = "https" if self.ssl_context else "http"
-        return f"{scheme}://127.0.0.1:{self.port}"
+        display_host = self.host if self.host != "0.0.0.0" else "127.0.0.1"
+        return f"{scheme}://{display_host}:{self.port}"
 
     def start(self) -> None:
         """Start the server in a background thread."""
@@ -162,7 +175,7 @@ class MockModemServer:
                 if body:
                     self.wfile.write(body)
 
-        self._server = HTTPServer(("127.0.0.1", self.port), RequestHandler)
+        self._server = HTTPServer((self.host, self.port), RequestHandler)
 
         # Wrap socket with SSL if context provided
         if self.ssl_context:
@@ -200,6 +213,7 @@ class MockModemServer:
         port: int | None = None,
         auth_enabled: bool = True,
         ssl_context: ssl.SSLContext | None = None,
+        auth_type: str | None = None,
     ) -> Generator[MockModemServer, None, None]:
         """Context manager to start and stop server.
 
@@ -208,11 +222,12 @@ class MockModemServer:
             port: Optional port number.
             auth_enabled: If False, bypass auth and serve fixtures directly.
             ssl_context: SSL context for HTTPS. If None, uses HTTP.
+            auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
 
         Yields:
             Started MockModemServer instance.
         """
-        server = cls(modem_path, port, auth_enabled=auth_enabled, ssl_context=ssl_context)
+        server = cls(modem_path, port, auth_enabled=auth_enabled, ssl_context=ssl_context, auth_type=auth_type)
         server.start()
         try:
             yield server

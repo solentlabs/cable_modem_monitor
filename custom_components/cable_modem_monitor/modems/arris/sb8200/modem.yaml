@@ -135,8 +135,8 @@ capabilities:
 # STATUS
 # =============================================================================
 status_info:
-  status: verified
-  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/42"
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/81"
 
 # =============================================================================
 # METADATA
@@ -187,3 +187,4 @@ references:
   community_letter: "https://community.surfboard.com/sb8200-59/open-letter-to-arris-why-do-you-disable-basic-functionality-e-g-software-reboot-on-the-sb8200-5829"
   issue_http: "https://github.com/solentlabs/cable_modem_monitor/issues/42"
   issue_https: "https://github.com/solentlabs/cable_modem_monitor/issues/81"
+  source_code: "https://sourceforge.net/projects/c8200-cable-modem.arris/"

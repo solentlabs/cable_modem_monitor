@@ -659,4 +659,8 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
                 ),
             ),
             errors=errors,
+            description_placeholders={
+                "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
+                "last_detection": self._format_last_detection(entry_data.get(CONF_LAST_DETECTION, "Never")),
+            },
         )

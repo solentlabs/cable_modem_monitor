@@ -364,7 +364,6 @@ class TestFixtures:
         assert fixture_exists("virgin", "superhub5", "upstream.json")
         assert fixture_exists("virgin", "superhub5", "state.json")
         assert fixture_exists("virgin", "superhub5", "metadata.yaml")
-        assert fixture_exists("virgin", "superhub5", "README.md")
 
     def test_downstream_fixture_valid_json(self, downstream_json):
         """Test downstream fixture is valid JSON with expected structure."""

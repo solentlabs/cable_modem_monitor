@@ -753,15 +753,6 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "note": "Exception details have been sanitized for security",
         }
 
-    # Add parser detection history if available (helpful for troubleshooting)
-    if "_parser_detection_history" in data:
-        diagnostics["parser_detection_history"] = data["_parser_detection_history"]
-    else:
-        diagnostics["parser_detection_history"] = {
-            "note": "Parser detection succeeded on first attempt",
-            "attempted_parsers": [],
-        }
-
     # Add HNAP authentication attempt details if available
     # This helps debug auth failures by showing exactly what requests we sent
     diagnostics["hnap_auth_debug"] = _get_hnap_auth_attempt(coordinator)

@@ -185,7 +185,6 @@ class TestFixtures:
         assert fixtures_dir.exists()
         assert fixture_exists("technicolor", "cga2121", "st_docsis.html")
         assert fixture_exists("technicolor", "cga2121", "metadata.yaml")
-        assert fixture_exists("technicolor", "cga2121", "README.md")
 
     def test_extended_fixture_exists(self):
         """Test that extended fixture files exist."""

@@ -142,15 +142,20 @@ async def get_auth_types_for_parser(hass: HomeAssistant, selected_parser: type[M
         Returns ["none"] if parser not found or no modem.yaml.
     """
     if not selected_parser:
+        _LOGGER.debug("get_auth_types_for_parser: no parser selected")
         return ["none"]
 
     from .modem_config import get_auth_adapter_for_parser
 
-    adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, selected_parser.__name__)
+    parser_name = selected_parser.__name__
+    _LOGGER.debug("get_auth_types_for_parser: looking up adapter for %s", parser_name)
+    adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, parser_name)
     if not adapter:
+        _LOGGER.debug("get_auth_types_for_parser: no adapter found for %s", parser_name)
         return ["none"]
 
     auth_types: list[str] = adapter.get_available_auth_types()
+    _LOGGER.debug("get_auth_types_for_parser: %s has auth_types=%s", parser_name, auth_types)
     return auth_types if auth_types else ["none"]
 
 
@@ -181,6 +186,8 @@ async def needs_auth_type_selection(hass: HomeAssistant, selected_parser: type[M
         True if modem has multiple auth types to choose from
     """
     auth_types = await get_auth_types_for_parser(hass, selected_parser)
+    parser_name = selected_parser.__name__ if selected_parser else "None"
+    _LOGGER.info("Auth type check for %s: types=%s, needs_selection=%s", parser_name, auth_types, len(auth_types) > 1)
     return len(auth_types) > 1
 
 

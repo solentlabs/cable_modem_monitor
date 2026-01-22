@@ -7,9 +7,13 @@ from unittest.mock import Mock, patch
 import pytest
 
 from custom_components.cable_modem_monitor.config_flow_helpers import (
+    _build_static_config_for_auth_type,
     build_parser_dropdown,
     classify_error,
+    get_auth_type_dropdown,
+    get_auth_types_for_parser,
     load_parser_hints,
+    needs_auth_type_selection,
     validate_input,
 )
 from custom_components.cable_modem_monitor.core.exceptions import (
@@ -105,6 +109,330 @@ class TestBuildParserDropdown:
         choices = await build_parser_dropdown(mock_hass)
 
         assert choices == []
+
+
+# =============================================================================
+# AUTH TYPE HELPERS TEST CASES
+# =============================================================================
+# Tests for auth type selection functions used when modems have multiple
+# auth variants (e.g., SB8200 with none vs url_token, SB6190 with none vs form).
+#
+# ┌─────────────────────────┬────────────────────┬─────────────────────────────┐
+# │ function                │ scenario           │ expected                    │
+# ├─────────────────────────┼────────────────────┼─────────────────────────────┤
+# │ get_auth_types_for_...  │ no parser          │ ["none"]                    │
+# │ get_auth_types_for_...  │ no adapter         │ ["none"]                    │
+# │ get_auth_types_for_...  │ single auth type   │ ["form"]                    │
+# │ get_auth_types_for_...  │ multiple types     │ ["none", "url_token"]       │
+# │ needs_auth_type_...     │ single type        │ False                       │
+# │ needs_auth_type_...     │ multiple types     │ True                        │
+# │ get_auth_type_dropdown  │ multiple types     │ {"none": "...", "form": ...}│
+# │ _build_static_config... │ form type          │ {auth_strategy: form_plain} │
+# │ _build_static_config... │ url_token type     │ {auth_strategy: url_token}  │
+# └─────────────────────────┴────────────────────┴─────────────────────────────┘
+
+
+class TestGetAuthTypesForParser:
+    """Tests for get_auth_types_for_parser function."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create mock Home Assistant instance."""
+        return Mock()
+
+    @pytest.mark.asyncio
+    async def test_no_parser_returns_none_list(self, mock_hass):
+        """Test None parser returns ["none"]."""
+        result = await get_auth_types_for_parser(mock_hass, None)
+        assert result == ["none"]
+
+    @pytest.mark.asyncio
+    async def test_no_adapter_returns_none_list(self, mock_hass):
+        """Test parser without adapter returns ["none"]."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "TestParser"
+
+        async def mock_executor(func, *args):
+            return None  # No adapter found
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await get_auth_types_for_parser(mock_hass, mock_parser)
+        assert result == ["none"]
+
+    @pytest.mark.asyncio
+    async def test_single_auth_type(self, mock_hass):
+        """Test parser with single auth type."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "TestParser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = ["form"]
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await get_auth_types_for_parser(mock_hass, mock_parser)
+        assert result == ["form"]
+
+    @pytest.mark.asyncio
+    async def test_multiple_auth_types(self, mock_hass):
+        """Test parser with multiple auth types (e.g., SB8200)."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB8200Parser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = ["none", "url_token"]
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await get_auth_types_for_parser(mock_hass, mock_parser)
+        assert result == ["none", "url_token"]
+
+    @pytest.mark.asyncio
+    async def test_empty_auth_types_returns_none_list(self, mock_hass):
+        """Test adapter returning empty list falls back to ["none"]."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "TestParser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = []
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await get_auth_types_for_parser(mock_hass, mock_parser)
+        assert result == ["none"]
+
+
+class TestNeedsAuthTypeSelection:
+    """Tests for needs_auth_type_selection function."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create mock Home Assistant instance."""
+        return Mock()
+
+    @pytest.mark.asyncio
+    async def test_single_type_no_selection_needed(self, mock_hass):
+        """Test single auth type does not need selection."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "MotorplaMB7621Parser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = ["form"]
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await needs_auth_type_selection(mock_hass, mock_parser)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_multiple_types_needs_selection(self, mock_hass):
+        """Test multiple auth types requires selection."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB8200Parser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = ["none", "url_token"]
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await needs_auth_type_selection(mock_hass, mock_parser)
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_no_parser_no_selection_needed(self, mock_hass):
+        """Test None parser does not need selection."""
+        result = await needs_auth_type_selection(mock_hass, None)
+        assert result is False
+
+
+class TestGetAuthTypeDropdown:
+    """Tests for get_auth_type_dropdown function."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create mock Home Assistant instance."""
+        return Mock()
+
+    @pytest.mark.asyncio
+    async def test_builds_dropdown_with_labels(self, mock_hass):
+        """Test dropdown includes human-readable labels."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB8200Parser"
+
+        mock_adapter = Mock()
+        mock_adapter.get_available_auth_types.return_value = ["none", "url_token"]
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await get_auth_type_dropdown(mock_hass, mock_parser)
+
+        assert "none" in result
+        assert "url_token" in result
+        # Labels should be human-readable strings
+        assert isinstance(result["none"], str)
+        assert isinstance(result["url_token"], str)
+
+    @pytest.mark.asyncio
+    async def test_no_parser_returns_none_dropdown(self, mock_hass):
+        """Test None parser returns dropdown with just 'none'."""
+        result = await get_auth_type_dropdown(mock_hass, None)
+        assert "none" in result
+        assert len(result) == 1
+
+
+class TestBuildStaticConfigForAuthType:
+    """Tests for _build_static_config_for_auth_type function."""
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create mock Home Assistant instance."""
+        return Mock()
+
+    @pytest.mark.asyncio
+    async def test_no_parser_returns_none(self, mock_hass):
+        """Test None parser returns None."""
+        result = await _build_static_config_for_auth_type(mock_hass, None, "form")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_no_adapter_returns_none(self, mock_hass):
+        """Test parser without adapter returns None."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "TestParser"
+
+        async def mock_executor(func, *args):
+            return None
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "form")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_form_auth_type_builds_config(self, mock_hass):
+        """Test form auth type builds correct config structure."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB6190Parser"
+        mock_parser.name = "ARRIS SB6190"
+
+        mock_adapter = Mock()
+        mock_adapter.get_auth_config_for_type.return_value = {
+            "action": "/cgi-bin/login",
+            "method": "POST",
+        }
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "form")
+
+        assert result is not None
+        assert result["auth_strategy"] == "form_plain"
+        assert result["auth_form_config"] == {"action": "/cgi-bin/login", "method": "POST"}
+        assert result["auth_hnap_config"] is None
+        assert result["auth_url_token_config"] is None
+
+    @pytest.mark.asyncio
+    async def test_url_token_auth_type_builds_config(self, mock_hass):
+        """Test url_token auth type builds correct config structure."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB8200Parser"
+        mock_parser.name = "ARRIS SB8200"
+
+        mock_adapter = Mock()
+        mock_adapter.get_auth_config_for_type.return_value = {
+            "login_page": "/cmconnectionstatus.html",
+            "token_prefix": "ct_",
+        }
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "url_token")
+
+        assert result is not None
+        assert result["auth_strategy"] == "url_token_session"
+        assert result["auth_url_token_config"] == {
+            "login_page": "/cmconnectionstatus.html",
+            "token_prefix": "ct_",
+        }
+        assert result["auth_form_config"] is None
+        assert result["auth_hnap_config"] is None
+
+    @pytest.mark.asyncio
+    async def test_none_auth_type_builds_config(self, mock_hass):
+        """Test none auth type builds correct config structure."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB6190Parser"
+        mock_parser.name = "ARRIS SB6190"
+
+        mock_adapter = Mock()
+        mock_adapter.get_auth_config_for_type.return_value = {}
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "none")
+
+        assert result is not None
+        assert result["auth_strategy"] == "no_auth"
+        assert result["auth_form_config"] is None
+        assert result["auth_hnap_config"] is None
+        assert result["auth_url_token_config"] is None
+
+    @pytest.mark.asyncio
+    async def test_hnap_auth_type_builds_config(self, mock_hass):
+        """Test hnap auth type builds correct config structure."""
+        mock_parser = Mock()
+        mock_parser.__name__ = "MotorolaMB8611Parser"
+        mock_parser.name = "Motorola MB8611"
+
+        mock_adapter = Mock()
+        mock_adapter.get_auth_config_for_type.return_value = {
+            "endpoint": "/HNAP1/",
+            "namespace": "http://purenetworks.com/HNAP1/",
+        }
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "hnap")
+
+        assert result is not None
+        assert result["auth_strategy"] == "hnap_session"
+        assert result["auth_hnap_config"] == {
+            "endpoint": "/HNAP1/",
+            "namespace": "http://purenetworks.com/HNAP1/",
+        }
+        assert result["auth_form_config"] is None
+        assert result["auth_url_token_config"] is None
 
 
 class TestLoadParserHints:

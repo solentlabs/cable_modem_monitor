@@ -109,3 +109,7 @@ notes: |
   System uptime available in cmswinfo.html.
   Data across multiple pages: cmconnectionstatus.html (channels), cmswinfo.html (system info).
   Restart reports zero power during reboot window (300 seconds).
+
+references:
+  prior_art: "https://github.com/philfry/check_tc4400"
+  techinfodepot: "https://techinfodepot.shoutwiki.com/wiki/Technicolor_TC4400"

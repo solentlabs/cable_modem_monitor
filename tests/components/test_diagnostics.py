@@ -798,50 +798,6 @@ async def test_detection_method_legacy_no_field(mock_coordinator):
 # ============================================================================
 
 
-@pytest.mark.asyncio
-async def test_diagnostics_parser_detection_history(mock_config_entry, mock_coordinator):
-    """Test parser detection history is included when available."""
-    hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
-
-    # Add parser detection history to coordinator data
-    mock_coordinator.data["_parser_detection_history"] = {
-        "attempted_parsers": ["[MFG] [Model] (Static)", "[MFG] [Model2]", "Generic [MFG]"],
-        "detection_phases_run": ["anonymous_probing", "suggested_parser", "prioritized"],
-        "timestamp": "2025-11-18T10:00:00",
-    }
-
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
-
-    # Verify parser detection history exists
-    assert "parser_detection_history" in diagnostics
-
-    history = diagnostics["parser_detection_history"]
-    assert "attempted_parsers" in history
-    assert len(history["attempted_parsers"]) == 3
-    assert "[MFG] [Model] (Static)" in history["attempted_parsers"]
-    assert "detection_phases_run" in history
-    assert "timestamp" in history
-
-
-@pytest.mark.asyncio
-async def test_diagnostics_parser_detection_history_not_available(mock_config_entry, mock_coordinator):
-    """Test parser detection history shows note when not available."""
-    hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
-
-    # Ensure no parser detection history in coordinator data
-    assert "_parser_detection_history" not in mock_coordinator.data
-
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
-
-    # Verify parser detection history exists with note
-    assert "parser_detection_history" in diagnostics
-
-    history = diagnostics["parser_detection_history"]
-    assert "note" in history
-    assert "succeeded on first attempt" in history["note"]
-    assert history["attempted_parsers"] == []
-
-
 class TestGetHnapAuthAttempt:
     """Test _get_hnap_auth_attempt helper function."""
 

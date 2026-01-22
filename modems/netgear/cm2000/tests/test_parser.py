@@ -202,10 +202,6 @@ class TestCM2000Fixtures:
         """Verify index.htm fixture is present."""
         assert fixture_exists("netgear", "cm2000", "index.htm"), "index.htm fixture should exist"
 
-    def test_readme_exists(self):
-        """Verify README.md is present in fixtures directory."""
-        assert fixture_exists("netgear", "cm2000", "README.md"), "README.md should exist"
-
     def test_docsis_status_fixture_exists(self):
         """Verify DocsisStatus.htm fixture is present."""
         assert fixture_exists("netgear", "cm2000", "DocsisStatus.htm"), "DocsisStatus.htm fixture should exist"

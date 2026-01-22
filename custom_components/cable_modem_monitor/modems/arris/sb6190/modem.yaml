@@ -42,6 +42,8 @@ auth:
       username_field: "username"
       password_field: "password"
       password_encoding: plain
+      success:
+        redirect: "/cgi-bin/status" # Redirect to data page after login
 
 pages:
   public:
@@ -79,8 +81,8 @@ capabilities:
 # STATUS
 # =============================================================================
 status_info:
-  status: verified
-  verification_source: "https://github.com/solentlabs/cable_modem_monitor/pull/22"
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/83"
 
 # =============================================================================
 # METADATA
@@ -114,3 +116,4 @@ notes: |
 references:
   issue_83: "https://github.com/solentlabs/cable_modem_monitor/issues/83"
   pr_22: "https://github.com/solentlabs/cable_modem_monitor/pull/22"
+  source_code: "https://sourceforge.net/projects/sb6190.arris/"

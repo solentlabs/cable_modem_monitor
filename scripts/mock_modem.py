@@ -4,21 +4,23 @@
 This script starts an HTTP server that emulates a cable modem,
 including authentication flows and fixture responses.
 
+Auto-discovers all modems with fixtures in modems/<manufacturer>/<model>/.
+
 Usage:
-    # List available modems
+    # List available modems (auto-discovered)
     python scripts/mock_modem.py --list
 
-    # Run MB8611 HNAP mock on default port (8080)
-    python scripts/mock_modem.py motorola/mb8611
+    # Run a modem on default port (8080)
+    python scripts/mock_modem.py <manufacturer>/<model>
 
     # Run on specific port
-    python scripts/mock_modem.py motorola/mb8611 --port 8888
+    python scripts/mock_modem.py <manufacturer>/<model> --port 8888
 
     # Disable authentication (serve fixtures directly)
-    python scripts/mock_modem.py motorola/mb8611 --no-auth
+    python scripts/mock_modem.py <manufacturer>/<model> --no-auth
 
-    # Run with verbose logging
-    python scripts/mock_modem.py motorola/mb8611 -v
+    # Override auth type for modems with multiple variants
+    python scripts/mock_modem.py <manufacturer>/<model> --auth-type form
 
 Then configure Home Assistant integration to connect to:
     http://127.0.0.1:8080
@@ -68,10 +70,11 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --list                    List available modems
-  %(prog)s motorola/mb8611           Run MB8611 HNAP mock
-  %(prog)s arris/s33 --port 8888     Run S33 on port 8888
-  %(prog)s arris/sb6190 --no-auth    Run SB6190 without auth
+  %(prog)s --list                                  List available modems (auto-discovered)
+  %(prog)s <manufacturer>/<model>                  Run modem with default auth
+  %(prog)s <manufacturer>/<model> --port 8888     Run on specific port
+  %(prog)s <manufacturer>/<model> --no-auth       Disable auth (serve fixtures directly)
+  %(prog)s <manufacturer>/<model> --auth-type form  Override auth type
 
 Test credentials: admin / password
 """,
@@ -94,9 +97,20 @@ Test credentials: admin / password
         help="Port to listen on (default: 8080)",
     )
     parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1, use 0.0.0.0 for Docker access)",
+    )
+    parser.add_argument(
         "--no-auth",
         action="store_true",
         help="Disable authentication (serve fixtures directly)",
+    )
+    parser.add_argument(
+        "--auth-type",
+        type=str,
+        help="Override auth type (e.g., 'form', 'none', 'url_token'). For modems with multiple variants.",
     )
     parser.add_argument(
         "-v",
@@ -145,7 +159,9 @@ Test credentials: admin / password
     server = MockModemServer(
         modem_path=modem_path,
         port=args.port,
+        host=args.host,
         auth_enabled=not args.no_auth,
+        auth_type=args.auth_type,
     )
 
     # Handle Ctrl+C gracefully
@@ -163,7 +179,7 @@ Test credentials: admin / password
 ║  Mock Modem Server Running                                       ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Modem:      {server.config.manufacturer} {server.config.model:<30} ║
-║  Strategy:   {server.config.auth.strategy.value:<42} ║
+║  Auth Type:  {server.handler.__class__.__name__:<42} ║
 ║  URL:        {server.url:<44} ║
 ║  Auth:       {'Enabled' if args.no_auth is False else 'Disabled':<44} ║
 ╠══════════════════════════════════════════════════════════════════╣

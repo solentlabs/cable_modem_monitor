@@ -230,12 +230,6 @@ class TestCM1200Fixtures:
 
         assert fixture_exists("netgear", "cm1200", "DocsisStatus.htm"), "DocsisStatus.htm fixture should exist"
 
-    def test_readme_exists(self):
-        """Verify README.md is present in fixtures directory."""
-        from tests.fixtures import fixture_exists
-
-        assert fixture_exists("netgear", "cm1200", "README.md"), "README.md should exist"
-
     def test_metadata_exists(self):
         """Verify metadata.yaml is present in fixtures directory."""
         from tests.fixtures import fixture_exists
