@@ -59,7 +59,7 @@ class MockModemHandler(BaseHTTPRequestHandler):
 class BasicAuthMockHandler(BaseHTTPRequestHandler):
     """Mock server requiring HTTP Basic Auth."""
 
-    valid_credentials = ("admin", "password")
+    valid_credentials = ("admin", "pw")
 
     def log_message(self, format, *args):
         """Suppress logging during tests."""

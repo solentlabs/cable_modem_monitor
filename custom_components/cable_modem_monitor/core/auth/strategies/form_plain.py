@@ -157,9 +157,9 @@ class FormPlainAuthStrategy(AuthStrategy):
             return self._verify_with_base_url(session, base_url, log)
 
         # If response is NOT a login page, consider login successful
-        # Don't return HTML - let scraper fetch actual data pages
+        # Return the HTML for discovery validation (parser detection, validation step)
         log("Form auth successful - form response is not a login page")
-        return AuthResult.ok()
+        return AuthResult.ok(response.text)
 
     def _check_success_indicator(self, response: requests.Response, config: FormAuthConfig) -> AuthResult:
         """Check if success indicator is present in response."""

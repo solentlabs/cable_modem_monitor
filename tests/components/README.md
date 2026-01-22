@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 302
+**Total Tests:** 308
 
 ## Test Files
 
@@ -19,7 +19,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_init.py](test_init.py) | 29 | Tests for __init__.py helper functions. |
-| [test_modem_scraper.py](test_modem_scraper.py) | 86 | Tests for Cable Modem Monitor scraper. |
+| [test_modem_scraper.py](test_modem_scraper.py) | 92 | Tests for Cable Modem Monitor scraper. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
@@ -386,8 +386,18 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_restart_modem_fails_when_login_fails`: Test that restart_modem aborts when login fails.
 - `test_restart_modem_fails_when_connection_fails`: Test that restart_modem fails gracefully when connection fails.
 - `test_restart_modem_fails_when_parser_not_detected`: Test that restart_modem fails when parser cannot be detected.
-- `test_restart_modem_fails_when_parser_lacks_restart_method`: Test that restart_modem fails when parser doesn't support restart.
+- `test_restart_modem_fails_when_modem_yaml_has_no_restart_action`: Test that restart_modem fails when modem.yaml has no actions.restart config.
 - `test_restart_modem_always_fetches_data_even_with_cached_parser`: Test that restart_modem always calls _fetch_data even when parser is cached.
+
+**TestRestartValidation** (6 tests)
+: Tests for _validate_restart_capability method.
+
+- `test_validate_restart_returns_true_when_modem_yaml_has_restart`: Test validation succeeds when modem.yaml has actions.restart configured.
+- `test_validate_restart_returns_false_when_no_restart_action`: Test validation fails when modem.yaml has no actions.restart.
+- `test_validate_restart_returns_false_when_no_actions_key`: Test validation fails when modem.yaml has no actions key at all.
+- `test_validate_restart_returns_false_when_no_adapter`: Test validation fails when no modem.yaml adapter found.
+- `test_validate_restart_returns_false_when_no_parser`: Test validation fails when parser is not set.
+- `test_validate_restart_with_hnap_action_type`: Test validation succeeds for HNAP restart action type.
 
 **TestFallbackParserDetection** (6 tests)
 : Test that fallback parser is excluded from detection phases and only used as last resort.

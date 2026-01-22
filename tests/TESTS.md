@@ -4,14 +4,14 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 867 across 37 test files
+**Total Tests:** 874 across 37 test files
 
 ## Test Categories
 
 | Category | Tests | Files | Description |
 |----------|-------|-------|-------------|
-| [Core Module Tests](tests/core/README.md) | 346 | 13 | Unit tests for core functionality including sig... |
-| [Component Tests](tests/components/README.md) | 302 | 13 | Tests for Home Assistant components including c... |
+| [Core Module Tests](tests/core/README.md) | 347 | 13 | Unit tests for core functionality including sig... |
+| [Component Tests](tests/components/README.md) | 308 | 13 | Tests for Home Assistant components including c... |
 | [Integration Tests](tests/integration/README.md) | 44 | 3 | End-to-end integration tests using mock HTTP/HT... |
 | [Parser Tests](tests/parsers/FIXTURES.md) | 55 | 3 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
@@ -61,7 +61,7 @@ pytest tests/core/test_signal_analyzer.py::TestSignalAnalyzerBasics::test_initia
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
 - **Path:** `tests/core/`
-- **Tests:** 346
+- **Tests:** 347
 - **Files:** 13
 - **Documentation:** [tests/core/README.md](tests/core/README.md)
 
@@ -70,7 +70,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
 - **Path:** `tests/components/`
-- **Tests:** 302
+- **Tests:** 308
 - **Files:** 13
 - **Documentation:** [tests/components/README.md](tests/components/README.md)
 
