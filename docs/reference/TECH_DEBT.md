@@ -2,7 +2,7 @@
 
 This document tracks known technical debt, architectural issues, and improvement opportunities in the Cable Modem Monitor integration. Items are prioritized by impact and effort.
 
-**Last Updated:** January 2026
+**Last Updated:** January 2026 (v3.13.0 review)
 **Maintainer:** Ken Schulz (@kwschulz)
 
 ---
@@ -20,7 +20,7 @@ This document tracks known technical debt, architectural issues, and improvement
 
 ## P1 - High Priority
 
-### 1. `__init__.py` Monolith (916 lines)
+### 1. `__init__.py` Monolith (982 lines)
 
 **Problem:** The main integration file handles too many responsibilities:
 - Async setup and teardown
@@ -95,9 +95,9 @@ Extracted to shared module `core/parser_utils.py`:
 
 ---
 
-### 4. AuthDiscovery Class Too Large (1347 lines)
+### 4. AuthDiscovery Class Too Large (1409 lines)
 
-**Problem:** `core/auth/discovery.py` has grown to 1347 lines with 7+ responsibilities:
+**Problem:** `core/auth/discovery.py` has grown to 1409 lines with 7+ responsibilities:
 - Form parsing and detection
 - HTML inspection
 - Password encoding detection
@@ -222,6 +222,38 @@ See `_authenticate()` in `modem_scraper.py`.
 - `scripts/ci-check.sh` (create)
 - `.pre-commit-config.yaml` (add pre-push hook)
 - `Makefile` (fix validate-ci target)
+
+---
+
+### 22. ModemScraper Monolith (1906 lines)
+
+**Problem:** `core/modem_scraper.py` is the largest class in the codebase at 1906 lines with 37+ methods handling multiple concerns:
+- Data fetching/loading (circuits, tiering, caching)
+- Authentication flows (login, session expiry, token handling)
+- Parser detection and selection
+- Error handling and circuit breakers
+- Restart orchestration
+
+**Impact:**
+- Difficult to unit test individual behaviors
+- High regression risk for changes
+- New contributors struggle to understand the class
+- Coverage gaps due to complexity
+
+**Remediation:**
+1. Extract `DataLoader` - fetching and caching logic
+2. Extract `SessionManager` - auth state and expiry handling
+3. Extract `CircuitBreaker` - failure tracking and recovery
+4. Keep `ModemScraper` (or `DataOrchestrator` per Item #14) as thin coordinator
+
+**Related:** Item #14 proposes renaming to `DataOrchestrator` - consider combining with this refactor.
+
+**Effort:** High (3-4 sessions)
+
+**Source:** v3.13.0 tech debt review (January 2026)
+
+**Files:**
+- `custom_components/cable_modem_monitor/core/modem_scraper.py`
 
 ---
 
@@ -429,6 +461,34 @@ ruff check . && pytest
 **Files:**
 - `custom_components/cable_modem_monitor/core/modem_scraper.py`
 - See blast radius table above
+
+---
+
+### 23. Undocumented Linting Suppressions
+
+**Problem:** The codebase contains ~127 instances of `# noqa` and `# type: ignore` comments without rationale. High concentration areas:
+- `conftest.py` files: ~17 instances (socket patching workarounds)
+- `core/auth/discovery.py`: complexity-related suppressions
+- Integration tests: ~13 instances
+- Parser files: HTML extraction complexity
+
+**Impact:**
+- Reviewers can't distinguish intentional suppressions from lazy shortcuts
+- Suppressions may mask real issues introduced later
+- Difficult to audit whether suppressions are still needed
+
+**Remediation:**
+1. Audit each suppression and add inline comment explaining why
+2. Remove suppressions that are no longer needed
+3. Add pre-commit hook to require rationale for new suppressions
+4. Consider more specific error codes (e.g., `# noqa: E501` vs bare `# noqa`)
+
+**Effort:** Medium (2 sessions - mechanical but requires understanding each case)
+
+**Source:** v3.13.0 tech debt review (January 2026)
+
+**Files:**
+- 45+ files across codebase (run `grep -r "noqa\|type: ignore" --include="*.py" | wc -l`)
 
 ---
 
@@ -692,7 +752,8 @@ core/actions/
 ├── base.py           # ActionType enum, ActionResult, ModemAction base
 ├── factory.py        # ActionFactory creates actions from modem.yaml
 ├── hnap.py           # HNAPRestartAction (fully data-driven)
-└── html_form.py      # HTMLFormRestartAction
+├── html.py           # HTMLFormRestartAction
+└── rest.py           # RESTRestartAction
 ```
 
 **Benefits:**
