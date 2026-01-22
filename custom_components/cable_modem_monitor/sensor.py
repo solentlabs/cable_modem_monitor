@@ -40,8 +40,12 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_ACTUAL_MODEL,
     CONF_DETECTED_MODEM,
+    CONF_ENTITY_PREFIX,
     CONF_HOST,
     DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
 )
 from .core.base_parser import ModemCapability
 from .lib.utils import parse_uptime_to_seconds
@@ -184,12 +188,10 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         self._entry = entry
 
         # Get modem info from config entry
-        # NOTE: Device name is kept as "Cable Modem" for entity ID stability.
-        # Changing device name would change all entity IDs since has_entity_name=True.
-        # Users can rename the device in the UI if desired.
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
         actual_model = entry.data.get(CONF_ACTUAL_MODEL)
         detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
+        host = entry.data.get(CONF_HOST, "")
 
         # Use actual_model if available, otherwise fall back to detected_modem
         # Strip manufacturer prefix to avoid redundancy (e.g., "Motorola MB7621" -> "MB7621")
@@ -197,12 +199,23 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         if model and manufacturer and model.lower().startswith(manufacturer.lower()):
             model = model[len(manufacturer) :].strip()
 
+        # Device name based on entity_prefix setting (for multi-modem disambiguation)
+        # With has_entity_name=True, entity IDs are generated from device_name + entity_name
+        entity_prefix = entry.data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+        if entity_prefix == ENTITY_PREFIX_MODEL:
+            device_name = f"Cable Modem {model}"
+        elif entity_prefix == ENTITY_PREFIX_IP:
+            sanitized_host = host.replace(".", "_").replace(":", "_")
+            device_name = f"Cable Modem {sanitized_host}"
+        else:
+            device_name = "Cable Modem"
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "Cable Modem",
+            "name": device_name,
             "manufacturer": manufacturer,
             "model": model,
-            "configuration_url": f"http://{entry.data[CONF_HOST]}",
+            "configuration_url": f"http://{host}",
         }
 
     @property

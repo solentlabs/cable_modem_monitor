@@ -50,6 +50,7 @@ from .const import (
     CONF_AUTH_STRATEGY,
     CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DOCSIS_VERSION,
+    CONF_ENTITY_PREFIX,
     CONF_HOST,
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
@@ -61,6 +62,9 @@ from .const import (
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
     VERIFY_SSL,
     VERSION,
 )
@@ -313,9 +317,14 @@ async def _perform_initial_refresh(coordinator, entry: ConfigEntry) -> None:
 def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
     """Update device registry with detected modem info.
 
-    NOTE: Device name is kept as "Cable Modem" (without host) for entity ID stability.
-    With has_entity_name=True, entity IDs are generated from device name.
-    Users can rename the device in the UI if desired.
+    Device name is based on entity_prefix setting to ensure unique entity IDs
+    when multiple modems are configured. With has_entity_name=True, entity IDs
+    are generated from device name + sensor name.
+
+    Prefix options:
+    - none: "Cable Modem" -> sensor.cable_modem_downstream_1_power
+    - model: "Cable Modem MB7621" -> sensor.cable_modem_mb7621_downstream_1_power
+    - ip: "Cable Modem 192_168_100_1" -> sensor.cable_modem_192_168_100_1_downstream_1_power
     """
     device_registry = dr.async_get(hass)
 
@@ -329,10 +338,23 @@ def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) 
     if model and manufacturer and model.lower().startswith(manufacturer.lower()):
         model = model[len(manufacturer) :].strip()
 
+    # Determine device name based on entity_prefix setting
+    entity_prefix = entry.data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+    if entity_prefix == ENTITY_PREFIX_MODEL:
+        # Use model name (stripped of manufacturer) for prefix
+        device_name = f"Cable Modem {model}"
+    elif entity_prefix == ENTITY_PREFIX_IP:
+        # Sanitize host for entity ID (replace . and : with _)
+        sanitized_host = host.replace(".", "_").replace(":", "_")
+        device_name = f"Cable Modem {sanitized_host}"
+    else:
+        # No prefix (default for single modem setups)
+        device_name = "Cable Modem"
+
     device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name="Cable Modem",
+        name=device_name,
     )
 
     device_registry.async_update_device(
@@ -341,7 +363,8 @@ def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) 
         model=model,
     )
     _LOGGER.debug(
-        "Updated device registry: manufacturer=%s, model=%s",
+        "Updated device registry: name=%s, manufacturer=%s, model=%s",
+        device_name,
         manufacturer,
         model,
     )

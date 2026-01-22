@@ -69,6 +69,7 @@ from .const import (
     VERSION,
 )
 from .core.log_buffer import get_log_entries
+from .core.modem_scraper import _get_parser_url_patterns
 from .lib.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
@@ -447,6 +448,10 @@ def _get_auth_method_from_coordinator(coordinator: Any) -> str:
     This is a thin wrapper that handles HA object traversal and delegates
     to the pure _extract_auth_method function.
 
+    Uses _get_parser_url_patterns() which checks both modem.yaml config
+    (via adapter) and parser class attributes, ensuring correct auth_method
+    is reported even for parsers that rely solely on modem.yaml.
+
     Args:
         coordinator: DataUpdateCoordinator with scraper reference
 
@@ -462,7 +467,9 @@ def _get_auth_method_from_coordinator(coordinator: Any) -> str:
         if not parser:
             return "unknown"
 
-        url_patterns = getattr(parser, "url_patterns", None)
+        # Use _get_parser_url_patterns which checks modem.yaml via adapter
+        # This fixes incorrect "none" for parsers without class-level url_patterns
+        url_patterns = _get_parser_url_patterns(parser)
         return _extract_auth_method(url_patterns)
     except Exception:
         return "unknown"

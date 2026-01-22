@@ -59,6 +59,7 @@ from .const import (
     CONF_DETECTED_MODEM,
     CONF_DETECTION_METHOD,
     CONF_DOCSIS_VERSION,
+    CONF_ENTITY_PREFIX,
     CONF_HOST,
     CONF_LAST_DETECTION,
     CONF_LEGACY_SSL,
@@ -71,6 +72,9 @@ from .const import (
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
@@ -276,8 +280,28 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         default_username: str = "",
         default_password: str = "",
         default_modem: str = "",
+        default_entity_prefix: str = "",
     ) -> vol.Schema:
         """Build the form schema for user input step."""
+        # Determine entity prefix options based on existing entries
+        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+
+        if existing_entries:
+            # Second+ modem: no "None" option, default to "Model"
+            prefix_options = [
+                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+            ]
+            prefix_default = default_entity_prefix or ENTITY_PREFIX_MODEL
+        else:
+            # First modem: all options available, default to "None"
+            prefix_options = [
+                selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="None"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+            ]
+            prefix_default = default_entity_prefix or ENTITY_PREFIX_NONE
+
         return vol.Schema(
             {
                 vol.Required(CONF_HOST, default=default_host): str,
@@ -286,6 +310,12 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 vol.Required(CONF_MODEM_CHOICE, default=default_modem): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=self._modem_choices,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(CONF_ENTITY_PREFIX, default=prefix_default): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=prefix_options,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
@@ -407,6 +437,9 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
 
+        # Store entity prefix (default to "none" for backwards compatibility)
+        data[CONF_ENTITY_PREFIX] = user_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+
         # Store auth type if selected
         if self._selected_auth_type:
             data[CONF_AUTH_TYPE] = self._selected_auth_type
@@ -438,6 +471,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 default_username=saved_input.get(CONF_USERNAME, ""),
                 default_password=saved_input.get(CONF_PASSWORD, ""),
                 default_modem=saved_input.get(CONF_MODEM_CHOICE, ""),
+                default_entity_prefix=saved_input.get(CONF_ENTITY_PREFIX, ""),
             ),
             errors=errors,
         )

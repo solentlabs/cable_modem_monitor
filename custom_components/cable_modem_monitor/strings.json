@@ -66,13 +66,15 @@
           "host": "Modem IP Address",
           "username": "Username",
           "password": "Password",
-          "modem_choice": "Modem Model"
+          "modem_choice": "Modem Model",
+          "entity_prefix": "Entity ID Prefix"
         },
         "data_description": {
           "host": "Usually 192.168.100.1",
           "username": "Leave blank if not required",
           "password": "Leave blank if not required",
-          "modem_choice": "Select your modem model. Use 'Unknown Modem (Fallback Mode)' if not listed."
+          "modem_choice": "Select your modem model. Use 'Unknown Modem (Fallback Mode)' if not listed.",
+          "entity_prefix": "Adds model or IP to entity IDs to avoid conflicts with multiple modems."
         }
       },
       "auth_type": {

@@ -69,3 +69,10 @@ DISCOVERY_TIMEOUT = 3  # For initial modem discovery probes
 # Host validation - characters that could enable command injection
 # Used by both config_flow and health_monitor for input validation
 INVALID_HOST_CHARS = [";", "&", "|", "$", "`", "\n", "\r", "\t", " ", "<", ">", "(", ")", "{", "}", "\\"]
+
+# Entity prefix options for multi-modem setups
+# Allows users to choose how entity IDs are prefixed to avoid conflicts
+CONF_ENTITY_PREFIX = "entity_prefix"
+ENTITY_PREFIX_NONE = "none"
+ENTITY_PREFIX_MODEL = "model"
+ENTITY_PREFIX_IP = "ip"
