@@ -44,7 +44,7 @@ class TestHTTPSFormAuth:
         # Submit login form
         response = session.post(
             f"{https_form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -76,7 +76,7 @@ class TestHTTPSFormAuth:
         # Login
         session.post(
             f"{https_form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -110,7 +110,7 @@ class TestHTTPSAuthHandler:
             session=session,
             base_url=https_form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
 
         assert success is True

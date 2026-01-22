@@ -40,7 +40,7 @@ class TestConnectionErrors:
             session=session,
             base_url="http://127.0.0.1:59999",  # Unlikely to be in use
             username="admin",
-            password="password",
+            password="pw",
         )
 
         assert success is False
@@ -56,7 +56,7 @@ class TestConnectionErrors:
             session=session,
             base_url="http://127.0.0.1:59999",
             username="admin",
-            password="password",
+            password="pw",
         )
 
         assert success is False
@@ -86,7 +86,7 @@ class TestTimeoutErrors:
             session=session,
             base_url=http_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
 
         # This server doesn't have form auth, so it will fail
@@ -117,7 +117,7 @@ class TestInvalidResponses:
             session=session,
             base_url=http_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
 
         # Should handle gracefully (the page doesn't have a login form)
@@ -138,7 +138,7 @@ class TestAuthStrategyFallback:
             session=session,
             base_url="http://127.0.0.1:8080",
             username="admin",
-            password="password",
+            password="pw",
         )
 
         # Unknown strategy returns True to allow data fetch attempt
@@ -155,7 +155,7 @@ class TestAuthStrategyFallback:
             session=session,
             base_url="http://127.0.0.1:8080",
             username="admin",
-            password="password",
+            password="pw",
         )
 
         # None/Unknown strategy returns True
@@ -184,7 +184,7 @@ class TestMissingCredentials:
             session=session,
             base_url=form_auth_server.url,
             username=None,
-            password="password",
+            password="pw",
         )
 
         assert success is False
@@ -263,7 +263,7 @@ class TestMissingFormConfig:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
 
         assert success is False
@@ -283,7 +283,7 @@ class TestMissingFormConfig:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
 
         assert isinstance(success, bool)
@@ -321,7 +321,7 @@ class TestRetryBehavior:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success2 is True
 
@@ -356,6 +356,6 @@ class TestRetryBehavior:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True

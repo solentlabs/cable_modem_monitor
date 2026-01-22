@@ -57,7 +57,11 @@ class MockModemHandler(BaseHTTPRequestHandler):
 
 
 class BasicAuthMockHandler(BaseHTTPRequestHandler):
-    """Mock server requiring HTTP Basic Auth."""
+    """Mock server requiring HTTP Basic Auth.
+
+    Uses "pw" instead of "password" to avoid browser password managers
+    flagging these as real credentials during development.
+    """
 
     valid_credentials = ("admin", "pw")
 
@@ -107,7 +111,7 @@ class FormAuthMockHandler(BaseHTTPRequestHandler):
     """Mock server with form-based authentication."""
 
     valid_username = "admin"
-    valid_password = "password"
+    valid_password = "pw"
     authenticated_sessions: set = set()
 
     def log_message(self, format, *args):
@@ -200,7 +204,7 @@ class HNAPAuthMockHandler(BaseHTTPRequestHandler):
     """
 
     valid_username = "admin"
-    valid_password = "password"
+    valid_password = "pw"
     # Simulated challenge values
     challenge = "1234567890ABCDEF"
     public_key = "FEDCBA0987654321"
@@ -442,7 +446,7 @@ class HTTP302RedirectMockHandler(BaseHTTPRequestHandler):
     """Mock server using HTTP 302 redirects (not meta refresh)."""
 
     valid_username = "admin"
-    valid_password = "password"
+    valid_password = "pw"
     authenticated_sessions: set = set()
 
     def log_message(self, format, *args):

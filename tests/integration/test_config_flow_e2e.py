@@ -54,6 +54,7 @@ def build_static_auth_config(parser: type[ModemParser], auth_type: str) -> dict[
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
     }
 
+
 MODEMS_DIR = Path(__file__).parent.parent.parent / "modems"
 
 
@@ -146,7 +147,6 @@ class TestAuthTypeSelection:
         assert len(auth_types) == 1, f"Expected single auth type, got {auth_types}"
 
 
-
 # =============================================================================
 # STATIC AUTH CONFIG TESTS
 # =============================================================================
@@ -166,7 +166,6 @@ class TestStaticAuthConfig:
         assert config is not None, f"Failed to build config for {parser_name} with {auth_type}"
         actual = config.get("auth_strategy")
         assert actual == expected_strategy, f"Expected {expected_strategy}, got {actual}"
-
 
 
 # =============================================================================
@@ -192,7 +191,7 @@ class TestDiscoveryPipelineE2E:
             result = run_discovery_pipeline(
                 host=f"127.0.0.1:{server.port}",
                 username="admin",
-                password="password",
+                password="pw",
                 selected_parser=parser,
                 static_auth_config=static_config,
             )
@@ -201,7 +200,6 @@ class TestDiscoveryPipelineE2E:
             assert result.success, f"Pipeline failed: {result.error}"
             actual = result.auth_strategy
             assert actual == expected_strategy, f"Expected {expected_strategy}, got {actual}"
-
 
 
 # =============================================================================
@@ -223,7 +221,7 @@ class TestFormAuthE2E:
             result = run_discovery_pipeline(
                 host=f"127.0.0.1:{server.port}",
                 username="admin",
-                password="password",
+                password="pw",
                 selected_parser=parser,
                 static_auth_config=static_config,
             )

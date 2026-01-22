@@ -70,7 +70,7 @@ class TestBasicAuthIntegration:
             base_url=basic_auth_server.url,
             data_url=f"{basic_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -128,7 +128,7 @@ class TestFormAuthIntegration:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -155,7 +155,7 @@ class TestHNAPAuthIntegration:
             base_url=hnap_auth_server.url,
             data_url=f"{hnap_auth_server.url}/Login.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -195,7 +195,7 @@ class TestRedirectAuthIntegration:
             base_url=redirect_auth_server.url,
             data_url=f"{redirect_auth_server.url}/status",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -241,7 +241,7 @@ class TestFormConfigSerialization:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -281,7 +281,7 @@ class TestSessionPersistence:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -390,7 +390,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=parser_without_hint,
         )
 
@@ -423,7 +423,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",  # Base URL still
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -451,7 +451,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -525,7 +525,7 @@ class TestModemYamlDrivenAuthDiscovery:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             verification_url=verification_url,
         )
@@ -560,7 +560,7 @@ class TestModemYamlDrivenAuthDiscovery:
         import base64
         from urllib.parse import quote
 
-        password = "password"
+        password = "pw"
         encoded_password = base64.b64encode(quote(password).encode()).decode()
 
         login_data = {

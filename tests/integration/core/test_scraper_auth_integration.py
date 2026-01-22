@@ -21,7 +21,7 @@ class TestScraperAuthStrategyUsage:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="basic_http",
         )
 
@@ -41,7 +41,7 @@ class TestScraperAuthStrategyUsage:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="form_plain",
             auth_form_config=form_config,
         )
@@ -65,7 +65,7 @@ class TestScraperAuthStrategyUsage:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             auth_strategy=None,  # No stored strategy
         )
@@ -85,14 +85,14 @@ class TestScraperBasicAuthStrategy:
         scraper = ModemScraper(
             host=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="basic_http",
         )
 
         success, html = scraper._login()
 
         assert success is True
-        assert scraper.session.auth == ("admin", "password")
+        assert scraper.session.auth == ("admin", "pw")
 
 
 class TestScraperFormAuthStrategy:
@@ -111,7 +111,7 @@ class TestScraperFormAuthStrategy:
         scraper = ModemScraper(
             host=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="form_plain",
             auth_form_config=form_config,
         )
@@ -153,7 +153,7 @@ class TestScraperHNAPStrategy:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             auth_strategy="hnap_session",
         )
@@ -177,7 +177,7 @@ class TestScraperURLTokenStrategy:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             auth_strategy="url_token_session",
         )
@@ -208,7 +208,7 @@ class TestScraperLegacyEntryHandling:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             auth_strategy=None,
             auth_form_config=None,
@@ -230,7 +230,7 @@ class TestScraperLegacyEntryHandling:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=None,
             auth_strategy=None,
         )
@@ -252,7 +252,7 @@ class TestScraperAuthHandlerIntegration:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             auth_strategy="form_plain",
             auth_form_config=None,  # Missing config will cause warning
@@ -268,7 +268,7 @@ class TestScraperAuthHandlerIntegration:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="basic_http",
         )
 
@@ -280,7 +280,7 @@ class TestScraperAuthHandlerIntegration:
         scraper = ModemScraper(
             host="http://192.168.100.1",
             username="admin",
-            password="password",
+            password="pw",
             auth_strategy="not_a_real_strategy",
         )
 

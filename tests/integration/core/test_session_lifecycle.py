@@ -106,7 +106,7 @@ class TestSessionPersistence:
         # Login
         session.post(
             f"{form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -128,7 +128,7 @@ class TestSessionPersistence:
         # Login with redirect
         response = session.post(
             f"{form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
             timeout=10,
         )
@@ -162,7 +162,7 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success1 is True
 
@@ -174,7 +174,7 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success2 is True
 
@@ -193,13 +193,13 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
 
         # session.auth should be set
         assert session.auth is not None
-        assert session.auth == ("admin", "password")
+        assert session.auth == ("admin", "pw")
 
         # Multiple requests should work
         for _ in range(3):
@@ -231,7 +231,7 @@ class TestPollingSimulation:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
 
