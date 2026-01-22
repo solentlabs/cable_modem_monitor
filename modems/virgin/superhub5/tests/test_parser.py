@@ -358,12 +358,16 @@ class TestFixtures:
 
     def test_fixtures_exist(self):
         """Verify required fixture files exist."""
+        from pathlib import Path
+
         from tests.fixtures import fixture_exists
 
         assert fixture_exists("virgin", "superhub5", "downstream.json")
         assert fixture_exists("virgin", "superhub5", "upstream.json")
         assert fixture_exists("virgin", "superhub5", "state.json")
-        assert fixture_exists("virgin", "superhub5", "metadata.yaml")
+        # modem.yaml is now in the modem directory, not fixtures
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
     def test_downstream_fixture_valid_json(self, downstream_json):
         """Test downstream fixture is valid JSON with expected structure."""

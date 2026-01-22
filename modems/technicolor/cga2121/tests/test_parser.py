@@ -179,12 +179,16 @@ class TestFixtures:
 
     def test_fixture_file_exists(self):
         """Test that required fixture files exist."""
+        from pathlib import Path
+
         from tests.fixtures import fixture_exists, get_fixture_dir
 
         fixtures_dir = get_fixture_dir("technicolor", "cga2121")
         assert fixtures_dir.exists()
         assert fixture_exists("technicolor", "cga2121", "st_docsis.html")
-        assert fixture_exists("technicolor", "cga2121", "metadata.yaml")
+        # modem.yaml is now in the modem directory, not fixtures
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
     def test_extended_fixture_exists(self):
         """Test that extended fixture files exist."""

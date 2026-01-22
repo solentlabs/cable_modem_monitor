@@ -59,7 +59,7 @@ class TestSB8200ParserDetection:
         adapter = get_auth_adapter_for_parser("ArrisSB8200Parser")
         assert adapter is not None
         assert adapter.get_docsis_version() == "3.1"
-        assert adapter.get_status() == "verified"  # Verified (Issue #42)
+        assert adapter.get_status() == "awaiting_verification"  # Issue #81
 
 
 class TestSB8200ParserCapabilities:

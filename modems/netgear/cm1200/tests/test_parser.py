@@ -230,11 +230,12 @@ class TestCM1200Fixtures:
 
         assert fixture_exists("netgear", "cm1200", "DocsisStatus.htm"), "DocsisStatus.htm fixture should exist"
 
-    def test_metadata_exists(self):
-        """Verify metadata.yaml is present in fixtures directory."""
-        from tests.fixtures import fixture_exists
+    def test_modem_yaml_exists(self):
+        """Verify modem.yaml is present in modem directory."""
+        from pathlib import Path
 
-        assert fixture_exists("netgear", "cm1200", "metadata.yaml"), "metadata.yaml should exist"
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
 
 class TestCM1200BootTimeCalculation:

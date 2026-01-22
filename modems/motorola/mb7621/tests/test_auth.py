@@ -101,7 +101,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=parser_without_hint,
         )
 
@@ -132,7 +132,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",  # Base URL still
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -158,7 +158,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -223,7 +223,7 @@ class TestMB7621AuthDiscovery:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             verification_url=verification_url,
         )
@@ -253,7 +253,7 @@ class TestMB7621AuthDiscovery:
         assert form_config.success is not None, "MB7621 must have success config"
 
         # Encode password for MB7621 (base64)
-        password = "password"
+        password = "pw"
         encoded_password = base64.b64encode(quote(password).encode()).decode()
 
         login_data = {
