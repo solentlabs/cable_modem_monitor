@@ -149,14 +149,14 @@ Login detection uses password field presence - simple and reliable.
 - Created `custom_components/cable_modem_monitor/core/auth/detection.py`
 - Updated `core/auth/discovery.py` - Uses shared `has_login_form()`
 - Updated `core/auth/strategies/form_plain.py` - Uses `is_login_page()`
-- Updated `core/modem_scraper.py` - Session expiry detection with auto re-fetch
+- Updated `core/data_orchestrator.py` - Session expiry detection with auto re-fetch
 - Created `tests/core/test_auth_detection.py` - 26 tests for detection
 
 **Session Expiry Handling:**
 The scraper now detects when a fetch returns a login page (session expired) and
 automatically re-fetches the data URL after successful re-authentication. This
 prevents the parser from receiving login page HTML when the session has expired.
-See `_authenticate()` in `modem_scraper.py`.
+See `_authenticate()` in `data_orchestrator.py`.
 
 ---
 
@@ -166,7 +166,7 @@ See `_authenticate()` in `modem_scraper.py`.
 
 Refactored ~36 `except Exception` blocks across 3 core files:
 - `core/auth/discovery.py` (14 blocks)
-- `core/modem_scraper.py` (15 blocks)
+- `core/data_orchestrator.py` (15 blocks)
 - `core/discovery/steps.py` (7 blocks)
 
 **Approach:**
@@ -180,7 +180,7 @@ Refactored ~36 `except Exception` blocks across 3 core files:
 **Files Changed:**
 - `custom_components/cable_modem_monitor/core/exceptions.py` - Added new exception types
 - `custom_components/cable_modem_monitor/core/auth/discovery.py`
-- `custom_components/cable_modem_monitor/core/modem_scraper.py`
+- `custom_components/cable_modem_monitor/core/data_orchestrator.py`
 - `custom_components/cable_modem_monitor/core/discovery/steps.py`
 
 ---
@@ -227,9 +227,9 @@ Refactored ~36 `except Exception` blocks across 3 core files:
 
 ---
 
-### 22. ModemScraper Monolith (1906 lines)
+### 22. DataOrchestrator Monolith (1906 lines)
 
-**Problem:** `core/modem_scraper.py` is the largest class in the codebase at 1906 lines with 37+ methods handling multiple concerns:
+**Problem:** `core/data_orchestrator.py` is the largest class in the codebase at 1906 lines with 37+ methods handling multiple concerns:
 - Data fetching/loading (circuits, tiering, caching)
 - Authentication flows (login, session expiry, token handling)
 - Parser detection and selection
@@ -246,7 +246,7 @@ Refactored ~36 `except Exception` blocks across 3 core files:
 1. Extract `DataLoader` - fetching and caching logic
 2. Extract `SessionManager` - auth state and expiry handling
 3. Extract `CircuitBreaker` - failure tracking and recovery
-4. Keep `ModemScraper` (or `DataOrchestrator` per Item #14) as thin coordinator
+4. Keep `DataOrchestrator` (or `DataOrchestrator` per Item #14) as thin coordinator
 
 **Related:** Item #14 proposes renaming to `DataOrchestrator` - consider combining with this refactor.
 
@@ -255,7 +255,7 @@ Refactored ~36 `except Exception` blocks across 3 core files:
 **Source:** v3.13.0 tech debt review (January 2026)
 
 **Files:**
-- `custom_components/cable_modem_monitor/core/modem_scraper.py`
+- `custom_components/cable_modem_monitor/core/data_orchestrator.py`
 
 ---
 
@@ -408,61 +408,18 @@ auth_attempt = json_builder.get_last_auth_attempt()  # HNAP-specific!
 
 ---
 
-### 14. Rename ModemScraper to DataOrchestrator
+### 14. Rename ModemScraper to DataOrchestrator (RESOLVED)
 
-**Problem:** The name "ModemScraper" implies web scraping, but the class is now an orchestrator that coordinates:
-- Loaders (data fetching)
-- Parsers (data transformation)
-- Actions (operations like restart)
+**Resolution:** v3.13.0 (January 2026)
 
-**Impact:**
-- Name doesn't reflect actual responsibility
-- "Scraper" terminology is dated
-- New contributors may misunderstand the class's role
+Renamed `ModemScraper` class to `DataOrchestrator` to better reflect its role as a coordinator
+(not a web scraper). The class orchestrates loaders, parsers, and actions.
 
-**Blast Radius:**
-
-| Category | Files | Notes |
-|----------|-------|-------|
-| File renames | 2 | `modem_scraper.py` → `data_orchestrator.py`, `test_modem_scraper.py` → `test_data_orchestrator.py` |
-| Core source | 6 | `__init__.py`, `button.py`, `sensor.py`, `discovery/steps.py`, `discovery/pipeline.py`, `parser_template.py` |
-| Config/adapter | 2 | `modem_config/adapter.py`, `modem_config/loader.py` |
-| Test files | 6 | `test_auth.py`, `test_button.py`, `test_protocol_caching.py`, `test_version_and_startup.py`, `test_scraper_auth_integration.py`, `tests/components/README.md` |
-| Docs | 6 | `AI_CONTEXT.md`, `TECH_DEBT.md`, `TESTING.md`, `ARCHITECTURE.md`, `TROUBLESHOOTING.md`, `v3.13.0-discovery-cleanup.md` |
-
-**Key counts:**
-- ~100+ `ModemScraper` instantiations (mostly in tests)
-- ~15 import statements
-- ~10 patch paths (`"...modem_scraper.ModemScraper"`)
-
-**Leave unchanged:** `CHANGELOG.md` (historical references)
-
-**Execution Steps:**
-```bash
-# 1. Rename files
-git mv custom_components/cable_modem_monitor/core/modem_scraper.py \
-       custom_components/cable_modem_monitor/core/data_orchestrator.py
-git mv tests/components/test_modem_scraper.py \
-       tests/components/test_data_orchestrator.py
-
-# 2. Find/replace class name (case-sensitive)
-# ModemScraper → DataOrchestrator
-
-# 3. Find/replace module references
-# modem_scraper → data_orchestrator
-
-# 4. Update test patch paths
-# "...modem_scraper.ModemScraper" → "...data_orchestrator.DataOrchestrator"
-
-# 5. Verify
-ruff check . && pytest
-```
-
-**Effort:** Low (1 session, mechanical find/replace)
-
-**Files:**
-- `custom_components/cable_modem_monitor/core/modem_scraper.py`
-- See blast radius table above
+**Changes:**
+- Renamed `core/modem_scraper.py` → `core/data_orchestrator.py`
+- Renamed `tests/components/test_modem_scraper.py` → `tests/components/test_data_orchestrator.py`
+- Updated ~100 class references across 22 files
+- Preserved historical references in `CHANGELOG.md`
 
 ---
 

@@ -13,13 +13,13 @@ Services:
 
 Key Components:
     DataUpdateCoordinator: Polls modem every scan_interval (default 30s)
-    ModemScraper: Fetches and parses modem data
+    DataOrchestrator: Fetches and parses modem data
     ModemHealthMonitor: Tracks ICMP latency to modem
 
 See Also:
     - config_flow.py: Setup wizard UI
     - sensor.py: Sensor entity definitions
-    - core/modem_scraper.py: Data fetching logic
+    - core/data_orchestrator.py: Data fetching logic
 """
 
 from __future__ import annotations
@@ -68,9 +68,9 @@ from .const import (
     VERIFY_SSL,
     VERSION,
 )
+from .core.data_orchestrator import DataOrchestrator
 from .core.health_monitor import ModemHealthMonitor
 from .core.log_buffer import setup_log_buffer
-from .core.modem_scraper import ModemScraper
 from .entity_migration import async_migrate_docsis30_entities
 from .modem_config.adapter import get_auth_adapter_for_parser
 from .parsers import get_parser_by_name, get_parsers
@@ -869,7 +869,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # AuthHandler will use defaults for these cases
     _log_missing_auth_config(auth_strategy, auth_hnap_config, auth_url_token_config)
 
-    scraper = ModemScraper(
+    scraper = DataOrchestrator(
         host,
         username,
         password,

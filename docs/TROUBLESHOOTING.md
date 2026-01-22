@@ -309,8 +309,8 @@ When using auto-detection, INFO-level logs show the detection process:
 INFO [config_flow] Using auto-detection mode (modem_choice=auto, cached_parser=None)
 INFO [config_flow] No cached parser, will try all available parsers
 INFO [config_flow] Attempting to connect to modem at 192.168.100.1
-INFO [modem_scraper] Tier 3: Auto-detection mode - trying all parsers
-INFO [modem_scraper] Successfully connected to http://192.168.100.1/MotoSwInfo.asp
+INFO [data_orchestrator] Tier 3: Auto-detection mode - trying all parsers
+INFO [data_orchestrator] Successfully connected to http://192.168.100.1/MotoSwInfo.asp
 INFO [config_flow] Detection successful: {'modem_name': 'Motorola MB7621', 'manufacturer': 'Motorola', ...}
 INFO [config_flow] Auto-detection successful: updating modem_choice from 'auto' to 'Motorola MB7621'
 ```

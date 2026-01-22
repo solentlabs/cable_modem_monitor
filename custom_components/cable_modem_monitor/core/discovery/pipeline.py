@@ -56,7 +56,7 @@ Usage:
 
 Note:
     This is for ONE-TIME setup discovery during config flow.
-    Polling uses stored config and is handled separately by ModemScraper.
+    Polling uses stored config and is handled separately by DataOrchestrator.
 """
 
 from __future__ import annotations

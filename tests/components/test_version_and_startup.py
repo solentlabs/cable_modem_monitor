@@ -287,7 +287,7 @@ class TestProtocolOptimizationIntegration:
 
     @pytest.mark.asyncio
     async def test_cached_url_passed_to_scraper(self):
-        """Test that cached working URL is passed to ModemScraper."""
+        """Test that cached working URL is passed to DataOrchestrator."""
         # Create a mock HomeAssistant instance
         hass = Mock(spec=HomeAssistant)
         hass.data = {}
@@ -319,7 +319,7 @@ class TestProtocolOptimizationIntegration:
 
         with (
             patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
-            patch("custom_components.cable_modem_monitor.ModemScraper") as mock_scraper_class,
+            patch("custom_components.cable_modem_monitor.DataOrchestrator") as mock_scraper_class,
             patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
@@ -343,7 +343,7 @@ class TestProtocolOptimizationIntegration:
 
             await async_setup_entry(hass, mock_entry)
 
-            # Verify ModemScraper was called with cached_url
+            # Verify DataOrchestrator was called with cached_url
             call_args = mock_scraper_class.call_args
             assert call_args is not None
             assert call_args.kwargs.get("cached_url") == cached_url

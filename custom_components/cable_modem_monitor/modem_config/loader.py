@@ -130,7 +130,7 @@ def get_detection_hints_from_index(parser_class_name: str) -> dict[str, str | li
     This is the fastest path for YAML-driven detection - reads pre-computed
     hints from the cached index without loading any modem.yaml files.
 
-    Used by modem_scraper Phase 0a for fast parser detection.
+    Used by data_orchestrator Phase 0a for fast parser detection.
 
     Args:
         parser_class_name: Parser class name (e.g., "MotorolaMB7621Parser")

@@ -30,7 +30,7 @@ HTTP Request Policy:
 
 Note:
     This is for ONE-TIME setup discovery during config flow.
-    Polling uses stored config and is handled by ModemScraper.
+    Polling uses stored config and is handled by DataOrchestrator.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Tests for Cable Modem Monitor scraper.
 
-These tests validate the ModemScraper core functionality using mock parsers.
+These tests validate the DataOrchestrator core functionality using mock parsers.
 No modem-specific references - tests exercise the scraper mechanism itself.
 
 NOTE: The scraper is core/generic functionality that will be further abstracted
@@ -14,13 +14,13 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
 
 class MockTestParser(ModemParser):
     """Mock parser for scraper mechanism tests.
 
-    This parser is used to test ModemScraper behavior without coupling
+    This parser is used to test DataOrchestrator behavior without coupling
     to any specific modem implementation.
 
     Detection is handled by YAML hints (HintMatcher) - tests should mock
@@ -54,8 +54,8 @@ class MockTestParser(ModemParser):
         }
 
 
-class TestModemScraper:
-    """Test the ModemScraper class."""
+class TestDataOrchestrator:
+    """Test the DataOrchestrator class."""
 
     @pytest.fixture
     def mock_parser(self, mocker):
@@ -86,7 +86,7 @@ class TestModemScraper:
         mock_parser_class = mocker.Mock(spec=ModemParser)
         mock_parser_class.return_value = mock_parser_instance  # What the class returns when instantiated
 
-        scraper = ModemScraper("192.168.100.1", parser=[mock_parser_class])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_parser_class])
         # _fetch_data now returns (html, url, parser_class)
         mocker.patch.object(
             scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", mock_parser_class)
@@ -110,7 +110,7 @@ class TestModemScraper:
 
         parsers = get_parsers()
 
-        scraper = ModemScraper("192.168.100.1", parser=parsers)
+        scraper = DataOrchestrator("192.168.100.1", parser=parsers)
 
         # Mock the session.get to track which URLs are tried
         mock_get = mocker.patch.object(scraper.session, "get")
@@ -140,7 +140,7 @@ class TestModemScraper:
 
         parsers = get_parsers()
 
-        scraper = ModemScraper("192.168.100.1", parser=parsers)
+        scraper = DataOrchestrator("192.168.100.1", parser=parsers)
 
         # Mock successful response on first URL
         mock_get = mocker.patch.object(scraper.session, "get")
@@ -165,13 +165,13 @@ class TestModemScraper:
         """Test that restart_modem falls back from HTTPS to HTTP when connection refused."""
         import requests
 
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
         from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
 
         # Using MockTestParser defined at module level
 
         # Create scraper with HTTPS URL
-        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
+        scraper = DataOrchestrator("https://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
 
         # Mock session.get to simulate HTTPS failure, HTTP success
         call_count = [0]
@@ -225,12 +225,12 @@ class TestModemScraper:
 
     def test_restart_modem_calls_login_with_credentials(self, mocker):
         """Test that restart_modem calls login when credentials are provided."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
         from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
 
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("http://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
+        scraper = DataOrchestrator("http://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -276,13 +276,13 @@ class TestModemScraper:
 
     def test_restart_modem_skips_login_without_credentials(self, mocker):
         """Test that restart_modem skips login when no credentials provided."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
         from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
 
         # Using MockTestParser defined at module level
 
         # No username/password
-        scraper = ModemScraper("http://192.168.100.1", None, None, parser=[MockTestParser])
+        scraper = DataOrchestrator("http://192.168.100.1", None, None, parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -328,12 +328,12 @@ class TestModemScraper:
 
     def test_restart_modem_fails_when_login_fails(self, mocker):
         """Test that restart_modem aborts when login fails."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
         from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
 
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("http://192.168.100.1", "admin", "wrong_password", parser=[MockTestParser])
+        scraper = DataOrchestrator("http://192.168.100.1", "admin", "wrong_password", parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -379,7 +379,7 @@ class TestModemScraper:
         """Test that restart_modem fails gracefully when connection fails."""
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("http://192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("http://192.168.100.1", parser=[MockTestParser])
 
         # Mock _fetch_data to return None (connection failed)
         mocker.patch.object(scraper, "_fetch_data", return_value=None)
@@ -392,7 +392,7 @@ class TestModemScraper:
 
     def test_restart_modem_fails_when_parser_not_detected(self, mocker):
         """Test that restart_modem fails when parser cannot be detected."""
-        scraper = ModemScraper("http://192.168.100.1", parser=[])
+        scraper = DataOrchestrator("http://192.168.100.1", parser=[])
 
         # Mock _fetch_data to return success but no parser
         mocker.patch.object(
@@ -414,7 +414,7 @@ class TestModemScraper:
         v3.13+: Restart capability is determined by modem.yaml actions.restart config,
         not by parser attributes. ActionFactory.supports() is the single source of truth.
         """
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
         # Create a mock parser
         mock_parser_instance = mocker.Mock()
@@ -423,7 +423,7 @@ class TestModemScraper:
         mock_parser_class = mocker.Mock()
         mock_parser_class.return_value = mock_parser_instance
 
-        scraper = ModemScraper("http://192.168.100.1", parser=[mock_parser_class])
+        scraper = DataOrchestrator("http://192.168.100.1", parser=[mock_parser_class])
 
         # Mock _fetch_data to return success
         mocker.patch.object(
@@ -452,13 +452,13 @@ class TestModemScraper:
 
         This is critical to ensure protocol detection (HTTP vs HTTPS) happens on every restart.
         """
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
         from custom_components.cable_modem_monitor.core.actions.factory import ActionFactory
 
         # Using MockTestParser defined at module level
 
         # Create scraper with HTTPS and pre-set parser (simulating cached state)
-        scraper = ModemScraper("https://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
+        scraper = DataOrchestrator("https://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
 
         # Mock parser instance
         mock_parser_instance = mocker.Mock()
@@ -513,9 +513,9 @@ class TestRestartValidation:
 
     def test_validate_restart_returns_true_when_modem_yaml_has_restart(self, mocker):
         """Test validation succeeds when modem.yaml has actions.restart configured."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser
         mock_parser = mocker.Mock()
@@ -542,9 +542,9 @@ class TestRestartValidation:
 
     def test_validate_restart_returns_false_when_no_restart_action(self, mocker):
         """Test validation fails when modem.yaml has no actions.restart."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         mock_parser = mocker.Mock()
         mock_parser.__class__.__name__ = "TestParser"
@@ -565,9 +565,9 @@ class TestRestartValidation:
 
     def test_validate_restart_returns_false_when_no_actions_key(self, mocker):
         """Test validation fails when modem.yaml has no actions key at all."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         mock_parser = mocker.Mock()
         mock_parser.__class__.__name__ = "TestParser"
@@ -588,9 +588,9 @@ class TestRestartValidation:
 
     def test_validate_restart_returns_false_when_no_adapter(self, mocker):
         """Test validation fails when no modem.yaml adapter found."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         mock_parser = mocker.Mock()
         mock_parser.__class__.__name__ = "UnknownParser"
@@ -606,7 +606,7 @@ class TestRestartValidation:
 
     def test_validate_restart_returns_false_when_no_parser(self, mocker):
         """Test validation fails when parser is not set."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
         scraper.parser = None
 
         result = scraper._validate_restart_capability()
@@ -615,9 +615,9 @@ class TestRestartValidation:
 
     def test_validate_restart_with_hnap_action_type(self, mocker):
         """Test validation succeeds for HNAP restart action type."""
-        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+        from custom_components.cable_modem_monitor.core import data_orchestrator as scraper_module
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         mock_parser = mocker.Mock()
         mock_parser.__class__.__name__ = "ArrisS33Parser"
@@ -675,9 +675,9 @@ class TestFallbackParserDetection:
 
     def test_excluded_from_anonymous_probing(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Phase 1 (anonymous probing)."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
-        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
 
         # Mock session.get to return HTML
         mock_response = mocker.Mock()
@@ -704,9 +704,9 @@ class TestFallbackParserDetection:
     def test_excluded_from_prioritized_parsers(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Phase 3 (prioritized parsers)."""
 
-        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
-        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
 
         html = "<html><body>Test</body></html>"
         soup = BeautifulSoup(html, "html.parser")
@@ -729,10 +729,10 @@ class TestFallbackParserDetection:
 
     def test_excluded_from_url_discovery_tier2(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Tier 2 URL discovery."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
         # Set a cached parser name to trigger tier 2
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class], parser_name="Test Parser"
         )
 
@@ -748,9 +748,9 @@ class TestFallbackParserDetection:
 
     def test_excluded_from_url_discovery_tier3(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
         """Test that fallback parser is excluded from Tier 3 URL discovery."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
-        scraper = ModemScraper("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
 
         urls = scraper._get_tier3_urls()
 
@@ -766,12 +766,12 @@ class TestFallbackParserDetection:
         User must manually select "Unknown Modem (Fallback Mode)" from the list.
         This prevents accidental fallback for supported modems with connection issues.
         """
+        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
         from custom_components.cable_modem_monitor.core.discovery_helpers import ParserNotFoundError
-        from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
         from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
 
         # Use real fallback parser to ensure it's available but not auto-selected
-        scraper = ModemScraper("192.168.100.1", parser=[UniversalFallbackParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=[UniversalFallbackParser])
 
         html = "<html><body>Unknown Modem</body></html>"
         url = "http://192.168.100.1/"
@@ -799,7 +799,7 @@ class TestLogoutAfterPoll:
 
     def test_perform_logout_calls_endpoint_when_defined(self, mocker):
         """Test that _perform_logout calls the logout endpoint when parser defines it."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser with logout_endpoint
         mock_parser = mocker.Mock()
@@ -816,7 +816,7 @@ class TestLogoutAfterPoll:
 
     def test_perform_logout_skips_when_no_endpoint(self, mocker):
         """Test that _perform_logout does nothing when parser has no logout_endpoint."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser without logout_endpoint
         mock_parser = mocker.Mock()
@@ -833,7 +833,7 @@ class TestLogoutAfterPoll:
 
     def test_perform_logout_skips_when_no_parser(self, mocker):
         """Test that _perform_logout does nothing when no parser is set."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
         scraper.parser = None
 
         # Mock session.get
@@ -848,7 +848,7 @@ class TestLogoutAfterPoll:
         """Test that _perform_logout gracefully handles request failures."""
         import requests
 
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser with logout_endpoint
         mock_parser = mocker.Mock()
@@ -865,7 +865,7 @@ class TestLogoutAfterPoll:
 
     def test_get_modem_data_calls_logout_in_finally(self, mocker):
         """Test that get_modem_data calls _perform_logout even on success."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser with logout_endpoint
         mock_parser = mocker.Mock()
@@ -890,7 +890,7 @@ class TestLogoutAfterPoll:
 
     def test_get_modem_data_calls_logout_on_error(self, mocker):
         """Test that get_modem_data calls _perform_logout even on error."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser with logout_endpoint
         mock_parser = mocker.Mock()
@@ -910,7 +910,7 @@ class TestLogoutAfterPoll:
 
     def test_get_detection_info_includes_logout_endpoint(self, mocker):
         """Test that get_detection_info exposes logout_endpoint from adapter."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser
         mock_parser = mocker.Mock()
@@ -939,7 +939,7 @@ class TestLogoutAfterPoll:
 
     def test_get_detection_info_logout_endpoint_none_when_not_set(self, mocker):
         """Test that get_detection_info returns None for logout_endpoint when not set."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
 
         # Create mock parser
         mock_parser = mocker.Mock()
@@ -968,7 +968,7 @@ class TestLogoutAfterPoll:
 
     def test_perform_logout_with_https_url(self, mocker):
         """Test that _perform_logout works with HTTPS base URL."""
-        scraper = ModemScraper("https://192.168.100.1")
+        scraper = DataOrchestrator("https://192.168.100.1")
 
         mock_parser = mocker.Mock()
         mock_parser.logout_endpoint = "/Logout.htm"
@@ -990,7 +990,7 @@ class TestLogoutAfterPoll:
         ]
 
         for endpoint, expected_url in test_cases:
-            scraper = ModemScraper("http://192.168.100.1")
+            scraper = DataOrchestrator("http://192.168.100.1")
 
             mock_parser = mocker.Mock()
             mock_parser.logout_endpoint = endpoint
@@ -1003,71 +1003,71 @@ class TestLogoutAfterPoll:
             mock_get.assert_called_once_with(expected_url, timeout=5)
 
 
-class TestModemScraperInitialization:
-    """Tests for ModemScraper initialization and configuration."""
+class TestDataOrchestratorInitialization:
+    """Tests for DataOrchestrator initialization and configuration."""
 
     def test_init_with_plain_ip_uses_https_default(self):
         """Test that plain IP defaults to HTTPS."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         assert scraper.base_url == "https://192.168.100.1"
         assert scraper.host == "192.168.100.1"
 
     def test_init_with_http_url_preserves_protocol(self):
         """Test that explicit HTTP URL is preserved."""
-        scraper = ModemScraper("http://192.168.100.1")
+        scraper = DataOrchestrator("http://192.168.100.1")
         assert scraper.base_url == "http://192.168.100.1"
 
     def test_init_with_https_url_preserves_protocol(self):
         """Test that explicit HTTPS URL is preserved."""
-        scraper = ModemScraper("https://192.168.100.1")
+        scraper = DataOrchestrator("https://192.168.100.1")
         assert scraper.base_url == "https://192.168.100.1"
 
     def test_init_with_trailing_slash_removed(self):
         """Test that trailing slashes are removed from URL."""
-        scraper = ModemScraper("http://192.168.100.1/")
+        scraper = DataOrchestrator("http://192.168.100.1/")
         assert scraper.base_url == "http://192.168.100.1"
 
     def test_init_uses_cached_url_protocol(self):
         """Test that cached URL protocol is used for plain IP."""
-        scraper = ModemScraper("192.168.100.1", cached_url="http://192.168.100.1/status")
+        scraper = DataOrchestrator("192.168.100.1", cached_url="http://192.168.100.1/status")
         assert scraper.base_url == "http://192.168.100.1"
 
     def test_init_with_credentials(self):
         """Test initialization with credentials."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
         assert scraper.username == "admin"
         assert scraper.password == "secret"
 
     def test_init_with_parser_instance(self, mocker):
         """Test initialization with a parser instance."""
         mock_parser = mocker.Mock(spec=ModemParser)
-        scraper = ModemScraper("192.168.100.1", parser=mock_parser)
+        scraper = DataOrchestrator("192.168.100.1", parser=mock_parser)
         assert scraper.parser == mock_parser
         assert scraper.parsers == [mock_parser]
 
     def test_init_with_parser_class(self, mocker):
         """Test initialization with a parser class."""
         mock_parser_class = mocker.Mock()
-        scraper = ModemScraper("192.168.100.1", parser=[mock_parser_class])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_parser_class])
         assert scraper.parser is None
         assert scraper.parsers == [mock_parser_class]
 
     def test_init_with_verify_ssl_true(self):
         """Test initialization with SSL verification enabled."""
-        scraper = ModemScraper("https://192.168.100.1", verify_ssl=True)
+        scraper = DataOrchestrator("https://192.168.100.1", verify_ssl=True)
         assert scraper.verify_ssl is True
         assert scraper.session.verify is True
 
     def test_init_with_verify_ssl_false(self):
         """Test initialization with SSL verification disabled."""
-        scraper = ModemScraper("https://192.168.100.1", verify_ssl=False)
+        scraper = DataOrchestrator("https://192.168.100.1", verify_ssl=False)
         assert scraper.verify_ssl is False
         assert scraper.session.verify is False
 
     def test_init_with_legacy_ssl_mounts_adapter(self, mocker):
         """Test that legacy SSL mode mounts the LegacySSLAdapter."""
         # We can verify by checking that session.mount was called or adapter exists
-        scraper = ModemScraper("https://192.168.100.1", legacy_ssl=True)
+        scraper = DataOrchestrator("https://192.168.100.1", legacy_ssl=True)
         assert scraper.legacy_ssl is True
         # The adapter should be mounted for https://
         adapters = scraper.session.adapters
@@ -1075,14 +1075,14 @@ class TestModemScraperInitialization:
 
     def test_init_legacy_ssl_not_mounted_for_http(self, mocker):
         """Test that legacy SSL adapter is NOT mounted for HTTP URLs."""
-        scraper = ModemScraper("http://192.168.100.1", legacy_ssl=True)
+        scraper = DataOrchestrator("http://192.168.100.1", legacy_ssl=True)
         # Legacy SSL flag is set but adapter shouldn't affect HTTP
         assert scraper.legacy_ssl is True
         assert scraper.base_url == "http://192.168.100.1"
 
     def test_init_with_parser_name_for_tier2(self):
         """Test initialization with parser_name for Tier 2 caching."""
-        scraper = ModemScraper("192.168.100.1", parser_name="[MFG] [Model]")
+        scraper = DataOrchestrator("192.168.100.1", parser_name="[MFG] [Model]")
         assert scraper.parser_name == "[MFG] [Model]"
 
 
@@ -1091,7 +1091,7 @@ class TestCapturingSession:
 
     def test_capturing_session_calls_callback(self, mocker):
         """Test that CapturingSession calls the callback on each request."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import CapturingSession
+        from custom_components.cable_modem_monitor.core.data_orchestrator import CapturingSession
 
         callback = mocker.Mock()
         session = CapturingSession(callback)
@@ -1109,7 +1109,7 @@ class TestCapturingSession:
 
     def test_capturing_session_detects_hnap_requests(self, mocker):
         """Test that CapturingSession identifies HNAP requests."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import CapturingSession
+        from custom_components.cable_modem_monitor.core.data_orchestrator import CapturingSession
 
         callback = mocker.Mock()
         session = CapturingSession(callback)
@@ -1129,7 +1129,7 @@ class TestCapturingSession:
 
     def test_capturing_session_detects_login_pages(self, mocker):
         """Test that CapturingSession identifies login pages."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import CapturingSession
+        from custom_components.cable_modem_monitor.core.data_orchestrator import CapturingSession
 
         callback = mocker.Mock()
         session = CapturingSession(callback)
@@ -1146,7 +1146,7 @@ class TestCapturingSession:
 
     def test_capturing_session_detects_status_pages(self, mocker):
         """Test that CapturingSession identifies status pages."""
-        from custom_components.cable_modem_monitor.core.modem_scraper import CapturingSession
+        from custom_components.cable_modem_monitor.core.data_orchestrator import CapturingSession
 
         callback = mocker.Mock()
         session = CapturingSession(callback)
@@ -1167,7 +1167,7 @@ class TestClearAuthCache:
 
     def test_clear_auth_cache_creates_new_session(self, mocker):
         """Test that clear_auth_cache creates a fresh session."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         old_session = scraper.session
 
         scraper.clear_auth_cache()
@@ -1176,7 +1176,7 @@ class TestClearAuthCache:
 
     def test_clear_auth_cache_preserves_verify_setting(self, mocker):
         """Test that clear_auth_cache preserves SSL verify setting."""
-        scraper = ModemScraper("192.168.100.1", verify_ssl=True)
+        scraper = DataOrchestrator("192.168.100.1", verify_ssl=True)
         assert scraper.session.verify is True
 
         scraper.clear_auth_cache()
@@ -1185,7 +1185,7 @@ class TestClearAuthCache:
 
     def test_clear_auth_cache_clears_hnap_builder(self, mocker):
         """Test that clear_auth_cache clears HNAP builder cache via auth_handler."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
 
         # Mock auth handler with HNAP builder
         mock_builder = mocker.Mock()
@@ -1199,7 +1199,7 @@ class TestClearAuthCache:
 
     def test_clear_auth_cache_handles_missing_builder(self, mocker):
         """Test that clear_auth_cache handles auth handler without HNAP builder."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
 
         # Mock auth handler returning None for HNAP builder (not HNAP modem)
         mock_auth_handler = mocker.Mock()
@@ -1215,7 +1215,7 @@ class TestCaptureResponse:
 
     def test_capture_response_when_disabled(self, mocker):
         """Test that capture is skipped when disabled."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = False
 
         mock_response = mocker.Mock()
@@ -1227,7 +1227,7 @@ class TestCaptureResponse:
 
     def test_capture_response_when_enabled(self, mocker):
         """Test that response is captured when enabled."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = True
         scraper._captured_urls = []
 
@@ -1249,7 +1249,7 @@ class TestCaptureResponse:
 
     def test_capture_response_deduplicates_urls(self, mocker):
         """Test that duplicate URLs are not captured twice."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = True
         scraper._captured_urls = []
 
@@ -1275,7 +1275,7 @@ class TestRecordFailedUrl:
 
     def test_record_failed_url_when_disabled(self, mocker):
         """Test that failed URL is not recorded when capture disabled."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = False
         scraper._failed_urls = []
 
@@ -1285,7 +1285,7 @@ class TestRecordFailedUrl:
 
     def test_record_failed_url_when_enabled(self, mocker):
         """Test that failed URL is recorded when capture enabled."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = True
         scraper._failed_urls = []
 
@@ -1304,7 +1304,7 @@ class TestRecordFailedUrl:
 
     def test_record_failed_url_with_response_body(self, mocker):
         """Test that response body is recorded for error pages."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._capture_enabled = True
         scraper._failed_urls = []
 
@@ -1327,7 +1327,7 @@ class TestProtocolDetection:
         """Test that _fetch_data tries HTTPS before HTTP."""
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
 
         urls_tried = []
 
@@ -1350,7 +1350,7 @@ class TestProtocolDetection:
 
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
 
         urls_tried = []
 
@@ -1380,7 +1380,7 @@ class TestProtocolDetection:
 
         # Using MockTestParser defined at module level
 
-        scraper = ModemScraper("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
         assert scraper.base_url == "https://192.168.100.1"
 
         def mock_get(url, **kwargs):
@@ -1404,7 +1404,7 @@ class TestLoginFlow:
 
     def test_login_skipped_without_credentials(self, mocker):
         """Test that login is skipped when no credentials provided."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper.parser = mocker.Mock()
 
         result = scraper._login()
@@ -1418,7 +1418,7 @@ class TestLoginFlow:
         Without a parser or stored auth strategy, we assume the modem
         doesn't require authentication (e.g., status pages are public).
         """
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
         scraper.parser = None
 
         result = scraper._login()
@@ -1433,7 +1433,7 @@ class TestLoginFlow:
         js_auth_hints, auth_form_hints), we assume no authentication is
         required. This handles modems with public status pages.
         """
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         mock_parser = mocker.Mock()
         # Explicitly set no hints - should assume no auth required
@@ -1453,7 +1453,7 @@ class TestSessionExpiryHandling:
 
     def test_authenticate_detects_session_expiry(self, mocker):
         """When original HTML is login page, session expiry is detected."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         # Mock _login to succeed
         mocker.patch.object(scraper, "_login", return_value=(True, None))
@@ -1475,7 +1475,7 @@ class TestSessionExpiryHandling:
 
     def test_authenticate_skips_refetch_when_not_login_page(self, mocker):
         """When original HTML is NOT a login page, no re-fetch needed."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         # Mock _login to succeed without returning HTML
         mocker.patch.object(scraper, "_login", return_value=(True, None))
@@ -1494,7 +1494,7 @@ class TestSessionExpiryHandling:
 
     def test_authenticate_uses_auth_html_when_provided(self, mocker):
         """When _login returns authenticated_html, use it directly."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         # Mock _login to return authenticated HTML
         auth_html = "<h1>Authenticated Content</h1>"
@@ -1514,7 +1514,7 @@ class TestSessionExpiryHandling:
 
     def test_authenticate_returns_none_on_login_failure(self, mocker):
         """When _login fails, return None."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         # Mock _login to fail
         mocker.patch.object(scraper, "_login", return_value=(False, None))
@@ -1527,7 +1527,7 @@ class TestSessionExpiryHandling:
 
     def test_authenticate_handles_refetch_still_login_page(self, mocker):
         """When re-fetch still returns login page, fall back to original."""
-        scraper = ModemScraper("192.168.100.1", username="admin", password="secret")
+        scraper = DataOrchestrator("192.168.100.1", username="admin", password="secret")
 
         mocker.patch.object(scraper, "_login", return_value=(True, None))
 
@@ -1558,7 +1558,7 @@ class TestTierUrlGeneration:
             {"path": "/info.html", "auth_method": "basic"},
         ]
 
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper.parser = mock_parser
 
         urls = scraper._get_tier1_urls()
@@ -1576,7 +1576,7 @@ class TestTierUrlGeneration:
             {"path": "/cached.html", "auth_method": "none"},
         ]
 
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             parser=[mock_parser_class],
             parser_name="Cached Parser",
@@ -1599,7 +1599,7 @@ class TestTierUrlGeneration:
         mock_fallback.manufacturer = "Unknown"  # Identifies as fallback
         mock_fallback.url_patterns = [{"path": "/fallback.html", "auth_method": "none"}]
 
-        scraper = ModemScraper("192.168.100.1", parser=[mock_normal, mock_fallback])
+        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal, mock_fallback])
 
         urls = scraper._get_tier3_urls()
 
@@ -1614,7 +1614,7 @@ class TestGetModemData:
 
     def test_get_modem_data_clears_captures_on_start(self, mocker):
         """Test that get_modem_data clears previous captures."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
         scraper._captured_urls = [{"url": "old"}]
         scraper._failed_urls = [{"url": "old_fail"}]
 
@@ -1628,7 +1628,7 @@ class TestGetModemData:
 
     def test_get_modem_data_returns_status_on_connection_failure(self, mocker):
         """Test that get_modem_data returns status dict on connection failure."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
 
         mocker.patch.object(scraper, "_fetch_data", return_value=None)
 
@@ -1640,7 +1640,7 @@ class TestGetModemData:
 
     def test_get_modem_data_sets_capture_enabled_flag(self, mocker):
         """Test that get_modem_data sets _capture_enabled flag when capture_raw=True."""
-        scraper = ModemScraper("192.168.100.1")
+        scraper = DataOrchestrator("192.168.100.1")
 
         # Mock _fetch_data to return None (fail early, but flag should be set)
         mocker.patch.object(scraper, "_fetch_data", return_value=None)
@@ -1667,7 +1667,7 @@ class TestV312DetectionMethods:
     @pytest.fixture
     def scraper(self):
         """Create a scraper with mock parsers."""
-        return ModemScraper("192.168.100.1", parser=[MockTestParser])
+        return DataOrchestrator("192.168.100.1", parser=[MockTestParser])
 
     @pytest.fixture
     def mock_hint_matcher(self, mocker):
@@ -1710,7 +1710,7 @@ class TestV312DetectionMethods:
         mock_hint_matcher.match_login_markers.return_value = [mock_match]
         mock_hint_matcher.match_model_strings.return_value = []
         mocker.patch(
-            "custom_components.cable_modem_monitor.core.modem_scraper.HintMatcher.get_instance",
+            "custom_components.cable_modem_monitor.core.data_orchestrator.HintMatcher.get_instance",
             return_value=mock_hint_matcher,
         )
 
@@ -1839,7 +1839,7 @@ class TestV312ScraperInitialization:
     def test_init_with_auth_hnap_config(self):
         """Test initialization with HNAP config from config entry."""
         hnap_config = {"endpoint": "/HNAP1/", "namespace": "http://example.com"}
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             auth_strategy="hnap_session",
             auth_hnap_config=hnap_config,
@@ -1849,7 +1849,7 @@ class TestV312ScraperInitialization:
     def test_init_with_auth_url_token_config(self):
         """Test initialization with URL token config from config entry."""
         url_token_config = {"login_page": "/login.html", "token_prefix": "session="}
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             auth_strategy="url_token_session",
             auth_url_token_config=url_token_config,
@@ -1858,7 +1858,7 @@ class TestV312ScraperInitialization:
 
     def test_init_with_authenticated_html(self):
         """Test initialization with pre-fetched HTML."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             authenticated_html="<html>Pre-fetched</html>",
         )
@@ -1866,7 +1866,7 @@ class TestV312ScraperInitialization:
 
     def test_init_with_session_pre_authenticated(self):
         """Test initialization with pre-authenticated session flag."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             session_pre_authenticated=True,
         )
@@ -1874,7 +1874,7 @@ class TestV312ScraperInitialization:
 
     def test_login_skipped_when_pre_authenticated(self, mocker):
         """Test _login returns success without auth when session is pre-authenticated."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             username="admin",
             password="password",
@@ -1889,7 +1889,7 @@ class TestV312ScraperInitialization:
 
     def test_login_proceeds_after_pre_auth_flag_cleared(self, mocker):
         """Test subsequent _login calls proceed normally after flag is cleared."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             "192.168.100.1",
             username="admin",
             password="password",

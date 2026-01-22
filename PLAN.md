@@ -219,8 +219,8 @@ Ensure `AuthResult` can be constructed from `AuthWorkflowResult`. May need a con
 | `core/discovery/steps.py` | Delete `create_authenticated_session()` (~160 lines) |
 | `core/auth/workflow.py` | Ensure result format is pipeline-compatible |
 | `config_flow_helpers.py` | Remove `load_static_auth_config()`, `_build_static_config_for_auth_type()`, simplify `validate_input()` |
-| `__init__.py` | Extract `CONF_AUTH_TYPE` from entry, pass to ModemScraper |
-| `core/modem_scraper.py` | Add `auth_type` param, use in `_login_with_parser_hints()` fallback |
+| `__init__.py` | Extract `CONF_AUTH_TYPE` from entry, pass to DataOrchestrator |
+| `core/data_orchestrator.py` | Add `auth_type` param, use in `_login_with_parser_hints()` fallback |
 
 ## Code to Remove
 
@@ -301,10 +301,10 @@ DataUpdateCoordinator (30s interval)
 async_update_data() in __init__.py
          │
          ▼
-ModemScraper.get_modem_data()
+DataOrchestrator.get_modem_data()
          │
          ▼
-ModemScraper._login() ──────────────────────────┐
+DataOrchestrator._login() ──────────────────────────┐
          │                                       │
          │ Uses auth config from ConfigEntry:    │
          │ - CONF_AUTH_STRATEGY                  │
@@ -336,11 +336,11 @@ Returns authenticated session + HTML ────────────┘
 | File | Change |
 |------|--------|
 | `__init__.py` | Extract `CONF_AUTH_TYPE` from entry, pass to scraper |
-| `core/modem_scraper.py` | Use auth_type in `_login_with_parser_hints()` fallback |
+| `core/data_orchestrator.py` | Use auth_type in `_login_with_parser_hints()` fallback |
 
 ### Runtime Fallback Update
 
-In `modem_scraper.py`, `_login_with_parser_hints()` should:
+In `data_orchestrator.py`, `_login_with_parser_hints()` should:
 ```python
 def _login_with_parser_hints(self, session, url):
     adapter = get_auth_adapter_for_parser(self._parser_name)

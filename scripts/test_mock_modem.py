@@ -26,8 +26,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator  # noqa: E402
 from custom_components.cable_modem_monitor.core.discovery import run_discovery_pipeline  # noqa: E402
-from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper  # noqa: E402
 from custom_components.cable_modem_monitor.modem_config import load_modem_config  # noqa: E402
 from custom_components.cable_modem_monitor.modem_config.adapter import ModemConfigAuthAdapter  # noqa: E402
 from custom_components.cable_modem_monitor.parsers import get_parser_by_name  # noqa: E402
@@ -136,7 +136,7 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
     print(f"  Form config: {auth_form_config is not None}")
 
     # Create scraper (simulating what __init__.py does)
-    scraper = ModemScraper(
+    scraper = DataOrchestrator(
         host=host,
         username=username,
         password=password,

@@ -1211,7 +1211,7 @@ Tests Home Assistant integration behavior with mocked HA core.
 - `test_button.py` - Button entities (restart, refresh)
 - `test_diagnostics.py` - Diagnostics download
 - `test_init.py` - Integration setup/teardown
-- `test_modem_scraper.py` - Scraper behavior
+- `test_data_orchestrator.py` - Scraper behavior
 
 **Answers:** "Does the HA integration behave correctly?"
 

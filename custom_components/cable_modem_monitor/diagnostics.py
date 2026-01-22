@@ -68,8 +68,8 @@ from .const import (
     DOMAIN,
     VERSION,
 )
+from .core.data_orchestrator import _get_parser_url_patterns
 from .core.log_buffer import get_log_entries
-from .core.modem_scraper import _get_parser_url_patterns
 from .lib.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
 
 class TestProtocolCaching:
@@ -11,7 +11,7 @@ class TestProtocolCaching:
     def test_protocol_from_https_cached_url(self):
         """Test that HTTPS protocol is extracted from cached URL."""
         cached_url = "https://192.168.100.1/MotoConnection.asp"
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=cached_url,
@@ -23,7 +23,7 @@ class TestProtocolCaching:
     def test_protocol_from_http_cached_url(self):
         """Test that HTTP protocol is extracted from cached URL."""
         cached_url = "http://192.168.100.1/MotoConnection.asp"
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=cached_url,
@@ -34,7 +34,7 @@ class TestProtocolCaching:
 
     def test_no_cached_url_defaults_to_https(self):
         """Test that HTTPS is default when no cached URL."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=None,
@@ -46,7 +46,7 @@ class TestProtocolCaching:
     def test_explicit_protocol_in_host_overrides_cache(self):
         """Test that explicit protocol in host overrides cached URL."""
         cached_url = "https://192.168.100.1/MotoConnection.asp"
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             parser=[],
             cached_url=cached_url,
@@ -58,7 +58,7 @@ class TestProtocolCaching:
     def test_cached_url_without_protocol_ignored(self):
         """Test that cached URL without protocol is ignored."""
         cached_url = "192.168.100.1/MotoConnection.asp"  # No protocol
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=cached_url,
@@ -71,7 +71,7 @@ class TestProtocolCaching:
         """Test that protocol is extracted even with different path."""
         # User might have cached URL with one path but trying different path
         cached_url = "http://192.168.100.1/oldpath.html"
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=cached_url,
@@ -84,7 +84,7 @@ class TestProtocolCaching:
         """Test that protocol caching only applies to same host."""
         # This is a defensive test - cached URL is from different host
         cached_url = "http://192.168.1.1/MotoConnection.asp"
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",  # Different host
             parser=[],
             cached_url=cached_url,
@@ -100,7 +100,7 @@ class TestProtocolDiscoveryBehavior:
 
     def test_protocols_to_try_with_https_base(self, mocker):
         """Test that both protocols are tried when base is HTTPS."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url=None,  # No cache, defaults to HTTPS
@@ -116,7 +116,7 @@ class TestProtocolDiscoveryBehavior:
 
     def test_protocols_to_try_with_http_cache(self, mocker):
         """Test that only HTTP is tried when cached URL is HTTP."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             cached_url="http://192.168.100.1/test.html",  # HTTP cached
@@ -139,7 +139,7 @@ class TestSSLVerification:
 
     def test_false_by_default(self):
         """Test that SSL verification is disabled by default."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
         )
@@ -149,7 +149,7 @@ class TestSSLVerification:
 
     def test_can_be_enabled(self):
         """Test that SSL verification can be enabled."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             verify_ssl=True,
@@ -160,7 +160,7 @@ class TestSSLVerification:
 
     def test_passed_through_requests(self, mocker):
         """Test that verify parameter is passed to requests."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="192.168.100.1",
             parser=[],
             verify_ssl=False,

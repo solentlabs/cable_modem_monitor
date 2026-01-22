@@ -47,7 +47,7 @@ STEP-BY-STEP GUIDE:
 
 9. TEST YOUR PARSER
    - Place modem HTML in tests/fixtures/your_modem.html
-   - Run: pytest tests/test_modem_scraper.py -v
+   - Run: pytest tests/test_data_orchestrator.py -v
    - Verify all channels parsed correctly
 
 8. SUBMIT
@@ -385,6 +385,6 @@ class YourModemParser(ModemParser):
 #
 # To test:
 # 1. Save your modem's HTML: curl http://192.168.100.1 > tests/fixtures/your_modem.html
-# 2. Run tests: pytest tests/test_modem_scraper.py -v
+# 2. Run tests: pytest tests/test_data_orchestrator.py -v
 # 3. Check logs for warnings/errors
 # 4. Verify channel counts and values look correct

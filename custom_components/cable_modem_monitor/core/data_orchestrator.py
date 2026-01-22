@@ -1,11 +1,11 @@
 """Web scraper for cable modem data.
 
-This module provides the ModemScraper class for fetching and parsing data from
+This module provides the DataOrchestrator class for fetching and parsing data from
 cable modem web interfaces. It handles authentication, parser detection, and
 multi-page data collection.
 
 Architecture:
-    ModemScraper is used in two contexts:
+    DataOrchestrator is used in two contexts:
 
     1. **Polling (every 30s)** - Uses stored config from discovery:
        - auth_strategy, auth_form_config, etc. from config entry
@@ -29,7 +29,7 @@ Parser Detection:
     4. Heuristics - Last resort pattern matching
 
 Key Classes:
-    ModemScraper: Main scraper class
+    DataOrchestrator: Main scraper class
     CapturingSession: Session wrapper for diagnostics capture
 
 See Also:
@@ -145,7 +145,7 @@ class CapturingSession(requests.Session):
         return response
 
 
-class ModemScraper:
+class DataOrchestrator:
     """Scrape data from cable modem web interface.
 
     This class handles the complete data fetch cycle:

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
-from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
 
 class TestScraperAuthStrategyUsage:
@@ -18,7 +18,7 @@ class TestScraperAuthStrategyUsage:
 
     def test_scraper_accepts_auth_strategy_param(self):
         """Scraper accepts auth_strategy parameter."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -38,7 +38,7 @@ class TestScraperAuthStrategyUsage:
             "password_field": "pass",
             "hidden_fields": {"csrf": "token123"},
         }
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -62,7 +62,7 @@ class TestScraperAuthStrategyUsage:
         mock_parser.js_auth_hints = None
         mock_parser.auth_form_hints = None
 
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -82,7 +82,7 @@ class TestScraperBasicAuthStrategy:
 
     def test_basic_auth_sets_session_credentials(self, basic_auth_server):
         """Basic auth strategy sets session.auth."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host=basic_auth_server.url,
             username="admin",
             password="pw",
@@ -108,7 +108,7 @@ class TestScraperFormAuthStrategy:
             "hidden_fields": {"csrf_token": "test_token"},
         }
 
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host=form_auth_server.url,
             username="admin",
             password="pw",
@@ -127,7 +127,7 @@ class TestScraperNoAuthStrategy:
 
     def test_no_auth_strategy_succeeds(self, http_server):
         """NO_AUTH strategy succeeds without any auth action."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host=http_server.url,
             username=None,
             password=None,
@@ -150,7 +150,7 @@ class TestScraperHNAPStrategy:
         mock_parser = MagicMock()
         # _json_builder will be set by AuthHandler if HNAP auth succeeds
 
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -174,7 +174,7 @@ class TestScraperURLTokenStrategy:
         """URL token strategy uses AuthHandler directly."""
         mock_parser = MagicMock()
 
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -205,7 +205,7 @@ class TestScraperLegacyEntryHandling:
         mock_parser.auth_form_hints = None
 
         # Legacy entry: no auth_strategy or auth_form_config
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -227,7 +227,7 @@ class TestScraperLegacyEntryHandling:
         assume the modem doesn't require authentication. This supports
         modems with public status pages.
         """
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -242,14 +242,14 @@ class TestScraperLegacyEntryHandling:
 
 
 class TestScraperAuthHandlerIntegration:
-    """Test AuthHandler integration with ModemScraper."""
+    """Test AuthHandler integration with DataOrchestrator."""
 
     def test_form_auth_without_config_fails_gracefully(self):
         """Form auth without config returns failure."""
         mock_parser = MagicMock()
 
         # Create scraper with form auth but no form config
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -265,7 +265,7 @@ class TestScraperAuthHandlerIntegration:
 
     def test_auth_handler_initialized_correctly(self):
         """Auth handler is initialized with correct strategy."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -277,7 +277,7 @@ class TestScraperAuthHandlerIntegration:
 
     def test_auth_handler_initialized_with_unknown_strategy(self):
         """Unknown strategy string handled gracefully."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
@@ -293,7 +293,7 @@ class TestScraperNoCredentials:
 
     def test_no_credentials_skips_login(self):
         """Without credentials, _login() returns success immediately."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username=None,
             password=None,
@@ -308,7 +308,7 @@ class TestScraperNoCredentials:
 
     def test_empty_credentials_skips_login(self):
         """Empty string credentials skip login."""
-        scraper = ModemScraper(
+        scraper = DataOrchestrator(
             host="http://192.168.100.1",
             username="",
             password="",

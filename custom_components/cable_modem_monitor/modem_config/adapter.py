@@ -372,7 +372,7 @@ class ModemConfigAuthAdapter:
         """Get detection hints from modem.yaml for YAML-driven detection.
 
         These hints enable fast parser detection via HintMatcher.
-        Used by modem_scraper Phase 0 quick detection.
+        Used by data_orchestrator Phase 0 quick detection.
 
         Returns:
             Dict with keys:
@@ -676,7 +676,7 @@ def get_docsis_version_for_parser(parser_class_name: str) -> str | None:
 def get_detection_hints_for_parser(parser_class_name: str) -> dict[str, str | list[str] | None] | None:
     """Get detection hints for a parser class from modem.yaml.
 
-    Used by modem_scraper for YAML-driven detection in Phase 0.
+    Used by data_orchestrator for YAML-driven detection in Phase 0.
     Enables fast parser matching via HintMatcher.
 
     Args:

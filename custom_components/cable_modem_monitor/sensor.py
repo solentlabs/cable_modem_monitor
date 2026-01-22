@@ -2,7 +2,7 @@
 
 This module creates Home Assistant sensor entities from modem data provided by
 the DataUpdateCoordinator. It does NOT handle authentication or data fetching -
-those responsibilities belong to __init__.py and ModemScraper.
+those responsibilities belong to __init__.py and DataOrchestrator.
 
 Entity Types:
     - Status/Info: ModemStatusSensor, ModemInfoSensor

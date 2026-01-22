@@ -16,10 +16,10 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 92 | Tests for Cable Modem Monitor scraper. |
 | [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_init.py](test_init.py) | 29 | Tests for __init__.py helper functions. |
-| [test_modem_scraper.py](test_modem_scraper.py) | 92 | Tests for Cable Modem Monitor scraper. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
@@ -199,6 +199,173 @@ Tests for Cable Modem Monitor coordinator improvements.
 - `test_uses_first_refresh_for_setup_in_progress`: Test that async_config_entry_first_refresh is used during SETUP_IN_PROGRESS.
 - `test_uses_regular_refresh_for_loaded_state`: Test that async_refresh is used when entry is already LOADED.
 
+### test_data_orchestrator.py
+
+Tests for Cable Modem Monitor scraper.
+
+These tests validate the DataOrchestrator core functionality using mock parsers.
+No modem-specific references - tests exercise the scraper mechanism itself.
+
+NOTE: The scraper is core/generic functionality that will be further abstracted
+in future versions. Using mock parsers (not real modems) ensures these tests
+remain stable as the architecture evolves toward declarative modem configs.
+
+**TestDataOrchestrator** (11 tests)
+: Test the DataOrchestrator class.
+
+- `test_scraper_with_mock_parser`: Test the scraper with a mock parser.
+- `test_fetch_data_url_ordering`: Test that the scraper tries URLs in the correct order when all fail.
+- `test_fetch_data_stops_on_first_success`: Test that the scraper stops trying URLs after first successful response.
+- `test_restart_modem_https_to_http_fallback`: Test that restart_modem falls back from HTTPS to HTTP when connection refused.
+- `test_restart_modem_calls_login_with_credentials`: Test that restart_modem calls login when credentials are provided.
+- `test_restart_modem_skips_login_without_credentials`: Test that restart_modem skips login when no credentials provided.
+- `test_restart_modem_fails_when_login_fails`: Test that restart_modem aborts when login fails.
+- `test_restart_modem_fails_when_connection_fails`: Test that restart_modem fails gracefully when connection fails.
+- `test_restart_modem_fails_when_parser_not_detected`: Test that restart_modem fails when parser cannot be detected.
+- `test_restart_modem_fails_when_modem_yaml_has_no_restart_action`: Test that restart_modem fails when modem.yaml has no actions.restart config.
+- `test_restart_modem_always_fetches_data_even_with_cached_parser`: Test that restart_modem always calls _fetch_data even when parser is cached.
+
+**TestRestartValidation** (6 tests)
+: Tests for _validate_restart_capability method.
+
+- `test_validate_restart_returns_true_when_modem_yaml_has_restart`: Test validation succeeds when modem.yaml has actions.restart configured.
+- `test_validate_restart_returns_false_when_no_restart_action`: Test validation fails when modem.yaml has no actions.restart.
+- `test_validate_restart_returns_false_when_no_actions_key`: Test validation fails when modem.yaml has no actions key at all.
+- `test_validate_restart_returns_false_when_no_adapter`: Test validation fails when no modem.yaml adapter found.
+- `test_validate_restart_returns_false_when_no_parser`: Test validation fails when parser is not set.
+- `test_validate_restart_with_hnap_action_type`: Test validation succeeds for HNAP restart action type.
+
+**TestFallbackParserDetection** (6 tests)
+: Test that fallback parser is excluded from detection phases and only used as last resort.
+
+- `test_excluded_from_anonymous_probing`: Test that fallback parser is excluded from Phase 1 (anonymous probing).
+- `test_excluded_from_prioritized_parsers`: Test that fallback parser is excluded from Phase 3 (prioritized parsers).
+- `test_excluded_from_url_discovery_tier2`: Test that fallback parser is excluded from Tier 2 URL discovery.
+- `test_excluded_from_url_discovery_tier3`: Test that fallback parser is excluded from Tier 3 URL discovery.
+- `test_not_auto_selected_raises_error`: Test that fallback parser is NOT auto-selected when detection fails.
+- `test_known_modem_detected_before_fallback`: Test that a known modem parser is detected before fallback parser.
+
+**TestLogoutAfterPoll** (10 tests)
+: Tests for session cleanup after polling.
+
+- `test_perform_logout_calls_endpoint_when_defined`: Test that _perform_logout calls the logout endpoint when parser defines it.
+- `test_perform_logout_skips_when_no_endpoint`: Test that _perform_logout does nothing when parser has no logout_endpoint.
+- `test_perform_logout_skips_when_no_parser`: Test that _perform_logout does nothing when no parser is set.
+- `test_perform_logout_handles_request_failure`: Test that _perform_logout gracefully handles request failures.
+- `test_get_modem_data_calls_logout_in_finally`: Test that get_modem_data calls _perform_logout even on success.
+- `test_get_modem_data_calls_logout_on_error`: Test that get_modem_data calls _perform_logout even on error.
+- `test_get_detection_info_includes_logout_endpoint`: Test that get_detection_info exposes logout_endpoint from adapter.
+- `test_get_detection_info_logout_endpoint_none_when_not_set`: Test that get_detection_info returns None for logout_endpoint when not set.
+- `test_perform_logout_with_https_url`: Test that _perform_logout works with HTTPS base URL.
+- `test_perform_logout_with_different_endpoint_formats`: Test that _perform_logout works with various endpoint formats.
+
+**TestDataOrchestratorInitialization** (13 tests)
+: Tests for DataOrchestrator initialization and configuration.
+
+- `test_init_with_plain_ip_uses_https_default`: Test that plain IP defaults to HTTPS.
+- `test_init_with_http_url_preserves_protocol`: Test that explicit HTTP URL is preserved.
+- `test_init_with_https_url_preserves_protocol`: Test that explicit HTTPS URL is preserved.
+- `test_init_with_trailing_slash_removed`: Test that trailing slashes are removed from URL.
+- `test_init_uses_cached_url_protocol`: Test that cached URL protocol is used for plain IP.
+- `test_init_with_credentials`: Test initialization with credentials.
+- `test_init_with_parser_instance`: Test initialization with a parser instance.
+- `test_init_with_parser_class`: Test initialization with a parser class.
+- `test_init_with_verify_ssl_true`: Test initialization with SSL verification enabled.
+- `test_init_with_verify_ssl_false`: Test initialization with SSL verification disabled.
+- `test_init_with_legacy_ssl_mounts_adapter`: Test that legacy SSL mode mounts the LegacySSLAdapter.
+- `test_init_legacy_ssl_not_mounted_for_http`: Test that legacy SSL adapter is NOT mounted for HTTP URLs.
+- `test_init_with_parser_name_for_tier2`: Test initialization with parser_name for Tier 2 caching.
+
+**TestCapturingSession** (4 tests)
+: Tests for the CapturingSession class.
+
+- `test_capturing_session_calls_callback`: Test that CapturingSession calls the callback on each request.
+- `test_capturing_session_detects_hnap_requests`: Test that CapturingSession identifies HNAP requests.
+- `test_capturing_session_detects_login_pages`: Test that CapturingSession identifies login pages.
+- `test_capturing_session_detects_status_pages`: Test that CapturingSession identifies status pages.
+
+**TestClearAuthCache** (4 tests)
+: Tests for auth cache clearing.
+
+- `test_clear_auth_cache_creates_new_session`: Test that clear_auth_cache creates a fresh session.
+- `test_clear_auth_cache_preserves_verify_setting`: Test that clear_auth_cache preserves SSL verify setting.
+- `test_clear_auth_cache_clears_hnap_builder`: Test that clear_auth_cache clears HNAP builder cache via auth_handler.
+- `test_clear_auth_cache_handles_missing_builder`: Test that clear_auth_cache handles auth handler without HNAP builder.
+
+**TestCaptureResponse** (3 tests)
+: Tests for response capture functionality.
+
+- `test_capture_response_when_disabled`: Test that capture is skipped when disabled.
+- `test_capture_response_when_enabled`: Test that response is captured when enabled.
+- `test_capture_response_deduplicates_urls`: Test that duplicate URLs are not captured twice.
+
+**TestRecordFailedUrl** (3 tests)
+: Tests for failed URL recording.
+
+- `test_record_failed_url_when_disabled`: Test that failed URL is not recorded when capture disabled.
+- `test_record_failed_url_when_enabled`: Test that failed URL is recorded when capture enabled.
+- `test_record_failed_url_with_response_body`: Test that response body is recorded for error pages.
+
+**TestProtocolDetection** (3 tests)
+: Tests for HTTP/HTTPS protocol detection and fallback.
+
+- `test_fetch_data_tries_https_first`: Test that _fetch_data tries HTTPS before HTTP.
+- `test_fetch_data_falls_back_to_http`: Test that _fetch_data falls back to HTTP when HTTPS fails.
+- `test_fetch_data_updates_base_url_on_success`: Test that base_url is updated when HTTP fallback succeeds.
+
+**TestLoginFlow** (3 tests)
+: Tests for the login flow.
+
+- `test_login_skipped_without_credentials`: Test that login is skipped when no credentials provided.
+- `test_login_skipped_without_parser`: Test that login assumes no auth required when no parser is set.
+- `test_login_assumes_no_auth_when_parser_has_no_hints`: Test that login assumes no auth required when parser has no hints.
+
+**TestSessionExpiryHandling** (5 tests)
+: Tests for session expiry detection and re-fetch.
+
+- `test_authenticate_detects_session_expiry`: When original HTML is login page, session expiry is detected.
+- `test_authenticate_skips_refetch_when_not_login_page`: When original HTML is NOT a login page, no re-fetch needed.
+- `test_authenticate_uses_auth_html_when_provided`: When _login returns authenticated_html, use it directly.
+- `test_authenticate_returns_none_on_login_failure`: When _login fails, return None.
+- `test_authenticate_handles_refetch_still_login_page`: When re-fetch still returns login page, fall back to original.
+
+**TestTierUrlGeneration** (3 tests)
+: Tests for URL generation in different tiers.
+
+- `test_tier1_urls_from_explicit_parser`: Test Tier 1: URLs from explicitly selected parser.
+- `test_tier2_urls_from_cached_parser`: Test Tier 2: URLs from cached parser name.
+- `test_tier3_excludes_fallback_parser`: Test Tier 3: Fallback parser excluded from URL discovery.
+
+**TestGetModemData** (3 tests)
+: Tests for the main get_modem_data flow.
+
+- `test_get_modem_data_clears_captures_on_start`: Test that get_modem_data clears previous captures.
+- `test_get_modem_data_returns_status_on_connection_failure`: Test that get_modem_data returns status dict on connection failure.
+- `test_get_modem_data_sets_capture_enabled_flag`: Test that get_modem_data sets _capture_enabled flag when capture_raw=True.
+
+**TestV312DetectionMethods** (9 tests)
+: Tests for v3.12 HintMatcher-based detection methods.
+
+- `test_get_parser_by_name_found`: Test _get_parser_by_name returns parser when found.
+- `test_get_parser_by_name_not_found`: Test _get_parser_by_name returns None when not found.
+- `test_try_instant_detection_with_prefetched_html`: Test instant detection uses pre-fetched HTML from auth discovery.
+- `test_try_instant_detection_skipped_when_no_html`: Test instant detection is skipped when no pre-fetched HTML.
+- `test_try_instant_detection_skipped_when_parser_exists`: Test instant detection is skipped when parser already detected.
+- `test_login_markers_detection`: Table-driven test for _try_login_markers_detection.
+- `test_disambiguate_finds_intersection`: Test disambiguation finds parser in both login and model matches.
+- `test_disambiguate_no_intersection`: Test disambiguation returns None when no intersection.
+- `test_try_quick_detection_delegates_to_login_markers`: Test _try_quick_detection delegates to _try_login_markers_detection.
+
+**TestV312ScraperInitialization** (6 tests)
+: Tests for v3.12 scraper initialization parameters.
+
+- `test_init_with_auth_hnap_config`: Test initialization with HNAP config from config entry.
+- `test_init_with_auth_url_token_config`: Test initialization with URL token config from config entry.
+- `test_init_with_authenticated_html`: Test initialization with pre-fetched HTML.
+- `test_init_with_session_pre_authenticated`: Test initialization with pre-authenticated session flag.
+- `test_login_skipped_when_pre_authenticated`: Test _login returns success without auth when session is pre-authenticated.
+- `test_login_proceeds_after_pre_auth_flag_cleared`: Test subsequent _login calls proceed normally after flag is cleared.
+
 ### test_diagnostics.py
 
 Tests for Cable Modem Monitor diagnostics platform.
@@ -362,173 +529,6 @@ Tests for __init__.py helper functions.
 - `test_upstream_ofdma_channels`: Test upstream OFDMA channel normalization (G54-style).
 - `test_channels_sorted_by_frequency`: Channels within a type are sorted by frequency.
 - `test_empty_channels`: Empty channel list returns empty dict.
-
-### test_modem_scraper.py
-
-Tests for Cable Modem Monitor scraper.
-
-These tests validate the ModemScraper core functionality using mock parsers.
-No modem-specific references - tests exercise the scraper mechanism itself.
-
-NOTE: The scraper is core/generic functionality that will be further abstracted
-in future versions. Using mock parsers (not real modems) ensures these tests
-remain stable as the architecture evolves toward declarative modem configs.
-
-**TestModemScraper** (11 tests)
-: Test the ModemScraper class.
-
-- `test_scraper_with_mock_parser`: Test the scraper with a mock parser.
-- `test_fetch_data_url_ordering`: Test that the scraper tries URLs in the correct order when all fail.
-- `test_fetch_data_stops_on_first_success`: Test that the scraper stops trying URLs after first successful response.
-- `test_restart_modem_https_to_http_fallback`: Test that restart_modem falls back from HTTPS to HTTP when connection refused.
-- `test_restart_modem_calls_login_with_credentials`: Test that restart_modem calls login when credentials are provided.
-- `test_restart_modem_skips_login_without_credentials`: Test that restart_modem skips login when no credentials provided.
-- `test_restart_modem_fails_when_login_fails`: Test that restart_modem aborts when login fails.
-- `test_restart_modem_fails_when_connection_fails`: Test that restart_modem fails gracefully when connection fails.
-- `test_restart_modem_fails_when_parser_not_detected`: Test that restart_modem fails when parser cannot be detected.
-- `test_restart_modem_fails_when_modem_yaml_has_no_restart_action`: Test that restart_modem fails when modem.yaml has no actions.restart config.
-- `test_restart_modem_always_fetches_data_even_with_cached_parser`: Test that restart_modem always calls _fetch_data even when parser is cached.
-
-**TestRestartValidation** (6 tests)
-: Tests for _validate_restart_capability method.
-
-- `test_validate_restart_returns_true_when_modem_yaml_has_restart`: Test validation succeeds when modem.yaml has actions.restart configured.
-- `test_validate_restart_returns_false_when_no_restart_action`: Test validation fails when modem.yaml has no actions.restart.
-- `test_validate_restart_returns_false_when_no_actions_key`: Test validation fails when modem.yaml has no actions key at all.
-- `test_validate_restart_returns_false_when_no_adapter`: Test validation fails when no modem.yaml adapter found.
-- `test_validate_restart_returns_false_when_no_parser`: Test validation fails when parser is not set.
-- `test_validate_restart_with_hnap_action_type`: Test validation succeeds for HNAP restart action type.
-
-**TestFallbackParserDetection** (6 tests)
-: Test that fallback parser is excluded from detection phases and only used as last resort.
-
-- `test_excluded_from_anonymous_probing`: Test that fallback parser is excluded from Phase 1 (anonymous probing).
-- `test_excluded_from_prioritized_parsers`: Test that fallback parser is excluded from Phase 3 (prioritized parsers).
-- `test_excluded_from_url_discovery_tier2`: Test that fallback parser is excluded from Tier 2 URL discovery.
-- `test_excluded_from_url_discovery_tier3`: Test that fallback parser is excluded from Tier 3 URL discovery.
-- `test_not_auto_selected_raises_error`: Test that fallback parser is NOT auto-selected when detection fails.
-- `test_known_modem_detected_before_fallback`: Test that a known modem parser is detected before fallback parser.
-
-**TestLogoutAfterPoll** (10 tests)
-: Tests for session cleanup after polling.
-
-- `test_perform_logout_calls_endpoint_when_defined`: Test that _perform_logout calls the logout endpoint when parser defines it.
-- `test_perform_logout_skips_when_no_endpoint`: Test that _perform_logout does nothing when parser has no logout_endpoint.
-- `test_perform_logout_skips_when_no_parser`: Test that _perform_logout does nothing when no parser is set.
-- `test_perform_logout_handles_request_failure`: Test that _perform_logout gracefully handles request failures.
-- `test_get_modem_data_calls_logout_in_finally`: Test that get_modem_data calls _perform_logout even on success.
-- `test_get_modem_data_calls_logout_on_error`: Test that get_modem_data calls _perform_logout even on error.
-- `test_get_detection_info_includes_logout_endpoint`: Test that get_detection_info exposes logout_endpoint from adapter.
-- `test_get_detection_info_logout_endpoint_none_when_not_set`: Test that get_detection_info returns None for logout_endpoint when not set.
-- `test_perform_logout_with_https_url`: Test that _perform_logout works with HTTPS base URL.
-- `test_perform_logout_with_different_endpoint_formats`: Test that _perform_logout works with various endpoint formats.
-
-**TestModemScraperInitialization** (13 tests)
-: Tests for ModemScraper initialization and configuration.
-
-- `test_init_with_plain_ip_uses_https_default`: Test that plain IP defaults to HTTPS.
-- `test_init_with_http_url_preserves_protocol`: Test that explicit HTTP URL is preserved.
-- `test_init_with_https_url_preserves_protocol`: Test that explicit HTTPS URL is preserved.
-- `test_init_with_trailing_slash_removed`: Test that trailing slashes are removed from URL.
-- `test_init_uses_cached_url_protocol`: Test that cached URL protocol is used for plain IP.
-- `test_init_with_credentials`: Test initialization with credentials.
-- `test_init_with_parser_instance`: Test initialization with a parser instance.
-- `test_init_with_parser_class`: Test initialization with a parser class.
-- `test_init_with_verify_ssl_true`: Test initialization with SSL verification enabled.
-- `test_init_with_verify_ssl_false`: Test initialization with SSL verification disabled.
-- `test_init_with_legacy_ssl_mounts_adapter`: Test that legacy SSL mode mounts the LegacySSLAdapter.
-- `test_init_legacy_ssl_not_mounted_for_http`: Test that legacy SSL adapter is NOT mounted for HTTP URLs.
-- `test_init_with_parser_name_for_tier2`: Test initialization with parser_name for Tier 2 caching.
-
-**TestCapturingSession** (4 tests)
-: Tests for the CapturingSession class.
-
-- `test_capturing_session_calls_callback`: Test that CapturingSession calls the callback on each request.
-- `test_capturing_session_detects_hnap_requests`: Test that CapturingSession identifies HNAP requests.
-- `test_capturing_session_detects_login_pages`: Test that CapturingSession identifies login pages.
-- `test_capturing_session_detects_status_pages`: Test that CapturingSession identifies status pages.
-
-**TestClearAuthCache** (4 tests)
-: Tests for auth cache clearing.
-
-- `test_clear_auth_cache_creates_new_session`: Test that clear_auth_cache creates a fresh session.
-- `test_clear_auth_cache_preserves_verify_setting`: Test that clear_auth_cache preserves SSL verify setting.
-- `test_clear_auth_cache_clears_hnap_builder`: Test that clear_auth_cache clears HNAP builder cache via auth_handler.
-- `test_clear_auth_cache_handles_missing_builder`: Test that clear_auth_cache handles auth handler without HNAP builder.
-
-**TestCaptureResponse** (3 tests)
-: Tests for response capture functionality.
-
-- `test_capture_response_when_disabled`: Test that capture is skipped when disabled.
-- `test_capture_response_when_enabled`: Test that response is captured when enabled.
-- `test_capture_response_deduplicates_urls`: Test that duplicate URLs are not captured twice.
-
-**TestRecordFailedUrl** (3 tests)
-: Tests for failed URL recording.
-
-- `test_record_failed_url_when_disabled`: Test that failed URL is not recorded when capture disabled.
-- `test_record_failed_url_when_enabled`: Test that failed URL is recorded when capture enabled.
-- `test_record_failed_url_with_response_body`: Test that response body is recorded for error pages.
-
-**TestProtocolDetection** (3 tests)
-: Tests for HTTP/HTTPS protocol detection and fallback.
-
-- `test_fetch_data_tries_https_first`: Test that _fetch_data tries HTTPS before HTTP.
-- `test_fetch_data_falls_back_to_http`: Test that _fetch_data falls back to HTTP when HTTPS fails.
-- `test_fetch_data_updates_base_url_on_success`: Test that base_url is updated when HTTP fallback succeeds.
-
-**TestLoginFlow** (3 tests)
-: Tests for the login flow.
-
-- `test_login_skipped_without_credentials`: Test that login is skipped when no credentials provided.
-- `test_login_skipped_without_parser`: Test that login assumes no auth required when no parser is set.
-- `test_login_assumes_no_auth_when_parser_has_no_hints`: Test that login assumes no auth required when parser has no hints.
-
-**TestSessionExpiryHandling** (5 tests)
-: Tests for session expiry detection and re-fetch.
-
-- `test_authenticate_detects_session_expiry`: When original HTML is login page, session expiry is detected.
-- `test_authenticate_skips_refetch_when_not_login_page`: When original HTML is NOT a login page, no re-fetch needed.
-- `test_authenticate_uses_auth_html_when_provided`: When _login returns authenticated_html, use it directly.
-- `test_authenticate_returns_none_on_login_failure`: When _login fails, return None.
-- `test_authenticate_handles_refetch_still_login_page`: When re-fetch still returns login page, fall back to original.
-
-**TestTierUrlGeneration** (3 tests)
-: Tests for URL generation in different tiers.
-
-- `test_tier1_urls_from_explicit_parser`: Test Tier 1: URLs from explicitly selected parser.
-- `test_tier2_urls_from_cached_parser`: Test Tier 2: URLs from cached parser name.
-- `test_tier3_excludes_fallback_parser`: Test Tier 3: Fallback parser excluded from URL discovery.
-
-**TestGetModemData** (3 tests)
-: Tests for the main get_modem_data flow.
-
-- `test_get_modem_data_clears_captures_on_start`: Test that get_modem_data clears previous captures.
-- `test_get_modem_data_returns_status_on_connection_failure`: Test that get_modem_data returns status dict on connection failure.
-- `test_get_modem_data_sets_capture_enabled_flag`: Test that get_modem_data sets _capture_enabled flag when capture_raw=True.
-
-**TestV312DetectionMethods** (9 tests)
-: Tests for v3.12 HintMatcher-based detection methods.
-
-- `test_get_parser_by_name_found`: Test _get_parser_by_name returns parser when found.
-- `test_get_parser_by_name_not_found`: Test _get_parser_by_name returns None when not found.
-- `test_try_instant_detection_with_prefetched_html`: Test instant detection uses pre-fetched HTML from auth discovery.
-- `test_try_instant_detection_skipped_when_no_html`: Test instant detection is skipped when no pre-fetched HTML.
-- `test_try_instant_detection_skipped_when_parser_exists`: Test instant detection is skipped when parser already detected.
-- `test_login_markers_detection`: Table-driven test for _try_login_markers_detection.
-- `test_disambiguate_finds_intersection`: Test disambiguation finds parser in both login and model matches.
-- `test_disambiguate_no_intersection`: Test disambiguation returns None when no intersection.
-- `test_try_quick_detection_delegates_to_login_markers`: Test _try_quick_detection delegates to _try_login_markers_detection.
-
-**TestV312ScraperInitialization** (6 tests)
-: Tests for v3.12 scraper initialization parameters.
-
-- `test_init_with_auth_hnap_config`: Test initialization with HNAP config from config entry.
-- `test_init_with_auth_url_token_config`: Test initialization with URL token config from config entry.
-- `test_init_with_authenticated_html`: Test initialization with pre-fetched HTML.
-- `test_init_with_session_pre_authenticated`: Test initialization with pre-authenticated session flag.
-- `test_login_skipped_when_pre_authenticated`: Test _login returns success without auth when session is pre-authenticated.
-- `test_login_proceeds_after_pre_auth_flag_cleared`: Test subsequent _login calls proceed normally after flag is cleared.
 
 ### test_protocol_caching.py
 

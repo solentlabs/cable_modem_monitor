@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.modem_scraper import ModemScraper
+from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
 
 class MockParserWithHints(ModemParser):
@@ -51,7 +51,7 @@ class TestAuth:
         When a parser has auth_form_hints defined, the scraper creates a temporary
         AuthHandler to handle authentication.
         """
-        scraper = ModemScraper("192.168.100.1", "admin", "password", parser=[MockParserWithHints])
+        scraper = DataOrchestrator("192.168.100.1", "admin", "password", parser=[MockParserWithHints])
         # _fetch_data now returns (html, url, parser_class)
         mocker.patch.object(
             scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", MockParserWithHints)
