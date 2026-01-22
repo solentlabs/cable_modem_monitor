@@ -123,7 +123,8 @@ cd cable_modem_monitor
 
 # Option 2: Manual installation
 pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes types, linters, pre-commit)
-pre-commit install  # Install git hooks for automatic code formatting
+pre-commit install                   # Install pre-commit hooks (runs on each commit)
+pre-commit install --hook-type pre-push  # Install pre-push hooks (runs full validation before push)
 ```
 
 **Having environment issues?** See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) for:
@@ -193,18 +194,21 @@ bash scripts/dev/lint.sh
 
 **Automated Quality Checks:**
 
-The repository includes a **pre-push hook** that automatically runs quality checks before pushing to GitHub. This prevents CI failures by catching issues locally.
+The repository includes **pre-push hooks** that automatically run full project validation before pushing to GitHub. This prevents CI failures by catching issues locally.
 
 ```bash
+# Install pre-push hooks (one-time setup)
+pre-commit install --hook-type pre-push
+
 # The pre-push hook runs automatically and checks:
-# - Code formatting (Black)
-# - Linting (Ruff)
+# - Full project linting (ruff check .)
+# - Full test suite (pytest)
 
 # To skip the hook in emergencies (not recommended):
 git push --no-verify
 ```
 
-**Pre-commit hooks (alternative method):**
+**Pre-commit hooks (runs on each commit):**
 ```bash
 # Install pre-commit hooks (runs automatically on commit)
 pip install pre-commit
@@ -213,7 +217,7 @@ pre-commit install
 # Run manually on all files
 pre-commit run --all-files
 
-# Note: May have permission issues in WSL environments
+# Note: Pre-commit only checks staged files. Pre-push checks the full project.
 ```
 
 ### 4. Run Tests

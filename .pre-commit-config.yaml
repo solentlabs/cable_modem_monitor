@@ -151,3 +151,19 @@ repos:
         pass_filenames: false
         stages: [manual]
         always_run: true
+
+      - id: pre-push-lint
+        name: Full project lint check
+        entry: ruff check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
+      - id: pre-push-tests
+        name: Full test suite
+        entry: pytest
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true

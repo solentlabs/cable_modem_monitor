@@ -182,49 +182,25 @@ Refactored ~36 `except Exception` blocks across 3 core files:
 
 ---
 
-### 20. CI/Local Environment Synchronization Gap
+### 20. Pre-Push Hook for Full Project Validation (RESOLVED)
 
-**Problem:** CI workflows and local pre-commit hooks use different tool versions and validation paths, causing CI failures that pass locally. Discovered during v3.12.0 release (January 2026).
+**Resolution:** v3.13.0 (January 2026)
 
-**Specific Issues:**
-1. **Version drift:** CI installs `black` without version pinning (`.github/workflows/tests.yml:66`) while pre-commit pins to specific version
-2. **Missing CI simulation:** `make validate-ci` references non-existent `scripts/ci-check.sh`
-3. **Workflow drift:** `release.yml` and `tests.yml` had different pytest configurations (one used `pytest tests/`, other used `pytest`)
-4. **CodeQL not locally testable:** Pre-commit hook requires CodeQL CLI which isn't installed
-5. **Pre-commit staged-only:** Hooks only check staged files, not full project
+Added pre-push hooks to `.pre-commit-config.yaml` that run full project checks:
+- `pre-push-lint` - runs `ruff check .` on entire project
+- `pre-push-tests` - runs `pytest` full test suite
 
-**Impact:**
-- CI failures after "all green" local checks
-- Embarrassing release delays
-- Loss of confidence in local validation
+**Installation:** Users must run once to enable:
+```bash
+pre-commit install --hook-type pre-push
+```
 
-**Remediation:**
-1. **Create `scripts/ci-check.sh`** - Mirror CI environment locally:
-   - Install exact CI tool versions in temp venv
-   - Run same commands as CI (ruff, black --check, mypy, pytest)
-   - Check CodeQL alerts via GitHub API or skip with warning
-2. **Pin tool versions in CI** - Add explicit versions in tests.yml:
-   ```yaml
-   pip install ruff==0.8.2 black==26.1.0 mypy==1.11.2 ...
-   ```
-3. **Add pre-push hook** - Run full project checks (not just staged files)
-4. **Single source of truth** - Create `requirements-ci.txt` used by both CI and local simulation
-5. **Remove or document CodeQL hook** - Either install CLI or mark as optional
-
-**Effort:** Medium (2 sessions)
-
-**Source:** v3.12.0 post-release review (January 2026)
-
-**Files:**
-- `.github/workflows/tests.yml` (add version pins)
-- `.github/workflows/release.yml` (keep in sync with tests.yml)
-- `scripts/ci-check.sh` (create)
-- `.pre-commit-config.yaml` (add pre-push hook)
-- `Makefile` (fix validate-ci target)
+**Files Changed:**
+- `.pre-commit-config.yaml` - added pre-push stage hooks
 
 ---
 
-### 22. DataOrchestrator Monolith (1906 lines)
+### 21. DataOrchestrator Monolith (1906 lines)
 
 **Problem:** `core/data_orchestrator.py` is the largest class in the codebase at 1906 lines with 37+ methods handling multiple concerns:
 - Data fetching/loading (circuits, tiering, caching)
