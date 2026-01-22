@@ -125,7 +125,7 @@ def check_connectivity(  # noqa: C901
                         protocol=protocol,
                         legacy_ssl=True,
                     )
-                except Exception as legacy_err:
+                except (requests.RequestException, OSError) as legacy_err:
                     _LOGGER.debug("Legacy SSL also failed: %s", legacy_err)
 
         except requests.exceptions.ConnectionError as e:
@@ -136,8 +136,13 @@ def check_connectivity(  # noqa: C901
             _LOGGER.debug("Timeout for %s", url)
             continue
 
+        except (requests.RequestException, OSError) as e:
+            _LOGGER.debug("Network error for %s: %s", url, e)
+            continue
+
         except Exception as e:
-            _LOGGER.debug("Unexpected error for %s: %s", url, e)
+            # Fallback: catch unexpected errors to prevent crash during discovery
+            _LOGGER.debug("Unexpected error for %s: %s", url, e, exc_info=True)
             continue
 
     return ConnectivityResult(
@@ -210,7 +215,7 @@ def discover_auth(
                 html=resp.text,
                 form_config=None,
             )
-        except Exception as e:
+        except requests.RequestException as e:
             return AuthResult(success=False, error=f"Connection failed: {e}")
 
     # Run auth discovery
@@ -260,7 +265,12 @@ def discover_auth(
             url_token_config=result.url_token_config,
         )
 
+    except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+        # Expected errors from network/parsing
+        _LOGGER.debug("Auth discovery failed: %s", e)
+        return AuthResult(success=False, error=str(e))
     except Exception as e:
+        # Fallback: catch unexpected errors to prevent crash
         _LOGGER.exception("Auth discovery exception: %s", e)
         return AuthResult(success=False, error=str(e))
 
@@ -493,7 +503,8 @@ def validate_parse(  # noqa: C901
 
                 modem_data = parser_instance.parse_resources(resources)
 
-            except Exception as loader_error:
+            except (requests.RequestException, KeyError, TypeError, ValueError, AttributeError) as loader_error:
+                # Intentionally broad: loader can fail via network or config issues
                 _LOGGER.debug(
                     "ResourceLoader failed, falling back to single-page parse: %s",
                     loader_error,
@@ -551,6 +562,7 @@ def validate_parse(  # noqa: C901
             parser_instance=parser_instance,
         )
 
-    except Exception as e:
+    except (requests.RequestException, AttributeError, TypeError, KeyError, ValueError) as e:
+        # Intentionally broad: validation can fail via network, parsing, or config
         _LOGGER.exception("Validation parse failed: %s", e)
         return ValidationResult(success=False, error=str(e))

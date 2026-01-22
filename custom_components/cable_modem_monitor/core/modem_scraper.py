@@ -355,7 +355,8 @@ class ModemScraper:
                 }
             )
             _LOGGER.debug("Captured response: %s (%d bytes) - %s", response.url, len(response.text), description)
-        except Exception as e:
+        except (AttributeError, TypeError, KeyError) as e:
+            # Intentionally broad: capture can fail due to malformed response objects
             _LOGGER.warning(
                 "Failed to capture response from %s: %s", response.url if hasattr(response, "url") else "unknown", e
             )
@@ -467,7 +468,7 @@ class ModemScraper:
                         response_body=response.text if hasattr(response, "text") else None,
                     )
 
-            except Exception as e:
+            except requests.RequestException as e:
                 _LOGGER.debug("Failed to fetch parser URL %s: %s", url, e)
                 self._record_failed_url(
                     url=url,
@@ -588,7 +589,7 @@ class ModemScraper:
                             response_body=response.text if hasattr(response, "text") else None,
                         )
 
-                except Exception as e:
+                except requests.RequestException as e:
                     _LOGGER.debug("Failed to fetch %s %s: %s", resource_type, url, e)
                     self._record_failed_url(
                         url=url,
@@ -710,7 +711,8 @@ class ModemScraper:
             )
             _LOGGER.debug("Created %s for %s", fetcher.__class__.__name__, self.parser.name)
             return fetcher
-        except Exception as e:
+        except (KeyError, TypeError, ValueError, AttributeError) as e:
+            # Intentionally broad: loader creation depends on config structure
             _LOGGER.warning("Failed to create loader for %s: %s", self.parser.name, e)
             return None
 
@@ -731,7 +733,8 @@ class ModemScraper:
                 list(resources.keys())[:5],  # Log first 5 keys
             )
             return resources
-        except Exception as e:
+        except (requests.RequestException, KeyError, TypeError, ValueError) as e:
+            # Intentionally broad: loading can fail via network or parsing issues
             _LOGGER.warning("Loader failed: %s", e)
             return {}
 
@@ -1041,7 +1044,8 @@ class ModemScraper:
                         return cast(type[ModemParser], parser_class)()
                     else:
                         attempted_parsers.append(parser_class.name)
-            except Exception as e:
+            except (requests.RequestException, AttributeError, TypeError, KeyError) as e:
+                # Intentionally broad: probing tries many parsers with varied failures
                 _LOGGER.debug("Anonymous probing failed for %s: %s", parser_class.name, e)
 
         return None
@@ -1085,7 +1089,8 @@ class ModemScraper:
                     else:
                         if parser_class.name not in attempted_parsers:
                             attempted_parsers.append(parser_class.name)
-            except Exception as e:
+            except (requests.RequestException, AttributeError, TypeError, KeyError) as e:
+                # Intentionally broad: probing tries many parsers with varied failures
                 _LOGGER.debug("Authenticated probing failed for %s: %s", parser_class.name, e)
 
         return None
@@ -1125,8 +1130,9 @@ class ModemScraper:
             else:
                 attempted_parsers.append(suggested_parser.name)
                 _LOGGER.debug("Suggested parser %s did not match via HintMatcher", suggested_parser.name)
-        except Exception as e:
-            _LOGGER.error(f"Suggested parser {suggested_parser.name} detection failed: {e}", exc_info=True)
+        except (AttributeError, TypeError, KeyError, ValueError) as e:
+            # Intentionally broad: parser detection can fail in various ways
+            _LOGGER.error("Suggested parser %s detection failed: %s", suggested_parser.name, e, exc_info=True)
             attempted_parsers.append(suggested_parser.name)
 
         return None
@@ -1172,8 +1178,9 @@ class ModemScraper:
                 else:
                     attempted_parsers.append(parser_class.name)
                     _LOGGER.debug("Parser %s did not match via HintMatcher", parser_class.name)
-            except Exception as e:
-                _LOGGER.error(f"Parser {parser_class.name} detection failed with exception: {e}", exc_info=True)
+            except (AttributeError, TypeError, KeyError, ValueError) as e:
+                # Intentionally broad: parser detection can fail in various ways
+                _LOGGER.error("Parser %s detection failed: %s", parser_class.name, e, exc_info=True)
                 attempted_parsers.append(parser_class.name)
 
         return None
@@ -1484,8 +1491,9 @@ class ModemScraper:
 
             return response
 
-        except Exception as e:
-            _LOGGER.error("Error fetching modem data: %s", e)
+        except (requests.RequestException, AttributeError, TypeError, KeyError) as e:
+            # Top-level catch for unexpected errors during data fetch
+            _LOGGER.error("Error fetching modem data: %s", e, exc_info=True)
             return self._create_error_response("unreachable")
         finally:
             # End session for single-session modems (before restoring original session)
@@ -1522,7 +1530,7 @@ class ModemScraper:
             adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
             if adapter:
                 logout_endpoint = adapter.get_logout_endpoint()
-        except Exception:
+        except (ImportError, AttributeError, KeyError):
             pass  # Fall through to parser attribute
 
         # Fall back to parser attribute (legacy)
@@ -1536,7 +1544,7 @@ class ModemScraper:
             logout_url = f"{self.base_url}{logout_endpoint}"
             self.session.get(logout_url, timeout=5)
             _LOGGER.debug("Session ended via %s", logout_endpoint)
-        except Exception as e:
+        except requests.RequestException as e:
             # Don't fail the poll if logout fails - it's just cleanup
             _LOGGER.debug("Logout request failed (non-critical): %s", e)
 
@@ -1611,7 +1619,7 @@ class ModemScraper:
                         _LOGGER.warning("Re-fetch after auth still returned login page - auth may have failed")
                 else:
                     _LOGGER.warning("Re-fetch failed with status %s", response.status_code)
-            except Exception as e:
+            except requests.RequestException as e:
                 _LOGGER.warning("Failed to re-fetch data URL after auth: %s", e)
 
         return html
@@ -1777,8 +1785,9 @@ class ModemScraper:
 
             return self._execute_restart()
 
-        except Exception as e:
-            _LOGGER.error("Error restarting modem: %s", e)
+        except (requests.RequestException, AttributeError, TypeError, KeyError) as e:
+            # Top-level catch for unexpected errors during restart
+            _LOGGER.error("Error restarting modem: %s", e, exc_info=True)
             return False
 
     def _prepare_for_restart(self) -> bool:

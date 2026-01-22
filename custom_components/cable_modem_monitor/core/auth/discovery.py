@@ -35,14 +35,13 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
+import requests
 from bs4 import BeautifulSoup
 
 from .detection import has_login_form
 from .types import AuthStrategyType
 
 if TYPE_CHECKING:
-    import requests
-
     from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import (
         HNAPJsonRequestBuilder,
     )
@@ -191,7 +190,7 @@ class AuthDiscovery:
                     len(self._auth_patterns.get("form", {}).get("username_fields", [])),
                     len(self._auth_patterns.get("form", {}).get("password_fields", [])),
                 )
-            except Exception as e:
+            except (ImportError, FileNotFoundError, KeyError, TypeError) as e:
                 _LOGGER.debug("Failed to load aggregated auth patterns: %s", e)
                 self._auth_patterns = {
                     "form": {
@@ -267,8 +266,12 @@ class AuthDiscovery:
         # Step 1: Fetch anonymously (don't follow redirects)
         try:
             response = session.get(data_url, timeout=10, allow_redirects=False)
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Connection failed during discovery: %s", e)
+            return self._error_result(f"Connection failed: {e}")
+        except Exception as e:
+            # Fallback: catch unexpected errors to prevent crash
+            _LOGGER.debug("Unexpected error during discovery: %s", e, exc_info=True)
             return self._error_result(f"Connection failed: {e}")
 
         # Step 2: Inspect and react
@@ -427,7 +430,7 @@ class AuthDiscovery:
                     )
             elif response.status_code == 401:
                 return self._error_result("Invalid credentials (HTTP 401).")
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Basic auth failed: {e}")
 
         return self._unknown_result(response)
@@ -493,7 +496,7 @@ class AuthDiscovery:
                 response = session.post(action_url, data=form_data, timeout=10)
             else:
                 response = session.get(action_url, params=form_data, timeout=10)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Form submission failed: {e}")
 
         # FORM_PLAIN handles both plain and base64 via password_encoding field
@@ -600,7 +603,7 @@ class AuthDiscovery:
                     error_message=None,
                     captured_response=None,
                 )
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Post-auth verification fetch failed: %s", e)
 
         # Check if we're still on login page (wrong credentials)
@@ -685,7 +688,8 @@ class AuthDiscovery:
                     response_preview = response_text[:200] if response_text else "(empty)"
                     _LOGGER.debug("HNAP %s login failed, response: %s", algorithm.value, response_preview)
 
-            except Exception as e:
+            except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+                # Intentionally broad: HNAP auth can fail in many ways (network, parsing, crypto)
                 last_error = f"HNAP {algorithm.value} error: {e}"
                 _LOGGER.debug("HNAP %s auth exception: %s", algorithm.value, e)
 
@@ -728,7 +732,7 @@ class AuthDiscovery:
                     )
                     # Merge with defaults to ensure all required keys exist
                     return {**default_config, **hints}
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml HNAP config: %s", e)
 
         return default_config
@@ -819,7 +823,7 @@ class AuthDiscovery:
                     # Filter out "pattern" key since it's not part of the config
                     merged = {**default_config, **_strip_pattern_key(url_token_hints)}
                     return merged
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml URL token config: %s", e)
 
         return default_config
@@ -880,7 +884,7 @@ class AuthDiscovery:
 
         try:
             response = session.post(action_url, data=form_data, timeout=10)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Form submission failed: {e}")
 
         # Check for success - fetch data page
@@ -902,7 +906,7 @@ class AuthDiscovery:
                     error_message=None,
                     captured_response=None,
                 )
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Post-auth data fetch failed: %s", e)
 
         return self._unknown_result(response)
@@ -1002,7 +1006,7 @@ class AuthDiscovery:
                             parser.__class__.__name__,
                         )
                         return hints
-            except Exception as e:
+            except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
                 _LOGGER.debug("Failed to load modem.yaml js_auth hints: %s", e)
 
             # Fall back to parser class attributes (legacy)
@@ -1076,7 +1080,7 @@ class AuthDiscovery:
 
         try:
             response = session.get(redirect_url, timeout=10, allow_redirects=False)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Failed to follow redirect: {e}")
 
         # Re-inspect the redirected response
@@ -1179,7 +1183,7 @@ class AuthDiscovery:
                         list(hints.keys()),
                     )
                     return hints
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml hints: %s", e)
 
         # Fall back to parser class attributes (legacy)
@@ -1372,7 +1376,8 @@ class AuthDiscovery:
             downstream = result.get("downstream", [])
             upstream = result.get("upstream", [])
             return len(downstream) > 0 or len(upstream) > 0
-        except Exception:
+        except (AttributeError, TypeError, KeyError, ValueError):
+            # Parsing failed - expected when checking if page is parseable
             return False
 
     def _resolve_url(self, base_url: str, path: str) -> str:
