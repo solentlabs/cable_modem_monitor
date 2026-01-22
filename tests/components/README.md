@@ -12,6 +12,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 |------|-------|-------------|
 | [test_auth.py](test_auth.py) | 3 |  |
 | [test_button.py](test_button.py) | 0 | Tests for Cable Modem Monitor button platform. |
+| [test_channel_utils.py](test_channel_utils.py) | 29 | Tests for channel_utils helper functions. |
 | [test_config_flow.py](test_config_flow.py) | 15 | Tests for Cable Modem Monitor config flow. |
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
@@ -19,7 +20,6 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_data_orchestrator.py](test_data_orchestrator.py) | 92 | Tests for Cable Modem Monitor scraper. |
 | [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
-| [test_init.py](test_init.py) | 29 | Tests for __init__.py helper functions. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
@@ -38,6 +38,51 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 ### test_button.py
 
 Tests for Cable Modem Monitor button platform.
+
+### test_channel_utils.py
+
+Tests for channel_utils helper functions.
+
+**TestNormalizeChannelType** (15 tests)
+: Tests for normalize_channel_type function.
+
+- `test_downstream_qam_from_channel_type`: QAM downstream with explicit channel_type.
+- `test_downstream_qam_from_modulation_only`: QAM downstream with only modulation field.
+- `test_downstream_qam_default`: QAM downstream when no type info provided.
+- `test_downstream_ofdm_from_channel_type`: OFDM downstream with explicit channel_type.
+- `test_downstream_ofdm_from_modulation`: OFDM downstream detected from modulation field.
+- `test_downstream_ofdm_from_is_ofdm_flag`: OFDM downstream detected from is_ofdm flag.
+- `test_upstream_atdma_from_channel_type`: ATDMA upstream with explicit channel_type from modem.
+- `test_upstream_atdma_from_channel_type_lowercase`: ATDMA upstream with lowercase channel_type.
+- `test_upstream_atdma_default`: ATDMA upstream when no type info provided.
+- `test_upstream_ofdma_from_channel_type`: OFDMA upstream with explicit channel_type from modem.
+- `test_upstream_ofdma_from_channel_type_lowercase`: OFDMA upstream with lowercase channel_type.
+- `test_upstream_ofdma_from_modulation`: OFDMA upstream detected from modulation field.
+- `test_upstream_ofdma_from_is_ofdm_flag`: OFDMA upstream detected from is_ofdm flag.
+- `test_empty_channel`: Empty channel defaults correctly.
+- `test_case_insensitivity`: Channel type matching is case-insensitive.
+
+**TestExtractChannelId** (10 tests)
+: Tests for extract_channel_id function.
+
+- `test_numeric_string`: Numeric string channel ID.
+- `test_numeric_int`: Integer channel ID (already numeric).
+- `test_channel_field_fallback`: Falls back to 'channel' field if 'channel_id' missing.
+- `test_ofdm_prefix`: OFDM-prefixed channel ID from G54 parser.
+- `test_ofdma_prefix`: OFDMA-prefixed channel ID from G54 parser.
+- `test_other_prefixes`: Other prefixed formats should also work.
+- `test_missing_channel_id`: Returns default when no channel_id or channel field.
+- `test_unparseable_string`: Returns default for unparseable strings.
+- `test_none_value`: Returns default when channel_id is None.
+- `test_whitespace_handling`: Handles whitespace in channel IDs.
+
+**TestNormalizeChannels** (4 tests)
+: Tests for normalize_channels function.
+
+- `test_downstream_normalization`: Test downstream channel normalization.
+- `test_upstream_ofdma_channels`: Test upstream OFDMA channel normalization (G54-style).
+- `test_channels_sorted_by_frequency`: Channels within a type are sorted by frequency.
+- `test_empty_channels`: Empty channel list returns empty dict.
 
 ### test_config_flow.py
 
@@ -484,51 +529,6 @@ Tests for entity migration utilities.
 - `test_migrates_statistics_upstream`: Test migration of upstream statistics.
 - `test_merges_statistics_when_new_exists`: Test that old statistics are merged when new statistic already exists.
 - `test_migrates_both_states_and_statistics`: Test that both states and statistics are migrated together.
-
-### test_init.py
-
-Tests for __init__.py helper functions.
-
-**TestNormalizeChannelType** (15 tests)
-: Tests for _normalize_channel_type function.
-
-- `test_downstream_qam_from_channel_type`: QAM downstream with explicit channel_type.
-- `test_downstream_qam_from_modulation_only`: QAM downstream with only modulation field.
-- `test_downstream_qam_default`: QAM downstream when no type info provided.
-- `test_downstream_ofdm_from_channel_type`: OFDM downstream with explicit channel_type.
-- `test_downstream_ofdm_from_modulation`: OFDM downstream detected from modulation field.
-- `test_downstream_ofdm_from_is_ofdm_flag`: OFDM downstream detected from is_ofdm flag.
-- `test_upstream_atdma_from_channel_type`: ATDMA upstream with explicit channel_type from modem.
-- `test_upstream_atdma_from_channel_type_lowercase`: ATDMA upstream with lowercase channel_type.
-- `test_upstream_atdma_default`: ATDMA upstream when no type info provided.
-- `test_upstream_ofdma_from_channel_type`: OFDMA upstream with explicit channel_type from modem.
-- `test_upstream_ofdma_from_channel_type_lowercase`: OFDMA upstream with lowercase channel_type.
-- `test_upstream_ofdma_from_modulation`: OFDMA upstream detected from modulation field.
-- `test_upstream_ofdma_from_is_ofdm_flag`: OFDMA upstream detected from is_ofdm flag.
-- `test_empty_channel`: Empty channel defaults correctly.
-- `test_case_insensitivity`: Channel type matching is case-insensitive.
-
-**TestExtractChannelId** (10 tests)
-: Tests for _extract_channel_id function.
-
-- `test_numeric_string`: Numeric string channel ID.
-- `test_numeric_int`: Integer channel ID (already numeric).
-- `test_channel_field_fallback`: Falls back to 'channel' field if 'channel_id' missing.
-- `test_ofdm_prefix`: OFDM-prefixed channel ID from G54 parser.
-- `test_ofdma_prefix`: OFDMA-prefixed channel ID from G54 parser.
-- `test_other_prefixes`: Other prefixed formats should also work.
-- `test_missing_channel_id`: Returns default when no channel_id or channel field.
-- `test_unparseable_string`: Returns default for unparseable strings.
-- `test_none_value`: Returns default when channel_id is None.
-- `test_whitespace_handling`: Handles whitespace in channel IDs.
-
-**TestNormalizeChannels** (4 tests)
-: Tests for _normalize_channels function.
-
-- `test_downstream_normalization`: Test downstream channel normalization.
-- `test_upstream_ofdma_channels`: Test upstream OFDMA channel normalization (G54-style).
-- `test_channels_sorted_by_frequency`: Channels within a type are sorted by frequency.
-- `test_empty_channels`: Empty channel list returns empty dict.
 
 ### test_protocol_caching.py
 
