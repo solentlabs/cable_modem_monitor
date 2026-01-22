@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Configurable HMAC Algorithm** - HNAPJsonRequestBuilder now supports `hmac_algorithm` parameter ("md5" or "sha256") for modems with different authentication requirements
 
+### Fixed
+
+- **Form Auth HTML Response** - Fixed form authentication discarding the HTML response when auth succeeded without a `success_indicator`, causing parsers like CGA2121 to see empty data (#75)
+
 ## [3.12.1] - 2026-01-20
 
 ### Fixed
