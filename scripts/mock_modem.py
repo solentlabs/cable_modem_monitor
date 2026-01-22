@@ -27,7 +27,7 @@ Then configure Home Assistant integration to connect to:
 
 Test credentials:
     Username: admin
-    Password: password
+    Password: pw
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ Examples:
   %(prog)s <manufacturer>/<model> --no-auth       Disable auth (serve fixtures directly)
   %(prog)s <manufacturer>/<model> --auth-type form  Override auth type
 
-Test credentials: admin / password
+Test credentials: admin / pw
 """,
     )
 
@@ -185,7 +185,7 @@ Test credentials: admin / password
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Test Credentials:                                               ║
 ║    Username: admin                                               ║
-║    Password: password                                            ║
+║    Password: pw                                            ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Press Ctrl+C to stop                                            ║
 ╚══════════════════════════════════════════════════════════════════╝

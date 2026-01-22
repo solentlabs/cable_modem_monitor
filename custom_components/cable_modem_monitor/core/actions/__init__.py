@@ -19,7 +19,7 @@ Usage:
         result = action.execute(session, base_url, hnap_builder)
 """
 
-from .base import ModemAction
+from .base import ActionType, ModemAction
 from .factory import ActionFactory
 from .hnap import HNAPRestartAction
 from .html import HTMLRestartAction
@@ -27,6 +27,7 @@ from .rest import RESTRestartAction
 
 __all__ = [
     "ActionFactory",
+    "ActionType",
     "HNAPRestartAction",
     "HTMLRestartAction",
     "ModemAction",

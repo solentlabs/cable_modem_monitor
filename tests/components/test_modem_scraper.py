@@ -203,7 +203,10 @@ class TestModemScraper:
 
         # Mock adapter and action layer - restart uses adapter + ActionFactory
         mock_adapter = mocker.Mock()
-        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {"restart": {"type": "html_form", "endpoint": "/restart"}},
+        }
         mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
 
         mock_action = mocker.Mock()
@@ -251,7 +254,10 @@ class TestModemScraper:
 
         # Mock adapter and action layer - restart uses adapter + ActionFactory
         mock_adapter = mocker.Mock()
-        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {"restart": {"type": "html_form", "endpoint": "/restart"}},
+        }
         mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
 
         mock_action = mocker.Mock()
@@ -300,7 +306,10 @@ class TestModemScraper:
 
         # Mock adapter and action layer - restart uses adapter + ActionFactory
         mock_adapter = mocker.Mock()
-        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {"restart": {"type": "html_form", "endpoint": "/restart"}},
+        }
         mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
 
         mock_action = mocker.Mock()
@@ -348,7 +357,10 @@ class TestModemScraper:
 
         # Mock adapter and action layer - but action should NOT be called due to login failure
         mock_adapter = mocker.Mock()
-        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {"restart": {"type": "html_form", "endpoint": "/restart"}},
+        }
         mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
 
         mock_action = mocker.Mock()
@@ -396,10 +408,18 @@ class TestModemScraper:
         # Should fail
         assert result is False
 
-    def test_restart_modem_fails_when_parser_lacks_restart_method(self, mocker):
-        """Test that restart_modem fails when parser doesn't support restart."""
-        # Create a mock parser without restart method
-        mock_parser_instance = mocker.Mock(spec=["parse", "login"])  # No 'restart'
+    def test_restart_modem_fails_when_modem_yaml_has_no_restart_action(self, mocker):
+        """Test that restart_modem fails when modem.yaml has no actions.restart config.
+
+        v3.13+: Restart capability is determined by modem.yaml actions.restart config,
+        not by parser attributes. ActionFactory.supports() is the single source of truth.
+        """
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        # Create a mock parser
+        mock_parser_instance = mocker.Mock()
+        mock_parser_instance.__class__.__name__ = "TestParser"
+        mock_parser_instance.name = "Test Parser"
         mock_parser_class = mocker.Mock()
         mock_parser_class.return_value = mock_parser_instance
 
@@ -413,10 +433,18 @@ class TestModemScraper:
         )
         mocker.patch.object(scraper, "_detect_parser", return_value=mock_parser_instance)
 
+        # Mock adapter to return modem config WITHOUT actions.restart
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            # No "actions" key - restart not supported
+        }
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
         # Call restart_modem
         result = scraper.restart_modem()
 
-        # Should fail
+        # Should fail because modem.yaml has no actions.restart
         assert result is False
 
     def test_restart_modem_always_fetches_data_even_with_cached_parser(self, mocker):
@@ -453,7 +481,10 @@ class TestModemScraper:
 
         # Mock adapter and action layer - restart uses adapter + ActionFactory
         mock_adapter = mocker.Mock()
-        mock_adapter.get_modem_config_dict.return_value = {"paradigm": "html"}
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {"restart": {"type": "html_form", "endpoint": "/restart"}},
+        }
         mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
 
         mock_action = mocker.Mock()
@@ -471,6 +502,150 @@ class TestModemScraper:
         assert scraper.base_url == "http://192.168.100.1"
         # Action execute should have been called
         mock_action.execute.assert_called_once()
+
+
+class TestRestartValidation:
+    """Tests for _validate_restart_capability method.
+
+    v3.13+: Restart capability is determined by modem.yaml actions.restart config,
+    checked via ActionFactory.supports(). Parser attributes are not used.
+    """
+
+    def test_validate_restart_returns_true_when_modem_yaml_has_restart(self, mocker):
+        """Test validation succeeds when modem.yaml has actions.restart configured."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        # Create mock parser
+        mock_parser = mocker.Mock()
+        mock_parser.__class__.__name__ = "TestParser"
+        mock_parser.name = "Test Parser"
+        scraper.parser = mock_parser
+
+        # Mock adapter to return modem config WITH actions.restart
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {
+                "restart": {
+                    "type": "html_form",
+                    "endpoint": "/goform/restart",
+                }
+            },
+        }
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        result = scraper._validate_restart_capability()
+
+        assert result is True
+
+    def test_validate_restart_returns_false_when_no_restart_action(self, mocker):
+        """Test validation fails when modem.yaml has no actions.restart."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        mock_parser = mocker.Mock()
+        mock_parser.__class__.__name__ = "TestParser"
+        mock_parser.name = "Test Parser"
+        scraper.parser = mock_parser
+
+        # Mock adapter to return modem config WITHOUT actions.restart
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            "actions": {},  # Empty actions
+        }
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        result = scraper._validate_restart_capability()
+
+        assert result is False
+
+    def test_validate_restart_returns_false_when_no_actions_key(self, mocker):
+        """Test validation fails when modem.yaml has no actions key at all."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        mock_parser = mocker.Mock()
+        mock_parser.__class__.__name__ = "TestParser"
+        mock_parser.name = "Test Parser"
+        scraper.parser = mock_parser
+
+        # Mock adapter to return modem config with no actions key
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "html",
+            # No "actions" key
+        }
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        result = scraper._validate_restart_capability()
+
+        assert result is False
+
+    def test_validate_restart_returns_false_when_no_adapter(self, mocker):
+        """Test validation fails when no modem.yaml adapter found."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        mock_parser = mocker.Mock()
+        mock_parser.__class__.__name__ = "UnknownParser"
+        mock_parser.name = "Unknown Parser"
+        scraper.parser = mock_parser
+
+        # Mock adapter to return None (no modem.yaml for this parser)
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=None)
+
+        result = scraper._validate_restart_capability()
+
+        assert result is False
+
+    def test_validate_restart_returns_false_when_no_parser(self, mocker):
+        """Test validation fails when parser is not set."""
+        scraper = ModemScraper("http://192.168.100.1")
+        scraper.parser = None
+
+        result = scraper._validate_restart_capability()
+
+        assert result is False
+
+    def test_validate_restart_with_hnap_action_type(self, mocker):
+        """Test validation succeeds for HNAP restart action type."""
+        from custom_components.cable_modem_monitor.core import modem_scraper as scraper_module
+
+        scraper = ModemScraper("http://192.168.100.1")
+
+        mock_parser = mocker.Mock()
+        mock_parser.__class__.__name__ = "ArrisS33Parser"
+        mock_parser.name = "Arris S33"
+        scraper.parser = mock_parser
+
+        # Mock adapter to return HNAP restart config
+        mock_adapter = mocker.Mock()
+        mock_adapter.get_modem_config_dict.return_value = {
+            "paradigm": "hnap",
+            "auth": {
+                "hnap": {
+                    "endpoint": "/HNAP1/",
+                    "namespace": "http://purenetworks.com/HNAP1/",
+                }
+            },
+            "actions": {
+                "restart": {
+                    "type": "hnap",
+                    "action_name": "SetArrisConfigurationInfo",
+                }
+            },
+        }
+        mocker.patch.object(scraper_module, "get_auth_adapter_for_parser", return_value=mock_adapter)
+
+        result = scraper._validate_restart_capability()
+
+        assert result is True
 
 
 class TestFallbackParserDetection:

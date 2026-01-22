@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Test credentials
 TEST_USERNAME = "admin"
-TEST_PASSWORD = "password"
+TEST_PASSWORD = "pw"
 
 # Use repo root modems/ directory (has fixtures), not custom_components/.../modems/
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -139,9 +139,7 @@ class TestModemE2E:
             pytest.skip("Modem has no auth")
 
         # Filter to only protected pages with fixtures
-        protected_with_fixtures = [
-            p for p in config.pages.protected if has_fixture_for_path(modem_path, p)
-        ]
+        protected_with_fixtures = [p for p in config.pages.protected if has_fixture_for_path(modem_path, p)]
         if not protected_with_fixtures:
             pytest.skip("No fixtures for protected pages")
 

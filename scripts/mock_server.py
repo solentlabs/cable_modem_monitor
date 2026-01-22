@@ -6,7 +6,7 @@ Usage:
     python scripts/mock_server.py mb7621 --port 8081
     python scripts/mock_server.py arris/sb8200
 
-Credentials: admin / password
+Credentials: admin / pw
 """
 
 import argparse
@@ -57,7 +57,7 @@ def main():
     print(f"Mock server: {server.config.manufacturer} {server.config.model}")
     print(f"URL: {server.url}")
     print(f"HA host: host.docker.internal:{args.port}")
-    print("Credentials: admin / password")
+    print("Credentials: admin / pw")
     print(f"{'='*50}\n")
     print("Press Ctrl+C to stop...")
 

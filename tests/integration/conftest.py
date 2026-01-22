@@ -302,7 +302,7 @@ class SB8200MockHandler(BaseHTTPRequestHandler):
     """
 
     require_auth = False
-    valid_credentials = "admin:password"
+    valid_credentials = "admin:pw"
     _fixture_html: bytes | None = None
 
     def log_message(self, format, *args):
@@ -403,7 +403,7 @@ def sb8200_server_auth() -> Generator[MockServer, None, None]:
     /cmconnectionstatus.html?login_<base64(user:pass)>
     """
     SB8200MockHandler.require_auth = True
-    SB8200MockHandler.valid_credentials = "admin:password"
+    SB8200MockHandler.valid_credentials = "admin:pw"
     port = _find_free_port()
     server = MockServer(port=port, ssl_context=None, handler_class=SB8200MockHandler)
     server.start()
@@ -418,7 +418,7 @@ def sb8200_server_auth_https(test_certs) -> Generator[MockServer, None, None]:
     This simulates the complete scenario: HTTPS with self-signed cert + auth.
     """
     SB8200MockHandler.require_auth = True
-    SB8200MockHandler.valid_credentials = "admin:password"
+    SB8200MockHandler.valid_credentials = "admin:pw"
 
     cert_path, key_path = test_certs
     port = _find_free_port()

@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Test credentials for MockModemServer
 TEST_USERNAME = "admin"
-TEST_PASSWORD = "password"
+TEST_PASSWORD = "pw"
 
 
 def _hmac_md5(key: str, message: str) -> str:

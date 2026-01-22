@@ -50,7 +50,7 @@ from bs4 import BeautifulSoup
 
 from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
-from .actions import ActionFactory
+from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
 from .auth.types import AuthStrategyType
 from .base_parser import ModemParser
@@ -1425,6 +1425,8 @@ class ModemScraper:
             self.session = CapturingSession(self._capture_response)
             # Copy SSL verification settings to capturing session
             self.session.verify = original_session.verify
+            # Copy cookies from original session (required for authenticated captures)
+            self.session.cookies.update(original_session.cookies)
             # Copy legacy SSL adapter if needed (fixes capture for older modem firmware)
             if self.legacy_ssl and self.base_url.startswith("https://"):
                 self.session.mount("https://", LegacySSLAdapter())
@@ -1816,15 +1818,25 @@ class ModemScraper:
         _LOGGER.debug("Updated base_url to %s from successful connection", self.base_url)
 
     def _validate_restart_capability(self) -> bool:
-        """Validate that parser supports restart functionality.
+        """Validate that modem supports restart functionality.
+
+        Checks modem.yaml actions.restart config via ActionFactory.
 
         Returns:
-            True if parser supports restart, False otherwise
+            True if modem supports restart, False otherwise
         """
         if self.parser is None:
             _LOGGER.warning("Cannot validate restart capability: parser is not set")
             return False
-        if not hasattr(self.parser, "restart"):
+
+        # Check modem.yaml for restart action config
+        adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+        if not adapter:
+            _LOGGER.warning("No modem.yaml adapter for %s - restart not supported", self.parser.name)
+            return False
+
+        modem_config = adapter.get_modem_config_dict()
+        if not ActionFactory.supports(ActionType.RESTART, modem_config):
             _LOGGER.warning("Parser %s does not support restart functionality", self.parser.name)
             return False
         return True

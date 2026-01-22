@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 346
+**Total Tests:** 347
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_auth_detection.py](test_auth_detection.py) | 10 | Tests for auth/detection.py - login page detection. |
 | [test_auth_discovery.py](test_auth_discovery.py) | 48 | Tests for Authentication Discovery. |
 | [test_auth_handler.py](test_auth_handler.py) | 29 | Tests for the AuthHandler class. |
-| [test_authentication.py](test_authentication.py) | 42 | Tests for Authentication Strategies. |
+| [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
@@ -277,13 +277,14 @@ Tests for Authentication Strategies.
 - `test_basic_auth_401_returns_failure`: Test that 401 response returns failure and clears auth.
 - `test_basic_auth_connection_error`: Test connection error returns failure.
 
-**TestFormPlainAuthStrategy** (4 tests)
+**TestFormPlainAuthStrategy** (5 tests)
 : Test FormPlainAuthStrategy.
 
 - `test_form_auth_success`: Test successful form authentication.
 - `test_form_auth_without_credentials`: Test form auth fails without credentials.
 - `test_form_auth_wrong_config_type`: Test form auth with wrong config type.
 - `test_form_auth_large_response_indicator`: Test form auth with size-based success indicator.
+- `test_form_auth_no_indicator_returns_html_when_not_login_page`: Test form auth returns HTML when no success_indicator and response is not a login page.
 
 **TestRedirectFormAuthStrategy** (9 tests)
 : Test RedirectFormAuthStrategy.

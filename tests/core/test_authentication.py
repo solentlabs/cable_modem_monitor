@@ -219,6 +219,38 @@ class TestFormPlainAuthStrategy:
 
         assert success is True
 
+    def test_form_auth_no_indicator_returns_html_when_not_login_page(self, mock_session):
+        """Test form auth returns HTML when no success_indicator and response is not a login page.
+
+        This is the CGA2121 scenario: form auth redirects to DOCSIS status page,
+        no success_indicator configured, response should be returned for discovery validation.
+        Regression test for issue #75.
+        """
+        # Config WITHOUT success_indicator (like CGA2121)
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/goform/logon",
+            username_field="username_login",
+            password_field="password_login",
+            # No success_indicator - relies on is_login_page() check
+        )
+
+        strategy = FormPlainAuthStrategy()
+
+        # Mock response that is NOT a login page (DOCSIS status page after redirect)
+        mock_response = MagicMock()
+        mock_response.url = "http://192.168.1.1/st_docsis.html"
+        mock_response.text = "<html><h2>Downstream Channels</h2><table>...</table></html>"
+        mock_response.status_code = 200
+        mock_session.post.return_value = mock_response
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "admin", "password", config)
+
+        assert result.success is True
+        # CRITICAL: HTML must be returned for discovery validation to work
+        assert result.response_html is not None
+        assert "Downstream Channels" in result.response_html
+
 
 class TestRedirectFormAuthStrategy:
     """Test RedirectFormAuthStrategy."""
