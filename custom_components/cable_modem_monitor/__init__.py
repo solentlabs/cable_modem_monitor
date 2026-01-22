@@ -113,6 +113,44 @@ def _normalize_channel_type(channel: dict[str, Any], direction: str) -> str:
         return "atdma"  # Default for DOCSIS 3.0 or unspecified
 
 
+def _extract_channel_id(channel: dict[str, Any], default: int) -> int:
+    """Extract numeric channel ID from channel data.
+
+    Handles both numeric IDs ("1", "32") and prefixed IDs ("OFDM-0", "OFDMA-1").
+    For prefixed IDs, extracts the number after the dash.
+
+    Args:
+        channel: Channel data dict with channel_id or channel field
+        default: Default value if parsing fails
+
+    Returns:
+        Numeric channel ID
+    """
+    ch_id = channel.get("channel_id", channel.get("channel"))
+    if ch_id is None:
+        return default
+
+    # Already numeric
+    if isinstance(ch_id, int):
+        return ch_id
+
+    # String - try direct conversion first
+    ch_id_str = str(ch_id).strip()
+    try:
+        return int(ch_id_str)
+    except ValueError:
+        pass
+
+    # Try extracting number after dash (e.g., "OFDM-0" -> 0)
+    if "-" in ch_id_str:
+        try:
+            return int(ch_id_str.split("-")[-1])
+        except ValueError:
+            pass
+
+    return default
+
+
 def _normalize_channels(channels: list[dict[str, Any]], direction: str) -> dict[tuple[str, int], dict[str, Any]]:
     """Normalize and index channels by (type, id) tuple.
 
@@ -127,7 +165,7 @@ def _normalize_channels(channels: list[dict[str, Any]], direction: str) -> dict[
     by_type: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for idx, ch in enumerate(channels):
         ch_type = _normalize_channel_type(ch, direction)
-        ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+        ch_id = _extract_channel_id(ch, idx + 1)
         by_type[ch_type].append({**ch, "_channel_type": ch_type, "_channel_id": ch_id})
 
     # Sort each type by frequency and assign index
@@ -409,7 +447,7 @@ def _get_channel_info(
     elif "cable_modem_downstream" in coordinator.data:
         for idx, ch in enumerate(coordinator.data["cable_modem_downstream"]):
             ch_type = _normalize_channel_type(ch, "downstream")
-            ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+            ch_id = _extract_channel_id(ch, idx + 1)
             downstream_info.append((ch_type, ch_id))
         downstream_info = sorted(downstream_info)
 
@@ -419,7 +457,7 @@ def _get_channel_info(
     elif "cable_modem_upstream" in coordinator.data:
         for idx, ch in enumerate(coordinator.data["cable_modem_upstream"]):
             ch_type = _normalize_channel_type(ch, "upstream")
-            ch_id = int(ch.get("channel_id", ch.get("channel", idx + 1)))
+            ch_id = _extract_channel_id(ch, idx + 1)
             upstream_info.append((ch_type, ch_id))
         upstream_info = sorted(upstream_info)
 
