@@ -59,40 +59,38 @@ Extracted to shared module `core/parser_utils.py`:
 
 ---
 
-### 3. Config Flow Test Coverage Gap
+### 3. Config Flow Test Coverage Gap (IMPROVED)
 
-**Problem:** The main config_flow.py has 26% coverage while config_flow_helpers.py has 99% coverage. The HA form step handlers and async coordinator setup remain undertested.
+**Status:** v3.13.0 added 24 new tests covering previously untested areas.
 
-**Current Coverage:**
-- `config_flow.py`: 26% (form steps, async setup)
-- `config_flow_helpers.py`: 99% (validation logic, error classification)
+**Previous Coverage:**
+- `config_flow.py`: 26%
 
-**Impact:**
-- Setup failures may not be caught before release
-- User-facing errors may be unclear or incorrect
-- Regressions can slip through
+**New Tests Added (v3.13.0):**
+- `ValidationProgressHelper` state machine (11 tests)
+- `async_step_auth_type` flow (2 tests)
+- Entity prefix conditional logic (3 tests)
+- Options flow credential preservation (4 tests)
+- Options flow detection preservation (2 tests)
+- Exception classification edge cases (2 tests)
 
-**Specific Gaps in config_flow.py:**
-- `async_step_user`, `async_step_credentials` form handlers
-- `async_step_finish` coordinator setup
-- Error recovery paths (auth failures, connection timeouts)
-- Options flow step handlers
+**Discoveries During Testing:**
+1. `CannotConnectError` classification is nuanced - `user_message` triggers `"network_unreachable"`
+2. HA deprecated `OptionsFlow.config_entry` setter - tests required workaround
 
-**Remediation:**
-1. Add pytest fixtures for HA config entry machinery
-2. Test each form step transition
-3. Test options flow
-4. Target 70%+ coverage on config_flow.py
+**Remaining Gaps:**
+- Progress indicator transitions (HA framework complexity)
+- Full form step transitions (requires HA config entry mocking)
 
-**Effort:** Medium (2-3 sessions)
-
-**Files:**
-- `custom_components/cable_modem_monitor/config_flow.py` (26%)
-- `tests/components/test_config_flow.py`
+**Files Changed:**
+- `tests/components/test_config_flow.py` - 24 new tests (53 total)
 
 ---
 
-### 4. AuthDiscovery Class Too Large (1409 lines)
+### 4. AuthDiscovery Class Too Large (1409 lines) - DEPRIORITIZED
+
+**Status:** Deprioritized - this class is only used by the fallback modem workflow.
+Known modems use static auth config from modem.yaml, bypassing AuthDiscovery entirely.
 
 **Problem:** `core/auth/discovery.py` has grown to 1409 lines with 7+ responsibilities:
 - Form parsing and detection
@@ -103,12 +101,9 @@ Extracted to shared module `core/parser_utils.py`:
 - Multiple discovery strategies
 - Error handling
 
-**Impact:**
-- Hard to test individual behaviors in isolation
-- Changes risk unintended side effects
-- Difficult for new contributors to understand
+**Impact:** Limited - only affects unknown/fallback modem discovery path.
 
-**Remediation:**
+**Remediation (if needed):**
 1. Extract `FormParser` - dedicated form detection/parsing
 2. Extract `HtmlInspector` - HTML structure analysis
 3. Extract `PasswordEncodingDetector` - encoding heuristics
