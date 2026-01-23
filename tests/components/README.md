@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 327
+**Total Tests:** 333
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_auth.py](test_auth.py) | 3 |  |
 | [test_button.py](test_button.py) | 0 | Tests for Cable Modem Monitor button platform. |
 | [test_channel_utils.py](test_channel_utils.py) | 29 | Tests for channel_utils helper functions. |
-| [test_config_flow.py](test_config_flow.py) | 26 | Tests for Cable Modem Monitor config flow. |
+| [test_config_flow.py](test_config_flow.py) | 32 | Tests for Cable Modem Monitor config flow. |
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
@@ -159,6 +159,16 @@ Tables are defined at the top of the file with ASCII box-drawing comments.
 - `test_first_modem_has_none_option`: Test first modem config includes 'None' prefix option.
 - `test_second_modem_no_none_option`: Test second modem config excludes 'None' prefix option.
 - `test_default_entity_prefix_preserved`: Test that explicitly passed default_entity_prefix is used.
+
+**TestApplyAuthDiscoveryInfo** (6 tests)
+: Test _apply_auth_discovery_info stores all auth config types.
+
+- `test_stores_hnap_config`: Test HNAP config is stored in config entry data.
+- `test_stores_url_token_config`: Test URL token config is stored in config entry data.
+- `test_stores_form_config`: Test form config is stored (existing behavior).
+- `test_stores_auth_strategy`: Test auth strategy is stored.
+- `test_fallback_to_existing_hnap_config`: Test fallback to existing HNAP config when not in new info.
+- `test_new_hnap_config_overrides_fallback`: Test new HNAP config takes precedence over fallback.
 
 ### test_config_flow_helpers.py
 

@@ -6,7 +6,7 @@ to keep the core code clean and simple.
 
 Components:
 - FallbackOrchestrator: Extends DataOrchestrator with auth discovery
-- UniversalFallbackParser: Minimal parser for HTML capture
+- UniversalFallbackParser: Minimal parser for HTML capture (import from .parser)
 - AuthDiscovery: Response-driven auth detection logic
 
 When to use:
@@ -17,9 +17,12 @@ The fallback system enables:
 - Basic connectivity monitoring (ping/HTTP latency)
 - HTML capture for parser development
 - Response-driven auth discovery (trying various strategies)
+
+Note:
+    UniversalFallbackParser is NOT exported here to avoid early initialization.
+    Import directly from .parser when needed (after other parsers are loaded).
 """
 
 from .data_orchestrator import FallbackOrchestrator
-from .parser import UniversalFallbackParser
 
-__all__ = ["FallbackOrchestrator", "UniversalFallbackParser"]
+__all__ = ["FallbackOrchestrator"]

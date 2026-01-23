@@ -53,8 +53,10 @@ from .const import (
     CONF_AUTH_DISCOVERY_FAILED,
     CONF_AUTH_DISCOVERY_STATUS,
     CONF_AUTH_FORM_CONFIG,
+    CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
     CONF_AUTH_TYPE,
+    CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
     CONF_DETECTION_METHOD,
@@ -227,7 +229,12 @@ class ConfigFlowMixin:
             fallback_data: Existing entry data for fallback values (options flow).
         """
         # Prefer new values, fall back to existing
-        for key in (CONF_AUTH_STRATEGY, CONF_AUTH_FORM_CONFIG):
+        for key in (
+            CONF_AUTH_STRATEGY,
+            CONF_AUTH_FORM_CONFIG,
+            CONF_AUTH_HNAP_CONFIG,
+            CONF_AUTH_URL_TOKEN_CONFIG,
+        ):
             if info.get(key):
                 data[key] = info[key]
             elif fallback_data and fallback_data.get(key):

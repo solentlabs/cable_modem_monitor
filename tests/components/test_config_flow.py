@@ -1037,3 +1037,115 @@ async def test_options_flow_preserves_detection_with_missing_fields(hass: HomeAs
         # Should have defaults for missing fields
         assert data[CONF_DETECTED_MODEM] == "Unknown"
         assert data[CONF_DETECTED_MANUFACTURER] == "Unknown"
+
+
+# =============================================================================
+# Auth Config Persistence Tests
+# =============================================================================
+
+
+class TestApplyAuthDiscoveryInfo:
+    """Test _apply_auth_discovery_info stores all auth config types.
+
+    This was added after manual testing revealed HNAP config wasn't being
+    stored in config entries, causing 'hmac_algorithm is required' errors.
+    """
+
+    @pytest.fixture
+    def flow(self):
+        """Create a CableModemMonitorConfigFlow instance."""
+        return CableModemMonitorConfigFlow()
+
+    def test_stores_hnap_config(self, flow):
+        """Test HNAP config is stored in config entry data.
+
+        Regression test for bug where _apply_auth_discovery_info only stored
+        CONF_AUTH_STRATEGY and CONF_AUTH_FORM_CONFIG, missing HNAP config.
+        This caused 'hmac_algorithm is required' errors for HNAP modems.
+        """
+        data = {}
+        info = {
+            "auth_strategy": "hnap_session",
+            "auth_hnap_config": {
+                "endpoint": "/HNAP1/",
+                "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "sha256",
+            },
+        }
+
+        flow._apply_auth_discovery_info(data, info)
+
+        assert "auth_hnap_config" in data
+        assert data["auth_hnap_config"]["hmac_algorithm"] == "sha256"
+        assert data["auth_hnap_config"]["endpoint"] == "/HNAP1/"
+
+    def test_stores_url_token_config(self, flow):
+        """Test URL token config is stored in config entry data."""
+        data = {}
+        info = {
+            "auth_strategy": "url_token_session",
+            "auth_url_token_config": {
+                "login_prefix": "login",
+                "data_page": "status.html",
+            },
+        }
+
+        flow._apply_auth_discovery_info(data, info)
+
+        assert "auth_url_token_config" in data
+        assert data["auth_url_token_config"]["login_prefix"] == "login"
+
+    def test_stores_form_config(self, flow):
+        """Test form config is stored (existing behavior)."""
+        data = {}
+        info = {
+            "auth_strategy": "form_plain",
+            "auth_form_config": {
+                "action": "/login.cgi",
+                "method": "POST",
+            },
+        }
+
+        flow._apply_auth_discovery_info(data, info)
+
+        assert "auth_form_config" in data
+        assert data["auth_form_config"]["action"] == "/login.cgi"
+
+    def test_stores_auth_strategy(self, flow):
+        """Test auth strategy is stored."""
+        data = {}
+        info = {"auth_strategy": "no_auth"}
+
+        flow._apply_auth_discovery_info(data, info)
+
+        assert data["auth_strategy"] == "no_auth"
+
+    def test_fallback_to_existing_hnap_config(self, flow):
+        """Test fallback to existing HNAP config when not in new info."""
+        data = {}
+        info = {"auth_strategy": "hnap_session"}  # No HNAP config
+        fallback = {
+            "auth_hnap_config": {
+                "endpoint": "/HNAP1/",
+                "hmac_algorithm": "md5",
+            },
+        }
+
+        flow._apply_auth_discovery_info(data, info, fallback_data=fallback)
+
+        assert data["auth_hnap_config"]["hmac_algorithm"] == "md5"
+
+    def test_new_hnap_config_overrides_fallback(self, flow):
+        """Test new HNAP config takes precedence over fallback."""
+        data = {}
+        info = {
+            "auth_strategy": "hnap_session",
+            "auth_hnap_config": {"hmac_algorithm": "sha256"},
+        }
+        fallback = {
+            "auth_hnap_config": {"hmac_algorithm": "md5"},
+        }
+
+        flow._apply_auth_discovery_info(data, info, fallback_data=fallback)
+
+        assert data["auth_hnap_config"]["hmac_algorithm"] == "sha256"
