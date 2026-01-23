@@ -1,0 +1,6 @@
+{
+  "GetCustomerStatusUpstreamChannelInfoResponse": {
+    "CustomerConnUpstreamChannel": "1^Locked^SC-QAM^3^6400000^22800000^37.8^|+|2^Locked^SC-QAM^6^3200000^40400000^38.0^|+|3^Locked^SC-QAM^5^6400000^35600000^37.5^|+|4^Locked^SC-QAM^4^6400000^29200000^37.8^|+|5^Locked^SC-QAM^2^6400000^16300000^38.3^|+|6^Not Locked^Unknown^0^0^0^-inf^|+|7^Not Locked^Unknown^0^0^0^-inf^|+|8^Not Locked^Unknown^0^0^0^-inf^|+|9^Not Locked^Unknown^0^0^0^ 0.0^|+|10^Not Locked^Unknown^0^0^0^ 0.0^",
+    "GetCustomerStatusUpstreamChannelInfoResult": "OK"
+  }
+}
