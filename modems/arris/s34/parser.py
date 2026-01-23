@@ -1,552 +1,89 @@
 """Parser for Arris/CommScope S34 cable modem using HNAP protocol.
 
-The S34 uses HNAP protocol similar to S33, but with key differences:
-- Authentication: Uses HMAC-SHA256 (vs S33's HMAC-MD5)
-- Firmware pattern: AT01.01.* (vs S33's TB01.03.*)
+The S34 uses the same HNAP protocol as the S33, with one key difference:
+- S34: Uses HMAC-SHA256 for authentication (configured in modem.yaml)
+- S33: Uses HMAC-MD5 for authentication
 
-Channel data format is caret-delimited (same as S33), using GetCustomer* actions.
-System info uses GetArrisDeviceStatus which returns pure JSON.
+The data format (caret-delimited, pipe-separated) and action names
+(GetCustomer*) are identical between the two modems.
 
-Known firmware quirks:
-- The S34's web server sends malformed HTTP headers containing debug timing data
-  (e.g., "   4.699997  |Content-type: text/html"). This is a firmware bug that
-  causes urllib3 to log HeaderParsingError warnings. We suppress these warnings
-  since they are cosmetic and don't affect functionality.
+Known firmware quirk: The S34's web server sends malformed HTTP headers
+containing debug timing data. This is handled by the centralized
+_HNAPHeaderParsingFilter in json_builder.py.
+
+Reference: https://github.com/solentlabs/cable_modem_monitor/pull/90
 """
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import logging
-import time
+from typing import Any
 
 from bs4 import BeautifulSoup
 
-# Suppress urllib3 header parsing warnings caused by S34 firmware bug.
-# The S34's web server sends malformed HTTP headers with debug timing data
-# prepended to the Content-type header (e.g., "   4.699997  |Content-type: text/html").
-# This is cosmetic - requests still succeed. We filter these specific warnings.
-# See: https://github.com/solentlabs/cable_modem_monitor/pull/90
-
-
-class _S34HeaderParsingFilter(logging.Filter):
-    """Filter to suppress S34 modem's malformed header warnings.
-
-    The S34 firmware has a bug where it prepends debug timing data to HTTP headers.
-    This causes urllib3 to log HeaderParsingError warnings, but the requests succeed.
-    """
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        """Return False to suppress S34-related header parsing warnings."""
-        # Suppress warnings about header parsing that mention the S34's typical pattern
-        # or the HNAP endpoint used by S34
-        if "Failed to parse headers" in record.getMessage():
-            msg = record.getMessage()
-            # S34 uses HNAP1 endpoint and shows timing data like "4.699997"
-            if "/HNAP1/" in msg or "Content-type:" in msg:
-                return False
-        return True
-
-
-# Install the filter on urllib3's connection logger
-logging.getLogger("urllib3.connection").addFilter(_S34HeaderParsingFilter())
-
-from custom_components.cable_modem_monitor.core.auth_config import HNAPAuthConfig  # noqa: E402
-from custom_components.cable_modem_monitor.core.authentication import AuthStrategyType  # noqa: E402
-from custom_components.cable_modem_monitor.core.hnap_json_builder import HNAPJsonRequestBuilder  # noqa: E402
-
-from ..base_parser import ModemCapability, ModemParser, ParserStatus  # noqa: E402
+from custom_components.cable_modem_monitor.core.base_parser import ModemParser
+from custom_components.cable_modem_monitor.modem_config.adapter import (
+    get_auth_adapter_for_parser,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class ArrisS34HnapParser(ModemParser):
-    """Parser for Arris/CommScope S34 cable modem using HNAP/JSON protocol.
+    """Parser for Arris/CommScope S34 cable modem using HNAP/SOAP protocol."""
 
-    MVP Implementation: Only provides system info (firmware version, model, connection status).
-    Downstream/upstream channel data will be added in Phase 4.
-    """
+    def _get_hnap_hints(self) -> dict[str, str]:
+        """Get HNAP hints from modem.yaml."""
+        adapter = get_auth_adapter_for_parser(self.__class__.__name__)
+        if adapter:
+            hints = adapter.get_hnap_hints()
+            if hints:
+                return hints
+        raise ValueError(f"No HNAP hints found in modem.yaml for {self.__class__.__name__}")
 
-    name = "Arris S34"
-    manufacturer = "Arris/CommScope"
-    models = ["S34", "CommScope S34", "ARRIS S34"]
-    priority = 102  # Higher than S33 (101) to ensure S34 is tried first
+    def parse_resources(self, resources: dict[str, Any]) -> dict:
+        """Parse all data from pre-fetched resources.
 
-    # Parser status
-    status = ParserStatus.AWAITING_VERIFICATION
-    verification_source = "https://github.com/solentlabs/cable_modem_monitor/issues/TBD"
-
-    # Device metadata
-    release_date = "2024"
-    docsis_version = "3.1"
-    fixtures_path = "tests/parsers/arris/fixtures/s34"
-
-    # S34 blocks ICMP ping - skip ping check and use HTTP-only health status
-    supports_icmp = False
-
-    def __init__(self):
-        """Initialize the parser with instance-level state."""
-        super().__init__()
-        # Store the JSON builder instance to preserve private_key across login/parse calls
-        self._json_builder: HNAPJsonRequestBuilder | None = None
-        # Store private key for SHA256 authentication
-        self._private_key: str | None = None
-
-    # HNAP authentication configuration (same as S33)
-    auth_config = HNAPAuthConfig(
-        strategy=AuthStrategyType.HNAP_SESSION,
-        login_url="/Login.html",
-        hnap_endpoint="/HNAP1/",
-        session_timeout_indicator="UN-AUTH",
-        soap_action_namespace="http://purenetworks.com/HNAP1/",
-    )
-
-    url_patterns = [
-        {"path": "/HNAP1/", "auth_method": "hnap", "auth_required": True},
-        {"path": "/Login.html", "auth_method": "hnap", "auth_required": False},
-    ]
-
-    # Full capabilities including channel data
-    capabilities = {
-        ModemCapability.SOFTWARE_VERSION,
-        ModemCapability.RESTART,  # Uses SetArrisConfigurationInfo Action="reboot"
-        ModemCapability.DOWNSTREAM_CHANNELS,
-        ModemCapability.UPSTREAM_CHANNELS,
-    }
-
-    @classmethod
-    def can_parse(cls, soup: BeautifulSoup, url: str, html: str) -> bool:
-        """Detect if this is an Arris/CommScope S34 modem.
-
-        Detection strategy:
-        1. Check for "S34" model identifier in HTML (primary)
-        2. Reject if "S33" is present without "S34" (avoid false-positive)
-        3. Check for S34-specific firmware pattern (AT01.01.*)
-        4. Check for Arris/CommScope branding with HNAP
+        For HNAP parsers, resources contains:
+        - "hnap_response": Pre-fetched HNAP response data from HNAPLoader
+        - "/": BeautifulSoup object (for fallback compatibility)
 
         Args:
-            soup: BeautifulSoup parsed HTML
-            url: The URL that returned this HTML
-            html: Raw HTML string
-
-        Returns:
-            True if this is an S34 modem
-        """
-        # Primary check: S34 model identifier
-        if "S34" in html:
-            return True
-
-        # Avoid matching S33-only content
-        if "S33" in html and "S34" not in html:
-            return False
-
-        # Check for S34-specific firmware pattern
-        if "AT01.01" in html:
-            return True
-
-        # Check for Arris/CommScope branding with HNAP (less specific)
-        # Only match if we see S34-specific indicators
-        return (
-            ("ARRIS" in html or "CommScope" in html)
-            and "purenetworks.com/HNAP1" in html
-            and "GetArrisDeviceStatus" in html
-        )
-
-    def _hmac_sha256(self, key: str, message: str) -> str:
-        """Compute HMAC-SHA256 and return uppercase hex string.
-
-        This matches the JavaScript hex_hmac_sha256() function used by S34.
-        The S34 uses SHA256 instead of MD5 (which S33/MB8611 use).
-        """
-        return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest().upper()
-
-    def _get_hnap_auth_sha256(self, action: str) -> str:
-        """Generate HNAP_AUTH header using SHA256 for authenticated requests.
-
-        Format: HMAC_SHA256(PrivateKey, timestamp + SOAPAction) + " " + timestamp
-        """
-        if not self._private_key:
-            private_key = "withoutloginkey"
-        else:
-            private_key = self._private_key
-
-        current_time = int(time.time() * 1000) % 2000000000000
-        timestamp = str(current_time)
-        soap_action_uri = f'"{self.auth_config.soap_action_namespace}{action}"'
-
-        auth = self._hmac_sha256(private_key, timestamp + soap_action_uri)
-        return f"{auth} {timestamp}"
-
-    def login(self, session, base_url, username, password) -> tuple[bool, str | None]:
-        """
-        Log in using HNAP authentication with HMAC-SHA256.
-
-        The S34 uses HMAC-SHA256 (different from S33/MB8611 which use HMAC-MD5):
-        1. Request challenge with Action="request"
-        2. Compute PrivateKey = HMAC_SHA256(PublicKey + password, Challenge)
-        3. Compute LoginPassword = HMAC_SHA256(PrivateKey, Challenge)
-        4. Send login with Action="login" and computed LoginPassword
-
-        Note: S34 requires HTTPS with self-signed certificates.
-        The session should have verify=False for self-signed certs.
-
-        Args:
-            session: requests.Session object
-            base_url: Modem base URL (e.g., "https://192.168.100.1")
-            username: Username for authentication
-            password: Password for authentication
-
-        Returns:
-            Tuple of (success, response_text)
-        """
-        _LOGGER.debug("S34: Attempting HMAC-SHA256 HNAP login to %s", base_url)
-
-        endpoint = self.auth_config.hnap_endpoint
-        namespace = self.auth_config.soap_action_namespace
-
-        try:
-            # Step 1: Request challenge
-            challenge_data = {
-                "Login": {
-                    "Action": "request",
-                    "Username": username,
-                    "LoginPassword": "",
-                    "Captcha": "",
-                }
-            }
-
-            _LOGGER.debug("S34: Sending challenge request")
-
-            response = session.post(
-                f"{base_url}{endpoint}",
-                json=challenge_data,
-                headers={
-                    "SOAPAction": f'"{namespace}Login"',
-                    "HNAP_AUTH": self._get_hnap_auth_sha256("Login"),
-                    "Content-Type": "application/json",
-                },
-                timeout=10,
-                verify=session.verify,
-            )
-
-            if response.status_code != 200:
-                _LOGGER.error("S34: Challenge request failed with HTTP %d", response.status_code)
-                return (False, response.text)
-
-            # Parse challenge response
-            try:
-                challenge_json = json.loads(response.text)
-            except json.JSONDecodeError:
-                _LOGGER.error("S34: Challenge response is not valid JSON: %s", response.text[:500])
-                return (False, response.text)
-
-            login_response = challenge_json.get("LoginResponse", {})
-            challenge = login_response.get("Challenge")
-            cookie = login_response.get("Cookie")
-            public_key = login_response.get("PublicKey")
-
-            if not all([challenge, cookie, public_key]):
-                _LOGGER.error(
-                    "S34: Challenge response missing required fields. Response: %s",
-                    response.text[:500],
-                )
-                return (False, response.text)
-
-            _LOGGER.debug(
-                "S34: Challenge received: Challenge=%s..., PublicKey=%s...",
-                challenge[:8] if challenge else "None",
-                public_key[:8] if public_key else "None",
-            )
-
-            # Step 2: Compute credentials using HMAC-SHA256
-            # PrivateKey = HMAC_SHA256(PublicKey + password, Challenge)
-            private_key = self._hmac_sha256(public_key + password, challenge)
-            self._private_key = private_key
-
-            # Set session cookies
-            session.cookies.set("uid", cookie)
-            session.cookies.set("PrivateKey", private_key)
-
-            # LoginPassword = HMAC_SHA256(PrivateKey, Challenge)
-            login_password = self._hmac_sha256(private_key, challenge)
-
-            _LOGGER.debug("S34: Computed SHA256 credentials, sending login request")
-
-            # Step 3: Send login with computed password
-            login_data = {
-                "Login": {
-                    "Action": "login",
-                    "Username": username,
-                    "LoginPassword": login_password,
-                    "Captcha": "",
-                }
-            }
-
-            response = session.post(
-                f"{base_url}{endpoint}",
-                json=login_data,
-                headers={
-                    "SOAPAction": f'"{namespace}Login"',
-                    "HNAP_AUTH": self._get_hnap_auth_sha256("Login"),
-                    "Content-Type": "application/json",
-                },
-                timeout=10,
-                verify=session.verify,
-            )
-
-            if response.status_code != 200:
-                _LOGGER.error("S34: Login request failed with HTTP %d", response.status_code)
-                self._private_key = None
-                return (False, response.text)
-
-            # Check login result
-            try:
-                response_json = json.loads(response.text)
-                login_result = response_json.get("LoginResponse", {}).get("LoginResult", "")
-
-                if login_result in ("OK", "SUCCESS"):
-                    _LOGGER.info("S34: HMAC-SHA256 login successful! LoginResult=%s", login_result)
-
-                    # Create JSON builder for subsequent requests
-                    self._json_builder = HNAPJsonRequestBuilder(
-                        endpoint=endpoint,
-                        namespace=namespace,
-                        empty_action_value="",
-                    )
-                    # Transfer the private key to the builder
-                    self._json_builder._private_key = self._private_key
-
-                    return (True, response.text)
-                else:
-                    _LOGGER.error("S34: Login failed with result: %s. Response: %s", login_result, response.text[:500])
-                    self._private_key = None
-                    return (False, response.text)
-
-            except json.JSONDecodeError:
-                _LOGGER.error("S34: Login response is not valid JSON: %s", response.text[:500])
-                self._private_key = None
-                return (False, response.text)
-
-        except Exception as e:
-            _LOGGER.error("S34: Login failed with exception: %s", str(e))
-            self._private_key = None
-            return (False, str(e))
-
-    def _is_auth_failure(self, error: Exception) -> bool:
-        """Detect if an exception indicates an authentication failure.
-
-        Args:
-            error: The exception that occurred
-
-        Returns:
-            True if this appears to be an auth failure
-        """
-        error_str = str(error).lower()
-
-        auth_indicators = [
-            "401",
-            "403",
-            "unauthorized",
-            "forbidden",
-            "authentication failed",
-            "login failed",
-            "invalid credentials",
-            "session timeout",
-            "invalid session",
-            '"loginresult":"failed"',
-            '"loginresult": "failed"',
-        ]
-
-        return any(indicator in error_str for indicator in auth_indicators)
-
-    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
-        """
-        Parse data using HNAP calls.
-
-        MVP Implementation: Only fetches GetArrisDeviceStatus for system info.
-        Channel data (downstream/upstream) deferred to Phase 4.
-
-        Args:
-            soup: BeautifulSoup object (not used for HNAP modems)
-            session: requests.Session with authenticated session
-            base_url: Modem base URL
+            resources: Dictionary of pre-fetched resources
 
         Returns:
             Dict with downstream, upstream, and system_info
         """
-        if not session or not base_url:
-            raise ValueError("S34 requires session and base_url for HNAP calls")
+        # Get pre-fetched HNAP response data (provided by HNAPLoader)
+        hnap_response = resources.get("hnap_response", {})
 
-        try:
-            return self._parse_with_json_hnap(session, base_url)
-        except Exception as json_error:
-            _LOGGER.error("S34: HNAP parsing failed: %s", str(json_error), exc_info=True)
+        if hnap_response:
+            _LOGGER.debug("S34: Parsing pre-fetched HNAP response data")
+            return self._parse_hnap_response(hnap_response)
 
-            # Check if failure is due to authentication
-            auth_failure = self._is_auth_failure(json_error)
+        _LOGGER.warning("S34: No HNAP response data in resources")
+        return {"downstream": [], "upstream": [], "system_info": {}}
 
-            # Log unusual pattern: login succeeded but parse failed
-            if self._json_builder is not None:
-                _LOGGER.warning(
-                    "S34: Parse failed after successful login - possible session invalidation. "
-                    "Cookies: %s, Has private_key: %s, Error: %s",
-                    list(session.cookies.keys()) if session else "no session",
-                    self._json_builder._private_key is not None,
-                    str(json_error)[:100],
-                )
-
-            result: dict[str, list | dict] = {"downstream": [], "upstream": [], "system_info": {}}
-
-            if auth_failure:
-                result["_auth_failure"] = True  # type: ignore[assignment]
-                result["_login_page_detected"] = True  # type: ignore[assignment]
-                result["_diagnostic_context"] = {
-                    "parser": "S34 HNAP",
-                    "error": str(json_error)[:200],
-                    "error_type": "HNAP authentication failure",
-                }
-                _LOGGER.warning("S34: HNAP authentication failure detected - modem requires valid credentials")
-
-            return result
-
-    def _call_hnap_sha256(self, session, base_url: str, actions: list[str]) -> str:
-        """Make HNAP request using SHA256 authentication (GetMultipleHNAPs).
-
-        The S34 requires SHA256 for all authenticated requests, not MD5.
+    def _parse_hnap_response(self, hnap_data: dict) -> dict:
+        """Parse pre-fetched HNAP response data.
 
         Args:
-            session: Authenticated requests.Session
-            base_url: Modem base URL
-            actions: List of HNAP action names
-
-        Returns:
-            JSON response text
-        """
-        endpoint = self.auth_config.hnap_endpoint
-        namespace = self.auth_config.soap_action_namespace
-
-        # Build request with empty string values (S34 format)
-        action_objects = {action: "" for action in actions}
-        request_data = {"GetMultipleHNAPs": action_objects}
-
-        response = session.post(
-            f"{base_url}{endpoint}",
-            json=request_data,
-            headers={
-                "SOAPAction": f'"{namespace}GetMultipleHNAPs"',
-                "HNAP_AUTH": self._get_hnap_auth_sha256("GetMultipleHNAPs"),
-                "Content-Type": "application/json",
-            },
-            timeout=10,
-            verify=session.verify,
-        )
-
-        response.raise_for_status()
-        return response.text
-
-    def _call_hnap_single_sha256(self, session, base_url: str, action: str, params: dict | None = None) -> str:
-        """Make single HNAP action call using SHA256 authentication.
-
-        The S34 requires SHA256 for all authenticated requests, not MD5.
-        This is used for actions like GetArrisConfigurationInfo and SetArrisConfigurationInfo.
-
-        Args:
-            session: Authenticated requests.Session
-            base_url: Modem base URL
-            action: HNAP action name (e.g., "SetArrisConfigurationInfo")
-            params: Optional parameters for the action
-
-        Returns:
-            JSON response text
-
-        Raises:
-            requests.RequestException: If request fails
-        """
-        endpoint = self.auth_config.hnap_endpoint
-        namespace = self.auth_config.soap_action_namespace
-
-        # Build JSON request
-        request_data = {action: params or {}}
-
-        url = f"{base_url}{endpoint}"
-        headers = {
-            "SOAPAction": f'"{namespace}{action}"',
-            "HNAP_AUTH": self._get_hnap_auth_sha256(action),
-            "Content-Type": "application/json",
-        }
-
-        response = session.post(
-            url,
-            json=request_data,
-            headers=headers,
-            timeout=10,
-            verify=session.verify,
-        )
-
-        # Enhanced error diagnostics for failed HTTP requests
-        if not response.ok:
-            _LOGGER.error(
-                "S34 HNAP call_single failed: action=%s, status=%s, url=%s",
-                action,
-                response.status_code,
-                url,
-            )
-            _LOGGER.error("S34 HNAP call_single request: %s", request_data)
-            _LOGGER.error("S34 HNAP call_single response: %s", response.text[:500] if response.text else "(empty)")
-
-        response.raise_for_status()
-        return response.text
-
-    def _parse_with_json_hnap(self, session, base_url: str) -> dict:
-        """Parse modem data using JSON-based HNAP requests with SHA256 auth.
-
-        Fetches device status and channel data using GetCustomer* actions.
-
-        Args:
-            session: Authenticated requests.Session
-            base_url: Modem base URL
+            hnap_data: Dictionary containing HNAP response data
 
         Returns:
             Dict with downstream, upstream, and system_info
         """
-        _LOGGER.debug("S34: Attempting JSON-based HNAP communication with SHA256 auth")
+        # Extract nested response if present
+        if "GetMultipleHNAPsResponse" in hnap_data:
+            hnap_data = hnap_data["GetMultipleHNAPsResponse"]
 
-        # Fetch device status first
-        _LOGGER.debug("S34: Fetching device status")
-        device_response = self._call_hnap_sha256(session, base_url, ["GetArrisDeviceStatus"])
-        device_data = json.loads(device_response)
-
-        # Fetch downstream channel data (uses GetCustomer* like S33, not GetArris*)
-        _LOGGER.debug("S34: Fetching downstream channel data")
-        downstream_response = self._call_hnap_sha256(session, base_url, ["GetCustomerStatusDownstreamChannelInfo"])
-        downstream_data = json.loads(downstream_response)
-
-        # Fetch upstream channel data
-        _LOGGER.debug("S34: Fetching upstream channel data")
-        upstream_response = self._call_hnap_sha256(session, base_url, ["GetCustomerStatusUpstreamChannelInfo"])
-        upstream_data = json.loads(upstream_response)
-
-        # Merge all responses
-        hnap_data = {**device_data, **downstream_data, **upstream_data}
-
-        _LOGGER.debug(
-            "S34: JSON HNAP responses received. Keys: %s",
-            list(hnap_data.keys()),
-        )
-
-        # Parse system info from GetArrisDeviceStatus
-        system_info = self._parse_system_info_from_hnap(hnap_data)
-
-        # Parse channel data (same format as S33 - caret-delimited)
+        # Parse channels and system info
         downstream = self._parse_downstream_from_hnap(hnap_data)
         upstream = self._parse_upstream_from_hnap(hnap_data)
+        system_info = self._parse_system_info_from_hnap(hnap_data)
 
         _LOGGER.info(
-            "S34: Successfully parsed data (firmware: %s, model: %s, DS: %d, US: %d)",
-            system_info.get("software_version", "unknown"),
-            system_info.get("model_name", "unknown"),
+            "S34: Successfully parsed HNAP data (downstream: %d channels, upstream: %d channels)",
             len(downstream),
             len(upstream),
         )
@@ -557,83 +94,47 @@ class ArrisS34HnapParser(ModemParser):
             "system_info": system_info,
         }
 
-    def _parse_system_info_from_hnap(self, hnap_data: dict) -> dict:
-        """Parse system info from HNAP JSON response.
+    def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
+        """Parse data from BeautifulSoup or delegate to parse_resources().
 
-        S34 Response Format (pure JSON, NOT caret-delimited):
-        {
-            "GetArrisDeviceStatusResponse": {
-                "FirmwareVersion": "AT01.01.010.042324_S3.04.735",
-                "InternetConnection": "Connected",
-                "DownstreamFrequency": "483000000 Hz",
-                "StatusSoftwareModelName": "S34",
-                "StatusSoftwareModelName2": "S34",
-                "GetArrisDeviceStatusResult": "OK"
-            }
-        }
+        This method exists for backwards compatibility. New code should use
+        parse_resources() which receives pre-fetched HNAP response data via HNAPLoader.
+
+        Note: session and base_url parameters are deprecated. HNAP data fetching
+        is now handled by HNAPLoader, and parsers only parse pre-fetched data.
 
         Args:
-            hnap_data: Parsed JSON response from HNAP call
+            soup: BeautifulSoup object (unused for HNAP parsers)
+            session: Deprecated - network calls moved to HNAPLoader
+            base_url: Deprecated - network calls moved to HNAPLoader
 
         Returns:
-            Dict with system info fields
+            Dict with downstream, upstream, and system_info
         """
-        system_info: dict[str, str] = {}
-
-        try:
-            # Extract GetArrisDeviceStatus response
-            device_status = hnap_data.get("GetArrisDeviceStatusResponse", {})
-
-            if not device_status:
-                _LOGGER.warning(
-                    "S34: No GetArrisDeviceStatusResponse found. Keys: %s",
-                    list(hnap_data.keys()),
-                )
-                return system_info
-
-            # Check result status
-            result = device_status.get("GetArrisDeviceStatusResult", "")
-            if result and result != "OK":
-                _LOGGER.warning("S34: GetArrisDeviceStatus returned: %s", result)
-
-            # Map S34 fields to standard system_info keys
-            # FirmwareVersion -> software_version
-            self._set_if_present(device_status, "FirmwareVersion", system_info, "software_version")
-
-            # InternetConnection -> internet_connection
-            self._set_if_present(device_status, "InternetConnection", system_info, "internet_connection")
-
-            # StatusSoftwareModelName -> model_name
-            self._set_if_present(device_status, "StatusSoftwareModelName", system_info, "model_name")
-
-            # DownstreamFrequency -> downstream_frequency (informational)
-            self._set_if_present(device_status, "DownstreamFrequency", system_info, "downstream_frequency")
-
-            _LOGGER.debug("S34: Parsed system_info: %s", system_info)
-
-        except Exception as e:
-            _LOGGER.error("S34: Error parsing system info: %s", e)
-
-        return system_info
+        # Delegate to parse_resources (HNAP parsers need hnap_response, not soup)
+        return self.parse_resources({"/": soup})
 
     def _parse_downstream_from_hnap(self, hnap_data: dict) -> list[dict]:
         """Parse downstream channels from HNAP JSON response.
 
-        Format: "RowIndex^LockStatus^Modulation^ChannelID^Frequency^Power^SNR^Corrected^Uncorrected"
+        Format: "ChannelSelect^LockStatus^ChannelType^ChannelID^Frequency^PowerLevel^SNRLevel^Corrected^Uncorrected"
         Delimiter: ^ (caret) between fields, |+| between channels
 
-        Same format as S33 - uses GetCustomerStatusDownstreamChannelInfo.
+        Note: S34 includes placeholder channels with channel_id=0 for "Not Locked"
+        status. These are filtered out as they contain no useful data.
         """
         channels: list[dict] = []
 
         try:
+            # S34 uses CustomerConn* keys (same as S33)
             downstream_response = hnap_data.get("GetCustomerStatusDownstreamChannelInfoResponse", {})
             channel_data = downstream_response.get("CustomerConnDownstreamChannel", "")
 
             if not channel_data:
                 _LOGGER.warning(
-                    "S34: No downstream channel data found. Response keys: %s",
+                    "S34: No downstream channel data found. Response keys: %s, content: %s",
                     list(hnap_data.keys()),
+                    str(downstream_response)[:500] if downstream_response else "empty",
                 )
                 return channels
 
@@ -656,20 +157,25 @@ class ArrisS34HnapParser(ModemParser):
                     # fields[0] = row index (display order only)
                     # fields[3] = DOCSIS Channel ID
                     channel_id = int(fields[3])
+
+                    # Skip placeholder channels with channel_id=0 (S34-specific)
+                    # These appear for "Not Locked" slots and contain no useful data
+                    if channel_id == 0:
+                        continue
+
                     lock_status = fields[1].strip()
                     modulation = fields[2].strip()
 
-                    # Skip unlocked/placeholder channels (channel_id=0 or Not Locked)
-                    # These create duplicate entity IDs and have no useful data
-                    if channel_id == 0 or lock_status == "Not Locked":
-                        continue
-
                     # Frequency - could be Hz or need conversion
+                    # S34 HNAP returns frequencies already in Hz without suffix
+                    # (e.g., "537000000" for 537 MHz)
                     freq_str = fields[4].strip()
                     if "Hz" in freq_str:
                         frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
                     else:
                         freq_val = float(freq_str)
+                        # If value > 1,000,000 it's already in Hz (e.g., 537000000 Hz)
+                        # If value < 1000 it's likely MHz (e.g., 537 MHz)
                         if freq_val > 1_000_000:
                             frequency = int(freq_val)
                         else:
@@ -686,10 +192,15 @@ class ArrisS34HnapParser(ModemParser):
                     corrected = int(fields[7])
                     uncorrected = int(fields[8])
 
+                    # Derive channel_type from modulation string
+                    # S34 returns "OFDM PLC" for OFDM channels, "QAM256" etc for SC-QAM
+                    channel_type = "ofdm" if "ofdm" in modulation.lower() else "qam"
+
                     channel_info = {
                         "channel_id": channel_id,
                         "lock_status": lock_status,
                         "modulation": modulation,
+                        "channel_type": channel_type,
                         "frequency": frequency,
                         "power": power,
                         "snr": snr,
@@ -714,18 +225,21 @@ class ArrisS34HnapParser(ModemParser):
         Format: "ChannelSelect^LockStatus^ChannelType^ChannelID^SymbolRate/Width^Frequency^PowerLevel"
         Delimiter: ^ (caret) between fields, |+| between channels
 
-        Same format as S33 - uses GetCustomerStatusUpstreamChannelInfo.
+        Note: S34 includes placeholder channels with channel_id=0 for "Not Locked"
+        status. These are filtered out as they contain no useful data.
         """
         channels: list[dict] = []
 
         try:
+            # S34 uses CustomerConn* keys
             upstream_response = hnap_data.get("GetCustomerStatusUpstreamChannelInfoResponse", {})
             channel_data = upstream_response.get("CustomerConnUpstreamChannel", "")
 
             if not channel_data:
                 _LOGGER.warning(
-                    "S34: No upstream channel data found. Response keys: %s",
+                    "S34: No upstream channel data found. Response keys: %s, content: %s",
                     list(hnap_data.keys()),
+                    str(upstream_response)[:500] if upstream_response else "empty",
                 )
                 return channels
 
@@ -746,22 +260,25 @@ class ArrisS34HnapParser(ModemParser):
                 try:
                     # Parse channel fields
                     channel_id = int(fields[3])
-                    lock_status = fields[1].strip()
-                    modulation = fields[2].strip()
 
-                    # Skip unlocked/placeholder channels (channel_id=0 or Not Locked)
-                    # These create duplicate entity IDs and have no useful data
-                    if channel_id == 0 or lock_status == "Not Locked":
+                    # Skip placeholder channels with channel_id=0 (S34-specific)
+                    # These appear for "Not Locked" slots and contain no useful data
+                    if channel_id == 0:
                         continue
 
-                    symbol_rate = fields[4].strip()
+                    lock_status = fields[1].strip()
+                    modulation = fields[2].strip()
+                    symbol_rate = fields[4].strip()  # Keep as string, may have units
 
-                    # Frequency
+                    # Frequency - could be Hz or need conversion
+                    # S34 HNAP returns frequencies already in Hz without suffix
                     freq_str = fields[5].strip()
                     if "Hz" in freq_str:
                         frequency = int(freq_str.replace(" Hz", "").replace("Hz", ""))
                     else:
                         freq_val = float(freq_str)
+                        # If value > 1,000,000 it's already in Hz (e.g., 22800000 Hz)
+                        # If value < 1000 it's likely MHz (e.g., 22.8 MHz)
                         if freq_val > 1_000_000:
                             frequency = int(freq_val)
                         else:
@@ -771,10 +288,15 @@ class ArrisS34HnapParser(ModemParser):
                     power_str = fields[6].strip().replace(" dBmV", "").replace("dBmV", "")
                     power = float(power_str)
 
+                    # Derive channel_type from modulation string
+                    # S34 returns "OFDMA" for OFDMA channels, "SC-QAM"/"ATDMA" etc for SC-QAM
+                    channel_type = "ofdma" if "ofdma" in modulation.lower() else "atdma"
+
                     channel_info = {
                         "channel_id": channel_id,
                         "lock_status": lock_status,
                         "modulation": modulation,
+                        "channel_type": channel_type,
                         "symbol_rate": symbol_rate,
                         "frequency": frequency,
                         "power": power,
@@ -791,121 +313,55 @@ class ArrisS34HnapParser(ModemParser):
 
         return channels
 
-    def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
-        """Set target[key] if source[source_key] exists and is non-empty.
+    def _parse_system_info_from_hnap(self, hnap_data: dict) -> dict:
+        """Parse system info from HNAP JSON response."""
+        system_info: dict[str, str] = {}
 
-        Args:
-            source: Source dictionary
-            source_key: Key to look up in source
-            target: Target dictionary to update
-            target_key: Key to set in target
-        """
+        try:
+            self._extract_connection_info(hnap_data, system_info)
+            self._extract_startup_info(hnap_data, system_info)
+            self._extract_device_status(hnap_data, system_info)
+        except Exception as e:
+            _LOGGER.error("S34: Error parsing system info: %s", e)
+
+        return system_info
+
+    def _extract_connection_info(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract connection info fields from HNAP data."""
+        # S34 uses CustomerConn* keys
+        conn_info = hnap_data.get("GetCustomerStatusConnectionInfoResponse", {})
+        if not conn_info:
+            return
+
+        # Note: CustomerCurSystemTime is the current clock time, NOT uptime.
+        # The Arris UI displays this in an element called "SystemUpTime" which is misleading.
+        # We intentionally do NOT map it to system_uptime since it's not a duration.
+        self._set_if_present(conn_info, "CustomerConnNetworkAccess", system_info, "network_access")
+        self._set_if_present(conn_info, "StatusSoftwareModelName", system_info, "model_name")
+
+    def _extract_startup_info(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract startup sequence info fields from HNAP data."""
+        startup_info = hnap_data.get("GetCustomerStatusStartupSequenceResponse", {})
+        if not startup_info:
+            return
+
+        self._set_if_present(startup_info, "CustomerConnDSFreq", system_info, "downstream_frequency")
+        self._set_if_present(startup_info, "CustomerConnConnectivityStatus", system_info, "connectivity_status")
+        self._set_if_present(startup_info, "CustomerConnBootStatus", system_info, "boot_status")
+        self._set_if_present(startup_info, "CustomerConnSecurityStatus", system_info, "security_status")
+
+    def _extract_device_status(self, hnap_data: dict, system_info: dict) -> None:
+        """Extract device status fields from HNAP data (firmware version, etc.)."""
+        device_status = hnap_data.get("GetArrisDeviceStatusResponse", {})
+        if not device_status:
+            return
+
+        # FirmwareVersion -> software_version
+        self._set_if_present(device_status, "FirmwareVersion", system_info, "software_version")
+        self._set_if_present(device_status, "InternetConnection", system_info, "internet_connection")
+
+    def _set_if_present(self, source: dict, source_key: str, target: dict, target_key: str) -> None:
+        """Set target[key] if source[source_key] exists and is non-empty."""
         value = source.get(source_key, "")
         if value:
             target[target_key] = value
-
-    def _get_current_config(self, session, base_url: str) -> dict[str, str]:
-        """Get current modem configuration (EEE and LED settings).
-
-        The browser fetches this before sending a reboot command to preserve settings.
-        Uses SHA256 authentication (required for S34).
-
-        Args:
-            session: Authenticated session
-            base_url: Modem base URL
-
-        Returns:
-            Dict with current config values
-        """
-        try:
-            response = self._call_hnap_single_sha256(session, base_url, "GetArrisConfigurationInfo", {})
-            response_data: dict = json.loads(response)
-            config_response: dict[str, str] = response_data.get("GetArrisConfigurationInfoResponse", {})
-
-            if config_response.get("GetArrisConfigurationInfoResult") == "OK":
-                _LOGGER.debug(
-                    "S34: Got current config: EEE=%s, LED=%s",
-                    config_response.get("ethSWEthEEE"),
-                    config_response.get("LedStatus"),
-                )
-                return config_response
-
-            _LOGGER.warning("S34: GetArrisConfigurationInfo returned non-OK result")
-            return {}
-        except Exception as e:
-            _LOGGER.warning("S34: Failed to get current config: %s", str(e)[:100])
-            return {}
-
-    def restart(self, session, base_url) -> bool:
-        """Restart the S34 modem via HNAP SetArrisConfigurationInfo.
-
-        The S34 uses SetArrisConfigurationInfo with Action="reboot" to restart.
-        Uses SHA256 authentication (required for S34, unlike S33 which uses MD5).
-
-        Returns:
-            True if restart command was sent successfully, False otherwise
-        """
-        _LOGGER.info("S34: Sending restart command via SetArrisConfigurationInfo (SHA256 auth)")
-
-        # Verify we have the private key for SHA256 auth
-        if not self._private_key:
-            _LOGGER.error("S34: Cannot restart - no private key available (not logged in?)")
-            return False
-
-        try:
-            # First, get current configuration values (EEE and LED settings)
-            current_config = self._get_current_config(session, base_url)
-
-            # Build restart request with current settings preserved
-            restart_data = {
-                "Action": "reboot",
-                "SetEEEEnable": current_config.get("ethSWEthEEE", "0"),
-                "LED_Status": current_config.get("LedStatus", "1"),
-            }
-
-            _LOGGER.debug("S34: Sending restart with config: %s", restart_data)
-            response = self._call_hnap_single_sha256(session, base_url, "SetArrisConfigurationInfo", restart_data)
-
-            # Log response for debugging
-            _LOGGER.debug("S34: Restart response: %s", response[:500] if response else "empty")
-
-            # Parse response to check result
-            response_data = json.loads(response)
-            result = response_data.get("SetArrisConfigurationInfoResponse", {}).get(
-                "SetArrisConfigurationInfoResult", ""
-            )
-            action_status = response_data.get("SetArrisConfigurationInfoResponse", {}).get(
-                "SetArrisConfigurationInfoAction", ""
-            )
-
-            if result == "OK" and action_status == "REBOOT":
-                _LOGGER.info("S34: Restart command accepted - modem is rebooting")
-                return True
-            elif result == "OK":
-                # OK but no REBOOT action - might still work
-                _LOGGER.info(
-                    "S34: Restart command returned OK (action=%s) - modem may be rebooting",
-                    action_status,
-                )
-                return True
-            else:
-                _LOGGER.warning(
-                    "S34: Restart command returned unexpected result=%s, action=%s",
-                    result,
-                    action_status,
-                )
-                return False
-
-        except ConnectionResetError:
-            # Connection reset often means the modem is rebooting
-            _LOGGER.info("S34: Restart likely successful (connection reset by rebooting modem)")
-            return True
-
-        except Exception as e:
-            error_str = str(e)
-            if "Connection aborted" in error_str or "Connection reset" in error_str:
-                _LOGGER.info("S34: Restart likely successful (connection reset)")
-                return True
-
-            _LOGGER.error("S34: Restart failed with error: %s", error_str[:200])
-            return False

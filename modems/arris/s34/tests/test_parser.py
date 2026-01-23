@@ -1,379 +1,361 @@
 """Tests for the Arris/CommScope S34 parser.
 
-The S34 uses HNAP protocol like the S33, but with key differences:
+The S34 uses HNAP protocol like the S33, with key differences:
 - Authentication: Uses HMAC-SHA256 (vs S33's HMAC-MD5)
 - Firmware pattern: AT01.01.* (vs S33's TB01.03.*)
 
 Channel data format is caret-delimited (same as S33).
+
+Fixtures contributed by @rplancha (PR #90).
 """
 
-import json
-import os
+from unittest.mock import MagicMock
 
 import pytest
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.parsers.arris.s34 import ArrisS34HnapParser
-from custom_components.cable_modem_monitor.parsers.base_parser import ModemCapability, ParserStatus
-
-# =============================================================================
-# FIXTURES
-# =============================================================================
+from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
+from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
+from custom_components.cable_modem_monitor.modems.arris.s34.parser import ArrisS34HnapParser
+from tests.fixtures import load_fixture
 
 
 @pytest.fixture
 def s34_login_html():
     """Load S34 Login.html fixture."""
-    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "s34", "Login.html")
-    with open(fixture_path) as f:
-        return f.read()
+    return load_fixture("arris", "s34", "Login.html")
 
 
 @pytest.fixture
 def s34_device_status_response():
-    """Load S34 GetArrisDeviceStatus response fixture."""
-    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "s34", "hnap_device_status.json")
-    with open(fixture_path) as f:
-        return json.load(f)
+    """Load S34 hnap_device_status.json fixture."""
+    import json
+
+    content = load_fixture("arris", "s34", "hnap_device_status.json")
+    return json.loads(content)
+
+
+@pytest.fixture
+def s34_downstream_response():
+    """Load S34 hnap_downstream_channels.json fixture."""
+    import json
+
+    content = load_fixture("arris", "s34", "hnap_downstream_channels.json")
+    return json.loads(content)
+
+
+@pytest.fixture
+def s34_upstream_response():
+    """Load S34 hnap_upstream_channels.json fixture."""
+    import json
+
+    content = load_fixture("arris", "s34", "hnap_upstream_channels.json")
+    return json.loads(content)
+
+
+@pytest.fixture
+def sample_downstream_hnap_response():
+    """Sample HNAP downstream channel response matching S34 format."""
+    return {
+        "GetCustomerStatusDownstreamChannelInfoResponse": {
+            "CustomerConnDownstreamChannel": (
+                "1^Locked^256QAM^17^483000000^ 7.3^39.0^34^0^|+|"
+                "2^Not Locked^Unknown^0^0^-60.0^ 7.3^0^0^|+|"  # channel_id=0, should skip
+                "3^Locked^256QAM^14^465000000^ 7.6^39.0^4^0^"
+            ),
+            "GetCustomerStatusDownstreamChannelInfoResult": "OK",
+        }
+    }
+
+
+@pytest.fixture
+def sample_upstream_hnap_response():
+    """Sample HNAP upstream channel response matching S34 format."""
+    return {
+        "GetCustomerStatusUpstreamChannelInfoResponse": {
+            "CustomerConnUpstreamChannel": (
+                "1^Locked^SC-QAM^3^6400000^22800000^37.8^|+|"
+                "2^Not Locked^Unknown^0^0^0^-inf^|+|"  # channel_id=0, should skip
+                "3^Locked^SC-QAM^6^3200000^40400000^38.0^"
+            ),
+            "GetCustomerStatusUpstreamChannelInfoResult": "OK",
+        }
+    }
 
 
 @pytest.fixture
 def sample_device_status_response():
-    """Sample HNAP device status response for S34 (inline for quick tests)."""
+    """Sample HNAP device status response for S34."""
     return {
         "GetArrisDeviceStatusResponse": {
             "FirmwareVersion": "AT01.01.010.042324_S3.04.735",
             "InternetConnection": "Connected",
             "DownstreamFrequency": "483000000 Hz",
             "StatusSoftwareModelName": "S34",
-            "StatusSoftwareModelName2": "S34",
             "GetArrisDeviceStatusResult": "OK",
         }
     }
 
 
-# =============================================================================
-# TEST CLASSES
-# =============================================================================
+@pytest.fixture
+def mock_hnap_builder():
+    """Mock HNAP builder that returns empty response for API calls."""
+    builder = MagicMock()
+    builder.call_multiple.return_value = [{}, {}, {}, {}, {}]
+    return builder
 
 
 class TestS34ParserMetadata:
-    """Test parser metadata and class attributes."""
+    """Test parser metadata from modem.yaml."""
 
-    def test_parser_name(self):
-        """Test parser name is correct."""
-        assert ArrisS34HnapParser.name == "Arris S34"
+    def test_parser_class_name(self):
+        """Test parser class name is correct."""
+        assert ArrisS34HnapParser.__name__ == "ArrisS34HnapParser"
 
     def test_parser_manufacturer(self):
-        """Test manufacturer is correct."""
-        assert ArrisS34HnapParser.manufacturer == "Arris/CommScope"
+        """Test manufacturer from modem.yaml."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
 
-    def test_parser_models(self):
-        """Test model list includes S34 variants."""
-        assert "S34" in ArrisS34HnapParser.models
-        assert "CommScope S34" in ArrisS34HnapParser.models
-        assert "ARRIS S34" in ArrisS34HnapParser.models
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        config = adapter.get_modem_config_dict()
+        assert config["manufacturer"] == "Arris/CommScope"
 
-    def test_parser_priority(self):
-        """Test priority is high (HNAP API method)."""
-        # S34 should have same or higher priority than S33 (101)
-        assert ArrisS34HnapParser.priority >= 100
+    def test_parser_model(self):
+        """Test model from modem.yaml."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        config = adapter.get_modem_config_dict()
+        assert config["model"] == "S34"
 
     def test_docsis_version(self):
         """Test DOCSIS version is 3.1."""
-        assert ArrisS34HnapParser.docsis_version == "3.1"
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
 
-    def test_verified_status(self):
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        assert adapter.get_docsis_version() == "3.1"
+
+    def test_awaiting_verification_status(self):
         """Test parser is awaiting verification (not yet verified by user)."""
-        assert ArrisS34HnapParser.status == ParserStatus.AWAITING_VERIFICATION
-        parser = ArrisS34HnapParser()
-        assert parser.verified is False
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        assert adapter.get_status() == "awaiting_verification"
 
     def test_fixtures_path(self):
-        """Test fixtures path is set correctly."""
-        assert ArrisS34HnapParser.fixtures_path == "tests/parsers/arris/fixtures/s34"
+        """Test fixtures path is set via modem.yaml adapter."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        assert adapter.get_fixtures_path() == "modems/arris/s34/fixtures"
+
+
+class TestS34HmacAlgorithm:
+    """Test S34 uses SHA256 HMAC (key difference from S33)."""
+
+    def test_hmac_algorithm_sha256(self):
+        """Test S34 modem.yaml specifies hmac_algorithm: sha256."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        hints = adapter.get_hnap_hints()
+        assert hints is not None
+        assert hints["hmac_algorithm"] == "sha256"
+
+    def test_s33_uses_md5_for_comparison(self):
+        """Verify S33 uses md5 (to confirm S34 is different)."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("ArrisS33HnapParser")
+        assert adapter is not None
+        hints = adapter.get_hnap_hints()
+        assert hints is not None
+        assert hints["hmac_algorithm"] == "md5"
 
 
 class TestS34ParserCapabilities:
-    """Test parser capabilities declaration (MVP scope)."""
-
-    def test_has_version_capability(self):
-        """Test software version capability (MVP)."""
-        assert ArrisS34HnapParser.has_capability(ModemCapability.SOFTWARE_VERSION)
+    """Test parser capabilities declaration."""
 
     def test_has_downstream_capability(self):
-        """Test downstream channels capability is declared."""
-        assert ArrisS34HnapParser.has_capability(ModemCapability.DOWNSTREAM_CHANNELS)
+        """Test downstream channels capability."""
+        assert ArrisS34HnapParser.has_capability(ModemCapability.SCQAM_DOWNSTREAM)
 
     def test_has_upstream_capability(self):
-        """Test upstream channels capability is declared."""
-        assert ArrisS34HnapParser.has_capability(ModemCapability.UPSTREAM_CHANNELS)
+        """Test upstream channels capability."""
+        assert ArrisS34HnapParser.has_capability(ModemCapability.SCQAM_UPSTREAM)
 
     def test_no_uptime_capability(self):
-        """Test S34 does NOT have uptime capability.
-
-        Like S33, S34 only provides current clock time, not actual uptime.
-        """
+        """Test S34 does NOT have uptime capability (same as S33)."""
         assert not ArrisS34HnapParser.has_capability(ModemCapability.SYSTEM_UPTIME)
 
-    def test_has_restart_capability(self):
-        """Test restart capability is declared."""
-        assert ArrisS34HnapParser.has_capability(ModemCapability.RESTART)
+    def test_has_version_capability(self):
+        """Test software version capability."""
+        assert ArrisS34HnapParser.has_capability(ModemCapability.SOFTWARE_VERSION)
+
+    def test_has_restart_action(self):
+        """Test that restart is supported via ActionFactory."""
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
+
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None, "S34 should have modem.yaml config"
+        modem_config = adapter.get_modem_config_dict()
+        assert ActionFactory.supports(ActionType.RESTART, modem_config)
 
 
 class TestS34ParserDetection:
     """Test parser detection logic."""
 
-    def test_can_parse_with_s34_model(self, s34_login_html):
-        """Test detection via S34 model string."""
-        soup = BeautifulSoup(s34_login_html, "html.parser")
+    def test_detection_with_s34_model(self, s34_login_html):
+        """Test detection via S34 model string using HintMatcher."""
         html_with_model = s34_login_html + "<!-- S34 -->"
-        assert ArrisS34HnapParser.can_parse(soup, "http://192.168.100.1/Login.html", html_with_model)
+        hint_matcher = HintMatcher.get_instance()
+        matches = hint_matcher.match_login_markers(html_with_model)
+        assert any(m.parser_name == "ArrisS34HnapParser" for m in matches)
 
-    def test_can_parse_with_surfboard_and_hnap_and_s34(self):
-        """Test detection via SURFboard + HNAP + S34 markers."""
-        html = "<html><body>SURFboard HNAP S34</body></html>"
-        soup = BeautifulSoup(html, "html.parser")
-        assert ArrisS34HnapParser.can_parse(soup, "http://192.168.100.1/", html)
+    def test_detection_with_arris_and_hnap(self, s34_login_html):
+        """Test detection via ARRIS + HNAP markers using HintMatcher."""
+        if "ARRIS" in s34_login_html and "purenetworks.com/HNAP1" in s34_login_html:
+            hint_matcher = HintMatcher.get_instance()
+            matches = hint_matcher.match_login_markers(s34_login_html)
+            assert any(m.parser_name == "ArrisS34HnapParser" for m in matches)
 
-    def test_can_parse_with_at01_firmware(self):
-        """Test detection via S34-specific firmware pattern."""
-        html = "<html><body>AT01.01.010 purenetworks.com/HNAP1 ARRIS</body></html>"
-        soup = BeautifulSoup(html, "html.parser")
-        assert ArrisS34HnapParser.can_parse(soup, "http://192.168.100.1/", html)
+    def test_detection_with_commscope_and_hnap(self):
+        """Test detection via CommScope + HNAP markers using HintMatcher."""
+        html = "<html><body>CommScope purenetworks.com/HNAP1 S34</body></html>"
+        hint_matcher = HintMatcher.get_instance()
+        matches = hint_matcher.match_login_markers(html)
+        assert any(m.parser_name == "ArrisS34HnapParser" for m in matches)
 
     def test_cannot_parse_generic_html(self):
         """Test that generic HTML is not detected as S34."""
         html = "<html><body>Hello World</body></html>"
-        soup = BeautifulSoup(html, "html.parser")
-        assert not ArrisS34HnapParser.can_parse(soup, "http://example.com/", html)
-
-    def test_cannot_parse_s33_only(self):
-        """Test that S33-only content is not detected as S34."""
-        # S34 parser should NOT match S33-only content
-        html = "<html><body>S33 HNAP purenetworks.com/HNAP1</body></html>"
-        soup = BeautifulSoup(html, "html.parser")
-        # S34 should not match when only S33 is mentioned
-        assert not ArrisS34HnapParser.can_parse(soup, "http://192.168.100.1/", html)
+        hint_matcher = HintMatcher.get_instance()
+        matches = hint_matcher.match_login_markers(html)
+        assert not any(m.parser_name == "ArrisS34HnapParser" for m in matches)
 
 
-class TestS34SupportsICMP:
-    """Test supports_icmp attribute."""
+class TestS34ParseResources:
+    """Test parse_resources method."""
 
-    def test_supports_icmp_false(self):
-        """Test that S34 has supports_icmp=False (blocks ICMP ping like S33)."""
-        assert ArrisS34HnapParser.supports_icmp is False
-
-    def test_supports_icmp_instance(self):
-        """Test supports_icmp on parser instance."""
+    def test_returns_empty_without_hnap_response(self):
+        """Test that parse_resources returns empty data without hnap_response."""
         parser = ArrisS34HnapParser()
-        assert parser.supports_icmp is False
+        result = parser.parse_resources({"/": BeautifulSoup("<html></html>", "html.parser")})
 
+        assert result["downstream"] == []
+        assert result["upstream"] == []
 
-class TestS34AuthConfig:
-    """Test authentication configuration."""
-
-    def test_auth_config_hnap_endpoint(self):
-        """Test HNAP endpoint is correct."""
-        assert ArrisS34HnapParser.auth_config.hnap_endpoint == "/HNAP1/"
-
-    def test_auth_config_namespace(self):
-        """Test HNAP namespace matches standard."""
-        assert ArrisS34HnapParser.auth_config.soap_action_namespace == "http://purenetworks.com/HNAP1/"
-
-    def test_auth_config_login_url(self):
-        """Test login URL is correct."""
-        assert ArrisS34HnapParser.auth_config.login_url == "/Login.html"
-
-
-class TestS34SystemInfoParsing:
-    """Test system info parsing from HNAP responses (MVP scope)."""
-
-    def test_parse_device_status(self, sample_device_status_response):
-        """Test parsing device status from GetArrisDeviceStatus response."""
+    def test_parses_hnap_response(self, sample_downstream_hnap_response):
+        """Test that parse_resources uses hnap_response from resources."""
         parser = ArrisS34HnapParser()
-        system_info = parser._parse_system_info_from_hnap(sample_device_status_response)
 
-        assert system_info["software_version"] == "AT01.01.010.042324_S3.04.735"
-        assert system_info["internet_connection"] == "Connected"
-        assert system_info["model_name"] == "S34"
-
-    def test_parse_device_status_firmware_format(self, sample_device_status_response):
-        """Test firmware version format is preserved."""
-        parser = ArrisS34HnapParser()
-        system_info = parser._parse_system_info_from_hnap(sample_device_status_response)
-
-        # S34 firmware format: AT01.01.010.042324_S3.04.735
-        # Different from S33: TB01.03.001.10_012022_212.S3
-        assert "AT01" in system_info["software_version"]
-
-    def test_parse_device_status_from_fixture(self, s34_device_status_response):
-        """Test parsing from actual fixture file."""
-        parser = ArrisS34HnapParser()
-        system_info = parser._parse_system_info_from_hnap(s34_device_status_response)
-
-        assert "software_version" in system_info
-        assert "model_name" in system_info
-        assert system_info["model_name"] == "S34"
-
-    def test_parse_device_status_missing_fields(self):
-        """Test parsing handles missing optional fields gracefully."""
-        parser = ArrisS34HnapParser()
-        minimal_response = {
-            "GetArrisDeviceStatusResponse": {
-                "FirmwareVersion": "1.0.0",
-                "GetArrisDeviceStatusResult": "OK",
-            }
+        resources = {
+            "hnap_response": sample_downstream_hnap_response,
+            "/": BeautifulSoup("<html></html>", "html.parser"),
         }
-        system_info = parser._parse_system_info_from_hnap(minimal_response)
-        assert system_info["software_version"] == "1.0.0"
-        # Missing fields should not cause errors
-        assert "internet_connection" not in system_info
 
-    def test_parse_device_status_empty_response(self):
-        """Test parsing handles empty response gracefully."""
-        parser = ArrisS34HnapParser()
-        empty_response = {}
-        system_info = parser._parse_system_info_from_hnap(empty_response)
-        assert system_info == {}
+        result = parser.parse_resources(resources)
 
-    def test_parse_device_status_missing_inner_response(self):
-        """Test parsing handles missing GetArrisDeviceStatusResponse."""
-        parser = ArrisS34HnapParser()
-        wrong_response = {"SomeOtherResponse": {"field": "value"}}
-        system_info = parser._parse_system_info_from_hnap(wrong_response)
-        assert system_info == {}
-
-
-class TestS34AuthFailureDetection:
-    """Test _is_auth_failure method."""
-
-    def test_detects_401_error(self):
-        """Test detection of 401 Unauthorized."""
-        parser = ArrisS34HnapParser()
-        assert parser._is_auth_failure(Exception("HTTP 401 Unauthorized"))
-
-    def test_detects_403_error(self):
-        """Test detection of 403 Forbidden."""
-        parser = ArrisS34HnapParser()
-        assert parser._is_auth_failure(Exception("HTTP 403 Forbidden"))
-
-    def test_detects_login_failed(self):
-        """Test detection of login failed message."""
-        parser = ArrisS34HnapParser()
-        assert parser._is_auth_failure(Exception('"loginresult":"failed"'))
-
-    def test_detects_session_timeout(self):
-        """Test detection of session timeout."""
-        parser = ArrisS34HnapParser()
-        assert parser._is_auth_failure(Exception("session timeout"))
-
-    def test_does_not_detect_network_error(self):
-        """Test that network errors are not auth failures."""
-        parser = ArrisS34HnapParser()
-        assert not parser._is_auth_failure(Exception("Connection refused"))
-
-    def test_does_not_detect_parse_error(self):
-        """Test that parse errors are not auth failures."""
-        parser = ArrisS34HnapParser()
-        assert not parser._is_auth_failure(Exception("JSON decode error"))
-
-
-class TestS34ParseMethod:
-    """Test parse method error handling."""
-
-    def test_parse_requires_session(self):
-        """Test that parse raises ValueError without session."""
-        parser = ArrisS34HnapParser()
-        soup = BeautifulSoup("<html></html>", "html.parser")
-
-        with pytest.raises(ValueError, match="requires session"):
-            parser.parse(soup, session=None, base_url="http://192.168.100.1")
-
-    def test_parse_requires_base_url(self):
-        """Test that parse raises ValueError without base_url."""
-        from unittest.mock import MagicMock
-
-        parser = ArrisS34HnapParser()
-        soup = BeautifulSoup("<html></html>", "html.parser")
-
-        with pytest.raises(ValueError, match="requires session"):
-            parser.parse(soup, session=MagicMock(), base_url=None)
-
-
-class TestS34UrlPatterns:
-    """Test URL patterns configuration."""
-
-    def test_hnap_endpoint_pattern(self):
-        """Test HNAP1 URL pattern exists."""
-        patterns = ArrisS34HnapParser.url_patterns
-        hnap_pattern = next((p for p in patterns if p["path"] == "/HNAP1/"), None)
-        assert hnap_pattern is not None
-        assert hnap_pattern["auth_method"] == "hnap"
-        assert hnap_pattern["auth_required"] is True
-
-    def test_login_page_pattern(self):
-        """Test login page URL pattern exists."""
-        patterns = ArrisS34HnapParser.url_patterns
-        login_pattern = next((p for p in patterns if p["path"] == "/Login.html"), None)
-        assert login_pattern is not None
-        assert login_pattern["auth_required"] is False
-
-
-# =============================================================================
-# CHANNEL PARSING TESTS
-# =============================================================================
+        assert "downstream" in result
+        assert "upstream" in result
+        assert "system_info" in result
+        # Should have 2 channels (channel_id=0 filtered out)
+        assert len(result["downstream"]) == 2
 
 
 class TestS34DownstreamParsing:
-    """Test downstream channel parsing."""
+    """Test downstream channel parsing from HNAP responses."""
 
-    def test_parse_downstream_channels(self):
+    def test_parse_downstream_channels(self, sample_downstream_hnap_response):
         """Test parsing downstream channels from HNAP data."""
         parser = ArrisS34HnapParser()
+        channels = parser._parse_downstream_from_hnap(sample_downstream_hnap_response)
 
-        # Sample downstream data in S34 format (caret-delimited, same as S33)
-        hnap_data = {
-            "GetCustomerStatusDownstreamChannelInfoResponse": {
-                "CustomerConnDownstreamChannel": (
-                    "1^Locked^256QAM^17^483000000^7.7^39.0^5^0^|+|2^Locked^256QAM^1^387000000^6.9^39.0^11^35^"
-                ),
-                "GetCustomerStatusDownstreamChannelInfoResult": "OK",
-            }
-        }
-
-        channels = parser._parse_downstream_from_hnap(hnap_data)
-
+        # Should have 2 channels (channel_id=0 filtered out)
         assert len(channels) == 2
 
         # Check first channel
-        assert channels[0]["channel_id"] == 17
-        assert channels[0]["lock_status"] == "Locked"
-        assert channels[0]["modulation"] == "256QAM"
-        assert channels[0]["frequency"] == 483000000
-        assert channels[0]["power"] == 7.7
-        assert channels[0]["snr"] == 39.0
-        assert channels[0]["corrected"] == 5
-        assert channels[0]["uncorrected"] == 0
+        ch1 = channels[0]
+        assert ch1["channel_id"] == 17
+        assert ch1["lock_status"] == "Locked"
+        assert ch1["modulation"] == "256QAM"
+        assert ch1["channel_type"] == "qam"
+        assert ch1["frequency"] == 483000000
+        assert ch1["power"] == 7.3
+        assert ch1["snr"] == 39.0
+        assert ch1["corrected"] == 34
+        assert ch1["uncorrected"] == 0
 
-        # Check second channel
-        assert channels[1]["channel_id"] == 1
-        assert channels[1]["frequency"] == 387000000
+    def test_skips_channel_id_zero(self, sample_downstream_hnap_response):
+        """Test that placeholder channels with channel_id=0 are skipped."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_downstream_from_hnap(sample_downstream_hnap_response)
+
+        # No channel should have channel_id=0
+        assert all(ch["channel_id"] != 0 for ch in channels)
+
+    def test_parse_downstream_ofdm_channel_type(self):
+        """Test that OFDM modulation strings derive channel_type='ofdm'."""
+        parser = ArrisS34HnapParser()
+        response = {
+            "GetCustomerStatusDownstreamChannelInfoResponse": {
+                "CustomerConnDownstreamChannel": (
+                    "1^Locked^OFDM PLC^25^690000000^ 4.7^40.0^100^0|+|" "2^Locked^256QAM^17^483000000^ 7.3^39.0^34^0"
+                )
+            }
+        }
+        channels = parser._parse_downstream_from_hnap(response)
+
+        assert len(channels) == 2
+        assert channels[0]["modulation"] == "OFDM PLC"
+        assert channels[0]["channel_type"] == "ofdm"
+        assert channels[1]["modulation"] == "256QAM"
+        assert channels[1]["channel_type"] == "qam"
+
+    def test_parse_downstream_from_fixture(self, s34_downstream_response):
+        """Test parsing downstream channels from actual PR #90 fixture."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_downstream_from_hnap(s34_downstream_response)
+
+        # Fixture has 34 entries, 2 with channel_id=0
+        assert len(channels) == 32
+
+        # Check OFDM channel (last one in fixture)
+        ofdm_channels = [ch for ch in channels if ch["channel_type"] == "ofdm"]
+        assert len(ofdm_channels) == 1
+        assert ofdm_channels[0]["channel_id"] == 25
+        assert ofdm_channels[0]["modulation"] == "OFDM PLC"
 
     def test_parse_downstream_empty(self):
         """Test parsing empty downstream data."""
         parser = ArrisS34HnapParser()
-
-        hnap_data = {
-            "GetCustomerStatusDownstreamChannelInfoResponse": {
-                "CustomerConnDownstreamChannel": "",
-            }
-        }
-
-        channels = parser._parse_downstream_from_hnap(hnap_data)
+        empty_response = {"GetCustomerStatusDownstreamChannelInfoResponse": {"CustomerConnDownstreamChannel": ""}}
+        channels = parser._parse_downstream_from_hnap(empty_response)
         assert channels == []
 
-    def test_parse_downstream_missing_response(self):
+    def test_parse_downstream_missing_key(self):
         """Test parsing when response key is missing."""
         parser = ArrisS34HnapParser()
         channels = parser._parse_downstream_from_hnap({})
@@ -381,159 +363,124 @@ class TestS34DownstreamParsing:
 
 
 class TestS34UpstreamParsing:
-    """Test upstream channel parsing."""
+    """Test upstream channel parsing from HNAP responses."""
 
-    def test_parse_upstream_channels(self):
+    def test_parse_upstream_channels(self, sample_upstream_hnap_response):
         """Test parsing upstream channels from HNAP data."""
         parser = ArrisS34HnapParser()
+        channels = parser._parse_upstream_from_hnap(sample_upstream_hnap_response)
 
-        # Sample upstream data in S34 format (caret-delimited, same as S33)
-        hnap_data = {
-            "GetCustomerStatusUpstreamChannelInfoResponse": {
-                "CustomerConnUpstreamChannel": (
-                    "1^Locked^SC-QAM^3^6400000^22800000^37.3^|+|2^Locked^SC-QAM^6^3200000^40400000^37.5^"
-                ),
-                "GetCustomerStatusUpstreamChannelInfoResult": "OK",
-            }
-        }
-
-        channels = parser._parse_upstream_from_hnap(hnap_data)
-
+        # Should have 2 channels (channel_id=0 filtered out)
         assert len(channels) == 2
 
         # Check first channel
-        assert channels[0]["channel_id"] == 3
-        assert channels[0]["lock_status"] == "Locked"
-        assert channels[0]["modulation"] == "SC-QAM"
-        assert channels[0]["symbol_rate"] == "6400000"
-        assert channels[0]["frequency"] == 22800000
-        assert channels[0]["power"] == 37.3
+        ch1 = channels[0]
+        assert ch1["channel_id"] == 3
+        assert ch1["lock_status"] == "Locked"
+        assert ch1["modulation"] == "SC-QAM"
+        assert ch1["channel_type"] == "atdma"
+        assert ch1["symbol_rate"] == "6400000"
+        assert ch1["frequency"] == 22800000
+        assert ch1["power"] == 37.8
 
-        # Check second channel
-        assert channels[1]["channel_id"] == 6
-        assert channels[1]["frequency"] == 40400000
+    def test_skips_channel_id_zero(self, sample_upstream_hnap_response):
+        """Test that placeholder channels with channel_id=0 are skipped."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_upstream_from_hnap(sample_upstream_hnap_response)
+
+        # No channel should have channel_id=0
+        assert all(ch["channel_id"] != 0 for ch in channels)
+
+    def test_parse_upstream_from_fixture(self, s34_upstream_response):
+        """Test parsing upstream channels from actual PR #90 fixture."""
+        parser = ArrisS34HnapParser()
+        channels = parser._parse_upstream_from_hnap(s34_upstream_response)
+
+        # Fixture has 10 entries, 5 with channel_id=0
+        assert len(channels) == 5
+
+        # All should be SC-QAM (no OFDMA in this fixture)
+        assert all(ch["channel_type"] == "atdma" for ch in channels)
 
     def test_parse_upstream_empty(self):
         """Test parsing empty upstream data."""
         parser = ArrisS34HnapParser()
-
-        hnap_data = {
-            "GetCustomerStatusUpstreamChannelInfoResponse": {
-                "CustomerConnUpstreamChannel": "",
-            }
-        }
-
-        channels = parser._parse_upstream_from_hnap(hnap_data)
-        assert channels == []
-
-    def test_parse_upstream_missing_response(self):
-        """Test parsing when response key is missing."""
-        parser = ArrisS34HnapParser()
-        channels = parser._parse_upstream_from_hnap({})
+        empty_response = {"GetCustomerStatusUpstreamChannelInfoResponse": {"CustomerConnUpstreamChannel": ""}}
+        channels = parser._parse_upstream_from_hnap(empty_response)
         assert channels == []
 
 
-class TestS34Restart:
-    """Test restart functionality."""
+class TestS34SystemInfoParsing:
+    """Test system info parsing from HNAP responses."""
 
-    def test_restart_success_with_reboot_action(self):
-        """Test restart returns True when modem accepts reboot command."""
-        from unittest.mock import MagicMock
-
+    def test_parse_device_status(self, sample_device_status_response):
+        """Test parsing device status from HNAP data."""
         parser = ArrisS34HnapParser()
-        # Set private key to simulate logged-in state (required for SHA256 auth)
-        parser._private_key = "test_private_key"
+        system_info = parser._parse_system_info_from_hnap(sample_device_status_response)
 
-        # Mock session with post method that returns proper responses
-        mock_session = MagicMock()
-        mock_response_1 = MagicMock()
-        mock_response_1.ok = True
-        mock_response_1.text = (
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "1", "LedStatus": "1"}}'
-        )
-        mock_response_1.raise_for_status = MagicMock()
+        assert system_info["software_version"] == "AT01.01.010.042324_S3.04.735"
+        assert system_info["internet_connection"] == "Connected"
 
-        mock_response_2 = MagicMock()
-        mock_response_2.ok = True
-        mock_response_2.text = (
-            '{"SetArrisConfigurationInfoResponse": {'
-            '"SetArrisConfigurationInfoResult": "OK", '
-            '"SetArrisConfigurationInfoAction": "REBOOT"}}'
-        )
-        mock_response_2.raise_for_status = MagicMock()
-
-        mock_session.post.side_effect = [mock_response_1, mock_response_2]
-
-        result = parser.restart(mock_session, "https://192.168.100.1")
-
-        assert result is True
-        assert mock_session.post.call_count == 2
-
-    def test_restart_success_on_connection_reset(self):
-        """Test restart returns True on connection reset (modem rebooting)."""
-        from unittest.mock import MagicMock
-
+    def test_parse_device_status_from_fixture(self, s34_device_status_response):
+        """Test parsing device status from actual PR #90 fixture."""
         parser = ArrisS34HnapParser()
-        # Set private key to simulate logged-in state (required for SHA256 auth)
-        parser._private_key = "test_private_key"
+        system_info = parser._parse_system_info_from_hnap(s34_device_status_response)
 
-        # Mock session with post method
-        mock_session = MagicMock()
-        mock_response_1 = MagicMock()
-        mock_response_1.ok = True
-        mock_response_1.text = (
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-        )
-        mock_response_1.raise_for_status = MagicMock()
+        assert "software_version" in system_info
+        # Fixture firmware: AT01.01.010.042324_S3.04.735
+        assert "AT01.01" in system_info["software_version"]
 
-        # Second call raises ConnectionResetError (modem rebooting)
-        mock_session.post.side_effect = [mock_response_1, ConnectionResetError("Connection reset by peer")]
 
-        result = parser.restart(mock_session, "https://192.168.100.1")
+class TestS34HnapHints:
+    """Test HNAP hints configuration from modem.yaml."""
 
-        assert result is True
+    def test_hnap_hints_endpoint(self):
+        """Test HNAP endpoint is correct."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import get_auth_adapter_for_parser
 
-    def test_restart_failure_on_error_response(self):
-        """Test restart returns False on error response."""
-        from unittest.mock import MagicMock
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        hints = adapter.get_hnap_hints()
+        assert hints is not None
+        assert hints["endpoint"] == "/HNAP1/"
 
-        parser = ArrisS34HnapParser()
-        # Set private key to simulate logged-in state (required for SHA256 auth)
-        parser._private_key = "test_private_key"
+    def test_hnap_hints_namespace(self):
+        """Test HNAP namespace matches standard."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import get_auth_adapter_for_parser
 
-        # Mock session with post method
-        mock_session = MagicMock()
-        mock_response_1 = MagicMock()
-        mock_response_1.ok = True
-        mock_response_1.text = (
-            '{"GetArrisConfigurationInfoResponse": {'
-            '"GetArrisConfigurationInfoResult": "OK", '
-            '"ethSWEthEEE": "0", "LedStatus": "1"}}'
-        )
-        mock_response_1.raise_for_status = MagicMock()
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        hints = adapter.get_hnap_hints()
+        assert hints is not None
+        assert hints["namespace"] == "http://purenetworks.com/HNAP1/"
 
-        mock_response_2 = MagicMock()
-        mock_response_2.ok = True
-        mock_response_2.text = '{"SetArrisConfigurationInfoResponse": {"SetArrisConfigurationInfoResult": "ERROR"}}'
-        mock_response_2.raise_for_status = MagicMock()
+    def test_hnap_hints_empty_action_value(self):
+        """Test S34 uses empty string for action values (same as S33)."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import get_auth_adapter_for_parser
 
-        mock_session.post.side_effect = [mock_response_1, mock_response_2]
+        adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
+        assert adapter is not None
+        hints = adapter.get_hnap_hints()
+        assert hints is not None
+        assert hints["empty_action_value"] == ""
 
-        result = parser.restart(mock_session, "https://192.168.100.1")
 
-        assert result is False
+class TestS34UrlPatterns:
+    """Test URL patterns configuration from modem.yaml."""
 
-    def test_restart_failure_without_private_key(self):
-        """Test restart returns False when not logged in (no private key)."""
-        from unittest.mock import MagicMock
+    def test_has_url_patterns(self):
+        """Test S34 has URL patterns in modem.yaml."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import get_url_patterns_for_parser
 
-        parser = ArrisS34HnapParser()
-        # Don't set private key - simulates not being logged in
+        patterns = get_url_patterns_for_parser("ArrisS34HnapParser")
+        assert patterns is not None, "S34 should have URL patterns in modem.yaml"
+        assert len(patterns) > 0
 
-        result = parser.restart(MagicMock(), "https://192.168.100.1")
+    def test_public_page_exists(self):
+        """Test S34 has a public (no auth) page for detection."""
+        from custom_components.cable_modem_monitor.modem_config.adapter import get_url_patterns_for_parser
 
-        assert result is False
+        patterns = get_url_patterns_for_parser("ArrisS34HnapParser")
+        assert patterns is not None
+        public_patterns = [p for p in patterns if not p.get("auth_required", True)]
+        assert len(public_patterns) > 0, "S34 should have at least one public page"

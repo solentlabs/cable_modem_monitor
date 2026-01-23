@@ -1,0 +1,184 @@
+# =============================================================================
+# Arris/CommScope S34 Cable Modem
+# =============================================================================
+# DOCSIS 3.1 modem with HNAP/SOAP authentication
+# Uses HMAC-SHA256 (vs S33's HMAC-MD5)
+# Reference: https://github.com/solentlabs/cable_modem_monitor/pull/90
+
+manufacturer: Arris/CommScope
+model: S34
+paradigm: hnap
+
+# =============================================================================
+# HARDWARE
+# =============================================================================
+# Source: https://www.surfboard.com/products/cable-modems/s34/
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+  release_date: "2024"
+
+# Provenance tracking
+sources:
+  chipset: "Same platform as S33"
+  hardware: "[SURFboard S34 page](https://www.surfboard.com/products/cable-modems/s34/)"
+  auth_config: "HAR analysis by @rplancha (PR #90)"
+  detection_hints: "[PR #90](https://github.com/solentlabs/cable_modem_monitor/pull/90)"
+
+# =============================================================================
+# NETWORK
+# =============================================================================
+default_host: "192.168.100.1"
+
+# =============================================================================
+# AUTHENTICATION
+# =============================================================================
+auth:
+  types:
+    hnap:
+      endpoint: "/HNAP1/"
+      namespace: "http://purenetworks.com/HNAP1/"
+      # S34-specific: uses empty string "" for action values (same as S33)
+      empty_action_value: ""
+      hmac_algorithm: sha256 # KEY DIFFERENCE from S33 (which uses md5)
+      formats:
+        - json
+      actions:
+        login: "Login"
+        downstream: "GetCustomerStatusDownstreamChannelInfo"
+        upstream: "GetCustomerStatusUpstreamChannelInfo"
+        restart: "SetArrisConfigurationInfo"
+
+  session:
+    cookie_name: "uid"
+# =============================================================================
+# PAGES
+# =============================================================================
+
+pages:
+  public:
+    - "/Login.html"
+  protected:
+    - "/cmconnectionstatus.html"
+    - "/Cmconnectionstatus.html"
+  data:
+    downstream_channels: "/HNAP1/"
+    upstream_channels: "/HNAP1/"
+    system_info: "/HNAP1/"
+  hnap_actions:
+    downstream_channels: "GetCustomerStatusDownstreamChannelInfo"
+    upstream_channels: "GetCustomerStatusUpstreamChannelInfo"
+    startup_sequence: "GetCustomerStatusStartupSequence"
+    connection_info: "GetCustomerStatusConnectionInfo"
+    device_status: "GetArrisDeviceStatus"
+
+# =============================================================================
+# PARSER
+# =============================================================================
+parser:
+  class: ArrisS34HnapParser
+  module: custom_components.cable_modem_monitor.modems.arris.s34.parser
+  format:
+    type: json
+    # HNAP uses caret (^) and pipe-plus-pipe (|+|) delimiters
+    delimiters:
+      field: "^"
+      record: "|+|"
+
+# =============================================================================
+# DETECTION
+# =============================================================================
+detection:
+  pre_auth:
+    - "HNAP"
+    - "purenetworks.com/HNAP1"
+    - "SURFboard"
+    - "/Login.html"
+  post_auth:
+    - "S34"
+    - "ARRIS S34"
+    - "CommScope S34"
+    - "ARRIS"
+    - "CommScope"
+    - "HNAP"
+    - "purenetworks.com/HNAP1"
+    - "SURFboard"
+  page_hint: "/HNAP1/"
+  model_aliases:
+    - "CommScope S34"
+    - "ARRIS S34"
+# =============================================================================
+# CAPABILITIES
+# =============================================================================
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - software_version
+
+# =============================================================================
+# ACTIONS
+# =============================================================================
+actions:
+  restart:
+    type: hnap
+    action_name: "SetArrisConfigurationInfo"
+    # Pre-fetch current config to preserve EEE and LED settings during restart
+    pre_fetch_action: "GetArrisConfigurationInfo"
+    pre_fetch_response_key: "GetArrisConfigurationInfoResponse"
+    params:
+      Action: "reboot"
+      # These use values from pre-fetch response, with defaults if not found
+      SetEEEEnable: "${ethSWEthEEE:0}"
+      LED_Status: "${LedStatus:1}"
+    response_key: "SetArrisConfigurationInfoResponse"
+    result_key: "SetArrisConfigurationInfoResult"
+    success_value: "OK"
+
+# =============================================================================
+# BEHAVIORS
+# =============================================================================
+behaviors:
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/pull/90"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/arris/s34/fixtures
+  source: user-captured
+  firmware_tested: "AT01.01.010.042324_S3.04.735"
+  last_validated: "2026-01-23"
+
+attribution:
+  contributors:
+    - github: rplancha
+      contribution: "Initial implementation and HAR capture (PR #90)"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  HNAP protocol uses GetCustomer* action names (same as S33).
+  Key difference from S33: Uses HMAC-SHA256 instead of HMAC-MD5.
+  Firmware pattern: AT01.01.* (vs S33's TB01.03.*).
+  S34 blocks ICMP ping - HTTP-only health checks required.
+  System uptime not available (only current time exposed).
+  Known firmware quirk: Sends malformed HTTP headers with debug timing data.
+
+references:
+  pr_90: "https://github.com/solentlabs/cable_modem_monitor/pull/90"
+  surfboard: "https://www.surfboard.com/products/cable-modems/s34/"

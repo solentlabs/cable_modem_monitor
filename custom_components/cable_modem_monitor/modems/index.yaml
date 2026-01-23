@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-23T14:15:16.445344+00:00"
+generated: "2026-01-23T21:55:46.922552+00:00"
 auth_patterns:
   form:
     username_fields: []
@@ -66,6 +66,28 @@ modems:
         - S33
         - ARRIS S33
         - CommScope S33
+        - ARRIS
+        - CommScope
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+      page_hint: /HNAP1/
+  ArrisS34HnapParser:
+    path: arris/s34
+    name: Arris/CommScope S34
+    manufacturer: Arris/CommScope
+    model: S34
+    verified: false
+    detection:
+      pre_auth:
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+        - /Login.html
+      post_auth:
+        - S34
+        - ARRIS S34
+        - CommScope S34
         - ARRIS
         - CommScope
         - HNAP
