@@ -143,7 +143,10 @@ def _load_modem_index() -> dict:
         _LOGGER.warning("Modem index not found at %s", index_path)
         _MODEM_INDEX = {"modems": {}}
         _NAME_TO_PATH = {}
-    except Exception as e:
+    except (yaml.YAMLError, OSError, ValueError, TypeError) as e:
+        # yaml.YAMLError: malformed YAML
+        # OSError: permission/IO errors
+        # ValueError/TypeError: unexpected data structure
         _LOGGER.error("Failed to load modem index: %s", e)
         _MODEM_INDEX = {"modems": {}}
         _NAME_TO_PATH = {}
@@ -219,7 +222,10 @@ def _load_parser_direct(parser_name: str) -> type[ModemParser] | None:
         )
         return None
 
-    except Exception as e:
+    except (ImportError, AttributeError, TypeError, ValueError) as e:
+        # ImportError: module not found
+        # AttributeError: class not found in module
+        # TypeError/ValueError: class instantiation or config issues
         _LOGGER.error("Failed to direct load parser '%s': %s", parser_name, e)
         return None
 
@@ -347,7 +353,11 @@ def _discover_parsers(base_path: str) -> list[type[ModemParser]]:
                             attr.manufacturer,
                             attr.models,
                         )
-            except Exception as e:
+            except (ImportError, AttributeError, TypeError, ValueError, SyntaxError) as e:
+                # ImportError: module or dependency not found
+                # AttributeError: class attribute access errors
+                # TypeError/ValueError: class config issues
+                # SyntaxError: parser.py has syntax errors
                 _LOGGER.error(
                     "Failed to load parser from modems/%s/%s: %s",
                     mfr_name,
