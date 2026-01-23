@@ -542,17 +542,27 @@ class TestValidateInput:
         return parser_class
 
     @pytest.fixture
-    def mock_pipeline_result(self):
-        """Create a successful pipeline result."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+    def mock_adapter(self):
+        """Create a mock modem adapter that returns static auth config."""
+        adapter = Mock()
+        adapter.get_static_auth_config.return_value = {
+            "auth_strategy": "no_auth",
+            "auth_form_config": None,
+            "auth_hnap_config": None,
+            "auth_url_token_config": None,
+        }
+        return adapter
+
+    @pytest.fixture
+    def mock_setup_result(self):
+        """Create a successful setup result."""
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
         mock_parser = Mock()
         mock_parser.manufacturer = "Arris"
         mock_parser.get_actual_model.return_value = "SB8200-v2"
 
-        return DiscoveryPipelineResult(
+        return SetupResult(
             success=True,
             working_url="http://192.168.100.1",
             auth_strategy="no_auth",
@@ -598,16 +608,20 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_successful_validation(self, mock_hass, mock_parser_class, mock_pipeline_result):
+    async def test_successful_validation(self, mock_hass, mock_parser_class, mock_adapter, mock_setup_result):
         """Test successful validation returns expected data."""
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
-                return mock_pipeline_result
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
+                return mock_setup_result
+            # Handle bound methods from mock adapter (e.g., adapter.get_static_auth_config)
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -635,25 +649,26 @@ class TestValidateInput:
         assert result["detection_info"]["actual_model"] == "SB8200-v2"
 
     @pytest.mark.asyncio
-    async def test_connectivity_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
+    async def test_connectivity_failure_raises_cannot_connect(self, mock_hass, mock_parser_class, mock_adapter):
         """Test connectivity failure raises CannotConnectError."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error="Connection refused",
             failed_step="connectivity",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -670,25 +685,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_auth_failure_raises_invalid_auth(self, mock_hass, mock_parser_class):
+    async def test_auth_failure_raises_invalid_auth(self, mock_hass, mock_parser_class, mock_adapter):
         """Test auth failure raises InvalidAuthError."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error="Bad credentials",
             failed_step="auth",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -705,25 +721,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_parser_detection_failure_raises_unsupported(self, mock_hass, mock_parser_class):
+    async def test_parser_detection_failure_raises_unsupported(self, mock_hass, mock_parser_class, mock_adapter):
         """Test parser detection failure raises UnsupportedModemError."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error="No parser matched",
             failed_step="parser_detection",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -740,25 +757,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_generic_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
+    async def test_generic_failure_raises_cannot_connect(self, mock_hass, mock_parser_class, mock_adapter):
         """Test generic failure raises CannotConnectError."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error="Unknown error",
             failed_step="validation",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -775,16 +793,25 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_validation_with_user_selected_parser(self, mock_hass, mock_parser_class, mock_pipeline_result):
+    async def test_validation_with_user_selected_parser(
+        self,
+        mock_hass,
+        mock_parser_class,
+        mock_adapter,
+        mock_setup_result,
+    ):
         """Test validation with user-selected parser."""
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None  # No adapter, will fall back to parser hints
-            elif func.__name__ == "run_discovery_pipeline":
-                return mock_pipeline_result
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
+                return mock_setup_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -806,17 +833,15 @@ class TestValidateInput:
         assert result["supports_icmp"] is False
 
     @pytest.mark.asyncio
-    async def test_validation_without_actual_model(self, mock_hass, mock_parser_class):
+    async def test_validation_without_actual_model(self, mock_hass, mock_parser_class, mock_adapter):
         """Test validation when parser doesn't return actual model."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
         mock_parser = Mock()
         mock_parser.manufacturer = "Netgear"
         mock_parser.get_actual_model.return_value = None
 
-        result = DiscoveryPipelineResult(
+        result = SetupResult(
             success=True,
             working_url="http://192.168.100.1",
             auth_strategy="basic",
@@ -829,12 +854,15 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -857,16 +885,25 @@ class TestValidateInput:
         assert validation_result["detection_info"]["modem_name"] == "Netgear CM600"
 
     @pytest.mark.asyncio
-    async def test_validation_stores_auth_discovery_status(self, mock_hass, mock_parser_class, mock_pipeline_result):
+    async def test_validation_stores_auth_discovery_status(
+        self,
+        mock_hass,
+        mock_parser_class,
+        mock_adapter,
+        mock_setup_result,
+    ):
         """Test validation stores auth discovery status in result."""
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
-                return mock_pipeline_result
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
+                return mock_setup_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -890,14 +927,12 @@ class TestValidateInput:
         assert result["auth_discovery_error"] is None
 
     @pytest.mark.asyncio
-    async def test_validation_with_none_parser_instance(self, mock_hass, mock_parser_class):
+    async def test_validation_with_none_parser_instance(self, mock_hass, mock_parser_class, mock_adapter):
         """Test validation handles None parser_instance gracefully."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
         # Result with no parser_instance (edge case)
-        result = DiscoveryPipelineResult(
+        result = SetupResult(
             success=True,
             working_url="http://192.168.100.1",
             auth_strategy="no_auth",
@@ -910,12 +945,15 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -940,25 +978,26 @@ class TestValidateInput:
         assert validation_result["detection_info"]["modem_name"] == "Unknown Modem"
 
     @pytest.mark.asyncio
-    async def test_connectivity_failure_uses_default_message(self, mock_hass, mock_parser_class):
+    async def test_connectivity_failure_uses_default_message(self, mock_hass, mock_parser_class, mock_adapter):
         """Test connectivity failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error=None,  # No specific error message
             failed_step="connectivity",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -975,25 +1014,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_auth_failure_uses_default_message(self, mock_hass, mock_parser_class):
+    async def test_auth_failure_uses_default_message(self, mock_hass, mock_parser_class, mock_adapter):
         """Test auth failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error=None,  # No specific error message
             failed_step="auth",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -1010,25 +1050,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_parser_detection_failure_uses_default_message(self, mock_hass, mock_parser_class):
+    async def test_parser_detection_failure_uses_default_message(self, mock_hass, mock_parser_class, mock_adapter):
         """Test parser detection failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error=None,  # No specific error message
             failed_step="parser_detection",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -1045,25 +1086,26 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_generic_failure_uses_default_message(self, mock_hass, mock_parser_class):
+    async def test_generic_failure_uses_default_message(self, mock_hass, mock_parser_class, mock_adapter):
         """Test generic failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
-        failed_result = DiscoveryPipelineResult(
+        failed_result = SetupResult(
             success=False,
             error=None,  # No specific error message
             failed_step="validation",
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return failed_result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -1080,11 +1122,9 @@ class TestValidateInput:
             )
 
     @pytest.mark.asyncio
-    async def test_validation_stores_hnap_config(self, mock_hass, mock_parser_class):
-        """Test validation stores auth_hnap_config from pipeline result."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+    async def test_validation_stores_hnap_config(self, mock_hass, mock_parser_class, mock_adapter):
+        """Test validation stores auth_hnap_config from setup result."""
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
         mock_parser = Mock()
         mock_parser.manufacturer = "Arris"
@@ -1095,7 +1135,7 @@ class TestValidateInput:
             "namespace": "http://purenetworks.com/HNAP1/",
         }
 
-        result = DiscoveryPipelineResult(
+        result = SetupResult(
             success=True,
             working_url="http://192.168.100.1",
             auth_strategy="hnap_session",
@@ -1109,12 +1149,15 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor
@@ -1137,11 +1180,9 @@ class TestValidateInput:
         assert validation_result["auth_strategy"] == "hnap_session"
 
     @pytest.mark.asyncio
-    async def test_validation_stores_url_token_config(self, mock_hass, mock_parser_class):
-        """Test validation stores auth_url_token_config from pipeline result."""
-        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
-            DiscoveryPipelineResult,
-        )
+    async def test_validation_stores_url_token_config(self, mock_hass, mock_parser_class, mock_adapter):
+        """Test validation stores auth_url_token_config from setup result."""
+        from custom_components.cable_modem_monitor.core.setup import SetupResult
 
         mock_parser = Mock()
         mock_parser.manufacturer = "Motorola"
@@ -1153,7 +1194,7 @@ class TestValidateInput:
             "token_pattern": r"currentSessionId\s*=\s*['\"]([^'\"]+)['\"]",
         }
 
-        result = DiscoveryPipelineResult(
+        result = SetupResult(
             success=True,
             working_url="http://192.168.100.1",
             auth_strategy="url_token_session",
@@ -1167,12 +1208,15 @@ class TestValidateInput:
         )
 
         async def mock_executor(func, *args):
-            if func.__name__ == "get_parser_by_name":
+            func_name = getattr(func, "__name__", None)
+            if func_name == "get_parser_by_name":
                 return mock_parser_class
-            elif func.__name__ == "get_auth_adapter_for_parser":
-                return None
-            elif func.__name__ == "run_discovery_pipeline":
+            elif func_name == "get_auth_adapter_for_parser":
+                return mock_adapter
+            elif func_name == "setup_modem":
                 return result
+            elif callable(func):
+                return func()
             return None
 
         mock_hass.async_add_executor_job = mock_executor

@@ -48,7 +48,8 @@ from .core.parser_registry import get_parser_by_name, get_parser_dropdown_from_i
 from .core.parser_utils import create_title
 from .lib.host_validation import extract_hostname as _validate_host_format
 
-_LOGGER = logging.getLogger(__name__)
+# Use config_flow logger for cleaner log output (this module is an impl detail)
+_LOGGER = logging.getLogger(__name__.replace("_helpers", ""))
 
 
 # =============================================================================
@@ -327,7 +328,7 @@ async def _build_static_config_for_auth_type(
     return static_config
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
     """Validate the user input allows us to connect.
 
     Uses the discovery pipeline for a single-pass, response-driven flow:
@@ -348,7 +349,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         InvalidAuthError: If authentication fails
         UnsupportedModemError: If no parser matches
     """
-    from .core.setup import setup_known_modem
+    from .core.setup import setup_modem
 
     # Validate host format
     host = data[CONF_HOST]
@@ -377,36 +378,24 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         # Get static auth config from modem.yaml for known modems
         static_auth_config = await load_static_auth_config(hass, selected_parser)
 
-    # Use known modem setup path (not fallback discovery)
-    if static_auth_config:
-        _LOGGER.info(
-            "Using modem.yaml auth config for %s (strategy=%s)",
+    # Require static auth config - all known modems must have modem.yaml
+    if not static_auth_config:
+        _LOGGER.error(
+            "No auth config found for %s - modem.yaml may be incomplete",
             selected_parser.name,
-            static_auth_config.get("auth_strategy"),
         )
-        result = await hass.async_add_executor_job(
-            setup_known_modem,
-            host,
-            selected_parser,
-            static_auth_config,
-            data.get(CONF_USERNAME),
-            data.get(CONF_PASSWORD),
+        raise UnsupportedModemError(
+            f"Configuration error: {selected_parser.name} is missing auth configuration. " "Please report this issue."
         )
-    else:
-        # No static auth config - use fallback discovery for auth probing
-        from .core.fallback.discovery import run_discovery_pipeline
 
-        _LOGGER.info("No modem.yaml auth config - using fallback discovery")
-        parser_hints = await load_parser_hints(hass, selected_parser)
-        result = await hass.async_add_executor_job(
-            run_discovery_pipeline,
-            host,
-            data.get(CONF_USERNAME),
-            data.get(CONF_PASSWORD),
-            selected_parser,
-            parser_hints,
-            None,  # No static config - will run dynamic discovery
-        )
+    result = await hass.async_add_executor_job(
+        setup_modem,
+        host,
+        selected_parser,
+        static_auth_config,
+        data.get(CONF_USERNAME),
+        data.get(CONF_PASSWORD),
+    )
 
     # Handle setup/discovery failures
     if not result.success:

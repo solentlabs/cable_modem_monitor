@@ -686,18 +686,17 @@ class TestDiscoveryPipelineE2E:
         [path for _, path in MODEMS_WITH_FIXTURES],
         ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
     )
-    def test_discovery_pipeline_static_auth(self, modem_path: Path):
-        """Test run_discovery_pipeline with static auth config from modem.yaml.
+    def test_known_modem_setup_static_auth(self, modem_path: Path):
+        """Test setup_modem with static auth config from modem.yaml.
 
-        This tests the NEW "modem.yaml as source of truth" architecture where
-        known modems skip dynamic auth discovery and use verified config directly.
+        This tests the "modem.yaml as source of truth" architecture where
+        users select their modem model and we use verified config directly.
+        This is the KNOWN MODEM path - separate from fallback discovery.
 
         This enables support for ALL auth strategies (NONE, BASIC, URL_TOKEN,
         REST_API) that don't work well with dynamic discovery.
         """
-        from custom_components.cable_modem_monitor.core.fallback.discovery import (
-            run_discovery_pipeline,
-        )
+        from custom_components.cable_modem_monitor.core.setup import setup_modem
         from custom_components.cable_modem_monitor.modem_config import (
             get_auth_adapter_for_parser,
         )
@@ -726,25 +725,25 @@ class TestDiscoveryPipelineE2E:
         static_auth_config = adapter.get_static_auth_config()
 
         with MockModemServer.from_modem_path(modem_path) as server:
-            # Run discovery pipeline with static auth config (skip dynamic discovery)
-            result = run_discovery_pipeline(
+            # Run known modem setup with static auth config
+            result = setup_modem(
                 host=server.url.replace("http://", "").replace("https://", ""),
+                parser_class=parser_class,
+                static_auth_config=static_auth_config,
                 username=TEST_USERNAME,
                 password=TEST_PASSWORD,
-                selected_parser=parser_class,
-                static_auth_config=static_auth_config,
             )
 
-            # Pipeline should succeed
+            # Setup should succeed
             assert result.success, (
-                f"Static auth pipeline failed for {config.manufacturer} {config.model}: "
+                f"Known modem setup failed for {config.manufacturer} {config.model}: "
                 f"step={result.failed_step}, error={result.error}"
             )
 
             # Should have used the strategy from static config
             assert result.auth_strategy is not None, "No auth strategy in result"
             _LOGGER.info(
-                "Static auth pipeline succeeded: %s %s (strategy=%s)",
+                "Known modem setup succeeded: %s %s (strategy=%s)",
                 config.manufacturer,
                 config.model,
                 result.auth_strategy,

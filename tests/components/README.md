@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 319
+**Total Tests:** 327
 
 ## Test Files
 
@@ -22,6 +22,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
+| [test_services.py](test_services.py) | 8 | Tests for Cable Modem Monitor services. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
 
 ## Test Details
@@ -768,6 +769,28 @@ Tests for Cable Modem Monitor sensors.
 
 - `test_software_version_sensor_created_with_capability`: Test software version sensor IS created when capability present.
 - `test_software_version_sensor_not_created_without_capability`: Test software version sensor NOT created when capability missing.
+
+### test_services.py
+
+Tests for Cable Modem Monitor services.
+
+Tests the generate_dashboard and clear_history services.
+
+**TestGenerateDashboard** (8 tests)
+: Tests for generate_dashboard service.
+
+- `test_finds_coordinator_when_log_buffer_present`: Service should find coordinator even when log_buffer is in hass.data.
+- `test_finds_coordinator_without_log_buffer`: Service works when only coordinator is present.
+- `test_returns_error_when_no_domain_data`: Service returns error when DOMAIN not in hass.data.
+- `test_returns_error_when_only_log_buffer`: Service returns error when no coordinator exists (only log_buffer).
+- `test_generates_status_card_by_default`: Status card is included by default.
+- `test_excludes_status_card_when_disabled`: Status card can be excluded.
+- `test_includes_downstream_power_by_default`: Downstream power graphs included by default.
+- `test_handles_empty_coordinator_data`: Service handles coordinator with no channel data.
+
+**TestClearHistory** (0 tests)
+: Tests for clear_history service.
+
 
 ### test_version_and_startup.py
 

@@ -1,4 +1,4 @@
-"""Setup flow for known modems (modems with modem.yaml definitions).
+"""Setup flow for modems with modem.yaml definitions.
 
 This module provides the setup path for modems where the user has selected
 a specific model and we have a modem.yaml configuration. This is the normal
@@ -11,7 +11,7 @@ Key differences from fallback discovery:
 
 Architecture:
     ┌─────────────────────────────────────────────────────────────────────┐
-    │                   KNOWN MODEM SETUP                                  │
+    │                      MODEM SETUP                                     │
     ├─────────────────────────────────────────────────────────────────────┤
     │                                                                      │
     │  host ──► [Connectivity Check] ──► working_url, legacy_ssl          │
@@ -29,16 +29,16 @@ Architecture:
 
 Usage:
     from custom_components.cable_modem_monitor.core.setup import (
-        setup_known_modem,
+        setup_modem,
         SetupResult,
     )
 
-    result = setup_known_modem(
+    result = setup_modem(
         host="192.168.100.1",
-        username="admin",
-        password="password",
         parser_class=MotorolaMB7621Parser,
         static_auth_config={"auth_strategy": "form_plain", ...},
+        username="admin",
+        password="password",
     )
 
     if result.success:
@@ -100,14 +100,14 @@ class SetupResult:
     failed_step: str | None = None
 
 
-def setup_known_modem(
+def setup_modem(
     host: str,
     parser_class: type[ModemParser],
     static_auth_config: dict[str, Any],
     username: str | None = None,
     password: str | None = None,
 ) -> SetupResult:
-    """Set up a known modem using modem.yaml configuration.
+    """Set up a modem using modem.yaml configuration.
 
     This is the setup path for modems where we have:
     - A user-selected parser (they chose their modem model)
@@ -127,7 +127,7 @@ def setup_known_modem(
     Returns:
         SetupResult with all data needed for config entry
     """
-    _LOGGER.info("Setting up known modem %s at %s", parser_class.name, host)
+    _LOGGER.info("Setting up %s at %s", parser_class.name, host)
 
     # Step 1: Connectivity check (shared with fallback)
     _LOGGER.debug("Step 1/3: Checking connectivity to %s", host)
@@ -188,7 +188,7 @@ def setup_known_modem(
     )
 
     # Step 3: Validation parse
-    _LOGGER.debug("Step 3/3: Validating parser can extract data")
+    _LOGGER.info("Step 3/3: Validating parser can extract data")
     validation = _validate_parse(
         html=auth_result.html,
         parser_class=parser_class,
@@ -248,7 +248,7 @@ class _ValidationResult:
     error: str | None = None
 
 
-def _validate_parse(
+def _validate_parse(  # noqa: C901
     html: str | None,
     parser_class: type[ModemParser],
     session: requests.Session | None,
@@ -256,6 +256,9 @@ def _validate_parse(
     hnap_builder: Any | None = None,
 ) -> _ValidationResult:
     """Validate that the parser can extract channel data.
+
+    Uses ResourceLoader to fetch any additional pages declared in modem.yaml.
+    This ensures known modems can validate parsers that need multiple pages.
 
     Args:
         html: HTML from auth step (may be None for HNAP modems)
@@ -267,43 +270,103 @@ def _validate_parse(
     Returns:
         _ValidationResult with modem_data if successful
     """
+    from bs4 import BeautifulSoup
+
+    from ...modem_config.adapter import get_auth_adapter_for_parser
+    from ..loaders import ResourceLoaderFactory
+
+    is_hnap = hnap_builder is not None
+
+    if not html and not is_hnap:
+        return _ValidationResult(
+            success=False,
+            error="No HTML provided for validation",
+        )
+
     try:
         # Instantiate parser
         parser = parser_class()
 
-        # Build resources dict for parsing
-        resources: dict[str, Any] = {}
+        # Parse the initial HTML as the "/" resource (if available)
+        soup = None
+        if html:
+            soup = BeautifulSoup(html, "html.parser")
 
-        # For HNAP modems, use the HNAP builder to fetch data
-        if hnap_builder is not None:
-            _LOGGER.debug("Validation: Using HNAP builder for data fetch")
-            # HNAP parsers expect the builder in resources
-            resources["hnap_builder"] = hnap_builder
-            resources["session"] = session
-            resources["base_url"] = base_url
-        elif html:
-            # HTML-based parsers use the HTML directly
-            resources["html"] = html
-            resources["session"] = session
-            resources["base_url"] = base_url
+        # Use ResourceLoader for proper resource fetching (modem.yaml declares pages)
+        adapter = get_auth_adapter_for_parser(parser_class.__name__)
+        if adapter and session is not None:
+            try:
+                modem_config = adapter.get_modem_config_dict()
+                url_token_config = adapter.get_url_token_config_for_loader()
+
+                loader = ResourceLoaderFactory.create(
+                    session=session,
+                    base_url=base_url,
+                    modem_config=modem_config,
+                    verify_ssl=False,  # SSL verification off during setup
+                    hnap_builder=hnap_builder,
+                    url_token_config=url_token_config,
+                )
+
+                # Fetch all resources declared in modem.yaml
+                resources = loader.fetch()
+                _LOGGER.debug(
+                    "Validation using ResourceLoader: fetched %d resources",
+                    len(resources),
+                )
+
+                # Ensure we have the main page (for HTML modems)
+                if "/" not in resources and soup:
+                    resources["/"] = soup
+
+                modem_data = parser.parse_resources(resources)
+
+            except (requests.RequestException, KeyError, TypeError, ValueError, AttributeError) as e:
+                _LOGGER.debug(
+                    "ResourceLoader failed, falling back to single-page parse: %s",
+                    e,
+                )
+                # Fallback: just parse the initial HTML (only works for HTML modems)
+                if soup:
+                    modem_data = parser.parse_resources({"/": soup})
+                else:
+                    return _ValidationResult(
+                        success=False,
+                        error=f"ResourceLoader failed and no HTML fallback: {e}",
+                    )
         else:
+            # No modem.yaml config - use single-page parse
+            if soup:
+                _LOGGER.debug(
+                    "No modem.yaml for %s, using single-page parse",
+                    parser_class.__name__,
+                )
+                modem_data = parser.parse_resources({"/": soup})
+            else:
+                return _ValidationResult(
+                    success=False,
+                    error=f"No modem.yaml config for {parser_class.__name__} and no HTML",
+                )
+
+        if modem_data is None:
             return _ValidationResult(
                 success=False,
-                error="No HTML or HNAP builder available for parsing",
+                parser_instance=parser,
+                error="Parser returned None",
             )
 
-        # Try to parse
-        modem_data = parser.parse_resources(resources)
+        # Check if we got any meaningful data
+        # Parsers use "downstream"/"upstream" keys
+        downstream = modem_data.get("downstream", [])
+        upstream = modem_data.get("upstream", [])
+        system_info = modem_data.get("system_info", {})
 
-        # Validate we got some channel data
-        downstream = modem_data.get("downstream_channels", [])
-        upstream = modem_data.get("upstream_channels", [])
+        # Consider success if we got any data at all
+        has_data = bool(downstream or upstream or system_info)
 
-        if not downstream and not upstream:
-            return _ValidationResult(
-                success=False,
-                error="Parser returned no channel data",
-            )
+        if not has_data:
+            _LOGGER.warning("Parser returned empty data - modem may have no signal")
+            # Still consider this a success - parser worked, just no signal
 
         _LOGGER.info(
             "Validation parse: %d downstream, %d upstream channels",

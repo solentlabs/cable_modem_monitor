@@ -1,7 +1,8 @@
 """E2E tests for config flow against mock modem servers.
 
-Tests the full config flow validation pipeline using MockModemServer
-to simulate real modem behavior without hardware.
+Tests the known modem setup flow using MockModemServer to simulate
+real modem behavior without hardware. These tests verify the path
+users take when selecting their modem model from the dropdown.
 """
 
 from __future__ import annotations
@@ -14,8 +15,8 @@ import pytest
 
 from custom_components.cable_modem_monitor.core.auth.workflow import AUTH_TYPE_TO_STRATEGY
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import run_discovery_pipeline
 from custom_components.cable_modem_monitor.core.parser_registry import get_parser_by_name
+from custom_components.cable_modem_monitor.core.setup import setup_modem
 from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
 
 from .mock_modem_server import MockModemServer
@@ -169,16 +170,20 @@ class TestStaticAuthConfig:
 
 
 # =============================================================================
-# E2E DISCOVERY PIPELINE TESTS
+# E2E KNOWN MODEM SETUP TESTS
 # =============================================================================
 
 
-class TestDiscoveryPipelineE2E:
-    """E2E tests running discovery pipeline against mock servers."""
+class TestKnownModemSetupE2E:
+    """E2E tests running known modem setup against mock servers.
+
+    These tests verify the path where users select their modem model from
+    the dropdown and we use modem.yaml as the source of truth for auth config.
+    """
 
     @pytest.mark.parametrize("modem_path,auth_type,expected_strategy", MULTI_AUTH_MODEMS)
-    def test_discovery_with_static_auth(self, modem_path: str, auth_type: str, expected_strategy: str):
-        """Discovery pipeline should succeed with static auth config."""
+    def test_setup_with_static_auth(self, modem_path: str, auth_type: str, expected_strategy: str):
+        """Known modem setup should succeed with static auth config from modem.yaml."""
         modem_dir = MODEMS_DIR / modem_path
 
         with MockModemServer.from_modem_path(modem_dir, auth_type=auth_type) as server:
@@ -187,17 +192,17 @@ class TestDiscoveryPipelineE2E:
             parser = get_parser_by_name(parser_name)
             static_config = build_static_auth_config(parser, auth_type)
 
-            # Run discovery pipeline
-            result = run_discovery_pipeline(
+            # Run known modem setup
+            result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
                 username="admin",
                 password="pw",
-                selected_parser=parser,
-                static_auth_config=static_config,
             )
 
             # Verify success
-            assert result.success, f"Pipeline failed: {result.error}"
+            assert result.success, f"Setup failed: {result.error}"
             actual = result.auth_strategy
             assert actual == expected_strategy, f"Expected {expected_strategy}, got {actual}"
 
@@ -218,12 +223,12 @@ class TestFormAuthE2E:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "form")
 
-            result = run_discovery_pipeline(
+            result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
                 username="admin",
                 password="pw",
-                selected_parser=parser,
-                static_auth_config=static_config,
             )
 
             assert result.success, f"Form auth failed: {result.error}"
@@ -237,12 +242,12 @@ class TestFormAuthE2E:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "form")
 
-            result = run_discovery_pipeline(
+            result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
                 username="wrong",
                 password="wrong",
-                selected_parser=parser,
-                static_auth_config=static_config,
             )
 
             assert not result.success, "Should fail with wrong credentials"
@@ -265,12 +270,12 @@ class TestNoAuthE2E:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "none")
 
-            result = run_discovery_pipeline(
+            result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
                 username="",
                 password="",
-                selected_parser=parser,
-                static_auth_config=static_config,
             )
 
             assert result.success, f"No-auth failed: {result.error}"

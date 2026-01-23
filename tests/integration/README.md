@@ -20,8 +20,9 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 
 E2E tests for config flow against mock modem servers.
 
-Tests the full config flow validation pipeline using MockModemServer
-to simulate real modem behavior without hardware.
+Tests the known modem setup flow using MockModemServer to simulate
+real modem behavior without hardware. These tests verify the path
+users take when selecting their modem model from the dropdown.
 
 **TestAuthTypeSelection** (2 tests)
 : Test that auth type dropdown appears for correct modems.
@@ -34,10 +35,10 @@ to simulate real modem behavior without hardware.
 
 - `test_build_static_auth_config`: Static auth config should have correct strategy.
 
-**TestDiscoveryPipelineE2E** (1 tests)
-: E2E tests running discovery pipeline against mock servers.
+**TestKnownModemSetupE2E** (1 tests)
+: E2E tests running known modem setup against mock servers.
 
-- `test_discovery_with_static_auth`: Discovery pipeline should succeed with static auth config.
+- `test_setup_with_static_auth`: Known modem setup should succeed with static auth config from modem.yaml.
 
 **TestFormAuthE2E** (2 tests)
 : E2E tests for form-based authentication.
@@ -148,7 +149,7 @@ not custom_components/.../modems/ (deployment sync target).
 
 - `test_discovery_pipeline_dynamic_auth`: Test run_discovery_pipeline with dynamic auth discovery.
 - `test_discovery_pipeline_auto_detection`: Test discovery pipeline with auto-detection (no pre-selected parser).
-- `test_discovery_pipeline_static_auth`: Test run_discovery_pipeline with static auth config from modem.yaml.
+- `test_known_modem_setup_static_auth`: Test setup_modem with static auth config from modem.yaml.
 
 ## Fixtures
 

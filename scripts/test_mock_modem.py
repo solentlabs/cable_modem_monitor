@@ -27,8 +27,8 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator  # noqa: E402
-from custom_components.cable_modem_monitor.core.fallback.discovery import run_discovery_pipeline  # noqa: E402
 from custom_components.cable_modem_monitor.core.parser_registry import get_parser_by_name  # noqa: E402
+from custom_components.cable_modem_monitor.core.setup import setup_modem  # noqa: E402
 from custom_components.cable_modem_monitor.modem_config import load_modem_config  # noqa: E402
 from custom_components.cable_modem_monitor.modem_config.adapter import ModemConfigAuthAdapter  # noqa: E402
 
@@ -40,14 +40,17 @@ logging.basicConfig(
 _LOGGER = logging.getLogger(__name__)
 
 
-def test_discovery_pipeline(host: str, modem_path: str, username: str, password: str) -> bool:
-    """Test the discovery pipeline against mock server.
+def test_known_modem_setup(host: str, modem_path: str, username: str, password: str) -> bool:
+    """Test the known modem setup against mock server.
+
+    This tests the path users take when they select their modem model
+    and we use modem.yaml as the source of truth for auth configuration.
 
     Returns:
         True if successful, False otherwise.
     """
     print(f"\n{'='*60}")
-    print("TEST: Discovery Pipeline")
+    print("TEST: Known Modem Setup (modem.yaml as source of truth)")
     print(f"{'='*60}")
 
     # Load modem config
@@ -69,18 +72,14 @@ def test_discovery_pipeline(host: str, modem_path: str, username: str, password:
     static_auth_config = adapter.get_static_auth_config()
     print(f"Auth strategy: {static_auth_config.get('auth_strategy')}")
 
-    # Get parser hints (for form auth encoding hints)
-    parser_hints = adapter.get_auth_form_hints()
-
-    # Run discovery pipeline (pass class, not instance)
-    print(f"\nRunning discovery pipeline against {host}...")
-    result = run_discovery_pipeline(
+    # Run known modem setup (pass class, not instance)
+    print(f"\nRunning known modem setup against {host}...")
+    result = setup_modem(
         host=host,
+        parser_class=parser_class,
+        static_auth_config=static_auth_config,
         username=username,
         password=password,
-        selected_parser=parser_class,  # Pass class, not instance
-        parser_hints=parser_hints,
-        static_auth_config=static_auth_config,
     )
 
     if result.success:
@@ -89,8 +88,8 @@ def test_discovery_pipeline(host: str, modem_path: str, username: str, password:
         print(f"  Auth strategy: {result.auth_strategy}")
         print(f"  Parser: {result.parser_name}")
         if result.modem_data:
-            ds = result.modem_data.get("downstream", [])
-            us = result.modem_data.get("upstream", [])
+            ds = result.modem_data.get("downstream_channels", [])
+            us = result.modem_data.get("upstream_channels", [])
             print(f"  Downstream channels: {len(ds)}")
             print(f"  Upstream channels: {len(us)}")
             if ds:
@@ -202,17 +201,13 @@ def test_auth_failure(host: str, modem_path: str) -> bool:
     # Get static auth config (same format as load_static_auth_config)
     static_auth_config = adapter.get_static_auth_config()
 
-    # Get parser hints
-    parser_hints = adapter.get_auth_form_hints()
-
-    print("Running discovery with WRONG credentials...")
-    result = run_discovery_pipeline(
+    print("Running setup with WRONG credentials...")
+    result = setup_modem(
         host=host,
+        parser_class=parser_class,
+        static_auth_config=static_auth_config,
         username="wrong_user",
         password="wrong_pass",
-        selected_parser=parser_class,  # Pass class, not instance
-        parser_hints=parser_hints,
-        static_auth_config=static_auth_config,
     )
 
     if not result.success:
@@ -243,8 +238,8 @@ def main():
 
     results = []
 
-    # Test 1: Discovery pipeline
-    results.append(("Discovery Pipeline", test_discovery_pipeline(host, args.modem, args.username, args.password)))
+    # Test 1: Known modem setup (modem.yaml as source of truth)
+    results.append(("Known Modem Setup", test_known_modem_setup(host, args.modem, args.username, args.password)))
 
     # Test 2: Scraper polling
     results.append(("Scraper Polling", test_scraper_polling(host, args.modem, args.username, args.password)))

@@ -39,7 +39,7 @@ from custom_components.cable_modem_monitor.core.exceptions import (
     CannotConnectError,
     InvalidAuthError,
 )
-from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import DiscoveryPipelineResult
+from custom_components.cable_modem_monitor.core.setup import SetupResult
 
 # Mock constants to avoid ImportError in tests
 CONF_HOST = "host"
@@ -109,13 +109,13 @@ def _create_success_result(
     modem_name: str = "Cable Modem",
     manufacturer: str = "Unknown",
     working_url: str = "https://192.168.100.1",
-) -> DiscoveryPipelineResult:
-    """Create a successful discovery pipeline result for tests."""
+) -> SetupResult:
+    """Create a successful setup result for tests."""
     mock_parser = Mock()
     mock_parser.manufacturer = manufacturer
     mock_parser.get_actual_model.return_value = None
 
-    return DiscoveryPipelineResult(
+    return SetupResult(
         success=True,
         working_url=working_url,
         auth_strategy="no_auth",
@@ -185,18 +185,29 @@ class TestValidateInput:
         }
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_success(
-        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+        self,
+        mock_get_parser,
+        mock_icmp_ping,
+        mock_load_static_auth,
+        mock_setup,
+        mock_hass,
+        mock_parser_class,
+        valid_input,
     ):
         """Test successful validation."""
         # Mock parser lookup
         mock_get_parser.return_value = mock_parser_class
 
-        # Mock pipeline to return success
-        mock_pipeline.return_value = _create_success_result()
+        # Mock static auth config (required now that fallback is removed)
+        mock_load_static_auth.return_value = {"auth_strategy": "no_auth"}
+
+        # Mock setup to return success
+        mock_setup.return_value = _create_success_result()
         mock_icmp_ping.return_value = True
 
         # Mock async_add_executor_job to call the function
@@ -210,18 +221,29 @@ class TestValidateInput:
         assert result["title"] == "Cable Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_connection_failure(
-        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+        self,
+        mock_get_parser,
+        mock_icmp_ping,
+        mock_load_static_auth,
+        mock_setup,
+        mock_hass,
+        mock_parser_class,
+        valid_input,
     ):
         """Test validation fails when cannot connect to modem."""
         # Mock parser lookup
         mock_get_parser.return_value = mock_parser_class
 
-        # Mock pipeline to return failure
-        mock_pipeline.return_value = DiscoveryPipelineResult(
+        # Mock static auth config (required now that fallback is removed)
+        mock_load_static_auth.return_value = {"auth_strategy": "no_auth"}
+
+        # Mock setup to return failure
+        mock_setup.return_value = SetupResult(
             success=False,
             error="Connection failed",
             failed_step="connectivity",
@@ -309,14 +331,16 @@ class TestModemNameFormatting:
         TITLE_FORMATTING_CASES,
         ids=[c[3] for c in TITLE_FORMATTING_CASES],
     )
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_formatting(
         self,
         mock_get_parser,
         mock_icmp_ping,
-        mock_pipeline,
+        mock_load_static_auth,
+        mock_setup,
         mock_hass,
         mock_parser_class,
         valid_input,
@@ -327,7 +351,8 @@ class TestModemNameFormatting:
     ):
         """Test title formatting via table-driven cases."""
         mock_get_parser.return_value = mock_parser_class
-        mock_pipeline.return_value = _create_success_result(
+        mock_load_static_auth.return_value = {"auth_strategy": "no_auth"}
+        mock_setup.return_value = _create_success_result(
             modem_name=modem_name,
             manufacturer=manufacturer,
         )
@@ -343,15 +368,24 @@ class TestModemNameFormatting:
         assert result["title"] == expected_title, f"Failed: {desc}"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_detection_info_included(
-        self, mock_get_parser, mock_icmp_ping, mock_pipeline, mock_hass, mock_parser_class, valid_input
+        self,
+        mock_get_parser,
+        mock_icmp_ping,
+        mock_load_static_auth,
+        mock_setup,
+        mock_hass,
+        mock_parser_class,
+        valid_input,
     ):
         """Test that detection_info is included in result."""
         mock_get_parser.return_value = mock_parser_class
-        mock_pipeline.return_value = _create_success_result(
+        mock_load_static_auth.return_value = {"auth_strategy": "no_auth"}
+        mock_setup.return_value = _create_success_result(
             modem_name="[Model]",
             manufacturer="[MFG]",
         )
