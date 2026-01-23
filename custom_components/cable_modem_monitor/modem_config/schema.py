@@ -734,13 +734,11 @@ class ModemConfig(BaseModel):
         description="Provenance tracking for where facts came from",
     )
 
-    # Network
-    protocol: str = Field(default="http", description="HTTP or HTTPS")
+    # Network - only default_host is needed; protocol is auto-detected at setup
     default_host: str = Field(
         default="192.168.100.1",
         description="Default modem IP address",
     )
-    default_port: int = Field(default=80, description="Default port")
 
     # Authentication
     auth: AuthConfig = Field(description="Authentication configuration")

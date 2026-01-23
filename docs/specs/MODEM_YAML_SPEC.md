@@ -37,9 +37,8 @@ paradigm: string            # "html" | "hnap" | "rest_api"
 # =============================================================================
 # NETWORK
 # =============================================================================
-protocol: string            # "http" | "https"
+# Protocol (HTTP/HTTPS) is auto-detected at setup time - not specified here
 default_host: string        # Usually "192.168.100.1"
-default_port: int           # Usually 80 or 443
 
 # =============================================================================
 # HARDWARE
@@ -354,9 +353,7 @@ hardware:
   docsis_version: "3.0"
   chipset: Broadcom BCM3384
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   strategy: form
@@ -435,9 +432,7 @@ hardware:
   docsis_version: "3.1"
   chipset: Broadcom BCM3390
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   strategy: hnap
@@ -543,9 +538,7 @@ paradigm: html
 hardware:
   docsis_version: "3.1"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   strategy: basic

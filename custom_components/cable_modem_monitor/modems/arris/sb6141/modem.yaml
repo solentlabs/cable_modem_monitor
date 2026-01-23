@@ -23,9 +23,7 @@ hardware:
 sources:
   detection_hints: "HA Community thread"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   types:

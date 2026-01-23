@@ -21,9 +21,7 @@ hardware:
 sources:
   detection_hints: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   types:

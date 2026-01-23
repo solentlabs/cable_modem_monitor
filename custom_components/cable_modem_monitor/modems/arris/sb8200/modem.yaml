@@ -40,9 +40,7 @@ sources:
 # NETWORK
 # =============================================================================
 # Protocol varies by firmware - can be HTTP (no auth) or HTTPS (with auth)
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 # =============================================================================
 # AUTHENTICATION

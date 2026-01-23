@@ -15,7 +15,6 @@ sources:
   detection_hints: "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
 
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   types:

@@ -23,9 +23,7 @@ sources:
   auth_config: "[Issue #83](https://github.com/solentlabs/cable_modem_monitor/issues/83)"
   detection_hints: "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   # SB6190 has two firmware variants with different auth:

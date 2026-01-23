@@ -24,9 +24,7 @@ sources:
   hardware: "[CM600 Datasheet](https://www.downloads.netgear.com/files/GDC/datasheet/en/CM600.pdf)"
   detection_hints: "[Issue #3](https://github.com/solentlabs/cable_modem_monitor/issues/3)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
   types:
