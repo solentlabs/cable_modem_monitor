@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 308
+**Total Tests:** 325
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_auth.py](test_auth.py) | 3 |  |
 | [test_button.py](test_button.py) | 0 | Tests for Cable Modem Monitor button platform. |
 | [test_channel_utils.py](test_channel_utils.py) | 29 | Tests for channel_utils helper functions. |
-| [test_config_flow.py](test_config_flow.py) | 15 | Tests for Cable Modem Monitor config flow. |
+| [test_config_flow.py](test_config_flow.py) | 32 | Tests for Cable Modem Monitor config flow. |
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
@@ -135,6 +135,43 @@ Tables are defined at the top of the file with ASCII box-drawing comments.
 : Test the config flow registration.
 
 - `test_handler_is_registered`: Test that the config flow handler is registered.
+
+**TestValidationProgressHelper** (8 tests)
+: Test the ValidationProgressHelper state machine.
+
+- `test_initial_state`: Test helper initializes with empty state.
+- `test_is_running_when_no_task`: Test is_running returns False when no task exists.
+- `test_is_running_when_task_done`: Test is_running returns False when task is complete.
+- `test_is_running_when_task_active`: Test is_running returns True when task is running.
+- `test_start_stores_user_input`: Test start() stores user input and creates task.
+- `test_reset_clears_all_state`: Test reset() clears all state.
+- `test_get_error_type_with_known_error`: Test get_error_type returns correct classification.
+- `test_get_error_type_with_no_error`: Test get_error_type when no error is set.
+
+**TestAuthTypeFlow** (0 tests)
+: Test the auth type selection flow.
+
+
+**TestEntityPrefixLogic** (3 tests)
+: Test the entity prefix dropdown conditional logic.
+
+- `test_first_modem_has_none_option`: Test first modem config includes 'None' prefix option.
+- `test_second_modem_no_none_option`: Test second modem config excludes 'None' prefix option.
+- `test_default_entity_prefix_preserved`: Test that explicitly passed default_entity_prefix is used.
+
+**TestOptionsFlowCredentialPreservation** (4 tests)
+: Test the options flow credential preservation logic.
+
+- `test_preserve_password_when_empty`: Test password is preserved when user leaves it empty.
+- `test_preserve_username_when_empty`: Test username is preserved when user leaves it empty.
+- `test_new_password_not_overwritten`: Test new password is not overwritten by existing.
+- `test_preserve_both_when_both_empty`: Test both credentials preserved when both empty.
+
+**TestOptionsFlowDetectionPreservation** (2 tests)
+: Test the options flow detection info preservation.
+
+- `test_preserve_detection_info_copies_all_fields`: Test all detection fields are preserved.
+- `test_preserve_detection_with_missing_fields`: Test preservation handles missing fields gracefully.
 
 ### test_config_flow_helpers.py
 

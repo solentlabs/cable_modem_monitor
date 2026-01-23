@@ -16,13 +16,25 @@ from homeassistant import config_entries
 from custom_components.cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
     OptionsFlowHandler,
+    ValidationProgressHelper,
 )
 from custom_components.cable_modem_monitor.config_flow_helpers import (
     validate_input,
 )
+from custom_components.cable_modem_monitor.const import (
+    CONF_DETECTED_MANUFACTURER,
+    CONF_DETECTED_MODEM,
+    CONF_DOCSIS_VERSION,
+    CONF_LAST_DETECTION,
+    CONF_PARSER_NAME,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
+)
 from custom_components.cable_modem_monitor.core.discovery.pipeline import DiscoveryPipelineResult
 from custom_components.cable_modem_monitor.core.exceptions import (
     CannotConnectError,
+    InvalidAuthError,
 )
 
 # Mock constants to avoid ImportError in tests
@@ -413,3 +425,498 @@ class TestConfigFlowRegistration:
         handler = config_entries.HANDLERS.get("cable_modem_monitor")
         assert handler is not None
         assert handler == CableModemMonitorConfigFlow
+
+
+# =============================================================================
+# ValidationProgressHelper Tests
+# =============================================================================
+
+
+class TestValidationProgressHelper:
+    """Test the ValidationProgressHelper state machine.
+
+    This helper manages async validation state for the progress indicator flow.
+    Tests verify state transitions and error handling.
+    """
+
+    @pytest.fixture
+    def helper(self):
+        """Create a fresh ValidationProgressHelper instance."""
+        return ValidationProgressHelper()
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create a mock Home Assistant instance."""
+        hass = Mock()
+        return hass
+
+    def test_initial_state(self, helper):
+        """Test helper initializes with empty state."""
+        assert helper.user_input is None
+        assert helper.task is None
+        assert helper.error is None
+        assert helper.info is None
+
+    def test_is_running_when_no_task(self, helper):
+        """Test is_running returns False when no task exists."""
+        assert helper.is_running() is False
+
+    def test_is_running_when_task_done(self, helper):
+        """Test is_running returns False when task is complete."""
+        mock_task = Mock()
+        mock_task.done.return_value = True
+        helper.task = mock_task
+
+        assert helper.is_running() is False
+
+    def test_is_running_when_task_active(self, helper):
+        """Test is_running returns True when task is running."""
+        mock_task = Mock()
+        mock_task.done.return_value = False
+        helper.task = mock_task
+
+        assert helper.is_running() is True
+
+    def test_start_stores_user_input(self, helper, mock_hass):
+        """Test start() stores user input and creates task."""
+        user_input = {"host": "192.168.100.1"}
+        mock_task = Mock()
+        mock_hass.async_create_task = Mock(return_value=mock_task)
+
+        helper.start(mock_hass, user_input)
+
+        assert helper.user_input == user_input
+        assert helper.task == mock_task
+        mock_hass.async_create_task.assert_called_once()
+
+    def test_reset_clears_all_state(self, helper):
+        """Test reset() clears all state."""
+        # Set up state
+        helper.user_input = {"host": "192.168.100.1"}
+        helper.task = Mock()
+        helper.error = Exception("test")
+        helper.info = {"title": "Test"}
+
+        helper.reset()
+
+        assert helper.user_input is None
+        assert helper.task is None
+        assert helper.error is None
+        assert helper.info is None
+
+    @pytest.mark.asyncio
+    async def test_get_result_returns_missing_input_when_no_task(self, helper):
+        """Test get_result returns 'missing_input' when task is None."""
+        result = await helper.get_result()
+
+        assert result == "missing_input"
+
+    @pytest.mark.asyncio
+    async def test_get_result_success_stores_info(self, helper):
+        """Test get_result stores info dict on success."""
+        import asyncio
+
+        # Create a real completed task
+        async def success_validation():
+            return {"title": "Test Modem"}
+
+        helper.task = asyncio.create_task(success_validation())
+
+        result = await helper.get_result()
+
+        assert result is None  # None means success
+        assert helper.info == {"title": "Test Modem"}
+        assert helper.task is None  # Task cleared in finally
+
+    @pytest.mark.asyncio
+    async def test_get_result_known_exception_classified(self, helper):
+        """Test get_result classifies known exceptions."""
+        import asyncio
+
+        async def failing_validation():
+            # CannotConnectError with a message gets user_message set,
+            # which triggers "network_unreachable" classification
+            raise CannotConnectError("Connection failed")
+
+        helper.task = asyncio.create_task(failing_validation())
+
+        result = await helper.get_result()
+
+        # CannotConnectError with user_message returns "network_unreachable"
+        assert result == "network_unreachable"
+        assert helper.error is not None
+        assert isinstance(helper.error, CannotConnectError)
+        assert helper.task is None
+
+    @pytest.mark.asyncio
+    async def test_get_result_invalid_auth_classified(self, helper):
+        """Test get_result classifies InvalidAuthError."""
+        import asyncio
+
+        async def failing_validation():
+            raise InvalidAuthError("Bad credentials")
+
+        helper.task = asyncio.create_task(failing_validation())
+
+        result = await helper.get_result()
+
+        assert result == "invalid_auth"
+        assert isinstance(helper.error, InvalidAuthError)
+
+    @pytest.mark.asyncio
+    async def test_get_result_unknown_exception_logged(self, helper):
+        """Test get_result logs unexpected exceptions."""
+        import asyncio
+
+        async def unexpected_failure():
+            raise RuntimeError("Unexpected error")
+
+        helper.task = asyncio.create_task(unexpected_failure())
+
+        # Should not raise, should return error type
+        result = await helper.get_result()
+
+        assert result is not None  # Some error type
+        assert helper.error is not None
+        assert isinstance(helper.error, RuntimeError)
+
+    def test_get_error_type_with_known_error(self, helper):
+        """Test get_error_type returns correct classification."""
+        helper.error = InvalidAuthError("test")
+
+        result = helper.get_error_type()
+
+        assert result == "invalid_auth"
+
+    def test_get_error_type_with_no_error(self, helper):
+        """Test get_error_type when no error is set."""
+        # This tests an edge case - what happens if called before error is set
+        result = helper.get_error_type()
+
+        # Should handle None gracefully
+        assert result is not None  # Should return some default
+
+
+# =============================================================================
+# Auth Type Flow Tests
+# =============================================================================
+
+
+class TestAuthTypeFlow:
+    """Test the auth type selection flow.
+
+    This step only appears for modems with multiple auth types defined
+    in their modem.yaml (e.g., SB8200 with "none" and "url_token").
+    """
+
+    @pytest.fixture
+    def flow(self):
+        """Create a CableModemMonitorConfigFlow instance."""
+        return CableModemMonitorConfigFlow()
+
+    @pytest.fixture
+    def mock_hass(self):
+        """Create a mock Home Assistant instance."""
+        hass = Mock()
+        hass.config_entries = Mock()
+        hass.config_entries.async_entries = Mock(return_value=[])
+        return hass
+
+    @pytest.mark.asyncio
+    @patch("custom_components.cable_modem_monitor.config_flow.get_auth_type_dropdown")
+    async def test_auth_type_step_shown_for_multi_auth_modem(self, mock_get_dropdown, flow, mock_hass):
+        """Test auth type step is shown when modem has multiple auth options."""
+        flow.hass = mock_hass
+        flow._modem_choices = ["Arris SB8200"]
+
+        # Simulate user input from step_user
+        flow._progress.user_input = {
+            "host": "192.168.100.1",
+            "modem_choice": "Arris SB8200",
+        }
+
+        mock_get_dropdown.return_value = {
+            "none": "No Authentication",
+            "url_token": "URL Token (Requires Password)",
+        }
+
+        # Make async_add_executor_job return an awaitable
+        mock_parser = Mock()
+        mock_parser.name = "Arris SB8200"
+
+        async def mock_executor_job(func, *args):
+            return mock_parser
+
+        mock_hass.async_add_executor_job = mock_executor_job
+
+        # Call auth_type step with no input (show form)
+        with patch.object(flow, "async_show_form") as mock_show_form:
+            mock_show_form.return_value = {"type": "form", "step_id": "auth_type"}
+
+            await flow.async_step_auth_type(None)
+
+            mock_show_form.assert_called_once()
+            call_kwargs = mock_show_form.call_args[1]
+            assert call_kwargs["step_id"] == "auth_type"
+
+    @pytest.mark.asyncio
+    async def test_auth_type_selection_stored_and_proceeds(self, flow, mock_hass):
+        """Test selecting auth type stores it and proceeds to validation."""
+        flow.hass = mock_hass
+        flow._modem_choices = ["Arris SB8200"]
+        flow._progress.user_input = {
+            "host": "192.168.100.1",
+            "modem_choice": "Arris SB8200",
+        }
+
+        # Simulate user selecting an auth type
+        user_input = {"auth_type": "url_token"}
+
+        with patch.object(flow, "async_step_validate") as mock_validate:
+            mock_validate.return_value = {"type": "progress"}
+
+            await flow.async_step_auth_type(user_input)
+
+            # Verify auth type was stored
+            assert flow._selected_auth_type == "url_token"
+            assert flow._progress.user_input["auth_type"] == "url_token"
+            mock_validate.assert_called_once()
+
+
+# =============================================================================
+# Entity Prefix Logic Tests
+# =============================================================================
+
+
+class TestEntityPrefixLogic:
+    """Test the entity prefix dropdown conditional logic.
+
+    First modem: "None" option available, default is "None"
+    Second+ modem: "None" option removed, default is "Model"
+    """
+
+    @pytest.fixture
+    def flow(self):
+        """Create a CableModemMonitorConfigFlow instance."""
+        return CableModemMonitorConfigFlow()
+
+    @pytest.fixture
+    def mock_hass_no_entries(self):
+        """Create mock hass with no existing entries."""
+        hass = Mock()
+        hass.config_entries = Mock()
+        hass.config_entries.async_entries = Mock(return_value=[])
+        return hass
+
+    @pytest.fixture
+    def mock_hass_with_entries(self):
+        """Create mock hass with existing entries."""
+        hass = Mock()
+        existing_entry = Mock()
+        hass.config_entries = Mock()
+        hass.config_entries.async_entries = Mock(return_value=[existing_entry])
+        return hass
+
+    def test_first_modem_has_none_option(self, flow, mock_hass_no_entries):
+        """Test first modem config includes 'None' prefix option."""
+        flow.hass = mock_hass_no_entries
+        flow._modem_choices = ["Test Modem"]
+
+        schema = flow._build_user_schema()
+
+        # Extract entity_prefix field from schema
+        schema_dict = dict(schema.schema)
+        entity_prefix_key = None
+        for key in schema_dict:
+            if hasattr(key, "schema") and key.schema == "entity_prefix":
+                entity_prefix_key = key
+                break
+
+        assert entity_prefix_key is not None
+        # Default should be "none" for first modem
+        assert entity_prefix_key.default() == ENTITY_PREFIX_NONE
+
+    def test_second_modem_no_none_option(self, flow, mock_hass_with_entries):
+        """Test second modem config excludes 'None' prefix option."""
+        flow.hass = mock_hass_with_entries
+        flow._modem_choices = ["Test Modem"]
+
+        schema = flow._build_user_schema()
+
+        # Extract entity_prefix field from schema
+        schema_dict = dict(schema.schema)
+        entity_prefix_key = None
+        for key in schema_dict:
+            if hasattr(key, "schema") and key.schema == "entity_prefix":
+                entity_prefix_key = key
+                break
+
+        assert entity_prefix_key is not None
+        # Default should be "model" for second+ modem
+        assert entity_prefix_key.default() == ENTITY_PREFIX_MODEL
+
+    def test_default_entity_prefix_preserved(self, flow, mock_hass_no_entries):
+        """Test that explicitly passed default_entity_prefix is used."""
+        flow.hass = mock_hass_no_entries
+        flow._modem_choices = ["Test Modem"]
+
+        schema = flow._build_user_schema(default_entity_prefix=ENTITY_PREFIX_IP)
+
+        schema_dict = dict(schema.schema)
+        entity_prefix_key = None
+        for key in schema_dict:
+            if hasattr(key, "schema") and key.schema == "entity_prefix":
+                entity_prefix_key = key
+                break
+
+        assert entity_prefix_key is not None
+        assert entity_prefix_key.default() == ENTITY_PREFIX_IP
+
+
+# =============================================================================
+# Options Flow Tests
+# =============================================================================
+
+
+class TestOptionsFlowCredentialPreservation:
+    """Test the options flow credential preservation logic.
+
+    When user leaves password/username blank in options, the existing
+    values should be preserved from the config entry.
+    """
+
+    @pytest.fixture
+    def mock_config_entry(self):
+        """Create a mock config entry with stored credentials."""
+        entry = Mock()
+        entry.data = {
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "secretpassword",
+            "modem_choice": "Test Modem",
+        }
+        return entry
+
+    @pytest.fixture
+    def options_flow_with_entry(self, mock_config_entry):
+        """Create an OptionsFlowHandler with mocked config_entry property."""
+        flow = OptionsFlowHandler()
+        # Patch the config_entry property to avoid HA deprecation error
+        with patch.object(type(flow), "config_entry", new_callable=lambda: property(lambda self: mock_config_entry)):
+            # We need to set it on the instance instead
+            pass
+        # Use object.__setattr__ to bypass the deprecated setter
+        object.__setattr__(flow, "_config_entry", mock_config_entry)
+        # Patch the property getter
+        type(flow).config_entry = property(lambda self: self._config_entry)
+        return flow
+
+    def test_preserve_password_when_empty(self, options_flow_with_entry):
+        """Test password is preserved when user leaves it empty."""
+        user_input = {
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "",  # User left blank
+        }
+
+        options_flow_with_entry._preserve_credentials(user_input)
+
+        assert user_input["password"] == "secretpassword"
+
+    def test_preserve_username_when_empty(self, options_flow_with_entry):
+        """Test username is preserved when user leaves it empty."""
+        user_input = {
+            "host": "192.168.100.1",
+            "username": "",  # User left blank
+            "password": "newpassword",
+        }
+
+        options_flow_with_entry._preserve_credentials(user_input)
+
+        assert user_input["username"] == "admin"
+
+    def test_new_password_not_overwritten(self, options_flow_with_entry):
+        """Test new password is not overwritten by existing."""
+        user_input = {
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "newpassword",  # User entered new password
+        }
+
+        options_flow_with_entry._preserve_credentials(user_input)
+
+        assert user_input["password"] == "newpassword"
+
+    def test_preserve_both_when_both_empty(self, options_flow_with_entry):
+        """Test both credentials preserved when both empty."""
+        user_input = {
+            "host": "192.168.100.1",
+            "username": "",
+            "password": "",
+        }
+
+        options_flow_with_entry._preserve_credentials(user_input)
+
+        assert user_input["username"] == "admin"
+        assert user_input["password"] == "secretpassword"
+
+
+class TestOptionsFlowDetectionPreservation:
+    """Test the options flow detection info preservation.
+
+    When validation doesn't return new detection info, existing
+    detection info should be preserved from the config entry.
+    """
+
+    @pytest.fixture
+    def mock_config_entry_with_detection(self):
+        """Create a mock config entry with detection info."""
+        entry = Mock()
+        entry.data = {
+            "host": "192.168.100.1",
+            "parser_name": "Arris SB8200",
+            "detected_modem": "Arris SB8200",
+            "detected_manufacturer": "Arris",
+            "docsis_version": "3.1",
+            "last_detection": "2026-01-22T10:00:00",
+            "actual_model": "SB8200",
+            "detection_method": "user_selected",
+        }
+        return entry
+
+    @pytest.fixture
+    def options_flow_with_detection(self, mock_config_entry_with_detection):
+        """Create an OptionsFlowHandler with mocked config_entry."""
+        flow = OptionsFlowHandler()
+        object.__setattr__(flow, "_config_entry", mock_config_entry_with_detection)
+        type(flow).config_entry = property(lambda self: self._config_entry)
+        return flow
+
+    def test_preserve_detection_info_copies_all_fields(self, options_flow_with_detection):
+        """Test all detection fields are preserved."""
+        data = {}
+        options_flow_with_detection._preserve_detection_info(data)
+
+        assert data[CONF_PARSER_NAME] == "Arris SB8200"
+        assert data[CONF_DETECTED_MODEM] == "Arris SB8200"
+        assert data[CONF_DETECTED_MANUFACTURER] == "Arris"
+        assert data[CONF_DOCSIS_VERSION] == "3.1"
+        assert data[CONF_LAST_DETECTION] == "2026-01-22T10:00:00"
+
+    def test_preserve_detection_with_missing_fields(self):
+        """Test preservation handles missing fields gracefully."""
+        entry = Mock()
+        entry.data = {
+            "host": "192.168.100.1",
+            # Missing most detection fields
+        }
+        flow = OptionsFlowHandler()
+        object.__setattr__(flow, "_config_entry", entry)
+        type(flow).config_entry = property(lambda self: self._config_entry)
+
+        data = {}
+        flow._preserve_detection_info(data)
+
+        # Should have defaults for missing fields
+        assert data[CONF_DETECTED_MODEM] == "Unknown"
+        assert data[CONF_DETECTED_MANUFACTURER] == "Unknown"
