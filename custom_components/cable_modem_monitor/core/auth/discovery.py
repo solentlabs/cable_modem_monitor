@@ -269,9 +269,10 @@ class AuthDiscovery:
         except requests.RequestException as e:
             _LOGGER.debug("Connection failed during discovery: %s", e)
             return self._error_result(f"Connection failed: {e}")
-        except Exception as e:
-            # Fallback: catch unexpected errors to prevent crash
-            _LOGGER.debug("Unexpected error during discovery: %s", e, exc_info=True)
+        except (OSError, ValueError) as e:
+            # OSError: SSL/socket errors not always wrapped as RequestException
+            # ValueError: URL parsing issues
+            _LOGGER.debug("Network error during discovery: %s", e, exc_info=True)
             return self._error_result(f"Connection failed: {e}")
 
         # Step 2: Inspect and react

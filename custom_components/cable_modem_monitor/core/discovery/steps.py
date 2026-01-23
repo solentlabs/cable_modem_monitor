@@ -140,8 +140,9 @@ def check_connectivity(  # noqa: C901
             _LOGGER.debug("Network error for %s: %s", url, e)
             continue
 
-        except Exception as e:
-            # Fallback: catch unexpected errors to prevent crash during discovery
+        except (AttributeError, ValueError) as e:
+            # AttributeError: session object issues
+            # ValueError: URL parsing errors
             _LOGGER.debug("Unexpected error for %s: %s", url, e, exc_info=True)
             continue
 
@@ -265,13 +266,12 @@ def discover_auth(
             url_token_config=result.url_token_config,
         )
 
-    except (requests.RequestException, ValueError, KeyError, TypeError) as e:
-        # Expected errors from network/parsing
-        _LOGGER.debug("Auth discovery failed: %s", e)
-        return AuthResult(success=False, error=str(e))
-    except Exception as e:
-        # Fallback: catch unexpected errors to prevent crash
-        _LOGGER.exception("Auth discovery exception: %s", e)
+    except (requests.RequestException, ValueError, KeyError, TypeError, AttributeError, OSError) as e:
+        # requests.RequestException: network failures
+        # ValueError/KeyError/TypeError: parsing/config issues
+        # AttributeError: object access errors
+        # OSError: SSL/socket errors not wrapped as RequestException
+        _LOGGER.debug("Auth discovery failed: %s", e, exc_info=True)
         return AuthResult(success=False, error=str(e))
 
 
@@ -407,7 +407,10 @@ def _get_parser_class_by_name(
                     if isinstance(attr, type) and attr.__name__ == parser_name:
                         _LOGGER.debug("Direct loaded parser class: %s", parser_name)
                         return attr
-            except Exception as e:
+            except (ImportError, AttributeError, TypeError) as e:
+                # ImportError: module not found
+                # AttributeError: class not found in module
+                # TypeError: class instantiation issues
                 _LOGGER.debug("Direct load failed for %s: %s", parser_name, e)
 
     # Fallback: Search provided parsers list (if given)

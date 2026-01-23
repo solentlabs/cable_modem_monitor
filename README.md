@@ -69,11 +69,6 @@ cd cable_modem_monitor
 Track your cable modem's health with comprehensive dashboards and real-time monitoring:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/dashboard-screenshot.png" alt="Cable Modem Health Dashboard" width="400"><br>
-  <em>Complete dashboard showing connection status, signal quality, and error tracking</em>
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/downstream-power-levels.png" alt="Downstream Power Levels" width="500"><br>
   <em>Real-time power level monitoring across all downstream channels</em>
 </p>
@@ -123,14 +118,14 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 
 ### Developer Friendly
 - **Extensible**: Plugin architecture makes adding new modem models easy
-- **Well Tested**: 440+ test cases with comprehensive coverage
+- **Well Tested**: 2,400+ test cases with comprehensive coverage
 - **Type Safe**: Full type hints and mypy validation
 
 ## Supported Modems
 
-This integration supports modems from ARRIS, Motorola, Netgear, and Technicolor. Compatibility varies based on firmware versions and ISP customizations.
+This integration supports modems from ARRIS, Compal, Motorola, Netgear, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
 
-> **📊 [View the Modem Fixture Library](./tests/parsers/FIXTURES.md)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
+> **📊 [View the Supported Modems List](./modems/README.md)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
 
 ### Fallback Mode
 If your modem isn't listed, you can still install the integration! It will enter **Fallback Mode** which:
@@ -227,9 +222,10 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
 
 **Entity Naming Pattern:**
 - System sensors: `sensor.cable_modem_{metric}` (e.g., `sensor.cable_modem_status`)
-- Channel sensors: `sensor.cable_modem_{direction}_ch_{number}_{metric}`
-  - Example: `sensor.cable_modem_ds_ch_1_power` (downstream channel 1 power)
-  - Example: `sensor.cable_modem_us_ch_3_frequency` (upstream channel 3 frequency)
+- Channel sensors: `sensor.cable_modem_{direction}_{type}_ch_{number}_{metric}`
+  - Example: `sensor.cable_modem_ds_qam_ch_1_power` (downstream QAM channel 1 power)
+  - Example: `sensor.cable_modem_us_atdma_ch_3_frequency` (upstream ATDMA channel 3 frequency)
+  - DOCSIS 3.1 modems also have OFDM/OFDMA channels: `sensor.cable_modem_ds_ofdm_ch_1_power`
 
 ### Modem Status
 - `sensor.cable_modem_status`: Unified pass/fail status combining connection, health, and DOCSIS lock state
@@ -256,17 +252,17 @@ All sensors use the `cable_modem_` prefix for consistent entity naming and easy 
 - `sensor.cable_modem_total_uncorrected_errors`: Total uncorrected errors across all downstream channels
 
 ### Per-Channel Downstream Sensors (for each channel)
-Replace `X` with the channel number (1-32 depending on your modem):
-- `sensor.cable_modem_downstream_ch_X_power`: Power level in dBmV
-- `sensor.cable_modem_downstream_ch_X_snr`: Signal-to-Noise Ratio in dB
-- `sensor.cable_modem_downstream_ch_X_frequency`: Channel frequency in Hz
-- `sensor.cable_modem_downstream_ch_X_corrected`: Corrected errors
-- `sensor.cable_modem_downstream_ch_X_uncorrected`: Uncorrected errors
+Replace `{type}` with channel type (qam, ofdm) and `X` with the channel number:
+- `sensor.cable_modem_ds_{type}_ch_X_power`: Power level in dBmV
+- `sensor.cable_modem_ds_{type}_ch_X_snr`: Signal-to-Noise Ratio in dB
+- `sensor.cable_modem_ds_{type}_ch_X_frequency`: Channel frequency in Hz
+- `sensor.cable_modem_ds_{type}_ch_X_corrected`: Corrected errors
+- `sensor.cable_modem_ds_{type}_ch_X_uncorrected`: Uncorrected errors
 
 ### Per-Channel Upstream Sensors (for each channel)
-Replace `X` with the channel number (1-8 depending on your modem):
-- `sensor.cable_modem_upstream_ch_X_power`: Transmit power level in dBmV
-- `sensor.cable_modem_upstream_ch_X_frequency`: Channel frequency in Hz
+Replace `{type}` with channel type (atdma, ofdma) and `X` with the channel number:
+- `sensor.cable_modem_us_{type}_ch_X_power`: Transmit power level in dBmV
+- `sensor.cable_modem_us_{type}_ch_X_frequency`: Channel frequency in Hz
 
 ### Controls
 - `button.cable_modem_restart_modem`: Restart your cable modem remotely
@@ -371,12 +367,6 @@ MIT License - see LICENSE file for details
 ### External Resources
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
 - [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
-
-## Credits
-
-Created for monitoring Cox Cable Motorola modems, but designed to work with various cable modem brands.
-
----
 
 ## Legal & Safety
 

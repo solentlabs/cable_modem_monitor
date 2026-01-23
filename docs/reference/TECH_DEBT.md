@@ -235,25 +235,20 @@ _Moved to Completed Items section._
 
 ---
 
-### 8. Channel Lookup Optimization Incomplete
+### 8. Channel Lookup Optimization Incomplete (RESOLVED)
 
-**Problem:** Coordinator creates `_downstream_by_id` and `_upstream_by_id` lookup dictionaries, but sensors still iterate through full channel lists in some cases.
+**Resolution:** v3.13.0 (January 2026)
 
-**Impact:**
-- O(n) lookups instead of O(1) for modems with many channels
-- Performance degrades with 32+ downstream channels
-- Inconsistent access patterns
+Audit confirmed all sensor value access uses O(1) dictionary lookups:
+- `native_value` properties use `_downstream_by_id[key]` / `_upstream_by_id[key]`
+- `extra_state_attributes` use the same O(1) pattern
+- Sensor creation iterates once at startup (acceptable)
+- `_derive_docsis_status` counts locked channels once per poll (acceptable for aggregate)
 
-**Remediation:**
-1. Audit all sensor value access paths
-2. Ensure all lookups use the pre-built dictionaries
-3. Add performance test with high channel count fixture
-
-**Effort:** Low (1 session)
+Code includes explicit comments: "Use indexed lookup for O(1) performance instead of O(n) linear search"
 
 **Files:**
-- `custom_components/cable_modem_monitor/sensor.py`
-- `custom_components/cable_modem_monitor/__init__.py` (coordinator)
+- `custom_components/cable_modem_monitor/sensor.py` - All lookups verified O(1)
 
 ---
 

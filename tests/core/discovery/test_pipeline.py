@@ -367,11 +367,12 @@ class TestCheckConnectivity:
 
     @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
     def test_unexpected_exception(self, mock_session_class):
-        """Test unexpected exception is handled."""
+        """Test unexpected exception is handled (e.g., URL parsing errors)."""
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
-        mock_session.head.side_effect = RuntimeError("Unexpected error")
-        mock_session.get.side_effect = RuntimeError("Unexpected error")
+        # Use ValueError for URL parsing errors (realistic scenario)
+        mock_session.head.side_effect = ValueError("Invalid URL")
+        mock_session.get.side_effect = ValueError("Invalid URL")
 
         result = check_connectivity("192.168.100.1")
 
@@ -533,18 +534,19 @@ class TestDiscoverAuth:
     @patch("custom_components.cable_modem_monitor.core.auth.discovery.AuthDiscovery")
     @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
     def test_auth_discovery_exception(self, mock_session_class, mock_auth_discovery_class):
-        """Test auth discovery handles exception."""
+        """Test auth discovery handles exception (e.g., parsing/config errors)."""
         mock_session = _create_mock_session()
         mock_session_class.return_value = mock_session
 
         mock_discovery = MagicMock()
         mock_auth_discovery_class.return_value = mock_discovery
-        mock_discovery.discover.side_effect = RuntimeError("Discovery crashed")
+        # Use TypeError for config/parsing errors (realistic scenario)
+        mock_discovery.discover.side_effect = TypeError("Discovery config error")
 
         result = discover_auth("http://192.168.100.1", "admin", "password")
 
         assert result.success is False
-        assert "Discovery crashed" in result.error
+        assert "Discovery config error" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
     @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")

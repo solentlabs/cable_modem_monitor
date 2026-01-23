@@ -873,7 +873,8 @@ class TestAuthDiscoveryConnectionErrors:
 
     def test_connection_error_returns_failure(self, discovery, mock_session, mock_parser):
         """Test that connection errors return failure."""
-        mock_session.get.side_effect = Exception("Connection refused")
+        # Use OSError (ConnectionRefusedError is a subclass) for realistic simulation
+        mock_session.get.side_effect = OSError("Connection refused")
 
         result = discovery.discover(
             session=mock_session,
