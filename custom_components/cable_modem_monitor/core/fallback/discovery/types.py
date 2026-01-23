@@ -7,6 +7,7 @@ explicitly declared.
 
 Classes:
     ConnectivityResult: Step 1 output - working URL, protocol, SSL flags
+        (re-exported from lib/connectivity for shared use)
     AuthResult: Step 2 output - authenticated session, HTML response, strategy
     ParserResult: Step 3 output - matched parser class, detection method
     ValidationResult: Step 4 output - parsed modem data, parser instance
@@ -31,28 +32,20 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
+# Re-export ConnectivityResult from shared lib for backward compatibility
+from ....lib.connectivity import ConnectivityResult
+
+__all__ = [
+    "ConnectivityResult",
+    "AuthResult",
+    "ParserResult",
+    "ValidationResult",
+    "DiscoveryPipelineResult",
+]
+
 if TYPE_CHECKING:  # pragma: no cover
     from ...auth.hnap.json_builder import HNAPJsonRequestBuilder
     from ...base_parser import ModemParser
-
-
-@dataclass
-class ConnectivityResult:
-    """Output of connectivity check (Step 1).
-
-    Attributes:
-        success: True if modem was reachable via HTTP/HTTPS
-        working_url: Full URL that responded (e.g., "https://192.168.100.1")
-        protocol: "http" or "https"
-        legacy_ssl: True if SECLEVEL=0 ciphers were required
-        error: Error message if success=False
-    """
-
-    success: bool
-    working_url: str | None = None
-    protocol: str | None = None
-    legacy_ssl: bool = False
-    error: str | None = None
 
 
 @dataclass

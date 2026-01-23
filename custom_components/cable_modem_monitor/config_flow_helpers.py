@@ -348,7 +348,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         InvalidAuthError: If authentication fails
         UnsupportedModemError: If no parser matches
     """
-    from .core.fallback.discovery import run_discovery_pipeline
+    from .core.setup import setup_known_modem
 
     # Validate host format
     host = data[CONF_HOST]
@@ -365,9 +365,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         raise UnsupportedModemError(f"Parser '{choice_clean}' not found")
     _LOGGER.info("User selected parser: %s", choice_clean)
 
-    # Load parser auth hints if user selected a specific parser
-    parser_hints = await load_parser_hints(hass, selected_parser)
-
     # Check if user explicitly selected an auth type (from auth_type step)
     auth_type = data.get(CONF_AUTH_TYPE)
     static_auth_config: dict[str, Any] | None = None
@@ -378,23 +375,42 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         static_auth_config = await _build_static_config_for_auth_type(hass, selected_parser, auth_type)
     else:
         # Get static auth config from modem.yaml for known modems
-        # This allows us to skip dynamic auth discovery for faster, more reliable setup
         static_auth_config = await load_static_auth_config(hass, selected_parser)
 
-    # Run discovery pipeline (single-pass, response-driven)
-    result = await hass.async_add_executor_job(
-        run_discovery_pipeline,
-        host,
-        data.get(CONF_USERNAME),
-        data.get(CONF_PASSWORD),
-        selected_parser,
-        parser_hints,
-        static_auth_config,  # None for fallback = dynamic discovery
-    )
+    # Use known modem setup path (not fallback discovery)
+    if static_auth_config:
+        _LOGGER.info(
+            "Using modem.yaml auth config for %s (strategy=%s)",
+            selected_parser.name,
+            static_auth_config.get("auth_strategy"),
+        )
+        result = await hass.async_add_executor_job(
+            setup_known_modem,
+            host,
+            selected_parser,
+            static_auth_config,
+            data.get(CONF_USERNAME),
+            data.get(CONF_PASSWORD),
+        )
+    else:
+        # No static auth config - use fallback discovery for auth probing
+        from .core.fallback.discovery import run_discovery_pipeline
 
-    # Handle pipeline failures
+        _LOGGER.info("No modem.yaml auth config - using fallback discovery")
+        parser_hints = await load_parser_hints(hass, selected_parser)
+        result = await hass.async_add_executor_job(
+            run_discovery_pipeline,
+            host,
+            data.get(CONF_USERNAME),
+            data.get(CONF_PASSWORD),
+            selected_parser,
+            parser_hints,
+            None,  # No static config - will run dynamic discovery
+        )
+
+    # Handle setup/discovery failures
     if not result.success:
-        _LOGGER.error("Discovery pipeline failed at step '%s': %s", result.failed_step, result.error)
+        _LOGGER.error("Setup failed at step '%s': %s", result.failed_step, result.error)
         if result.failed_step == "connectivity":
             raise CannotConnectError(result.error or "Cannot connect to modem")
         elif result.failed_step == "auth":
@@ -402,14 +418,15 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         elif result.failed_step == "parser_detection":
             raise UnsupportedModemError(result.error or "Could not detect modem type")
         else:
-            raise CannotConnectError(result.error or "Discovery failed")
+            raise CannotConnectError(result.error or "Setup failed")
 
-    # Build detection info from pipeline result
+    # Build detection info from result
+    detection_method = "known_modem" if static_auth_config else "fallback_discovery"
     detection_info = {
         "modem_name": result.parser_name,
         "detected_modem": result.parser_name,
         "manufacturer": result.parser_instance.manufacturer if result.parser_instance else None,
-        "detection_method": "discovery_pipeline",
+        "detection_method": detection_method,
     }
 
     # Extract actual model from parsed modem data

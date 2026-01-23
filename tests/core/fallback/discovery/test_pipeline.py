@@ -312,7 +312,7 @@ class TestCheckConnectivity:
         result = check_connectivity("192.168.100.1")
 
         assert result.success is False
-        assert "Could not connect" in result.error
+        assert "Cannot connect" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_timeout(self, mock_session_class):
@@ -971,14 +971,14 @@ class TestRunDiscoveryPipeline:
         """Test pipeline fails at connectivity step."""
         mock_connectivity.return_value = ConnectivityResult(
             success=False,
-            error="Could not connect",
+            error="Cannot connect",
         )
 
         result = run_discovery_pipeline("192.168.100.1")
 
         assert result.success is False
         assert result.failed_step == "connectivity"
-        assert "Could not connect" in result.error
+        assert "Cannot connect" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
     @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")

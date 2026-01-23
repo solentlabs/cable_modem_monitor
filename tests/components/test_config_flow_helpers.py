@@ -1068,7 +1068,7 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with pytest.raises(CannotConnectError, match="Discovery failed"):
+        with pytest.raises(CannotConnectError, match="Setup failed"):
             await validate_input(
                 mock_hass,
                 {

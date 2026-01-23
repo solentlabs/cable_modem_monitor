@@ -1,14 +1,14 @@
-"""Individual pipeline step functions for modem discovery.
+"""Pipeline step functions for fallback modem discovery.
 
-This module contains the four core pipeline steps, each as a pure function
-that takes explicit inputs and returns a typed result dataclass.
+This module contains step functions for discovering unknown modems.
+For known modems with modem.yaml, use core/setup/known_modem.py instead.
 
 Pipeline Steps:
     1. check_connectivity(host) -> ConnectivityResult
-       Finds working URL (HTTPS/HTTP) and detects legacy SSL needs
+       Shared utility from lib/connectivity.py
 
     2. discover_auth(working_url, credentials) -> AuthResult
-       Detects auth strategy and returns authenticated session + HTML
+       Probes auth strategy for unknown modems
 
     3. detect_parser(html) -> ParserResult
        Matches HTML against login_markers/model_strings from modem.yaml hints
@@ -23,8 +23,8 @@ Design Principles:
     - Errors are returned, not raised (except for unexpected exceptions)
 
 HTTP Request Policy:
-    - Step 1: HEAD/GET to test connectivity only
-    - Step 2: Auth requests (may be multiple for form/HNAP)
+    - Step 1: HEAD/GET to test connectivity (shared with known modem setup)
+    - Step 2: Auth probing requests (fallback only - known modems use modem.yaml)
     - Step 3: NO HTTP requests - uses HTML from step 2
     - Step 4: Fetches additional pages declared in modem.yaml
 
@@ -40,9 +40,19 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
+from ....lib.connectivity import check_connectivity
 from ...discovery_helpers import HintMatcher
 from ...ssl_adapter import LegacySSLAdapter
-from .types import AuthResult, ConnectivityResult, ParserResult, ValidationResult
+from .types import AuthResult, ParserResult, ValidationResult
+
+# Re-export check_connectivity for pipeline.py
+__all__ = [
+    "check_connectivity",
+    "discover_auth",
+    "detect_parser",
+    "validate_parse",
+    "_get_parser_class_by_name",
+]
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...base_parser import ModemParser
@@ -51,109 +61,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # =============================================================================
-# STEP 1: CONNECTIVITY CHECK
+# STEP 1: CONNECTIVITY CHECK - imported from lib/connectivity.py
 # =============================================================================
-
-
-def check_connectivity(  # noqa: C901
-    host: str,
-    timeout: float = 5.0,
-) -> ConnectivityResult:
-    """Step 1: Find working URL and protocol.
-
-    Tries HTTPS first, then HTTP. For HTTPS failures, attempts legacy SSL
-    ciphers (SECLEVEL=0) for older modem firmware.
-
-    Args:
-        host: Modem IP address or hostname (with or without protocol)
-        timeout: Connection timeout in seconds
-
-    Returns:
-        ConnectivityResult with working_url if successful
-
-    HTTP Behavior:
-        - Uses HEAD request first (faster), falls back to GET
-        - Any HTTP response (200, 401, 403, 500) indicates connectivity
-        - SSL certificate verification is disabled (modems use self-signed)
-    """
-    # Build URLs to try
-    if host.startswith(("http://", "https://")):
-        urls_to_try = [host]
-    else:
-        urls_to_try = [f"https://{host}", f"http://{host}"]
-
-    legacy_ssl = False
-
-    for url in urls_to_try:
-        protocol = "https" if url.startswith("https://") else "http"
-        _LOGGER.debug("Connectivity check: trying %s", url)
-
-        try:
-            # Try HEAD first (faster), fall back to GET
-            session = requests.Session()
-            session.verify = False
-
-            try:
-                resp = session.head(url, timeout=timeout, allow_redirects=True)
-            except requests.RequestException:
-                resp = session.get(url, timeout=timeout, allow_redirects=True)
-
-            # Any HTTP response means the server is reachable
-            _LOGGER.info("Connectivity check: %s reachable (HTTP %d)", url, resp.status_code)
-            return ConnectivityResult(
-                success=True,
-                working_url=url,
-                protocol=protocol,
-                legacy_ssl=legacy_ssl,
-            )
-
-        except requests.exceptions.SSLError as e:
-            # Try with legacy SSL for older firmware
-            if protocol == "https" and not legacy_ssl:
-                _LOGGER.debug("SSL error, trying legacy SSL ciphers: %s", e)
-                try:
-                    legacy_session = requests.Session()
-                    legacy_session.mount("https://", LegacySSLAdapter())
-                    legacy_session.verify = False
-                    # Response not used - we only care that request succeeded
-                    legacy_session.get(url, timeout=timeout, allow_redirects=True)
-
-                    _LOGGER.info("Connectivity check: %s reachable with legacy SSL", url)
-                    return ConnectivityResult(
-                        success=True,
-                        working_url=url,
-                        protocol=protocol,
-                        legacy_ssl=True,
-                    )
-                except (requests.RequestException, OSError) as legacy_err:
-                    _LOGGER.debug("Legacy SSL also failed: %s", legacy_err)
-
-        except requests.exceptions.ConnectionError as e:
-            _LOGGER.debug("Connection error for %s: %s", url, e)
-            continue
-
-        except requests.exceptions.Timeout:
-            _LOGGER.debug("Timeout for %s", url)
-            continue
-
-        except (requests.RequestException, OSError) as e:
-            _LOGGER.debug("Network error for %s: %s", url, e)
-            continue
-
-        except (AttributeError, ValueError) as e:
-            # AttributeError: session object issues
-            # ValueError: URL parsing errors
-            _LOGGER.debug("Unexpected error for %s: %s", url, e, exc_info=True)
-            continue
-
-    return ConnectivityResult(
-        success=False,
-        error=f"Could not connect to {host} via HTTPS or HTTP",
-    )
+# check_connectivity() and ConnectivityResult are shared with core/setup/
+# and imported at the top of this file from lib.connectivity
 
 
 # =============================================================================
-# STEP 2: AUTH DISCOVERY
+# STEP 2: AUTH DISCOVERY (fallback only - known modems use modem.yaml)
 # =============================================================================
 # Note: For modems with known auth config (from modem.yaml), use
 # AuthWorkflow.authenticate_with_static_config() in pipeline.py instead
