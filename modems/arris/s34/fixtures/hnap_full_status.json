@@ -1,0 +1,30 @@
+{
+  "GetMultipleHNAPsResponse": {
+    "GetMultipleHNAPsResult": "OK",
+    "GetCustomerStatusDownstreamChannelInfoResponse": {
+      "CustomerConnDownstreamChannel": "1^Locked^256QAM^17^483000000^ 7.3^39.0^34^0^|+|2^Not Locked^Unknown^0^0^-60.0^ 7.3^0^0^|+|3^Locked^256QAM^14^465000000^ 7.6^39.0^4^0^|+|4^Locked^256QAM^15^471000000^ 7.5^39.0^18^0^|+|5^Locked^256QAM^16^477000000^ 7.6^39.0^20^0^|+|6^Locked^256QAM^18^489000000^ 7.0^38.6^5^0^|+|7^Locked^256QAM^19^495000000^ 7.0^38.6^19^0^|+|8^Locked^256QAM^20^513000000^ 6.8^38.6^21^0^|+|9^Locked^256QAM^21^519000000^ 6.6^39.0^11^0^|+|10^Locked^256QAM^22^525000000^ 6.2^38.6^9^0^|+|11^Locked^256QAM^23^531000000^ 6.4^38.6^17^0^|+|12^Locked^256QAM^24^537000000^ 6.3^39.0^7^0^|+|13^Locked^256QAM^26^543000000^ 7.0^39.0^10^0^|+|14^Locked^256QAM^27^549000000^ 5.6^39.0^6^0^|+|15^Locked^256QAM^28^555000000^ 6.0^39.0^10^0^|+|16^Locked^256QAM^29^561000000^ 5.3^39.0^4^0^|+|17^Locked^256QAM^30^567000000^ 5.9^38.6^7^0^|+|18^Locked^256QAM^31^573000000^ 5.9^38.6^8^0^|+|19^Locked^256QAM^32^579000000^ 5.8^38.6^11^0^|+|20^Locked^256QAM^33^585000000^ 5.0^38.6^18^0^|+|21^Locked^256QAM^34^591000000^ 5.3^38.6^24^0^|+|22^Locked^256QAM^35^597000000^ 4.9^38.6^7^0^|+|23^Locked^256QAM^36^603000000^ 5.9^38.6^25^0^|+|24^Locked^256QAM^37^609000000^ 5.1^38.6^26^0^|+|25^Locked^256QAM^38^615000000^ 5.2^38.6^29^0^|+|26^Locked^256QAM^39^621000000^ 5.0^38.6^16^0^|+|27^Locked^256QAM^40^627000000^ 5.2^37.6^11^0^|+|28^Locked^256QAM^41^633000000^ 4.6^38.6^8^0^|+|29^Locked^256QAM^42^639000000^ 4.3^37.6^9^0^|+|30^Locked^256QAM^43^645000000^ 4.5^38.6^6^0^|+|31^Locked^256QAM^44^651000000^ 3.7^38.6^29^0^|+|32^Locked^256QAM^45^657000000^ 4.2^38.6^13^0^|+|33^Not Locked^Unknown^0^0^ 0.0^ 0.0^0^0^|+|34^Locked^OFDM PLC^25^690000000^ 4.7^40.0^1224629527^717^",
+      "GetCustomerStatusDownstreamChannelInfoResult": "OK"
+    },
+    "GetCustomerStatusUpstreamChannelInfoResponse": {
+      "CustomerConnUpstreamChannel": "1^Locked^SC-QAM^3^6400000^22800000^37.8^|+|2^Locked^SC-QAM^6^3200000^40400000^38.0^|+|3^Locked^SC-QAM^5^6400000^35600000^37.5^|+|4^Locked^SC-QAM^4^6400000^29200000^37.8^|+|5^Locked^SC-QAM^2^6400000^16300000^38.3^|+|6^Not Locked^Unknown^0^0^0^-inf^|+|7^Not Locked^Unknown^0^0^0^-inf^|+|8^Not Locked^Unknown^0^0^0^-inf^|+|9^Not Locked^Unknown^0^0^0^ 0.0^|+|10^Not Locked^Unknown^0^0^0^ 0.0^",
+      "GetCustomerStatusUpstreamChannelInfoResult": "OK"
+    },
+    "GetCustomerStatusStartupSequenceResponse": {
+      "CustomerConnDSFreq": "483000000 Hz",
+      "CustomerConnConnectivityStatus": "OK",
+      "CustomerConnBootStatus": "OK",
+      "CustomerConnSecurityStatus": "Enabled",
+      "GetCustomerStatusStartupSequenceResult": "OK"
+    },
+    "GetCustomerStatusConnectionInfoResponse": {
+      "CustomerConnNetworkAccess": "Allowed",
+      "StatusSoftwareModelName": "S34",
+      "GetCustomerStatusConnectionInfoResult": "OK"
+    },
+    "GetArrisDeviceStatusResponse": {
+      "FirmwareVersion": "AT01.01.010.042324_S3.04.735",
+      "InternetConnection": "Connected",
+      "GetArrisDeviceStatusResult": "OK"
+    }
+  }
+}

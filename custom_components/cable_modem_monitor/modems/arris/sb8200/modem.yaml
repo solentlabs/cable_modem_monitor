@@ -39,7 +39,7 @@ sources:
 # =============================================================================
 # NETWORK
 # =============================================================================
-# Protocol varies by firmware - can be HTTP (no auth) or HTTPS (with auth)
+# Protocol (HTTP/HTTPS) is auto-detected at setup - varies by firmware
 default_host: "192.168.100.1"
 
 # =============================================================================

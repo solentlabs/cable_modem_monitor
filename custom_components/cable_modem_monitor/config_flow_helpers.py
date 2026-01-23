@@ -379,14 +379,27 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         static_auth_config = await load_static_auth_config(hass, selected_parser)
 
     # Require static auth config - all known modems must have modem.yaml
+    # Exception: Fallback parser uses dynamic auth discovery (no modem.yaml by design)
     if not static_auth_config:
-        _LOGGER.error(
-            "No auth config found for %s - modem.yaml may be incomplete",
-            selected_parser.name,
-        )
-        raise UnsupportedModemError(
-            f"Configuration error: {selected_parser.name} is missing auth configuration. " "Please report this issue."
-        )
+        if selected_parser.manufacturer == "Unknown":
+            # Fallback parser - provide default no_auth config
+            # FallbackOrchestrator will discover actual auth at runtime
+            _LOGGER.info("Using default no_auth config for fallback parser %s", selected_parser.name)
+            static_auth_config = {
+                "auth_strategy": "no_auth",
+                "auth_form_config": None,
+                "auth_hnap_config": None,
+                "auth_url_token_config": None,
+            }
+        else:
+            _LOGGER.error(
+                "No auth config found for %s - modem.yaml may be incomplete",
+                selected_parser.name,
+            )
+            raise UnsupportedModemError(
+                f"Configuration error: {selected_parser.name} is missing auth configuration. "
+                "Please report this issue."
+            )
 
     result = await hass.async_add_executor_job(
         setup_modem,

@@ -369,10 +369,8 @@ def main():  # noqa: C901
         # pre-commit: format/lint staged files
         # commit-msg: validate commit message format
         # pre-push: full project validation (ruff check . && pytest)
-        run_command(
-            f"{precommit_cmd} install --install-hooks --hook-type pre-commit --hook-type commit-msg --hook-type pre-push",
-            quiet=True,
-        )
+        hook_types = "--hook-type pre-commit --hook-type commit-msg --hook-type pre-push"
+        run_command(f"{precommit_cmd} install --install-hooks {hook_types}", quiet=True)
         print_success("Pre-commit hooks installed (pre-commit + commit-msg + pre-push)")
     except Exception as e:
         print_warning(f"Pre-commit hook installation failed: {e}")

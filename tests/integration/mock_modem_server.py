@@ -152,6 +152,12 @@ class MockModemServer:
                 status, resp_headers, body = auth_handler.handle_request(self, "GET", self.path, headers)
                 self._send_response(status, resp_headers, body)
 
+            def do_HEAD(self) -> None:  # noqa: N802
+                """Handle HEAD requests (same as GET but no body)."""
+                headers = {k: v for k, v in self.headers.items()}
+                status, resp_headers, body = auth_handler.handle_request(self, "GET", self.path, headers)
+                self._send_response(status, resp_headers, b"")  # No body for HEAD
+
             def do_POST(self) -> None:  # noqa: N802
                 """Handle POST requests."""
                 headers = {k: v for k, v in self.headers.items()}

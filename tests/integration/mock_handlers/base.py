@@ -98,7 +98,13 @@ class BaseAuthHandler(ABC):
         clean_path = urlparse(path).path.lstrip("/")
 
         if not clean_path:
-            clean_path = "index.html"
+            # Try index.html first, then root.html
+            for default in ("index.html", "root.html"):
+                if (self.fixtures_path / default).exists():
+                    clean_path = default
+                    break
+            else:
+                clean_path = "index.html"  # Will 404
 
         fixture_path = self.fixtures_path / clean_path
 

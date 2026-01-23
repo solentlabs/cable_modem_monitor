@@ -23,10 +23,10 @@ v3.13.0 focuses on code quality, maintainability, and developer experience. Majo
 
 ### Changed
 
-- **BREAKING (Internal)**: `__init__.py` monolith extracted into focused modules (`setup.py`, `lifecycle.py`, `data_update.py`) (#1)
-- **BREAKING (Internal)**: `ModemScraper` renamed to `DataOrchestrator` for clarity (#14)
-- **BREAKING (Internal)**: `parser_discovery` module renamed to `parser_registry`
-- **Fallback Subsystem Isolation** - Unknown modem discovery moved to `core/fallback/` directory
+- **Modular Init** - `__init__.py` monolith extracted into focused modules (`setup.py`, `lifecycle.py`, `data_update.py`) (#1)
+- **DataOrchestrator** - `ModemScraper` renamed to `DataOrchestrator` for clarity (#14)
+- **Parser Registry** - `parser_discovery` module renamed to `parser_registry`
+- **Fallback Subsystem** - Unknown modem discovery moved to `core/fallback/` directory
 - **Auth Config Consolidation** - All auth configuration now lives in `auth.types{}` section of `modem.yaml`
 - **Metadata Consolidation** - Separate `metadata.yaml` files merged into `modem.yaml`
 - **Protocol Detection** - Removed hardcoded `default_port` and `protocol` from `modem.yaml`; now auto-detected

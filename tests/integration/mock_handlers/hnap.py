@@ -38,6 +38,27 @@ def _hmac_md5(key: str, message: str) -> str:
     return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.md5).hexdigest().upper()
 
 
+def _hmac_sha256(key: str, message: str) -> str:
+    """Compute HMAC-SHA256 and return uppercase hex string."""
+    return hmac.new(key.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest().upper()
+
+
+def _compute_hmac(key: str, message: str, algorithm: str = "md5") -> str:
+    """Compute HMAC with configurable algorithm.
+
+    Args:
+        key: HMAC key.
+        message: Message to sign.
+        algorithm: Algorithm name ("md5" or "sha256"). Defaults to "md5".
+
+    Returns:
+        Uppercase hex digest.
+    """
+    if algorithm == "sha256":
+        return _hmac_sha256(key, message)
+    return _hmac_md5(key, message)
+
+
 class HnapAuthHandler(BaseAuthHandler):
     """Handler for HNAP/SOAP challenge-response authentication.
 
@@ -67,6 +88,9 @@ class HnapAuthHandler(BaseAuthHandler):
         # Session state
         self.pending_challenges: dict[str, dict] = {}  # cookie -> challenge data
         self.authenticated_sessions: dict[str, str] = {}  # uid cookie -> private_key
+
+        # HMAC algorithm (S33 uses md5, S34 uses sha256)
+        self.hmac_algorithm = getattr(hnap_config, "hmac_algorithm", "md5")
 
     def handle_request(
         self,
@@ -257,8 +281,9 @@ class HnapAuthHandler(BaseAuthHandler):
         public_key = challenge_data["public_key"]
 
         # Verify credentials using TEST credentials
-        expected_private_key = _hmac_md5(public_key + TEST_PASSWORD, challenge)
-        expected_login_password = _hmac_md5(expected_private_key, challenge)
+        # Use configurable algorithm (S33 uses md5, S34 uses sha256)
+        expected_private_key = _compute_hmac(public_key + TEST_PASSWORD, challenge, self.hmac_algorithm)
+        expected_login_password = _compute_hmac(expected_private_key, challenge, self.hmac_algorithm)
 
         if username == TEST_USERNAME and login_password == expected_login_password:
             # Store authenticated session
