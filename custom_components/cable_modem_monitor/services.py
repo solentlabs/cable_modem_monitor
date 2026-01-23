@@ -357,75 +357,88 @@ def create_clear_history_handler(hass: HomeAssistant):
     return handle_clear_history
 
 
-def create_generate_dashboard_handler(hass: HomeAssistant):
+def create_generate_dashboard_handler(hass: HomeAssistant):  # noqa: C901
     """Create the generate dashboard service handler."""
 
-    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
+    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:  # noqa: C901
         """Handle the generate_dashboard service call."""
-        # Get options from call
-        opts = {
-            "ds_power": call.data.get("include_downstream_power", True),
-            "ds_snr": call.data.get("include_downstream_snr", True),
-            "ds_freq": call.data.get("include_downstream_frequency", True),
-            "us_power": call.data.get("include_upstream_power", True),
-            "us_freq": call.data.get("include_upstream_frequency", False),
-            "errors": call.data.get("include_errors", True),
-            "latency": call.data.get("include_latency", True),
-            "status": call.data.get("include_status_card", True),
-        }
-        graph_hours = call.data.get("graph_hours", 24)
-        short_titles = call.data.get("short_titles", False)
-        titles = _get_dashboard_titles(short_titles)
-        channel_label = call.data.get("channel_label", "auto")
-        channel_grouping = call.data.get("channel_grouping", "by_direction")
+        try:
+            # Get options from call
+            opts = {
+                "ds_power": call.data.get("include_downstream_power", True),
+                "ds_snr": call.data.get("include_downstream_snr", True),
+                "ds_freq": call.data.get("include_downstream_frequency", True),
+                "us_power": call.data.get("include_upstream_power", True),
+                "us_freq": call.data.get("include_upstream_frequency", False),
+                "errors": call.data.get("include_errors", True),
+                "latency": call.data.get("include_latency", True),
+                "status": call.data.get("include_status_card", True),
+            }
+            graph_hours = call.data.get("graph_hours", 24)
+            short_titles = call.data.get("short_titles", False)
+            titles = _get_dashboard_titles(short_titles)
+            channel_label = call.data.get("channel_label", "auto")
+            channel_grouping = call.data.get("channel_grouping", "by_direction")
 
-        # Get coordinator data to find actual channel info
-        if DOMAIN not in hass.data or not hass.data[DOMAIN]:
-            return {"yaml": "# Error: No cable modem configured"}
+            # Get coordinator data to find actual channel info
+            if DOMAIN not in hass.data or not hass.data[DOMAIN]:
+                return {"yaml": "# Error: No cable modem configured"}
 
-        entry_id = next(iter(hass.data[DOMAIN]))
-        coordinator = hass.data[DOMAIN][entry_id]
-        downstream_info, upstream_info = get_channel_info(coordinator)
+            # Find first coordinator (skip non-coordinator entries like "log_buffer")
+            coordinator = None
+            for value in hass.data[DOMAIN].values():
+                if hasattr(value, "data") and hasattr(value, "async_refresh"):
+                    coordinator = value
+                    break
 
-        # Build YAML
-        yaml_parts = [
-            "# Cable Modem Dashboard",
-            "# Copy from here, paste into: Dashboard > Add Card > Manual",
-            "type: vertical-stack",
-            "cards:",
-        ]
+            if coordinator is None:
+                return {"yaml": "# Error: No cable modem coordinator found"}
 
-        if opts["status"]:
-            yaml_parts.extend(_build_status_card_yaml())
+            downstream_info, upstream_info = get_channel_info(coordinator)
 
-        # Channel graph configurations: (opt_key, channel_info, title_key, entity_pattern)
-        channel_graphs = [
-            ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
-            ("ds_snr", downstream_info, "ds_snr", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
-            ("ds_freq", downstream_info, "ds_freq", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
-            ("us_power", upstream_info, "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
-            ("us_freq", upstream_info, "us_freq", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
-        ]
+            # Build YAML
+            yaml_parts = [
+                "# Cable Modem Dashboard",
+                "# Copy from here, paste into: Dashboard > Add Card > Manual",
+                "type: vertical-stack",
+                "cards:",
+            ]
 
-        for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
-            if opts[opt_key]:
-                _add_channel_graphs(
-                    yaml_parts,
-                    ch_info,
-                    titles[title_key],
-                    entity_pattern,
-                    graph_hours,
-                    channel_label,
-                    channel_grouping,
-                    short_titles,
-                )
+            if opts["status"]:
+                yaml_parts.extend(_build_status_card_yaml())
 
-        if opts["errors"]:
-            yaml_parts.extend(_build_error_graphs_yaml(titles))
+            # Channel graph configurations: (opt_key, channel_info, title_key, entity_pattern)
+            channel_graphs = [
+                ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
+                ("ds_snr", downstream_info, "ds_snr", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
+                ("ds_freq", downstream_info, "ds_freq", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
+                ("us_power", upstream_info, "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
+                ("us_freq", upstream_info, "us_freq", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
+            ]
 
-        if opts["latency"]:
-            yaml_parts.extend(_build_latency_graph_yaml())
+            for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
+                if opts[opt_key]:
+                    _add_channel_graphs(
+                        yaml_parts,
+                        ch_info,
+                        titles[title_key],
+                        entity_pattern,
+                        graph_hours,
+                        channel_label,
+                        channel_grouping,
+                        short_titles,
+                    )
 
-        return {"yaml": "\n".join(yaml_parts)}
+            if opts["errors"]:
+                yaml_parts.extend(_build_error_graphs_yaml(titles))
+
+            if opts["latency"]:
+                yaml_parts.extend(_build_latency_graph_yaml())
+
+            return {"yaml": "\n".join(yaml_parts)}
+
+        except Exception as e:
+            _LOGGER.exception("Error generating dashboard: %s", e)
+            return {"yaml": f"# Error generating dashboard: {e}"}
 
     return handle_generate_dashboard
