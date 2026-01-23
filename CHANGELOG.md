@@ -7,13 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Architecture Improvements
+
+v3.13.0 focuses on code quality, maintainability, and developer experience. Major refactoring reduces tech debt while adding new modem support and improving test coverage.
+
 ### Added
 
-- **Configurable HMAC Algorithm** - HNAPJsonRequestBuilder now supports `hmac_algorithm` parameter ("md5" or "sha256") for modems with different authentication requirements
+- **Arris/CommScope S34 Support** - HNAP protocol with HMAC-SHA256 authentication. 32 downstream + 5 upstream SC-QAM channels, plus OFDM/OFDMA. (Thanks [@rplancha](https://github.com/rplancha)! Based on [PR #90](https://github.com/solentlabs/cable_modem_monitor/pull/90))
+- **Configurable HMAC Algorithm** - `HNAPJsonRequestBuilder` now supports `hmac_algorithm` parameter ("md5" or "sha256") for modems with different authentication requirements
+- **Entity Prefix Selection** - Multi-modem setups can now configure custom entity prefixes during setup to avoid naming conflicts
+- **Action Layer Architecture** - Restart functionality now uses data-driven action definitions in `modem.yaml` instead of hardcoded parser methods
+- **Circular Log Buffer** - New diagnostics buffer compatible with HA 2025.11+ that preserves logs across integration reloads
+- **E2E Test Framework** - Mock modem CLI and discovery pipeline integration tests for comprehensive testing
+- **Pre-Push Hooks** - Full project validation (ruff + pytest) before push to catch issues early (#20)
+
+### Changed
+
+- **BREAKING (Internal)**: `__init__.py` monolith extracted into focused modules (`setup.py`, `lifecycle.py`, `data_update.py`) (#1)
+- **BREAKING (Internal)**: `ModemScraper` renamed to `DataOrchestrator` for clarity (#14)
+- **BREAKING (Internal)**: `parser_discovery` module renamed to `parser_registry`
+- **Fallback Subsystem Isolation** - Unknown modem discovery moved to `core/fallback/` directory
+- **Auth Config Consolidation** - All auth configuration now lives in `auth.types{}` section of `modem.yaml`
+- **Metadata Consolidation** - Separate `metadata.yaml` files merged into `modem.yaml`
+- **Protocol Detection** - Removed hardcoded `default_port` and `protocol` from `modem.yaml`; now auto-detected
 
 ### Fixed
 
 - **Form Auth HTML Response** - Fixed form authentication discarding the HTML response when auth succeeded without a `success_indicator`, causing parsers like CGA2121 to see empty data (#75)
+- **Case-Insensitive Password Detection** - Password field detection now case-insensitive (#75)
+- **G54 OFDM Channel IDs** - Handle OFDM/OFDMA prefixed channel IDs correctly
+- **URL Pattern Ordering** - Protected pages now prioritized in URL pattern ordering for polling
+- **Log Buffer Persistence** - Diagnostics log buffer preserved across integration reloads
+- **HTTP/HTTPS Detection** - Try HTTP before HTTPS to prevent protocol mismatch on setup
+- **Dashboard Service** - Handle `log_buffer` in `hass.data` when generating dashboard
+
+### Improved
+
+- **Exception Handling** - Replaced broad `except Exception` blocks with specific exception types for better diagnostics (#6)
+- **Test Coverage** - Config flow tests now use proper HA test infrastructure (`pytest-homeassistant-custom-component`)
+- **Test Credentials** - Standardized test credentials to "pw" across all test files
 
 ## [3.12.1] - 2026-01-20
 
