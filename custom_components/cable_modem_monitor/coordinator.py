@@ -58,7 +58,8 @@ def create_update_function(hass: HomeAssistant, scraper, health_monitor, host: s
 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
-        base_url = f"http://{host}"
+        # Host may already include protocol (http:// or https://)
+        base_url = host if host.startswith(("http://", "https://")) else f"http://{host}"
 
         # Use config-based ICMP setting (auto-detected during setup/options flow)
         # This allows different IPs of the same modem to have different ICMP behavior
