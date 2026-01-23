@@ -103,9 +103,11 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
 
     for config in configs:
         auth = config.get("auth", {})
+        # v3.12+ uses auth.types.{form,hnap,url_token}
+        auth_types = auth.get("types", {})
 
-        # Form auth
-        form = auth.get("form", {})
+        # Form auth - check both auth.form (legacy) and auth.types.form (v3.12+)
+        form = auth.get("form", {}) or auth_types.get("form", {})
         if form:
             if uf := form.get("username_field"):
                 username_fields.add(uf)
@@ -138,16 +140,16 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
                 if action := strategy_form.get("action"):
                     form_actions.add(action)
 
-        # HNAP auth
-        hnap = auth.get("hnap", {})
+        # HNAP auth - check both auth.hnap (legacy) and auth.types.hnap (v3.12+)
+        hnap = auth.get("hnap", {}) or auth_types.get("hnap", {})
         if hnap:
             if endpoint := hnap.get("endpoint"):
                 hnap_endpoints.add(endpoint)
             if namespace := hnap.get("namespace"):
                 hnap_namespaces.add(namespace)
 
-        # URL token auth
-        url_token = auth.get("url_token", {})
+        # URL token auth - check both auth.url_token and auth.types.url_token
+        url_token = auth.get("url_token", {}) or auth_types.get("url_token", {})
         if url_token:
             if prefix := url_token.get("login_prefix"):
                 url_token_indicators.add(prefix)
