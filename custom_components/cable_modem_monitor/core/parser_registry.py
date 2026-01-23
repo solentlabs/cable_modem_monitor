@@ -236,8 +236,8 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
     Fast path: Uses index.yaml for O(1) lookup and direct loading.
     Fallback: Full discovery if direct load fails.
 
-    Special case: The Universal Fallback Parser is not in modems/ so it's
-    loaded directly from parsers/universal/fallback.py.
+    Special case: The Universal Fallback Parser is in core/fallback/ (not modems/)
+    as it's part of the fallback subsystem.
 
     Args:
         parser_name: The name of the parser (e.g., "Motorola MB8611")
@@ -252,9 +252,9 @@ def get_parser_by_name(parser_name: str) -> type[ModemParser] | None:
 
     _LOGGER.debug("Attempting to get parser by name: %s", parser_name_clean)
 
-    # Special case: Universal Fallback Parser is not in modems/ directory
+    # Special case: Universal Fallback Parser is in core/fallback/ (not modems/)
     if parser_name_clean == "Unknown Modem (Fallback Mode)":
-        from custom_components.cable_modem_monitor.parsers.universal.fallback import (
+        from custom_components.cable_modem_monitor.core.fallback.parser import (
             UniversalFallbackParser,
         )
 

@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import pytest
 
+from custom_components.cable_modem_monitor.core.fallback.parser import UniversalFallbackParser
+from custom_components.cable_modem_monitor.core.parser_registry import get_parsers
 from custom_components.cable_modem_monitor.modem_config.adapter import get_url_patterns_for_parser
-from custom_components.cable_modem_monitor.parsers import get_parsers
-from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
 
 
 def _get_url_patterns(parser_class) -> list[dict]:

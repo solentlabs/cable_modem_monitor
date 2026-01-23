@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 from ..core.actions import ActionFactory
 from ..core.actions.base import ActionType
-from ..parsers import get_parser_by_name
+from ..core.parser_registry import get_parser_by_name
 from .adapter import get_auth_adapter_for_parser
 
 _LOGGER = logging.getLogger(__name__)

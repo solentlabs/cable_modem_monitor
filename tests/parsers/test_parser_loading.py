@@ -12,12 +12,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.parser_discovery import (
+from custom_components.cable_modem_monitor.core.parser_registry import (
     _find_parser_in_module,
     _sort_parsers,
     clear_parser_caches,
-)
-from custom_components.cable_modem_monitor.parsers import (
     get_parser_by_name,
     get_parser_dropdown_from_index,
     get_parsers,
@@ -73,8 +71,8 @@ class TestParserCaching:
 
     def test_get_parsers_caches_results(self):
         """Test that get_parsers caches results on first call."""
-        # Clear cache - cache is now in core.parser_discovery
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery_module
+        # Clear cache - cache is now in core.parser_registry
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery_module
 
         discovery_module._PARSER_CACHE = None
 
@@ -233,7 +231,7 @@ class TestParserLoadingPerformance:
         """Test that direct loading is faster than full discovery."""
         import time
 
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery_module
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery_module
 
         parser_name = _get_any_parser_name()
 
@@ -281,7 +279,7 @@ class TestClearParserCaches:
 
     def test_clear_parser_caches_clears_all(self):
         """Test that clear_parser_caches clears all cache variables."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery
 
         # Prime all caches
         get_parsers(use_cache=True)
@@ -364,9 +362,9 @@ class TestFindParserInModule:
 
     def test_find_parser_empty_module_returns_none(self):
         """Test that module without parser returns None."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery_module
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery_module
 
-        # parser_discovery itself has no ModemParser subclasses
+        # parser_registry itself has no ModemParser subclasses
         result = _find_parser_in_module(discovery_module)
         assert result is None
 
@@ -390,7 +388,7 @@ class TestIndexLoadingErrors:
 
     def test_missing_index_file(self):
         """Test handling of missing index.yaml file."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery
 
         clear_parser_caches()
 
@@ -403,14 +401,16 @@ class TestIndexLoadingErrors:
 
     def test_corrupted_index_file(self):
         """Test handling of corrupted/invalid YAML in index."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery
+        import yaml
+
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery
 
         clear_parser_caches()
 
-        # Simulate YAML parse error
+        # Simulate YAML parse error (use yaml.YAMLError which is what the code catches)
         with (
             patch("builtins.open"),
-            patch("yaml.safe_load", side_effect=Exception("YAML parse error")),
+            patch("yaml.safe_load", side_effect=yaml.YAMLError("YAML parse error")),
         ):
             index = discovery._load_modem_index()
 
@@ -424,7 +424,7 @@ class TestDirectLoadErrors:
 
     def test_direct_load_import_error(self):
         """Test handling of import errors during direct load."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery
 
         clear_parser_caches()
 
@@ -439,7 +439,7 @@ class TestDirectLoadErrors:
 
     def test_direct_load_parser_not_in_module(self):
         """Test when module exists but parser class not found."""
-        import custom_components.cable_modem_monitor.core.parser_discovery as discovery
+        import custom_components.cable_modem_monitor.core.parser_registry as discovery
 
         clear_parser_caches()
 
