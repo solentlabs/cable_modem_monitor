@@ -3,10 +3,14 @@
 Tests the known modem setup flow using MockModemServer to simulate
 real modem behavior without hardware. These tests verify the path
 users take when selecting their modem model from the dropdown.
+
+Tests run on both HTTP and HTTPS protocols to ensure protocol detection
+works correctly for all modems.
 """
 
 from __future__ import annotations
 
+import ssl
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -57,6 +61,37 @@ def build_static_auth_config(parser: type[ModemParser], auth_type: str) -> dict[
 
 
 MODEMS_DIR = Path(__file__).parent.parent.parent / "modems"
+
+
+# =============================================================================
+# PROTOCOL FIXTURES
+# =============================================================================
+
+
+@pytest.fixture(params=["http", "https"], ids=["http", "https"])
+def protocol(request) -> str:
+    """Parameterize tests to run on both HTTP and HTTPS."""
+    return request.param
+
+
+@pytest.fixture
+def ssl_context_for_protocol(protocol, test_certs) -> ssl.SSLContext | None:
+    """Provide SSL context for HTTPS, None for HTTP.
+
+    Args:
+        protocol: "http" or "https" from the protocol fixture
+        test_certs: Certificate paths from conftest.py
+
+    Returns:
+        SSL context for HTTPS, None for HTTP
+    """
+    if protocol == "http":
+        return None
+
+    cert_path, key_path = test_certs
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(cert_path, key_path)
+    return context
 
 
 def modem_path_to_display_name(modem_path: str) -> str:
@@ -179,20 +214,35 @@ class TestKnownModemSetupE2E:
 
     These tests verify the path where users select their modem model from
     the dropdown and we use modem.yaml as the source of truth for auth config.
+
+    Tests run on both HTTP and HTTPS protocols to ensure protocol detection
+    and connectivity work correctly regardless of transport.
     """
 
     @pytest.mark.parametrize("modem_path,auth_type,expected_strategy", MULTI_AUTH_MODEMS)
-    def test_setup_with_static_auth(self, modem_path: str, auth_type: str, expected_strategy: str):
-        """Known modem setup should succeed with static auth config from modem.yaml."""
+    def test_setup_with_static_auth(
+        self,
+        modem_path: str,
+        auth_type: str,
+        expected_strategy: str,
+        protocol: str,
+        ssl_context_for_protocol: ssl.SSLContext | None,
+    ):
+        """Known modem setup should succeed with static auth config from modem.yaml.
+
+        Runs on both HTTP and HTTPS to verify protocol-agnostic behavior.
+        """
         modem_dir = MODEMS_DIR / modem_path
 
-        with MockModemServer.from_modem_path(modem_dir, auth_type=auth_type) as server:
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type=auth_type, ssl_context=ssl_context_for_protocol
+        ) as server:
             # Build static auth config
             parser_name = modem_path_to_display_name(modem_path)
             parser = get_parser_by_name(parser_name)
             static_config = build_static_auth_config(parser, auth_type)
 
-            # Run known modem setup
+            # Run known modem setup - pass just host:port so protocol detection runs
             result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
                 parser_class=parser,
@@ -202,7 +252,7 @@ class TestKnownModemSetupE2E:
             )
 
             # Verify success
-            assert result.success, f"Setup failed: {result.error}"
+            assert result.success, f"Setup failed on {protocol}: {result.error}"
             actual = result.auth_strategy
             assert actual == expected_strategy, f"Expected {expected_strategy}, got {actual}"
 
@@ -213,13 +263,18 @@ class TestKnownModemSetupE2E:
 
 
 class TestFormAuthE2E:
-    """E2E tests for form-based authentication."""
+    """E2E tests for form-based authentication.
 
-    def test_sb6190_form_auth(self):
+    Tests run on both HTTP and HTTPS protocols.
+    """
+
+    def test_sb6190_form_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
         """SB6190 form auth should authenticate and parse."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
-        with MockModemServer.from_modem_path(modem_dir, auth_type="form") as server:
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+        ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "form")
 
@@ -231,14 +286,16 @@ class TestFormAuthE2E:
                 password="pw",
             )
 
-            assert result.success, f"Form auth failed: {result.error}"
+            assert result.success, f"Form auth failed on {protocol}: {result.error}"
             assert result.auth_strategy == "form_plain"
 
-    def test_sb6190_wrong_credentials(self):
+    def test_sb6190_wrong_credentials(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
         """SB6190 form auth should fail with wrong credentials."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
-        with MockModemServer.from_modem_path(modem_dir, auth_type="form") as server:
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+        ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "form")
 
@@ -260,13 +317,18 @@ class TestFormAuthE2E:
 
 
 class TestNoAuthE2E:
-    """E2E tests for modems without authentication."""
+    """E2E tests for modems without authentication.
 
-    def test_sb6190_no_auth(self):
+    Tests run on both HTTP and HTTPS protocols.
+    """
+
+    def test_sb6190_no_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
         """SB6190 no-auth variant should work without credentials."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
-        with MockModemServer.from_modem_path(modem_dir, auth_type="none") as server:
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type="none", ssl_context=ssl_context_for_protocol
+        ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
             static_config = build_static_auth_config(parser, "none")
 
@@ -278,5 +340,5 @@ class TestNoAuthE2E:
                 password="",
             )
 
-            assert result.success, f"No-auth failed: {result.error}"
+            assert result.success, f"No-auth failed on {protocol}: {result.error}"
             assert result.auth_strategy == "no_auth"

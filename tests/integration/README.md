@@ -24,6 +24,9 @@ Tests the known modem setup flow using MockModemServer to simulate
 real modem behavior without hardware. These tests verify the path
 users take when selecting their modem model from the dropdown.
 
+Tests run on both HTTP and HTTPS protocols to ensure protocol detection
+works correctly for all modems.
+
 **TestAuthTypeSelection** (2 tests)
 : Test that auth type dropdown appears for correct modems.
 

@@ -69,10 +69,12 @@ def check_connectivity(  # noqa: C901
         - SSL certificate verification is disabled (modems use self-signed)
     """
     # Build URLs to try
+    # HTTP first: Most cable modems are HTTP-only. HTTPS modems still work via fallback.
+    # This prevents issues where a modem responds to HTTPS but serves invalid content.
     if host.startswith(("http://", "https://")):
         urls_to_try = [host]
     else:
-        urls_to_try = [f"https://{host}", f"http://{host}"]
+        urls_to_try = [f"http://{host}", f"https://{host}"]
 
     legacy_ssl = False
 

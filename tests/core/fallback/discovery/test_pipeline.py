@@ -247,11 +247,15 @@ class TestDiscoveryPipelineResult:
 
 
 class TestCheckConnectivity:
-    """Test check_connectivity function."""
+    """Test check_connectivity function.
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    Note: Protocol order is HTTP-first to prevent issues where a modem
+    responds to HTTPS but serves invalid content (e.g., CGA2121 issue #75).
+    """
+
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_http_success(self, mock_session_class):
-        """Test successful HTTP connection."""
+        """Test successful HTTP connection (HTTP tried first)."""
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
         mock_response = MagicMock()
@@ -261,34 +265,34 @@ class TestCheckConnectivity:
         result = check_connectivity("192.168.100.1")
 
         assert result.success is True
-        assert result.working_url == "https://192.168.100.1"
-        assert result.protocol == "https"
+        assert result.working_url == "http://192.168.100.1"
+        assert result.protocol == "http"
         assert result.legacy_ssl is False
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
-    def test_https_fails_http_succeeds(self, mock_session_class):
-        """Test HTTPS fails but HTTP succeeds."""
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
+    def test_http_fails_https_succeeds(self, mock_session_class):
+        """Test HTTP fails but HTTPS succeeds."""
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
 
-        # First call (HTTPS HEAD) fails
-        # Second call (HTTPS GET) fails
-        # Third call (HTTP HEAD) succeeds
+        # First call (HTTP HEAD) fails
+        # Second call (HTTP GET) fails
+        # Third call (HTTPS HEAD) succeeds
         mock_session.head.side_effect = [
-            requests.exceptions.ConnectionError("HTTPS failed"),
+            requests.exceptions.ConnectionError("HTTP failed"),
             MagicMock(status_code=200),
         ]
-        mock_session.get.side_effect = requests.exceptions.ConnectionError("HTTPS GET failed")
+        mock_session.get.side_effect = requests.exceptions.ConnectionError("HTTP GET failed")
 
         result = check_connectivity("192.168.100.1")
 
         assert result.success is True
-        assert result.working_url == "http://192.168.100.1"
-        assert result.protocol == "http"
+        assert result.working_url == "https://192.168.100.1"
+        assert result.protocol == "https"
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_head_fails_get_succeeds(self, mock_session_class):
-        """Test HEAD fails but GET succeeds."""
+        """Test HEAD fails but GET succeeds (on first protocol: HTTP)."""
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
         mock_session.head.side_effect = requests.RequestException("HEAD not supported")
@@ -299,9 +303,9 @@ class TestCheckConnectivity:
         result = check_connectivity("192.168.100.1")
 
         assert result.success is True
-        assert result.protocol == "https"
+        assert result.protocol == "http"
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_all_connections_fail(self, mock_session_class):
         """Test all connection attempts fail."""
         mock_session = MagicMock()
@@ -314,7 +318,7 @@ class TestCheckConnectivity:
         assert result.success is False
         assert "Cannot connect" in result.error
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_timeout(self, mock_session_class):
         """Test connection timeout."""
         mock_session = MagicMock()
@@ -326,7 +330,7 @@ class TestCheckConnectivity:
 
         assert result.success is False
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_ssl_error_with_legacy_fallback(self, mock_session_class):
         """Test SSL error triggers legacy SSL fallback."""
         mock_session = MagicMock()
@@ -350,7 +354,7 @@ class TestCheckConnectivity:
             # Will try legacy SSL and succeed
             assert result.success is True
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_url_with_protocol_prefix(self, mock_session_class):
         """Test URL that already has protocol prefix."""
         mock_session = MagicMock()
@@ -365,7 +369,7 @@ class TestCheckConnectivity:
         assert result.working_url == "http://192.168.100.1"
         assert result.protocol == "http"
 
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_unexpected_exception(self, mock_session_class):
         """Test unexpected exception is handled (e.g., URL parsing errors)."""
         mock_session = MagicMock()
@@ -378,14 +382,17 @@ class TestCheckConnectivity:
 
         assert result.success is False
 
-    @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.LegacySSLAdapter")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_legacy_ssl_success(self, mock_session_class, mock_adapter_class):
-        """Test legacy SSL fallback succeeds when regular SSL fails."""
+        """Test legacy SSL fallback succeeds when regular SSL fails.
+
+        Uses explicit https:// URL to test HTTPS-specific legacy SSL path.
+        """
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
 
-        # First HTTPS attempt fails with SSL error, HEAD then GET
+        # HTTPS attempt fails with SSL error, HEAD then GET
         mock_session.head.side_effect = requests.exceptions.SSLError("SSL handshake failed")
         # GET also fails for regular session
         call_count = [0]
@@ -402,16 +409,20 @@ class TestCheckConnectivity:
 
         mock_session.get.side_effect = get_side_effect
 
-        result = check_connectivity("192.168.100.1")
+        # Use explicit https:// URL to test legacy SSL path
+        result = check_connectivity("https://192.168.100.1")
 
         assert result.success is True
         assert result.legacy_ssl is True
         assert result.protocol == "https"
 
-    @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.LegacySSLAdapter")
+    @patch("custom_components.cable_modem_monitor.lib.connectivity.requests.Session")
     def test_legacy_ssl_also_fails(self, mock_session_class, mock_adapter_class):
-        """Test legacy SSL fallback also fails."""
+        """Test legacy SSL fallback also fails.
+
+        Uses explicit https:// URL to test HTTPS-specific behavior.
+        """
         mock_session = MagicMock()
         mock_session_class.return_value = mock_session
 
@@ -419,9 +430,10 @@ class TestCheckConnectivity:
         mock_session.head.side_effect = requests.exceptions.SSLError("SSL failed")
         mock_session.get.side_effect = requests.exceptions.SSLError("SSL failed")
 
-        result = check_connectivity("192.168.100.1")
+        # Use explicit https:// URL
+        result = check_connectivity("https://192.168.100.1")
 
-        # Should fail after trying both HTTPS (with legacy fallback) and HTTP
+        # Should fail after trying HTTPS with legacy fallback
         assert result.success is False
 
 
