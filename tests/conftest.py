@@ -6,6 +6,10 @@ import socket
 
 import pytest
 
+# Re-export pytest-homeassistant-custom-component fixtures
+# This makes them available to all tests in the project
+pytest_plugins = ["pytest_homeassistant_custom_component"]
+
 # Store the original socket before pytest-socket patches it
 try:
     import pytest_socket

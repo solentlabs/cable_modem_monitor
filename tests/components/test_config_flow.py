@@ -12,6 +12,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.cable_modem_monitor.config_flow import (
     CableModemMonitorConfigFlow,
@@ -27,6 +30,7 @@ from custom_components.cable_modem_monitor.const import (
     CONF_DOCSIS_VERSION,
     CONF_LAST_DETECTION,
     CONF_PARSER_NAME,
+    DOMAIN,
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
@@ -775,127 +779,195 @@ class TestEntityPrefixLogic:
 
 # =============================================================================
 # Options Flow Tests
+#
+# Uses HA test infrastructure (pytest-homeassistant-custom-component):
+# - MockConfigEntry for config entries
+# - hass fixture for Home Assistant instance
+# - enable_custom_integrations to load custom component
 # =============================================================================
 
 
-class TestOptionsFlowCredentialPreservation:
-    """Test the options flow credential preservation logic.
-
-    When user leaves password/username blank in options, the existing
-    values should be preserved from the config entry.
-    """
-
-    @pytest.fixture
-    def mock_config_entry(self):
-        """Create a mock config entry with stored credentials."""
-        entry = Mock()
-        entry.data = {
+async def test_options_flow_init_shows_form(hass: HomeAssistant, enable_custom_integrations):
+    """Test options flow initialization shows form."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
             "host": "192.168.100.1",
             "username": "admin",
             "password": "secretpassword",
             "modem_choice": "Test Modem",
-        }
-        return entry
+            "parser_name": "Test Modem",
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
 
-    @pytest.fixture
-    def options_flow_with_entry(self, mock_config_entry):
-        """Create an OptionsFlowHandler with mocked config_entry property."""
-        flow = OptionsFlowHandler()
-        # Patch the config_entry property to avoid HA deprecation error
-        with patch.object(type(flow), "config_entry", new_callable=lambda: property(lambda self: mock_config_entry)):
-            # We need to set it on the instance instead
-            pass
-        # Use object.__setattr__ to bypass the deprecated setter
-        object.__setattr__(flow, "_config_entry", mock_config_entry)
-        # Patch the property getter
-        type(flow).config_entry = property(lambda self: self._config_entry)
-        return flow
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Test Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
 
-    def test_preserve_password_when_empty(self, options_flow_with_entry):
-        """Test password is preserved when user leaves it empty."""
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+
+async def test_options_flow_preserves_password_when_empty(hass: HomeAssistant, enable_custom_integrations):
+    """Test password is preserved when user leaves it empty in options."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "secretpassword",
+            "modem_choice": "Test Modem",
+            "parser_name": "Test Modem",
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Test Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
+        assert flow is not None
+
         user_input = {
             "host": "192.168.100.1",
             "username": "admin",
             "password": "",  # User left blank
         }
-
-        options_flow_with_entry._preserve_credentials(user_input)
+        flow._preserve_credentials(user_input)
 
         assert user_input["password"] == "secretpassword"
 
-    def test_preserve_username_when_empty(self, options_flow_with_entry):
-        """Test username is preserved when user leaves it empty."""
+
+async def test_options_flow_preserves_username_when_empty(hass: HomeAssistant, enable_custom_integrations):
+    """Test username is preserved when user leaves it empty."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "secretpassword",
+            "modem_choice": "Test Modem",
+            "parser_name": "Test Modem",
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Test Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
+
         user_input = {
             "host": "192.168.100.1",
             "username": "",  # User left blank
             "password": "newpassword",
         }
-
-        options_flow_with_entry._preserve_credentials(user_input)
+        flow._preserve_credentials(user_input)
 
         assert user_input["username"] == "admin"
 
-    def test_new_password_not_overwritten(self, options_flow_with_entry):
-        """Test new password is not overwritten by existing."""
+
+async def test_options_flow_new_password_not_overwritten(hass: HomeAssistant, enable_custom_integrations):
+    """Test new password is not overwritten by existing."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "secretpassword",
+            "modem_choice": "Test Modem",
+            "parser_name": "Test Modem",
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Test Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
+
         user_input = {
             "host": "192.168.100.1",
             "username": "admin",
             "password": "newpassword",  # User entered new password
         }
-
-        options_flow_with_entry._preserve_credentials(user_input)
+        flow._preserve_credentials(user_input)
 
         assert user_input["password"] == "newpassword"
 
-    def test_preserve_both_when_both_empty(self, options_flow_with_entry):
-        """Test both credentials preserved when both empty."""
+
+async def test_options_flow_preserves_both_credentials_when_empty(hass: HomeAssistant, enable_custom_integrations):
+    """Test both credentials preserved when both empty."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "host": "192.168.100.1",
+            "username": "admin",
+            "password": "secretpassword",
+            "modem_choice": "Test Modem",
+            "parser_name": "Test Modem",
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Test Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
+
         user_input = {
             "host": "192.168.100.1",
             "username": "",
             "password": "",
         }
-
-        options_flow_with_entry._preserve_credentials(user_input)
+        flow._preserve_credentials(user_input)
 
         assert user_input["username"] == "admin"
         assert user_input["password"] == "secretpassword"
 
 
-class TestOptionsFlowDetectionPreservation:
-    """Test the options flow detection info preservation.
-
-    When validation doesn't return new detection info, existing
-    detection info should be preserved from the config entry.
-    """
-
-    @pytest.fixture
-    def mock_config_entry_with_detection(self):
-        """Create a mock config entry with detection info."""
-        entry = Mock()
-        entry.data = {
+async def test_options_flow_preserves_detection_info(hass: HomeAssistant, enable_custom_integrations):
+    """Test all detection fields are preserved."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
             "host": "192.168.100.1",
             "parser_name": "Arris SB8200",
+            "modem_choice": "Arris SB8200",
             "detected_modem": "Arris SB8200",
             "detected_manufacturer": "Arris",
             "docsis_version": "3.1",
             "last_detection": "2026-01-22T10:00:00",
-            "actual_model": "SB8200",
-            "detection_method": "user_selected",
-        }
-        return entry
+        },
+        unique_id="192.168.100.1",
+    )
+    entry.add_to_hass(hass)
 
-    @pytest.fixture
-    def options_flow_with_detection(self, mock_config_entry_with_detection):
-        """Create an OptionsFlowHandler with mocked config_entry."""
-        flow = OptionsFlowHandler()
-        object.__setattr__(flow, "_config_entry", mock_config_entry_with_detection)
-        type(flow).config_entry = property(lambda self: self._config_entry)
-        return flow
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Arris SB8200"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
 
-    def test_preserve_detection_info_copies_all_fields(self, options_flow_with_detection):
-        """Test all detection fields are preserved."""
         data = {}
-        options_flow_with_detection._preserve_detection_info(data)
+        flow._preserve_detection_info(data)
 
         assert data[CONF_PARSER_NAME] == "Arris SB8200"
         assert data[CONF_DETECTED_MODEM] == "Arris SB8200"
@@ -903,16 +975,27 @@ class TestOptionsFlowDetectionPreservation:
         assert data[CONF_DOCSIS_VERSION] == "3.1"
         assert data[CONF_LAST_DETECTION] == "2026-01-22T10:00:00"
 
-    def test_preserve_detection_with_missing_fields(self):
-        """Test preservation handles missing fields gracefully."""
-        entry = Mock()
-        entry.data = {
+
+async def test_options_flow_preserves_detection_with_missing_fields(hass: HomeAssistant, enable_custom_integrations):
+    """Test preservation handles missing fields gracefully."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
             "host": "192.168.100.1",
+            "parser_name": "Unknown Modem",
+            "modem_choice": "Unknown Modem",
             # Missing most detection fields
-        }
-        flow = OptionsFlowHandler()
-        object.__setattr__(flow, "_config_entry", entry)
-        type(flow).config_entry = property(lambda self: self._config_entry)
+        },
+        unique_id="192.168.100.2",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.cable_modem_monitor.config_flow.build_parser_dropdown",
+        return_value=["Unknown Modem"],
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        flow = hass.config_entries.options._progress.get(result["flow_id"])
 
         data = {}
         flow._preserve_detection_info(data)
