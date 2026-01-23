@@ -5,15 +5,24 @@ parser is not available. It provides minimal functionality to enable users
 to capture HTML diagnostics using the built-in "Capture HTML" button.
 
 Once HTML is captured, developers can create a proper parser for the modem.
+
+Note: This parser is part of the fallback subsystem (core/fallback/) which
+is isolated from the main orchestrator. It should only be used with
+FallbackOrchestrator, not DataOrchestrator.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.core.base_parser import ModemCapability, ModemParser, ParserStatus
+from custom_components.cable_modem_monitor.core.base_parser import (
+    ModemCapability,
+    ModemParser,
+    ParserStatus,
+)
 from custom_components.cable_modem_monitor.lib.html_crawler import generate_seed_urls
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,9 +63,9 @@ class UniversalFallbackParser(ModemParser):
     # Priority seed URLs - generic patterns, not manufacturer-specific
     # Link crawler will discover all other pages automatically
     # Uses reusable pattern generation from html_crawler utility
-
     _seed_urls = generate_seed_urls(
-        bases=["", "index", "status", "connection"], extensions=["", ".html", ".htm", ".asp"]
+        bases=["", "index", "status", "connection"],
+        extensions=["", ".html", ".htm", ".asp"],
     )
 
     # Convert to url_patterns format
@@ -111,9 +120,9 @@ class UniversalFallbackParser(ModemParser):
                 "manufacturer": "Unknown",
                 "fallback_mode": True,  # Special flag to indicate fallback parser
                 "status_message": (
-                    "⚠️  Modem Not Fully Supported\n"
-                    "✓  Connectivity monitoring is active (ping & HTTP latency)\n"
-                    "📋 Press 'Capture HTML' to help us add channel data support\n\n"
+                    "\u26a0\ufe0f  Modem Not Fully Supported\n"
+                    "\u2713  Connectivity monitoring is active (ping & HTTP latency)\n"
+                    "\U0001f4cb Press 'Capture HTML' to help us add channel data support\n\n"
                     "Next Steps:\n"
                     "1. Monitor basic connectivity using Ping Latency and HTTP Latency sensors\n"
                     "2. Press the 'Capture HTML' button to help add full support\n"
@@ -140,7 +149,7 @@ class UniversalFallbackParser(ModemParser):
         if soup.title and soup.title.string:
             title = soup.title.string.strip()
             if title and title != "":
-                _LOGGER.debug(f"Found page title: {title}")
+                _LOGGER.debug("Found page title: %s", title)
                 return str(title)
 
         # Try meta tags
@@ -157,13 +166,12 @@ class UniversalFallbackParser(ModemParser):
                     continue
                 content = content_attr.strip()
                 if content:
-                    _LOGGER.debug(f"Found model in meta tag: {content}")
+                    _LOGGER.debug("Found model in meta tag: %s", content)
                     return str(content)
 
         # Try common modem identifiers in HTML
         # Look for common patterns like "NETGEAR", "ARRIS", "CM600", etc.
         html_text = soup.get_text()
-        import re
 
         # Common modem brand patterns
         patterns = [
@@ -177,7 +185,7 @@ class UniversalFallbackParser(ModemParser):
             match = re.search(pattern, html_text, re.IGNORECASE)
             if match:
                 model = match.group(1)
-                _LOGGER.info(f"Detected possible modem model from HTML: {model}")
+                _LOGGER.info("Detected possible modem model from HTML: %s", model)
                 return model
 
         return None

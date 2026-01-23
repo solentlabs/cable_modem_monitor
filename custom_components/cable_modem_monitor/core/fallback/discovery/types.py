@@ -32,8 +32,8 @@ from typing import TYPE_CHECKING, Any
 import requests
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..auth.hnap.json_builder import HNAPJsonRequestBuilder
-    from ..base_parser import ModemParser
+    from ...auth.hnap.json_builder import HNAPJsonRequestBuilder
+    from ...base_parser import ModemParser
 
 
 @dataclass

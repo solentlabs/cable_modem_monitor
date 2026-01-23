@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import requests
 
 # Patch requests in steps.py where check_connectivity is defined
-STEPS_MODULE = "custom_components.cable_modem_monitor.core.discovery.steps"
+STEPS_MODULE = "custom_components.cable_modem_monitor.core.fallback.discovery.steps"
 
 
 def create_mock_session(head_side_effect=None, get_side_effect=None, response_status=200):
@@ -51,7 +51,7 @@ class TestConnectivityCheckSSLFallback:
 
     def test_connectivity_check_should_fallback_on_ssl_handshake_error(self):
         """Verify connectivity check tries legacy SSL when modern fails."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # Create an SSL handshake error
         ssl_error = requests.exceptions.SSLError(
@@ -86,7 +86,7 @@ class TestConnectivityCheckSSLFallback:
 
     def test_connectivity_check_returns_false_for_non_ssl_errors(self):
         """Verify non-SSL errors still return failure (no false positives)."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # Connection refused - not an SSL issue
         connection_error = requests.exceptions.ConnectionError("Connection refused")
@@ -103,7 +103,7 @@ class TestConnectivityCheckSSLFallback:
 
     def test_modern_ssl_success_returns_legacy_false(self):
         """Verify successful modern SSL connection returns legacy_ssl=False."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         mock_session = create_mock_session(response_status=200)
 
@@ -129,7 +129,7 @@ class TestConnectivityCheckHTTPRedirectToHTTPS:
 
         When explicit HTTPS URL fails with SSL error, legacy SSL fallback should be tried.
         """
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # SSL error that happens with modern SSL
         ssl_error = requests.exceptions.SSLError(
@@ -177,7 +177,7 @@ class TestConnectivityCheckLogging:
 
     def test_successful_connection_logs_at_info_not_warning(self, caplog):
         """Verify successful connection logs at INFO level, not WARNING."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         mock_session = create_mock_session(response_status=200)
 
@@ -197,7 +197,7 @@ class TestConnectivityCheckLogging:
 
     def test_fallback_attempts_log_at_info_not_warning(self, caplog):
         """Verify fallback attempts (HTTPS fail, HTTP succeed) log at DEBUG/INFO (not WARNING)."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # HTTPS fails with connection refused (common for HTTP-only modems)
         connection_error = requests.exceptions.ConnectionError("Connection refused")
@@ -231,7 +231,7 @@ class TestConnectivityCheckLogging:
 
     def test_get_fallback_logs_at_info_not_warning(self, caplog):
         """Verify HEAD->GET fallback logs at DEBUG (not WARNING), success at INFO."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # HEAD fails with connection reset (some modems reject HEAD)
         connection_reset = requests.RequestException("Connection reset by peer")
@@ -267,7 +267,7 @@ class TestConnectivityCheckLogging:
         Note: check_connectivity logs failures at DEBUG level. ERROR logging
         happens in the pipeline orchestrator, not here.
         """
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # All attempts fail
         connection_error = requests.exceptions.ConnectionError("Connection refused")
@@ -290,7 +290,7 @@ class TestConnectivityCheckLogging:
 
     def test_legacy_ssl_success_logs_at_info(self, caplog):
         """Verify legacy SSL success logs appropriately."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import check_connectivity
 
         # SSL handshake error triggers legacy SSL fallback
         ssl_error = requests.exceptions.SSLError("ssl/tls alert handshake failure")

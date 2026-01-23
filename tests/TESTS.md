@@ -4,7 +4,7 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 886 across 37 test files
+**Total Tests:** 869 across 36 test files
 
 ## Test Categories
 
@@ -13,7 +13,7 @@ This document provides an overview of the Cable Modem Monitor test suite.
 | [Core Module Tests](tests/core/README.md) | 348 | 13 | Unit tests for core functionality including sig... |
 | [Component Tests](tests/components/README.md) | 319 | 13 | Tests for Home Assistant components including c... |
 | [Integration Tests](tests/integration/README.md) | 44 | 3 | End-to-end integration tests using mock HTTP/HT... |
-| [Parser Tests](tests/parsers/FIXTURES.md) | 55 | 3 | Tests for modem-specific parsers, parser contra... |
+| [Parser Tests](tests/parsers/FIXTURES.md) | 38 | 2 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
 | [Library Tests](tests/lib/README.md) | 120 | 5 | Tests for library modules including the HTML cr... |
 
@@ -88,8 +88,8 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 Tests for modem-specific parsers, parser contracts, and fixture validation.
 
 - **Path:** `tests/parsers/`
-- **Tests:** 55
-- **Files:** 3
+- **Tests:** 38
+- **Files:** 2
 
 ### Utility Tests
 

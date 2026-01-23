@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+from custom_components.cable_modem_monitor.core.fallback.parser import UniversalFallbackParser
 
 # Detection is handled by YAML hints (HintMatcher).
 # The fallback parser is manually selected by users when auto-detection fails.

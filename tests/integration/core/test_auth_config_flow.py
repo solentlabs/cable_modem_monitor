@@ -7,7 +7,7 @@ config flow, storing the discovered strategy in config entry data.
 from __future__ import annotations
 
 from custom_components.cable_modem_monitor.core.auth.discovery import AuthStrategyType
-from custom_components.cable_modem_monitor.core.discovery.pipeline import discover_auth
+from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import discover_auth
 
 
 class TestSetupDiscoveryNoAuth:

@@ -44,9 +44,9 @@ from .core.exceptions import (
     UnsupportedModemError,
 )
 from .core.network import test_icmp_ping
+from .core.parser_registry import get_parser_by_name, get_parser_dropdown_from_index
 from .core.parser_utils import create_title
 from .lib.host_validation import extract_hostname as _validate_host_format
-from .parsers import get_parser_by_name, get_parser_dropdown_from_index
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -348,7 +348,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         InvalidAuthError: If authentication fails
         UnsupportedModemError: If no parser matches
     """
-    from .core.discovery import run_discovery_pipeline
+    from .core.fallback.discovery import run_discovery_pipeline
 
     # Validate host format
     host = data[CONF_HOST]

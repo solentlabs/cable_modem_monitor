@@ -31,7 +31,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 **TestAuth** (3 tests)
 : Test the authentication system.
 
-- `test_form_auth_uses_parser_hints`: Test form-based authentication uses parser's auth_form_hints.
+- `test_form_auth_uses_parser_hints`: Test FallbackOrchestrator uses parser's auth_form_hints.
 - `test_parser_does_not_have_login_method`: Test that parsers don't have a login() method.
 - `test_parser_without_hints_can_be_instantiated`: Test that parsers without auth_form_hints can still be used.
 

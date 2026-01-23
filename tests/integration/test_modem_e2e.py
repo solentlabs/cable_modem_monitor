@@ -560,7 +560,7 @@ class TestDiscoveryPipelineE2E:
         Tests the legacy path where auth is discovered dynamically.
         Only FORM and HNAP strategies support dynamic discovery.
         """
-        from custom_components.cable_modem_monitor.core.discovery import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery import (
             run_discovery_pipeline,
         )
 
@@ -629,7 +629,7 @@ class TestDiscoveryPipelineE2E:
         HNAP modems will fail gracefully (require manual selection).
         Form-based modems should auto-detect successfully.
         """
-        from custom_components.cable_modem_monitor.core.discovery import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery import (
             run_discovery_pipeline,
         )
 
@@ -695,7 +695,7 @@ class TestDiscoveryPipelineE2E:
         This enables support for ALL auth strategies (NONE, BASIC, URL_TOKEN,
         REST_API) that don't work well with dynamic discovery.
         """
-        from custom_components.cable_modem_monitor.core.discovery import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery import (
             run_discovery_pipeline,
         )
         from custom_components.cable_modem_monitor.modem_config import (

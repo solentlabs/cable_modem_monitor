@@ -52,7 +52,6 @@ from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
 from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
-from .auth.types import AuthStrategyType
 from .base_parser import ModemParser
 from .discovery_helpers import (
     DiscoveryCircuitBreaker,
@@ -617,12 +616,13 @@ class DataOrchestrator:
             iteration,
         )
 
-    def _login(self) -> tuple[bool, str | None]:  # noqa: C901
-        """
-        Log in to the modem web interface.
+    def _login(self) -> tuple[bool, str | None]:
+        """Log in to the modem web interface using stored auth strategy.
 
-        Uses the auth handler with the stored strategy.
-        Falls back to parser hints or parser.login() for old config entries.
+        For modem.yaml parsers, this method uses only the stored auth configuration.
+        No discovery or fallback logic - modem.yaml is the source of truth.
+
+        For fallback/discovery scenarios, use FallbackOrchestrator instead.
 
         Returns:
             tuple[bool, str | None]: (success, authenticated_html)
@@ -634,52 +634,23 @@ class DataOrchestrator:
             return (True, None)
 
         # Skip login if session was pre-authenticated by auth discovery
-        # This avoids redundant authentication during config flow validation
         if self._session_pre_authenticated:
             _LOGGER.debug("Session pre-authenticated by auth discovery, skipping login")
-            # Clear flag after first use (subsequent polls need re-auth)
             self._session_pre_authenticated = False
             return (True, None)
 
-        # Use auth handler if we have a stored strategy
+        # Use auth handler with stored strategy
         if self._auth_handler and self._auth_strategy:
-            # If strategy is UNKNOWN but parser has hints, use hints instead of logging warning
-            result = self._try_parser_hints_for_unknown_strategy()
-            if result is not None:
-                return result
-
             _LOGGER.debug(
                 "Using auth handler with strategy: %s",
                 self._auth_handler.strategy.value,
             )
             auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
-
-            if auth_result.success:
-                return auth_result.success, auth_result.response_html
-
-            # Stored strategy failed - try parser hints fallback
-            # This handles cases where discovery found form_plain but parser needs form_base64
-            if not auth_result.success and self.parser:
-                _LOGGER.info(
-                    "Stored auth strategy %s failed (error: %s), trying parser hints fallback",
-                    self._auth_handler.strategy.value,
-                    auth_result.error_type.value if auth_result.error_type else "unknown",
-                )
-                result = self._login_with_parser_hints()
-                if result is not None:
-                    return result
-
             return auth_result.success, auth_result.response_html
 
-        # No auth strategy stored - try parser hints fallback
-        if self.parser:
-            result = self._login_with_parser_hints()
-            if result is not None:
-                return result
-
-        # No auth strategy or parser hints - assume no authentication required
-        # This handles modems that don't need login (e.g., status pages are public)
-        _LOGGER.debug("No auth strategy or parser hints found, assuming no auth required")
+        # No auth strategy stored - assume no authentication required
+        # This handles modems with public status pages
+        _LOGGER.debug("No auth strategy stored, assuming no auth required")
         return (True, None)
 
     def _create_loader(self):
@@ -738,110 +709,53 @@ class DataOrchestrator:
             _LOGGER.warning("Loader failed: %s", e)
             return {}
 
-    def _try_parser_hints_for_unknown_strategy(self) -> tuple[bool, str | None] | None:
-        """Try parser hints when auth strategy is UNKNOWN.
+    def _is_fallback_parser(self) -> bool:
+        """Check if current parser is UniversalFallbackParser (no modem.yaml).
 
-        Returns:
-            tuple[bool, str | None] if hints were found and auth succeeded
-            None if strategy is not UNKNOWN, no hints, or auth failed (caller continues)
-        """
-        if not self._auth_handler or self._auth_handler.strategy != AuthStrategyType.UNKNOWN:
-            return None
-
-        if not self.parser:
-            return None
-
-        _LOGGER.debug("Auth strategy is UNKNOWN, checking for parser hints first")
-        result = self._login_with_parser_hints()
-        if result is not None:
-            return result
-
-        # No hints found - return None to fall through to unknown strategy handling
-        return None
-
-    def _login_with_parser_hints(self) -> tuple[bool, str | None] | None:  # noqa: C901
-        """
-        Attempt login using auth hints from modem.yaml or parser class.
-
-        Prefers modem.yaml hints (via adapter) over parser class attributes.
-
-        Returns:
-            tuple[bool, str | None] if hints were found and auth was attempted
-            None if no hints were found (caller should try legacy path)
+        Used to gate legacy fallback code paths that should only apply to
+        the fallback parser. Modem.yaml parsers are authoritative and should
+        not trigger re-discovery on transient errors.
         """
         if not self.parser:
-            return None
+            return False
+        return self.parser.manufacturer == "Unknown"
 
-        # Get adapter for modem.yaml hints (preferred source)
+    def _correct_protocol_from_modem_yaml(self) -> None:
+        """Override base_url protocol from modem.yaml if specified.
+
+        For modem.yaml parsers, the YAML protocol field is the source of truth.
+        Config entry may have detected HTTPS (with legacy_ssl) but the modem
+        may actually require HTTP for proper auth/session handling.
+
+        This fixes protocol mismatches where auto-detection stored HTTPS but
+        the modem actually needs HTTP.
+        """
+        if not self.parser or self._is_fallback_parser():
+            return
+
         adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
+        if not adapter:
+            return
 
-        # Check for HNAP hints (S33, MB8611)
-        # HNAP config is in modem.yaml auth.hnap section
-        hints = None
-        if adapter:
-            hints = adapter.get_hnap_hints()
-            if hints:
-                _LOGGER.debug("Using modem.yaml hnap_hints for HNAP authentication")
-        if hints:
-            temp_handler = AuthHandler(strategy="hnap_session", hnap_config=hints)
-            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
-            if auth_result.success:
-                # Save handler for subsequent polls (loader will get builder via get_hnap_builder())
-                self._auth_handler = temp_handler
-                _LOGGER.debug("Saved HNAP auth handler for future polls")
-            return auth_result.success, auth_result.response_html
+        modem_config = adapter.get_modem_config_dict()
+        yaml_protocol = modem_config.get("protocol")
 
-        # Check for URL token hints (SB8200)
-        # URL token config is in modem.yaml auth.url_token section
-        hints = None
-        if adapter:
-            hints = adapter.get_js_auth_hints()
-            if hints:
-                _LOGGER.debug("Using modem.yaml js_auth_hints for URL token authentication")
-        if hints:
-            url_token_config = {
-                "login_page": hints.get("login_page", "/cmconnectionstatus.html"),
-                "login_prefix": hints.get("login_prefix", "login_"),
-                "session_cookie_name": hints.get("session_cookie_name", "credential"),
-                "data_page": hints.get("data_page", "/cmconnectionstatus.html"),
-                "token_prefix": hints.get("token_prefix", "ct_"),
-                "success_indicator": hints.get("success_indicator", "Downstream"),
-            }
-            temp_handler = AuthHandler(strategy="url_token_session", url_token_config=url_token_config)
-            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
-            if auth_result.success:
-                self._auth_handler = temp_handler
-                _LOGGER.debug("Saved URL token auth handler for future polls")
-            return auth_result.success, auth_result.response_html
+        if not yaml_protocol:
+            return
 
-        # Check for form hints (MB7621, CGA2121, G54, CM2000)
-        # Try modem.yaml first, fall back to parser class
-        hints = None
-        if adapter:
-            hints = adapter.get_auth_form_hints()
-            if hints:
-                _LOGGER.debug("Using modem.yaml auth_form_hints for form authentication")
-        if not hints and hasattr(self.parser, "auth_form_hints") and self.parser.auth_form_hints:
-            hints = self.parser.auth_form_hints
-            _LOGGER.debug("Using parser's auth_form_hints for form authentication")
-        if hints:
-            # Build form_config from hints (password_encoding controls encoding behavior)
-            form_config = {
-                "action": hints.get("login_url", ""),
-                "method": "POST",
-                "username_field": hints.get("username_field", "username"),
-                "password_field": hints.get("password_field", "password"),
-                "password_encoding": hints.get("password_encoding", "plain"),
-            }
+        # Determine current protocol from base_url
+        current_protocol = "https" if self.base_url.startswith("https://") else "http"
 
-            temp_handler = AuthHandler(strategy="form_plain", form_config=form_config)
-            auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
-            if auth_result.success:
-                self._auth_handler = temp_handler
-                _LOGGER.debug("Saved form auth handler (strategy=form_plain) for future polls")
-            return auth_result.success, auth_result.response_html
-
-        return None  # No hints found
+        if yaml_protocol != current_protocol:
+            old_base_url = self.base_url
+            self.base_url = self.base_url.replace(f"{current_protocol}://", f"{yaml_protocol}://")
+            _LOGGER.info(
+                "Protocol corrected from modem.yaml: %s -> %s (was: %s, now: %s)",
+                current_protocol,
+                yaml_protocol,
+                old_base_url,
+                self.base_url,
+            )
 
     def _get_tier1_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 1: User explicitly selected a parser."""
@@ -1551,10 +1465,14 @@ class DataOrchestrator:
     def _ensure_parser(self, html: str, successful_url: str, suggested_parser: type[ModemParser] | None) -> bool:
         """Ensure parser is detected or instantiated.
 
+        Also corrects protocol from modem.yaml after parser detection.
+
         Returns:
             True if parser is available, False otherwise
         """
         if self.parser:
+            # Parser already set - still correct protocol if needed
+            self._correct_protocol_from_modem_yaml()
             return True
 
         try:
@@ -1570,6 +1488,9 @@ class DataOrchestrator:
         if not self.parser:
             _LOGGER.error("No compatible parser found for modem at %s.", successful_url)
             return False
+
+        # Correct protocol from modem.yaml (source of truth for known parsers)
+        self._correct_protocol_from_modem_yaml()
 
         return True
 
