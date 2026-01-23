@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-21T20:19:04.816793+00:00"
+generated: "2026-01-23T14:15:16.445344+00:00"
 auth_patterns:
   form:
     username_fields: []
@@ -93,7 +93,7 @@ modems:
     name: ARRIS SB6190
     manufacturer: ARRIS
     model: SB6190
-    verified: true
+    verified: false
     detection:
       pre_auth:
         - SB6190
@@ -109,7 +109,7 @@ modems:
     name: ARRIS SB8200
     manufacturer: ARRIS
     model: SB8200
-    verified: true
+    verified: false
     detection:
       pre_auth:
         - SB8200

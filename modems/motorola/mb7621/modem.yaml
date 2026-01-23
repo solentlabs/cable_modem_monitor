@@ -16,7 +16,6 @@ sources:
   auth_config: "Maintainer hardware HAR capture"
   detection_hints: "Maintainer verified"
 
-protocol: http
 default_host: "192.168.100.1"
 default_port: 80
 

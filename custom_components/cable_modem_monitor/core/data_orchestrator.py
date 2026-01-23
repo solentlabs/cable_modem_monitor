@@ -720,43 +720,6 @@ class DataOrchestrator:
             return False
         return self.parser.manufacturer == "Unknown"
 
-    def _correct_protocol_from_modem_yaml(self) -> None:
-        """Override base_url protocol from modem.yaml if specified.
-
-        For modem.yaml parsers, the YAML protocol field is the source of truth.
-        Config entry may have detected HTTPS (with legacy_ssl) but the modem
-        may actually require HTTP for proper auth/session handling.
-
-        This fixes protocol mismatches where auto-detection stored HTTPS but
-        the modem actually needs HTTP.
-        """
-        if not self.parser or self._is_fallback_parser():
-            return
-
-        adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
-        if not adapter:
-            return
-
-        modem_config = adapter.get_modem_config_dict()
-        yaml_protocol = modem_config.get("protocol")
-
-        if not yaml_protocol:
-            return
-
-        # Determine current protocol from base_url
-        current_protocol = "https" if self.base_url.startswith("https://") else "http"
-
-        if yaml_protocol != current_protocol:
-            old_base_url = self.base_url
-            self.base_url = self.base_url.replace(f"{current_protocol}://", f"{yaml_protocol}://")
-            _LOGGER.info(
-                "Protocol corrected from modem.yaml: %s -> %s (was: %s, now: %s)",
-                current_protocol,
-                yaml_protocol,
-                old_base_url,
-                self.base_url,
-            )
-
     def _get_tier1_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
         """Get URLs for Tier 1: User explicitly selected a parser."""
         if self.parser is None:
@@ -1465,14 +1428,10 @@ class DataOrchestrator:
     def _ensure_parser(self, html: str, successful_url: str, suggested_parser: type[ModemParser] | None) -> bool:
         """Ensure parser is detected or instantiated.
 
-        Also corrects protocol from modem.yaml after parser detection.
-
         Returns:
             True if parser is available, False otherwise
         """
         if self.parser:
-            # Parser already set - still correct protocol if needed
-            self._correct_protocol_from_modem_yaml()
             return True
 
         try:
@@ -1488,9 +1447,6 @@ class DataOrchestrator:
         if not self.parser:
             _LOGGER.error("No compatible parser found for modem at %s.", successful_url)
             return False
-
-        # Correct protocol from modem.yaml (source of truth for known parsers)
-        self._correct_protocol_from_modem_yaml()
 
         return True
 
