@@ -5,7 +5,7 @@ These are independent of Home Assistant and can be used in any context (CLI, tes
 
 This module contains functions that operate on parser classes but don't perform
 any I/O (loading, discovery). For parser loading/discovery, see:
-- core/parser_discovery.py - Parser class loading and discovery
+- core/parser_registry.py - Parser class loading and registry
 - modem_config/loader.py - Modem YAML configuration loading
 - modem_config/adapter.py - Config-to-parser adapters
 
