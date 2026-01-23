@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 325
+**Total Tests:** 319
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_auth.py](test_auth.py) | 3 |  |
 | [test_button.py](test_button.py) | 0 | Tests for Cable Modem Monitor button platform. |
 | [test_channel_utils.py](test_channel_utils.py) | 29 | Tests for channel_utils helper functions. |
-| [test_config_flow.py](test_config_flow.py) | 32 | Tests for Cable Modem Monitor config flow. |
+| [test_config_flow.py](test_config_flow.py) | 26 | Tests for Cable Modem Monitor config flow. |
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
@@ -158,20 +158,6 @@ Tables are defined at the top of the file with ASCII box-drawing comments.
 - `test_first_modem_has_none_option`: Test first modem config includes 'None' prefix option.
 - `test_second_modem_no_none_option`: Test second modem config excludes 'None' prefix option.
 - `test_default_entity_prefix_preserved`: Test that explicitly passed default_entity_prefix is used.
-
-**TestOptionsFlowCredentialPreservation** (4 tests)
-: Test the options flow credential preservation logic.
-
-- `test_preserve_password_when_empty`: Test password is preserved when user leaves it empty.
-- `test_preserve_username_when_empty`: Test username is preserved when user leaves it empty.
-- `test_new_password_not_overwritten`: Test new password is not overwritten by existing.
-- `test_preserve_both_when_both_empty`: Test both credentials preserved when both empty.
-
-**TestOptionsFlowDetectionPreservation** (2 tests)
-: Test the options flow detection info preservation.
-
-- `test_preserve_detection_info_copies_all_fields`: Test all detection fields are preserved.
-- `test_preserve_detection_with_missing_fields`: Test preservation handles missing fields gracefully.
 
 ### test_config_flow_helpers.py
 
