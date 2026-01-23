@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
     AuthResult,
     ConnectivityResult,
     DiscoveryPipelineResult,
@@ -249,7 +249,7 @@ class TestDiscoveryPipelineResult:
 class TestCheckConnectivity:
     """Test check_connectivity function."""
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_http_success(self, mock_session_class):
         """Test successful HTTP connection."""
         mock_session = MagicMock()
@@ -265,7 +265,7 @@ class TestCheckConnectivity:
         assert result.protocol == "https"
         assert result.legacy_ssl is False
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_https_fails_http_succeeds(self, mock_session_class):
         """Test HTTPS fails but HTTP succeeds."""
         mock_session = MagicMock()
@@ -286,7 +286,7 @@ class TestCheckConnectivity:
         assert result.working_url == "http://192.168.100.1"
         assert result.protocol == "http"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_head_fails_get_succeeds(self, mock_session_class):
         """Test HEAD fails but GET succeeds."""
         mock_session = MagicMock()
@@ -301,7 +301,7 @@ class TestCheckConnectivity:
         assert result.success is True
         assert result.protocol == "https"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_all_connections_fail(self, mock_session_class):
         """Test all connection attempts fail."""
         mock_session = MagicMock()
@@ -314,7 +314,7 @@ class TestCheckConnectivity:
         assert result.success is False
         assert "Could not connect" in result.error
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_timeout(self, mock_session_class):
         """Test connection timeout."""
         mock_session = MagicMock()
@@ -326,7 +326,7 @@ class TestCheckConnectivity:
 
         assert result.success is False
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_ssl_error_with_legacy_fallback(self, mock_session_class):
         """Test SSL error triggers legacy SSL fallback."""
         mock_session = MagicMock()
@@ -338,7 +338,7 @@ class TestCheckConnectivity:
 
         # Mock the legacy SSL adapter import and success
         with patch(
-            "custom_components.cable_modem_monitor.core.discovery.steps.requests.Session"
+            "custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session"
         ) as mock_legacy_session_class:
             mock_legacy_session = MagicMock()
             mock_legacy_session_class.return_value = mock_legacy_session
@@ -350,7 +350,7 @@ class TestCheckConnectivity:
             # Will try legacy SSL and succeed
             assert result.success is True
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_url_with_protocol_prefix(self, mock_session_class):
         """Test URL that already has protocol prefix."""
         mock_session = MagicMock()
@@ -365,7 +365,7 @@ class TestCheckConnectivity:
         assert result.working_url == "http://192.168.100.1"
         assert result.protocol == "http"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_unexpected_exception(self, mock_session_class):
         """Test unexpected exception is handled (e.g., URL parsing errors)."""
         mock_session = MagicMock()
@@ -379,7 +379,7 @@ class TestCheckConnectivity:
         assert result.success is False
 
     @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_legacy_ssl_success(self, mock_session_class, mock_adapter_class):
         """Test legacy SSL fallback succeeds when regular SSL fails."""
         mock_session = MagicMock()
@@ -409,7 +409,7 @@ class TestCheckConnectivity:
         assert result.protocol == "https"
 
     @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_legacy_ssl_also_fails(self, mock_session_class, mock_adapter_class):
         """Test legacy SSL fallback also fails."""
         mock_session = MagicMock()
@@ -432,7 +432,7 @@ class TestDiscoverAuth:
     # No-credentials path tests (special case - doesn't use AuthDiscovery)
     # -------------------------------------------------------------------------
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_no_credentials(self, mock_session_class):
         """Test auth discovery without credentials."""
         mock_session = _create_mock_session()
@@ -447,7 +447,7 @@ class TestDiscoverAuth:
         assert result.strategy == "no_auth"
         assert result.html == "<html><body>Modem page</body></html>"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_no_credentials_connection_fails(self, mock_session_class):
         """Test auth discovery without credentials when connection fails."""
         mock_session = _create_mock_session()
@@ -468,7 +468,7 @@ class TestDiscoverAuth:
         AUTH_DISCOVERY_CASES,
     )
     @patch("custom_components.cable_modem_monitor.core.auth.discovery.AuthDiscovery")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_auth_discovery_strategies(
         self,
         mock_session_class,
@@ -532,7 +532,7 @@ class TestDiscoverAuth:
     # -------------------------------------------------------------------------
 
     @patch("custom_components.cable_modem_monitor.core.auth.discovery.AuthDiscovery")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_auth_discovery_exception(self, mock_session_class, mock_auth_discovery_class):
         """Test auth discovery handles exception (e.g., parsing/config errors)."""
         mock_session = _create_mock_session()
@@ -549,7 +549,7 @@ class TestDiscoverAuth:
         assert "Discovery config error" in result.error
 
     @patch("custom_components.cable_modem_monitor.core.ssl_adapter.LegacySSLAdapter")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_legacy_ssl_mounts_adapter(self, mock_session_class, mock_adapter_class):
         """Test legacy SSL mounts the adapter."""
         mock_session = _create_mock_session()
@@ -564,7 +564,7 @@ class TestDiscoverAuth:
         assert result.success is True
 
     @patch("custom_components.cable_modem_monitor.core.auth.discovery.AuthDiscovery")
-    @patch("custom_components.cable_modem_monitor.core.discovery.steps.requests.Session")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.steps.requests.Session")
     def test_parser_hints_passed_to_discovery(self, mock_session_class, mock_auth_discovery_class):
         """Test parser hints are passed to auth discovery."""
         mock_session = _create_mock_session()
@@ -628,7 +628,7 @@ class TestDetectParser:
         )
 
         with patch(
-            "custom_components.cable_modem_monitor.core.discovery.steps._get_parser_class_by_name"
+            "custom_components.cable_modem_monitor.core.fallback.discovery.steps._get_parser_class_by_name"
         ) as mock_get_parser:
             if parser_found:
                 mock_parser = MagicMock()
@@ -664,7 +664,7 @@ class TestDetectParser:
         )
 
         with patch(
-            "custom_components.cable_modem_monitor.core.discovery.steps._get_parser_class_by_name"
+            "custom_components.cable_modem_monitor.core.fallback.discovery.steps._get_parser_class_by_name"
         ) as mock_get_parser:
             mock_parser = MagicMock()
             mock_parser.name = "ARRIS SB8200"
@@ -686,7 +686,7 @@ class TestDetectParser:
         mock_parser_class.name = "Test Parser"
 
         with patch(
-            "custom_components.cable_modem_monitor.core.discovery.steps._get_parser_class_by_name"
+            "custom_components.cable_modem_monitor.core.fallback.discovery.steps._get_parser_class_by_name"
         ) as mock_get_parser:
             mock_get_parser.return_value = mock_parser_class
 
@@ -733,7 +733,7 @@ class TestGetParserClassByName:
         """Test fallback to provided parsers list."""
         mock_index = {"modems": {}}
 
-        with patch("custom_components.cable_modem_monitor.core.parser_discovery._load_modem_index") as mock_load:
+        with patch("custom_components.cable_modem_monitor.core.parser_registry._load_modem_index") as mock_load:
             mock_load.return_value = mock_index
 
             mock_parser_class = MagicMock()
@@ -747,7 +747,7 @@ class TestGetParserClassByName:
         """Test returns None when parser not found."""
         mock_index = {"modems": {}}
 
-        with patch("custom_components.cable_modem_monitor.core.parser_discovery._load_modem_index") as mock_load:
+        with patch("custom_components.cable_modem_monitor.core.parser_registry._load_modem_index") as mock_load:
             mock_load.return_value = mock_index
 
             result = _get_parser_class_by_name("NonExistentParser")
@@ -765,7 +765,7 @@ class TestGetParserClassByName:
             }
         }
 
-        with patch("custom_components.cable_modem_monitor.core.parser_discovery._load_modem_index") as mock_load:
+        with patch("custom_components.cable_modem_monitor.core.parser_registry._load_modem_index") as mock_load:
             mock_load.return_value = mock_index
 
             with patch("importlib.import_module") as mock_import:
@@ -915,10 +915,10 @@ class TestValidateParse:
 class TestRunDiscoveryPipeline:
     """Test run_discovery_pipeline orchestrator."""
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.detect_parser")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.detect_parser")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_successful_pipeline(self, mock_connectivity, mock_auth, mock_detect, mock_validate):
         """Test successful full pipeline run."""
         # Step 1: Connectivity succeeds
@@ -966,7 +966,7 @@ class TestRunDiscoveryPipeline:
         assert result.error is None
         assert result.failed_step is None
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_connectivity_failure(self, mock_connectivity):
         """Test pipeline fails at connectivity step."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -980,8 +980,8 @@ class TestRunDiscoveryPipeline:
         assert result.failed_step == "connectivity"
         assert "Could not connect" in result.error
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_auth_failure(self, mock_connectivity, mock_auth):
         """Test pipeline fails at auth step."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1000,9 +1000,9 @@ class TestRunDiscoveryPipeline:
         assert result.failed_step == "auth"
         assert result.working_url == "http://192.168.100.1"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.detect_parser")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.detect_parser")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_parser_detection_failure(self, mock_connectivity, mock_auth, mock_detect):
         """Test pipeline fails at parser detection step."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1028,10 +1028,10 @@ class TestRunDiscoveryPipeline:
         assert result.failed_step == "parser_detection"
         assert result.session is mock_session
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.detect_parser")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.detect_parser")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_validation_failure(self, mock_connectivity, mock_auth, mock_detect, mock_validate):
         """Test pipeline fails at validation step."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1066,9 +1066,9 @@ class TestRunDiscoveryPipeline:
         assert result.failed_step == "validation"
         assert result.parser_name == "Test Parser"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_user_selected_parser(self, mock_connectivity, mock_auth, mock_validate):
         """Test pipeline with user-selected parser skips detection."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1099,10 +1099,10 @@ class TestRunDiscoveryPipeline:
         assert result.success is True
         assert result.parser_name == "User Selected Parser"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.detect_parser")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.detect_parser")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_parser_hints_passed_through(self, mock_connectivity, mock_auth, mock_detect, mock_validate):
         """Test parser hints are passed through the pipeline."""
         mock_connectivity.return_value = ConnectivityResult(
@@ -1144,9 +1144,9 @@ class TestRunDiscoveryPipeline:
         assert result.success is True
         assert result.auth_form_config == {"action": "/login"}
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_hnap_with_selected_parser_validates(self, mock_connectivity, mock_auth, mock_validate):
         """Test HNAP modem with selected parser validates via HNAP builder.
 
@@ -1203,8 +1203,8 @@ class TestRunDiscoveryPipeline:
         assert call_kwargs["hnap_builder"] is mock_hnap_builder
         assert call_kwargs["html"] is None
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_hnap_without_selected_parser_fails_gracefully(self, mock_connectivity, mock_auth):
         """Test HNAP without selected parser fails with helpful error.
 
@@ -1521,10 +1521,12 @@ class TestRunDiscoveryPipelineWithStaticConfig:
     where known modems skip dynamic auth discovery.
     """
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch(
+        "custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.AuthWorkflow.authenticate_with_static_config"
+    )
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_uses_static_config_when_provided(
         self, mock_connectivity, mock_discover_auth, mock_workflow_auth, mock_validate
     ):
@@ -1576,10 +1578,12 @@ class TestRunDiscoveryPipelineWithStaticConfig:
         assert result.success is True
         assert result.auth_strategy == "form_plain"
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.discover_auth")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch(
+        "custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.AuthWorkflow.authenticate_with_static_config"
+    )
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.discover_auth")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_uses_discover_auth_when_no_static_config(
         self, mock_connectivity, mock_discover_auth, mock_workflow_auth, mock_validate
     ):
@@ -1622,8 +1626,10 @@ class TestRunDiscoveryPipelineWithStaticConfig:
         mock_workflow_auth.assert_not_called()
         assert result.success is True
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch(
+        "custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.AuthWorkflow.authenticate_with_static_config"
+    )
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_static_auth_failure_returns_auth_error(self, mock_connectivity, mock_workflow_auth):
         """Test static auth failure returns proper error with failed_step."""
         from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflowResult
@@ -1653,9 +1659,11 @@ class TestRunDiscoveryPipelineWithStaticConfig:
         assert result.failed_step == "auth"
         assert "Invalid credentials" in result.error
 
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.validate_parse")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.AuthWorkflow.authenticate_with_static_config")
-    @patch("custom_components.cable_modem_monitor.core.discovery.pipeline.check_connectivity")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.validate_parse")
+    @patch(
+        "custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.AuthWorkflow.authenticate_with_static_config"
+    )
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.pipeline.check_connectivity")
     def test_static_config_hnap_success(self, mock_connectivity, mock_workflow_auth, mock_validate):
         """Test HNAP auth with static config succeeds."""
         from custom_components.cable_modem_monitor.core.auth.workflow import AuthWorkflowResult

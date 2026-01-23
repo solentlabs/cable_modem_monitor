@@ -544,7 +544,7 @@ class TestValidateInput:
     @pytest.fixture
     def mock_pipeline_result(self):
         """Create a successful pipeline result."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -637,7 +637,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_connectivity_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
         """Test connectivity failure raises CannotConnectError."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -672,7 +672,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_auth_failure_raises_invalid_auth(self, mock_hass, mock_parser_class):
         """Test auth failure raises InvalidAuthError."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -707,7 +707,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_parser_detection_failure_raises_unsupported(self, mock_hass, mock_parser_class):
         """Test parser detection failure raises UnsupportedModemError."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -742,7 +742,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_generic_failure_raises_cannot_connect(self, mock_hass, mock_parser_class):
         """Test generic failure raises CannotConnectError."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -808,7 +808,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_validation_without_actual_model(self, mock_hass, mock_parser_class):
         """Test validation when parser doesn't return actual model."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -892,7 +892,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_validation_with_none_parser_instance(self, mock_hass, mock_parser_class):
         """Test validation handles None parser_instance gracefully."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -942,7 +942,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_connectivity_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test connectivity failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -977,7 +977,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_auth_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test auth failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -1012,7 +1012,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_parser_detection_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test parser detection failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -1047,7 +1047,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_generic_failure_uses_default_message(self, mock_hass, mock_parser_class):
         """Test generic failure uses default message when error is None."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -1082,7 +1082,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_validation_stores_hnap_config(self, mock_hass, mock_parser_class):
         """Test validation stores auth_hnap_config from pipeline result."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 
@@ -1139,7 +1139,7 @@ class TestValidateInput:
     @pytest.mark.asyncio
     async def test_validation_stores_url_token_config(self, mock_hass, mock_parser_class):
         """Test validation stores auth_url_token_config from pipeline result."""
-        from custom_components.cable_modem_monitor.core.discovery.pipeline import (
+        from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import (
             DiscoveryPipelineResult,
         )
 

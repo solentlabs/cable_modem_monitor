@@ -35,11 +35,11 @@ from custom_components.cable_modem_monitor.const import (
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
 )
-from custom_components.cable_modem_monitor.core.discovery.pipeline import DiscoveryPipelineResult
 from custom_components.cable_modem_monitor.core.exceptions import (
     CannotConnectError,
     InvalidAuthError,
 )
+from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import DiscoveryPipelineResult
 
 # Mock constants to avoid ImportError in tests
 CONF_HOST = "host"
@@ -185,7 +185,7 @@ class TestValidateInput:
         }
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_success(
@@ -210,7 +210,7 @@ class TestValidateInput:
         assert result["title"] == "Cable Modem (192.168.100.1)"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_connection_failure(
@@ -309,7 +309,7 @@ class TestModemNameFormatting:
         TITLE_FORMATTING_CASES,
         ids=[c[3] for c in TITLE_FORMATTING_CASES],
     )
-    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_formatting(
@@ -343,7 +343,7 @@ class TestModemNameFormatting:
         assert result["title"] == expected_title, f"Failed: {desc}"
 
     @pytest.mark.asyncio
-    @patch("custom_components.cable_modem_monitor.core.discovery.run_discovery_pipeline")
+    @patch("custom_components.cable_modem_monitor.core.fallback.discovery.run_discovery_pipeline")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_detection_info_included(

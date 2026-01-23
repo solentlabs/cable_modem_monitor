@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
+from custom_components.cable_modem_monitor.core.fallback import FallbackOrchestrator
 
 
 class MockParserWithHints(ModemParser):
     """Mock parser WITH auth_form_hints - should use AuthHandler."""
 
     name = "[MFG] [Model] WithHints"
-    manufacturer = "[MFG]"
+    manufacturer = "Unknown"  # Mark as fallback parser for FallbackOrchestrator
     auth_form_hints = {"username_field": "user", "password_field": "pass"}
 
     # Detection uses YAML hints (HintMatcher)
@@ -40,21 +40,24 @@ class MockParserWithoutHints(ModemParser):
 class TestAuth:
     """Test the authentication system.
 
-    Authentication is handled by AuthHandler:
-    - Parsers with auth_form_hints use AuthHandler for form-based auth.
-    - Parsers without auth_form_hints use auth discovery to detect auth type.
+    Authentication architecture:
+    - DataOrchestrator: For known modem.yaml parsers, uses stored auth strategy only
+    - FallbackOrchestrator: For unknown modems, adds parser hints discovery
     """
 
     def test_form_auth_uses_parser_hints(self, mocker):
-        """Test form-based authentication uses parser's auth_form_hints.
+        """Test FallbackOrchestrator uses parser's auth_form_hints.
 
-        When a parser has auth_form_hints defined, the scraper creates a temporary
-        AuthHandler to handle authentication.
+        When a fallback parser has auth_form_hints defined, FallbackOrchestrator
+        creates a temporary AuthHandler to handle authentication.
         """
-        scraper = DataOrchestrator("192.168.100.1", "admin", "password", parser=[MockParserWithHints])
+        # Use FallbackOrchestrator for parser hints behavior
+        scraper = FallbackOrchestrator("192.168.100.1", "admin", "password", parser=[MockParserWithHints])
         # _fetch_data now returns (html, url, parser_class)
         mocker.patch.object(
-            scraper, "_fetch_data", return_value=("<html></html>", "http://192.168.100.1", MockParserWithHints)
+            scraper,
+            "_fetch_data",
+            return_value=("<html></html>", "http://192.168.100.1", MockParserWithHints),
         )
         mocker.patch.object(scraper, "_detect_parser", return_value=MockParserWithHints())
 

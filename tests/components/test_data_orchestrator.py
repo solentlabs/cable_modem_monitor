@@ -106,7 +106,7 @@ class TestDataOrchestrator:
     def test_fetch_data_url_ordering(self, mocker):
         """Test that the scraper tries URLs in the correct order when all fail."""
         # Import parsers to get URL patterns
-        from custom_components.cable_modem_monitor.parsers import get_parsers
+        from custom_components.cable_modem_monitor.core.parser_registry import get_parsers
 
         parsers = get_parsers()
 
@@ -136,7 +136,7 @@ class TestDataOrchestrator:
     def test_fetch_data_stops_on_first_success(self, mocker):
         """Test that the scraper stops trying URLs after first successful response."""
         # Import parsers to get URL patterns
-        from custom_components.cable_modem_monitor.parsers import get_parsers
+        from custom_components.cable_modem_monitor.core.parser_registry import get_parsers
 
         parsers = get_parsers()
 
@@ -768,7 +768,7 @@ class TestFallbackParserDetection:
         """
         from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
         from custom_components.cable_modem_monitor.core.discovery_helpers import ParserNotFoundError
-        from custom_components.cable_modem_monitor.parsers.universal.fallback import UniversalFallbackParser
+        from custom_components.cable_modem_monitor.core.fallback.parser import UniversalFallbackParser
 
         # Use real fallback parser to ensure it's available but not auto-selected
         scraper = DataOrchestrator("192.168.100.1", parser=[UniversalFallbackParser])

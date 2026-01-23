@@ -40,12 +40,12 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
-from ..discovery_helpers import HintMatcher
-from ..ssl_adapter import LegacySSLAdapter
+from ...discovery_helpers import HintMatcher
+from ...ssl_adapter import LegacySSLAdapter
 from .types import AuthResult, ConnectivityResult, ParserResult, ValidationResult
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..base_parser import ModemParser
+    from ...base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -194,8 +194,8 @@ def discover_auth(
         The HTML response is critical - it flows to parser detection.
         Do not discard it even if auth "failed" (may be no-auth modem).
     """
-    from ..auth.discovery import AuthDiscovery
-    from ..auth.types import AuthStrategyType
+    from ...auth.discovery import AuthDiscovery
+    from ...auth.types import AuthStrategyType
 
     # Create session with appropriate SSL settings
     session = requests.Session()
@@ -386,7 +386,7 @@ def _get_parser_class_by_name(
         Parser class or None if not found
     """
     # Fast path: Direct load using index.yaml
-    from ..parser_discovery import _load_modem_index
+    from ...parser_registry import _load_modem_index
 
     index = _load_modem_index()
     modems = index.get("modems", {})
@@ -459,8 +459,8 @@ def validate_parse(  # noqa: C901
     """
     from bs4 import BeautifulSoup
 
-    from ...modem_config.adapter import get_auth_adapter_for_parser
-    from ..loaders import ResourceLoaderFactory
+    from ....modem_config.adapter import get_auth_adapter_for_parser
+    from ...loaders import ResourceLoaderFactory
 
     # HNAP modems don't return HTML - they use API calls via the builder
     is_hnap = hnap_builder is not None

@@ -334,7 +334,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
             self._progress.user_input = user_input
 
             # Check if auth type selection is needed
-            from .parsers import get_parser_by_name
+            from .core.parser_registry import get_parser_by_name
 
             modem_choice = user_input.get(CONF_MODEM_CHOICE, "")
             choice_clean = modem_choice.rstrip(" *")
@@ -356,7 +356,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         This step is only shown for modems with auth.types{} in modem.yaml
         that have more than one option (e.g., SB8200 with "none" and "url_token").
         """
-        from .parsers import get_parser_by_name
+        from .core.parser_registry import get_parser_by_name
 
         if user_input is not None:
             # Store selected auth type and proceed to validation

@@ -14,8 +14,8 @@ import pytest
 
 from custom_components.cable_modem_monitor.core.auth.workflow import AUTH_TYPE_TO_STRATEGY
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
-from custom_components.cable_modem_monitor.core.discovery.pipeline import run_discovery_pipeline
-from custom_components.cable_modem_monitor.core.parser_discovery import get_parser_by_name
+from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline import run_discovery_pipeline
+from custom_components.cable_modem_monitor.core.parser_registry import get_parser_by_name
 from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
 
 from .mock_modem_server import MockModemServer

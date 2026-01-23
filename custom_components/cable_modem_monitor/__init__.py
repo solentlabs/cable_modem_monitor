@@ -62,10 +62,11 @@ from .const import (
 )
 from .coordinator import create_health_monitor, create_update_function, perform_initial_refresh
 from .core.data_orchestrator import DataOrchestrator
+from .core.fallback import FallbackOrchestrator
 from .core.log_buffer import setup_log_buffer
+from .core.parser_registry import get_parser_by_name, get_parsers
 from .entity_migration import async_migrate_docsis30_entities
 from .modem_config.adapter import get_auth_adapter_for_parser
-from .parsers import get_parser_by_name, get_parsers
 from .services import (
     SERVICE_CLEAR_HISTORY,
     SERVICE_CLEAR_HISTORY_SCHEMA,
@@ -209,20 +210,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # AuthHandler will use defaults for these cases
     _log_missing_auth_config(auth_strategy, auth_hnap_config, auth_url_token_config)
 
-    scraper = DataOrchestrator(
-        host,
-        username,
-        password,
-        parser=selected_parser,
-        cached_url=entry.data.get(CONF_WORKING_URL),
-        parser_name=parser_name_hint,
-        verify_ssl=False,
-        legacy_ssl=legacy_ssl,
-        auth_strategy=auth_strategy,
-        auth_form_config=auth_form_config,
-        auth_hnap_config=auth_hnap_config,
-        auth_url_token_config=auth_url_token_config,
-    )
+    # Choose orchestrator based on modem selection:
+    # - FallbackOrchestrator: For unknown modems, enables auth discovery for HTML capture
+    # - DataOrchestrator: For known modems, uses modem.yaml as source of truth
+    is_fallback_modem = modem_choice == "Unknown Modem (Fallback Mode)"
+
+    orchestrator_args = {
+        "host": host,
+        "username": username,
+        "password": password,
+        "parser": selected_parser,
+        "cached_url": entry.data.get(CONF_WORKING_URL),
+        "parser_name": parser_name_hint,
+        "verify_ssl": False,
+        "legacy_ssl": legacy_ssl,
+        "auth_strategy": auth_strategy,
+        "auth_form_config": auth_form_config,
+        "auth_hnap_config": auth_hnap_config,
+        "auth_url_token_config": auth_url_token_config,
+    }
+
+    scraper: DataOrchestrator
+    if is_fallback_modem:
+        _LOGGER.info("Using FallbackOrchestrator for unknown modem (auth discovery enabled)")
+        scraper = FallbackOrchestrator(**orchestrator_args)
+    else:
+        _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
+        scraper = DataOrchestrator(**orchestrator_args)
 
     # Create health monitor
     health_monitor = await create_health_monitor(hass, legacy_ssl=legacy_ssl)

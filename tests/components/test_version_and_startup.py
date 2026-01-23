@@ -61,7 +61,7 @@ class TestVersionLogging:
 
         # Mock the necessary components
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser,
             patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
@@ -326,7 +326,7 @@ class TestProtocolOptimizationIntegration:
         mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
 
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser,
             patch("custom_components.cable_modem_monitor.DataOrchestrator") as mock_scraper_class,
             patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,

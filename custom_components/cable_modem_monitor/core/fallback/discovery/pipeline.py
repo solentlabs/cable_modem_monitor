@@ -36,7 +36,7 @@ Entry Point:
     run_discovery_pipeline(host, username, password) -> DiscoveryPipelineResult
 
 Usage:
-    from custom_components.cable_modem_monitor.core.discovery import (
+    from custom_components.cable_modem_monitor.core.fallback.discovery import (
         run_discovery_pipeline,
         DiscoveryPipelineResult,
     )
@@ -66,8 +66,8 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
-from ..auth.workflow import AuthWorkflow
-from ..ssl_adapter import LegacySSLAdapter
+from ...auth.workflow import AuthWorkflow
+from ...ssl_adapter import LegacySSLAdapter
 from .steps import (
     _get_parser_class_by_name,
     check_connectivity,
@@ -84,7 +84,7 @@ from .types import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..base_parser import ModemParser
+    from ...base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 
