@@ -76,6 +76,7 @@ def check_connectivity(  # noqa: C901
     else:
         urls_to_try = [f"http://{host}", f"https://{host}"]
 
+    _LOGGER.info("Connectivity check: trying URLs in order: %s", urls_to_try)
     legacy_ssl = False
 
     for url in urls_to_try:

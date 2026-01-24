@@ -4,13 +4,13 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 44
+**Total Tests:** 46
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
-| [test_config_flow_e2e.py](test_config_flow_e2e.py) | 7 | E2E tests for config flow against mock modem servers. |
+| [test_config_flow_e2e.py](test_config_flow_e2e.py) | 9 | E2E tests for config flow against mock modem servers. |
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
 
@@ -53,6 +53,12 @@ works correctly for all modems.
 : E2E tests for modems without authentication.
 
 - `test_sb6190_no_auth`: SB6190 no-auth variant should work without credentials.
+
+**TestWorkingUrlFormat** (2 tests)
+: Tests to verify working_url is always a base URL without path.
+
+- `test_cga2121_working_url_is_base_url`: CGA2121 setup should return base URL without page path.
+- `test_mb7621_working_url_is_base_url`: MB7621 setup should return base URL without page path.
 
 ### test_fixture_validation.py
 

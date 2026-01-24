@@ -342,3 +342,95 @@ class TestNoAuthE2E:
 
             assert result.success, f"No-auth failed on {protocol}: {result.error}"
             assert result.auth_strategy == "no_auth"
+
+
+# =============================================================================
+# WORKING URL FORMAT TESTS
+# =============================================================================
+
+
+class TestWorkingUrlFormat:
+    """Tests to verify working_url is always a base URL without path.
+
+    The working_url returned by setup_modem should only contain
+    protocol://host:port, never a path like /st_docsis.html.
+
+    Related to: Issue #75 (CGA2121 getting HTTPS with path in working_url)
+    """
+
+    def test_cga2121_working_url_is_base_url(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
+        """CGA2121 setup should return base URL without page path.
+
+        Regression test for Issue #75: working_url was including
+        /st_docsis.html path, causing protocol/auth issues.
+        """
+        modem_dir = MODEMS_DIR / "technicolor/cga2121"
+        if not modem_dir.exists():
+            pytest.skip("CGA2121 modem not found")
+
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+        ) as server:
+            parser = get_parser_by_name("Technicolor CGA2121")
+            if not parser:
+                pytest.skip("CGA2121 parser not registered")
+
+            static_config = build_static_auth_config(parser, "form")
+
+            result = setup_modem(
+                host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
+                username="admin",
+                password="pw",
+            )
+
+            assert result.success, f"Setup failed on {protocol}: {result.error}"
+
+            # Key assertion: working_url should be base URL only
+            working_url = result.working_url
+            assert working_url is not None, "working_url should not be None"
+
+            # Parse the URL - should not have a path beyond "/"
+            from urllib.parse import urlparse
+
+            parsed = urlparse(working_url)
+            assert parsed.path in ("", "/"), (
+                f"working_url should be base URL without path, " f"got path='{parsed.path}' in URL: {working_url}"
+            )
+
+    def test_mb7621_working_url_is_base_url(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
+        """MB7621 setup should return base URL without page path."""
+        modem_dir = MODEMS_DIR / "motorola/mb7621"
+        if not modem_dir.exists():
+            pytest.skip("MB7621 modem not found")
+
+        with MockModemServer.from_modem_path(
+            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+        ) as server:
+            parser = get_parser_by_name("Motorola MB7621")
+            if not parser:
+                pytest.skip("MB7621 parser not registered")
+
+            static_config = build_static_auth_config(parser, "form")
+
+            result = setup_modem(
+                host=f"127.0.0.1:{server.port}",
+                parser_class=parser,
+                static_auth_config=static_config,
+                username="admin",
+                password="pw",
+            )
+
+            assert result.success, f"Setup failed on {protocol}: {result.error}"
+            self._assert_base_url_only(result.working_url)
+
+    def _assert_base_url_only(self, working_url: str | None):
+        """Assert that working_url is a base URL without path."""
+        from urllib.parse import urlparse
+
+        assert working_url is not None, "working_url should not be None"
+        parsed = urlparse(working_url)
+        assert parsed.path in ("", "/"), (
+            f"working_url should be base URL without path, " f"got path='{parsed.path}' in URL: {working_url}"
+        )
