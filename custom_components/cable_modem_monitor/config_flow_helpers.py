@@ -437,10 +437,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             _LOGGER.debug("Actual model extracted from modem: %s", actual_model)
 
     # Extract docsis_version from modem.yaml
-    if result.parser_name:
+    # get_auth_adapter_for_parser expects class name, not display name
+    if result.parser_instance:
         from .modem_config import get_auth_adapter_for_parser
 
-        adapter = get_auth_adapter_for_parser(result.parser_name)
+        parser_class_name = result.parser_instance.__class__.__name__
+        adapter = get_auth_adapter_for_parser(parser_class_name)
         if adapter:
             docsis_version = adapter.get_docsis_version()
             if docsis_version:
