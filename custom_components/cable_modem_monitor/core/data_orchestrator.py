@@ -1288,7 +1288,27 @@ class DataOrchestrator:
         soup = BeautifulSoup(html, "html.parser")
         return self.parser.parse(soup)
 
-    def get_modem_data(self, capture_raw: bool = False) -> dict:
+    def _pre_authenticate(self) -> tuple[bool, str | None]:
+        """Pre-authenticate before data fetch for modems requiring auth.
+
+        For modems with an auth strategy configured, this authenticates BEFORE
+        fetching. This handles modems that return 401/403 without auth.
+
+        Returns:
+            tuple[bool, str | None]: (success, html_from_auth)
+                - success: True if auth succeeded or no auth needed
+                - html_from_auth: HTML returned during auth (some strategies return data), or None
+        """
+        if not self._auth_strategy or not self.username or not self.password:
+            return (True, None)
+
+        _LOGGER.debug(
+            "Pre-authenticating with strategy %s before data fetch",
+            self._auth_strategy,
+        )
+        return self._login()
+
+    def get_modem_data(self, capture_raw: bool = False) -> dict:  # noqa: C901
         """Fetch and parse modem data.
 
         Args:
@@ -1320,21 +1340,36 @@ class DataOrchestrator:
         self._try_instant_detection()
 
         try:
-            fetched_data = self._fetch_data(capture_raw=capture_raw)
-            if not fetched_data:
-                return self._create_error_response("unreachable")
+            # Pre-authenticate for modems that require auth before any request
+            success, pre_auth_html = self._pre_authenticate()
+            if not success:
+                _LOGGER.error("Pre-authentication failed")
+                return self._create_error_response("auth_failed")
 
-            html, successful_url, suggested_parser = fetched_data
+            # If we got HTML from pre-auth, use it directly (some auth strategies return data)
+            if pre_auth_html:
+                _LOGGER.debug("Using HTML from pre-authentication (%d bytes)", len(pre_auth_html))
+                html = pre_auth_html
+                successful_url = self.base_url
+                suggested_parser = self.parser.__class__ if self.parser else None
+            else:
+                # No pre-auth HTML - fetch data normally
+                fetched_data = self._fetch_data(capture_raw=capture_raw)
+                if not fetched_data:
+                    return self._create_error_response("unreachable")
+                html, successful_url, suggested_parser = fetched_data
 
             # Detect or instantiate parser
             if not self._ensure_parser(html, successful_url, suggested_parser):
                 return self._create_error_response("offline")
 
-            # Authenticate and get usable HTML (re-fetches if session had expired)
-            authenticated = self._authenticate(html, data_url=successful_url)
-            if authenticated is None:
-                return self._create_error_response("auth_failed")
-            html = authenticated
+            # Additional auth check if we didn't pre-authenticate
+            # (handles session expiration for no-auth modems that later require login)
+            if not pre_auth_html:
+                authenticated = self._authenticate(html, data_url=successful_url)
+                if authenticated is None:
+                    return self._create_error_response("auth_failed")
+                html = authenticated
 
             # Parse data and build response
             data = self._parse_data(html)

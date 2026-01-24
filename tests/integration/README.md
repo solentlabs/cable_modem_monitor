@@ -4,7 +4,7 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 52
+**Total Tests:** 56
 
 ## Test Files
 
@@ -14,6 +14,7 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
 | [test_hnap_protocol_fallback.py](test_hnap_protocol_fallback.py) | 6 | Tests for HNAP modem protocol fallback behavior. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
+| [test_url_token_polling.py](test_url_token_polling.py) | 4 | Tests for URL token authentication during polling cycle. |
 
 ## Test Details
 
@@ -191,6 +192,36 @@ not custom_components/.../modems/ (deployment sync target).
 - `test_discovery_pipeline_dynamic_auth`: Test run_discovery_pipeline with dynamic auth discovery.
 - `test_discovery_pipeline_auto_detection`: Test discovery pipeline with auto-detection (no pre-selected parser).
 - `test_known_modem_setup_static_auth`: Test setup_modem with static auth config from modem.yaml.
+
+### test_url_token_polling.py
+
+Tests for URL token authentication during polling cycle.
+
+Issue #81: SB8200 with URL token auth works during config flow but fails
+during polling because DataOrchestrator._fetch_data doesn't use AuthHandler.
+
+Root cause: DataOrchestrator stores auth_url_token_config but never uses it
+when fetching data. It only supports Basic auth in _fetch_data().
+
+These tests verify:
+1. CURRENT BEHAVIOR: Polling fails for URL token auth modems (bug)
+2. DESIRED BEHAVIOR: Polling should use AuthHandler for URL token auth
+
+**TestConfigFlowVsPolling** (1 tests)
+: Compare config flow behavior vs polling behavior for URL token auth.
+
+- `test_config_flow_works_with_url_token`: Config flow successfully authenticates with URL token auth.
+
+**TestAuthHandlerUsage** (2 tests)
+: Tests verifying AuthHandler is used during data fetch.
+
+- `test_get_modem_data_uses_auth_handler`: FIXED: get_modem_data now pre-authenticates before fetching.
+- `test_login_uses_auth_handler`: Verify _login() does use AuthHandler.
+
+**TestUrlTokenAuthRequirement** (1 tests)
+: Tests verifying URL token auth works correctly.
+
+- `test_authenticated_request_succeeds`: Verify mock server works with correct URL token auth.
 
 ## Fixtures
 
