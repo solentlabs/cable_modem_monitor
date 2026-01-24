@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test script to exercise mock modem server with the full scraper flow.
+"""Test script to exercise mock modem server with the full modem_client flow.
 
 This script tests the complete data fetch cycle against the mock server:
 1. Authentication (form, basic, etc.)
@@ -101,14 +101,14 @@ def test_known_modem_setup(host: str, modem_path: str, username: str, password: 
         return False
 
 
-def test_scraper_polling(host: str, modem_path: str, username: str, password: str) -> bool:
-    """Test the scraper polling flow (simulates what HA does during updates).
+def test_modem_client_polling(host: str, modem_path: str, username: str, password: str) -> bool:
+    """Test the modem_client polling flow (simulates what HA does during updates).
 
     Returns:
         True if successful, False otherwise.
     """
     print(f"\n{'='*60}")
-    print("TEST: Scraper Polling (simulates HA coordinator updates)")
+    print("TEST: Data Polling (simulates HA coordinator updates)")
     print(f"{'='*60}")
 
     # Load modem config
@@ -132,14 +132,14 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
     auth_hnap_config = static_config.get("auth_hnap_config")
     auth_url_token_config = static_config.get("auth_url_token_config")
 
-    print("Creating scraper with stored auth config...")
+    print("Creating modem_client with stored auth config...")
     print(f"  Auth strategy: {auth_strategy}")
     print(f"  Form config: {auth_form_config is not None}")
     print(f"  HNAP config: {auth_hnap_config is not None}")
 
-    # Create scraper (simulating what __init__.py does)
+    # Create modem_client (simulating what __init__.py does)
     try:
-        scraper = DataOrchestrator(
+        modem_client = DataOrchestrator(
             host=host,
             username=username,
             password=password,
@@ -153,13 +153,13 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
             auth_url_token_config=auth_url_token_config,
         )
     except Exception as e:
-        print(f"\nFAILED to create scraper: {e}")
+        print(f"\nFAILED to create modem_client: {e}")
         return False
 
     # Fetch data (simulating coordinator update)
     print("\nFetching modem data (poll #1)...")
     try:
-        data = scraper.get_modem_data()
+        data = modem_client.get_modem_data()
     except Exception as e:
         print(f"\nFAILED with exception: {e}")
         return False
@@ -177,7 +177,7 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
         # Test second poll (session should still be valid)
         print("\nFetching modem data (poll #2 - session reuse)...")
         try:
-            data2 = scraper.get_modem_data()
+            data2 = modem_client.get_modem_data()
             if data2:
                 ds2 = data2.get("cable_modem_downstream", [])
                 print(f"  Poll #2 downstream channels: {len(ds2)}")
@@ -238,7 +238,7 @@ def test_auth_failure(host: str, modem_path: str) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Test mock modem server with scraper")
+    parser = argparse.ArgumentParser(description="Test mock modem server with modem_client")
     parser.add_argument("modem", help="Modem path (e.g., technicolor/cga2121)")
     parser.add_argument("--host", default="localhost", help="Mock server host")
     parser.add_argument("--port", type=int, default=9080, help="Mock server port")
@@ -259,7 +259,7 @@ def main():
     results.append(("Known Modem Setup", test_known_modem_setup(host, args.modem, args.username, args.password)))
 
     # Test 2: Scraper polling
-    results.append(("Scraper Polling", test_scraper_polling(host, args.modem, args.username, args.password)))
+    results.append(("Data Polling", test_modem_client_polling(host, args.modem, args.username, args.password)))
 
     # Test 3: Auth failure handling
     if not args.skip_auth_failure:

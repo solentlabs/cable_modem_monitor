@@ -73,8 +73,8 @@ class RestartMonitor:
 
             # Clear auth cache before polling resumes
             # Modem invalidates all sessions on reboot, so cached credentials become stale
-            if hasattr(self._coordinator, "scraper"):
-                self._coordinator.scraper.clear_auth_cache()
+            if hasattr(self._coordinator, "modem_client"):
+                self._coordinator.modem_client.clear_auth_cache()
                 _LOGGER.debug("Cleared auth cache after modem restart")
 
             # Phase 1: Wait for modem to respond (max 2 minutes)

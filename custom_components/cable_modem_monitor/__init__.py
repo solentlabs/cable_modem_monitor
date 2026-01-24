@@ -188,7 +188,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         selected_parser = parsers
         parser_name_hint = entry.data.get(CONF_PARSER_NAME)
 
-    # Create scraper
+    # Create modem_client
     legacy_ssl = entry.data.get(CONF_LEGACY_SSL, False)
     auth_strategy = entry.data.get(CONF_AUTH_STRATEGY)
     auth_form_config = entry.data.get(CONF_AUTH_FORM_CONFIG)
@@ -196,7 +196,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     auth_url_token_config = entry.data.get(CONF_AUTH_URL_TOKEN_CONFIG)
 
     # Auto-recover from "unknown" auth strategy (failed discovery from previous attempts)
-    # Clear it so scraper uses modem.yaml hints for authentication
+    # Clear it so modem_client uses modem.yaml hints for authentication
     # Also persist the cleared value so we don't repeat this message every restart
     if auth_strategy == "unknown":
         _LOGGER.info("Auth strategy was 'unknown' (previous discovery failed), " "clearing to use modem.yaml hints")
@@ -230,13 +230,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         "auth_url_token_config": auth_url_token_config,
     }
 
-    scraper: DataOrchestrator
+    modem_client: DataOrchestrator
     if is_fallback_modem:
         _LOGGER.info("Using FallbackOrchestrator for unknown modem (auth discovery enabled)")
-        scraper = FallbackOrchestrator(**orchestrator_args)
+        modem_client = FallbackOrchestrator(**orchestrator_args)
     else:
         _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
-        scraper = DataOrchestrator(**orchestrator_args)
+        modem_client = DataOrchestrator(**orchestrator_args)
 
     # Create health monitor
     health_monitor = await create_health_monitor(hass, legacy_ssl=legacy_ssl)
@@ -245,7 +245,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
 
     # Create coordinator
-    async_update_data = create_update_function(hass, scraper, health_monitor, host, supports_icmp)
+    async_update_data = create_update_function(hass, modem_client, health_monitor, host, supports_icmp)
     coordinator = DataUpdateCoordinator[dict[str, Any]](
         hass,
         _LOGGER,
@@ -255,8 +255,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         config_entry=entry,
     )
 
-    # Store scraper reference for cache invalidation after modem restart
-    coordinator.scraper = scraper  # type: ignore[attr-defined]
+    # Store modem_client reference for cache invalidation after modem restart
+    coordinator.modem_client = modem_client  # type: ignore[attr-defined]
 
     # Perform initial data fetch
     await perform_initial_refresh(coordinator, entry)
@@ -270,8 +270,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
     # Fallback: get docsis_version from modem.yaml if not in config entry (pre-v3.11 installs)
     # Run in executor to avoid blocking I/O in event loop (modem.yaml file reads)
-    if not docsis_version and scraper.parser:
-        adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, scraper.parser.__class__.__name__)
+    if not docsis_version and modem_client.parser:
+        adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, modem_client.parser.__class__.__name__)
         if adapter:
             docsis_version = adapter.get_docsis_version()
             _LOGGER.debug("Using modem.yaml docsis_version for migration: %s", docsis_version)
