@@ -129,27 +129,40 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
     static_config = adapter.get_static_auth_config()
     auth_strategy = static_config.get("auth_strategy")
     auth_form_config = static_config.get("auth_form_config")
+    auth_hnap_config = static_config.get("auth_hnap_config")
+    auth_url_token_config = static_config.get("auth_url_token_config")
 
     print("Creating scraper with stored auth config...")
     print(f"  Auth strategy: {auth_strategy}")
     print(f"  Form config: {auth_form_config is not None}")
+    print(f"  HNAP config: {auth_hnap_config is not None}")
 
     # Create scraper (simulating what __init__.py does)
-    scraper = DataOrchestrator(
-        host=host,
-        username=username,
-        password=password,
-        parser=parser,
-        cached_url=f"http://{host}",
-        verify_ssl=False,
-        legacy_ssl=False,
-        auth_strategy=auth_strategy,
-        auth_form_config=auth_form_config,
-    )
+    try:
+        scraper = DataOrchestrator(
+            host=host,
+            username=username,
+            password=password,
+            parser=parser,
+            cached_url=f"http://{host}",
+            verify_ssl=False,
+            legacy_ssl=False,
+            auth_strategy=auth_strategy,
+            auth_form_config=auth_form_config,
+            auth_hnap_config=auth_hnap_config,
+            auth_url_token_config=auth_url_token_config,
+        )
+    except Exception as e:
+        print(f"\nFAILED to create scraper: {e}")
+        return False
 
     # Fetch data (simulating coordinator update)
     print("\nFetching modem data (poll #1)...")
-    data = scraper.get_modem_data()
+    try:
+        data = scraper.get_modem_data()
+    except Exception as e:
+        print(f"\nFAILED with exception: {e}")
+        return False
 
     if data:
         # Scraper uses cable_modem_* keys, discovery uses downstream/upstream
@@ -163,13 +176,17 @@ def test_scraper_polling(host: str, modem_path: str, username: str, password: st
 
         # Test second poll (session should still be valid)
         print("\nFetching modem data (poll #2 - session reuse)...")
-        data2 = scraper.get_modem_data()
-        if data2:
-            ds2 = data2.get("cable_modem_downstream", [])
-            print(f"  Poll #2 downstream channels: {len(ds2)}")
-            return True
-        else:
-            print("  Poll #2 FAILED")
+        try:
+            data2 = scraper.get_modem_data()
+            if data2:
+                ds2 = data2.get("cable_modem_downstream", [])
+                print(f"  Poll #2 downstream channels: {len(ds2)}")
+                return True
+            else:
+                print("  Poll #2 FAILED - no data")
+                return False
+        except Exception as e:
+            print(f"  Poll #2 FAILED with exception: {e}")
             return False
     else:
         print("\nFAILED to get modem data")
