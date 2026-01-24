@@ -28,8 +28,8 @@ from custom_components.cable_modem_monitor.const import (
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
     CONF_DOCSIS_VERSION,
-    CONF_LAST_DETECTION,
     CONF_PARSER_NAME,
+    CONF_PARSER_SELECTED_AT,
     DOMAIN,
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
@@ -987,7 +987,7 @@ async def test_options_flow_preserves_detection_info(hass: HomeAssistant, enable
             "detected_modem": "Arris SB8200",
             "detected_manufacturer": "Arris",
             "docsis_version": "3.1",
-            "last_detection": "2026-01-22T10:00:00",
+            "parser_selected_at": "2026-01-22T10:00:00",
         },
         unique_id="192.168.100.1",
     )
@@ -1007,7 +1007,7 @@ async def test_options_flow_preserves_detection_info(hass: HomeAssistant, enable
         assert data[CONF_DETECTED_MODEM] == "Arris SB8200"
         assert data[CONF_DETECTED_MANUFACTURER] == "Arris"
         assert data[CONF_DOCSIS_VERSION] == "3.1"
-        assert data[CONF_LAST_DETECTION] == "2026-01-22T10:00:00"
+        assert data[CONF_PARSER_SELECTED_AT] == "2026-01-22T10:00:00"
 
 
 async def test_options_flow_preserves_detection_with_missing_fields(hass: HomeAssistant, enable_custom_integrations):

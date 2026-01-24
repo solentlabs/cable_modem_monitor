@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "Налаштування Cable Modem",
-        "description": "Поточний: {detected_modem}\nОстання перевірка: {last_detection}",
+        "description": "Поточний: {detected_modem}\nОстання перевірка: {parser_selected_at}",
         "data": {
           "host": "IP модему",
           "username": "Ім'я користувача",

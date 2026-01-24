@@ -59,14 +59,13 @@ from .const import (
     CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
-    CONF_DETECTION_METHOD,
     CONF_DOCSIS_VERSION,
     CONF_ENTITY_PREFIX,
     CONF_HOST,
-    CONF_LAST_DETECTION,
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
+    CONF_PARSER_SELECTED_AT,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_ICMP,
@@ -207,13 +206,10 @@ class ConfigFlowMixin:
         data[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
         data[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
         data[CONF_DOCSIS_VERSION] = detection_info.get("docsis_version")
-        data[CONF_LAST_DETECTION] = datetime.now().isoformat()
+        data[CONF_PARSER_SELECTED_AT] = datetime.now().isoformat()
 
         if detection_info.get("actual_model"):
             data[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
-
-        # Detection method is always user_selected (auto-detection removed)
-        data[CONF_DETECTION_METHOD] = "user_selected"
 
     def _apply_auth_discovery_info(
         self,
@@ -550,15 +546,15 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
                 return stored_clean
         return stored
 
-    def _format_last_detection(self, last_detection: str) -> str:
+    def _format_parser_selected_at(self, parser_selected_at: str) -> str:
         """Format ISO timestamp for display."""
-        if last_detection and last_detection != "Never":
+        if parser_selected_at and parser_selected_at != "Never":
             try:
-                dt = datetime.fromisoformat(last_detection)
+                dt = datetime.fromisoformat(parser_selected_at)
                 return dt.strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
                 pass
-        return last_detection
+        return parser_selected_at
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Show the options form."""
@@ -590,7 +586,7 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
             ),
             description_placeholders={
                 "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
-                "last_detection": self._format_last_detection(entry_data.get(CONF_LAST_DETECTION, "Never")),
+                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
             },
         )
 
@@ -674,9 +670,8 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
         data[CONF_DETECTED_MODEM] = entry_data.get(CONF_DETECTED_MODEM, "Unknown")
         data[CONF_DETECTED_MANUFACTURER] = entry_data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
         data[CONF_DOCSIS_VERSION] = entry_data.get(CONF_DOCSIS_VERSION)
-        data[CONF_LAST_DETECTION] = entry_data.get(CONF_LAST_DETECTION)
+        data[CONF_PARSER_SELECTED_AT] = entry_data.get(CONF_PARSER_SELECTED_AT)
         data[CONF_ACTUAL_MODEL] = entry_data.get(CONF_ACTUAL_MODEL)
-        data[CONF_DETECTION_METHOD] = entry_data.get(CONF_DETECTION_METHOD)
 
     async def async_step_options_with_errors(
         self, user_input: dict[str, Any] | None = None
@@ -702,6 +697,6 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
             errors=errors,
             description_placeholders={
                 "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
-                "last_detection": self._format_last_detection(entry_data.get(CONF_LAST_DETECTION, "Never")),
+                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
             },
         )

@@ -31,11 +31,10 @@ CONF_DETECTED_MODEM = "detected_modem"  # Display name for UI
 CONF_DETECTED_MANUFACTURER = "detected_manufacturer"  # Display manufacturer for UI
 CONF_DOCSIS_VERSION = "docsis_version"  # DOCSIS version (3.0, 3.1) for entity migration
 CONF_WORKING_URL = "working_url"  # Last successful URL
-CONF_LAST_DETECTION = "last_detection"  # Timestamp of last detection
+CONF_PARSER_SELECTED_AT = "parser_selected_at"  # Timestamp when parser was selected in config flow
 CONF_SUPPORTS_ICMP = "supports_icmp"  # Auto-detected ICMP ping support for configured host
 CONF_ACTUAL_MODEL = "actual_model"  # Actual model name extracted from modem (e.g., "C3700-100NAS")
 CONF_LEGACY_SSL = "legacy_ssl"  # Auto-detected: True if modem requires SECLEVEL=0 ciphers
-CONF_DETECTION_METHOD = "detection_method"  # How parser was selected: "auto_detected" or "user_selected"
 
 # Auth discovery fields
 CONF_AUTH_TYPE = "auth_type"  # User-selected auth type (for modems with variants)

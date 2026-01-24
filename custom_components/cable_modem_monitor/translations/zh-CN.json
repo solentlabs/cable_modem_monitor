@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "有线调制解调器设置",
-        "description": "当前：{detected_modem}\n上次检测：{last_detection}",
+        "description": "当前：{detected_modem}\n上次检测：{parser_selected_at}",
         "data": {
           "host": "调制解调器 IP",
           "username": "用户名",

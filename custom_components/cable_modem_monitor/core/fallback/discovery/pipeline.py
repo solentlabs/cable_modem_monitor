@@ -256,7 +256,6 @@ def run_discovery_pipeline(
             success=True,
             parser_class=selected_parser,
             parser_name=selected_parser.name,
-            detection_method="user_selected",
             confidence=1.0,
         )
     elif auth.html is not None:
@@ -297,9 +296,8 @@ def run_discovery_pipeline(
             failed_step="parser_detection",
         )
     _LOGGER.info(
-        "Step 3/4: Parser Detection - parser=%s, method=%s, confidence=%.2f",
+        "Step 3/4: Parser Detection - parser=%s, confidence=%.2f",
         parser.parser_name,
-        parser.detection_method,
         parser.confidence,
     )
 

@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 333
+**Total Tests:** 328
 
 ## Test Files
 
@@ -18,7 +18,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
 | [test_data_orchestrator.py](test_data_orchestrator.py) | 92 | Tests for Cable Modem Monitor scraper. |
-| [test_diagnostics.py](test_diagnostics.py) | 52 | Tests for Cable Modem Monitor diagnostics platform. |
+| [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
@@ -484,8 +484,8 @@ Tests for Cable Modem Monitor diagnostics platform.
 - `test_sanitizes_sensitive_data`: Test that auth attempt data is sanitized.
 - `test_handles_exception_gracefully`: Test that exceptions are handled gracefully.
 
-**TestGetAuthDiscoveryInfo** (7 tests)
-: Test _get_auth_discovery_info helper function (v3.12.0+).
+**TestGetAuthConfigurationInfo** (7 tests)
+: Test _get_auth_configuration_info helper function (v3.12.0+).
 
 - `test_returns_minimal_info_when_no_strategy`: Test returns minimal info when no auth strategy configured.
 - `test_strategy_descriptions`: Test strategy descriptions are correct for each auth type.
@@ -510,15 +510,6 @@ Tests for Cable Modem Monitor diagnostics platform.
 - `test_extracts_auth_method_from_first_pattern`: Test extracts auth_method from first pattern.
 - `test_returns_none_when_no_auth_method_key`: Test returns 'none' when pattern has no auth_method.
 - `test_handles_various_auth_types`: Test handles various auth method types.
-
-**TestGetDetectionMethod** (5 tests)
-: Test _get_detection_method pure function.
-
-- `test_returns_stored_method_when_present`: Test returns stored detection_method when available.
-- `test_infers_auto_detected_from_matching_choice`: Test infers auto_detected when modem_choice matches parser_name.
-- `test_infers_user_selected_when_no_match`: Test infers user_selected when modem_choice differs.
-- `test_returns_user_selected_when_no_last_detection`: Test returns user_selected when no last_detection timestamp.
-- `test_defaults_to_auto_for_empty_data`: Test handles empty data dictionary.
 
 **TestParseLegacyRecord** (5 tests)
 : Test _parse_legacy_record pure function.

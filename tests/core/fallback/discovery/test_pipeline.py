@@ -123,10 +123,11 @@ AUTH_DISCOVERY_CASES = [
 # Parser detection test cases - each tuple:
 # (login_matches, model_matches, parser_found, exp_success, exp_method, description)
 PARSER_DETECTION_CASES = [
-    ([("MotorolaMB7621Parser", ["moto.css"])], [], True, True, "login_markers", "login_markers"),
-    ([], [("NetgearCM600Parser", ["CM600"])], True, True, "model_strings", "model_strings"),
-    ([], [], False, False, None, "no parser matched"),
-    ([("NonExistentParser", ["pattern"])], [], False, False, None, "parser not found"),
+    # (login_matches, model_matches, parser_found, exp_success, desc)
+    ([("MotorolaMB7621Parser", ["moto.css"])], [], True, True, "login_markers"),
+    ([], [("NetgearCM600Parser", ["CM600"])], True, True, "model_strings"),
+    ([], [], False, False, "no parser matched"),
+    ([("NonExistentParser", ["pattern"])], [], False, False, "parser not found"),
 ]
 
 
@@ -193,7 +194,6 @@ class TestParserResult:
         assert result.success is True
         assert result.parser_class is None
         assert result.parser_name is None
-        assert result.detection_method is None
         assert result.confidence == 0.0
         assert result.error is None
 
@@ -621,7 +621,7 @@ class TestDetectParser:
     # -------------------------------------------------------------------------
 
     @pytest.mark.parametrize(
-        "login_matches,model_matches,parser_found,exp_success,exp_method,desc",
+        "login_matches,model_matches,parser_found,exp_success,desc",
         PARSER_DETECTION_CASES,
     )
     def test_parser_detection_scenarios(
@@ -630,7 +630,6 @@ class TestDetectParser:
         model_matches,
         parser_found,
         exp_success,
-        exp_method,
         desc,
     ):
         """Table-driven test for parser detection scenarios."""
@@ -657,7 +656,6 @@ class TestDetectParser:
 
             assert result.success is exp_success, desc
             if exp_success:
-                assert result.detection_method == exp_method, desc
                 assert result.confidence > 0, desc
 
     # -------------------------------------------------------------------------
@@ -957,7 +955,6 @@ class TestRunDiscoveryPipeline:
             success=True,
             parser_class=mock_parser_class,
             parser_name="Motorola MB7621",
-            detection_method="login_markers",
             confidence=0.9,
         )
 
@@ -1064,7 +1061,6 @@ class TestRunDiscoveryPipeline:
             success=True,
             parser_class=mock_parser_class,
             parser_name="Test Parser",
-            detection_method="login_markers",
             confidence=0.9,
         )
         mock_validate.return_value = ValidationResult(
@@ -1136,7 +1132,6 @@ class TestRunDiscoveryPipeline:
             success=True,
             parser_class=mock_parser_class,
             parser_name="Test Parser",
-            detection_method="login_markers",
             confidence=0.9,
         )
         mock_validate.return_value = ValidationResult(

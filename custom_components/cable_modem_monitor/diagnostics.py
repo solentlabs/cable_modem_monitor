@@ -5,7 +5,7 @@ integrations in Home Assistant. It collects and sanitizes:
 
 - Configuration and detection information
 - Modem channel data (downstream/upstream)
-- Authentication discovery details
+- Authentication configuration details
 - Recent log entries from cable_modem_monitor
 - Raw HTML captures (when available, for debugging parsers)
 
@@ -36,8 +36,7 @@ Functions:
 
     Info Extraction:
         _get_auth_method: Get auth method from parser
-        _get_detection_method: Determine how parser was detected
-        _get_auth_discovery_info: Get auth discovery data
+        _get_auth_configuration_info: Get auth configuration data
         _get_hnap_auth_attempt: Get HNAP auth debug info
 
     Main:
@@ -475,43 +474,12 @@ def _get_auth_method_from_coordinator(coordinator: Any) -> str:
         return "unknown"
 
 
-def _get_detection_method(data: Mapping[str, Any]) -> str:
-    """Determine how parser was detected.
+def _get_auth_configuration_info(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Get authentication configuration information from config data.
 
-    Pure function that analyzes config entry data to determine detection method.
-
-    Args:
-        data: Config entry data (MappingProxyType or dict)
-
-    Returns:
-        Detection method: "user_selected" or "auto_detected"
-    """
-    # Prefer explicit detection_method if stored (new entries)
-    stored_method = data.get("detection_method")
-    if stored_method in ("auto_detected", "user_selected"):
-        return str(stored_method)
-
-    # Fallback for legacy entries without detection_method field:
-    # Infer from whether modem_choice matches parser_name
-    modem_choice = data.get("modem_choice", "auto")
-    parser_name = data.get("parser_name")
-    last_detection = data.get("last_detection")
-
-    # If modem_choice matches parser_name and we have a detection timestamp,
-    # auto-detection ran and cached the result
-    if modem_choice == parser_name and last_detection:
-        return "auto_detected"
-    else:
-        # User explicitly selected a specific parser from dropdown
-        return "user_selected"
-
-
-def _get_auth_discovery_info(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Get authentication discovery information from config data.
-
-    Pure function that extracts auth debugging info from response-driven
-    auth discovery. For modems with unknown auth patterns, captured_response
-    contains the login page HTML and headers for debugging.
+    Pure function that extracts auth configuration info for diagnostics.
+    For modems with unknown auth patterns, captured_response contains
+    the login page HTML and headers for debugging.
 
     Args:
         data: Config entry data (MappingProxyType or dict)
@@ -680,7 +648,6 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "supports_icmp": entry.data.get("supports_icmp", False),
         },
         "detection": {
-            "method": _get_detection_method(entry.data),
             "user_selection": entry.data.get("modem_choice", "auto"),
             "parser": entry.data.get("parser_name", "Unknown"),
             "manufacturer": entry.data.get("detected_manufacturer", "Unknown"),
@@ -690,10 +657,10 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "protocol": "https" if (entry.data.get("working_url") or "").startswith("https") else "http",
             "auth_method": _get_auth_method_from_coordinator(coordinator),
             "legacy_ssl": entry.data.get("legacy_ssl", False),
-            "last_detection": entry.data.get("last_detection", "Never"),
+            "parser_selected_at": entry.data.get("parser_selected_at", "Never"),
         },
-        # Auth discovery info - shows how authentication was detected
-        "auth_discovery": _get_auth_discovery_info(entry.data),
+        # Auth configuration info - shows how authentication is configured
+        "auth_configuration": _get_auth_configuration_info(entry.data),
         "coordinator": {
             "last_update_success": coordinator.last_update_success,
             "update_interval": str(coordinator.update_interval),

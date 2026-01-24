@@ -423,12 +423,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             raise CannotConnectError(result.error or "Setup failed")
 
     # Build detection info from result
-    detection_method = "known_modem" if static_auth_config else "fallback_discovery"
-    detection_info = {
+    detection_info: dict[str, Any] = {
         "modem_name": result.parser_name,
         "detected_modem": result.parser_name,
         "manufacturer": result.parser_instance.manufacturer if result.parser_instance else None,
-        "detection_method": detection_method,
     }
 
     # Extract actual model from parsed modem data
@@ -437,6 +435,17 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         if actual_model:
             detection_info["actual_model"] = actual_model
             _LOGGER.debug("Actual model extracted from modem: %s", actual_model)
+
+    # Extract docsis_version from modem.yaml
+    if result.parser_name:
+        from .modem_config import get_auth_adapter_for_parser
+
+        adapter = get_auth_adapter_for_parser(result.parser_name)
+        if adapter:
+            docsis_version = adapter.get_docsis_version()
+            if docsis_version:
+                detection_info["docsis_version"] = docsis_version
+                _LOGGER.debug("DOCSIS version from modem.yaml: %s", docsis_version)
 
     title = create_title(detection_info, host)
 

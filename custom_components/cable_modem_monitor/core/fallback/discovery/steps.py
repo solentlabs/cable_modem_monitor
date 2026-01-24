@@ -260,7 +260,6 @@ def detect_parser(  # noqa: C901
                 success=True,
                 parser_class=parser_class,
                 parser_name=parser_class.name,
-                detection_method="login_markers",
                 confidence=min(len(best_match.matched_markers) / 3.0, 1.0),
             )
 
@@ -275,7 +274,6 @@ def detect_parser(  # noqa: C901
                 success=True,
                 parser_class=parser_class,
                 parser_name=parser_class.name,
-                detection_method="model_strings",
                 confidence=min(len(best_match.matched_markers) / 2.0, 1.0),
             )
 

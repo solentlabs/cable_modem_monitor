@@ -16,8 +16,7 @@ from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.diagnostics import (
     _create_log_entry,
     _extract_auth_method,
-    _get_auth_discovery_info,
-    _get_detection_method,
+    _get_auth_configuration_info,
     _get_hnap_auth_attempt,
     _get_logs_from_file,
     _parse_legacy_record,
@@ -29,7 +28,7 @@ from custom_components.cable_modem_monitor.lib.html_helper import sanitize_html
 # =============================================================================
 # AUTH STRATEGY DESCRIPTION TEST CASES
 # =============================================================================
-# Tests _get_auth_discovery_info() strategy_description field.
+# Tests _get_auth_configuration_info() strategy_description field for diagnostics.
 # Each auth strategy should have a human-readable description for diagnostics.
 #
 # ┌──────────────┬─────────────────────────────────────────────┐
@@ -311,7 +310,7 @@ def mock_config_entry():
         "detected_manufacturer": "[MFG]",
         "parser_name": "[MFG] [Model] (Static)",
         "working_url": "https://192.168.100.1/MotoConnection.asp",
-        "last_detection": "2025-11-11T10:00:00",
+        "parser_selected_at": "2025-11-11T10:00:00",
     }
     return entry
 
@@ -630,172 +629,14 @@ async def test_diagnostics_includes_parser_detection_info(mock_config_entry, moc
 
     detection = diagnostics["detection"]
 
-    # Verify detection fields
+    # Verify detection fields (note: 'method' field removed in v3.13)
     assert "user_selection" in detection
-    assert "method" in detection
     assert "parser" in detection
+    assert "parser_selected_at" in detection
 
     # Verify values match config entry
     assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["method"] == "user_selected"
     assert detection["parser"] == "[MFG] [Model] (Static)"
-
-
-# ============================================================================
-# Detection Method Tests - TDD for 3 scenarios
-# ============================================================================
-
-
-@pytest.mark.asyncio
-async def test_detection_method_fresh_install_auto(mock_coordinator):
-    """
-    Scenario: Fresh install with auto-detection.
-
-    User selects "auto" → detection succeeds → modem_choice updated to parser name
-    → detection_method stored as "auto_detected"
-
-    Expected: method = "auto_detected"
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_fresh_auto"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # After auto-detection, modem_choice is updated to match parser_name
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        "last_detection": "2025-12-31T14:24:03.445441",
-        # KEY: This field tracks HOW the parser was selected
-        "detection_method": "auto_detected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    assert detection["method"] == "auto_detected"
-    assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["parser"] == "[MFG] [Model]"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_explicit_user_selection(mock_coordinator):
-    """
-    Scenario: User explicitly selects a parser from dropdown.
-
-    User picks "[MFG] [Model]" from dropdown (not auto)
-    → detection_method stored as "user_selected"
-
-    Expected: method = "user_selected"
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_explicit_select"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # User explicitly selected this parser
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        "last_detection": "2025-12-31T14:24:19.899726",
-        # KEY: User explicitly selected, not auto-detected
-        "detection_method": "user_selected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    assert detection["method"] == "user_selected"
-    assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["parser"] == "[MFG] [Model]"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_resubmit_after_auto(mock_coordinator):
-    """
-    Scenario: Re-submit with explicit selection after previous auto-detection.
-
-    1. Initial: auto-detection found "[MFG] [Model]"
-    2. Later: User re-opens config, explicitly selects same parser, saves
-    → detection_method should update to "user_selected"
-
-    Expected: method = "user_selected" (last action was explicit selection)
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_resubmit"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # Same parser name as before, but user explicitly re-selected it
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        # Newer timestamp from re-submit
-        "last_detection": "2025-12-31T14:24:19.899726",
-        # KEY: Even though same parser, user explicitly selected this time
-        "detection_method": "user_selected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    # This is the critical assertion - re-submit should show user_selected
-    assert detection["method"] == "user_selected"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_legacy_no_field(mock_coordinator):
-    """
-    Scenario: Legacy config entry without detection_method field.
-
-    For backwards compatibility, entries created before this field existed
-    should fall back to inferring from modem_choice vs parser_name.
-
-    Expected: Falls back to inference logic (user_selected if different)
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_legacy"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # Different modem_choice vs parser_name (legacy explicit selection)
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model] (Static)",
-        "detected_modem": "[Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "https://192.168.100.1/MotoConnection.asp",
-        "last_detection": "2025-11-11T10:00:00",
-        # NO detection_method field - legacy entry
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    # Fallback: modem_choice != parser_name → user_selected
-    assert detection["method"] == "user_selected"
-
-
-# ============================================================================
-# End Detection Method Tests
-# ============================================================================
 
 
 class TestGetHnapAuthAttempt:
@@ -901,15 +742,15 @@ class TestGetHnapAuthAttempt:
         assert "Exception" in result["note"]
 
 
-class TestGetAuthDiscoveryInfo:
-    """Test _get_auth_discovery_info helper function (v3.12.0+)."""
+class TestGetAuthConfigurationInfo:
+    """Test _get_auth_configuration_info helper function (v3.12.0+)."""
 
     def test_returns_minimal_info_when_no_strategy(self):
         """Test returns minimal info when no auth strategy configured."""
         entry = Mock(spec=ConfigEntry)
         entry.data = {}
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["status"] == "not_run"
         assert result["strategy"] == "not_set"
@@ -929,7 +770,7 @@ class TestGetAuthDiscoveryInfo:
             "auth_discovery_status": "success",
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["status"] == "success"
         assert result["strategy"] == strategy
@@ -952,7 +793,7 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["strategy"] == "form_plain"
         assert "form_config" in result
@@ -981,7 +822,7 @@ class TestGetAuthDiscoveryInfo:
                 form_config["password_encoding"] = encoding
             entry.data["auth_form_config"] = form_config
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         if exact_match:
             assert result["strategy_description"] == expected, f"{test_id}: expected exact match"
@@ -998,7 +839,7 @@ class TestGetAuthDiscoveryInfo:
             "auth_discovery_error": "Unknown authentication protocol detected",
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["discovery_failed"] is True
         assert "note" in result
@@ -1019,7 +860,7 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert "captured_response" in result
         assert result["captured_response"]["status_code"] == 200
@@ -1040,7 +881,7 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         # MAC should be sanitized in html_sample
         assert "AA:BB:CC:DD:EE:FF" not in result["captured_response"]["html_sample"]
@@ -1048,11 +889,11 @@ class TestGetAuthDiscoveryInfo:
 
 
 @pytest.mark.asyncio
-async def test_diagnostics_includes_auth_discovery(mock_config_entry, mock_coordinator):
-    """Test that diagnostics includes auth_discovery section."""
+async def test_diagnostics_includes_auth_configuration(mock_config_entry, mock_coordinator):
+    """Test that diagnostics includes auth_configuration section."""
     hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
 
-    # Update config entry with auth discovery data
+    # Update config entry with auth configuration data
     mock_config_entry.data = {
         **mock_config_entry.data,
         "auth_strategy": "form_plain",
@@ -1067,9 +908,9 @@ async def test_diagnostics_includes_auth_discovery(mock_config_entry, mock_coord
 
     diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
-    # Verify auth_discovery section exists
-    assert "auth_discovery" in diagnostics
-    auth = diagnostics["auth_discovery"]
+    # Verify auth_configuration section exists
+    assert "auth_configuration" in diagnostics
+    auth = diagnostics["auth_configuration"]
     assert auth["status"] == "success"
     assert auth["strategy"] == "form_plain"
     assert "form_config" in auth
@@ -1156,49 +997,6 @@ class TestExtractAuthMethod:
         assert _extract_auth_method([{"auth_method": "hnap"}]) == "hnap"
         assert _extract_auth_method([{"auth_method": "basic"}]) == "basic"
         assert _extract_auth_method([{"auth_method": "form_base64"}]) == "form_base64"
-
-
-class TestGetDetectionMethod:
-    """Test _get_detection_method pure function."""
-
-    def test_returns_stored_method_when_present(self):
-        """Test returns stored detection_method when available."""
-        data = {"detection_method": "auto_detected"}
-        assert _get_detection_method(data) == "auto_detected"
-
-        data = {"detection_method": "user_selected"}
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_infers_auto_detected_from_matching_choice(self):
-        """Test infers auto_detected when modem_choice matches parser_name."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB8200Parser",
-            "last_detection": "2024-01-15T10:00:00",
-        }
-        assert _get_detection_method(data) == "auto_detected"
-
-    def test_infers_user_selected_when_no_match(self):
-        """Test infers user_selected when modem_choice differs."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB6190Parser",
-        }
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_returns_user_selected_when_no_last_detection(self):
-        """Test returns user_selected when no last_detection timestamp."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB8200Parser",
-            # No last_detection
-        }
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_defaults_to_auto_for_empty_data(self):
-        """Test handles empty data dictionary."""
-        # Empty data defaults modem_choice to "auto", no match with parser_name
-        assert _get_detection_method({}) == "user_selected"
 
 
 class TestParseLegacyRecord:

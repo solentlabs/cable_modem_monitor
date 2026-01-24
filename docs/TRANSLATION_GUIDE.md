@@ -82,7 +82,7 @@ Keep these terms unchanged:
 - Use formal but approachable tone
 - Match Home Assistant's existing terminology for your language
 - Keep error messages helpful and actionable
-- Preserve placeholders like `{detected_modem}` and `{last_detection}`
+- Preserve placeholders like `{detected_modem}` and `{parser_selected_at}`
 - Test that the JSON is valid before submitting
 
 ## For Developers

@@ -84,7 +84,6 @@ class ParserResult:
         success: True if a parser was matched
         parser_class: The matched parser class (for instantiation)
         parser_name: Human-readable parser name (e.g., "Arris SB8200")
-        detection_method: How parser was found: "login_markers", "model_strings", "user_selected"
         confidence: Match confidence 0.0-1.0 (higher = more markers matched)
         error: Error message if success=False
     """
@@ -92,7 +91,6 @@ class ParserResult:
     success: bool
     parser_class: type[ModemParser] | None = None
     parser_name: str | None = None
-    detection_method: str | None = None
     confidence: float = 0.0
     error: str | None = None
 
