@@ -11,21 +11,35 @@ Key differences from fallback discovery:
 
 Architecture:
     ┌─────────────────────────────────────────────────────────────────────┐
-    │                      MODEM SETUP                                     │
+    │                      MODEM SETUP (with protocol fallback)           │
     ├─────────────────────────────────────────────────────────────────────┤
     │                                                                      │
-    │  host ──► [Connectivity Check] ──► working_url, legacy_ssl          │
-    │                     │            (lib/connectivity.py)               │
-    │                     ▼                                                │
-    │           [Auth with modem.yaml config] ──► session, html           │
-    │                     │            (core/auth/workflow.py)             │
-    │                     ▼                                                │
-    │           [Validation Parse] ──► modem_data                         │
-    │                     │            (confirm parser works)              │
-    │                     ▼                                                │
-    │           SetupResult (for config entry)                            │
+    │  host ──► [Has explicit protocol?]                                  │
+    │                │                                                     │
+    │         ┌──────┴──────┐                                             │
+    │         │ YES         │ NO                                          │
+    │         ▼             ▼                                             │
+    │    Use that URL   Build candidate URLs                              │
+    │         │          (order based on paradigm)                        │
+    │         │             │                                             │
+    │         └──────┬──────┘                                             │
+    │                ▼                                                     │
+    │    FOR EACH candidate URL:                                          │
+    │      1. check_connectivity(url)                                     │
+    │      2. If reachable, try auth                                      │
+    │      3. If auth succeeds → validate → RETURN SUCCESS                │
+    │      4. If auth fails → try next URL                                │
+    │                │                                                     │
+    │                ▼                                                     │
+    │    All URLs failed → RETURN ERROR with details                      │
     │                                                                      │
     └─────────────────────────────────────────────────────────────────────┘
+
+Protocol order by paradigm:
+- HNAP/REST API modems: HTTPS first (these protocols typically require HTTPS)
+- HTML modems: HTTP first (most cable modems are HTTP-only)
+
+Related issues: PR #90 (S34), Issue #81 (SB8200)
 
 Usage:
     from custom_components.cable_modem_monitor.core.setup import (
@@ -63,6 +77,62 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..auth.hnap_builder import HNAPJsonRequestBuilder
 
 _LOGGER = logging.getLogger(__name__)
+
+# Paradigms that prefer HTTPS (protocol-sensitive)
+_HTTPS_FIRST_PARADIGMS = {"hnap", "rest_api"}
+
+
+def _get_paradigm_for_parser(parser_class: type) -> str | None:
+    """Get the paradigm from modem.yaml for a parser.
+
+    Args:
+        parser_class: The parser class to look up.
+
+    Returns:
+        Paradigm string (e.g., "html", "hnap", "rest_api") or None.
+    """
+    from ...modem_config.adapter import get_auth_adapter_for_parser
+
+    adapter = get_auth_adapter_for_parser(parser_class.__name__)
+    if adapter:
+        config = adapter.get_modem_config_dict()
+        return config.get("paradigm")
+    return None
+
+
+def _build_candidate_urls(host: str, paradigm: str | None) -> list[str]:
+    """Build list of candidate URLs to try, ordered by paradigm preference.
+
+    If user specified an explicit protocol (http:// or https://), returns
+    only that URL. Otherwise, builds both HTTP and HTTPS URLs in an order
+    based on the modem's paradigm.
+
+    Args:
+        host: User-provided host (may include protocol, port, etc.)
+        paradigm: Modem paradigm from modem.yaml (e.g., "html", "hnap")
+
+    Returns:
+        List of URLs to try in order.
+    """
+    # If user specified explicit protocol, honor it
+    if host.startswith(("http://", "https://")):
+        return [host]
+
+    # Build both protocol URLs
+    # HNAP and REST API modems prefer HTTPS (protocol-sensitive)
+    # HTML modems prefer HTTP (most cable modems are HTTP-only)
+    if paradigm in _HTTPS_FIRST_PARADIGMS:
+        _LOGGER.debug(
+            "Paradigm '%s' prefers HTTPS - trying HTTPS first",
+            paradigm,
+        )
+        return [f"https://{host}", f"http://{host}"]
+    else:
+        _LOGGER.debug(
+            "Paradigm '%s' prefers HTTP - trying HTTP first",
+            paradigm or "unknown",
+        )
+        return [f"http://{host}", f"https://{host}"]
 
 
 @dataclass
@@ -113,8 +183,12 @@ def setup_modem(
     - A user-selected parser (they chose their modem model)
     - Static auth config from modem.yaml
 
+    If no protocol is specified in the host, tries both HTTP and HTTPS
+    in an order based on the modem's paradigm (HNAP prefers HTTPS,
+    HTML prefers HTTP). Uses the first protocol where auth succeeds.
+
     Args:
-        host: Modem IP address or hostname
+        host: Modem IP address or hostname (with or without protocol)
         parser_class: The parser class for this modem (user selected)
         static_auth_config: Auth configuration from modem.yaml containing:
             - auth_strategy: "form_plain" | "hnap_session" | "no_auth" | etc.
@@ -129,78 +203,107 @@ def setup_modem(
     """
     _LOGGER.info("Setting up %s at %s", parser_class.name, host)
 
-    # Step 1: Connectivity check (shared with fallback)
-    _LOGGER.debug("Step 1/3: Checking connectivity to %s", host)
-    conn = check_connectivity(host)
-    if not conn.success:
-        _LOGGER.error("Step 1/3: Connectivity failed: %s", conn.error)
-        return SetupResult(
-            success=False,
-            error=conn.error,
-            failed_step="connectivity",
+    # Get paradigm to determine protocol order
+    paradigm = _get_paradigm_for_parser(parser_class)
+    candidate_urls = _build_candidate_urls(host, paradigm)
+    _LOGGER.info("Protocol candidates: %s", candidate_urls)
+
+    # Track errors from each attempt for better error messages
+    attempt_errors: list[tuple[str, str, str]] = []  # [(url, step, error), ...]
+
+    for candidate_url in candidate_urls:
+        _LOGGER.debug("Trying candidate URL: %s", candidate_url)
+
+        # Step 1: Connectivity check for this URL
+        conn = check_connectivity(candidate_url)
+        if not conn.success:
+            _LOGGER.debug(
+                "Connectivity failed for %s: %s",
+                candidate_url,
+                conn.error,
+            )
+            attempt_errors.append((candidate_url, "connectivity", conn.error or "Unknown error"))
+            continue
+
+        _LOGGER.info(
+            "Connectivity OK - %s (legacy_ssl=%s)",
+            conn.working_url,
+            conn.legacy_ssl,
         )
-    _LOGGER.info(
-        "Step 1/3: Connectivity OK - %s (legacy_ssl=%s)",
-        conn.working_url,
-        conn.legacy_ssl,
-    )
 
-    # Step 2: Authenticate using modem.yaml config
-    assert conn.working_url is not None
-    _LOGGER.debug(
-        "Step 2/3: Authenticating with strategy=%s",
-        static_auth_config.get("auth_strategy"),
-    )
+        # Step 2: Authenticate using modem.yaml config
+        assert conn.working_url is not None
+        _LOGGER.debug(
+            "Authenticating with strategy=%s on %s",
+            static_auth_config.get("auth_strategy"),
+            conn.working_url,
+        )
 
-    # Create session with appropriate SSL settings
-    session = requests.Session()
-    session.verify = False
-    if conn.legacy_ssl and conn.working_url.startswith("https://"):
-        session.mount("https://", LegacySSLAdapter())
+        # Create session with appropriate SSL settings
+        session = requests.Session()
+        session.verify = False
+        if conn.legacy_ssl and conn.working_url.startswith("https://"):
+            session.mount("https://", LegacySSLAdapter())
 
-    # Use AuthWorkflow for authentication
-    auth_result = AuthWorkflow.authenticate_with_static_config(
-        session=session,
-        working_url=conn.working_url,
-        static_auth_config=static_auth_config,
-        username=username,
-        password=password,
-    )
-
-    if not auth_result.success:
-        _LOGGER.error("Step 2/3: Authentication failed: %s", auth_result.error)
-        return SetupResult(
-            success=False,
+        # Use AuthWorkflow for authentication
+        auth_result = AuthWorkflow.authenticate_with_static_config(
+            session=session,
             working_url=conn.working_url,
-            legacy_ssl=conn.legacy_ssl,
-            error=auth_result.error,
-            failed_step="auth",
+            static_auth_config=static_auth_config,
+            username=username,
+            password=password,
         )
 
-    # Log auth result with encoding info for form auth
-    encoding = ""
-    if auth_result.form_config and auth_result.form_config.get("password_encoding"):
-        encoding = f", encoding={auth_result.form_config['password_encoding']}"
-    _LOGGER.info(
-        "Step 2/3: Auth OK - strategy=%s%s",
-        auth_result.strategy,
-        encoding,
-    )
+        if not auth_result.success:
+            _LOGGER.debug(
+                "Auth failed for %s: %s",
+                conn.working_url,
+                auth_result.error,
+            )
+            attempt_errors.append((candidate_url, "auth", auth_result.error or "Unknown error"))
+            continue
 
-    # Step 3: Validation parse
-    _LOGGER.info("Step 3/3: Validating parser can extract data")
-    validation = _validate_parse(
-        html=auth_result.html,
-        parser_class=parser_class,
-        session=auth_result.session,
-        base_url=conn.working_url,
-        hnap_builder=auth_result.hnap_builder,
-    )
+        # Log auth result with encoding info for form auth
+        encoding = ""
+        if auth_result.form_config and auth_result.form_config.get("password_encoding"):
+            encoding = f", encoding={auth_result.form_config['password_encoding']}"
+        _LOGGER.info(
+            "Auth OK - strategy=%s%s on %s",
+            auth_result.strategy,
+            encoding,
+            conn.working_url,
+        )
 
-    if not validation.success:
-        _LOGGER.error("Step 3/3: Validation failed: %s", validation.error)
+        # Step 3: Validation parse
+        _LOGGER.info("Validating parser can extract data")
+        validation = _validate_parse(
+            html=auth_result.html,
+            parser_class=parser_class,
+            session=auth_result.session,
+            base_url=conn.working_url,
+            hnap_builder=auth_result.hnap_builder,
+        )
+
+        if not validation.success:
+            _LOGGER.debug(
+                "Validation failed for %s: %s",
+                conn.working_url,
+                validation.error,
+            )
+            attempt_errors.append((candidate_url, "validation", validation.error or "Unknown error"))
+            continue
+
+        # Success! We found a working protocol
+        _LOGGER.info(
+            "Setup complete: %s at %s (strategy=%s%s)",
+            parser_class.name,
+            conn.working_url,
+            auth_result.strategy,
+            encoding,
+        )
+
         return SetupResult(
-            success=False,
+            success=True,
             working_url=conn.working_url,
             legacy_ssl=conn.legacy_ssl,
             auth_strategy=auth_result.strategy,
@@ -208,34 +311,32 @@ def setup_modem(
             auth_hnap_config=auth_result.hnap_config,
             auth_url_token_config=auth_result.url_token_config,
             parser_name=parser_class.name,
+            parser_instance=validation.parser_instance,
+            modem_data=validation.modem_data,
             session=auth_result.session,
             hnap_builder=auth_result.hnap_builder,
-            error=validation.error,
-            failed_step="validation",
         )
 
-    _LOGGER.info(
-        "Setup complete: %s at %s (strategy=%s%s)",
-        parser_class.name,
-        conn.working_url,
-        auth_result.strategy,
-        encoding,
-    )
+    # All candidates failed - build informative error message
+    if len(candidate_urls) == 1:
+        # User specified explicit protocol
+        _, step, error = attempt_errors[0] if attempt_errors else ("", "unknown", "Unknown error")
+        return SetupResult(
+            success=False,
+            error=error,
+            failed_step=step,
+        )
+    else:
+        # Tried multiple protocols - summarize failures
+        error_summary = "; ".join(f"{url}: {step} failed ({error})" for url, step, error in attempt_errors)
+        # Determine which step failed most recently (for failed_step field)
+        last_step = attempt_errors[-1][1] if attempt_errors else "connectivity"
 
-    return SetupResult(
-        success=True,
-        working_url=conn.working_url,
-        legacy_ssl=conn.legacy_ssl,
-        auth_strategy=auth_result.strategy,
-        auth_form_config=auth_result.form_config,
-        auth_hnap_config=auth_result.hnap_config,
-        auth_url_token_config=auth_result.url_token_config,
-        parser_name=parser_class.name,
-        parser_instance=validation.parser_instance,
-        modem_data=validation.modem_data,
-        session=auth_result.session,
-        hnap_builder=auth_result.hnap_builder,
-    )
+        return SetupResult(
+            success=False,
+            error=f"Setup failed on all protocols. {error_summary}",
+            failed_step=last_step,
+        )
 
 
 @dataclass

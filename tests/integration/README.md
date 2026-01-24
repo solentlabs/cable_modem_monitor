@@ -4,7 +4,7 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 46
+**Total Tests:** 52
 
 ## Test Files
 
@@ -12,6 +12,7 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 |------|-------|-------------|
 | [test_config_flow_e2e.py](test_config_flow_e2e.py) | 9 | E2E tests for config flow against mock modem servers. |
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
+| [test_hnap_protocol_fallback.py](test_hnap_protocol_fallback.py) | 6 | Tests for HNAP modem protocol fallback behavior. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
 
 ## Test Details
@@ -128,6 +129,37 @@ to the repo and always available for testing.
 - `test_mb8611_empty_action_value_matches_fixture`: Verify MB8611 modem.yaml empty_action_value matches real HAR-derived fixture (v3.12.0+).
 - `test_s33_empty_action_value_matches_parser`: Verify S33 modem.yaml uses empty string for action values (v3.12.0+).
 - `test_default_hnap_config_uses_empty_string`: Verify DEFAULT_HNAP_CONFIG uses empty string for action values.
+
+### test_hnap_protocol_fallback.py
+
+Tests for HNAP modem protocol fallback behavior.
+
+Issue: S34 and other HNAP modems respond to HTTP but only work over HTTPS.
+The connectivity check accepts HTTP responses, but HNAP auth fails.
+
+These tests verify:
+1. CURRENT BEHAVIOR: setup_modem fails when HTTP is tried first for HNAP modems
+2. DESIRED BEHAVIOR: setup_modem tries HTTPS if HTTP auth fails
+
+Related: PR #90 (S34 support), Issue #81 (SB8200)
+
+**TestCurrentBehavior** (2 tests)
+: Tests documenting CURRENT (broken) behavior for HNAP protocol selection.
+
+- `test_explicit_https_works`: CURRENT: Explicit HTTPS URL works for HNAP modems.
+- `test_explicit_http_fails_for_hnap`: CURRENT: Explicit HTTP URL fails for HNAP modems.
+
+**TestProtocolFallback** (3 tests)
+: Tests for protocol fallback behavior.
+
+- `test_hnap_paradigm_tries_https_first`: HNAP paradigm should try HTTPS first.
+- `test_html_paradigm_tries_http_first`: HTML paradigm should try HTTP first.
+- `test_fallback_when_first_protocol_fails`: Should fall back to second protocol when first fails.
+
+**TestRealWorldScenario** (1 tests)
+: Tests using actual modem fixtures (closer to real deployment).
+
+- `test_s34_explicit_https_with_mock_server`: S34 with explicit HTTPS using MockModemServer.
 
 ### test_modem_e2e.py
 
