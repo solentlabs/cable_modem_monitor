@@ -53,7 +53,7 @@ async def create_health_monitor(hass: HomeAssistant, legacy_ssl: bool = False) -
     )
 
 
-def create_update_function(hass: HomeAssistant, scraper, health_monitor, host: str, supports_icmp: bool = True):
+def create_update_function(hass: HomeAssistant, modem_client, health_monitor, host: str, supports_icmp: bool = True):
     """Create the async update function for the coordinator."""
 
     async def async_update_data() -> dict[str, Any]:
@@ -66,7 +66,7 @@ def create_update_function(hass: HomeAssistant, scraper, health_monitor, host: s
         health_result = await health_monitor.check_health(base_url, skip_ping=not supports_icmp)
 
         try:
-            data: dict[str, Any] = await hass.async_add_executor_job(scraper.get_modem_data)
+            data: dict[str, Any] = await hass.async_add_executor_job(modem_client.get_modem_data)
 
             # Add health monitoring data
             data["health_status"] = health_result.status
@@ -87,7 +87,7 @@ def create_update_function(hass: HomeAssistant, scraper, health_monitor, host: s
                 data["_upstream_by_id"] = normalize_channels(data["cable_modem_upstream"], "upstream")
 
             # Add parser metadata for sensor attributes (works without re-adding integration)
-            detection_info = scraper.get_detection_info()
+            detection_info = modem_client.get_detection_info()
             if detection_info:
                 data["_parser_release_date"] = detection_info.get("release_date")
                 data["_parser_docsis_version"] = detection_info.get("docsis_version")
@@ -97,9 +97,9 @@ def create_update_function(hass: HomeAssistant, scraper, health_monitor, host: s
 
             return data
         except Exception as err:
-            # If scraper fails but health check succeeded, return partial data
+            # If modem_client fails but health check succeeded, return partial data
             if health_result.is_healthy:
-                _LOGGER.warning("Scraper failed but modem is responding to health checks: %s", err)
+                _LOGGER.warning("Data fetch failed but modem is responding to health checks: %s", err)
                 # Use "degraded" status to indicate partial connectivity
                 # This allows ping/http sensors to report while other sensors show unavailable
                 return {

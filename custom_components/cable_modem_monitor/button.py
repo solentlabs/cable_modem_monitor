@@ -11,7 +11,7 @@ Architecture:
     Buttons inherit ModemButtonBase which provides device linking and
     a _notify() helper for persistent notifications.
 
-    Restart uses coordinator.scraper (never creates new scrapers) to
+    Restart uses coordinator.modem_client (never creates new modem_clients) to
     ensure proper auth config. Monitoring is delegated to RestartMonitor.
 
     Capability checking is in modem_config/capabilities.py.
@@ -168,19 +168,19 @@ class ModemRestartButton(ModemButtonBase):
         """Handle the button press."""
         _LOGGER.info("Modem restart button pressed")
 
-        # Use coordinator's scraper (already has full auth config)
-        scraper = getattr(self.coordinator, "scraper", None)
-        if not scraper:
-            _LOGGER.error("No scraper available - cannot restart modem")
+        # Use coordinator's modem_client (already has full auth config)
+        modem_client = getattr(self.coordinator, "modem_client", None)
+        if not modem_client:
+            _LOGGER.error("No modem_client available - cannot restart modem")
             await self._notify(
                 "Modem Restart Failed",
-                "Internal error: scraper not available. Try reloading the integration.",
+                "Internal error: modem_client not available. Try reloading the integration.",
                 _NOTIFY_RESTART,
             )
             return
 
         # Run the restart in an executor since it uses requests (blocking I/O)
-        success = await self.hass.async_add_executor_job(scraper.restart_modem)
+        success = await self.hass.async_add_executor_job(modem_client.restart_modem)
 
         if success:
             _LOGGER.info("Modem restart initiated successfully")
@@ -320,20 +320,20 @@ class CaptureModemDataButton(ModemButtonBase):
         """Handle the button press - capture raw modem data for diagnostics."""
         _LOGGER.info("Capture modem data button pressed")
 
-        # Use coordinator's scraper (already has full auth config)
-        scraper = getattr(self.coordinator, "scraper", None)
-        if not scraper:
-            _LOGGER.error("No scraper available - cannot capture modem data")
+        # Use coordinator's modem_client (already has full auth config)
+        modem_client = getattr(self.coordinator, "modem_client", None)
+        if not modem_client:
+            _LOGGER.error("No modem_client available - cannot capture modem data")
             await self._notify(
                 "Capture Failed",
-                "Internal error: scraper not available. Try reloading the integration.",
+                "Internal error: modem_client not available. Try reloading the integration.",
                 _NOTIFY_CAPTURE,
             )
             return
 
         # Fetch data with capture enabled
         try:
-            data = await self.hass.async_add_executor_job(scraper.get_modem_data, True)  # capture_html=True
+            data = await self.hass.async_add_executor_job(modem_client.get_modem_data, True)  # capture_html=True
 
             # Check if capture was successful
             if "_raw_html_capture" in data:

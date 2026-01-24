@@ -35,18 +35,18 @@ def mock_config_entry():
 
 
 @pytest.fixture
-def mock_scraper():
-    """Create a mock scraper."""
-    scraper = Mock()
-    scraper.restart_modem = Mock(return_value=True)
-    scraper.get_modem_data = Mock(return_value={"cable_modem_connection_status": "online"})
-    scraper.clear_auth_cache = Mock()
-    return scraper
+def mock_modem_client():
+    """Create a mock modem_client."""
+    modem_client = Mock()
+    modem_client.restart_modem = Mock(return_value=True)
+    modem_client.get_modem_data = Mock(return_value={"cable_modem_connection_status": "online"})
+    modem_client.clear_auth_cache = Mock()
+    return modem_client
 
 
 @pytest.fixture
-def mock_coordinator(mock_scraper):
-    """Create a mock coordinator with scraper attached."""
+def mock_coordinator(mock_modem_client):
+    """Create a mock coordinator with modem_client attached."""
     coordinator = Mock(spec=DataUpdateCoordinator)
     coordinator.data = {
         "cable_modem_connection_status": "online",
@@ -56,7 +56,7 @@ def mock_coordinator(mock_scraper):
     coordinator.last_update_success = True
     coordinator.update_interval = timedelta(seconds=600)
     coordinator.async_request_refresh = AsyncMock()
-    coordinator.scraper = mock_scraper  # Attach scraper to coordinator
+    coordinator.modem_client = mock_modem_client  # Attach modem_client to coordinator
     return coordinator
 
 
@@ -104,8 +104,8 @@ async def test_restart_button_success(mock_coordinator, mock_config_entry):
     button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
-    # Coordinator.scraper.restart_modem returns True (success)
-    mock_coordinator.scraper.restart_modem.return_value = True
+    # Coordinator.modem_client.restart_modem returns True (success)
+    mock_coordinator.modem_client.restart_modem.return_value = True
 
     await button.async_press()
 
@@ -132,8 +132,8 @@ async def test_restart_button_failure(mock_coordinator, mock_config_entry):
     button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
-    # Coordinator.scraper.restart_modem returns False (failure)
-    mock_coordinator.scraper.restart_modem.return_value = False
+    # Coordinator.modem_client.restart_modem returns False (failure)
+    mock_coordinator.modem_client.restart_modem.return_value = False
 
     await button.async_press()
 
@@ -311,10 +311,10 @@ async def test_restart_monitor_clears_auth_cache(mock_coordinator):
     async def mock_notify(title: str, message: str):
         notifications.append({"title": title, "message": message})
 
-    # Create a mock scraper with cached auth
-    mock_scraper = MagicMock()
-    mock_scraper.clear_auth_cache = MagicMock()
-    mock_coordinator.scraper = mock_scraper
+    # Create a mock modem_client with cached auth
+    mock_modem_client = MagicMock()
+    mock_modem_client.clear_auth_cache = MagicMock()
+    mock_coordinator.modem_client = mock_modem_client
 
     monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
@@ -330,21 +330,21 @@ async def test_restart_monitor_clears_auth_cache(mock_coordinator):
         await monitor.start()
 
     # CRITICAL: Verify auth cache was cleared
-    mock_scraper.clear_auth_cache.assert_called_once()
+    mock_modem_client.clear_auth_cache.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_restart_monitor_handles_missing_scraper(mock_coordinator):
-    """Test that cache clear gracefully handles coordinator without scraper attribute."""
+async def test_restart_monitor_handles_missing_modem_client(mock_coordinator):
+    """Test that cache clear gracefully handles coordinator without modem_client attribute."""
     hass = Mock(spec=HomeAssistant)
     notifications = []
 
     async def mock_notify(title: str, message: str):
         notifications.append({"title": title, "message": message})
 
-    # Coordinator WITHOUT scraper attribute (old behavior)
-    if hasattr(mock_coordinator, "scraper"):
-        delattr(mock_coordinator, "scraper")
+    # Coordinator WITHOUT modem_client attribute (old behavior)
+    if hasattr(mock_coordinator, "modem_client"):
+        delattr(mock_coordinator, "modem_client")
 
     monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
@@ -371,7 +371,7 @@ async def test_restart_monitor_reauth_after_cache_clear(mock_coordinator):
     async def mock_notify(title: str, message: str):
         notifications.append({"title": title, "message": message})
 
-    # Create mock scraper with HNAP builder that has cached private key
+    # Create mock modem_client with HNAP builder that has cached private key
     mock_json_builder = MagicMock()
     mock_json_builder._private_key = "OLD_CACHED_KEY_123"
     mock_json_builder.clear_auth_cache = MagicMock()
@@ -379,24 +379,24 @@ async def test_restart_monitor_reauth_after_cache_clear(mock_coordinator):
     mock_parser = MagicMock()
     mock_parser._json_builder = mock_json_builder
 
-    mock_scraper = MagicMock()
-    mock_scraper.parser = mock_parser
-    mock_scraper.session = MagicMock()
+    mock_modem_client = MagicMock()
+    mock_modem_client.parser = mock_parser
+    mock_modem_client.session = MagicMock()
 
     def clear_cache_impl():
         """Simulate actual cache clearing."""
         mock_json_builder._private_key = None
         mock_json_builder.clear_auth_cache()
-        mock_scraper.session = MagicMock()  # New session
+        mock_modem_client.session = MagicMock()  # New session
 
-    mock_scraper.clear_auth_cache = clear_cache_impl
-    mock_coordinator.scraper = mock_scraper
+    mock_modem_client.clear_auth_cache = clear_cache_impl
+    mock_coordinator.modem_client = mock_modem_client
 
     monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
     # Track polling calls to verify re-auth happens
     poll_count = [0]
-    original_session = mock_scraper.session
+    original_session = mock_modem_client.session
 
     async def mock_refresh():
         poll_count[0] += 1
@@ -417,7 +417,7 @@ async def test_restart_monitor_reauth_after_cache_clear(mock_coordinator):
     assert mock_json_builder._private_key is None
 
     # 2. New session was created (different object)
-    assert mock_scraper.session is not original_session
+    assert mock_modem_client.session is not original_session
 
     # 3. HNAP builder's clear was called
     mock_json_builder.clear_auth_cache.assert_called()
@@ -641,8 +641,8 @@ async def test_capture_modem_data_button_success(mock_coordinator, mock_config_e
         },
     }
 
-    # Configure coordinator.scraper.get_modem_data to return capture data
-    mock_coordinator.scraper.get_modem_data.return_value = mock_capture_data
+    # Configure coordinator.modem_client.get_modem_data to return capture data
+    mock_coordinator.modem_client.get_modem_data.return_value = mock_capture_data
     hass.async_add_executor_job = AsyncMock(return_value=mock_capture_data)
 
     await button.async_press()
@@ -676,8 +676,8 @@ async def test_capture_modem_data_button_failure(mock_coordinator, mock_config_e
         "cable_modem_connection_status": "online",
     }
 
-    # Configure coordinator.scraper.get_modem_data to return data without capture
-    mock_coordinator.scraper.get_modem_data.return_value = mock_data
+    # Configure coordinator.modem_client.get_modem_data to return data without capture
+    mock_coordinator.modem_client.get_modem_data.return_value = mock_data
     hass.async_add_executor_job = AsyncMock(return_value=mock_data)
 
     await button.async_press()
@@ -700,8 +700,8 @@ async def test_capture_modem_data_button_exception(mock_coordinator, mock_config
     button = CaptureModemDataButton(mock_coordinator, mock_config_entry)
     button.hass = hass
 
-    # Configure coordinator.scraper.get_modem_data to raise exception
-    mock_coordinator.scraper.get_modem_data.side_effect = Exception("Test error")
+    # Configure coordinator.modem_client.get_modem_data to raise exception
+    mock_coordinator.modem_client.get_modem_data.side_effect = Exception("Test error")
     hass.async_add_executor_job = AsyncMock(side_effect=Exception("Test error"))
 
     await button.async_press()
