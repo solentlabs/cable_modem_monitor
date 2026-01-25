@@ -1204,7 +1204,7 @@ class TestAuthTypesIntegration:
             assert len(auth_types) == 1
 
     def test_sb6190_has_multiple_auth_types(self):
-        """Test SB6190 has multiple auth types (none, form)."""
+        """Test SB6190 has multiple auth types (none, form_ajax)."""
         adapter = get_auth_adapter_for_parser("ArrisSB6190Parser")
         if adapter is None:
             pytest.skip("SB6190 modem config not available")
@@ -1214,7 +1214,7 @@ class TestAuthTypesIntegration:
         # If auth.types{} is configured, should have both
         if adapter.has_multiple_auth_types():
             assert "none" in auth_types
-            assert "form" in auth_types
+            assert "form_ajax" in auth_types
         else:
             # Fallback to single strategy (none)
             assert len(auth_types) == 1
