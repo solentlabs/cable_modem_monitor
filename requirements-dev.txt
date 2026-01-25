@@ -4,7 +4,7 @@
 # -------------------------------
 # 🏠 Home Assistant (install FIRST to resolve dependencies)
 # -------------------------------
-homeassistant>=2024.1.0                     # Home Assistant core (for integration testing)
+homeassistant>=2025.1.0                     # Home Assistant core (>= 2025.1.0 for pydantic v2)
 
 # -------------------------------
 # ⚙️ Runtime dependencies (mirrors pyproject.toml)
