@@ -434,6 +434,52 @@ class TestBuildStaticConfigForAuthType:
         assert result["auth_form_config"] is None
         assert result["auth_url_token_config"] is None
 
+    @pytest.mark.asyncio
+    async def test_form_ajax_auth_type_builds_config(self, mock_hass):
+        """Test form_ajax auth type builds correct config structure.
+
+        Regression test for issue #93 and #83: SB6190 with firmware 9.1.103+
+        requires AJAX-based login. The config must include auth_form_ajax_config
+        for AuthWorkflow.authenticate_with_static_config() to work.
+        """
+        mock_parser = Mock()
+        mock_parser.__name__ = "ArrisSB6190Parser"
+        mock_parser.name = "ARRIS SB6190"
+
+        mock_adapter = Mock()
+        mock_adapter.get_auth_config_for_type.return_value = {
+            "endpoint": "/cgi-bin/adv_pwd_cgi",
+            "nonce_field": "ar_nonce",
+            "nonce_length": 8,
+            "arguments_field": "arguments",
+            "credential_format": "username={username}:password={password}",
+            "success_prefix": "Url:",
+            "error_prefix": "Error:",
+        }
+
+        async def mock_executor(func, *args):
+            return mock_adapter
+
+        mock_hass.async_add_executor_job = mock_executor
+
+        result = await _build_static_config_for_auth_type(mock_hass, mock_parser, "form_ajax")
+
+        assert result is not None
+        assert result["auth_strategy"] == "form_ajax"
+        # This is the key assertion - auth_form_ajax_config must be populated
+        assert result["auth_form_ajax_config"] == {
+            "endpoint": "/cgi-bin/adv_pwd_cgi",
+            "nonce_field": "ar_nonce",
+            "nonce_length": 8,
+            "arguments_field": "arguments",
+            "credential_format": "username={username}:password={password}",
+            "success_prefix": "Url:",
+            "error_prefix": "Error:",
+        }
+        assert result["auth_form_config"] is None
+        assert result["auth_hnap_config"] is None
+        assert result["auth_url_token_config"] is None
+
 
 class TestLoadParserHints:
     """Tests for load_parser_hints function."""

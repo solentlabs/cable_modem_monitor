@@ -314,6 +314,7 @@ async def _build_static_config_for_auth_type(
     static_config: dict[str, Any] = {
         "auth_strategy": strategy,
         "auth_form_config": type_config if auth_type == "form" else None,
+        "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
         "auth_hnap_config": type_config if auth_type == "hnap" else None,
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
     }
