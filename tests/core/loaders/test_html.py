@@ -113,7 +113,7 @@ class TestHTMLLoaderUrlToken:
         """Handles URLs that already have query parameters."""
         # Test internal URL building logic
         session = MagicMock()
-        session.cookies = []
+        session.cookies = {}
 
         config = {"pages": {"data": {}}}
         url_token_config = {"session_cookie": "sessionId", "token_prefix": "ct_"}
@@ -140,7 +140,7 @@ class TestHTMLLoaderUrlToken:
     def test_no_token_appended_when_cookie_not_found(self):
         """No token appended when session cookie is not found."""
         session = MagicMock()
-        session.cookies = []
+        session.cookies = {}
 
         response = MagicMock()
         response.ok = True

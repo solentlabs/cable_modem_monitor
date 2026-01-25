@@ -56,7 +56,7 @@ Note:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -190,7 +190,7 @@ class FormSuccessConfig(BaseModel):
 class FormAuthConfig(BaseModel):
     """Configuration for form-based authentication.
 
-    Used by: MB7621, CM2000, XB7, CGA2121, G54
+    Used by: MB7621, XB7, CGA2121, G54
     """
 
     action: str = Field(description="Form submission URL")
@@ -208,6 +208,26 @@ class FormAuthConfig(BaseModel):
     success: FormSuccessConfig | None = Field(
         default=None,
         description="How to detect successful login",
+    )
+
+
+class FormDynamicAuthConfig(FormAuthConfig):
+    """Configuration for form auth with dynamic action URL extraction.
+
+    Used when the login form's action attribute contains a dynamic parameter
+    that changes per page load (e.g., /goform/Login?id=XXXXXXXXXX).
+
+    The strategy fetches the login page first, parses the <form> element,
+    and extracts the actual action URL before submitting credentials.
+    """
+
+    login_page: str = Field(
+        default="/",
+        description="Page containing the login form to scrape for dynamic action",
+    )
+    form_selector: str | None = Field(
+        default=None,
+        description="CSS selector for form element (e.g., 'form[name=loginform]')",
     )
 
 
@@ -342,7 +362,12 @@ class AuthConfig(BaseModel):
     # types{} is the single source of truth for auth configuration
     # Key = auth type name (none, form, hnap, url_token, rest_api)
     # Value = config dict for that type, or null for "none"
-    types: dict[str, FormAuthConfig | HnapAuthConfig | UrlTokenAuthConfig | RestApiAuthConfig | None] = Field(
+    # Note: FormDynamicAuthConfig must come before FormAuthConfig in the union
+    # because it's a subclass - Pydantic tries types in order and stops at first match
+    types: dict[
+        str,
+        FormDynamicAuthConfig | FormAuthConfig | HnapAuthConfig | UrlTokenAuthConfig | RestApiAuthConfig | None,
+    ] = Field(
         default_factory=dict,
         description="Auth type configurations. Keys are type names (none, form, url_token, hnap, rest_api), "
         "values are the config for that type (or null for 'none').",
@@ -350,6 +375,44 @@ class AuthConfig(BaseModel):
 
     # Session management (shared across all auth types)
     session: SessionConfig | None = Field(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def discriminate_auth_types_by_key(cls, data: dict) -> dict:
+        """Use dict key to determine correct auth config type.
+
+        Pydantic's union matching can't use dict keys as discriminators,
+        so we manually map keys like 'form_dynamic' to FormDynamicAuthConfig.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        types_dict = data.get("types")
+        if not types_dict or not isinstance(types_dict, dict):
+            return data
+
+        # Map keys to their correct Pydantic model classes
+        key_to_class = {
+            "form_dynamic": FormDynamicAuthConfig,
+            "form": FormAuthConfig,
+            "hnap": HnapAuthConfig,
+            "url_token": UrlTokenAuthConfig,
+            "rest_api": RestApiAuthConfig,
+        }
+
+        converted: dict[str, Any] = {}
+        for key, value in types_dict.items():
+            if value is None:
+                converted[key] = None
+            elif key in key_to_class and isinstance(value, dict):
+                # Parse as the correct type based on key
+                converted[key] = key_to_class[key](**value)
+            else:
+                # Unknown key or already parsed - pass through
+                converted[key] = value
+
+        data["types"] = converted
+        return data
 
 
 # =============================================================================

@@ -379,6 +379,7 @@ class AuthHandler:
         from .configs import (
             BasicAuthConfig,
             FormAuthConfig,
+            FormDynamicAuthConfig,
             HNAPAuthConfig,
             NoAuthConfig,
             UrlTokenSessionConfig,
@@ -402,6 +403,20 @@ class AuthHandler:
                 password_encoding=form_config.get("password_encoding", "plain"),
                 credential_field=form_config.get("credential_field"),
                 credential_format=form_config.get("credential_format"),
+            )
+
+        if strategy == AuthStrategyType.FORM_DYNAMIC:
+            return FormDynamicAuthConfig(
+                strategy=strategy,
+                login_page=form_config.get("login_page", "/"),
+                login_url=form_config.get("action", ""),
+                form_selector=form_config.get("form_selector"),
+                username_field=form_config.get("username_field", "username"),
+                password_field=form_config.get("password_field", "password"),
+                method=form_config.get("method", "POST"),
+                success_indicator=form_config.get("success_indicator"),
+                hidden_fields=form_config.get("hidden_fields"),
+                password_encoding=form_config.get("password_encoding", "plain"),
             )
 
         if strategy == AuthStrategyType.HNAP_SESSION:

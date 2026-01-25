@@ -22,6 +22,7 @@ from custom_components.cable_modem_monitor.modem_config.loader import (
 
 from .mock_handlers import (
     FormAuthHandler,
+    FormDynamicAuthHandler,
     HnapAuthHandler,
     RestApiHandler,
     UrlTokenAuthHandler,
@@ -122,6 +123,7 @@ class MockModemServer:
         # Map auth type string to handler
         handler_map = {
             "form": FormAuthHandler,
+            "form_dynamic": FormDynamicAuthHandler,
             "none": NoAuthHandler,
             "basic": BasicAuthHandler,
             "hnap": HnapAuthHandler,

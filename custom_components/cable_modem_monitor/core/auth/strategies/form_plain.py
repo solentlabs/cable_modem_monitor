@@ -22,7 +22,7 @@ from ..types import AuthErrorType
 if TYPE_CHECKING:
     import requests
 
-    from ..configs import AuthConfig, FormAuthConfig
+    from ..configs import AuthConfig, FormAuthConfig, FormDynamicAuthConfig
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,13 +57,13 @@ class FormPlainAuthStrategy(AuthStrategy):
                 "Form auth requires username and password",
             )
 
-        from ..configs import FormAuthConfig
+        from ..configs import FormAuthConfig, FormDynamicAuthConfig
 
-        if not isinstance(config, FormAuthConfig):
-            _LOGGER.error("FormPlainAuthStrategy requires FormAuthConfig")
+        if not isinstance(config, FormAuthConfig | FormDynamicAuthConfig):
+            _LOGGER.error("FormPlainAuthStrategy requires FormAuthConfig or FormDynamicAuthConfig")
             return AuthResult.fail(
                 AuthErrorType.STRATEGY_NOT_CONFIGURED,
-                "FormPlainAuthStrategy requires FormAuthConfig",
+                "FormPlainAuthStrategy requires FormAuthConfig or FormDynamicAuthConfig",
             )
 
         if not config.login_url:
@@ -81,12 +81,13 @@ class FormPlainAuthStrategy(AuthStrategy):
         base_url: str,
         username: str,
         password: str,
-        config: FormAuthConfig,
+        config: FormAuthConfig | FormDynamicAuthConfig,
         log,
     ) -> AuthResult:
         """Execute the form login request and evaluate response."""
         form_data = self._build_form_data(config, username, password, log)
-        action_url = self._resolve_url(base_url, config.login_url)
+        action_path = self._get_action_path(session, base_url, config, log)
+        action_url = self._resolve_url(base_url, action_path)
         log("Form auth: submitting to %s (method=%s)", action_url, config.method)
 
         try:
@@ -96,6 +97,29 @@ class FormPlainAuthStrategy(AuthStrategy):
         except Exception as e:
             _LOGGER.warning("Form auth failed: %s", e)
             return AuthResult.fail(AuthErrorType.CONNECTION_FAILED, f"Form submission failed: {e}")
+
+    def _get_action_path(
+        self,
+        session: requests.Session,
+        base_url: str,
+        config: FormAuthConfig | FormDynamicAuthConfig,
+        log,
+    ) -> str:
+        """Get the form action path.
+
+        Override in subclasses (e.g., FormDynamicAuthStrategy) to extract
+        the action URL from the login page instead of using the static config value.
+
+        Args:
+            session: Requests session
+            base_url: Modem base URL
+            config: Form auth configuration
+            log: Logger function
+
+        Returns:
+            Form action path (relative or absolute URL)
+        """
+        return config.login_url
 
     def _submit_form(
         self,
@@ -144,7 +168,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         session: requests.Session,
         base_url: str,
         response: requests.Response,
-        config: FormAuthConfig,
+        config: FormAuthConfig | FormDynamicAuthConfig,
         log,
     ) -> AuthResult:
         """Evaluate response to determine if login succeeded."""
@@ -161,7 +185,9 @@ class FormPlainAuthStrategy(AuthStrategy):
         log("Form auth successful - form response is not a login page")
         return AuthResult.ok(response.text)
 
-    def _check_success_indicator(self, response: requests.Response, config: FormAuthConfig) -> AuthResult:
+    def _check_success_indicator(
+        self, response: requests.Response, config: FormAuthConfig | FormDynamicAuthConfig
+    ) -> AuthResult:
         """Check if success indicator is present in response."""
         indicator = config.success_indicator
         if not indicator:
@@ -204,7 +230,9 @@ class FormPlainAuthStrategy(AuthStrategy):
 
         return AuthResult.ok()
 
-    def _build_form_data(self, config: FormAuthConfig, username: str, password: str, log) -> dict:
+    def _build_form_data(
+        self, config: FormAuthConfig | FormDynamicAuthConfig, username: str, password: str, log
+    ) -> dict:
         """Build form data based on configuration mode."""
         hidden_fields = dict(config.hidden_fields) if config.hidden_fields else {}
 
@@ -216,7 +244,7 @@ class FormPlainAuthStrategy(AuthStrategy):
 
     def _build_combined_form_data(
         self,
-        config: FormAuthConfig,
+        config: FormAuthConfig | FormDynamicAuthConfig,
         username: str,
         password: str,
         hidden_fields: dict,
@@ -234,7 +262,7 @@ class FormPlainAuthStrategy(AuthStrategy):
 
     def _build_traditional_form_data(
         self,
-        config: FormAuthConfig,
+        config: FormAuthConfig | FormDynamicAuthConfig,
         username: str,
         password: str,
         hidden_fields: dict,

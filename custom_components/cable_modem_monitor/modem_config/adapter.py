@@ -199,6 +199,7 @@ class ModemConfigAuthAdapter:
             "none": "no_auth",
             "basic": "basic_http",  # HTTP Basic Auth (401 challenge)
             "form": "form_plain",
+            "form_dynamic": "form_dynamic",  # Form with dynamic action URL extraction
             "hnap": "hnap_session",
             "url_token": "url_token_session",
             "rest_api": "no_auth",  # REST API = no traditional auth
@@ -207,9 +208,12 @@ class ModemConfigAuthAdapter:
         strategy_str = strategy_mapping.get(auth_type, "no_auth")
         type_config = self.get_auth_config_for_type(auth_type)
 
+        # form and form_dynamic both use auth_form_config
+        is_form_type = auth_type in ("form", "form_dynamic")
+
         return {
             "auth_strategy": strategy_str,
-            "auth_form_config": type_config if auth_type == "form" else None,
+            "auth_form_config": type_config if is_form_type else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
         }
@@ -257,12 +261,13 @@ class ModemConfigAuthAdapter:
     def get_auth_form_hints(self) -> dict[str, Any] | None:
         """Get form auth config hints for discovery.
 
-        Returns config from auth.types.form if available.
+        Returns config from auth.types.form or auth.types.form_dynamic if available.
 
         Returns:
             Form config dict with action, username_field, password_field, etc., or None.
         """
-        return self.get_auth_config_for_type("form")
+        # Check both form and form_dynamic
+        return self.get_auth_config_for_type("form") or self.get_auth_config_for_type("form_dynamic")
 
     # =========================================================================
     # DEVICE METADATA

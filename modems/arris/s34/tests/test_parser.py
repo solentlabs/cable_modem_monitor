@@ -144,15 +144,15 @@ class TestS34ParserMetadata:
         assert adapter is not None
         assert adapter.get_docsis_version() == "3.1"
 
-    def test_awaiting_verification_status(self):
-        """Test parser is awaiting verification (not yet verified by user)."""
+    def test_verified_status(self):
+        """Test parser is verified."""
         from custom_components.cable_modem_monitor.modem_config.adapter import (
             get_auth_adapter_for_parser,
         )
 
         adapter = get_auth_adapter_for_parser("ArrisS34HnapParser")
         assert adapter is not None
-        assert adapter.get_status() == "awaiting_verification"
+        assert adapter.get_status() == "verified"
 
     def test_fixtures_path(self):
         """Test fixtures path is set via modem.yaml adapter."""

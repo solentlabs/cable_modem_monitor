@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-25T02:17:52.046819+00:00"
+generated: "2026-01-25T03:11:10.536050+00:00"
 auth_patterns:
   form:
     username_fields:
