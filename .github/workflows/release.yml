@@ -82,8 +82,13 @@ jobs:
           # Save to file to preserve formatting
           echo "$CHANGELOG" > /tmp/changelog.txt
 
-      # Tests are run by Devcontainer CI workflow on every push.
-      # Skipping here to avoid pydantic v1/v2 conflicts in minimal CI env.
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/requirements.txt
+
+      - name: Run tests
+        run: |
+          pytest -v --tb=short
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
