@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.2] - 2026-01-25
+
+### Fixed
+
+- **SB8200 URL Token Auth** - Match real browser behavior observed in HAR captures: login requests now include `X-Requested-With: XMLHttpRequest` header, data requests omit `Authorization` header. New `ajax_login` and `auth_header_data` config options added to `modem.yaml`. (#81)
+- **SB6190 Form AJAX Auth** - Fixed "invalid_credentials" error when using form_ajax authentication (firmware 9.1.103+). The config flow helper was not passing the form_ajax configuration to the auth workflow. (#93, #83)
+
+### Added
+
+- **Mock Server Auth Types** - `mock_server.py` now accepts `--auth-type` flag to test different authentication strategies
+
 ## [3.13.0-beta.1] - 2026-01-25
 
 ### ✨ Architecture Improvements
