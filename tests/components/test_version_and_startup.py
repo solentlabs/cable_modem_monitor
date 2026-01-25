@@ -93,10 +93,11 @@ class TestVersionLogging:
 
     def test_version_constant_format(self):
         """Test that VERSION constant is in correct format."""
-        # Version should be semantic versioning format: X.Y.Z
-        parts = VERSION.split(".")
-        assert len(parts) == 3
-        assert all(part.isdigit() for part in parts)
+        import re
+
+        # Version should be semantic versioning: X.Y.Z or X.Y.Z-beta.N
+        pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
+        assert re.match(pattern, VERSION), f"Invalid version format: {VERSION}"
 
     def test_current_version(self):
         """Test that version is the correct current version."""
