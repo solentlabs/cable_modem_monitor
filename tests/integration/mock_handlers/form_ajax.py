@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from urllib.parse import unquote, urlparse
 
-from .base import BaseAuthHandler
-from .form import TEST_PASSWORD, TEST_USERNAME
+from .form_base import BaseFormAuthHandler
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class FormAjaxAuthHandler(BaseAuthHandler):
+class FormAjaxAuthHandler(BaseFormAuthHandler):
     """Handler for AJAX-based form authentication.
 
     Simulates modems that use JavaScript XMLHttpRequest for login.
@@ -43,20 +42,13 @@ class FormAjaxAuthHandler(BaseAuthHandler):
     - "Error:message" on failure
     """
 
+    AUTH_TYPE_KEY = "form_ajax"
+
     def __init__(self, config: ModemConfig, fixtures_path: Path):
-        """Initialize AJAX form auth handler.
-
-        Args:
-            config: Modem configuration.
-            fixtures_path: Path to fixtures directory.
-        """
+        """Initialize AJAX form auth handler."""
         super().__init__(config, fixtures_path)
-
-        # Get form_ajax config (required for this handler)
-        form_config = config.auth.types.get("form_ajax")
-        if not form_config:
-            raise ValueError("FormAjaxAuthHandler requires form_ajax config in auth.types")
-        self.form_config: FormAjaxAuthConfig = cast("FormAjaxAuthConfig", form_config)
+        # Type narrow the config
+        self.form_config: FormAjaxAuthConfig = cast("FormAjaxAuthConfig", self.form_config)
 
     def handle_request(
         self,
@@ -66,18 +58,7 @@ class FormAjaxAuthHandler(BaseAuthHandler):
         headers: dict[str, str],
         body: bytes | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
-        """Handle HTTP request with AJAX form authentication.
-
-        Args:
-            handler: HTTP request handler.
-            method: HTTP method.
-            path: Request path.
-            headers: Request headers.
-            body: Request body.
-
-        Returns:
-            Response tuple (status, headers, body).
-        """
+        """Handle HTTP request with AJAX form authentication."""
         parsed = urlparse(path)
         clean_path = parsed.path
 
@@ -87,22 +68,17 @@ class FormAjaxAuthHandler(BaseAuthHandler):
 
         # Check if authenticated for protected paths
         if self.is_protected_path(clean_path) and not self.is_authenticated(headers):
-            # Return login page
-            return self._serve_login_page()
+            return self.serve_login_page()
 
         # Serve the requested page
         return self.serve_fixture(clean_path)
 
-    def _handle_ajax_login(self, body: bytes | None, headers: dict[str, str]) -> tuple[int, dict[str, str], bytes]:
-        """Handle AJAX login submission.
-
-        Args:
-            body: POST body with form data.
-            headers: Request headers.
-
-        Returns:
-            Response tuple with plain text body.
-        """
+    def _handle_ajax_login(
+        self,
+        body: bytes | None,
+        headers: dict[str, str],
+    ) -> tuple[int, dict[str, str], bytes]:
+        """Handle AJAX login submission."""
         if body is None:
             return self._error_response("No data submitted")
 
@@ -128,41 +104,35 @@ class FormAjaxAuthHandler(BaseAuthHandler):
 
         _LOGGER.debug("AJAX login attempt: username=%s", username)
 
-        if username == TEST_USERNAME and password == TEST_PASSWORD:
-            # Success - create session
-            session_id = self.create_session()
-            cookie_name = "session"
-            if self.config.auth.session and self.config.auth.session.cookie_name:
-                cookie_name = self.config.auth.session.cookie_name
-
-            # Return success response
-            success_prefix = getattr(self.form_config, "success_prefix", "Url:")
-            redirect_path = "/cgi-bin/status"  # Default redirect
-
-            _LOGGER.debug("AJAX login successful")
-            return (
-                200,
-                {
-                    "Content-Type": "text/plain",
-                    "Set-Cookie": f"{cookie_name}={session_id}; Path=/",
-                },
-                f"{success_prefix}{redirect_path}".encode(),
-            )
+        if self.validate_credentials(username, password):
+            return self._handle_ajax_login_success()
 
         # Failed login
         _LOGGER.debug("AJAX login failed: invalid credentials")
         return self._error_response("Invalid password")
 
+    def _handle_ajax_login_success(self) -> tuple[int, dict[str, str], bytes]:
+        """Handle successful AJAX login with plain text response."""
+        _, cookie_value = self.create_session_cookie()
+
+        # Return success response
+        success_prefix = getattr(self.form_config, "success_prefix", "Url:")
+        redirect_path = "/cgi-bin/status"  # Default redirect
+
+        _LOGGER.debug("AJAX login successful")
+        return (
+            200,
+            {
+                "Content-Type": "text/plain",
+                "Set-Cookie": cookie_value,
+            },
+            f"{success_prefix}{redirect_path}".encode(),
+        )
+
     def _parse_credentials(self, credential_str: str) -> tuple[str, str]:
         """Parse credentials from format string.
 
         Expected format: "username={user}:password={pass}"
-
-        Args:
-            credential_str: Decoded credential string.
-
-        Returns:
-            Tuple of (username, password).
         """
         username = ""
         password = ""
@@ -178,14 +148,7 @@ class FormAjaxAuthHandler(BaseAuthHandler):
         return username, password
 
     def _error_response(self, message: str) -> tuple[int, dict[str, str], bytes]:
-        """Return an error response.
-
-        Args:
-            message: Error message.
-
-        Returns:
-            Response tuple with error message.
-        """
+        """Return an error response."""
         error_prefix = getattr(self.form_config, "error_prefix", "Error:")
         return (
             200,
@@ -193,27 +156,8 @@ class FormAjaxAuthHandler(BaseAuthHandler):
             f"{error_prefix}{message}".encode(),
         )
 
-    def _serve_login_page(self) -> tuple[int, dict[str, str], bytes]:
-        """Serve the login page.
-
-        Returns:
-            Response tuple with login HTML.
-        """
-        # Try to serve login.html fixture if exists
-        login_fixture = self.get_fixture_content("/login.html")
-        if login_fixture:
-            return 200, {"Content-Type": "text/html; charset=utf-8"}, login_fixture
-
-        # Synthesize minimal login page
-        login_html = self._synthesize_login_page()
-        return 200, {"Content-Type": "text/html; charset=utf-8"}, login_html.encode()
-
-    def _synthesize_login_page(self) -> str:
-        """Synthesize a minimal login page with AJAX form.
-
-        Returns:
-            HTML string with AJAX login form.
-        """
+    def synthesize_login_page(self) -> str:
+        """Synthesize a minimal login page with AJAX form."""
         endpoint = getattr(self.form_config, "endpoint", "/cgi-bin/adv_pwd_cgi")
         nonce_field = getattr(self.form_config, "nonce_field", "ar_nonce")
         arguments_field = getattr(self.form_config, "arguments_field", "arguments")
@@ -221,7 +165,7 @@ class FormAjaxAuthHandler(BaseAuthHandler):
         return f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>{self.config.manufacturer} {self.config.model} - Login</title>
+    <title>{self.get_page_title()}</title>
     <script>
     function getNonce() {{
         return Math.random().toString().substr(2, 8);
@@ -248,7 +192,7 @@ class FormAjaxAuthHandler(BaseAuthHandler):
     </script>
 </head>
 <body>
-    <h1>{self.config.manufacturer} {self.config.model}</h1>
+    <h1>{self.get_page_heading()}</h1>
     <p>AJAX Login Form</p>
     <form onsubmit="do_login(); return false;">
         <input type="hidden" name="{nonce_field}" id="{nonce_field}">

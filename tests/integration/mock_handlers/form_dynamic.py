@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from urllib.parse import parse_qs, urlparse
 
-from .base import BaseAuthHandler
+from .form_base import BaseFormAuthHandler
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class FormDynamicAuthHandler(BaseAuthHandler):
+class FormDynamicAuthHandler(BaseFormAuthHandler):
     """Handler for form authentication with dynamic action URLs.
 
     Simulates modems that generate a unique session ID in the form action
@@ -38,24 +38,15 @@ class FormDynamicAuthHandler(BaseAuthHandler):
     action from modem.yaml, missing the required dynamic parameter.
     """
 
+    AUTH_TYPE_KEY = "form_dynamic"
+
     def __init__(self, config: ModemConfig, fixtures_path: Path):
-        """Initialize dynamic form auth handler.
-
-        Args:
-            config: Modem configuration.
-            fixtures_path: Path to fixtures directory.
-        """
+        """Initialize dynamic form auth handler."""
         super().__init__(config, fixtures_path)
-
+        # Type narrow the config
+        self.form_config: FormDynamicAuthConfig = cast("FormDynamicAuthConfig", self.form_config)
         # Track the current valid dynamic ID
-        # A new ID is generated each time the login page is served
         self._current_dynamic_id: str | None = None
-
-        # Get form_dynamic config (required for this handler)
-        form_config = config.auth.types.get("form_dynamic")
-        if not form_config:
-            raise ValueError("FormDynamicAuthHandler requires form_dynamic config in auth.types")
-        self.form_config: FormDynamicAuthConfig = cast("FormDynamicAuthConfig", form_config)
 
     def handle_request(
         self,
@@ -65,23 +56,10 @@ class FormDynamicAuthHandler(BaseAuthHandler):
         headers: dict[str, str],
         body: bytes | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
-        """Handle HTTP request with dynamic form authentication.
-
-        Args:
-            handler: HTTP request handler.
-            method: HTTP method.
-            path: Request path.
-            headers: Request headers.
-            body: Request body.
-
-        Returns:
-            Response tuple (status, headers, body).
-        """
+        """Handle HTTP request with dynamic form authentication."""
         parsed = urlparse(path)
         clean_path = parsed.path
         query_params = parse_qs(parsed.query)
-
-        assert self.form_config is not None, "FormDynamicAuthHandler requires form_config"
 
         # Handle login form submission
         if method == "POST" and clean_path == self.form_config.action:
@@ -112,8 +90,7 @@ class FormDynamicAuthHandler(BaseAuthHandler):
 
         # Check if authenticated for protected paths
         if self.is_protected_path(clean_path) and not self.is_authenticated(headers):
-            # Return login page with new dynamic ID
-            return self._serve_login_page()
+            return self._serve_login_page_with_dynamic_id()
 
         # Serve the requested page
         return self.serve_fixture(clean_path)
@@ -122,11 +99,6 @@ class FormDynamicAuthHandler(BaseAuthHandler):
         """Reject login attempt with invalid or missing dynamic ID.
 
         Simulates the real modem behavior: redirect back to login page.
-        This is what causes the 362-byte response (login redirect) instead
-        of the expected 63KB data page.
-
-        Returns:
-            Redirect response back to login page.
         """
         # Generate new dynamic ID for the login page
         self._current_dynamic_id = self._generate_dynamic_id()
@@ -141,18 +113,10 @@ class FormDynamicAuthHandler(BaseAuthHandler):
         )
 
     def _handle_login(self, body: bytes | None) -> tuple[int, dict[str, str], bytes]:
-        """Handle login form submission.
-
-        Args:
-            body: POST body with form data.
-
-        Returns:
-            Response tuple.
-        """
-        from .form import TEST_PASSWORD, TEST_USERNAME
-
-        assert self.form_config is not None
-        assert body is not None, "POST body is required for login"
+        """Handle login form submission."""
+        if body is None:
+            _LOGGER.debug("Login failed: no body")
+            return self._serve_login_page_with_dynamic_id()
 
         form_data = self.parse_form_data(body)
         username = form_data.get(self.form_config.username_field, "")
@@ -160,39 +124,18 @@ class FormDynamicAuthHandler(BaseAuthHandler):
 
         _LOGGER.debug("Login attempt: username=%s", username)
 
-        if username == TEST_USERNAME and password == TEST_PASSWORD:
-            # Success - create session and redirect
-            session_id = self.create_session()
-            cookie_name = "session"
-            if self.config.auth.session and self.config.auth.session.cookie_name:
-                cookie_name = self.config.auth.session.cookie_name
-
+        if self.validate_credentials(username, password):
             redirect_url = "/DocsisStatus.htm"
             if self.form_config.success and self.form_config.success.redirect:
                 redirect_url = self.form_config.success.redirect
-
-            _LOGGER.debug("Login successful, redirecting to %s", redirect_url)
-            return (
-                302,
-                {
-                    "Location": redirect_url,
-                    "Set-Cookie": f"{cookie_name}={session_id}; Path=/",
-                },
-                b"",
-            )
+            return self.handle_login_success_redirect(redirect_url)
 
         # Failed login - return to login page
         _LOGGER.debug("Login failed")
-        return self._serve_login_page()
+        return self._serve_login_page_with_dynamic_id()
 
-    def _serve_login_page(self) -> tuple[int, dict[str, str], bytes]:
-        """Serve the login page with a fresh dynamic ID.
-
-        Generates a new dynamic ID and embeds it in the form action.
-
-        Returns:
-            Response tuple.
-        """
+    def _serve_login_page_with_dynamic_id(self) -> tuple[int, dict[str, str], bytes]:
+        """Serve the login page with a fresh dynamic ID."""
         # Generate new dynamic ID
         self._current_dynamic_id = self._generate_dynamic_id()
         _LOGGER.debug("Generated dynamic ID: %s", self._current_dynamic_id)
@@ -211,17 +154,11 @@ class FormDynamicAuthHandler(BaseAuthHandler):
             return 200, {"Content-Type": "text/html; charset=utf-8"}, html.encode()
 
         # Synthesize minimal login form with dynamic action
-        login_html = self._synthesize_login_page()
+        login_html = self.synthesize_login_page()
         return 200, {"Content-Type": "text/html; charset=utf-8"}, login_html.encode()
 
-    def _synthesize_login_page(self) -> str:
-        """Synthesize a minimal login page with dynamic form action.
-
-        Returns:
-            HTML string with form action containing dynamic ID.
-        """
-        assert self.form_config is not None, "FormDynamicAuthHandler requires form_config"
-
+    def synthesize_login_page(self) -> str:
+        """Synthesize a minimal login page with dynamic form action."""
         username_field = self.form_config.username_field
         password_field = self.form_config.password_field
         method = self.form_config.method or "POST"
@@ -238,10 +175,10 @@ class FormDynamicAuthHandler(BaseAuthHandler):
         return f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>{self.config.manufacturer} {self.config.model} - Login</title>
+    <title>{self.get_page_title()}</title>
 </head>
 <body>
-    <h1>{self.config.manufacturer} {self.config.model}</h1>
+    <h1>{self.get_page_heading()}</h1>
     <p>Login form with dynamic action URL</p>
     <form name="loginform" action="{dynamic_action}" method="{method}">
         {hidden_inputs}
@@ -255,9 +192,5 @@ class FormDynamicAuthHandler(BaseAuthHandler):
 """
 
     def _generate_dynamic_id(self) -> str:
-        """Generate a random dynamic ID.
-
-        Returns:
-            Random alphanumeric string (simulates modem's session ID generator).
-        """
+        """Generate a random dynamic ID."""
         return secrets.token_hex(8).upper()
