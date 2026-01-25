@@ -190,8 +190,16 @@ class UrlTokenSessionConfig(AuthConfig):
     Auth flow:
     1. Login: GET {base_url}{login_page}?{login_prefix}{base64(user:pass)}
        with Authorization: Basic {base64(user:pass)} header
+       (optionally with X-Requested-With: XMLHttpRequest if ajax_login=True)
     2. Response sets {session_cookie_name} cookie
     3. Subsequent requests: GET {url}?{token_prefix}{session_cookie_value}
+       (Authorization header included only if auth_header_data=True)
+
+    Behavioral attributes (configured via modem.yaml):
+        ajax_login: If True, add X-Requested-With: XMLHttpRequest to login request.
+            Some modems (jQuery-based auth) require this header. Default: False.
+        auth_header_data: If True, include Authorization header on data requests.
+            Most modems only need the session cookie. Default: True (backwards compat).
     """
 
     strategy: AuthStrategyType = AuthStrategyType.URL_TOKEN_SESSION
@@ -201,3 +209,6 @@ class UrlTokenSessionConfig(AuthConfig):
     token_prefix: str = "ct_"
     session_cookie_name: str = "sessionId"
     success_indicator: str = "Downstream Bonded Channels"
+    # Behavioral attributes - control header behavior based on modem requirements
+    ajax_login: bool = False  # Add X-Requested-With: XMLHttpRequest to login
+    auth_header_data: bool = True  # Include Authorization header on data requests

@@ -72,6 +72,11 @@ auth:
       token_prefix: "ct_"
       session_cookie: "sessionId"
       success_indicator: "Downstream Bonded Channels"
+      # Browser behavior from HAR capture (Issue #81):
+      # - Login uses jQuery $.ajax() which adds X-Requested-With header
+      # - Data request (redirect) does NOT include Authorization header
+      ajax_login: true
+      auth_header_data: false
 # =============================================================================
 # PAGES
 # =============================================================================

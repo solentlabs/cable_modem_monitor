@@ -331,6 +331,15 @@ class UrlTokenAuthConfig(BaseModel):
         default=None,
         description="String indicating successful auth",
     )
+    # Behavioral attributes controlling header behavior (Issue #81)
+    ajax_login: bool = Field(
+        default=False,
+        description="Add X-Requested-With: XMLHttpRequest to login request",
+    )
+    auth_header_data: bool = Field(
+        default=True,
+        description="Include Authorization header on data requests",
+    )
 
 
 class RestApiAuthConfig(BaseModel):

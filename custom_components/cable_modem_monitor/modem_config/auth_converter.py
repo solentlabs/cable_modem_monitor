@@ -196,4 +196,6 @@ def url_token_config_to_auth_config(
         token_prefix=url_token.token_prefix,
         session_cookie_name=url_token.session_cookie,
         success_indicator=url_token.success_indicator or "Downstream",
+        ajax_login=url_token.ajax_login,
+        auth_header_data=url_token.auth_header_data,
     )
