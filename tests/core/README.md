@@ -335,7 +335,7 @@ Tests for Authentication Strategies.
 - `test_single_cookie_returns_value`: Test normal case with single cookie.
 - `test_duplicate_cookies_different_paths_returns_root`: Test that duplicate cookies with different paths returns root path value.
 - `test_missing_cookie_returns_none`: Test that missing cookie returns None.
-- `test_three_or_more_cookies_raises_error`: Test that 3+ cookies with same name raises ValueError with details.
+- `test_three_or_more_cookies_returns_root_path`: Test that 3+ cookies with same name returns root path value.
 
 ### test_base_parser.py
 

@@ -460,16 +460,26 @@ class ModemConfigAuthAdapter:
         """
         # Check if url_token is an available auth type
         if "url_token" not in self.config.auth.types:
+            _LOGGER.debug(
+                "get_url_token_config_for_loader: url_token not in auth.types (available: %s)",
+                list(self.config.auth.types.keys()),
+            )
             return None
 
         type_config = self.config.auth.types.get("url_token")
         if not isinstance(type_config, UrlTokenAuthConfig):
+            _LOGGER.debug(
+                "get_url_token_config_for_loader: url_token config is not UrlTokenAuthConfig (type: %s)",
+                type(type_config).__name__,
+            )
             return None
 
-        return {
+        config = {
             "session_cookie": type_config.session_cookie or "sessionId",
             "token_prefix": type_config.token_prefix or "ct_",
         }
+        _LOGGER.debug("get_url_token_config_for_loader: returning %s", config)
+        return config
 
     def get_behaviors(self) -> dict[str, Any]:
         """Get modem behaviors from modem.yaml.

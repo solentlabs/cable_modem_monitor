@@ -1,14 +1,9 @@
 """Tests for URL token authentication during polling cycle.
 
-Issue #81: SB8200 with URL token auth works during config flow but fails
-during polling because DataOrchestrator._fetch_data doesn't use AuthHandler.
-
-Root cause: DataOrchestrator stores auth_url_token_config but never uses it
-when fetching data. It only supports Basic auth in _fetch_data().
-
 These tests verify:
-1. CURRENT BEHAVIOR: Polling fails for URL token auth modems (bug)
-2. DESIRED BEHAVIOR: Polling should use AuthHandler for URL token auth
+1. Config flow works with URL token auth
+2. DataOrchestrator uses AuthHandler during get_modem_data()
+3. Strict URL token validation works (cookies alone rejected)
 """
 
 from __future__ import annotations
@@ -92,14 +87,11 @@ class TestAuthHandlerUsage:
     """Tests verifying AuthHandler is used during data fetch."""
 
     def test_get_modem_data_uses_auth_handler(self, test_certs):
-        """FIXED: get_modem_data now pre-authenticates before fetching.
+        """Verify get_modem_data pre-authenticates before fetching.
 
-        This test verifies the fix for Issue #81: when an auth strategy is configured,
-        get_modem_data() calls _login() (which uses AuthHandler) BEFORE _fetch_data().
-
-        This ensures modems that return 401/403 without auth get properly authenticated.
-
-        Related: Issue #81 (SB8200)
+        When an auth strategy is configured, get_modem_data() calls _login()
+        (which uses AuthHandler) BEFORE _fetch_data(). This ensures modems
+        that return 401/403 without auth get properly authenticated.
         """
         modem_path = MODEMS_DIR / "arris" / "sb8200"
         if not modem_path.exists():
@@ -147,10 +139,9 @@ class TestAuthHandlerUsage:
                 assert len(downstream) > 0, "Should return channel data after authentication"
 
     def test_login_uses_auth_handler(self, test_certs):
-        """Verify _login() does use AuthHandler.
+        """Verify _login() uses AuthHandler.
 
-        This confirms AuthHandler works - the issue is just that _fetch_data
-        bypasses it entirely.
+        Confirms the authentication flow goes through AuthHandler.authenticate().
         """
         modem_path = MODEMS_DIR / "arris" / "sb8200"
         if not modem_path.exists():
@@ -225,3 +216,121 @@ class TestUrlTokenAuthRequirement:
 
             assert resp.status_code == 200, f"Auth failed: {resp.status_code}"
             assert "Downstream Bonded Channels" in resp.text, "Should get data page after URL token auth"
+
+
+class TestStrictUrlTokenAuth:
+    """Tests with strict URL token validation (cookies alone don't work).
+
+    Some firmware requires the session token in EVERY URL query string.
+    Cookies alone are NOT sufficient for authentication.
+
+    This simulates that real modem behavior more accurately than the default
+    mock handler, which accepts either cookies OR URL tokens.
+
+    The strict mock validates that the orchestrator works correctly when
+    the modem requires URL tokens on every request.
+    """
+
+    def test_cookies_alone_are_rejected(self, test_certs):
+        """Verify that cookies alone don't authenticate - URL token required.
+
+        This simulates the real SB8200 behavior where you MUST include
+        the session token in the URL query string, not just in cookies.
+        """
+        import base64
+
+        import requests
+
+        modem_path = MODEMS_DIR / "arris" / "sb8200"
+        if not modem_path.exists():
+            pytest.skip("SB8200 modem directory not found")
+
+        cert_path, key_path = test_certs
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_path, key_path)
+
+        # Use url_token:strict - requires URL token in every request, rejects cookie-only
+        with MockModemServer.from_modem_path(modem_path, auth_type="url_token:strict", ssl_context=context) as server:
+            session = requests.Session()
+            session.verify = False
+
+            # Step 1: Login to get session cookie
+            token = base64.b64encode(b"admin:pw").decode()
+            login_resp = session.get(
+                f"https://127.0.0.1:{server.port}/cmconnectionstatus.html?login_{token}",
+                timeout=5,
+            )
+            assert login_resp.status_code == 200, "Login should succeed"
+            assert "sessionId" in session.cookies, "Session cookie should be set"
+
+            # Step 2: Try to fetch page with cookie only (no URL token)
+            # This should FAIL because strict mode requires URL token
+            data_resp = session.get(
+                f"https://127.0.0.1:{server.port}/cmswinfo.html",
+                timeout=5,
+            )
+
+            # With strict validation, cookie-only requests get login page
+            assert (
+                "Downstream Bonded Channels" not in data_resp.text
+            ), "Strict URL token auth should reject cookie-only requests"
+
+            # Step 3: With URL token, it should work
+            session_token = session.cookies.get("sessionId")
+            data_resp_with_token = session.get(
+                f"https://127.0.0.1:{server.port}/cmconnectionstatus.html?ct_{session_token}",
+                timeout=5,
+            )
+            assert data_resp_with_token.status_code == 200
+            assert "Downstream Bonded Channels" in data_resp_with_token.text, "With URL token, should get data page"
+
+    def test_polling_with_strict_url_token_server(self, test_certs):
+        """Test that polling works with strict URL token validation.
+
+        With strict URL token validation (simulating real firmware that
+        rejects cookie-only auth), the orchestrator should:
+        1. Authenticate with URL token and get session
+        2. Use the data returned directly from login
+        3. Successfully parse the data
+
+        The implementation works because login returns the data page directly.
+        """
+        modem_path = MODEMS_DIR / "arris" / "sb8200"
+        if not modem_path.exists():
+            pytest.skip("SB8200 modem directory not found")
+
+        parser = _get_sb8200_parser()
+        if not parser:
+            pytest.skip("SB8200 parser not found")
+
+        cert_path, key_path = test_certs
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_path, key_path)
+
+        # Use url_token:strict - requires URL token in every request, rejects cookie-only
+        with MockModemServer.from_modem_path(modem_path, auth_type="url_token:strict", ssl_context=context) as server:
+            adapter = get_auth_adapter_for_parser(parser.__name__)
+            url_token_config = adapter.get_auth_config_for_type("url_token")
+
+            orchestrator = DataOrchestrator(
+                host=f"https://127.0.0.1:{server.port}",
+                username="admin",
+                password="pw",
+                parser=parser,
+                cached_url=f"https://127.0.0.1:{server.port}",
+                verify_ssl=False,
+                legacy_ssl=False,
+                auth_strategy="url_token_session",
+                auth_url_token_config=url_token_config,
+            )
+
+            # This is the actual polling call
+            data = orchestrator.get_modem_data()
+
+            # Verify we got actual channel data (not login page)
+            downstream = data.get("cable_modem_downstream", [])
+            assert len(downstream) > 0, (
+                "Polling should return channel data with strict URL token auth. "
+                "Got 0 channels - likely got login page instead of data page. "
+                "This indicates _fetch_data or HTMLLoader isn't using URL tokens."
+            )

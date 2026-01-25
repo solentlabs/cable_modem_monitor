@@ -90,6 +90,10 @@ class MockModemServer:
     def _create_auth_handler(self) -> BaseAuthHandler:
         """Create the appropriate auth handler based on auth type.
 
+        Auth type can include options separated by colon, e.g.:
+        - "url_token" - standard URL token handler
+        - "url_token:strict" - strict mode (requires URL token, rejects cookies)
+
         Returns:
             Auth handler instance.
         """
@@ -102,14 +106,18 @@ class MockModemServer:
         if not auth_types:
             return NoAuthHandler(self.config, self.fixtures_path)
 
-        # Use override if provided, otherwise use first (default) auth type
+        # Parse auth type and options (e.g., "url_token:strict" -> "url_token", ["strict"])
         if self.auth_type_override:
-            if self.auth_type_override not in auth_types:
+            parts = self.auth_type_override.split(":")
+            auth_type = parts[0]
+            options = parts[1:] if len(parts) > 1 else []
+
+            if auth_type not in auth_types:
                 available = list(auth_types.keys())
-                raise ValueError(f"Auth type '{self.auth_type_override}' not in modem.yaml. Available: {available}")
-            auth_type = self.auth_type_override
+                raise ValueError(f"Auth type '{auth_type}' not in modem.yaml. Available: {available}")
         else:
             auth_type = next(iter(auth_types.keys()))
+            options = []
 
         # Map auth type string to handler
         handler_map = {
@@ -122,10 +130,14 @@ class MockModemServer:
         }
 
         handler_cls = handler_map.get(auth_type)
-        if handler_cls:
-            return handler_cls(self.config, self.fixtures_path)
-        else:
+        if not handler_cls:
             raise NotImplementedError(f"Auth type not yet implemented: {auth_type}")
+
+        # Handle handler-specific options
+        if auth_type == "url_token" and "strict" in options:
+            return handler_cls(self.config, self.fixtures_path, strict=True)
+
+        return handler_cls(self.config, self.fixtures_path)
 
     @property
     def url(self) -> str:

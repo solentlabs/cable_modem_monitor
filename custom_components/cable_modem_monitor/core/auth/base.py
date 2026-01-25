@@ -22,8 +22,10 @@ def get_cookie_safe(session: requests.Session, name: str) -> str | None:
 
     Some modems (e.g., SB8200 business firmware) set the same cookie name
     with different paths (e.g., "/" and "/cmconnectionstatus.html"). This
-    function handles that edge case by preferring non-empty values and
-    root path cookies.
+    function handles that edge case by:
+    1. Filtering out empty values (some firmware sets empty cookie on landing page)
+    2. Preferring root path "/" over page-specific paths
+    3. Returning first match if no root path found
 
     Args:
         session: requests.Session with cookies
@@ -31,9 +33,6 @@ def get_cookie_safe(session: requests.Session, name: str) -> str | None:
 
     Returns:
         Cookie value if found, None otherwise
-
-    Raises:
-        ValueError: If more than 2 cookies with the same name exist
     """
 
     # Collect all cookies with matching name, filtering out empty values
@@ -47,25 +46,19 @@ def get_cookie_safe(session: requests.Session, name: str) -> str | None:
     if len(matches) == 1:
         return matches[0][0]
 
-    if len(matches) == 2:
-        # Prefer root path "/" over specific path
-        for value, path in matches:
-            if path == "/":
-                return value
-        # No root path, return first match
-        _LOGGER.debug(
-            "Two %s cookies with non-root paths %s, using first",
-            name,
-            [m[1] for m in matches],
-        )
-        return matches[0][0]
+    # 2+ cookies: prefer root path "/" over specific paths
+    for value, path in matches:
+        if path == "/":
+            return value
 
-    # 3+ cookies is unexpected - log details and raise
-    paths = [m[1] for m in matches]
-    raise ValueError(
-        f"Unexpected: {len(matches)} cookies named '{name}' with paths {paths}. "
-        "Expected at most 2 (root and page-specific)."
+    # No root path, return first match
+    _LOGGER.debug(
+        "%d %s cookies with non-root paths %s, using first",
+        len(matches),
+        name,
+        [m[1] for m in matches],
     )
+    return matches[0][0]
 
 
 @dataclass

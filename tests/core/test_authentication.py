@@ -787,8 +787,12 @@ class TestGetCookieSafe:
         result = get_cookie_safe(session, "nonexistent")
         assert result is None
 
-    def test_three_or_more_cookies_raises_error(self):
-        """Test that 3+ cookies with same name raises ValueError with details."""
+    def test_three_or_more_cookies_returns_root_path(self):
+        """Test that 3+ cookies with same name returns root path value.
+
+        This handles edge cases like Cox Business firmware that may set
+        multiple sessionId cookies with different paths.
+        """
         import time
         from http.cookiejar import Cookie
 
@@ -819,9 +823,6 @@ class TestGetCookieSafe:
             )
             session.cookies.set_cookie(cookie)
 
-        with pytest.raises(ValueError) as exc_info:
-            get_cookie_safe(session, "sessionId")
-
-        assert "3 cookies" in str(exc_info.value)
-        assert "sessionId" in str(exc_info.value)
-        assert "/page1" in str(exc_info.value)
+        # Should return root path value, not raise error
+        result = get_cookie_safe(session, "sessionId")
+        assert result == "value0"  # Root path "/" gets value0

@@ -41,14 +41,21 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     Variants:
     - Some firmware (Spectrum) doesn't require auth at all
     - Other firmware (HTTPS) requires URL token auth
+
+    Strict mode (strict=True):
+    - Simulates real SB8200 HTTPS behavior where cookies alone don't work
+    - Session token MUST be in URL query string for EVERY request
+    - Used for testing Issue #81 (polling fails without URL tokens)
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(self, config: ModemConfig, fixtures_path: Path, *, strict: bool = False):
         """Initialize URL token auth handler.
 
         Args:
             config: Modem configuration.
             fixtures_path: Path to fixtures directory.
+            strict: If True, require URL token in every request (reject cookies).
+                    Simulates real SB8200 HTTPS firmware behavior.
         """
         super().__init__(config, fixtures_path)
 
@@ -57,6 +64,11 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         if not url_token_config:
             raise ValueError("URL token auth handler requires url_token config in auth.types")
         self.url_token_config: UrlTokenAuthConfig = url_token_config
+
+        # Strict mode: require URL token, reject cookie-only requests
+        self.strict = strict
+        if strict:
+            _LOGGER.debug("UrlTokenAuthHandler in strict mode - cookies will be ignored")
 
         # Session state
         self.authenticated_sessions: dict[str, str] = {}  # session_id -> username
@@ -184,6 +196,9 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     def _is_authenticated(self, headers: dict[str, str], query: str) -> bool:
         """Check if request is authenticated via session token.
 
+        In strict mode (simulating real SB8200 HTTPS), only URL tokens are accepted.
+        In normal mode, either URL token or session cookie is accepted.
+
         Args:
             headers: Request headers.
             query: Query string.
@@ -200,7 +215,12 @@ class UrlTokenAuthHandler(BaseAuthHandler):
                     if token in self.authenticated_sessions:
                         return True
 
-        # Check for session cookie
+        # In strict mode, only URL token is accepted (cookies ignored)
+        if self.strict:
+            _LOGGER.debug("Strict mode: No URL token found, rejecting request")
+            return False
+
+        # Check for session cookie (only in non-strict mode)
         cookie_name = self.url_token_config.session_cookie
         cookie_header = headers.get("Cookie", "")
 
@@ -227,9 +247,8 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     ) -> tuple[int, dict[str, str], bytes]:
         """Serve response for unauthenticated request.
 
-        Some URL_TOKEN modems serve data without auth (certain firmware versions),
-        others require auth. We serve the fixture if available
-        to support the no-auth variant.
+        In strict mode: Always return login page (no no-auth fallback).
+        In normal mode: Serve fixture if available (for Spectrum no-auth variant).
 
         Args:
             path: Request path.
@@ -237,6 +256,11 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple.
         """
+        # In strict mode, always return login page
+        if self.strict:
+            _LOGGER.debug("Strict mode: Serving login page for unauthenticated request to %s", path)
+            return self._serve_login_page()
+
         # Try to serve the fixture (for no-auth variant testing)
         content = self.get_fixture_content(path)
 
@@ -268,10 +292,14 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         if login_content:
             return 200, {"Content-Type": "text/html; charset=utf-8"}, login_content
 
-        # Try root.html
+        # Try root.html, but only if it doesn't contain data (check success indicator)
+        # In strict mode, we need a real login page, not a data page
         root_content = self.get_fixture_content("/root.html")
         if root_content:
-            return 200, {"Content-Type": "text/html; charset=utf-8"}, root_content
+            success_indicator = self.url_token_config.success_indicator
+            if not success_indicator or success_indicator.encode() not in root_content:
+                return 200, {"Content-Type": "text/html; charset=utf-8"}, root_content
+            # root.html contains data, don't use it as login page
 
         # Synthesize minimal login page with model detection
         login_html = f"""<!DOCTYPE html>

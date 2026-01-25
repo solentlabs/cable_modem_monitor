@@ -114,17 +114,25 @@ class HTMLLoader(ResourceLoader):
         url = f"{self.base_url}{path}"
 
         if not self._url_token_config:
+            _LOGGER.debug("HTMLLoader: No url_token_config, skipping token append")
             return url
 
         # Get session token from cookies
         cookie_name = self._url_token_config.get("session_cookie", "sessionId")
         token = get_cookie_safe(self.session, cookie_name)
 
-        if token:
-            prefix = self._url_token_config.get("token_prefix", "ct_")
-            # Handle URLs that already have query params
-            separator = "&" if "?" in url else "?"
-            url = f"{url}{separator}{prefix}{token}"
-            _LOGGER.debug("HTMLLoader appended token to URL: %s", path)
+        if not token:
+            _LOGGER.debug(
+                "HTMLLoader: No token found in cookie '%s' (cookies: %s)",
+                cookie_name,
+                list(self.session.cookies.keys()),
+            )
+            return url
+
+        prefix = self._url_token_config.get("token_prefix", "ct_")
+        # Handle URLs that already have query params
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}{prefix}{token}"
+        _LOGGER.debug("HTMLLoader appended token to URL: %s", path)
 
         return url
