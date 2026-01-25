@@ -137,6 +137,37 @@ class TestCM2000Metadata:
         assert hints.get("username_field") == "loginName"
         assert hints.get("password_field") == "loginPassword"
 
+    def test_uses_form_dynamic_auth_type(self):
+        """Test CM2000 uses form_dynamic auth for dynamic login URL extraction.
+
+        Issue #38: CM2000 login form has a dynamic action URL that changes per
+        page load (e.g., /goform/Login?id=XXXXXXXXXX). The form_dynamic strategy
+        fetches the login page first and extracts the actual action URL.
+        """
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("NetgearCM2000Parser")
+        assert adapter is not None
+
+        # Verify form_dynamic is the auth type
+        auth_types = adapter.get_available_auth_types()
+        assert "form_dynamic" in auth_types
+
+        # Get the form_dynamic config
+        config = adapter.get_auth_config_for_type("form_dynamic")
+        assert config is not None
+
+        # form_dynamic-specific fields
+        assert config.get("login_page") == "/"
+        assert config.get("form_selector") == "form[name='loginform']"
+
+        # Standard form fields (inherited from FormAuthConfig)
+        assert config.get("username_field") == "loginName"
+        assert config.get("password_field") == "loginPassword"
+        assert config.get("action") == "/goform/Login"
+
 
 class TestCM2000Parsing:
     """Tests for CM2000 channel parsing.

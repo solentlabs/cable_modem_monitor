@@ -34,6 +34,7 @@ from typing import Any, cast
 from .loader import discover_modems, load_modem_config_by_parser
 from .schema import (
     FormAuthConfig,
+    FormDynamicAuthConfig,
     HnapAuthConfig,
     ModemConfig,
     RestApiAuthConfig,
@@ -114,44 +115,66 @@ class ModemConfigAuthAdapter:
         if type_config is None:
             return {}
 
-        # Convert Pydantic model to dict based on config type
+        return self._convert_type_config_to_dict(type_config)
+
+    def _convert_type_config_to_dict(self, type_config: Any) -> dict[str, Any] | None:
+        """Convert a Pydantic auth config model to dict.
+
+        Args:
+            type_config: Pydantic model (FormAuthConfig, HnapAuthConfig, etc.)
+
+        Returns:
+            Dict representation of the config, or None if unknown type.
+        """
+        # Note: Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check first)
+        if isinstance(type_config, FormDynamicAuthConfig):
+            return self._convert_form_config(type_config, include_dynamic_fields=True)
         if isinstance(type_config, FormAuthConfig):
-            return {
-                "action": type_config.action,
-                "method": type_config.method,
-                "username_field": type_config.username_field,
-                "password_field": type_config.password_field,
-                "hidden_fields": type_config.hidden_fields,
-                "password_encoding": (
-                    type_config.password_encoding.value if type_config.password_encoding else "plain"
-                ),
-            }
-        elif isinstance(type_config, UrlTokenAuthConfig):
-            config: dict[str, Any] = {
-                "login_page": type_config.login_page,
-                "data_page": type_config.data_page or type_config.login_page,
-                "login_prefix": type_config.login_prefix,
-                "token_prefix": type_config.token_prefix,
-            }
-            if type_config.session_cookie:
-                config["session_cookie_name"] = type_config.session_cookie
-            if type_config.success_indicator:
-                config["success_indicator"] = type_config.success_indicator
-            return config
-        elif isinstance(type_config, HnapAuthConfig):
+            return self._convert_form_config(type_config, include_dynamic_fields=False)
+        if isinstance(type_config, UrlTokenAuthConfig):
+            return self._convert_url_token_config(type_config)
+        if isinstance(type_config, HnapAuthConfig):
             return {
                 "endpoint": type_config.endpoint,
                 "namespace": type_config.namespace,
                 "empty_action_value": type_config.empty_action_value,
                 "hmac_algorithm": type_config.hmac_algorithm,
             }
-        elif isinstance(type_config, RestApiAuthConfig):
+        if isinstance(type_config, RestApiAuthConfig):
             return {
                 "base_path": type_config.base_path,
                 "endpoints": type_config.endpoints,
             }
-
         return None
+
+    def _convert_form_config(self, config: FormAuthConfig, *, include_dynamic_fields: bool) -> dict[str, Any]:
+        """Convert form auth config to dict."""
+        result: dict[str, Any] = {
+            "action": config.action,
+            "method": config.method,
+            "username_field": config.username_field,
+            "password_field": config.password_field,
+            "hidden_fields": config.hidden_fields,
+            "password_encoding": (config.password_encoding.value if config.password_encoding else "plain"),
+        }
+        if include_dynamic_fields and isinstance(config, FormDynamicAuthConfig):
+            result["login_page"] = config.login_page
+            result["form_selector"] = config.form_selector
+        return result
+
+    def _convert_url_token_config(self, config: UrlTokenAuthConfig) -> dict[str, Any]:
+        """Convert URL token auth config to dict."""
+        result: dict[str, Any] = {
+            "login_page": config.login_page,
+            "data_page": config.data_page or config.login_page,
+            "login_prefix": config.login_prefix,
+            "token_prefix": config.token_prefix,
+        }
+        if config.session_cookie:
+            result["session_cookie_name"] = config.session_cookie
+        if config.success_indicator:
+            result["success_indicator"] = config.success_indicator
+        return result
 
     def get_default_auth_type(self) -> str:
         """Get the default/primary auth type.
