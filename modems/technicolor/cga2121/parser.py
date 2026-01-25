@@ -17,8 +17,24 @@ class TechnicolorCGA2121Parser(ModemParser):
     """Parser for Technicolor CGA2121 cable modem (Telia Finland)."""
 
     def parse_resources(self, resources: dict[str, Any]) -> dict:
-        """Parse modem data from pre-fetched resources."""
-        soup = resources.get("/")
+        """Parse modem data from pre-fetched resources.
+
+        Tries to find the data page in this order:
+        1. Specific data page path (/st_docsis.html) - from modem.yaml
+        2. Root path (/) - legacy compatibility
+        3. First BeautifulSoup in resources - fallback
+
+        This handles the case where auth redirects to a different page
+        than the data page (Issue #75).
+        """
+        # Try specific data page path first (from modem.yaml pages.data)
+        soup = resources.get("/st_docsis.html")
+
+        # Fall back to root path (legacy compatibility)
+        if soup is None:
+            soup = resources.get("/")
+
+        # Final fallback: iterate through all resources
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):

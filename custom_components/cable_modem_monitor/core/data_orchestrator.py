@@ -1277,6 +1277,8 @@ class DataOrchestrator:
             resources = self._load_resources(fetcher)
             if resources:
                 # Add the initial HTML as a resource for parsers that need it
+                # Note: Parsers should prefer specific paths from modem.yaml
+                # over "/" since auth may redirect to a different page (Issue #75)
                 soup = BeautifulSoup(html, "html.parser")
                 resources["/"] = soup
                 _LOGGER.debug("Fetched %d resources via loader", len(resources))
