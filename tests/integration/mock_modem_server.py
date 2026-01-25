@@ -313,6 +313,9 @@ class BasicAuthHandler(BaseAuthHandler):
                 from .mock_handlers.form import TEST_PASSWORD, TEST_USERNAME
 
                 if username == TEST_USERNAME and password == TEST_PASSWORD:
+                    # Handle form actions (restart, etc.)
+                    if clean_path.startswith("/goform/"):
+                        return self._handle_goform(method, clean_path)
                     return self.serve_fixture(clean_path)
             except Exception:
                 pass
@@ -325,4 +328,14 @@ class BasicAuthHandler(BaseAuthHandler):
                 "Content-Type": "text/plain",
             },
             b"Unauthorized",
+        )
+
+    def _handle_goform(self, method: str, path: str) -> tuple[int, dict[str, str], bytes]:
+        """Handle /goform/* endpoints (restart, settings, etc.)."""
+        # Simulate successful form submission
+        # Real modems either return 200 or drop connection on restart
+        return (
+            200,
+            {"Content-Type": "text/html"},
+            b"<html><body>Command accepted</body></html>",
         )
