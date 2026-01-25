@@ -55,6 +55,7 @@ Usage:
 from __future__ import annotations
 
 from .basic_http import BasicHttpAuthStrategy
+from .form_ajax import FormAjaxAuthStrategy
 from .form_dynamic import FormDynamicAuthStrategy
 from .form_plain import FormPlainAuthStrategy
 from .hnap_json import HNAPJsonAuthStrategy
@@ -65,6 +66,7 @@ from .url_token_session import UrlTokenSessionStrategy
 
 __all__ = [
     "BasicHttpAuthStrategy",
+    "FormAjaxAuthStrategy",
     "FormDynamicAuthStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",

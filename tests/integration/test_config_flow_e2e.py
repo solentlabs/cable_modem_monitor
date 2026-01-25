@@ -55,6 +55,7 @@ def build_static_auth_config(parser: type[ModemParser], auth_type: str) -> dict[
     return {
         "auth_strategy": strategy,
         "auth_form_config": type_config if auth_type == "form" else None,
+        "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
         "auth_hnap_config": type_config if auth_type == "hnap" else None,
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
     }
@@ -115,14 +116,14 @@ def modem_path_to_display_name(modem_path: str) -> str:
 # │ modem           │ auth_type     │ needs_selection  │ expected_strategy   │
 # ├─────────────────┼───────────────┼──────────────────┼─────────────────────┤
 # │ arris/sb6190    │ none          │ True             │ no_auth             │
-# │ arris/sb6190    │ form          │ True             │ form_plain          │
+# │ arris/sb6190    │ form_ajax     │ True             │ form_ajax           │
 # │ arris/sb8200    │ none          │ True             │ no_auth             │
 # │ arris/sb8200    │ url_token     │ True             │ url_token_session   │
 # │ motorola/mb7621 │ form          │ False            │ form_plain          │
 # └─────────────────┴───────────────┴──────────────────┴─────────────────────┘
 MULTI_AUTH_MODEMS = [
     ("arris/sb6190", "none", "no_auth"),
-    ("arris/sb6190", "form", "form_plain"),
+    ("arris/sb6190", "form_ajax", "form_ajax"),
     ("arris/sb8200", "none", "no_auth"),
     ("arris/sb8200", "url_token", "url_token_session"),
 ]
@@ -268,15 +269,15 @@ class TestFormAuthE2E:
     Tests run on both HTTP and HTTPS protocols.
     """
 
-    def test_sb6190_form_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
-        """SB6190 form auth should authenticate and parse."""
+    def test_sb6190_form_ajax_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
+        """SB6190 form_ajax auth should authenticate and parse."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
         with MockModemServer.from_modem_path(
-            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+            modem_dir, auth_type="form_ajax", ssl_context=ssl_context_for_protocol
         ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
-            static_config = build_static_auth_config(parser, "form")
+            static_config = build_static_auth_config(parser, "form_ajax")
 
             result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
@@ -286,18 +287,18 @@ class TestFormAuthE2E:
                 password="pw",
             )
 
-            assert result.success, f"Form auth failed on {protocol}: {result.error}"
-            assert result.auth_strategy == "form_plain"
+            assert result.success, f"Form AJAX auth failed on {protocol}: {result.error}"
+            assert result.auth_strategy == "form_ajax"
 
     def test_sb6190_wrong_credentials(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
-        """SB6190 form auth should fail with wrong credentials."""
+        """SB6190 form_ajax auth should fail with wrong credentials."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
         with MockModemServer.from_modem_path(
-            modem_dir, auth_type="form", ssl_context=ssl_context_for_protocol
+            modem_dir, auth_type="form_ajax", ssl_context=ssl_context_for_protocol
         ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
-            static_config = build_static_auth_config(parser, "form")
+            static_config = build_static_auth_config(parser, "form_ajax")
 
             result = setup_modem(
                 host=f"127.0.0.1:{server.port}",

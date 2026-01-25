@@ -33,6 +33,7 @@ from typing import Any, cast
 
 from .loader import discover_modems, load_modem_config_by_parser
 from .schema import (
+    FormAjaxAuthConfig,
     FormAuthConfig,
     FormDynamicAuthConfig,
     HnapAuthConfig,
@@ -129,6 +130,8 @@ class ModemConfigAuthAdapter:
         # Note: Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check first)
         if isinstance(type_config, FormDynamicAuthConfig):
             return self._convert_form_config(type_config, include_dynamic_fields=True)
+        if isinstance(type_config, FormAjaxAuthConfig):
+            return self._convert_form_ajax_config(type_config)
         if isinstance(type_config, FormAuthConfig):
             return self._convert_form_config(type_config, include_dynamic_fields=False)
         if isinstance(type_config, UrlTokenAuthConfig):
@@ -161,6 +164,18 @@ class ModemConfigAuthAdapter:
             result["login_page"] = config.login_page
             result["form_selector"] = config.form_selector
         return result
+
+    def _convert_form_ajax_config(self, config: FormAjaxAuthConfig) -> dict[str, Any]:
+        """Convert form ajax auth config to dict."""
+        return {
+            "endpoint": config.endpoint,
+            "nonce_field": config.nonce_field,
+            "nonce_length": config.nonce_length,
+            "arguments_field": config.arguments_field,
+            "credential_format": config.credential_format,
+            "success_prefix": config.success_prefix,
+            "error_prefix": config.error_prefix,
+        }
 
     def _convert_url_token_config(self, config: UrlTokenAuthConfig) -> dict[str, Any]:
         """Convert URL token auth config to dict."""
@@ -223,6 +238,7 @@ class ModemConfigAuthAdapter:
             "basic": "basic_http",  # HTTP Basic Auth (401 challenge)
             "form": "form_plain",
             "form_dynamic": "form_dynamic",  # Form with dynamic action URL extraction
+            "form_ajax": "form_ajax",  # AJAX-based form with nonce (SB6190)
             "hnap": "hnap_session",
             "url_token": "url_token_session",
             "rest_api": "no_auth",  # REST API = no traditional auth
@@ -237,6 +253,7 @@ class ModemConfigAuthAdapter:
         return {
             "auth_strategy": strategy_str,
             "auth_form_config": type_config if is_form_type else None,
+            "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
         }

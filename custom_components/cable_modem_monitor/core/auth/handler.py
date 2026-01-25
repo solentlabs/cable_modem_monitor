@@ -378,6 +378,7 @@ class AuthHandler:
         """
         from .configs import (
             BasicAuthConfig,
+            FormAjaxAuthConfig,
             FormAuthConfig,
             FormDynamicAuthConfig,
             HNAPAuthConfig,
@@ -417,6 +418,18 @@ class AuthHandler:
                 success_indicator=form_config.get("success_indicator"),
                 hidden_fields=form_config.get("hidden_fields"),
                 password_encoding=form_config.get("password_encoding", "plain"),
+            )
+
+        if strategy == AuthStrategyType.FORM_AJAX:
+            return FormAjaxAuthConfig(
+                strategy=strategy,
+                endpoint=form_config.get("endpoint", "/cgi-bin/adv_pwd_cgi"),
+                nonce_field=form_config.get("nonce_field", "ar_nonce"),
+                nonce_length=form_config.get("nonce_length", 8),
+                arguments_field=form_config.get("arguments_field", "arguments"),
+                credential_format=form_config.get("credential_format", "username={username}:password={password}"),
+                success_prefix=form_config.get("success_prefix", "Url:"),
+                error_prefix=form_config.get("error_prefix", "Error:"),
             )
 
         if strategy == AuthStrategyType.HNAP_SESSION:

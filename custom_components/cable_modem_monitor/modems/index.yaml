@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-25T03:11:10.536050+00:00"
+generated: "2026-01-25T15:03:50.223872+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -17,7 +17,6 @@ auth_patterns:
       - password
       - password_login
     actions:
-      - /cgi-bin/login
       - /cgi-bin/luci
       - /check.jst
       - /goform/Login
@@ -30,6 +29,9 @@ auth_patterns:
         type: base64
       - detect: btoa\s*\(
         type: base64
+  form_ajax:
+    endpoints:
+      - /cgi-bin/adv_pwd_cgi
   hnap:
     endpoints:
       - /HNAP1/

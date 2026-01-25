@@ -63,6 +63,9 @@ class AuthStrategyType(Enum):
     FORM_DYNAMIC = "form_dynamic"
     """Form-based auth where action URL is extracted from the login page."""
 
+    FORM_AJAX = "form_ajax"
+    """AJAX-based form auth with client-generated nonce."""
+
     REDIRECT_FORM = "redirect_form"
     """Form-based auth with redirect validation."""
 

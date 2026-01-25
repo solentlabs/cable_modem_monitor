@@ -231,6 +231,44 @@ class FormDynamicAuthConfig(FormAuthConfig):
     )
 
 
+class FormAjaxAuthConfig(BaseModel):
+    """Configuration for AJAX-based form authentication.
+
+    Used when the modem uses JavaScript XMLHttpRequest for login instead of
+    traditional form submission. Credentials are base64-encoded and submitted
+    with a client-generated nonce.
+    """
+
+    endpoint: str = Field(
+        default="/cgi-bin/adv_pwd_cgi",
+        description="AJAX endpoint for credential submission",
+    )
+    nonce_field: str = Field(
+        default="ar_nonce",
+        description="Form field name for client-generated nonce",
+    )
+    nonce_length: int = Field(
+        default=8,
+        description="Length of random numeric nonce",
+    )
+    arguments_field: str = Field(
+        default="arguments",
+        description="Form field name for encoded credentials",
+    )
+    credential_format: str = Field(
+        default="username={username}:password={password}",
+        description="Format string for credentials before encoding",
+    )
+    success_prefix: str = Field(
+        default="Url:",
+        description="Response prefix indicating successful login",
+    )
+    error_prefix: str = Field(
+        default="Error:",
+        description="Response prefix indicating failed login",
+    )
+
+
 class HnapAuthConfig(BaseModel):
     """Configuration for HNAP/SOAP authentication.
 
@@ -360,16 +398,23 @@ class AuthConfig(BaseModel):
     """
 
     # types{} is the single source of truth for auth configuration
-    # Key = auth type name (none, form, hnap, url_token, rest_api)
+    # Key = auth type name (none, form, form_dynamic, form_ajax, hnap, url_token, rest_api)
     # Value = config dict for that type, or null for "none"
     # Note: FormDynamicAuthConfig must come before FormAuthConfig in the union
     # because it's a subclass - Pydantic tries types in order and stops at first match
     types: dict[
         str,
-        FormDynamicAuthConfig | FormAuthConfig | HnapAuthConfig | UrlTokenAuthConfig | RestApiAuthConfig | None,
+        FormDynamicAuthConfig
+        | FormAjaxAuthConfig
+        | FormAuthConfig
+        | HnapAuthConfig
+        | UrlTokenAuthConfig
+        | RestApiAuthConfig
+        | None,
     ] = Field(
         default_factory=dict,
-        description="Auth type configurations. Keys are type names (none, form, url_token, hnap, rest_api), "
+        description="Auth type configurations. Keys are type names "
+        "(none, form, form_dynamic, form_ajax, url_token, hnap, rest_api), "
         "values are the config for that type (or null for 'none').",
     )
 
@@ -394,6 +439,7 @@ class AuthConfig(BaseModel):
         # Map keys to their correct Pydantic model classes
         key_to_class = {
             "form_dynamic": FormDynamicAuthConfig,
+            "form_ajax": FormAjaxAuthConfig,
             "form": FormAuthConfig,
             "hnap": HnapAuthConfig,
             "url_token": UrlTokenAuthConfig,

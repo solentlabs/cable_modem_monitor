@@ -12,7 +12,7 @@ hardware:
 
 # Provenance tracking
 sources:
-  auth_config: "[Issue #83](https://github.com/solentlabs/cable_modem_monitor/issues/83)"
+  auth_config: "[Issue #93](https://github.com/solentlabs/cable_modem_monitor/issues/93) - HAR capture from @HenryGeorge1978"
   detection_hints: "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
 
 default_host: "192.168.100.1"
@@ -20,20 +20,20 @@ default_host: "192.168.100.1"
 auth:
   # SB6190 has two firmware variants with different auth:
   # - Older firmware: No auth required (public status page)
-  # - Newer firmware (9.1.103+): Form-based login required
-  # See: https://github.com/solentlabs/cable_modem_monitor/issues/83
+  # - Newer firmware (9.1.103+): AJAX-based login required
+  # See: https://github.com/solentlabs/cable_modem_monitor/issues/93
   #
   # User selects their auth type during config flow.
   types:
     none: null # Older firmware - no auth needed
-    form: # Newer firmware (9.1.103+) - form login required
-      action: "/cgi-bin/login"
-      method: POST
-      username_field: "username"
-      password_field: "password"
-      password_encoding: plain
-      success:
-        redirect: "/cgi-bin/status" # Redirect to data page after login
+    form_ajax: # Newer firmware (9.1.103+) - AJAX login required
+      endpoint: "/cgi-bin/adv_pwd_cgi"
+      nonce_field: "ar_nonce"
+      nonce_length: 8
+      arguments_field: "arguments"
+      credential_format: "username={username}:password={password}"
+      success_prefix: "Url:"
+      error_prefix: "Error:"
 
 pages:
   public:
@@ -97,13 +97,18 @@ isps:
 notes: |
   Two firmware variants with different auth requirements:
   - Older firmware: No authentication required
-  - Newer firmware (9.1.103+): Form-based login required
+  - Newer firmware (9.1.103+): AJAX-based login required
 
-  UNVERIFIED status - no confirmed user reports on real hardware.
+  AJAX auth uses JavaScript XMLHttpRequest instead of traditional form.
+  Credentials: base64(urlencode("username=X:password=Y"))
+  Nonce: 8 random digits (client-generated)
+  Response: "Url:/path" (success) or "Error:msg" (failure)
+
   Parser based on SB6141 code; fixture provenance unknown.
   URL format differs from SB6141: uses .html extension vs .asp
 
 references:
+  issue_93: "https://github.com/solentlabs/cable_modem_monitor/issues/93"
   issue_83: "https://github.com/solentlabs/cable_modem_monitor/issues/83"
   pr_22: "https://github.com/solentlabs/cable_modem_monitor/pull/22"
   source_code: "https://sourceforge.net/projects/sb6190.arris/"

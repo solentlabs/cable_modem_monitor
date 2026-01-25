@@ -48,8 +48,8 @@ works correctly for all modems.
 **TestFormAuthE2E** (2 tests)
 : E2E tests for form-based authentication.
 
-- `test_sb6190_form_auth`: SB6190 form auth should authenticate and parse.
-- `test_sb6190_wrong_credentials`: SB6190 form auth should fail with wrong credentials.
+- `test_sb6190_form_ajax_auth`: SB6190 form_ajax auth should authenticate and parse.
+- `test_sb6190_wrong_credentials`: SB6190 form_ajax auth should fail with wrong credentials.
 
 **TestNoAuthE2E** (1 tests)
 : E2E tests for modems without authentication.

@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 357
+**Total Tests:** 374
 
 ## Test Files
 
@@ -16,6 +16,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
+| [test_form_ajax_auth.py](test_form_ajax_auth.py) | 17 | Tests for FormAjaxAuthStrategy. |
 | [test_form_dynamic_auth.py](test_form_dynamic_auth.py) | 9 | Tests for FormDynamicAuthStrategy. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
@@ -549,6 +550,57 @@ Tests for core/discovery_helpers.py.
 
 **TestParser** (0 tests)
 
+
+### test_form_ajax_auth.py
+
+Tests for FormAjaxAuthStrategy.
+
+This tests the AJAX-based form authentication where login is handled via
+JavaScript XMLHttpRequest instead of traditional form submission.
+
+Auth flow:
+1. Client generates random nonce (configurable length)
+2. Credentials are formatted and base64-encoded:
+   base64(urlencode("username={user}:password={pass}"))
+3. POST to endpoint with arguments + nonce
+4. Response is plain text: "Url:/path" (success) or "Error:msg" (failure)
+
+**TestFormAjaxSuccessfulLogin** (5 tests)
+: Test successful AJAX login flow.
+
+- `test_successful_login_returns_ok`: Successful login returns AuthResult.ok with post-login HTML.
+- `test_posts_to_correct_endpoint`: Verifies POST is sent to configured endpoint.
+- `test_sends_correct_form_data_structure`: Verifies form data contains arguments and nonce fields.
+- `test_credentials_are_properly_encoded`: Verifies credentials are base64(urlencode(format_string)).
+- `test_sends_ajax_headers`: Verifies X-Requested-With header is sent (AJAX indicator).
+
+**TestFormAjaxFailedLogin** (3 tests)
+: Test AJAX login failure handling.
+
+- `test_error_response_returns_failure`: Error: prefix in response returns AuthResult.fail.
+- `test_unexpected_response_returns_failure`: Unexpected response format returns AuthResult.fail.
+- `test_connection_error_returns_failure`: Connection error returns AuthResult.fail.
+
+**TestFormAjaxCredentialValidation** (3 tests)
+: Test credential validation.
+
+- `test_missing_username_returns_failure`: Missing username returns AuthResult.fail.
+- `test_missing_password_returns_failure`: Missing password returns AuthResult.fail.
+- `test_wrong_config_type_returns_failure`: Wrong config type returns AuthResult.fail.
+
+**TestFormAjaxNonceGeneration** (2 tests)
+: Test nonce generation.
+
+- `test_nonce_is_random`: Nonce is different on each call.
+- `test_custom_nonce_length`: Custom nonce length is respected.
+
+**TestFormAjaxCustomConfig** (4 tests)
+: Test custom configuration options.
+
+- `test_custom_endpoint`: Custom endpoint is used.
+- `test_custom_field_names`: Custom field names are used.
+- `test_custom_credential_format`: Custom credential format is used.
+- `test_custom_response_prefixes`: Custom success/error prefixes are recognized.
 
 ### test_form_dynamic_auth.py
 

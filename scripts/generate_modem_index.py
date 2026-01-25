@@ -101,6 +101,9 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
     # URL token patterns
     url_token_indicators: set[str] = set()
 
+    # Form AJAX patterns
+    form_ajax_endpoints: set[str] = set()
+
     for config in configs:
         auth = config.get("auth", {})
         # v3.12+ uses auth.types.{form,hnap,url_token}
@@ -156,12 +159,20 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
             if cookie := url_token.get("session_cookie"):
                 url_token_indicators.add(cookie)
 
+        # Form AJAX auth - check auth.types.form_ajax
+        form_ajax = auth_types.get("form_ajax", {})
+        if form_ajax and (endpoint := form_ajax.get("endpoint")):
+            form_ajax_endpoints.add(endpoint)
+
     return {
         "form": {
             "username_fields": sorted(username_fields),
             "password_fields": sorted(password_fields),
             "actions": sorted(form_actions),
             "encodings": encodings,
+        },
+        "form_ajax": {
+            "endpoints": sorted(form_ajax_endpoints),
         },
         "hnap": {
             "endpoints": sorted(hnap_endpoints),

@@ -111,6 +111,29 @@ class FormDynamicAuthConfig(AuthConfig):
 
 
 @dataclass
+class FormAjaxAuthConfig(AuthConfig):
+    """AJAX-based form auth with client-generated nonce.
+
+    Auth flow:
+    1. POST to endpoint with:
+       - arguments: base64(urlencode("username={user}:password={pass}"))
+       - ar_nonce: random digits (client-generated)
+    2. Response is plain text:
+       - "Url:/path" = success, redirect to path
+       - "Error:message" = failure
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_AJAX
+    endpoint: str = "/cgi-bin/adv_pwd_cgi"  # AJAX endpoint for credentials
+    nonce_field: str = "ar_nonce"  # Field name for client-generated nonce
+    nonce_length: int = 8  # Length of random nonce
+    arguments_field: str = "arguments"  # Field name for encoded credentials
+    credential_format: str = "username={username}:password={password}"
+    success_prefix: str = "Url:"  # Response prefix indicating success
+    error_prefix: str = "Error:"  # Response prefix indicating failure
+
+
+@dataclass
 class RedirectFormAuthConfig(AuthConfig):
     """Form auth with redirect validation configuration (e.g., XB7)."""
 
