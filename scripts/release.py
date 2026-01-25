@@ -60,9 +60,14 @@ def print_warning(msg: str) -> None:
 
 
 def validate_version(version: str) -> bool:
-    """Validate that version follows semantic versioning (X.Y.Z)."""
-    pattern = r"^\d+\.\d+\.\d+$"
+    """Validate that version follows semantic versioning (X.Y.Z or X.Y.Z-beta.N)."""
+    pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
     return bool(re.match(pattern, version))
+
+
+def is_prerelease(version: str) -> bool:
+    """Check if version is a prerelease (beta)."""
+    return "-beta." in version
 
 
 def get_repo_root() -> Path:
@@ -306,20 +311,24 @@ def create_github_release(version: str, repo_root: Path) -> bool:
         else:
             release_notes = f"Release version {version}"
 
-        # Create release
-        subprocess.run(
-            [
-                "gh",
-                "release",
-                "create",
-                tag_name,
-                "--title",
-                f"Version {version}",
-                "--notes",
-                release_notes,
-            ],
-            check=True,
-        )
+        # Build release command
+        cmd = [
+            "gh",
+            "release",
+            "create",
+            tag_name,
+            "--title",
+            f"Version {version}",
+            "--notes",
+            release_notes,
+        ]
+
+        # Mark as prerelease if beta version
+        if is_prerelease(version):
+            cmd.append("--prerelease")
+            print_info(f"Creating prerelease (beta) for {tag_name}")
+
+        subprocess.run(cmd, check=True)
 
         print_success(f"Created GitHub release: {tag_name}")
         return True
@@ -551,7 +560,7 @@ def validate_release_preconditions(version: str, repo_root: Path) -> None:
     """Validate all preconditions for creating a release."""
     # Validate version format
     if not validate_version(version):
-        print_error(f"Invalid version format: {version}. Must be X.Y.Z (e.g., 3.5.1)")
+        print_error(f"Invalid version format: {version}. Must be X.Y.Z or X.Y.Z-beta.N (e.g., 3.5.1 or 3.5.1-beta.1)")
         sys.exit(1)
 
     # Check if pre-commit is installed
