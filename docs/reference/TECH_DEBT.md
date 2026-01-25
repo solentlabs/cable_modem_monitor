@@ -112,6 +112,40 @@ Phase 5 (Documentation)
 
 ---
 
+### Parser Blind Field Discovery
+
+**Status:** Backlog (relates to Phase 4)
+
+**Problem:** Parsers blindly search every page for every field, generating noisy "not found" debug logs for fields that were never expected on that page. The `modem.yaml` already defines which page has which data via `pages.data`, but parsers ignore this mapping.
+
+**Example:** MB7621 parser calls `_parse_system_info()` on all 3 pages, looking for `hardware_version`, `software_version`, and `system_uptime` on each - even though `modem.yaml` specifies:
+```yaml
+pages:
+  data:
+    system_info: "/MotoHome.asp"
+    software_version: "/MotoSwInfo.asp"
+```
+
+**Remediation:** Extend `pages.data` to map individual fields to pages:
+```yaml
+pages:
+  data:
+    downstream_channels: "/MotoConnection.asp"
+    upstream_channels: "/MotoConnection.asp"
+    system_uptime: "/MotoConnection.asp"
+    hardware_version: "/MotoSwInfo.asp"
+    software_version: "/MotoSwInfo.asp"
+```
+
+Then pass field expectations to parsers so they only search where expected. Benefits:
+- Eliminates noisy "not found" logs
+- Faster parsing (no wasted searches)
+- Self-documenting: modem.yaml shows exactly where each field lives
+
+**Files:** All parser `_parse_system_info()` methods, `modem.yaml` schema, `HTMLLoader`
+
+---
+
 ### index.yaml Validation
 
 **Covered by:** [Phase 4 - Parser Infrastructure](../plans/PLAN_PHASE4_PARSERS.md)
