@@ -1,5 +1,5 @@
-# Home Assistant core (install FIRST to resolve dependencies)
-homeassistant>=2024.1.0
+# Home Assistant core (>= 2025.1.0 for pydantic v2 compatibility)
+homeassistant>=2025.1.0
 
 # Test framework
 pytest>=8.0.0
