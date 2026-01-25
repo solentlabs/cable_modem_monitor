@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<meta charset="utf-8">
+<!-- Temp disable <meta name="viewport" content="width=device-width"> -->
+<script src="/jquery-1.7.1.min.js"></script>
+<script src="/main.js"></script>
+<!-- START HTMLHEADER.HTML ADDITIONS -->
+
+	<!-- typography -->
+	<link href="/styles.css" rel="stylesheet">
+	<!-- layout -->
+	<link href="/styles_layout.css" rel="stylesheet">
+	<!-- images and colors -->
+	<link id="pictures_css" href="/styles_images.css" rel="stylesheet">
+
+ <!-- END HTMLHEADER ADDITIONS -->
+<script>
+	function do_login(){
+		document.getElementById("ar_nonce").value=getNonce(true);
+
+		$.ajax({
+			type:"POST",
+			dateType:"json",
+			url:"/cgi-bin/adv_pwd_cgi",
+			data:$('#login_form').serialize(),
+			success: function(result){
+				if (result.indexOf("Error:") != -1){
+					alert(result.slice(6,));
+					window.location.reload();
+				}
+				if (result.indexOf("Url:") != -1){
+					window.location.href=result.slice(4,);
+				}
+			}
+		});
+	}
+
+	function keyLogin(){
+		if(event.keyCode==13){
+			document.getElementById("login").click();
+		}
+	}
+</script>
+</head>
+<body onkeydown="keyLogin();">
+
+	  <!-- Header Area Begin -->
+<div class="header">
+    <div id="pw1"><div id="pw2"><div id="pw3"><div id="pw4">
+
+		<div id="hg1"><div id="hg2"><div id="hg3"><div id="hg4"><div id="hg5"><div id="hg6"><div id="hg7">
+
+            <div id="logo"><a href="http://www.arris.com"><img src="/px1_Ux.png" alt="ARRIS Logo" title="ARRIS Logo" class="logo"></a></div>
+
+			<div id="binnacleWrapper1" class="binnacleItems_hide" style="display:none;">
+                <div id="binnacleWrapper2" class="binnacleItems_hide" style="display:none;">
+                    <div id="binnacleWrapperLeft"><img src="/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                    <div id="binnacleWrapperRight"><img src="/px1_Ux.png" alt="" class="binnacleWrapperShim"></div>
+                    <div id="binnacleWrapperMiddle">
+                        <div id="binnacleInnards">
+							<div id="binnacleIndicatorWrap"></div>
+                            <div id="binnacleModelName"><span id="thisModelNumberIs"> SB6190 </span></div>
+                        </div>
+                    </div>
+                <!-- end binnacleWrapper1/2 -->
+				</div>
+			</div>
+
+		<!-- end divs for hg -->
+		</div></div></div></div></div></div></div>
+
+		<!--gap--><div id="tmtg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>
+
+		<div id="bg1"><div id="bg2"><div id="bg3"><div id="bg4">
+<!-- END pageheaderA.htm ADDITIONS -->
+		<script>
+			$(document).ready(function(){
+
+			// Strip the default values.
+			$("#binnacleWrapper1").removeClass("binnacleItems_0");
+			$("#binnacleWrapper2").removeClass("binnacleItems_0");
+			// Set number of items in binnacle (0 to 8)
+			$("#binnacleWrapper1").addClass("binnacleItems_0");
+			$("#binnacleWrapper2").addClass("binnacleItems_0");
+			// Show the binnacle.
+			$("#binnacleWrapper1").show();
+			$("#binnacleWrapper2").show();
+
+			});
+			// End READY functon
+		</script>
+
+<!-- END pageheaderA.htm -->
+<!-- ARRIS MENU Start-->
+<script language="javascript" type="text/javascript">
+var hiddenMenuList = '';
+</script>
+<div id="topMenu">
+</div>
+<script type='text/javascript'>
+
+        var menuItem = [
+        ];
+
+</script>
+<!-- ARRIS MENU End -->
+
+<!-- START pageheaderB.htm -->
+
+<!-- START pageheaderB.htm ADDITIONS -->
+		<!-- end divs for tmg -->
+
+
+
+<!-- END pageheaderB.htm ADDITIONS -->
+
+<!-- END pageheaderB.htm -->
+</div>
+	<!-- End Header -->
+
+	<div class="container">
+		<div class="subHeader">
+			<div class="subHeadcontent">Login</div>
+		</div>
+
+	<div class="content">
+       	<div class="introText">
+    		<p>The default user name is 'admin'. Valid characters are the numbers 0 to 9, the letters a through z, and printable special characters (such as $, !, ?, &, #, @, and others.)</p>
+    	</div>
+    </div>
+
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<form id="login_form" method="post" action="##" onsubmit="return fasle;">
+	<table class="simpleTable">
+		<tr>
+			<td><strong>Username</strong></td>
+			<td><input type="text" name="username" size="32"></td>
+		</tr>
+		<tr>
+			<td><strong>Password</strong></td>
+			<td><input type="password" name="password" size="32"></td>
+		</tr>
+	</table>
+
+	<br clear="all" class="clearfloat">
+	<div class="spacer30"></div>
+
+	<input name="ar_nonce" id="ar_nonce" type="hidden">
+	<input type="button" id="login" value="Apply" onclick="do_login()">
+</form>
+
+
+<br clear="all" class="clearfloat">
+<div class="spacer30"></div>
+
+<br clear="all" class="clearfloat">
+<div class="spacer40"></div>
+
+<!-- end .container --></div>
+
+<!-- START footer.htm ADDITIONS -->
+		<!-- end divs for bc -->
+		</div></div></div></div>
+
+		<!--gap--><div id="bmtg"><div class="gap1"><div class="gap2"><div class="gap3"><div class="gap4"></div></div></div></div></div>
+
+
+
+
+		<div id="fg1"><div id="fg2"><div id="fg3"><div id="fg4"><div id="fg5"><div id="fg6"><div id="fg7">
+
+			<div id="logo_bottom"><a href="http://www.arris.com"><img src="/px1_Ux.png" alt="ARRIS" title="ARRIS" class="logo_bottom"></a></div>
+
+			<div id="copyright">
+			<a href="http://www.arris.com">&#169 ARRIS Enterprises, Inc. 2019 All rights reserved.</a>
+			</div>
+
+		</div></div></div></div></div></div></div>
+
+
+		<div id="fgbl1"><div id="fgbl2"><div id="fgbl3"><div id="fgbl4"><img src="/px1_Ux.png" alt="" title="" class="fgbl3"></div></div></div></div>
+
+
+    <!-- end divs for pw -->
+    </div></div></div></div>
+
+<!-- END footer.htm ADDITIONS -->
+
+</body>
+</html>

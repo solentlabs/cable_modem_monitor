@@ -5,6 +5,7 @@ Usage:
     python scripts/mock_server.py g54
     python scripts/mock_server.py mb7621 --port 8081
     python scripts/mock_server.py arris/sb8200
+    python scripts/mock_server.py sb6190 --auth-type form_ajax
 
 Credentials: admin / pw
 """
@@ -47,14 +48,17 @@ def main():
     parser.add_argument("modem", help="Modem name (e.g., g54, mb7621, arris/sb8200)")
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
+    parser.add_argument("--auth-type", help="Auth type override (e.g., none, form, form_ajax, url_token)")
     args = parser.parse_args()
 
     modem_path = find_modem_path(args.modem)
-    server = MockModemServer(modem_path, port=args.port, host=args.host)
+    server = MockModemServer(modem_path, port=args.port, host=args.host, auth_type=args.auth_type)
     server.start()
 
+    auth_type = args.auth_type or next(iter(server.config.auth.types.keys()), "none")
     print(f"\n{'='*50}")
     print(f"Mock server: {server.config.manufacturer} {server.config.model}")
+    print(f"Auth type: {auth_type}")
     print(f"URL: {server.url}")
     print(f"HA host: host.docker.internal:{args.port}")
     print("Credentials: admin / pw")
