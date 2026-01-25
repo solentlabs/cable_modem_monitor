@@ -233,7 +233,7 @@ class ArrisCM820BParser(ModemParser):
         a cell containing multi-line text with HW_REV and SW_REV values.
         """
         try:
-            system_label = vers_soup.find("td", string=lambda t: t and "System:" in t.strip())
+            system_label = vers_soup.find("td", string=lambda t: t and "System:" in t.strip())  # type: ignore[call-overload]
             if system_label:
                 system_value = system_label.find_next_sibling("td")
                 if system_value:

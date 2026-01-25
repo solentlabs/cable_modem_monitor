@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
@@ -42,7 +42,7 @@ class TechnicolorCGA2121Parser(ModemParser):
         """Parse modem data (legacy interface)."""
         return self.parse_resources({"/": soup})
 
-    def _find_channel_tbody(self, soup: BeautifulSoup, section_name: str, i18n_key: str) -> BeautifulSoup | None:
+    def _find_channel_tbody(self, soup: BeautifulSoup, section_name: str, i18n_key: str) -> Tag | None:
         """Find the tbody element for a channel section by header text or i18n key."""
         # Look for header containing section name
         header = None
@@ -133,13 +133,13 @@ class TechnicolorCGA2121Parser(ModemParser):
 
         return channels
 
-    def _parse_system_info(self, soup: BeautifulSoup) -> dict:
+    def _parse_system_info(self, soup: BeautifulSoup) -> dict[str, Any]:
         """
         Parse system information from CGA2121.
 
         The status page has limited system info - mainly operational status.
         """
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
             # Try to find operational status
