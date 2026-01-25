@@ -13,13 +13,16 @@ import logging
 import secrets
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import parse_qs, urlparse
 
 from .base import BaseAuthHandler
 
 if TYPE_CHECKING:
-    from custom_components.cable_modem_monitor.modem_config.schema import ModemConfig
+    from custom_components.cable_modem_monitor.modem_config.schema import (
+        FormDynamicAuthConfig,
+        ModemConfig,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,9 +52,10 @@ class FormDynamicAuthHandler(BaseAuthHandler):
         self._current_dynamic_id: str | None = None
 
         # Get form_dynamic config (required for this handler)
-        self.form_config = config.auth.types.get("form_dynamic")
-        if not self.form_config:
+        form_config = config.auth.types.get("form_dynamic")
+        if not form_config:
             raise ValueError("FormDynamicAuthHandler requires form_dynamic config in auth.types")
+        self.form_config: FormDynamicAuthConfig = cast("FormDynamicAuthConfig", form_config)
 
     def handle_request(
         self,

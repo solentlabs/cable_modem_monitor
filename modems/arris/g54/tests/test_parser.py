@@ -364,6 +364,7 @@ class TestG54AuthHints:
         adapter = get_auth_adapter_for_parser("ArrisG54Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "luci_username"
         assert hints.get("password_field") == "luci_password"
 

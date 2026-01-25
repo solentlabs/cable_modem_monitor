@@ -14,7 +14,7 @@ import secrets
 import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
 from .base import BaseAuthHandler
@@ -83,7 +83,7 @@ class HnapAuthHandler(BaseAuthHandler):
         hnap_config = config.auth.types.get("hnap")
         if not hnap_config:
             raise ValueError("HNAP auth handler requires hnap config in auth.types")
-        self.hnap_config: HnapAuthConfig = hnap_config
+        self.hnap_config: HnapAuthConfig = cast("HnapAuthConfig", hnap_config)
 
         # Session state
         self.pending_challenges: dict[str, dict] = {}  # cookie -> challenge data

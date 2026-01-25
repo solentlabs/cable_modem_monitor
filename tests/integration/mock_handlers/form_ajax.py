@@ -15,14 +15,17 @@ import base64
 import logging
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import unquote, urlparse
 
 from .base import BaseAuthHandler
 from .form import TEST_PASSWORD, TEST_USERNAME
 
 if TYPE_CHECKING:
-    from custom_components.cable_modem_monitor.modem_config.schema import ModemConfig
+    from custom_components.cable_modem_monitor.modem_config.schema import (
+        FormAjaxAuthConfig,
+        ModemConfig,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,9 +53,10 @@ class FormAjaxAuthHandler(BaseAuthHandler):
         super().__init__(config, fixtures_path)
 
         # Get form_ajax config (required for this handler)
-        self.form_config = config.auth.types.get("form_ajax")
-        if not self.form_config:
+        form_config = config.auth.types.get("form_ajax")
+        if not form_config:
             raise ValueError("FormAjaxAuthHandler requires form_ajax config in auth.types")
+        self.form_config: FormAjaxAuthConfig = cast("FormAjaxAuthConfig", form_config)
 
     def handle_request(
         self,

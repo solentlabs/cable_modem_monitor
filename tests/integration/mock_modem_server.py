@@ -139,9 +139,9 @@ class MockModemServer:
 
         # Handle handler-specific options
         if auth_type == "url_token" and "strict" in options:
-            return handler_cls(self.config, self.fixtures_path, strict=True)
+            return handler_cls(self.config, self.fixtures_path, strict=True)  # type: ignore[no-any-return]
 
-        return handler_cls(self.config, self.fixtures_path)
+        return handler_cls(self.config, self.fixtures_path)  # type: ignore[no-any-return]
 
     @property
     def url(self) -> str:
