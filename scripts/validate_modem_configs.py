@@ -194,6 +194,7 @@ def validate_auth_types(config: dict, path: str) -> list[ValidationError]:
     # Validators for each auth type
     type_validators = {
         "form": validate_form_auth,
+        "form_dynamic": validate_form_auth,  # Uses same validation as form
         "hnap": validate_hnap_auth,
         "url_token": validate_url_token_auth,
         "basic": validate_basic_auth,

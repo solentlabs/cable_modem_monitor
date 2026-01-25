@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 348
+**Total Tests:** 357
 
 ## Test Files
 
@@ -16,6 +16,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
+| [test_form_dynamic_auth.py](test_form_dynamic_auth.py) | 9 | Tests for FormDynamicAuthStrategy. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
 | [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
@@ -548,6 +549,43 @@ Tests for core/discovery_helpers.py.
 
 **TestParser** (0 tests)
 
+
+### test_form_dynamic_auth.py
+
+Tests for FormDynamicAuthStrategy.
+
+This tests the dynamic form action extraction for modems where the login form
+contains a dynamic parameter that changes per page load:
+    <form action="/goform/Login?id=XXXXXXXXXX">
+
+The static FormPlainAuthStrategy would use the configured action "/goform/Login",
+missing the required ?id= parameter. FormDynamicAuthStrategy fetches the login
+page first and extracts the actual action URL including any dynamic parameters.
+
+**TestFormPlainStaticAction** (1 tests)
+: Demonstrate that FormPlain uses static action, missing dynamic params.
+
+- `test_form_plain_uses_static_action`: FormPlain submits to static action, missing the dynamic ?id=.
+
+**TestFormDynamicExtractsAction** (3 tests)
+: Test that FormDynamic correctly extracts and uses dynamic action URL.
+
+- `test_form_dynamic_fetches_page_and_extracts_action`: FormDynamic fetches login page, extracts form action with ?id=.
+- `test_form_dynamic_uses_css_selector`: FormDynamic uses the configured CSS selector to find the form.
+- `test_form_dynamic_falls_back_to_first_form`: Without a selector, FormDynamic uses the first form.
+
+**TestFormDynamicFallback** (3 tests)
+: Test fallback behavior when dynamic extraction fails.
+
+- `test_fallback_when_no_form_found`: Falls back to static action when no form element exists.
+- `test_fallback_when_form_has_no_action`: Falls back to static action when form has no action attribute.
+- `test_fallback_when_page_fetch_fails`: Falls back to static action when login page fetch fails.
+
+**TestFormDynamicInheritance** (2 tests)
+: Verify FormDynamic inherits form submission logic from FormPlain.
+
+- `test_submits_correct_form_data`: FormDynamic submits username/password in correct fields.
+- `test_missing_credentials_returns_failure`: FormDynamic inherits credential validation from FormPlain.
 
 ### test_health_monitor.py
 

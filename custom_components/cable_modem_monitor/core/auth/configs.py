@@ -71,6 +71,46 @@ class FormAuthConfig(AuthConfig):
 
 
 @dataclass
+class FormDynamicAuthConfig(AuthConfig):
+    """Form auth with dynamic action URL extracted from login page.
+
+    Used when the login form's action attribute contains a dynamic parameter
+    that changes per page load (e.g., /goform/Login?id=XXXXXXXXXX where the
+    id value is regenerated on each page load).
+
+    The strategy fetches the login page first, parses the <form> element,
+    and extracts the actual action URL before submitting credentials.
+
+    Extends AuthConfig directly (not FormAuthConfig) to avoid dataclass
+    inheritance issues with required vs optional fields.
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_DYNAMIC
+
+    # Page containing the login form to scrape for dynamic action URL
+    login_page: str = "/"
+
+    # Fallback form action URL if extraction fails
+    login_url: str = "/login"
+
+    # CSS selector for form element (e.g., "form[name='loginform']")
+    # If None, uses the first <form> element found
+    form_selector: str | None = None
+
+    # Form field configuration (same as FormAuthConfig)
+    username_field: str = "username"
+    password_field: str = "password"
+    method: str = "POST"
+    success_indicator: str | None = None
+    hidden_fields: dict[str, str] | None = None
+    password_encoding: str = "plain"
+
+    # Combined credential mode - unlikely for dynamic forms but included for completeness
+    credential_field: str | None = None
+    credential_format: str | None = None
+
+
+@dataclass
 class RedirectFormAuthConfig(AuthConfig):
     """Form auth with redirect validation configuration (e.g., XB7)."""
 

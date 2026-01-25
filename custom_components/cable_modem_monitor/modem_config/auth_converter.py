@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from custom_components.cable_modem_monitor.core.auth.configs import (
     BasicAuthConfig,
     FormAuthConfig,
+    FormDynamicAuthConfig,
     HNAPAuthConfig,
     NoAuthConfig,
     UrlTokenSessionConfig,
@@ -26,13 +27,16 @@ from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyTy
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
         FormAuthConfig as ModemFormAuthConfig,
+        FormDynamicAuthConfig as ModemFormDynamicAuthConfig,
         HnapAuthConfig as ModemHnapAuthConfig,
         ModemConfig,
         UrlTokenAuthConfig as ModemUrlTokenAuthConfig,
     )
 
 # Type alias for return type
-AuthConfigType = FormAuthConfig | HNAPAuthConfig | UrlTokenSessionConfig | BasicAuthConfig | NoAuthConfig
+AuthConfigType = (
+    FormAuthConfig | FormDynamicAuthConfig | HNAPAuthConfig | UrlTokenSessionConfig | BasicAuthConfig | NoAuthConfig
+)
 
 
 def modem_config_to_auth_config(
@@ -52,6 +56,7 @@ def modem_config_to_auth_config(
     """
     from custom_components.cable_modem_monitor.modem_config.schema import (
         FormAuthConfig as SchemaFormAuthConfig,
+        FormDynamicAuthConfig as SchemaFormDynamicAuthConfig,
         HnapAuthConfig as SchemaHnapAuthConfig,
         UrlTokenAuthConfig as SchemaUrlTokenAuthConfig,
     )
@@ -78,6 +83,10 @@ def modem_config_to_auth_config(
         return AuthStrategyType.NO_AUTH, NoAuthConfig()
 
     # Convert based on config type
+    # Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check order matters)
+    if isinstance(type_config, SchemaFormDynamicAuthConfig):
+        return form_dynamic_config_to_auth_config(type_config)
+
     if isinstance(type_config, SchemaFormAuthConfig):
         return form_config_to_auth_config(type_config)
 
@@ -117,6 +126,33 @@ def form_config_to_auth_config(form: ModemFormAuthConfig) -> tuple[AuthStrategyT
         hidden_fields=dict(form.hidden_fields) if form.hidden_fields else None,
         password_encoding=form.password_encoding.value,
         # success_indicator from form.success if present
+        success_indicator=form.success.indicator if form.success else None,
+    )
+
+
+def form_dynamic_config_to_auth_config(
+    form: ModemFormDynamicAuthConfig,
+) -> tuple[AuthStrategyType, FormDynamicAuthConfig]:
+    """Convert modem.yaml FormDynamicAuthConfig to auth.configs.FormDynamicAuthConfig.
+
+    Args:
+        form: FormDynamicAuthConfig from modem.yaml schema
+
+    Returns:
+        Tuple of (AuthStrategyType, FormDynamicAuthConfig)
+    """
+    strategy = AuthStrategyType.FORM_DYNAMIC
+
+    return strategy, FormDynamicAuthConfig(
+        strategy=strategy,
+        login_page=form.login_page,
+        login_url=form.action,
+        form_selector=form.form_selector,
+        username_field=form.username_field,
+        password_field=form.password_field,
+        method=form.method,
+        hidden_fields=dict(form.hidden_fields) if form.hidden_fields else None,
+        password_encoding=form.password_encoding.value,
         success_indicator=form.success.indicator if form.success else None,
     )
 

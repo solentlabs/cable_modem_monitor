@@ -60,6 +60,9 @@ class AuthStrategyType(Enum):
     FORM_PLAIN = "form_plain"
     """Form-based auth. Encoding controlled by FormAuthConfig.password_encoding."""
 
+    FORM_DYNAMIC = "form_dynamic"
+    """Form-based auth where action URL is extracted from the login page."""
+
     REDIRECT_FORM = "redirect_form"
     """Form-based auth with redirect validation."""
 

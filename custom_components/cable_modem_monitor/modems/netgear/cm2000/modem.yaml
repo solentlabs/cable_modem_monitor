@@ -25,8 +25,13 @@ default_host: "192.168.100.1"
 
 auth:
   types:
-    form:
+    form_dynamic:
+      # Dynamic action: modem generates /goform/Login?id=XXXXXXXXXX per page load
+      # The integration must fetch the login page, extract the form action,
+      # and submit to the exact URL including the ?id= parameter
       action: "/goform/Login"
+      login_page: "/"
+      form_selector: "form[name='loginform']"
       method: POST
       username_field: loginName
       password_field: loginPassword

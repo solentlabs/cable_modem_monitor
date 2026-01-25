@@ -14,7 +14,11 @@ Available Strategies:
 
     FormPlainAuthStrategy
         HTML form-based login with plain or base64-encoded credentials.
-        Used by: MB7621, CM2000, C3700, C7000v2, CGA2121, XB7
+        Used by: MB7621, C3700, C7000v2, CGA2121, XB7
+
+    FormDynamicAuthStrategy
+        Form auth where action URL is extracted from the login page.
+        Used when form action contains dynamic parameters (e.g., session IDs).
 
     HNAPSessionAuthStrategy
         HNAP/SOAP protocol authentication (XML format).
@@ -51,6 +55,7 @@ Usage:
 from __future__ import annotations
 
 from .basic_http import BasicHttpAuthStrategy
+from .form_dynamic import FormDynamicAuthStrategy
 from .form_plain import FormPlainAuthStrategy
 from .hnap_json import HNAPJsonAuthStrategy
 from .hnap_session import HNAPSessionAuthStrategy
@@ -60,6 +65,7 @@ from .url_token_session import UrlTokenSessionStrategy
 
 __all__ = [
     "BasicHttpAuthStrategy",
+    "FormDynamicAuthStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",
     "HNAPSessionAuthStrategy",

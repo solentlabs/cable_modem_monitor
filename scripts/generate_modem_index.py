@@ -106,8 +106,8 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
         # v3.12+ uses auth.types.{form,hnap,url_token}
         auth_types = auth.get("types", {})
 
-        # Form auth - check both auth.form (legacy) and auth.types.form (v3.12+)
-        form = auth.get("form", {}) or auth_types.get("form", {})
+        # Form auth - check auth.form (legacy), auth.types.form, and auth.types.form_dynamic
+        form = auth.get("form", {}) or auth_types.get("form", {}) or auth_types.get("form_dynamic", {})
         if form:
             if uf := form.get("username_field"):
                 username_fields.add(uf)

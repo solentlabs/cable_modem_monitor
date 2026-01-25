@@ -156,7 +156,8 @@ behaviors:
 # STATUS
 # =============================================================================
 status_info:
-  status: awaiting_verification
+  status: verified
+  verified_date: "2026-01-24"
   verification_source: "https://github.com/solentlabs/cable_modem_monitor/pull/90"
 
 # =============================================================================
