@@ -58,7 +58,8 @@ class TestCM2000Detection:
         # The meta description should contain CM2000
         meta = soup.find("meta", attrs={"name": "description"})
         assert meta is not None
-        assert "CM2000" in meta.get("content", "")
+        content = meta.get("content", "")
+        assert isinstance(content, str) and "CM2000" in content
 
     def test_does_not_match_cm600(self):
         """Test that CM2000 parser doesn't match CM600 HTML via HintMatcher.
@@ -134,6 +135,7 @@ class TestCM2000Metadata:
         adapter = get_auth_adapter_for_parser("NetgearCM2000Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "loginName"
         assert hints.get("password_field") == "loginPassword"
 

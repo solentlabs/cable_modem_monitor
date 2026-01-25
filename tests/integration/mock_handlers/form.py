@@ -10,13 +10,16 @@ import base64
 import logging
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import unquote, urlparse
 
 from .base import BaseAuthHandler
 
 if TYPE_CHECKING:
-    from custom_components.cable_modem_monitor.modem_config.schema import ModemConfig
+    from custom_components.cable_modem_monitor.modem_config.schema import (
+        FormAuthConfig,
+        ModemConfig,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,9 +45,10 @@ class FormAuthHandler(BaseAuthHandler):
         super().__init__(config, fixtures_path)
 
         # Extract form config from auth.types{}
-        self.form_config = config.auth.types.get("form")
-        if not self.form_config:
+        form_config = config.auth.types.get("form")
+        if not form_config:
             raise ValueError("Form auth handler requires form config in auth.types")
+        self.form_config: FormAuthConfig = cast("FormAuthConfig", form_config)
 
     def handle_request(
         self,

@@ -43,7 +43,8 @@ class TestCM1200Detection:
         soup = BeautifulSoup(cm1200_docsis_status_html, "html.parser")
         meta = soup.find("meta", attrs={"name": "description"})
         assert meta is not None
-        assert "CM1200" in meta.get("content", "")
+        content = meta.get("content", "")
+        assert isinstance(content, str) and "CM1200" in content
 
     def test_does_not_match_cm2000(self):
         """Test that CM1200 parser doesn't match CM2000 HTML via HintMatcher.

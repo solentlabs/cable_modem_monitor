@@ -170,6 +170,7 @@ class TestAuthHints:
         adapter = get_auth_adapter_for_parser("TechnicolorCGA2121Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "username_login"
         assert hints.get("password_field") == "password_login"
 

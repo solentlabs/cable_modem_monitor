@@ -216,7 +216,7 @@ async def load_parser_hints(hass: HomeAssistant, selected_parser: type[ModemPars
 
         adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, selected_parser.__name__)
         if adapter:
-            hints: dict[str, Any] = adapter.get_auth_form_hints()
+            hints: dict[str, Any] | None = adapter.get_auth_form_hints()
             if hints:
                 _LOGGER.info(
                     "Using modem.yaml auth hints for %s (encoding=%s, has_redirect=%s)",

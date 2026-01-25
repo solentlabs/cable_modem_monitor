@@ -73,8 +73,8 @@ from ..auth.workflow import AuthWorkflow
 from ..ssl_adapter import LegacySSLAdapter
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...base_parser import ModemParser
-    from ..auth.hnap_builder import HNAPJsonRequestBuilder
+    from ..auth.hnap.json_builder import HNAPJsonRequestBuilder
+    from ..base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
 

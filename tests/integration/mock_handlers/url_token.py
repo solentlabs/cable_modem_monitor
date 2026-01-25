@@ -11,7 +11,7 @@ import logging
 import secrets
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
 from .base import BaseAuthHandler
@@ -63,7 +63,7 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         url_token_config = config.auth.types.get("url_token")
         if not url_token_config:
             raise ValueError("URL token auth handler requires url_token config in auth.types")
-        self.url_token_config: UrlTokenAuthConfig = url_token_config
+        self.url_token_config: UrlTokenAuthConfig = cast("UrlTokenAuthConfig", url_token_config)
 
         # Strict mode: require URL token, reject cookie-only requests
         self.strict = strict
