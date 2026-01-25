@@ -416,7 +416,8 @@ def _validate_parse(  # noqa: C901
                     len(resources),
                 )
 
-                # Ensure we have the main page (for HTML modems)
+                # Add auth HTML as "/" for backwards compatibility
+                # Note: Parsers should prefer specific paths over "/" (Issue #75)
                 if "/" not in resources and soup:
                     resources["/"] = soup
 
