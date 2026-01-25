@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.1] - 2026-01-25
+
 ### ✨ Architecture Improvements
 
 v3.13.0 focuses on code quality, maintainability, and developer experience. Major refactoring reduces tech debt while adding new modem support and improving test coverage.
