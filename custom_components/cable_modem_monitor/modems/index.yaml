@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-23T21:57:18.689050+00:00"
+generated: "2026-01-25T02:17:52.046819+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -102,7 +102,7 @@ modems:
     name: Arris/CommScope S34
     manufacturer: Arris/CommScope
     model: S34
-    verified: false
+    verified: true
     detection:
       pre_auth:
         - HNAP
