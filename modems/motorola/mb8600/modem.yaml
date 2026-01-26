@@ -7,7 +7,8 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
-  # chipset: Broadcom BCM3390  # TODO: Verify via FCC ID Z8H-MB8600 internal photos
+  chipset: Broadcom BCM3390
+  release_date: "2017"
 
 status_info:
   status: in_progress
@@ -38,6 +39,6 @@ notes: |
 references:
   issue_40: "https://github.com/solentlabs/cable_modem_monitor/issues/40"
   review: "https://dongknows.com/motorola-mb8600-docsis-3-1-cable-modem-review/"
-  gpl_source: "https://help.motorolanetwork.com/kb/general/gpl-code-center"
+  source_code: "https://help.motorolanetwork.com/kb/general/gpl-code-center"
   bowlescr_login: "https://github.com/BowlesCR/MB8600_Login"
   xninjakittyx_mb8600: "https://github.com/xNinjaKittyx/mb8600"

@@ -7,6 +7,7 @@ paradigm: html
 
 hardware:
   docsis_version: "3.0"
+  chipset: Broadcom BCM3384ZU
   release_date: "2015"
 
 # Provenance tracking

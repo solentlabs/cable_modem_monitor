@@ -9,6 +9,7 @@ hardware:
   docsis_version: "3.0"
   chipset: Broadcom BCM3384
   release_date: "2016-03"
+  end_of_life: "2023"
 
 # Provenance tracking
 sources:

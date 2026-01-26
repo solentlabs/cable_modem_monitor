@@ -466,7 +466,7 @@ def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
     # Get hardware info
     hardware = modem_config.get("hardware", {})
     if hardware.get("docsis_version"):
-        info["docsis_version"] = hardware["docsis_version"]
+        info["docsis"] = hardware["docsis_version"]
     if hardware.get("chipset"):
         info["chipset"] = hardware["chipset"]
     if hardware.get("release_date"):
@@ -476,11 +476,25 @@ def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
         if release_str:
             info["release_year"] = int(release_str[:4])
     if hardware.get("end_of_life"):
-        info["end_of_life"] = hardware["end_of_life"]
+        eol_str = str(hardware["end_of_life"])
+        info["eol_year"] = int(eol_str[:4]) if eol_str else None
 
-    # Get paradigm for protocol display
-    if modem_config.get("paradigm"):
-        info["paradigm"] = modem_config["paradigm"]
+    # Get paradigm and convert to protocol display format
+    paradigm = modem_config.get("paradigm", "").lower()
+    if paradigm:
+        # Map paradigm values to protocol badge names
+        paradigm_to_protocol = {
+            "html": "HTML",
+            "hnap": "HNAP",
+            "rest": "REST_API",
+            "rest_api": "REST_API",
+            "luci": "LuCI",
+        }
+        info["protocol"] = paradigm_to_protocol.get(paradigm, "HTML")
+
+    # Get ISPs from modem.yaml
+    if modem_config.get("isps"):
+        info["isps"] = modem_config["isps"]
 
 
 def extract_fixture_info(fixture_dir: Path, base_dir: Path) -> dict[str, str | int | bool | None]:
