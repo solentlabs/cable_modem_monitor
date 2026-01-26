@@ -37,15 +37,25 @@ class BaseFormAuthHandler(BaseAuthHandler):
     # Subclasses must define the auth type key for config lookup
     AUTH_TYPE_KEY: str = ""
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        auth_redirect: str | None = None,
+    ):
         """Initialize form auth handler.
 
         Args:
             config: Modem configuration from modem.yaml.
             fixtures_path: Path to fixtures directory.
+            auth_redirect: Override redirect URL after successful auth.
+                          Used to simulate modems that redirect to a different
+                          page than the data page (e.g., CGA2121 redirects to
+                          /basicUX.html instead of /st_docsis.html).
         """
         super().__init__(config, fixtures_path)
         self.form_config = self._load_form_config()
+        self.auth_redirect_override = auth_redirect
 
     def _load_form_config(self) -> Any:
         """Load and validate form config from auth.types.

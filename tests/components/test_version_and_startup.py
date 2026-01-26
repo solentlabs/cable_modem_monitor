@@ -106,7 +106,7 @@ class TestVersionLogging:
         Use: python scripts/release.py <version>
         The script updates const.py, manifest.json, and this file.
         """
-        assert VERSION == "3.13.0-beta.2"
+        assert VERSION == "3.13.0-beta.3"
 
 
 class TestParserSelectionOptimization:

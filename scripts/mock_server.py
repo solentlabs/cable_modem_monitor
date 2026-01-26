@@ -49,10 +49,20 @@ def main():
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     parser.add_argument("--host", default="0.0.0.0", help="Host (default: 0.0.0.0)")
     parser.add_argument("--auth-type", help="Auth type override (e.g., none, form, form_ajax, url_token)")
+    parser.add_argument(
+        "--auth-redirect",
+        help="Override redirect URL after auth (simulates modems that redirect to non-data page)",
+    )
     args = parser.parse_args()
 
     modem_path = find_modem_path(args.modem)
-    server = MockModemServer(modem_path, port=args.port, host=args.host, auth_type=args.auth_type)
+    server = MockModemServer(
+        modem_path,
+        port=args.port,
+        host=args.host,
+        auth_type=args.auth_type,
+        auth_redirect=args.auth_redirect,
+    )
     server.start()
 
     auth_type = args.auth_type or next(iter(server.config.auth.types.keys()), "none")

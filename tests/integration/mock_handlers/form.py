@@ -35,9 +35,14 @@ class FormAuthHandler(BaseFormAuthHandler):
 
     AUTH_TYPE_KEY = "form"
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        auth_redirect: str | None = None,
+    ):
         """Initialize form auth handler."""
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, auth_redirect=auth_redirect)
         # Type narrow the config
         self.form_config: FormAuthConfig = cast("FormAuthConfig", self.form_config)
 
@@ -117,10 +122,13 @@ class FormAuthHandler(BaseFormAuthHandler):
 
     def _handle_login_success(self) -> tuple[int, dict[str, str], bytes]:
         """Handle successful login."""
-        # Determine redirect location
-        redirect_url = "/MotoHome.asp"  # Default
-        if self.form_config.success and self.form_config.success.redirect:
+        # Use override if set (for testing auth redirect scenarios)
+        if self.auth_redirect_override:
+            redirect_url = self.auth_redirect_override
+        elif self.form_config.success and self.form_config.success.redirect:
             redirect_url = self.form_config.success.redirect
+        else:
+            redirect_url = "/MotoHome.asp"  # Default
 
         return self.handle_login_success_redirect(redirect_url)
 

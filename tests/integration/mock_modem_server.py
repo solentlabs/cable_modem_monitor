@@ -60,6 +60,7 @@ class MockModemServer:
         auth_enabled: bool = True,
         ssl_context: ssl.SSLContext | None = None,
         auth_type: str | None = None,
+        auth_redirect: str | None = None,
     ):
         """Initialize MockModemServer.
 
@@ -70,6 +71,8 @@ class MockModemServer:
             auth_enabled: If False, bypass auth and serve fixtures directly.
             ssl_context: SSL context for HTTPS. If None, uses HTTP.
             auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
+            auth_redirect: Override redirect URL after auth. Used to simulate modems
+                          that redirect to a different page than the data page.
         """
         self.modem_path = Path(modem_path)
         self.port = port or _find_free_port()
@@ -77,6 +80,7 @@ class MockModemServer:
         self.auth_enabled = auth_enabled
         self.ssl_context = ssl_context
         self.auth_type_override = auth_type
+        self.auth_redirect = auth_redirect
 
         # Load configuration
         self.config = load_modem_config(self.modem_path)
@@ -143,6 +147,10 @@ class MockModemServer:
             two_step = "two_step" in options
             if strict or two_step:
                 return handler_cls(self.config, self.fixtures_path, strict=strict, two_step=two_step)  # type: ignore[no-any-return]
+
+        # Pass auth_redirect to form handlers
+        if auth_type in ("form", "form_ajax", "form_dynamic") and self.auth_redirect:
+            return handler_cls(self.config, self.fixtures_path, auth_redirect=self.auth_redirect)  # type: ignore[no-any-return]
 
         return handler_cls(self.config, self.fixtures_path)  # type: ignore[no-any-return]
 
@@ -239,6 +247,7 @@ class MockModemServer:
         auth_enabled: bool = True,
         ssl_context: ssl.SSLContext | None = None,
         auth_type: str | None = None,
+        auth_redirect: str | None = None,
     ) -> Generator[MockModemServer, None, None]:
         """Context manager to start and stop server.
 
@@ -248,11 +257,19 @@ class MockModemServer:
             auth_enabled: If False, bypass auth and serve fixtures directly.
             ssl_context: SSL context for HTTPS. If None, uses HTTP.
             auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
+            auth_redirect: Override redirect URL after auth.
 
         Yields:
             Started MockModemServer instance.
         """
-        server = cls(modem_path, port, auth_enabled=auth_enabled, ssl_context=ssl_context, auth_type=auth_type)
+        server = cls(
+            modem_path,
+            port,
+            auth_enabled=auth_enabled,
+            ssl_context=ssl_context,
+            auth_type=auth_type,
+            auth_redirect=auth_redirect,
+        )
         server.start()
         try:
             yield server

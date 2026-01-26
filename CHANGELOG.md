@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.3] - 2026-01-25
+
+### Fixed
+
+- **CGA2121 Auth Redirect** - Fixed parser receiving wrong page when modem redirects to `/basicUX.html` after login instead of the data page `/st_docsis.html`. Parser now tries the specific data page path first, then falls back to "/" for legacy compatibility. (#75)
+- **URL Token Auth Token Source** - Fixed URL token authentication using cookie value instead of response body. The session token comes from the login response body (matching the modem's JavaScript behavior), not the cookie. (#81)
+
+### Changed
+
+- **CGA2121 Data Page Config** - Parser now reads primary data page path from `modem.yaml` `pages.data` config instead of hardcoding, reducing duplication between parser and modem config.
+
 ## [3.13.0-beta.2] - 2026-01-25
 
 ### Fixed
