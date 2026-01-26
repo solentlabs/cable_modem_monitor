@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 def get_cookie_safe(session: requests.Session, name: str) -> str | None:
     """Safely get a cookie value by name, handling duplicate cookies.
 
-    Some modems (e.g., SB8200 business firmware) set the same cookie name
+    Some modems set the same cookie name
     with different paths (e.g., "/" and "/cmconnectionstatus.html"). This
     function handles that edge case by:
     1. Filtering out empty values (some firmware sets empty cookie on landing page)
@@ -36,8 +36,8 @@ def get_cookie_safe(session: requests.Session, name: str) -> str | None:
     """
 
     # Collect all cookies with matching name, filtering out empty values
-    # Some modems (SB8200 business) set empty cookie on landing page,
-    # then real value on login - we want the real value
+    # Some modems set empty cookie on landing page, then real value on
+    # login - we want the real value
     matches = [(c.value, c.path) for c in session.cookies if c.name == name and c.value]
 
     if len(matches) == 0:
@@ -75,6 +75,10 @@ class AuthResult:
         error_type: Classification of error (NONE if success=True)
         error_message: Human-readable error description (if failed)
         requires_retry: Whether the caller should retry (e.g., session expired)
+        session_token: Session token for subsequent requests (URL token auth).
+            This is the token from the response body that should be used for
+            ?ct_<token> in subsequent page fetches. Issue #81: This token is
+            different from the cookie value on some firmware.
 
     Note:
         This class is iterable for backward compatibility with code that
@@ -86,15 +90,21 @@ class AuthResult:
     error_type: AuthErrorType = AuthErrorType.NONE
     error_message: str | None = None
     requires_retry: bool = False
+    session_token: str | None = None
 
     def __iter__(self):
         """Allow unpacking as (success, html) for backward compatibility."""
         return iter((self.success, self.response_html))
 
     @classmethod
-    def ok(cls, response_html: str | None = None) -> AuthResult:
-        """Create successful result."""
-        return cls(success=True, response_html=response_html)
+    def ok(cls, response_html: str | None = None, session_token: str | None = None) -> AuthResult:
+        """Create successful result.
+
+        Args:
+            response_html: HTML from authenticated page (if applicable)
+            session_token: Session token for subsequent requests (URL token auth)
+        """
+        return cls(success=True, response_html=response_html, session_token=session_token)
 
     @classmethod
     def fail(

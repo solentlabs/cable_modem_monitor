@@ -14,7 +14,7 @@ Available Strategies:
 
     FormPlainAuthStrategy
         HTML form-based login with plain or base64-encoded credentials.
-        Used by: MB7621, C3700, C7000v2, CGA2121, XB7
+        Used by: Most traditional modem web interfaces
 
     FormDynamicAuthStrategy
         Form auth where action URL is extracted from the login page.
@@ -22,15 +22,15 @@ Available Strategies:
 
     HNAPSessionAuthStrategy
         HNAP/SOAP protocol authentication (XML format).
-        Used by: Arris S33
+        Used by: Some ARRIS modems with HNAP
 
     HNAPJsonAuthStrategy
         HNAP protocol with JSON format responses.
-        Used by: Motorola MB8611
+        Used by: HNAP modems with JSON responses
 
     UrlTokenSessionStrategy
         URL-based token authentication (tokens in URL path).
-        Used by: Arris SB8200 (HTTPS mode)
+        Used by: HTTPS modems with URL token auth
 
     RedirectFormAuthStrategy
         Form auth with redirect-based session establishment.

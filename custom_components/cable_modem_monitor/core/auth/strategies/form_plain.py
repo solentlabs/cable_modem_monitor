@@ -3,7 +3,7 @@
 This strategy handles all form-based authentication variants:
 - Plain password (default)
 - Base64-encoded password
-- Combined credential mode (SB6190-style)
+- Combined credential mode (single field with formatted value)
 
 The password_encoding field in FormAuthConfig controls encoding behavior.
 """
@@ -32,7 +32,7 @@ class FormPlainAuthStrategy(AuthStrategy):
 
     Supports:
     - Traditional mode: Separate username/password fields
-    - Combined mode: Single field with formatted credentials (SB6190)
+    - Combined mode: Single field with formatted credentials
     - Password encoding: plain or base64
     - Hidden fields for CSRF tokens etc.
     - GET or POST submission
@@ -236,7 +236,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         """Build form data based on configuration mode."""
         hidden_fields = dict(config.hidden_fields) if config.hidden_fields else {}
 
-        # Check for combined credential mode (SB6190-style)
+        # Check for combined credential mode
         if config.credential_field and config.credential_format:
             return self._build_combined_form_data(config, username, password, hidden_fields, log)
 
@@ -250,7 +250,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         hidden_fields: dict,
         log,
     ) -> dict:
-        """Build form data for combined credential mode (SB6190-style)."""
+        """Build form data for combined credential mode."""
         # credential_format is guaranteed non-None when this method is called
         assert config.credential_format is not None
         credential_string = config.credential_format.format(username=username, password=password)

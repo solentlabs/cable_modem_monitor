@@ -2,7 +2,7 @@
 
 Handles loading HTML pages from cable modem web interfaces, including:
 - Standard HTTP GET requests
-- URL token authentication (SB8200-style)
+- URL token authentication (session token in URL query string)
 - Multi-page loading based on modem.yaml pages.data
 """
 
@@ -26,8 +26,8 @@ class HTMLLoader(ResourceLoader):
     """Fetcher for HTML-based modem web interfaces.
 
     Handles fetching HTML pages and parsing them into BeautifulSoup objects.
-    Supports URL token authentication for modems like the SB8200 that require
-    session tokens in the URL query string.
+    Supports URL token authentication for modems that require session tokens
+    in the URL query string.
 
     Attributes:
         url_token_config: Configuration for URL token auth (if applicable)
@@ -102,8 +102,12 @@ class HTMLLoader(ResourceLoader):
     def _build_authenticated_url(self, path: str) -> str:
         """Build URL with session token if URL token auth is configured.
 
-        For SB8200-style auth, the session token must be appended to each URL
+        For URL token auth, the session token must be appended to each URL
         as a query parameter (e.g., ?ct_<token>).
+
+        Issue #81: The token comes from the auth response BODY, not the cookie.
+        The orchestrator passes the correct token via url_token_config["token"].
+        Cookie lookup is only used as a fallback for legacy compatibility.
 
         Args:
             path: Path to request (e.g., "/cmswinfo.html")
@@ -117,16 +121,20 @@ class HTMLLoader(ResourceLoader):
             _LOGGER.debug("HTMLLoader: No url_token_config, skipping token append")
             return url
 
-        # Get session token from cookies
-        cookie_name = self._url_token_config.get("session_cookie", "sessionId")
-        token = get_cookie_safe(self.session, cookie_name)
+        # Prefer token from auth response body (passed via config)
+        # Fall back to cookie lookup only if token not provided (legacy)
+        token = self._url_token_config.get("token")
+        if token:
+            _LOGGER.debug("HTMLLoader: Using token from auth response body")
+        else:
+            # Legacy fallback: look up token from cookie
+            cookie_name = self._url_token_config.get("session_cookie", "sessionId")
+            token = get_cookie_safe(self.session, cookie_name)
+            if token:
+                _LOGGER.debug("HTMLLoader: Using token from cookie (fallback)")
 
         if not token:
-            _LOGGER.debug(
-                "HTMLLoader: No token found in cookie '%s' (cookies: %s)",
-                cookie_name,
-                list(self.session.cookies.keys()),
-            )
+            _LOGGER.debug("HTMLLoader: No token available (neither from auth nor cookie)")
             return url
 
         prefix = self._url_token_config.get("token_prefix", "ct_")

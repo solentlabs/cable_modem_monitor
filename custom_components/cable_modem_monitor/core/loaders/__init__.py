@@ -12,7 +12,7 @@ Architecture:
     │  ResourceLoader (ABC)     ← Base class with fetch() interface   │
     │       │                                                          │
     │       ├── HTMLLoader      ← Traditional web pages (GET HTML)    │
-    │       │                     Used by: SB6190, MB7621, CM2000     │
+    │       │                     Used by: Most traditional modems    │
     │       │                                                          │
     │       ├── HNAPLoader      ← HNAP/SOAP protocol (POST JSON/XML)  │
     │       │                     Used by: S33, MB8611                │
@@ -48,7 +48,7 @@ Usage:
         base_url=base_url,
         modem_config=config,
         hnap_builder=builder,      # For HNAP modems
-        url_token_config=url_token, # For SB8200-style auth
+        url_token_config=url_token,  # For URL token auth
     )
 
     # Fetch all resources declared in modem.yaml

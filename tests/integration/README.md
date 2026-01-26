@@ -4,7 +4,7 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 58
+**Total Tests:** 62
 
 ## Test Files
 
@@ -14,7 +14,7 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
 | [test_hnap_protocol_fallback.py](test_hnap_protocol_fallback.py) | 6 | Tests for HNAP modem protocol fallback behavior. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
-| [test_url_token_polling.py](test_url_token_polling.py) | 6 | Tests for URL token authentication during polling cycle. |
+| [test_url_token_polling.py](test_url_token_polling.py) | 10 | Tests for URL token authentication during polling cycle. |
 
 ## Test Details
 
@@ -223,6 +223,14 @@ These tests verify:
 
 - `test_cookies_alone_are_rejected`: Verify that cookies alone don't authenticate - URL token required.
 - `test_polling_with_strict_url_token_server`: Test that polling works with strict URL token validation.
+
+**TestTwoStepUrlTokenAuth** (4 tests)
+: Tests with two-step URL token auth (real SB8200 HTTPS firmware behavior).
+
+- `test_two_step_login_returns_token_not_html`: Verify two-step mock returns token in body, not HTML.
+- `test_two_step_data_fetch_requires_token`: Verify data page requires token after two-step login.
+- `test_polling_with_two_step_url_token`: Test full polling cycle with two-step URL token auth.
+- `test_loader_fetches_additional_pages_with_correct_token`: Verify HTMLLoader uses CORRECT token (from response body, not cookie).
 
 ## Fixtures
 

@@ -197,7 +197,8 @@ class UrlTokenSessionStrategy(AuthStrategy):
 
         if data_response.status_code == 200 and config.success_indicator in data_response.text:
             _LOGGER.info("URL token auth: Authentication successful")
-            return AuthResult.ok(data_response.text)
+            # Store session token in result for subsequent page fetches (Issue #81)
+            return AuthResult.ok(data_response.text, session_token=session_token)
 
         _LOGGER.warning(
             "URL token auth: Data fetch returned %d, has indicator: %s",

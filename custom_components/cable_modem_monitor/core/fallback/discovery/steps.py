@@ -102,8 +102,8 @@ def discover_auth(
         - no_auth: Page accessible without credentials
         - basic_http: HTTP 401 with WWW-Authenticate header
         - form_plain: HTML form with password field (plain or base64)
-        - hnap_session: HNAP/SOAP protocol (Arris S33, Motorola)
-        - url_token_session: URL-based token (SB8200 HTTPS)
+        - hnap_session: HNAP/SOAP protocol
+        - url_token_session: URL-based token auth
 
     Important:
         The HTML response is critical - it flows to parser detection.

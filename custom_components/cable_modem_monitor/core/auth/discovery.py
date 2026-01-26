@@ -86,7 +86,7 @@ class DiscoveredFormConfig:
     - password_encoding: How password should be encoded (plain or base64)
     - success_redirect: URL to verify login success (from modem.yaml)
 
-    For combined credential forms (SB6190-style):
+    For combined credential forms:
     - credential_field: Single field name containing encoded credentials
     - credential_format: Template for combining username/password
     """
@@ -98,7 +98,7 @@ class DiscoveredFormConfig:
     hidden_fields: dict[str, str] = field(default_factory=dict)
     password_encoding: str = "plain"  # "plain" or "base64"
     success_redirect: str | None = None  # URL to verify login success
-    # Combined credential mode (SB6190-style)
+    # Combined credential mode
     credential_field: str | None = None
     credential_format: str | None = None
 
@@ -346,7 +346,7 @@ class AuthDiscovery:
                     parser=parser,
                 )
 
-            # Is it an SB6190-style combined credential form?
+            # Is it a combined credential form (arguments + nonce pattern)?
             if self._is_combined_credential_form(response.text):
                 return self._handle_combined_auth(
                     session=session,
@@ -750,9 +750,9 @@ class AuthDiscovery:
     ) -> DiscoveryResult:
         """Handle JavaScript-based authentication.
 
-        Some modems (like SB8200) have forms that use JavaScript for submission
-        instead of standard form submission. We check modem.yaml or parser hints
-        and return URL_TOKEN_SESSION with config for storage in config entry.
+        Some modems have forms that use JavaScript for submission instead of
+        standard form submission. We check modem.yaml or parser hints and
+        return URL_TOKEN_SESSION with config for storage in config entry.
         """
         # Get JS auth hints from modem.yaml, parser class, or login page detection
         js_auth_hints = self._get_js_auth_hints(parser, form_html)
@@ -792,7 +792,7 @@ class AuthDiscovery:
         Returns:
             URL token config dict with login_page, login_prefix, etc.
         """
-        # Default URL token config (SB8200 pattern)
+        # Default URL token config
         default_config = {
             "login_page": "/cmconnectionstatus.html",
             "login_prefix": "login_",
@@ -839,7 +839,7 @@ class AuthDiscovery:
         password: str | None,
         parser: ModemParser | None,
     ) -> DiscoveryResult:
-        """Handle SB6190-style combined credential form.
+        """Handle combined credential form (arguments + nonce pattern).
 
         These forms encode username and password together in a single field:
         arguments=base64(urlencode("username=X:password=Y"))
@@ -913,7 +913,7 @@ class AuthDiscovery:
         return self._unknown_result(response)
 
     def _is_combined_credential_form(self, html: str) -> bool:
-        """Detect SB6190-style combined credential form.
+        """Detect combined credential form (arguments + nonce pattern).
 
         Signature:
         - Form action contains 'adv_pwd_cgi'
@@ -949,7 +949,7 @@ class AuthDiscovery:
         return has_nonce and has_arguments
 
     def _parse_combined_form(self, html: str) -> DiscoveredFormConfig | None:
-        """Parse SB6190-style combined credential form."""
+        """Parse combined credential form (arguments + nonce pattern)."""
         soup = BeautifulSoup(html, "html.parser")
         form = soup.find("form")
         if not form:
@@ -1026,9 +1026,9 @@ class AuthDiscovery:
     def _detect_auth_hints_from_html(self, html: str) -> dict[str, str] | None:
         """Detect auth hints from login page markers when parser is unavailable.
 
-        This enables auth discovery for modems like SB8200 HTTPS that have no
-        public pages - we can't detect the parser, but we can recognize the
-        modem from login page content.
+        This enables auth discovery for HTTPS modems that have no public pages -
+        we can't detect the parser, but we can recognize the modem from login
+        page content.
 
         Args:
             html: Login page HTML
@@ -1038,22 +1038,19 @@ class AuthDiscovery:
         """
         html_lower = html.lower()
 
-        # ARRIS SB8200 detection via page content (not URL validation):
+        # ARRIS URL token auth detection via page content (not URL validation):
         # - main_arris.js script reference in HTML
         # - arris.com mentioned in page footer/content
-        # - Model label with "SB8200"
         # - URL token auth pattern: login_ prefix in JavaScript
         # Note: This checks HTML page content for brand indicators, not URL validation
         # lgtm[py/incomplete-url-substring-sanitization] - content detection, not URL validation
         is_arris = "main_arris.js" in html or "arris.com" in html_lower
-        has_sb8200 = "sb8200" in html_lower
         has_url_token_pattern = "login_" in html and "sessionid" in html_lower
 
-        if is_arris and (has_sb8200 or has_url_token_pattern):
+        if is_arris and has_url_token_pattern:
             _LOGGER.debug(
-                "Detected ARRIS SB8200 from login page (arris=%s, sb8200=%s, url_token=%s)",
+                "Detected URL token auth from login page (arris=%s, url_token=%s)",
                 is_arris,
-                has_sb8200,
                 has_url_token_pattern,
             )
             return {"pattern": "url_token_session"}

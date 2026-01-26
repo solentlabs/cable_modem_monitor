@@ -76,7 +76,7 @@ class AuthStrategyType(Enum):
     """HNAP XML/SOAP authentication (legacy/older firmwares)."""
 
     URL_TOKEN_SESSION = "url_token_session"
-    """URL-based token auth with session cookie (e.g., ARRIS SB8200 HTTPS variant)."""
+    """URL-based token auth with session cookie."""
 
     UNKNOWN = "unknown"
     """Unrecognized auth pattern - captured for debugging and future implementation."""

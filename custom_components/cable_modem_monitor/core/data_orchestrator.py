@@ -672,6 +672,14 @@ class DataOrchestrator:
             url_token_config = adapter.get_url_token_config_for_loader()
             hnap_builder = self._auth_handler.get_hnap_builder() if self._auth_handler else None
 
+            # Add session token to url_token_config for subsequent page fetches (Issue #81)
+            # The token comes from the auth response body, NOT the cookie value.
+            session_token = self._auth_handler.get_session_token() if self._auth_handler else None
+            if url_token_config and session_token:
+                url_token_config = url_token_config.copy()  # Don't mutate original
+                url_token_config["token"] = session_token
+                _LOGGER.debug("Passing auth session token to loader")
+
             fetcher = ResourceLoaderFactory.create(
                 session=self.session,
                 base_url=self.base_url,

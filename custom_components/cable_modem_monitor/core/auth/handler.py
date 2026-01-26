@@ -46,7 +46,7 @@ DEFAULT_HNAP_CONFIG = {
     "empty_action_value": "",  # Both S33 and MB8611 use "" (verified from HAR captures)
 }
 
-# Default URL token configuration (SB8200)
+# Default URL token configuration
 DEFAULT_URL_TOKEN_CONFIG = {
     "login_page": "/cmconnectionstatus.html",
     "login_prefix": "login_",
@@ -69,7 +69,7 @@ class AuthHandler:
     - BASIC_HTTP: HTTP Basic Authentication
     - FORM_PLAIN: Form-based login (encoding controlled by password_encoding)
     - HNAP_SESSION: HNAP/SOAP authentication
-    - URL_TOKEN_SESSION: URL-based token auth (SB8200)
+    - URL_TOKEN_SESSION: URL-based token auth
     """
 
     def __init__(
@@ -89,7 +89,7 @@ class AuthHandler:
             url_token_config: URL token configuration (login_page, etc.)
             fallback_strategies: Ordered list of alternate strategies to try if primary fails.
                 Each entry is a dict with 'strategy' key and optional config keys.
-                Used for try-until-success pattern (e.g., SB6190 with firmware variations).
+                Used for try-until-success pattern (e.g., modems with firmware variations).
         """
         # Normalize strategy to AuthStrategyType
         if isinstance(strategy, str):
@@ -124,6 +124,11 @@ class AuthHandler:
 
         # HNAP builder instance (created on first auth, reused for data fetches)
         self._hnap_builder: HNAPJsonRequestBuilder | None = None
+
+        # Session token from URL token auth (Issue #81)
+        # This is the token from the response body that must be used for subsequent
+        # page fetches. It's different from the cookie value on some firmware.
+        self._session_token: str | None = None
 
     @classmethod
     def from_modem_config(cls, config: Any, auth_type: str | None = None) -> AuthHandler:
@@ -244,6 +249,10 @@ class AuthHandler:
         )
 
         if result.success:
+            # Store session token for subsequent page fetches (Issue #81)
+            if result.session_token:
+                self._session_token = result.session_token
+                _LOGGER.debug("Stored session token from auth (%d chars)", len(result.session_token))
             return result
 
         # Try fallback strategies if primary failed
@@ -295,6 +304,9 @@ class AuthHandler:
                         **DEFAULT_URL_TOKEN_CONFIG,
                         **fallback.get("url_token_config", {}),
                     }
+                    # Store session token from fallback (Issue #81)
+                    if fallback_result.session_token:
+                        self._session_token = fallback_result.session_token
                     return fallback_result
 
             _LOGGER.warning("All auth strategies failed (primary + %d fallbacks)", len(self._fallback_strategies))
@@ -468,3 +480,15 @@ class AuthHandler:
         or None otherwise. The scraper can use this for HNAP data fetches.
         """
         return self._hnap_builder
+
+    def get_session_token(self) -> str | None:
+        """Get the session token for subsequent page fetches.
+
+        For URL token auth, returns the token from the login response body.
+        This token must be used for ?ct_<token> in subsequent requests.
+        Note: This may differ from the cookie value on some firmware.
+
+        Returns:
+            Session token string, or None if not URL token auth or auth not done.
+        """
+        return self._session_token

@@ -48,7 +48,7 @@ class FormAuthConfig(AuthConfig):
 
     Supports two modes:
     1. Traditional: Separate username_field and password_field
-    2. Combined: Single credential_field with formatted value (e.g., SB6190)
+    2. Combined: Single credential_field with formatted value
 
     For combined mode, set credential_field and credential_format.
     For traditional mode, use username_field and password_field.
@@ -65,7 +65,7 @@ class FormAuthConfig(AuthConfig):
     # Password encoding (plain, base64)
     password_encoding: str = "plain"
 
-    # Combined credential mode (SB6190-style)
+    # Combined credential mode
     credential_field: str | None = None  # Field name for combined credentials
     credential_format: str | None = None  # Format string, e.g., "{username}:{password}"
 
@@ -185,7 +185,7 @@ class HNAPSoapAuthConfig(AuthConfig):
 
 @dataclass
 class UrlTokenSessionConfig(AuthConfig):
-    """URL-based token auth with session cookie (e.g., ARRIS SB8200 HTTPS).
+    """URL-based token auth with session cookie.
 
     Auth flow:
     1. Login: GET {base_url}{login_page}?{login_prefix}{base64(user:pass)}

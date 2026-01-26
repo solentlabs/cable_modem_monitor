@@ -207,16 +207,25 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         # This matches real SB8200 HTTPS firmware behavior:
         #   success: function(result) { var token = result; }
         if self.two_step:
+            # CRITICAL: Real SB8200 firmware sets the cookie to a DIFFERENT value
+            # than the response body token. The response body is the ct_ token,
+            # while the cookie is used for session tracking but NOT for URL auth.
+            # This is the root cause of Issue #81 - code was using cookie value
+            # when it should use response body.
+            cookie_value = secrets.token_hex(16)  # Different from session_token!
+
             _LOGGER.debug(
-                "URL token auth (two-step): returning token in response body for %s",
+                "URL token auth (two-step): returning token in response body for %s " "(cookie=%s..., body=%s...)",
                 username,
+                cookie_value[:8],
+                session_token[:8],
             )
             return (
                 200,
                 {
                     "Content-Type": "text/plain",
                     "Content-Length": str(len(session_token)),
-                    "Set-Cookie": f"{cookie_name}={session_token}; Path=/",
+                    "Set-Cookie": f"{cookie_name}={cookie_value}; Path=/",
                 },
                 session_token.encode(),
             )

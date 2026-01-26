@@ -92,9 +92,9 @@ class FallbackOrchestrator(DataOrchestrator):
         """Attempt login using auth hints from modem.yaml or parser class.
 
         Tries multiple auth strategies in order:
-        1. HNAP hints (S33, MB8611)
-        2. URL token hints (SB8200)
-        3. Form hints (MB7621, CGA2121, G54, CM2000)
+        1. HNAP hints (HNAP modems)
+        2. URL token hints (URL token modems)
+        3. Form hints (form-based auth modems)
 
         Prefers modem.yaml hints (via adapter) over parser class attributes.
 
@@ -108,7 +108,7 @@ class FallbackOrchestrator(DataOrchestrator):
         # Get adapter for modem.yaml hints (preferred source)
         adapter = get_auth_adapter_for_parser(self.parser.__class__.__name__)
 
-        # Check for HNAP hints (S33, MB8611)
+        # Check for HNAP hints
         hints = self._get_hnap_hints(adapter)
         if hints:
             _LOGGER.debug("Trying HNAP authentication via parser hints")
@@ -119,7 +119,7 @@ class FallbackOrchestrator(DataOrchestrator):
                 _LOGGER.debug("HNAP auth succeeded, saved handler for future polls")
             return auth_result.success, auth_result.response_html
 
-        # Check for URL token hints (SB8200)
+        # Check for URL token hints
         hints = self._get_url_token_hints(adapter)
         if hints:
             _LOGGER.debug("Trying URL token authentication via parser hints")
@@ -138,7 +138,7 @@ class FallbackOrchestrator(DataOrchestrator):
                 _LOGGER.debug("URL token auth succeeded, saved handler for future polls")
             return auth_result.success, auth_result.response_html
 
-        # Check for form hints (MB7621, CGA2121, G54, CM2000)
+        # Check for form hints
         hints = self._get_form_hints(adapter)
         if hints:
             _LOGGER.debug("Trying form authentication via parser hints")

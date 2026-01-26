@@ -50,7 +50,7 @@ class ResourceLoaderFactory:
             modem_config: Modem configuration from modem.yaml
             verify_ssl: Whether to verify SSL certificates
             hnap_builder: HNAPJsonRequestBuilder (for HNAP modems)
-            url_token_config: URL token auth config (for SB8200-style auth)
+            url_token_config: URL token auth config (for URL token auth)
 
         Returns:
             Appropriate ResourceLoader subclass instance
