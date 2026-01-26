@@ -40,9 +40,10 @@ class FormAuthHandler(BaseFormAuthHandler):
         config: ModemConfig,
         fixtures_path: Path,
         auth_redirect: str | None = None,
+        response_delay: float = 0.0,
     ):
         """Initialize form auth handler."""
-        super().__init__(config, fixtures_path, auth_redirect=auth_redirect)
+        super().__init__(config, fixtures_path, auth_redirect=auth_redirect, response_delay=response_delay)
         # Type narrow the config
         self.form_config: FormAuthConfig = cast("FormAuthConfig", self.form_config)
 

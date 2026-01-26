@@ -70,14 +70,15 @@ class HnapAuthHandler(BaseAuthHandler):
     5. Subsequent requests need HNAP_AUTH header with signature
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(self, config: ModemConfig, fixtures_path: Path, response_delay: float = 0.0):
         """Initialize HNAP auth handler.
 
         Args:
             config: Modem configuration.
             fixtures_path: Path to fixtures directory.
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
         # Extract HNAP config from auth.types{}
         hnap_config = config.auth.types.get("hnap")
@@ -351,6 +352,7 @@ class HnapAuthHandler(BaseAuthHandler):
         Returns:
             Response with action results.
         """
+        self.apply_delay()
         # Try to load fixture file
         fixture_content = self.get_fixture_content("/hnap_full_status.json")
         if fixture_content:
@@ -407,6 +409,7 @@ class HnapAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple.
         """
+        self.apply_delay()
         # Try to serve Login.html fixture
         login_fixture = self.get_fixture_content("/Login.html")
         if login_fixture:

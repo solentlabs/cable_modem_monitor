@@ -10,11 +10,12 @@ Start a mock modem server for testing the cable modem monitor integration locall
 ## Usage
 
 ```
-/mock-server <modem>
+/mock-server <modem> [--delay <seconds>]
 ```
 
 **Arguments:**
-- `modem` - Modem name (e.g., `c7000v2`, `sb8200`, `arris/g54`)
+- `modem` - Modem name (e.g., `c7000v2`, `sb8200`, `arris/g54`, `tc4400`)
+- `--delay <seconds>` - Optional response delay to simulate slow modems (e.g., `--delay 15`)
 
 ## Execution Steps
 
@@ -22,7 +23,7 @@ Start a mock modem server for testing the cable modem monitor integration locall
 2. **Get WSL2 IP address** - Run `hostname -I | awk '{print $1}'`
 3. **Start mock server** - Run in background (use project venv):
    ```bash
-   .venv/bin/python scripts/mock_server.py <modem> --port <port> &
+   .venv/bin/python scripts/mock_server.py <modem> --port <port> [--delay <seconds>] &
    ```
 4. **Read modem config** - Get auth type from `modems/<manufacturer>/<model>/modem.yaml`
 5. **Verify server is running** - Curl the endpoint to confirm
@@ -41,8 +42,24 @@ Print a summary table:
 | URL (IP) | `http://<wsl2-ip>:<port>` |
 | Username | admin |
 | Password | pw |
-| Auth Type | <auth-type> |
+| Auth Type | <auth-type-label> |
+| Response Delay | <delay>s or none |
 ```
+
+## Auth Type Labels
+
+Use user-friendly labels matching the config flow UI:
+
+| modem.yaml key | Display Label |
+|----------------|---------------|
+| none | No Authentication |
+| basic | HTTP Basic Auth |
+| form | Form Login |
+| form_ajax | AJAX Login |
+| form_dynamic | Dynamic Form Login |
+| url_token | URL Token |
+| hnap | HNAP/SOAP |
+| rest_api | REST API |
 
 ## Environment Notes
 

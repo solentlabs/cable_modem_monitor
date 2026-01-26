@@ -68,6 +68,7 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         *,
         strict: bool = False,
         two_step: bool = False,
+        response_delay: float = 0.0,
     ):
         """Initialize URL token auth handler.
 
@@ -78,8 +79,9 @@ class UrlTokenAuthHandler(BaseAuthHandler):
                     Simulates real SB8200 HTTPS firmware behavior.
             two_step: If True, login returns just the token (not HTML).
                       Used for testing token-from-response-body fix (Issue #81).
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
         # Extract URL token config from auth.types{}
         url_token_config = config.auth.types.get("url_token")
@@ -197,6 +199,7 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         Returns:
             Response with session cookie and data (or just token in two-step mode).
         """
+        self.apply_delay()
         # Generate session token
         session_token = secrets.token_hex(16)
         self.authenticated_sessions[session_token] = username
@@ -345,6 +348,7 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple.
         """
+        self.apply_delay()
         # Try to serve Login.html fixture if it exists
         login_content = self.get_fixture_content("/Login.html")
         if login_content:

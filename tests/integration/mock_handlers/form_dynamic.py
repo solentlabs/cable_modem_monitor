@@ -45,9 +45,10 @@ class FormDynamicAuthHandler(BaseFormAuthHandler):
         config: ModemConfig,
         fixtures_path: Path,
         auth_redirect: str | None = None,
+        response_delay: float = 0.0,
     ):
         """Initialize dynamic form auth handler."""
-        super().__init__(config, fixtures_path, auth_redirect=auth_redirect)
+        super().__init__(config, fixtures_path, auth_redirect=auth_redirect, response_delay=response_delay)
         # Type narrow the config
         self.form_config: FormDynamicAuthConfig = cast("FormDynamicAuthConfig", self.form_config)
         # Track the current valid dynamic ID

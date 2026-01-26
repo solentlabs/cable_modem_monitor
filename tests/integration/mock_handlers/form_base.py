@@ -42,6 +42,7 @@ class BaseFormAuthHandler(BaseAuthHandler):
         config: ModemConfig,
         fixtures_path: Path,
         auth_redirect: str | None = None,
+        response_delay: float = 0.0,
     ):
         """Initialize form auth handler.
 
@@ -52,8 +53,9 @@ class BaseFormAuthHandler(BaseAuthHandler):
                           Used to simulate modems that redirect to a different
                           page than the data page (e.g., CGA2121 redirects to
                           /basicUX.html instead of /st_docsis.html).
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, response_delay=response_delay)
         self.form_config = self._load_form_config()
         self.auth_redirect_override = auth_redirect
 
@@ -118,6 +120,7 @@ class BaseFormAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple with 302 redirect.
         """
+        self.apply_delay()
         _, cookie_value = self.create_session_cookie()
 
         _LOGGER.debug("Login successful, redirecting to %s", redirect_url)
@@ -151,6 +154,7 @@ class BaseFormAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple with login HTML.
         """
+        self.apply_delay()
         # Try to serve login.html fixture if exists
         login_fixture = self.get_fixture_content("/login.html")
         if login_fixture:

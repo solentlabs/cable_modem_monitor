@@ -53,7 +53,16 @@ def main():
         "--auth-redirect",
         help="Override redirect URL after auth (simulates modems that redirect to non-data page)",
     )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="Response delay in seconds (simulates slow modems, e.g., --delay 15)",
+    )
     args = parser.parse_args()
+
+    if args.delay < 0:
+        parser.error("--delay must be non-negative")
 
     modem_path = find_modem_path(args.modem)
     server = MockModemServer(
@@ -62,13 +71,16 @@ def main():
         host=args.host,
         auth_type=args.auth_type,
         auth_redirect=args.auth_redirect,
+        response_delay=args.delay,
     )
     server.start()
 
     auth_type = args.auth_type or next(iter(server.config.auth.types.keys()), "none")
+    delay_str = f"{args.delay}s" if args.delay > 0 else "none"
     print(f"\n{'='*50}")
     print(f"Mock server: {server.config.manufacturer} {server.config.model}")
     print(f"Auth type: {auth_type}")
+    print(f"Response delay: {delay_str}")
     print(f"URL: {server.url}")
     print(f"HA host: host.docker.internal:{args.port}")
     print("Credentials: admin / pw")

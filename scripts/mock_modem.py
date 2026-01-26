@@ -63,7 +63,7 @@ def list_modems() -> list[str]:
     return available
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
     """Run the mock modem server."""
     parser = argparse.ArgumentParser(
         description="Run a mock modem server for development testing.",
@@ -113,6 +113,12 @@ Test credentials: admin / pw
         help="Override auth type (e.g., 'form', 'none', 'url_token'). For modems with multiple variants.",
     )
     parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="Response delay in seconds (simulates slow modems, e.g., --delay 15)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -128,6 +134,10 @@ Test credentials: admin / pw
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+
+    # Validate delay
+    if args.delay < 0:
+        parser.error("--delay must be non-negative")
 
     # List modems if requested
     if args.list:
@@ -162,6 +172,7 @@ Test credentials: admin / pw
         host=args.host,
         auth_enabled=not args.no_auth,
         auth_type=args.auth_type,
+        response_delay=args.delay,
     )
 
     # Handle Ctrl+C gracefully
@@ -174,6 +185,7 @@ Test credentials: admin / pw
 
     server.start()
 
+    delay_str = f"{args.delay}s" if args.delay > 0 else "none"
     print(f"""
 ╔══════════════════════════════════════════════════════════════════╗
 ║  Mock Modem Server Running                                       ║
@@ -182,6 +194,7 @@ Test credentials: admin / pw
 ║  Auth Type:  {server.handler.__class__.__name__:<42} ║
 ║  URL:        {server.url:<44} ║
 ║  Auth:       {'Enabled' if args.no_auth is False else 'Disabled':<44} ║
+║  Delay:      {delay_str:<44} ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  Test Credentials:                                               ║
 ║    Username: admin                                               ║

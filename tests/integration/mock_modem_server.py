@@ -19,6 +19,7 @@ from custom_components.cable_modem_monitor.modem_config import load_modem_config
 from custom_components.cable_modem_monitor.modem_config.loader import (
     get_modem_fixtures_path,
 )
+from custom_components.cable_modem_monitor.modem_config.schema import ModemConfig
 
 from .mock_handlers import (
     FormAjaxAuthHandler,
@@ -61,6 +62,7 @@ class MockModemServer:
         ssl_context: ssl.SSLContext | None = None,
         auth_type: str | None = None,
         auth_redirect: str | None = None,
+        response_delay: float = 0.0,
     ):
         """Initialize MockModemServer.
 
@@ -73,6 +75,7 @@ class MockModemServer:
             auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
             auth_redirect: Override redirect URL after auth. Used to simulate modems
                           that redirect to a different page than the data page.
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
         self.modem_path = Path(modem_path)
         self.port = port or _find_free_port()
@@ -81,6 +84,7 @@ class MockModemServer:
         self.ssl_context = ssl_context
         self.auth_type_override = auth_type
         self.auth_redirect = auth_redirect
+        self.response_delay = response_delay
 
         # Load configuration
         self.config = load_modem_config(self.modem_path)
@@ -105,7 +109,7 @@ class MockModemServer:
         """
         # If auth disabled, always use NoAuthHandler
         if not self.auth_enabled:
-            return NoAuthHandler(self.config, self.fixtures_path)
+            return NoAuthHandler(self.config, self.fixtures_path, response_delay=self.response_delay)
 
         # Get the auth type to use
         auth_types = self.config.auth.types
@@ -146,13 +150,28 @@ class MockModemServer:
             strict = "strict" in options
             two_step = "two_step" in options
             if strict or two_step:
-                return handler_cls(self.config, self.fixtures_path, strict=strict, two_step=two_step)  # type: ignore[no-any-return]
+                return handler_cls(  # type: ignore[no-any-return]
+                    self.config,
+                    self.fixtures_path,
+                    strict=strict,
+                    two_step=two_step,
+                    response_delay=self.response_delay,
+                )
 
         # Pass auth_redirect to form handlers
         if auth_type in ("form", "form_ajax", "form_dynamic") and self.auth_redirect:
-            return handler_cls(self.config, self.fixtures_path, auth_redirect=self.auth_redirect)  # type: ignore[no-any-return]
+            return handler_cls(  # type: ignore[no-any-return]
+                self.config,
+                self.fixtures_path,
+                auth_redirect=self.auth_redirect,
+                response_delay=self.response_delay,
+            )
 
-        return handler_cls(self.config, self.fixtures_path)  # type: ignore[no-any-return]
+        return handler_cls(  # type: ignore[no-any-return]
+            self.config,
+            self.fixtures_path,
+            response_delay=self.response_delay,
+        )
 
     @property
     def url(self) -> str:
@@ -248,6 +267,7 @@ class MockModemServer:
         ssl_context: ssl.SSLContext | None = None,
         auth_type: str | None = None,
         auth_redirect: str | None = None,
+        response_delay: float = 0.0,
     ) -> Generator[MockModemServer, None, None]:
         """Context manager to start and stop server.
 
@@ -258,6 +278,7 @@ class MockModemServer:
             ssl_context: SSL context for HTTPS. If None, uses HTTP.
             auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
             auth_redirect: Override redirect URL after auth.
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
 
         Yields:
             Started MockModemServer instance.
@@ -269,6 +290,7 @@ class MockModemServer:
             ssl_context=ssl_context,
             auth_type=auth_type,
             auth_redirect=auth_redirect,
+            response_delay=response_delay,
         )
         server.start()
         try:
@@ -284,6 +306,15 @@ class MockModemServer:
 
 class NoAuthHandler(BaseAuthHandler):
     """Handler for modems without authentication."""
+
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        response_delay: float = 0.0,
+    ):
+        """Initialize handler."""
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
     def handle_request(
         self,
@@ -302,6 +333,15 @@ class NoAuthHandler(BaseAuthHandler):
 
 class BasicAuthHandler(BaseAuthHandler):
     """Handler for HTTP Basic authentication."""
+
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        response_delay: float = 0.0,
+    ):
+        """Initialize handler."""
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
     def handle_request(
         self,
@@ -341,6 +381,7 @@ class BasicAuthHandler(BaseAuthHandler):
                 pass
 
         # Return 401 Unauthorized
+        self.apply_delay()
         return (
             401,
             {
@@ -352,6 +393,7 @@ class BasicAuthHandler(BaseAuthHandler):
 
     def _handle_goform(self, method: str, path: str) -> tuple[int, dict[str, str], bytes]:
         """Handle /goform/* endpoints (restart, settings, etc.)."""
+        self.apply_delay()
         # Simulate successful form submission
         # Real modems either return 200 or drop connection on restart
         return (

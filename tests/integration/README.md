@@ -4,7 +4,7 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 62
+**Total Tests:** 66
 
 ## Test Files
 
@@ -13,6 +13,7 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 | [test_config_flow_e2e.py](test_config_flow_e2e.py) | 9 | E2E tests for config flow against mock modem servers. |
 | [test_fixture_validation.py](test_fixture_validation.py) | 28 | Fixture-Based Validation Tests for Auth Strategy Discovery. |
 | [test_hnap_protocol_fallback.py](test_hnap_protocol_fallback.py) | 6 | Tests for HNAP modem protocol fallback behavior. |
+| [test_mock_server_delay.py](test_mock_server_delay.py) | 4 | Tests for MockModemServer response delay feature. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
 | [test_url_token_polling.py](test_url_token_polling.py) | 10 | Tests for URL token authentication during polling cycle. |
 
@@ -161,6 +162,21 @@ Related: PR #90 (S34 support), Issue #81 (SB8200)
 : Tests using actual modem fixtures (closer to real deployment).
 
 - `test_s34_explicit_https_with_mock_server`: S34 with explicit HTTPS using MockModemServer.
+
+### test_mock_server_delay.py
+
+Tests for MockModemServer response delay feature.
+
+Verifies that response_delay parameter correctly delays responses
+for timeout testing scenarios.
+
+**TestResponseDelay** (4 tests)
+: Test response_delay parameter.
+
+- `test_no_delay_by_default`: Responses should be fast when no delay configured.
+- `test_delay_applied_to_responses`: Responses should be delayed when response_delay is set.
+- `test_delay_applied_to_multiple_requests`: Each request should be delayed independently.
+- `test_zero_delay_is_valid`: Zero delay should work (no-op).
 
 ### test_modem_e2e.py
 

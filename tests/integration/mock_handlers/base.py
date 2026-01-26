@@ -6,6 +6,7 @@ Provides common functionality for all auth strategy handlers.
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -24,16 +25,18 @@ class BaseAuthHandler(ABC):
     Subclasses implement specific auth strategies (form, basic, hnap, etc.).
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(self, config: ModemConfig, fixtures_path: Path, response_delay: float = 0.0):
         """Initialize handler.
 
         Args:
             config: Modem configuration from modem.yaml.
             fixtures_path: Path to fixtures directory.
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
         self.config = config
         self.fixtures_path = fixtures_path
         self.sessions: set[str] = set()
+        self.response_delay = response_delay
 
     @abstractmethod
     def handle_request(
@@ -182,6 +185,15 @@ class BaseAuthHandler(ABC):
         cookie = headers.get("Cookie", "")
         return any(session_id in cookie for session_id in self.sessions)
 
+    def apply_delay(self) -> None:
+        """Apply response delay if configured.
+
+        Simulates slow modem responses for timeout testing.
+        """
+        if self.response_delay > 0:
+            _LOGGER.debug("Applying response delay: %.1fs", self.response_delay)
+            time.sleep(self.response_delay)
+
     def serve_fixture(
         self,
         path: str,
@@ -196,6 +208,7 @@ class BaseAuthHandler(ABC):
         Returns:
             Response tuple.
         """
+        self.apply_delay()
         content = self.get_fixture_content(path)
 
         if content is None:
