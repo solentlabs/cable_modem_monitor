@@ -9,6 +9,9 @@ from bs4 import BeautifulSoup, Tag
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+from custom_components.cable_modem_monitor.modem_config.adapter import (
+    get_auth_adapter_for_parser,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,19 +19,32 @@ _LOGGER = logging.getLogger(__name__)
 class TechnicolorCGA2121Parser(ModemParser):
     """Parser for Technicolor CGA2121 cable modem (Telia Finland)."""
 
+    def _get_primary_data_page(self) -> str | None:
+        """Get primary data page path from modem.yaml."""
+        adapter = get_auth_adapter_for_parser(self.__class__.__name__)
+        if adapter:
+            return adapter.get_primary_data_page()
+        return None
+
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse modem data from pre-fetched resources.
 
         Tries to find the data page in this order:
-        1. Specific data page path (/st_docsis.html) - from modem.yaml
+        1. Primary data page from modem.yaml (pages.data.downstream_channels)
         2. Root path (/) - legacy compatibility
         3. First BeautifulSoup in resources - fallback
 
         This handles the case where auth redirects to a different page
         than the data page (Issue #75).
         """
-        # Try specific data page path first (from modem.yaml pages.data)
-        soup = resources.get("/st_docsis.html")
+        soup = None
+
+        # Try primary data page from modem.yaml first
+        primary_page = self._get_primary_data_page()
+        if primary_page:
+            soup = resources.get(primary_page)
+            if soup:
+                _LOGGER.debug("CGA2121: Using primary data page %s", primary_page)
 
         # Fall back to root path (legacy compatibility)
         if soup is None:

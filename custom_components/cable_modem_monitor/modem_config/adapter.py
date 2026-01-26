@@ -544,6 +544,26 @@ class ModemConfigAuthAdapter:
 
         return result
 
+    def get_primary_data_page(self) -> str | None:
+        """Get the primary data page path from modem.yaml.
+
+        Returns the page path that contains channel data, prioritizing
+        downstream_channels if specified, otherwise the first data page.
+
+        Used by parsers to know which resource to look at first in
+        parse_resources(), avoiding reliance on "/" which may contain
+        auth redirect pages instead of data (Issue #75).
+
+        Returns:
+            Page path (e.g., "/st_docsis.html") or None if not configured.
+        """
+        if self.config.pages and self.config.pages.data:
+            return self.config.pages.data.get(
+                "downstream_channels",
+                next(iter(self.config.pages.data.values()), None),
+            )
+        return None
+
     def get_url_patterns(self) -> list[dict[str, str | bool]]:
         """Generate url_patterns from pages config.
 
@@ -568,13 +588,7 @@ class ModemConfigAuthAdapter:
 
         if self.config.pages:
             # Get primary data page for prioritization
-            primary_data_page = None
-            if self.config.pages.data:
-                # Prefer downstream_channels, fall back to first data page
-                primary_data_page = self.config.pages.data.get(
-                    "downstream_channels",
-                    next(iter(self.config.pages.data.values()), None),
-                )
+            primary_data_page = self.get_primary_data_page()
 
             # Protected pages FIRST - auth required, with data page first
             # This ensures data pages are fetched during polling
