@@ -138,8 +138,11 @@ class MockModemServer:
             raise NotImplementedError(f"Auth type not yet implemented: {auth_type}")
 
         # Handle handler-specific options
-        if auth_type == "url_token" and "strict" in options:
-            return handler_cls(self.config, self.fixtures_path, strict=True)  # type: ignore[no-any-return]
+        if auth_type == "url_token":
+            strict = "strict" in options
+            two_step = "two_step" in options
+            if strict or two_step:
+                return handler_cls(self.config, self.fixtures_path, strict=strict, two_step=two_step)  # type: ignore[no-any-return]
 
         return handler_cls(self.config, self.fixtures_path)  # type: ignore[no-any-return]
 

@@ -1,9 +1,17 @@
 """URL-based token authentication with session cookie strategy.
 
-Used by modems like ARRIS SB8200 (HTTPS firmware variant) that:
+Used by modems that:
 1. Accept base64-encoded credentials in the URL query parameter
-2. Return a session cookie for subsequent requests
+2. Return the session token in the RESPONSE BODY (not cookie value!)
 3. Require the session token appended to URLs for authenticated requests
+
+Important: The token for subsequent URLs comes from the login response BODY,
+not the cookie value. The typical JavaScript pattern is:
+
+    success: function (result) {
+        var token = result;  // Response body IS the token
+        window.location.href = "/page.html?ct_" + token;
+    }
 """
 
 from __future__ import annotations
@@ -29,9 +37,13 @@ class UrlTokenSessionStrategy(AuthStrategy):
     Auth flow:
     1. Build base64 token from credentials
     2. Send login request with token in URL and Authorization header
-    3. Extract session cookie from response
-    4. Fetch data page with session token in URL
+    3. Extract session token from RESPONSE BODY (not cookie!)
+    4. Fetch data page with session token in URL (?ct_<token>)
     5. Return authenticated HTML
+
+    Important: The ct_ token comes from the login response body, not the
+    cookie value. The cookie is set for session tracking but the URL token
+    is the response body text itself.
     """
 
     def login(
@@ -76,15 +88,15 @@ class UrlTokenSessionStrategy(AuthStrategy):
     ) -> AuthResult:
         """Execute the authentication flow."""
         # Build base64 token: base64(username:password)
-        token = base64.b64encode(f"{username}:{password}".encode()).decode()
+        auth_token = base64.b64encode(f"{username}:{password}".encode()).decode()
 
-        # Send login request
-        result = self._send_login_request(session, base_url, token, config)
+        # Send login request - returns (result, session_token_from_body)
+        result, session_token = self._send_login_request(session, base_url, auth_token, config)
         if not result.success or result.response_html:
             return result
 
-        # Login succeeded but no data yet - fetch data page
-        return self._fetch_data_page(session, base_url, token, config)
+        # Login succeeded but no data yet - fetch data page using response body token
+        return self._fetch_data_page(session, base_url, auth_token, session_token, config)
 
     def _send_login_request(
         self,
@@ -92,8 +104,13 @@ class UrlTokenSessionStrategy(AuthStrategy):
         base_url: str,
         token: str,
         config: UrlTokenSessionConfig,
-    ) -> AuthResult:
-        """Send login request and validate response."""
+    ) -> tuple[AuthResult, str | None]:
+        """Send login request and extract session token from response body.
+
+        Returns:
+            Tuple of (AuthResult, session_token). The session_token is extracted
+            from the response BODY, which is how the modem's JavaScript works.
+        """
         login_url = f"{base_url}{config.login_page}?{config.login_prefix}{token}"
         _LOGGER.debug("URL token auth: Attempting login to %s", base_url)
 
@@ -106,15 +123,23 @@ class UrlTokenSessionStrategy(AuthStrategy):
         response = session.get(login_url, headers=headers, timeout=10, verify=False)
 
         if response.status_code != 200:
-            return self._handle_login_error(response)
+            return self._handle_login_error(response), None
 
         # Check if we got data directly in login response
         if config.success_indicator in response.text:
             _LOGGER.info("URL token auth: Got data directly from login")
-            return AuthResult.ok(response.text)
+            return AuthResult.ok(response.text), None
 
-        # Login OK but no data - need to fetch data page
-        return AuthResult.ok()
+        # Login OK but no data - extract session token from response body
+        # URL token auth returns the session token as plain text in the response body
+        session_token = response.text.strip() if response.text else None
+
+        if session_token:
+            _LOGGER.debug("URL token auth: Got session token from response body (%d chars)", len(session_token))
+        else:
+            _LOGGER.warning("URL token auth: No session token in response body")
+
+        return AuthResult.ok(), session_token
 
     def _handle_login_error(self, response: requests.Response) -> AuthResult:
         """Handle non-200 login response."""
@@ -135,16 +160,30 @@ class UrlTokenSessionStrategy(AuthStrategy):
         self,
         session: requests.Session,
         base_url: str,
-        token: str,
+        auth_token: str,
+        session_token: str | None,
         config: UrlTokenSessionConfig,
     ) -> AuthResult:
-        """Fetch data page using session token."""
-        session_token = get_cookie_safe(session, config.session_cookie_name)
+        """Fetch data page using session token from login response body.
+
+        Args:
+            session: requests Session with cookies
+            base_url: Modem base URL
+            auth_token: Base64 auth token (for Authorization header if needed)
+            session_token: Token from login response body (preferred)
+            config: Auth configuration
+        """
+        # Use token from response body; fall back to cookie only if not provided
         if not session_token:
-            _LOGGER.warning("URL token auth: No session cookie received")
+            session_token = get_cookie_safe(session, config.session_cookie_name)
+            if session_token:
+                _LOGGER.debug("URL token auth: Using token from cookie (fallback)")
+
+        if not session_token:
+            _LOGGER.warning("URL token auth: No session token available")
             return AuthResult.ok()  # Return success to allow fallback
 
-        _LOGGER.debug("URL token auth: Got session cookie, fetching data page")
+        _LOGGER.debug("URL token auth: Fetching data page with session token")
 
         data_url = f"{base_url}{config.data_page}?{config.token_prefix}{session_token}"
 
@@ -152,7 +191,7 @@ class UrlTokenSessionStrategy(AuthStrategy):
         # (real browsers don't send Authorization on the redirect, just cookies)
         headers: dict[str, str] = {}
         if config.auth_header_data:
-            headers["Authorization"] = f"Basic {token}"
+            headers["Authorization"] = f"Basic {auth_token}"
 
         data_response = session.get(data_url, headers=headers, timeout=10, verify=False)
 

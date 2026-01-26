@@ -168,11 +168,17 @@ class TestLoginRequestHeaders:
         """
         strategy = UrlTokenSessionStrategy()
 
+        # Login response returns token in body (not HTML)
         login_response = MagicMock()
         login_response.status_code = 200
-        login_response.text = LOGIN_PAGE_HTML
+        login_response.text = TEST_SESSION_TOKEN
 
-        mock_session.get.return_value = login_response
+        # Data response with success indicator
+        data_response = MagicMock()
+        data_response.status_code = 200
+        data_response.text = DATA_PAGE_HTML
+
+        mock_session.get.side_effect = [login_response, data_response]
 
         strategy.login(
             mock_session,
@@ -182,8 +188,9 @@ class TestLoginRequestHeaders:
             url_token_config_browser_match,
         )
 
-        call_args = mock_session.get.call_args
-        headers = call_args[1].get("headers", {})
+        # Check the FIRST call (login request), not the last
+        login_call_args = mock_session.get.call_args_list[0]
+        headers = login_call_args[1].get("headers", {})
 
         assert "X-Requested-With" in headers, (
             "Login request must include X-Requested-With header when ajax_login=True. "
@@ -236,10 +243,10 @@ class TestDataRequestHeaders:
         """
         strategy = UrlTokenSessionStrategy()
 
-        # Login response - no success indicator, sets cookie
+        # Login response - returns session token in body (this is how URL token auth works)
         login_response = MagicMock()
         login_response.status_code = 200
-        login_response.text = LOGIN_PAGE_HTML
+        login_response.text = TEST_SESSION_TOKEN  # Token in response body, not HTML
 
         # Data response - has success indicator
         data_response = MagicMock()
@@ -248,9 +255,6 @@ class TestDataRequestHeaders:
 
         # First call is login, second call is data fetch
         mock_session.get.side_effect = [login_response, data_response]
-
-        # Add session cookie (simulating what modem sets after login)
-        mock_session.cookies.set("sessionId", TEST_SESSION_TOKEN)
 
         strategy.login(
             mock_session,
@@ -280,16 +284,16 @@ class TestDataRequestHeaders:
         """
         strategy = UrlTokenSessionStrategy()
 
+        # Login response returns token in body
         login_response = MagicMock()
         login_response.status_code = 200
-        login_response.text = LOGIN_PAGE_HTML
+        login_response.text = TEST_SESSION_TOKEN
 
         data_response = MagicMock()
         data_response.status_code = 200
         data_response.text = DATA_PAGE_HTML
 
         mock_session.get.side_effect = [login_response, data_response]
-        mock_session.cookies.set("sessionId", TEST_SESSION_TOKEN)
 
         strategy.login(
             mock_session,
@@ -318,19 +322,19 @@ class TestDataRequestUrl:
     """Test that data request URL is correctly formed."""
 
     def test_data_request_includes_session_token_in_url(self, mock_session, url_token_config_browser_match):
-        """Data request URL includes ?ct_<session_token>."""
+        """Data request URL includes ?ct_<session_token> from response body."""
         strategy = UrlTokenSessionStrategy()
 
+        # Login response returns token in body (this is the correct behavior)
         login_response = MagicMock()
         login_response.status_code = 200
-        login_response.text = LOGIN_PAGE_HTML
+        login_response.text = TEST_SESSION_TOKEN
 
         data_response = MagicMock()
         data_response.status_code = 200
         data_response.text = DATA_PAGE_HTML
 
         mock_session.get.side_effect = [login_response, data_response]
-        mock_session.cookies.set("sessionId", TEST_SESSION_TOKEN)
 
         strategy.login(
             mock_session,
@@ -361,16 +365,16 @@ class TestSuccessfulAuthentication:
         """Successful auth returns AuthResult.ok with data page HTML."""
         strategy = UrlTokenSessionStrategy()
 
+        # Login response returns token in body
         login_response = MagicMock()
         login_response.status_code = 200
-        login_response.text = LOGIN_PAGE_HTML
+        login_response.text = TEST_SESSION_TOKEN
 
         data_response = MagicMock()
         data_response.status_code = 200
         data_response.text = DATA_PAGE_HTML
 
         mock_session.get.side_effect = [login_response, data_response]
-        mock_session.cookies.set("sessionId", TEST_SESSION_TOKEN)
 
         result = strategy.login(
             mock_session,
@@ -407,3 +411,133 @@ class TestSuccessfulAuthentication:
         assert mock_session.get.call_count == 1
         assert result.success is True
         assert "Downstream Bonded Channels" in result.response_html
+
+
+# =============================================================================
+# Tests: Token Source (Response Body vs Cookie)
+# =============================================================================
+
+
+class TestTokenSource:
+    """Test that session token comes from the correct source.
+
+    The SB8200 JavaScript reveals the actual auth flow:
+
+        $.ajax({
+            url: "/cmconnectionstatus.html?login_" + auth,
+            success: function (result) {
+                var token = result;  // <-- Response BODY is the token!
+                window.location.href = "/cmconnectionstatus.html?ct_" + token;
+            }
+        });
+
+    The login endpoint returns the session token as the RESPONSE BODY,
+    not as the cookie value. The cookie is set for session tracking,
+    but the ct_ parameter uses the response body text.
+
+    Issue #81: Auth appeared to succeed (cookie received) but data requests
+    returned the login page because we used the cookie value instead of
+    the response body as the token.
+    """
+
+    def test_token_from_response_body_not_cookie(self, mock_session, url_token_config_browser_match):
+        """Data request must use token from login RESPONSE BODY, not cookie value.
+
+        This is the root cause of Issue #81 - dtaubert's SB8200:
+        - Login succeeded (cookie set)
+        - Data fetch returned login page (wrong token)
+
+        The modem returns the token in the response body. We were using
+        the cookie value, which is different.
+        """
+        strategy = UrlTokenSessionStrategy()
+
+        # The ACTUAL token that should be used for ?ct_ parameter
+        response_body_token = "CORRECT_TOKEN_FROM_RESPONSE_BODY"
+
+        # A DIFFERENT value in the cookie (to prove we're using wrong source)
+        cookie_value = "WRONG_TOKEN_FROM_COOKIE"
+
+        # Login response - body IS the token (no HTML, just the token string)
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = response_body_token  # Plain text token
+
+        # Data response - only returned if correct token is used
+        data_response = MagicMock()
+        data_response.status_code = 200
+        data_response.text = DATA_PAGE_HTML
+
+        mock_session.get.side_effect = [login_response, data_response]
+
+        # Modem sets cookie with DIFFERENT value than response body
+        # This simulates real SB8200 behavior
+        mock_session.cookies.set("sessionId", cookie_value)
+
+        strategy.login(
+            mock_session,
+            "https://192.168.100.1",
+            "admin",
+            "password",
+            url_token_config_browser_match,
+        )
+
+        # Verify data request was made
+        assert mock_session.get.call_count == 2, "Should make login then data request"
+
+        # Check the data request URL
+        data_call_args = mock_session.get.call_args_list[1]
+        data_url = data_call_args[0][0]
+
+        # The URL MUST use the response body token, NOT the cookie value
+        assert f"?ct_{response_body_token}" in data_url, (
+            f"Data URL must use token from response body.\n"
+            f"Expected: ?ct_{response_body_token}\n"
+            f"Got URL: {data_url}\n"
+            f"Bug: Code is using cookie value '{cookie_value}' instead of response body."
+        )
+
+        # Explicitly verify we're NOT using the cookie value
+        assert f"?ct_{cookie_value}" not in data_url, (
+            "Data URL is incorrectly using cookie value instead of response body token.\n"
+            "This is the Issue #81 bug - token source is wrong."
+        )
+
+    def test_token_from_response_body_when_cookie_empty(self, mock_session, url_token_config_browser_match):
+        """Auth should work even if cookie is empty, using response body token.
+
+        Some SB8200 firmware sets an empty sessionId cookie initially.
+        The response body always has the correct token.
+        """
+        strategy = UrlTokenSessionStrategy()
+
+        response_body_token = "TOKEN_FROM_BODY"
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = response_body_token
+
+        data_response = MagicMock()
+        data_response.status_code = 200
+        data_response.text = DATA_PAGE_HTML
+
+        mock_session.get.side_effect = [login_response, data_response]
+
+        # Cookie exists but is EMPTY (edge case from Jan 12 journal entry)
+        mock_session.cookies.set("sessionId", "")
+
+        strategy.login(
+            mock_session,
+            "https://192.168.100.1",
+            "admin",
+            "password",
+            url_token_config_browser_match,
+        )
+
+        # Should still succeed using response body token
+        assert mock_session.get.call_count == 2
+
+        data_call_args = mock_session.get.call_args_list[1]
+        data_url = data_call_args[0][0]
+
+        assert f"?ct_{response_body_token}" in data_url, "Should use response body token when cookie is empty"

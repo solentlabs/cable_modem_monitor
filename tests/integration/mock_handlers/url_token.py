@@ -2,6 +2,12 @@
 
 Handles URL-based token authentication with session cookies.
 Implements URL_TOKEN_SESSION auth pattern.
+
+Modes:
+- Normal: Login returns data directly (like Spectrum no-auth variant)
+- Strict: Requires URL token in every request (rejects cookie-only requests)
+- Two-step: Login returns JUST the token in response body, data requires ?ct_<token>
+  This simulates the real SB8200 HTTPS firmware behavior from Issue #81.
 """
 
 from __future__ import annotations
@@ -46,9 +52,23 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     - Simulates real SB8200 HTTPS behavior where cookies alone don't work
     - Session token MUST be in URL query string for EVERY request
     - Used for testing Issue #81 (polling fails without URL tokens)
+
+    Two-step mode (two_step=True):
+    - Login returns ONLY the session token in response body (not HTML!)
+    - Client must use that token for subsequent requests: ?ct_<token>
+    - This matches the real JavaScript behavior:
+        success: function(result) { var token = result; }
+    - Used for testing Issue #81 token-from-response-body fix
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path, *, strict: bool = False):
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        *,
+        strict: bool = False,
+        two_step: bool = False,
+    ):
         """Initialize URL token auth handler.
 
         Args:
@@ -56,6 +76,8 @@ class UrlTokenAuthHandler(BaseAuthHandler):
             fixtures_path: Path to fixtures directory.
             strict: If True, require URL token in every request (reject cookies).
                     Simulates real SB8200 HTTPS firmware behavior.
+            two_step: If True, login returns just the token (not HTML).
+                      Used for testing token-from-response-body fix (Issue #81).
         """
         super().__init__(config, fixtures_path)
 
@@ -69,6 +91,11 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         self.strict = strict
         if strict:
             _LOGGER.debug("UrlTokenAuthHandler in strict mode - cookies will be ignored")
+
+        # Two-step mode: login returns just token, data requires ?ct_<token>
+        self.two_step = two_step
+        if two_step:
+            _LOGGER.debug("UrlTokenAuthHandler in two-step mode - login returns token only")
 
         # Session state
         self.authenticated_sessions: dict[str, str] = {}  # session_id -> username
@@ -159,26 +186,48 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         self,
         username: str,
     ) -> tuple[int, dict[str, str], bytes]:
-        """Create authenticated session and return data page.
+        """Create authenticated session and return response.
+
+        In two-step mode: Returns just the session token in response body.
+        In normal mode: Returns data page with session cookie.
 
         Args:
             username: Authenticated username.
 
         Returns:
-            Response with session cookie and data.
+            Response with session cookie and data (or just token in two-step mode).
         """
         # Generate session token
         session_token = secrets.token_hex(16)
         self.authenticated_sessions[session_token] = username
 
-        # Get the data page content
+        cookie_name = self.url_token_config.session_cookie
+
+        # Two-step mode: return JUST the token in response body
+        # This matches real SB8200 HTTPS firmware behavior:
+        #   success: function(result) { var token = result; }
+        if self.two_step:
+            _LOGGER.debug(
+                "URL token auth (two-step): returning token in response body for %s",
+                username,
+            )
+            return (
+                200,
+                {
+                    "Content-Type": "text/plain",
+                    "Content-Length": str(len(session_token)),
+                    "Set-Cookie": f"{cookie_name}={session_token}; Path=/",
+                },
+                session_token.encode(),
+            )
+
+        # Normal mode: return data page with session cookie
         data_page = self.url_token_config.login_page
         content = self.get_fixture_content(data_page)
 
         if content is None:
             content = b"<html><body>Authenticated</body></html>"
 
-        cookie_name = self.url_token_config.session_cookie
         response_headers = {
             "Content-Type": self.get_content_type(data_page),
             "Content-Length": str(len(content)),
