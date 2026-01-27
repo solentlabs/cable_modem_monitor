@@ -58,7 +58,7 @@ test-simple:
 # Run mock modem server for manual testing
 # Usage: make mock MODEM=g54
 mock:
-	@python3 scripts/mock_server.py $(MODEM)
+	@python3 scripts/mock_modem.py $(MODEM)
 
 # Clean test artifacts
 clean:
@@ -132,22 +132,22 @@ sync-version:
 
 # Docker development environment
 docker-start:
-	@bash scripts/dev/docker-dev.sh start
+	@python3 scripts/dev/ha-sync-run.py
 
 docker-stop:
-	@bash scripts/dev/docker-dev.sh stop
+	@docker compose -f docker-compose.test.yml down
 
 docker-restart:
-	@bash scripts/dev/docker-dev.sh restart
+	@docker restart ha-cable-modem-test
 
 docker-logs:
-	@bash scripts/dev/docker-dev.sh logs
+	@docker logs -f ha-cable-modem-test
 
 docker-status:
-	@bash scripts/dev/docker-dev.sh status
+	@docker ps -a --filter name=ha-cable-modem-test
 
 docker-shell:
-	@bash scripts/dev/docker-dev.sh shell
+	@docker exec -it ha-cable-modem-test bash
 
 docker-clean:
-	@bash scripts/dev/docker-dev.sh clean
+	@docker compose -f docker-compose.test.yml down -v && echo "Volumes removed"
