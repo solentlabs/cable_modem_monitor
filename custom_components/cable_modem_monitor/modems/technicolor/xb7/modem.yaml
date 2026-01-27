@@ -34,7 +34,7 @@ auth:
       password_encoding: plain
       hidden_fields: {}
       success:
-        redirect: "/network_setup.jst"
+        redirect: "/at_a_glance.jst"
 
   session:
     cookie_name: "session"

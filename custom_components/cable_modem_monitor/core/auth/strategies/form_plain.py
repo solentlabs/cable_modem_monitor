@@ -172,11 +172,26 @@ class FormPlainAuthStrategy(AuthStrategy):
         log,
     ) -> AuthResult:
         """Evaluate response to determine if login succeeded."""
-        # Check for success indicator if configured
+        # Check success_redirect first (URL path validation)
+        if config.success_redirect:
+            if config.success_redirect in response.url:
+                log("Form auth successful - redirected to expected URL: %s", config.success_redirect)
+                return AuthResult.ok(response.text)
+            # Redirect URL expected but not matched - log warning and fall back to is_login_page()
+            # This is a soft-fail: modem.yaml redirect configs may be incorrect guesses.
+            # Log at INFO so we capture this in diagnostics for future correction.
+            _LOGGER.info(
+                "Form auth: expected redirect to '%s' but got '%s' - falling back to login page detection",
+                config.success_redirect,
+                response.url,
+            )
+            # Fall through to is_login_page() check below
+
+        # Check success_indicator (content/size validation - legacy)
         if config.success_indicator:
             return self._check_success_indicator(response, config)
 
-        # No success indicator - check if response is a login page
+        # No success criteria matched - check if response is a login page
         if is_login_page(response.text):
             return self._verify_with_base_url(session, base_url, log)
 
@@ -188,22 +203,28 @@ class FormPlainAuthStrategy(AuthStrategy):
     def _check_success_indicator(
         self, response: requests.Response, config: FormAuthConfig | FormDynamicAuthConfig
     ) -> AuthResult:
-        """Check if success indicator is present in response."""
+        """Check if success indicator is present in response.
+
+        Legacy method for content/size checks. Prefer success_redirect for URL validation.
+        """
         indicator = config.success_indicator
         if not indicator:
-            # No indicator configured, fall back to default evaluation
-            return AuthResult.ok(response.text)
-        is_in_url = indicator in response.url
-        is_large_response = indicator.isdigit() and len(response.text) > int(indicator)
-
-        if is_in_url or is_large_response:
-            _LOGGER.debug("Form login successful (success indicator found)")
             return AuthResult.ok(response.text)
 
-        _LOGGER.warning("Form login failed: success indicator not found")
+        # Content string check (indicator appears in response body or URL)
+        if indicator in response.text or indicator in response.url:
+            _LOGGER.debug("Form login successful (success indicator '%s' found)", indicator)
+            return AuthResult.ok(response.text)
+
+        # Size check (indicator is a number = minimum response size)
+        if indicator.isdigit() and len(response.text) > int(indicator):
+            _LOGGER.debug("Form login successful (response size %d > %s)", len(response.text), indicator)
+            return AuthResult.ok(response.text)
+
+        _LOGGER.warning("Form login failed: success indicator '%s' not found", indicator)
         return AuthResult.fail(
             AuthErrorType.INVALID_CREDENTIALS,
-            "Form login failed: success indicator not found",
+            f"Form login failed: success indicator '{indicator}' not found",
             response_html=response.text,
         )
 

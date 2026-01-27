@@ -160,6 +160,14 @@ class ModemConfigAuthAdapter:
             "hidden_fields": config.hidden_fields,
             "password_encoding": (config.password_encoding.value if config.password_encoding else "plain"),
         }
+        # Include success config from modem.yaml
+        # success_redirect: URL path to check in response.url after login (e.g., "/at_a_glance.jst")
+        # success_indicator: Content check - string in response or min size (legacy, avoid using)
+        if config.success:
+            if config.success.redirect:
+                result["success_redirect"] = config.success.redirect
+            if config.success.indicator:
+                result["success_indicator"] = config.success.indicator
         if include_dynamic_fields and isinstance(config, FormDynamicAuthConfig):
             result["login_page"] = config.login_page
             result["form_selector"] = config.form_selector

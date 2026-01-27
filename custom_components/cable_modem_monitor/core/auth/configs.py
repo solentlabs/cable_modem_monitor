@@ -59,7 +59,8 @@ class FormAuthConfig(AuthConfig):
     username_field: str = "username"
     password_field: str = "password"
     method: str = "POST"  # HTTP method for form submission
-    success_indicator: str | None = None  # URL fragment or min response size
+    success_redirect: str | None = None  # Expected URL path after successful login (e.g., "/at_a_glance.jst")
+    success_indicator: str | None = None  # Content string or min response size (legacy, prefer success_redirect)
     hidden_fields: dict[str, str] | None = None  # Additional hidden form fields
 
     # Password encoding (plain, base64)
@@ -101,7 +102,8 @@ class FormDynamicAuthConfig(AuthConfig):
     username_field: str = "username"
     password_field: str = "password"
     method: str = "POST"
-    success_indicator: str | None = None
+    success_redirect: str | None = None  # Expected URL path after successful login
+    success_indicator: str | None = None  # Content string or min response size (legacy)
     hidden_fields: dict[str, str] | None = None
     password_encoding: str = "plain"
 
