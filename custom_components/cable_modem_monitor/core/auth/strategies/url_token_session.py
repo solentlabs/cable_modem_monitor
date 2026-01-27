@@ -114,6 +114,14 @@ class UrlTokenSessionStrategy(AuthStrategy):
         login_url = f"{base_url}{config.login_page}?{config.login_prefix}{token}"
         _LOGGER.debug("URL token auth: Attempting login to %s", base_url)
 
+        # Clear any existing session cookie before login (Issue #81)
+        # This matches browser behavior: eraseCookie("sessionId") before $.ajax login
+        # Without this, the modem rejects re-login attempts with 401 because
+        # it sees a login request while a session is already active.
+        if config.session_cookie_name in session.cookies:
+            del session.cookies[config.session_cookie_name]
+            _LOGGER.debug("URL token auth: Cleared existing %s cookie before login", config.session_cookie_name)
+
         # Build login headers
         headers: dict[str, str] = {"Authorization": f"Basic {token}"}
         if config.ajax_login:

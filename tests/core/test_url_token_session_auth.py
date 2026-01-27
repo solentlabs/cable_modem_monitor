@@ -541,3 +541,103 @@ class TestTokenSource:
         data_url = data_call_args[0][0]
 
         assert f"?ct_{response_body_token}" in data_url, "Should use response body token when cookie is empty"
+
+
+# =============================================================================
+# Tests: Session Cookie Clearing (Issue #81 - Re-auth 401 Fix)
+# =============================================================================
+
+
+class TestSessionCookieClearing:
+    """Test that session cookie is cleared before login attempts.
+
+    Issue #81: After initial successful auth, subsequent poll cycles would
+    fail with 401 because the modem rejected re-login attempts while an
+    existing session cookie was present.
+
+    The SB8200 login page JavaScript shows the expected behavior:
+        eraseCookie("sessionId");  // Clear BEFORE login
+        $.ajax({ url: "/cmconnectionstatus.html?login_..." });
+
+    Our code must match this browser behavior by clearing the session
+    cookie before sending a new login request.
+    """
+
+    def test_clears_session_cookie_before_login(self, url_token_config_browser_match):
+        """Login must clear existing session cookie before sending request.
+
+        This prevents 401 errors when re-authenticating on subsequent polls.
+        The modem rejects login attempts when an active session cookie exists.
+        """
+        strategy = UrlTokenSessionStrategy()
+
+        # Create a real session (not mock) to verify cookie manipulation
+        session = requests.Session()
+        session.verify = False
+
+        # Simulate existing session from previous successful auth
+        session.cookies.set("sessionId", "old_session_from_previous_poll")
+
+        # We need to intercept the actual request to verify the cookie is gone
+        # Using requests_mock or checking post-call
+        import requests_mock
+
+        with requests_mock.Mocker() as m:
+            # Login endpoint - returns token
+            m.get(
+                "https://192.168.100.1/cmconnectionstatus.html",
+                [
+                    {"text": "new_session_token", "status_code": 200},  # Login response
+                    {"text": DATA_PAGE_HTML, "status_code": 200},  # Data response
+                ],
+            )
+
+            strategy.login(
+                session,
+                "https://192.168.100.1",
+                "admin",
+                "password",
+                url_token_config_browser_match,
+            )
+
+            # Check that the login request was made WITHOUT the old session cookie
+            # The first request is the login request
+            login_request = m.request_history[0]
+
+            # Cookie should have been cleared before the request
+            # If old cookie was sent, modem would return 401
+            assert "sessionId=old_session_from_previous_poll" not in login_request.headers.get("Cookie", ""), (
+                "Old session cookie must be cleared before login request. "
+                "Sending login request with existing session cookie causes 401 on SB8200."
+            )
+
+    def test_does_not_fail_when_no_existing_cookie(self, url_token_config_browser_match):
+        """Login works when there's no existing session cookie (first auth)."""
+        strategy = UrlTokenSessionStrategy()
+
+        session = requests.Session()
+        session.verify = False
+
+        # No existing cookie - first auth attempt
+        assert "sessionId" not in session.cookies
+
+        import requests_mock
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://192.168.100.1/cmconnectionstatus.html",
+                [
+                    {"text": "new_session_token", "status_code": 200},
+                    {"text": DATA_PAGE_HTML, "status_code": 200},
+                ],
+            )
+
+            result = strategy.login(
+                session,
+                "https://192.168.100.1",
+                "admin",
+                "password",
+                url_token_config_browser_match,
+            )
+
+            assert result.success is True, "Login should succeed when no existing session cookie"
