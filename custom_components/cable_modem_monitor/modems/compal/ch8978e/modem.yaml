@@ -15,6 +15,7 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
+  release_date: "2023"
 
 status_info:
   status: unsupported

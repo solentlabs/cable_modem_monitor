@@ -27,7 +27,7 @@ paradigm: html
 hardware:
   docsis_version: "3.1"
   chipset: Broadcom BCM3390
-  release_date: "2016"
+  release_date: "2017"
 
 # Provenance tracking
 sources:

@@ -121,17 +121,19 @@
       "problemMatcher": []
     },
     {
-      "label": "HA: Restart (Reload Integration)",
+      "label": "🔄 HA: Sync & Reload",
       "type": "shell",
-      "command": "docker restart ha-cable-modem-test && echo '✅ Home Assistant restarted - integration code reloaded'",
+      "command": "python3 ${workspaceFolder}/scripts/dev/ha-reload.py",
       "dependsOn": ["Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
-        "showReuseMessage": false
+        "showReuseMessage": false,
+        "clear": true
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Sync modem configs and restart HA to reload code"
     },
     {
       "label": "HA: Stop",

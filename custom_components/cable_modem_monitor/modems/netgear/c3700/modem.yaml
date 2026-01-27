@@ -15,8 +15,9 @@ paradigm: html
 
 hardware:
   docsis_version: "3.0"
-  release_date: "2014-09"
-  end_of_life: "2020"
+  chipset: Broadcom BCM3383
+  release_date: "2014"
+  end_of_life: "2022"
 
 # Provenance tracking
 sources:
