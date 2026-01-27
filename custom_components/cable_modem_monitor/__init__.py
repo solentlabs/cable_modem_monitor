@@ -47,7 +47,6 @@ from .const import (
     CONF_HOST,
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
-    CONF_PARSER_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_ICMP,
@@ -64,7 +63,7 @@ from .coordinator import create_health_monitor, create_update_function, perform_
 from .core.data_orchestrator import DataOrchestrator
 from .core.fallback import FallbackOrchestrator
 from .core.log_buffer import setup_log_buffer
-from .core.parser_registry import get_parser_by_name, get_parsers
+from .core.parser_registry import get_parser_by_name
 from .entity_migration import async_migrate_docsis30_entities
 from .modem_config.adapter import get_auth_adapter_for_parser
 from .services import (
@@ -162,31 +161,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    modem_choice = entry.data.get(CONF_MODEM_CHOICE, "auto")
+    modem_choice = entry.data.get(CONF_MODEM_CHOICE)
 
-    # Optimization: Only do full parser discovery if needed
-    # selected_parser can be: instance (user selected), or list of classes (auto mode)
-    selected_parser: ModemParser | list[type[ModemParser]]
-    parser_name_hint: str | None
-
-    if modem_choice and modem_choice != "auto":
-        # User selected specific parser - load only that one (fast path)
+    # Load parser for selected modem (user must select modem during config flow)
+    selected_parser: ModemParser
+    if modem_choice:
         parser_class = await hass.async_add_executor_job(get_parser_by_name, modem_choice)
         if parser_class:
             _LOGGER.info("Loaded parser: %s", modem_choice)
             selected_parser = parser_class()
-            parser_name_hint = None
         else:
-            # Fallback to auto if parser not found
-            _LOGGER.warning("Parser '%s' not found, falling back to auto discovery", modem_choice)
-            parsers = await hass.async_add_executor_job(get_parsers)
-            selected_parser = parsers
-            parser_name_hint = entry.data.get(CONF_PARSER_NAME)
+            # Parser not found - permanent error, user must reconfigure
+            _LOGGER.error("Parser '%s' not found - please reconfigure the integration", modem_choice)
+            return False
     else:
-        # Auto mode - need all parsers for discovery
-        parsers = await hass.async_add_executor_job(get_parsers)
-        selected_parser = parsers
-        parser_name_hint = entry.data.get(CONF_PARSER_NAME)
+        # No modem selected - permanent error, user must reconfigure
+        _LOGGER.error("No modem selected - please reconfigure the integration")
+        return False
 
     # Create modem_client
     legacy_ssl = entry.data.get(CONF_LEGACY_SSL, False)
@@ -221,7 +212,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         "password": password,
         "parser": selected_parser,
         "cached_url": entry.data.get(CONF_WORKING_URL),
-        "parser_name": parser_name_hint,
         "verify_ssl": False,
         "legacy_ssl": legacy_ssl,
         "auth_strategy": auth_strategy,

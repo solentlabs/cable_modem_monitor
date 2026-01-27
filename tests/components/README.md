@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 328
+**Total Tests:** 324
 
 ## Test Files
 
@@ -17,7 +17,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 92 | Tests for Cable Modem Monitor scraper. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 88 | Tests for Cable Modem Monitor scraper. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -293,7 +293,7 @@ remain stable as the architecture evolves toward declarative modem configs.
 : Test the DataOrchestrator class.
 
 - `test_scraper_with_mock_parser`: Test the scraper with a mock parser.
-- `test_fetch_data_url_ordering`: Test that the scraper tries URLs in the correct order when all fail.
+- `test_fetch_data_url_ordering`: Test that the scraper tries URLs from parser's url_patterns in order.
 - `test_fetch_data_stops_on_first_success`: Test that the scraper stops trying URLs after first successful response.
 - `test_restart_modem_https_to_http_fallback`: Test that restart_modem falls back from HTTPS to HTTP when connection refused.
 - `test_restart_modem_calls_login_with_credentials`: Test that restart_modem calls login when credentials are provided.
@@ -314,13 +314,11 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_validate_restart_returns_false_when_no_parser`: Test validation fails when parser is not set.
 - `test_validate_restart_with_hnap_action_type`: Test validation succeeds for HNAP restart action type.
 
-**TestFallbackParserDetection** (6 tests)
+**TestFallbackParserDetection** (4 tests)
 : Test that fallback parser is excluded from detection phases and only used as last resort.
 
 - `test_excluded_from_anonymous_probing`: Test that fallback parser is excluded from Phase 1 (anonymous probing).
 - `test_excluded_from_prioritized_parsers`: Test that fallback parser is excluded from Phase 3 (prioritized parsers).
-- `test_excluded_from_url_discovery_tier2`: Test that fallback parser is excluded from Tier 2 URL discovery.
-- `test_excluded_from_url_discovery_tier3`: Test that fallback parser is excluded from Tier 3 URL discovery.
 - `test_not_auto_selected_raises_error`: Test that fallback parser is NOT auto-selected when detection fails.
 - `test_known_modem_detected_before_fallback`: Test that a known modem parser is detected before fallback parser.
 
@@ -338,7 +336,7 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_perform_logout_with_https_url`: Test that _perform_logout works with HTTPS base URL.
 - `test_perform_logout_with_different_endpoint_formats`: Test that _perform_logout works with various endpoint formats.
 
-**TestDataOrchestratorInitialization** (13 tests)
+**TestDataOrchestratorInitialization** (12 tests)
 : Tests for DataOrchestrator initialization and configuration.
 
 - `test_init_with_plain_ip_uses_https_default`: Test that plain IP defaults to HTTPS.
@@ -353,7 +351,6 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_init_with_verify_ssl_false`: Test initialization with SSL verification disabled.
 - `test_init_with_legacy_ssl_mounts_adapter`: Test that legacy SSL mode mounts the LegacySSLAdapter.
 - `test_init_legacy_ssl_not_mounted_for_http`: Test that legacy SSL adapter is NOT mounted for HTTP URLs.
-- `test_init_with_parser_name_for_tier2`: Test initialization with parser_name for Tier 2 caching.
 
 **TestCapturingSession** (4 tests)
 : Tests for the CapturingSession class.
@@ -408,12 +405,11 @@ remain stable as the architecture evolves toward declarative modem configs.
 - `test_authenticate_returns_none_on_login_failure`: When _login fails, return None.
 - `test_authenticate_handles_refetch_still_login_page`: When re-fetch still returns login page, fall back to original.
 
-**TestTierUrlGeneration** (3 tests)
-: Tests for URL generation in different tiers.
+**TestUrlPatternGeneration** (2 tests)
+: Tests for URL pattern generation from parser.
 
-- `test_tier1_urls_from_explicit_parser`: Test Tier 1: URLs from explicitly selected parser.
-- `test_tier2_urls_from_cached_parser`: Test Tier 2: URLs from cached parser name.
-- `test_tier3_excludes_fallback_parser`: Test Tier 3: Fallback parser excluded from URL discovery.
+- `test_urls_from_parser_instance`: Test URL generation from parser instance.
+- `test_returns_empty_list_when_no_parser`: Test that _get_url_patterns_to_try returns empty list when no parser set.
 
 **TestGetModemData** (3 tests)
 : Tests for the main get_modem_data flow.

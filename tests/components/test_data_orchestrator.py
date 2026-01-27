@@ -104,13 +104,9 @@ class TestDataOrchestrator:
         mock_parser_instance.parse.assert_called_once()
 
     def test_fetch_data_url_ordering(self, mocker):
-        """Test that the scraper tries URLs in the correct order when all fail."""
-        # Import parsers to get URL patterns
-        from custom_components.cable_modem_monitor.core.parser_registry import get_parsers
-
-        parsers = get_parsers()
-
-        scraper = DataOrchestrator("192.168.100.1", parser=parsers)
+        """Test that the scraper tries URLs from parser's url_patterns in order."""
+        # Use MockTestParser which has proper class attributes
+        scraper = DataOrchestrator("192.168.100.1", parser=MockTestParser())
 
         # Mock the session.get to track which URLs are tried
         mock_get = mocker.patch.object(scraper.session, "get")
@@ -123,24 +119,17 @@ class TestDataOrchestrator:
         # Should try all URLs and return None (all failed)
         assert result is None
 
-        # Verify URLs were tried  - we should have tried URLs from all parsers
+        # Verify URLs were tried in order (MockTestParser has /status.html and /MotoConnection.asp)
         calls = [call[0][0] for call in mock_get.call_args_list]
-        # Just verify some URLs were tried (exact order may vary based on parsers)
-        assert len(calls) > 0
-        # Check that at least one known URL was tried
-        assert any(
-            "/MotoConnection.asp" in call or "/network_setup.jst" in call or "/cmSignalData.htm" in call
-            for call in calls
-        )
+        assert len(calls) >= 2
+        # Should try HTTPS first, then HTTP fallback
+        assert any("/status.html" in call for call in calls)
+        assert any("/MotoConnection.asp" in call for call in calls)
 
     def test_fetch_data_stops_on_first_success(self, mocker):
         """Test that the scraper stops trying URLs after first successful response."""
-        # Import parsers to get URL patterns
-        from custom_components.cable_modem_monitor.core.parser_registry import get_parsers
-
-        parsers = get_parsers()
-
-        scraper = DataOrchestrator("192.168.100.1", parser=parsers)
+        # Use MockTestParser which has proper class attributes
+        scraper = DataOrchestrator("192.168.100.1", parser=MockTestParser())
 
         # Mock successful response on first URL
         mock_get = mocker.patch.object(scraper.session, "get")
@@ -170,8 +159,8 @@ class TestDataOrchestrator:
 
         # Using MockTestParser defined at module level
 
-        # Create scraper with HTTPS URL
-        scraper = DataOrchestrator("https://192.168.100.1", "admin", "motorola", parser=[MockTestParser])
+        # Create scraper with HTTPS URL and parser instance
+        scraper = DataOrchestrator("https://192.168.100.1", "admin", "motorola", parser=MockTestParser())
 
         # Mock session.get to simulate HTTPS failure, HTTP success
         call_count = [0]
@@ -727,39 +716,6 @@ class TestFallbackParserDetection:
         # Normal parser should have been attempted
         assert "Test Parser" in attempted_parser_names
 
-    def test_excluded_from_url_discovery_tier2(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
-        """Test that fallback parser is excluded from Tier 2 URL discovery."""
-        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
-
-        # Set a cached parser name to trigger tier 2
-        scraper = DataOrchestrator(
-            "192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class], parser_name="Test Parser"
-        )
-
-        urls = scraper._get_tier2_urls()
-
-        # Convert URLs to list of parser names that contributed URLs
-        parser_names = [parser_class.name for _, _, parser_class in urls]
-
-        # Fallback parser should NOT contribute URLs in tier 2
-        assert "Unknown Modem (Fallback Mode)" not in parser_names
-        # Normal parser should contribute URLs
-        assert "Test Parser" in parser_names
-
-    def test_excluded_from_url_discovery_tier3(self, mocker, mock_normal_parser_class, mock_fallback_parser_class):
-        """Test that fallback parser is excluded from Tier 3 URL discovery."""
-        from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
-
-        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal_parser_class, mock_fallback_parser_class])
-
-        urls = scraper._get_tier3_urls()
-
-        # Convert URLs to list of parser names that contributed URLs
-        parser_names = [parser_class.name for _, _, parser_class in urls]
-
-        # Fallback parser should NOT contribute URLs in tier 3
-        assert "Unknown Modem (Fallback Mode)" not in parser_names
-
     def test_not_auto_selected_raises_error(self, mocker):
         """Test that fallback parser is NOT auto-selected when detection fails.
 
@@ -1080,11 +1036,6 @@ class TestDataOrchestratorInitialization:
         assert scraper.legacy_ssl is True
         assert scraper.base_url == "http://192.168.100.1"
 
-    def test_init_with_parser_name_for_tier2(self):
-        """Test initialization with parser_name for Tier 2 caching."""
-        scraper = DataOrchestrator("192.168.100.1", parser_name="[MFG] [Model]")
-        assert scraper.parser_name == "[MFG] [Model]"
-
 
 class TestCapturingSession:
     """Tests for the CapturingSession class."""
@@ -1327,7 +1278,7 @@ class TestProtocolDetection:
         """Test that _fetch_data tries HTTPS before HTTP."""
         # Using MockTestParser defined at module level
 
-        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=MockTestParser())
 
         urls_tried = []
 
@@ -1350,7 +1301,7 @@ class TestProtocolDetection:
 
         # Using MockTestParser defined at module level
 
-        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=MockTestParser())
 
         urls_tried = []
 
@@ -1380,7 +1331,7 @@ class TestProtocolDetection:
 
         # Using MockTestParser defined at module level
 
-        scraper = DataOrchestrator("192.168.100.1", parser=[MockTestParser])
+        scraper = DataOrchestrator("192.168.100.1", parser=MockTestParser())
         assert scraper.base_url == "https://192.168.100.1"
 
         def mock_get(url, **kwargs):
@@ -1546,11 +1497,11 @@ class TestSessionExpiryHandling:
         assert result == login_html
 
 
-class TestTierUrlGeneration:
-    """Tests for URL generation in different tiers."""
+class TestUrlPatternGeneration:
+    """Tests for URL pattern generation from parser."""
 
-    def test_tier1_urls_from_explicit_parser(self, mocker):
-        """Test Tier 1: URLs from explicitly selected parser."""
+    def test_urls_from_parser_instance(self, mocker):
+        """Test URL generation from parser instance."""
         mock_parser = mocker.Mock()
         mock_parser.name = "Test Parser"
         mock_parser.url_patterns = [
@@ -1558,55 +1509,22 @@ class TestTierUrlGeneration:
             {"path": "/info.html", "auth_method": "basic"},
         ]
 
-        scraper = DataOrchestrator("192.168.100.1")
-        scraper.parser = mock_parser
+        scraper = DataOrchestrator("192.168.100.1", parser=mock_parser)
 
-        urls = scraper._get_tier1_urls()
+        urls = scraper._get_url_patterns_to_try()
 
         assert len(urls) == 2
         assert urls[0][0] == "https://192.168.100.1/status.html"
         assert urls[1][0] == "https://192.168.100.1/info.html"
 
-    def test_tier2_urls_from_cached_parser(self, mocker):
-        """Test Tier 2: URLs from cached parser name."""
-        mock_parser_class = mocker.Mock()
-        mock_parser_class.name = "Cached Parser"
-        mock_parser_class.manufacturer = "TestBrand"
-        mock_parser_class.url_patterns = [
-            {"path": "/cached.html", "auth_method": "none"},
-        ]
+    def test_returns_empty_list_when_no_parser(self, mocker):
+        """Test that _get_url_patterns_to_try returns empty list when no parser set."""
+        scraper = DataOrchestrator("192.168.100.1")
+        scraper.parser = None
 
-        scraper = DataOrchestrator(
-            "192.168.100.1",
-            parser=[mock_parser_class],
-            parser_name="Cached Parser",
-        )
+        urls = scraper._get_url_patterns_to_try()
 
-        urls = scraper._get_tier2_urls()
-
-        assert len(urls) >= 1
-        assert any("/cached.html" in url[0] for url in urls)
-
-    def test_tier3_excludes_fallback_parser(self, mocker):
-        """Test Tier 3: Fallback parser excluded from URL discovery."""
-        mock_normal = mocker.Mock()
-        mock_normal.name = "Normal Parser"
-        mock_normal.manufacturer = "TestBrand"
-        mock_normal.url_patterns = [{"path": "/normal.html", "auth_method": "none"}]
-
-        mock_fallback = mocker.Mock()
-        mock_fallback.name = "Fallback"
-        mock_fallback.manufacturer = "Unknown"  # Identifies as fallback
-        mock_fallback.url_patterns = [{"path": "/fallback.html", "auth_method": "none"}]
-
-        scraper = DataOrchestrator("192.168.100.1", parser=[mock_normal, mock_fallback])
-
-        urls = scraper._get_tier3_urls()
-
-        # Fallback URLs should not be included
-        assert not any("/fallback.html" in url[0] for url in urls)
-        # Normal URLs should be included
-        assert any("/normal.html" in url[0] for url in urls)
+        assert urls == []
 
 
 class TestGetModemData:

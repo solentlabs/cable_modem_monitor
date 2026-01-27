@@ -1,39 +1,27 @@
-"""Web scraper for cable modem data.
+"""Polling orchestrator for cable modem data.
 
 This module provides the DataOrchestrator class for fetching and parsing data from
-cable modem web interfaces. It handles authentication, parser detection, and
-multi-page data collection.
+cable modem web interfaces during regular polling (every 30s).
 
 Architecture:
-    DataOrchestrator is used in two contexts:
+    DataOrchestrator is the POLLING orchestrator for known modems. It assumes:
+    - Parser is already selected (user chose modem in config flow)
+    - Auth strategy is already discovered (stored in config entry)
+    - modem.yaml is the source of truth for URL patterns and auth config
 
-    1. **Polling (every 30s)** - Uses stored config from discovery:
-       - auth_strategy, auth_form_config, etc. from config entry
-       - parser_name to load cached parser directly
-       - cached_url for fast path (skip URL discovery)
+    Discovery (parser detection, auth probing) happens ONCE during config flow
+    via core/fallback/discovery/pipeline.py - NOT in this class.
 
-    2. **Discovery (config_flow)** - Full auto-detection:
-       - Tiered URL probing (Tier 1: cached, Tier 2: index, Tier 3: fallback)
-       - Parser detection via login_markers and model_strings
-       - Auth discovery via AuthHandler
-
-URL Discovery Tiers:
-    Tier 1: Cached URL + parser (instant, from previous success)
-    Tier 2: Index-driven (modem.yaml URL patterns for detected parser)
-    Tier 3: Fallback paths (/index.html, /home.html, etc.)
-
-Parser Detection:
-    1. Instant detection - Use authenticated_html from auth discovery
-    2. Login markers - Match pre-auth HTML against modem.yaml markers
-    3. Model strings - Match post-auth HTML for disambiguation
-    4. Heuristics - Last resort pattern matching
+    For unknown/fallback modems, FallbackOrchestrator extends this class with
+    response-driven auth discovery.
 
 Key Classes:
-    DataOrchestrator: Main scraper class
+    DataOrchestrator: Main polling orchestrator
     CapturingSession: Session wrapper for diagnostics capture
 
 See Also:
-    - core/discovery/pipeline.py: Discovery orchestration (runs before scraper)
+    - core/fallback/discovery/pipeline.py: One-time discovery during config flow
+    - core/fallback/data_orchestrator.py: FallbackOrchestrator for unknown modems
     - core/auth/handler.py: Authentication execution
     - core/base_parser.py: Parser base class
 """
@@ -165,7 +153,6 @@ class DataOrchestrator:
         password: str | None = None,
         parser: ModemParser | list[type[ModemParser]] | None = None,
         cached_url: str | None = None,
-        parser_name: str | None = None,
         verify_ssl: bool = False,
         legacy_ssl: bool = False,
         auth_strategy: str | None = None,
@@ -176,18 +163,17 @@ class DataOrchestrator:
         session_pre_authenticated: bool = False,
     ):
         """
-        Initialize the modem scraper.
+        Initialize the polling orchestrator.
 
         Args:
             host: Modem IP address (or full URL with http:// or https://)
             username: Optional login username
             password: Optional login password
-            parser: Either a single parser instance, a parser class, or list of parser classes
-            cached_url: Previously successful URL (optimization)
-            parser_name: Name of cached parser to use (skips auto-detection)
+            parser: Parser instance for the selected modem (from config entry)
+            cached_url: Previously successful URL (optimization for protocol detection)
             verify_ssl: Enable SSL certificate verification (default: False for compatibility with self-signed certs)
             legacy_ssl: Use legacy SSL ciphers (SECLEVEL=0) for older modem firmware
-            auth_strategy: Discovered auth strategy type (from config entry)
+            auth_strategy: Auth strategy type from config entry (discovered during setup)
             auth_form_config: Form configuration for form-based auth (from config entry)
             auth_hnap_config: HNAP configuration (endpoint, namespace) from config entry
             auth_url_token_config: URL token configuration (login_prefix, etc.) from config entry
@@ -245,7 +231,6 @@ class DataOrchestrator:
             self.parser = None
 
         self.cached_url = cached_url
-        self.parser_name = parser_name  # For Tier 2: load cached parser by name
         self.last_successful_url = ""
         self._captured_urls: list[dict[str, Any]] = []  # For HTML capture feature
         self._failed_urls: list[dict[str, Any]] = []  # Track failed fetches for diagnostics
@@ -728,103 +713,22 @@ class DataOrchestrator:
             return False
         return self.parser.manufacturer == "Unknown"
 
-    def _get_tier1_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
-        """Get URLs for Tier 1: User explicitly selected a parser."""
+    def _get_url_patterns_to_try(self) -> list[tuple[str, str, type[ModemParser]]]:
+        """Get list of (url, auth_method, parser_class) tuples to try.
+
+        Returns URLs from the selected parser's modem.yaml configuration.
+        Parser must be set (user selects modem during config flow).
+        """
         if self.parser is None:
-            raise RuntimeError("Tier 1 URLs requested but parser is None")
-        _LOGGER.debug("Tier 1: Using explicitly selected parser: %s", self.parser.name)
+            _LOGGER.error("No parser set - cannot determine URL patterns")
+            return []
+
+        _LOGGER.debug("Using parser: %s", self.parser.name)
         urls = []
         for pattern in _get_parser_url_patterns(self.parser):
             url = f"{self.base_url}{pattern['path']}"
             urls.append((url, str(pattern["auth_method"]), type(self.parser)))
         return urls
-
-    def _find_cached_parser(self) -> type[ModemParser] | None:
-        """Find parser by name from available parsers."""
-        for parser_class in self.parsers:
-            if parser_class.name == self.parser_name:
-                # Cast to type[ModemParser] to satisfy type checker
-                return cast(type[ModemParser], parser_class)
-        return None
-
-    def _add_parser_urls(self, urls: list, parser_class: type[ModemParser]) -> None:
-        """Add URLs from a parser to the list in priority order (data page first)."""
-        for pattern in _get_parser_url_patterns(parser_class):
-            url = f"{self.base_url}{pattern['path']}"
-            urls.append((url, pattern["auth_method"], parser_class))
-
-    def _get_tier2_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
-        """Get URLs for Tier 2: Cached parser from previous detection."""
-        _LOGGER.debug("Tier 2: Looking for cached parser: %s", self.parser_name)
-        cached_parser = self._find_cached_parser()
-        if not cached_parser:
-            return []
-
-        # Cast to type[ModemParser] to satisfy type checker after None check
-        parser = cached_parser
-        _LOGGER.debug("Found cached parser: %s", parser.name)
-        urls: list[tuple[str, str, type[ModemParser]]] = []
-
-        # Add URLs from parser in priority order (data page first)
-        # Note: cached_url is only used for protocol detection, not page selection
-        self._add_parser_urls(urls, parser)
-
-        # Add other parsers as fallback (excluding fallback parser itself)
-        for parser_class in self.parsers:
-            if parser_class.name != self.parser_name:
-                # Skip fallback parser - it should only be tried as last resort
-                if parser_class.manufacturer == "Unknown":
-                    continue
-                # Cast to type[ModemParser] to satisfy type checker
-                self._add_parser_urls(urls, cast(type[ModemParser], parser_class))
-
-        return urls
-
-    def _get_tier3_urls(self) -> list[tuple[str, str, type[ModemParser]]]:
-        """Get URLs for Tier 3: Auto-detection mode - try all parsers.
-
-        Note: Excludes fallback parser (Unknown manufacturer) from URL discovery.
-        Fallback parser should only be tried as last resort during detection phases.
-        URLs are returned in priority order (data page first for each parser).
-        """
-        _LOGGER.debug("Tier 3: Auto-detection mode - trying all parsers")
-        urls = []
-
-        # Add all parser URLs in priority order (excluding fallback)
-        # Note: cached_url is only used for protocol detection, not page selection
-        for parser_class in self.parsers:
-            # Skip fallback parser - it should only be tried as last resort during detection
-            if parser_class.manufacturer == "Unknown":
-                _LOGGER.debug("Skipping fallback parser in URL discovery: %s", parser_class.name)
-                continue
-
-            for pattern in _get_parser_url_patterns(parser_class):
-                url = f"{self.base_url}{pattern['path']}"
-                urls.append((url, str(pattern["auth_method"]), parser_class))
-
-        return urls
-
-    def _get_url_patterns_to_try(self) -> list[tuple[str, str, type[ModemParser]]]:
-        """
-        Get list of (url, auth_method, parser_class) tuples to try.
-
-        Returns URLs in priority order based on 3-tier strategy:
-        1. If parser is set (user selected): use only that parser's URLs
-        2. If parser_name cached: load that parser and use its URLs first
-        3. Auto-detect mode: try all parsers' URLs
-        """
-        # Tier 1: User explicitly selected a parser
-        if self.parser:
-            return self._get_tier1_urls()
-
-        # Tier 2: Cached parser from previous successful detection
-        if self.parser_name and self.parsers:
-            urls = self._get_tier2_urls()
-            if urls:
-                return urls
-
-        # Tier 3: Auto-detection mode
-        return self._get_tier3_urls()
 
     def _fetch_data(self, capture_raw: bool = False) -> tuple[str, str, type[ModemParser]] | None:
         """
