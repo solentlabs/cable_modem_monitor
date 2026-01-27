@@ -270,13 +270,22 @@ def push_changes(version: str, skip_verify: bool = False) -> bool:
     try:
         tag_name = f"v{version}"
 
-        # Push commit
-        cmd = ["git", "push", "origin", "main"]
+        # Get current branch name
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        current_branch = result.stdout.strip()
+
+        # Push commit to current branch
+        cmd = ["git", "push", "origin", current_branch]
         if skip_verify:
             cmd.append("--no-verify")
 
         subprocess.run(cmd, check=True)
-        print_success("Pushed commit to origin/main")
+        print_success(f"Pushed commit to origin/{current_branch}")
 
         # Push tag
         cmd = ["git", "push", "origin", tag_name]
