@@ -25,9 +25,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Default timeout for verification request
-DEFAULT_TIMEOUT = 10
-
 
 class BasicHttpAuthStrategy(AuthStrategy):
     """HTTP Basic Authentication strategy (RFC 7617).
@@ -73,13 +70,14 @@ class BasicHttpAuthStrategy(AuthStrategy):
         log("Basic auth credentials set on session")
 
         # Verify auth works by fetching base URL
-        return self._verify_credentials(session, base_url, log)
+        return self._verify_credentials(session, base_url, log, config.timeout)
 
     def _verify_credentials(
         self,
         session: requests.Session,
         base_url: str,
         log,
+        timeout: int,
     ) -> AuthResult:
         """Verify credentials work by making a test request.
 
@@ -88,7 +86,7 @@ class BasicHttpAuthStrategy(AuthStrategy):
         fetch the actual data page with the auth header.
         """
         try:
-            response = session.get(base_url, timeout=DEFAULT_TIMEOUT)
+            response = session.get(base_url, timeout=timeout)
 
             if response.status_code == 200:
                 log("Basic auth verified successfully")

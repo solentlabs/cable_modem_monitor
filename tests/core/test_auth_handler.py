@@ -11,43 +11,46 @@ from unittest.mock import MagicMock
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestAuthHandlerInit:
     """Test AuthHandler initialization."""
 
     def test_init_with_string_strategy(self):
         """Test initialization with string strategy."""
-        handler = AuthHandler(strategy="basic_http")
+        handler = AuthHandler(strategy="basic_http", timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.BASIC_HTTP
 
     def test_init_with_enum_strategy(self):
         """Test initialization with enum strategy."""
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.FORM_PLAIN
 
     def test_init_with_none_strategy(self):
         """Test initialization with None strategy."""
-        handler = AuthHandler(strategy=None)
+        handler = AuthHandler(strategy=None, timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.UNKNOWN
 
     def test_init_with_unknown_string(self):
         """Test initialization with unknown string defaults to UNKNOWN."""
-        handler = AuthHandler(strategy="not_a_real_strategy")
+        handler = AuthHandler(strategy="not_a_real_strategy", timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.UNKNOWN
 
     def test_init_with_uppercase_string(self):
         """Test initialization with uppercase string (case-insensitive matching)."""
         # Config entries may store uppercase strategy names
-        handler = AuthHandler(strategy="FORM_PLAIN")
+        handler = AuthHandler(strategy="FORM_PLAIN", timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.FORM_PLAIN
 
-        handler2 = AuthHandler(strategy="BASIC_HTTP")
+        handler2 = AuthHandler(strategy="BASIC_HTTP", timeout=TEST_TIMEOUT)
         assert handler2.strategy == AuthStrategyType.BASIC_HTTP
 
     def test_init_with_legacy_form_base64(self):
         """Test that legacy form_base64 strategy maps to form_plain."""
         # form_base64 was consolidated into form_plain - encoding via password_encoding
-        handler = AuthHandler(strategy="form_base64")
+        handler = AuthHandler(strategy="form_base64", timeout=TEST_TIMEOUT)
         assert handler.strategy == AuthStrategyType.FORM_PLAIN
 
     def test_init_with_form_config(self):
@@ -58,7 +61,7 @@ class TestAuthHandlerInit:
             "username_field": "user",
             "password_field": "pass",
         }
-        handler = AuthHandler(strategy="form_plain", form_config=form_config)
+        handler = AuthHandler(strategy="form_plain", form_config=form_config, timeout=TEST_TIMEOUT)
         assert handler.form_config == form_config
 
 
@@ -67,7 +70,7 @@ class TestAuthHandlerNoAuth:
 
     def test_no_auth_succeeds_without_credentials(self):
         """Test NO_AUTH strategy succeeds."""
-        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH)
+        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -93,7 +96,7 @@ class TestAuthHandlerBasicAuth:
         Returning HTML from the root page would replace the correctly-fetched
         data page HTML, breaking modems like TC4400 where root is a frameset.
         """
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         session = MagicMock()
         response = MagicMock()
         response.status_code = 200
@@ -113,7 +116,7 @@ class TestAuthHandlerBasicAuth:
 
     def test_basic_auth_fails_without_credentials(self):
         """Test Basic Auth fails without credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -128,7 +131,7 @@ class TestAuthHandlerBasicAuth:
 
     def test_basic_auth_fails_on_401(self):
         """Test Basic Auth fails on 401 response."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         session = MagicMock()
         response = MagicMock()
         response.status_code = 401
@@ -146,7 +149,7 @@ class TestAuthHandlerBasicAuth:
 
     def test_basic_auth_handles_exception(self):
         """Test Basic Auth handles connection exception."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         session = MagicMock()
         session.get.side_effect = Exception("Connection refused")
 
@@ -173,7 +176,7 @@ class TestAuthHandlerFormAuth:
             "password_field": "pass",
             "hidden_fields": {"csrf": "token123"},
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         # Mock post response (after form submission)
@@ -217,7 +220,7 @@ class TestAuthHandlerFormAuth:
             "username_field": "user",
             "password_field": "pass",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -232,7 +235,7 @@ class TestAuthHandlerFormAuth:
 
     def test_form_auth_fails_without_form_config(self):
         """Test form auth fails without form config."""
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=None)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=None, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -253,7 +256,7 @@ class TestAuthHandlerFormAuth:
             "username_field": "user",
             "password_field": "pass",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         # Post returns login page again (wrong credentials - modem re-shows login form)
@@ -290,7 +293,7 @@ class TestAuthHandlerFormAuth:
             "username_field": "loginUsername",
             "password_field": "loginPassword",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         # Form action response has a password field (status page with form)
@@ -324,7 +327,7 @@ class TestAuthHandlerFormAuth:
             "username_field": "user",
             "password_field": "pass",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         get_response = MagicMock()
@@ -353,7 +356,7 @@ class TestAuthHandlerFormAuth:
             "password_field": "loginPassword",
             "password_encoding": "base64",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         # Mock post response
@@ -400,7 +403,7 @@ class TestAuthHandlerFormAuth:
             "credential_format": "username={username}:password={password}",
             "password_encoding": "base64",
         }
-        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config)
+        handler = AuthHandler(strategy=AuthStrategyType.FORM_PLAIN, form_config=form_config, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         # Mock post response
@@ -453,6 +456,7 @@ class TestAuthHandlerHNAP:
                 "namespace": "http://purenetworks.com/HNAP1/",
                 "hmac_algorithm": "md5",
             },
+            timeout=TEST_TIMEOUT,
         )
         session = MagicMock()
 
@@ -476,6 +480,7 @@ class TestAuthHandlerHNAP:
                 "namespace": "http://purenetworks.com/HNAP1/",
                 "hmac_algorithm": "md5",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock the session to simulate HNAP login
@@ -504,7 +509,7 @@ class TestAuthHandlerURLToken:
 
     def test_url_token_auth_no_credentials(self):
         """Test URL token strategy skips auth without credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.URL_TOKEN_SESSION)
+        handler = AuthHandler(strategy=AuthStrategyType.URL_TOKEN_SESSION, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -530,6 +535,7 @@ class TestAuthHandlerURLToken:
                 "token_prefix": "ct_",
                 "success_indicator": "Downstream",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock successful login response
@@ -556,7 +562,7 @@ class TestAuthHandlerUnknown:
 
     def test_unknown_returns_true_for_fallback(self):
         """Test unknown strategy returns True to allow fallback."""
-        handler = AuthHandler(strategy=AuthStrategyType.UNKNOWN)
+        handler = AuthHandler(strategy=AuthStrategyType.UNKNOWN, timeout=TEST_TIMEOUT)
         session = MagicMock()
 
         success, html = handler.authenticate(
@@ -582,6 +588,7 @@ class TestFallbackStrategies:
         handler = AuthHandler(
             strategy=AuthStrategyType.NO_AUTH,
             fallback_strategies=fallback_strategies,
+            timeout=TEST_TIMEOUT,
         )
         assert handler.strategy == AuthStrategyType.NO_AUTH
         assert len(handler._fallback_strategies) == 1
@@ -607,6 +614,7 @@ class TestFallbackStrategies:
             strategy=AuthStrategyType.FORM_PLAIN,
             form_config={},  # Empty config will cause failure
             fallback_strategies=fallback_strategies,
+            timeout=TEST_TIMEOUT,
         )
 
         session = MagicMock()
@@ -648,6 +656,7 @@ class TestFallbackStrategies:
         handler = AuthHandler(
             strategy=AuthStrategyType.BASIC_HTTP,  # Will fail without creds verification
             fallback_strategies=fallback_strategies,
+            timeout=TEST_TIMEOUT,
         )
 
         session = MagicMock()
@@ -688,6 +697,7 @@ class TestFallbackStrategies:
             strategy=AuthStrategyType.FORM_PLAIN,
             form_config={},  # Will fail
             fallback_strategies=fallback_strategies,
+            timeout=TEST_TIMEOUT,
         )
 
         session = MagicMock()

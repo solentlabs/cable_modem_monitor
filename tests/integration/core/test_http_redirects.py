@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import requests
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHTTP302Redirects:
     """Test HTTP 302 redirect handling."""
@@ -26,7 +29,7 @@ class TestHTTP302Redirects:
         response = session.get(
             http_302_redirect_server.url,
             allow_redirects=False,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 302
@@ -41,7 +44,7 @@ class TestHTTP302Redirects:
         response = session.get(
             http_302_redirect_server.url,
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -57,7 +60,7 @@ class TestHTTP302Redirects:
             f"{http_302_redirect_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=False,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 302
@@ -75,7 +78,7 @@ class TestHTTP302Redirects:
             f"{http_302_redirect_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should end up on data page
@@ -91,7 +94,7 @@ class TestHTTP302Redirects:
             f"{http_302_redirect_server.url}/login",
             data={"username": "wrong", "password": "wrong"},
             allow_redirects=False,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 302
@@ -109,7 +112,7 @@ class TestMetaRefreshRedirects:
 
         response = session.get(
             redirect_auth_server.url,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -122,11 +125,11 @@ class TestMetaRefreshRedirects:
         session.verify = False
 
         # Get initial page with meta refresh
-        response = session.get(redirect_auth_server.url, timeout=10)
+        response = session.get(redirect_auth_server.url, timeout=TEST_TIMEOUT)
         assert "url=/login" in response.text.lower()
 
         # Manually follow redirect
-        response = session.get(f"{redirect_auth_server.url}/login", timeout=10)
+        response = session.get(f"{redirect_auth_server.url}/login", timeout=TEST_TIMEOUT)
         assert response.status_code == 200
         assert 'type="password"' in response.text.lower()
 
@@ -136,21 +139,21 @@ class TestMetaRefreshRedirects:
         session.verify = False
 
         # Follow redirect to login
-        session.get(f"{redirect_auth_server.url}/login", timeout=10)
+        session.get(f"{redirect_auth_server.url}/login", timeout=TEST_TIMEOUT)
 
         # Login (session cookies are what matters, not response)
         _ = session.post(
             f"{redirect_auth_server.url}/login",
             data={"user": "admin", "pass": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should have session cookie
         assert len(session.cookies) > 0
 
         # Access data
-        response = session.get(f"{redirect_auth_server.url}/status", timeout=10)
+        response = session.get(f"{redirect_auth_server.url}/status", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
 
@@ -167,14 +170,14 @@ class TestRedirectChains:
             f"{http_302_redirect_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Cookies should be preserved
         assert len(session.cookies) > 0
 
         # Subsequent requests should work
-        response = session.get(f"{http_302_redirect_server.url}/data", timeout=10)
+        response = session.get(f"{http_302_redirect_server.url}/data", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
     def test_redirect_to_protected_page(self, http_302_redirect_server):
@@ -186,7 +189,7 @@ class TestRedirectChains:
         response = session.get(
             f"{http_302_redirect_server.url}/data",
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
         assert 'type="password"' in response.text.lower()
 
@@ -195,11 +198,11 @@ class TestRedirectChains:
             f"{http_302_redirect_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Now /data should work
-        response = session.get(f"{http_302_redirect_server.url}/data", timeout=10)
+        response = session.get(f"{http_302_redirect_server.url}/data", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
 
@@ -216,7 +219,7 @@ class TestRedirectLoopPrevention:
         response = session.get(
             http_302_redirect_server.url,
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should end up somewhere valid

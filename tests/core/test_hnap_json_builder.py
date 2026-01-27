@@ -11,6 +11,9 @@ import requests
 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
 from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHmacMd5:
     """Test the HMAC method with MD5 algorithm."""
@@ -22,6 +25,7 @@ class TestHmacMd5:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
         )
 
     def test_returns_uppercase_hex(self, md5_builder):
@@ -64,6 +68,7 @@ class TestHmacSha256:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
         )
 
     def test_returns_uppercase_hex(self, sha256_builder):
@@ -83,6 +88,7 @@ class TestHmacSha256:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
         )
         sha256_result = sha256_builder._hmac("key", "message")
         md5_result = md5_builder._hmac("key", "message")
@@ -100,6 +106,7 @@ class TestHmacAlgorithmValidation:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
         )
         assert builder.hmac_algorithm == HMACAlgorithm.SHA256
 
@@ -109,6 +116,7 @@ class TestHmacAlgorithmValidation:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
         )
         assert builder.hmac_algorithm == HMACAlgorithm.MD5
 
@@ -120,6 +128,7 @@ def builder():
         endpoint="/HNAP1/",
         namespace="http://purenetworks.com/HNAP1/",
         hmac_algorithm=HMACAlgorithm.MD5,
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -141,6 +150,7 @@ class TestHNAPJsonRequestBuilderInit:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
         )
 
         assert builder.endpoint == "/HNAP1/"
@@ -154,6 +164,7 @@ class TestHNAPJsonRequestBuilderInit:
             endpoint="/api/hnap",
             namespace="http://custom.com/",
             hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
         )
 
         assert builder.endpoint == "/api/hnap"
@@ -333,6 +344,7 @@ class TestCallMultiple:
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
             hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
             empty_action_value="",
         )
 

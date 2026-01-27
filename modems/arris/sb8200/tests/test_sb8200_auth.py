@@ -14,6 +14,9 @@ from custom_components.cable_modem_monitor.core.discovery_helpers import HintMat
 from custom_components.cable_modem_monitor.modem_config.adapter import get_auth_adapter_for_parser
 from custom_components.cable_modem_monitor.modems.arris.sb8200.parser import ArrisSB8200Parser
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 def _get_sb8200_js_auth_hints() -> dict:
     """Get JS auth hints for SB8200 from modem.yaml."""
@@ -30,7 +33,7 @@ class TestSB8200AuthNoAuthServer:
 
     def test_no_auth_strategy_succeeds(self, sb8200_modem_server_noauth):
         """Test NO_AUTH strategy succeeds on no-auth server."""
-        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH)
+        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH, timeout=TEST_TIMEOUT)
         session = requests.Session()
 
         success, html = handler.authenticate(session, sb8200_modem_server_noauth.url, None, None)
@@ -43,6 +46,7 @@ class TestSB8200AuthNoAuthServer:
         handler = AuthHandler(
             strategy=AuthStrategyType.URL_TOKEN_SESSION,
             url_token_config=_get_sb8200_js_auth_hints(),
+            timeout=TEST_TIMEOUT,
         )
         session = requests.Session()
 
@@ -59,6 +63,7 @@ class TestSB8200AuthServer:
         handler = AuthHandler(
             strategy=AuthStrategyType.URL_TOKEN_SESSION,
             url_token_config=_get_sb8200_js_auth_hints(),
+            timeout=TEST_TIMEOUT,
         )
         session = requests.Session()
 
@@ -77,6 +82,7 @@ class TestSB8200AuthServer:
         handler = AuthHandler(
             strategy=AuthStrategyType.URL_TOKEN_SESSION,
             url_token_config=_get_sb8200_js_auth_hints(),
+            timeout=TEST_TIMEOUT,
         )
         session = requests.Session()
 
@@ -94,6 +100,7 @@ class TestSB8200AuthHTTPS:
         handler = AuthHandler(
             strategy=AuthStrategyType.URL_TOKEN_SESSION,
             url_token_config=_get_sb8200_js_auth_hints(),
+            timeout=TEST_TIMEOUT,
         )
         session = requests.Session()
         session.verify = False  # Allow self-signed cert

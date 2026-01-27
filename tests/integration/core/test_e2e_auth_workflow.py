@@ -18,6 +18,9 @@ import requests
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestE2ENoAuth:
     """End-to-end tests for NO_AUTH modems."""
@@ -28,7 +31,7 @@ class TestE2ENoAuth:
         session.verify = False
 
         # Step 1: Connect to modem
-        response = session.get(http_server.url, timeout=10)
+        response = session.get(http_server.url, timeout=TEST_TIMEOUT)
         assert response.status_code == 200
 
         # Step 2: No auth needed, verify we can get data
@@ -36,7 +39,7 @@ class TestE2ENoAuth:
 
         # Step 3: Multiple polling cycles work
         for i in range(5):
-            response = session.get(http_server.url, timeout=10)
+            response = session.get(http_server.url, timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} failed"
 
@@ -52,7 +55,7 @@ class TestE2EBasicAuth:
     def test_basic_auth_workflow(self, basic_auth_server):
         """Test complete workflow for modem with Basic Auth."""
         # Step 1: Create handler with stored strategy
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -70,13 +73,13 @@ class TestE2EBasicAuth:
 
         # Step 3: Multiple polling cycles - now session.auth is set, all requests work
         for i in range(5):
-            response = session.get(basic_auth_server.url, timeout=10)
+            response = session.get(basic_auth_server.url, timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} failed"
 
     def test_basic_auth_invalid_then_valid(self, basic_auth_server):
         """Test workflow: invalid credentials, then valid credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         session = requests.Session()
         session.verify = False
 
@@ -104,7 +107,7 @@ class TestE2EBasicAuth:
         assert session.auth == ("admin", "pw")
 
         # Verify we can now fetch data
-        response = session.get(basic_auth_server.url, timeout=10)
+        response = session.get(basic_auth_server.url, timeout=TEST_TIMEOUT)
         assert response.status_code == 200
         assert "Cable Modem Status" in response.text
 
@@ -124,13 +127,14 @@ class TestE2EFormAuth:
                 "password_field": "password",
                 "hidden_fields": {"csrf_token": "test-csrf-token"},
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
         session.verify = False
 
         # Step 2: Verify initial page shows login form
-        initial = session.get(form_auth_server.url, timeout=10)
+        initial = session.get(form_auth_server.url, timeout=TEST_TIMEOUT)
         assert 'type="password"' in initial.text.lower()
 
         # Step 3: Authenticate
@@ -145,7 +149,7 @@ class TestE2EFormAuth:
 
         # Step 4: Multiple polling cycles
         for i in range(10):
-            response = session.get(f"{form_auth_server.url}/status.html", timeout=10)
+            response = session.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} failed"
 
@@ -164,6 +168,7 @@ class TestE2EFormBase64:
                 "password_field": "password",
                 "password_encoding": "base64",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -180,7 +185,7 @@ class TestE2EFormBase64:
 
         # Multiple polling cycles
         for i in range(5):
-            response = session.get(form_base64_server.url, timeout=10)
+            response = session.get(form_base64_server.url, timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} failed"
 
@@ -198,7 +203,7 @@ class TestE2ERedirectFlow:
         session.verify = False
 
         # Step 1: Initial access redirects to login
-        response = session.get(http_302_redirect_server.url, allow_redirects=True, timeout=10)
+        response = session.get(http_302_redirect_server.url, allow_redirects=True, timeout=TEST_TIMEOUT)
         assert 'type="password"' in response.text.lower()
 
         # Step 2: Submit login
@@ -206,12 +211,12 @@ class TestE2ERedirectFlow:
             f"{http_302_redirect_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
         assert response.status_code == 200
 
         # Step 3: Access data
-        response = session.get(f"{http_302_redirect_server.url}/data", timeout=10)
+        response = session.get(f"{http_302_redirect_server.url}/data", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
 
@@ -228,6 +233,7 @@ class TestE2EHTTPSWorkflow:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -244,7 +250,7 @@ class TestE2EHTTPSWorkflow:
 
         # Poll over HTTPS
         for i in range(5):
-            response = session.get(f"{https_form_auth_server.url}/status.html", timeout=10)
+            response = session.get(f"{https_form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"HTTPS poll {i + 1} failed"
 
@@ -262,16 +268,16 @@ class TestE2ESessionExpiry:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Poll until session expires (max 3 requests)
         for i in range(3):
-            response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+            response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} should succeed"
 
         # 4th request should fail (session expired)
-        response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+        response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
         assert 'type="password"' in response.text.lower(), "Should show login after expiry"
 
         # Re-authenticate
@@ -279,11 +285,11 @@ class TestE2ESessionExpiry:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should work again
-        response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+        response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text, "Should work after re-auth"
 
 
@@ -295,7 +301,7 @@ class TestE2EMultipleModemTypes:
         # Modem 1: No auth
         session1 = requests.Session()
         session1.verify = False
-        r1 = session1.get(http_server.url, timeout=10)
+        r1 = session1.get(http_server.url, timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in r1.text
 
         # Modem 2: Form auth
@@ -309,6 +315,7 @@ class TestE2EMultipleModemTypes:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
         handler2.authenticate(
             session=session2,
@@ -316,24 +323,25 @@ class TestE2EMultipleModemTypes:
             username="admin",
             password="pw",
         )
-        r2 = session2.get(f"{form_auth_server.url}/status.html", timeout=10)
+        r2 = session2.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in r2.text
 
         # Modem 3: Basic auth
         session3 = requests.Session()
         session3.verify = False
-        handler3 = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler3 = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
         handler3.authenticate(
             session=session3,
             base_url=basic_auth_server.url,
             username="admin",
             password="pw",
         )
-        r3 = session3.get(basic_auth_server.url, timeout=10)
+        r3 = session3.get(basic_auth_server.url, timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in r3.text
 
         # All three should continue working independently
         for _ in range(3):
-            assert "Cable Modem Status" in session1.get(http_server.url, timeout=10).text
-            assert "Cable Modem Status" in session2.get(f"{form_auth_server.url}/status.html", timeout=10).text
-            assert "Cable Modem Status" in session3.get(basic_auth_server.url, timeout=10).text
+            assert "Cable Modem Status" in session1.get(http_server.url, timeout=TEST_TIMEOUT).text
+            resp2 = session2.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
+            assert "Cable Modem Status" in resp2.text
+            assert "Cable Modem Status" in session3.get(basic_auth_server.url, timeout=TEST_TIMEOUT).text

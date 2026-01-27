@@ -10,6 +10,9 @@ import pytest
 from custom_components.cable_modem_monitor.core.actions.base import ActionResult
 from custom_components.cable_modem_monitor.core.actions.hnap import HNAPRestartAction
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 def _make_auth_handler(builder: MagicMock) -> MagicMock:
     """Create a mock auth handler that returns the given builder."""
@@ -25,6 +28,7 @@ class TestHNAPRestartActionExecution:
     def hnap_config_with_prefetch(self):
         """HNAP config with pre-fetch action (e.g., for modems that need current state)."""
         return {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "capabilities": ["restart"],
             "auth": {
@@ -57,6 +61,7 @@ class TestHNAPRestartActionExecution:
     def hnap_config_simple(self):
         """Simple HNAP config without pre-fetch."""
         return {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "capabilities": ["restart"],
             "auth": {
@@ -190,6 +195,7 @@ class TestHNAPRestartActionExecution:
     def test_no_action_configured(self):
         """Test when no restart action is configured."""
         config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "capabilities": ["restart"],
             "auth": {
@@ -270,6 +276,7 @@ class TestParamInterpolation:
     def test_interpolate_with_values(self):
         """Test interpolation when pre-fetch data has values."""
         config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "auth": {"hnap": {"actions": {"restart": "SetConfig"}}},
             "actions": {
@@ -292,6 +299,7 @@ class TestParamInterpolation:
     def test_interpolate_with_defaults(self):
         """Test interpolation falls back to defaults when value missing."""
         config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "auth": {"hnap": {"actions": {"restart": "SetConfig"}}},
             "actions": {

@@ -79,6 +79,7 @@ class AuthHandler:
         hnap_config: dict[str, Any] | None = None,
         url_token_config: dict[str, Any] | None = None,
         fallback_strategies: list[dict[str, Any]] | None = None,
+        timeout: int | None = None,
     ):
         """Initialize auth handler.
 
@@ -90,6 +91,7 @@ class AuthHandler:
             fallback_strategies: Ordered list of alternate strategies to try if primary fails.
                 Each entry is a dict with 'strategy' key and optional config keys.
                 Used for try-until-success pattern (e.g., modems with firmware variations).
+            timeout: Request timeout in seconds (ModemConfig.timeout)
         """
         # Normalize strategy to AuthStrategyType
         if isinstance(strategy, str):
@@ -118,6 +120,9 @@ class AuthHandler:
         self.form_config = form_config or {}
         self.hnap_config = {**DEFAULT_HNAP_CONFIG, **(hnap_config or {})}
         self.url_token_config = {**DEFAULT_URL_TOKEN_CONFIG, **(url_token_config or {})}
+        if timeout is None:
+            raise ValueError("timeout is required but was None. Schema defines default in const.py.")
+        self.timeout = timeout
 
         # Fallback strategies for try-until-success
         self._fallback_strategies = fallback_strategies or []
@@ -155,10 +160,14 @@ class AuthHandler:
         strategy_str = static_config.get("auth_strategy", "no_auth")
         strategy = cls._strategy_from_string(strategy_str)
 
+        # Get timeout from modem config - must be present (defined in schema with default)
+        timeout = config.timeout
+
         _LOGGER.debug(
-            "Created AuthHandler from modem.yaml (strategy=%s, auth_type=%s)",
+            "Created AuthHandler from modem.yaml (strategy=%s, auth_type=%s, timeout=%d)",
             strategy.value,
             auth_type or adapter.get_default_auth_type(),
+            timeout,
         )
 
         return cls(
@@ -166,6 +175,7 @@ class AuthHandler:
             form_config=static_config.get("auth_form_config"),
             hnap_config=static_config.get("auth_hnap_config"),
             url_token_config=static_config.get("auth_url_token_config"),
+            timeout=timeout,
         )
 
     @staticmethod
@@ -356,7 +366,7 @@ class AuthHandler:
             return AuthResult.ok()
 
         # Convert dict config to typed AuthConfig
-        config = self._create_typed_config(strategy, form_config, hnap_config, url_token_config)
+        config = self._create_typed_config(strategy, form_config, hnap_config, url_token_config, self.timeout)
 
         # Delegate to strategy
         result = strategy_instance.login(session, base_url, username, password, config, verbose)
@@ -376,6 +386,7 @@ class AuthHandler:
         form_config: dict[str, Any],
         hnap_config: dict[str, Any],
         url_token_config: dict[str, Any],
+        timeout: int,
     ):
         """Create typed AuthConfig from dict configs.
 
@@ -384,6 +395,7 @@ class AuthHandler:
             form_config: Form configuration dict
             hnap_config: HNAP configuration dict
             url_token_config: URL token configuration dict
+            timeout: Request timeout in seconds
 
         Returns:
             Typed AuthConfig object appropriate for the strategy
@@ -399,14 +411,15 @@ class AuthHandler:
         )
 
         if strategy == AuthStrategyType.NO_AUTH:
-            return NoAuthConfig()
+            return NoAuthConfig(timeout=timeout)
 
         if strategy == AuthStrategyType.BASIC_HTTP:
-            return BasicAuthConfig()
+            return BasicAuthConfig(timeout=timeout)
 
         if strategy == AuthStrategyType.FORM_PLAIN:
             return FormAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 login_url=form_config.get("action", ""),
                 username_field=form_config.get("username_field", "username"),
                 password_field=form_config.get("password_field", "password"),
@@ -422,6 +435,7 @@ class AuthHandler:
         if strategy == AuthStrategyType.FORM_DYNAMIC:
             return FormDynamicAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 login_page=form_config.get("login_page", "/"),
                 login_url=form_config.get("action", ""),
                 form_selector=form_config.get("form_selector"),
@@ -437,6 +451,7 @@ class AuthHandler:
         if strategy == AuthStrategyType.FORM_AJAX:
             return FormAjaxAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 endpoint=form_config.get("endpoint", "/cgi-bin/adv_pwd_cgi"),
                 nonce_field=form_config.get("nonce_field", "ar_nonce"),
                 nonce_length=form_config.get("nonce_length", 8),
@@ -454,6 +469,7 @@ class AuthHandler:
                 hmac_algo = HMACAlgorithm(hmac_algo)
             return HNAPAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 endpoint=merged.get("endpoint", "/HNAP1/"),
                 namespace=merged.get("namespace", "http://purenetworks.com/HNAP1/"),
                 empty_action_value=merged.get("empty_action_value", ""),
@@ -464,6 +480,7 @@ class AuthHandler:
             merged = {**DEFAULT_URL_TOKEN_CONFIG, **url_token_config}
             return UrlTokenSessionConfig(
                 strategy=strategy,
+                timeout=timeout,
                 login_page=merged.get("login_page", "/cmconnectionstatus.html"),
                 data_page=merged.get("data_page", "/cmconnectionstatus.html"),
                 login_prefix=merged.get("login_prefix", "login_"),
@@ -473,7 +490,7 @@ class AuthHandler:
             )
 
         # Default: return NoAuthConfig for unknown strategies
-        return NoAuthConfig()
+        return NoAuthConfig(timeout=timeout)
 
     def get_hnap_builder(self) -> HNAPJsonRequestBuilder | None:
         """Get the HNAP builder for data fetches after authentication.

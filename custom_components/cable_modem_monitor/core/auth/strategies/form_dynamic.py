@@ -62,7 +62,7 @@ class FormDynamicAuthStrategy(FormPlainAuthStrategy):
         try:
             response = session.get(
                 f"{base_url}{login_page}",
-                timeout=10,
+                timeout=config.timeout,
                 verify=session.verify,
             )
             response.raise_for_status()

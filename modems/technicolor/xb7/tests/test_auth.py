@@ -48,6 +48,9 @@ from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyTy
 from tests.integration.mock_handlers.form import TEST_PASSWORD, TEST_USERNAME
 from tests.integration.mock_modem_server import MockModemServer
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 # Path to XB7 modem config
 XB7_MODEM_PATH = Path("modems/technicolor/xb7")
 
@@ -136,6 +139,7 @@ class TestXB7FormAuth:
                     "password_field": "password",
                     "success_redirect": "/at_a_glance.jst",
                 },
+                timeout=TEST_TIMEOUT,
             )
 
             # Authenticate
@@ -168,6 +172,7 @@ class TestXB7FormAuth:
                     "password_field": "password",
                     "success_redirect": "/wrong_page.jst",  # Wrong!
                 },
+                timeout=TEST_TIMEOUT,
             )
 
             # Authenticate - should soft-fail to is_login_page() check
@@ -241,6 +246,7 @@ class TestXB7AuthRedirectValidation:
                     "password_field": "password",
                     "success_redirect": "/at_a_glance.jst",  # Correct!
                 },
+                timeout=TEST_TIMEOUT,
             )
 
             result = handler.authenticate(
@@ -272,6 +278,7 @@ class TestXB7AuthRedirectValidation:
                     "password_field": "password",
                     "success_redirect": "/totally_wrong.jst",  # Wrong!
                 },
+                timeout=TEST_TIMEOUT,
             )
 
             with caplog.at_level(logging.INFO):
@@ -301,6 +308,7 @@ class TestXB7AuthRedirectValidation:
                     "password_field": "password",
                     # No success_redirect - rely on is_login_page()
                 },
+                timeout=TEST_TIMEOUT,
             )
 
             result = handler.authenticate(

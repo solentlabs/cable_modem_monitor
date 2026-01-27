@@ -88,10 +88,10 @@ class FormPlainAuthStrategy(AuthStrategy):
         form_data = self._build_form_data(config, username, password, log)
         action_path = self._get_action_path(session, base_url, config, log)
         action_url = self._resolve_url(base_url, action_path)
-        log("Form auth: submitting to %s (method=%s)", action_url, config.method)
+        log("Form auth: submitting to %s (method=%s, timeout=%d)", action_url, config.method, config.timeout)
 
         try:
-            response = self._submit_form(session, action_url, form_data, base_url, config.method)
+            response = self._submit_form(session, action_url, form_data, base_url, config.method, config.timeout)
             self._log_response(response, session, log)
             return self._evaluate_response(session, base_url, response, config, log)
         except Exception as e:
@@ -128,6 +128,7 @@ class FormPlainAuthStrategy(AuthStrategy):
         form_data: dict,
         base_url: str,
         method: str,
+        timeout: int,
     ) -> requests.Response:
         """Submit the form via POST or GET."""
         headers = {"Referer": base_url}
@@ -137,7 +138,7 @@ class FormPlainAuthStrategy(AuthStrategy):
                 action_url,
                 data=form_data,
                 headers=headers,
-                timeout=10,
+                timeout=timeout,
                 allow_redirects=True,
                 verify=session.verify,
             )
@@ -145,7 +146,7 @@ class FormPlainAuthStrategy(AuthStrategy):
             action_url,
             params=form_data,
             headers=headers,
-            timeout=10,
+            timeout=timeout,
             allow_redirects=True,
             verify=session.verify,
         )
@@ -193,7 +194,7 @@ class FormPlainAuthStrategy(AuthStrategy):
 
         # No success criteria matched - check if response is a login page
         if is_login_page(response.text):
-            return self._verify_with_base_url(session, base_url, log)
+            return self._verify_with_base_url(session, base_url, log, config.timeout)
 
         # If response is NOT a login page, consider login successful
         # Return the HTML for discovery validation (parser detection, validation step)
@@ -228,10 +229,10 @@ class FormPlainAuthStrategy(AuthStrategy):
             response_html=response.text,
         )
 
-    def _verify_with_base_url(self, session: requests.Session, base_url: str, log) -> AuthResult:
+    def _verify_with_base_url(self, session: requests.Session, base_url: str, log, timeout: int) -> AuthResult:
         """Verify login by fetching base URL (for cookie-based auth)."""
         headers = {"Referer": base_url}
-        data_response = session.get(base_url, headers=headers, timeout=10, verify=session.verify)
+        data_response = session.get(base_url, headers=headers, timeout=timeout, verify=session.verify)
         log(
             "Post-login base URL: HTTP %d, %d bytes, is_login=%s",
             data_response.status_code,

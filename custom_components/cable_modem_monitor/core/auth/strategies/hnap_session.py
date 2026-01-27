@@ -72,7 +72,7 @@ class HNAPSessionAuthStrategy(AuthStrategy):
                     "SOAPAction": f'"{config.soap_action_namespace}Login"',
                     "Content-Type": "text/xml; charset=utf-8",
                 },
-                timeout=10,
+                timeout=config.timeout,
                 verify=session.verify,
             )
 

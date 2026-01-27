@@ -18,6 +18,9 @@ import requests
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestFormBase64Encoding:
     """Test base64 password encoding."""
@@ -40,7 +43,7 @@ class TestFormBase64Encoding:
             f"{form_base64_server.url}/login",
             data={"username": "admin", "password": encoded_password},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should have session cookie
@@ -59,7 +62,7 @@ class TestFormBase64Encoding:
             f"{form_base64_server.url}/login",
             data={"username": "admin", "password": encoded_password},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should show login form (authentication failed)
@@ -74,7 +77,7 @@ class TestFormBase64Encoding:
             f"{form_base64_server.url}/login",
             data={"username": "admin", "password": "p@ss!word"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should show login form (authentication failed)
@@ -95,6 +98,7 @@ class TestAuthHandlerFormBase64:
                 "password_field": "password",
                 "password_encoding": "base64",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -120,6 +124,7 @@ class TestAuthHandlerFormBase64:
                 "password_field": "password",
                 "password_encoding": "base64",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -154,12 +159,12 @@ class TestFormBase64SpecialCharacters:
             f"{form_base64_server.url}/login",
             data={"username": "admin", "password": encoded},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Verify we can access data after login
         if "session=authenticated" in str(session.cookies):
-            data_response = session.get(form_base64_server.url, timeout=10)
+            data_response = session.get(form_base64_server.url, timeout=TEST_TIMEOUT)
             assert "Cable Modem Status" in data_response.text
 
 
@@ -177,6 +182,7 @@ class TestFormBase64DataAccess:
                 "password_field": "password",
                 "password_encoding": "base64",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -191,7 +197,7 @@ class TestFormBase64DataAccess:
         assert success is True
 
         # Access data page
-        response = session.get(form_base64_server.url, timeout=10)
+        response = session.get(form_base64_server.url, timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
     def test_multiple_data_fetches(self, form_base64_server):
@@ -205,6 +211,7 @@ class TestFormBase64DataAccess:
                 "password_field": "password",
                 "password_encoding": "base64",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -219,7 +226,7 @@ class TestFormBase64DataAccess:
 
         # Multiple fetches should work
         for i in range(5):
-            response = session.get(form_base64_server.url, timeout=10)
+            response = session.get(form_base64_server.url, timeout=TEST_TIMEOUT)
             assert "Cable Modem Status" in response.text, f"Fetch {i + 1} failed"
 
 

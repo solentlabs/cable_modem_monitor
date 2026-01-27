@@ -128,7 +128,7 @@ class UrlTokenSessionStrategy(AuthStrategy):
             headers["X-Requested-With"] = "XMLHttpRequest"
             _LOGGER.debug("URL token auth: Using AJAX-style login (X-Requested-With)")
 
-        response = session.get(login_url, headers=headers, timeout=10, verify=False)
+        response = session.get(login_url, headers=headers, timeout=config.timeout, verify=False)
 
         if response.status_code != 200:
             return self._handle_login_error(response), None
@@ -201,7 +201,7 @@ class UrlTokenSessionStrategy(AuthStrategy):
         if config.auth_header_data:
             headers["Authorization"] = f"Basic {auth_token}"
 
-        data_response = session.get(data_url, headers=headers, timeout=10, verify=False)
+        data_response = session.get(data_url, headers=headers, timeout=config.timeout, verify=False)
 
         if data_response.status_code == 200 and config.success_indicator in data_response.text:
             _LOGGER.info("URL token auth: Authentication successful")

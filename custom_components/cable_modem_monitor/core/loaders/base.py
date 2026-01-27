@@ -86,10 +86,15 @@ class ResourceLoader(ABC):
         return set(pages_data.values())
 
     def _get_timeout(self) -> int:
-        """Get request timeout from config or default.
+        """Get request timeout from modem config.
 
         Returns:
-            Timeout in seconds
+            Timeout in seconds (from modem.yaml)
+
+        Raises:
+            KeyError: If timeout is missing from modem_config (indicates schema issue)
         """
-        timeout: int = self.modem_config.get("timeout", 20)
+        if "timeout" not in self.modem_config:
+            raise KeyError("timeout not found in modem_config - check schema defaults")
+        timeout: int = self.modem_config["timeout"]
         return timeout

@@ -113,6 +113,7 @@ class HNAPJsonAuthStrategy(AuthStrategy):
             endpoint=config.endpoint,
             namespace=config.namespace,
             hmac_algorithm=config.hmac_algorithm,
+            timeout=config.timeout,
             empty_action_value=config.empty_action_value,
         )
 

@@ -16,6 +16,9 @@ import requests
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestConnectionErrors:
     """Test handling of connection errors during auth."""
@@ -30,6 +33,7 @@ class TestConnectionErrors:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -47,7 +51,7 @@ class TestConnectionErrors:
 
     def test_connection_refused_basic_auth(self):
         """Verify Basic auth handles connection refused."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -75,6 +79,7 @@ class TestTimeoutErrors:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -107,6 +112,7 @@ class TestInvalidResponses:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -129,7 +135,7 @@ class TestAuthStrategyFallback:
 
     def test_unknown_strategy_returns_success(self):
         """Verify unknown strategy allows data fetch attempt."""
-        handler = AuthHandler(strategy="unknown_strategy")
+        handler = AuthHandler(strategy="unknown_strategy", timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -146,7 +152,7 @@ class TestAuthStrategyFallback:
 
     def test_none_strategy_returns_success(self):
         """Verify None strategy allows data fetch attempt."""
-        handler = AuthHandler(strategy=None)
+        handler = AuthHandler(strategy=None, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -175,6 +181,7 @@ class TestMissingCredentials:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -199,6 +206,7 @@ class TestMissingCredentials:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -215,7 +223,7 @@ class TestMissingCredentials:
 
     def test_basic_auth_no_credentials(self, basic_auth_server):
         """Verify basic auth fails gracefully with no credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -231,7 +239,7 @@ class TestMissingCredentials:
 
     def test_no_auth_works_without_credentials(self, http_server):
         """Verify NO_AUTH works without credentials."""
-        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH)
+        handler = AuthHandler(strategy=AuthStrategyType.NO_AUTH, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -254,6 +262,7 @@ class TestMissingFormConfig:
         handler = AuthHandler(
             strategy=AuthStrategyType.FORM_PLAIN,
             form_config=None,
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -273,6 +282,7 @@ class TestMissingFormConfig:
         handler = AuthHandler(
             strategy=AuthStrategyType.FORM_PLAIN,
             form_config={},
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -302,6 +312,7 @@ class TestRetryBehavior:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -335,6 +346,7 @@ class TestRetryBehavior:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()

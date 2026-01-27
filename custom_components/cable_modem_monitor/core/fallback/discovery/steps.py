@@ -43,6 +43,7 @@ import requests
 from ....lib.connectivity import check_connectivity
 from ...discovery_helpers import HintMatcher
 from ...ssl_adapter import LegacySSLAdapter
+from ..data_orchestrator import FALLBACK_TIMEOUT
 from .types import AuthResult, ParserResult, ValidationResult
 
 # Re-export check_connectivity for pipeline.py
@@ -123,7 +124,7 @@ def discover_auth(
     if not username and not password:
         _LOGGER.debug("No credentials provided, checking if auth required")
         try:
-            resp = session.get(working_url, timeout=10)
+            resp = session.get(working_url, timeout=FALLBACK_TIMEOUT)
             return AuthResult(
                 success=True,
                 strategy=AuthStrategyType.NO_AUTH.value,

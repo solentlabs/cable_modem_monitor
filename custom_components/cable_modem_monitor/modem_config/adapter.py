@@ -264,6 +264,7 @@ class ModemConfigAuthAdapter:
             "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
+            "timeout": self.config.timeout,
         }
 
     def get_logout_endpoint(self) -> str | None:
@@ -275,6 +276,14 @@ class ModemConfigAuthAdapter:
         if self.config.auth.session:
             return self.config.auth.session.logout_endpoint
         return None
+
+    def get_timeout(self) -> int:
+        """Get request timeout from modem.yaml.
+
+        Returns:
+            Timeout in seconds (from modem.yaml override or schema default).
+        """
+        return self.config.timeout
 
     # =========================================================================
     # AUTH HINTS (convenience methods for discovery)

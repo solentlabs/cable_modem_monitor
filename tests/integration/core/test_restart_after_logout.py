@@ -22,6 +22,9 @@ import requests
 from custom_components.cable_modem_monitor.core.actions.html import HTMLRestartAction
 from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHTMLRestartActionEndpointExtraction:
     """Test HTMLRestartAction endpoint extraction behavior."""
@@ -129,6 +132,7 @@ class TestLoginBehaviorWithoutStoredStrategy:
             username="admin",
             password="password",
             auth_strategy=None,  # Not stored (pre-v3.12 entry)
+            timeout=TEST_TIMEOUT,
         )
 
         success, html = orchestrator._login()
@@ -143,6 +147,7 @@ class TestLoginBehaviorWithoutStoredStrategy:
             host="http://192.168.100.1",
             username=None,
             password=None,
+            timeout=TEST_TIMEOUT,
         )
 
         success, html = orchestrator._login()
@@ -163,6 +168,7 @@ class TestLoginBehaviorWithStoredStrategy:
             username="admin",
             password="password",
             auth_strategy=AuthStrategyType.BASIC_HTTP,
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock auth handler to track if authenticate is called
@@ -189,6 +195,7 @@ class TestRestartFlowWithStoredStrategy:
             username="admin",
             password="password",
             auth_strategy=AuthStrategyType.BASIC_HTTP,
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock parser
@@ -247,6 +254,7 @@ class TestPerformLogout:
             host="http://192.168.100.1",
             username="admin",
             password="password",
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock parser (also clear logout_endpoint attribute to avoid fallback)
@@ -281,6 +289,7 @@ class TestPerformLogout:
             host="http://192.168.100.1",
             username="admin",
             password="password",
+            timeout=TEST_TIMEOUT,
         )
 
         # Mock parser (also clear logout_endpoint attribute to avoid fallback)

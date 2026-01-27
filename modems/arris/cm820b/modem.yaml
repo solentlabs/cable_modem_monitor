@@ -4,6 +4,7 @@
 manufacturer: ARRIS
 model: CM820B
 paradigm: html
+timeout: 15 # CM820B (older Intel Puma 5 chipset) can be slow to respond
 
 hardware:
   docsis_version: "3.0"

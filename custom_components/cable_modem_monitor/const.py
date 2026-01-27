@@ -64,7 +64,7 @@ MAX_SCAN_INTERVAL = 1800  # 30 minutes - maximum useful interval
 
 # HTTP request timeouts (seconds)
 # Used throughout parsers and core modules for consistent behavior
-DEFAULT_TIMEOUT = 20  # Standard timeout for modem requests (some modems take 12+ seconds)
+DEFAULT_TIMEOUT = 10  # Standard timeout for modem requests (slow modems override in modem.yaml)
 QUICK_TIMEOUT = 5  # For link crawling and secondary requests
 DISCOVERY_TIMEOUT = 3  # For initial modem discovery probes
 

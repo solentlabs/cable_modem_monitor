@@ -1,6 +1,6 @@
-"""Integration tests for scraper auth strategy usage.
+"""Integration tests for orchestrator auth strategy usage.
 
-These tests verify that the scraper correctly uses stored auth strategies
+These tests verify that the orchestrator correctly uses stored auth strategies
 during polling (Step 5 of Auth Strategy Discovery).
 """
 
@@ -12,22 +12,26 @@ from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 from custom_components.cable_modem_monitor.core.data_orchestrator import DataOrchestrator
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestScraperAuthStrategyUsage:
     """Test that scraper uses stored auth strategy during polling."""
 
     def test_scraper_accepts_auth_strategy_param(self):
         """Scraper accepts auth_strategy parameter."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             auth_strategy="basic_http",
+            timeout=TEST_TIMEOUT,
         )
 
-        assert scraper._auth_strategy == "basic_http"
-        assert scraper._auth_handler is not None
-        assert scraper._auth_handler.strategy == AuthStrategyType.BASIC_HTTP
+        assert orchestrator._auth_strategy == "basic_http"
+        assert orchestrator._auth_handler is not None
+        assert orchestrator._auth_handler.strategy == AuthStrategyType.BASIC_HTTP
 
     def test_scraper_accepts_form_config_param(self):
         """Scraper accepts auth_form_config parameter."""
@@ -38,15 +42,16 @@ class TestScraperAuthStrategyUsage:
             "password_field": "pass",
             "hidden_fields": {"csrf": "token123"},
         }
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             auth_strategy="form_plain",
             auth_form_config=form_config,
+            timeout=TEST_TIMEOUT,
         )
 
-        assert scraper._auth_handler.form_config == form_config
+        assert orchestrator._auth_handler.form_config == form_config
 
     def test_scraper_no_auth_strategy_assumes_no_auth_required(self):
         """Without auth_strategy or hints, scraper assumes no auth required.
@@ -62,15 +67,16 @@ class TestScraperAuthStrategyUsage:
         mock_parser.js_auth_hints = None
         mock_parser.auth_form_hints = None
 
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=mock_parser,
             auth_strategy=None,  # No stored strategy
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # v3.12: No longer calls parser.login() - assumes no auth required
         mock_parser.login.assert_not_called()
@@ -82,17 +88,18 @@ class TestScraperBasicAuthStrategy:
 
     def test_basic_auth_sets_session_credentials(self, basic_auth_server):
         """Basic auth strategy sets session.auth."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host=basic_auth_server.url,
             username="admin",
             password="pw",
             auth_strategy="basic_http",
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         assert success is True
-        assert scraper.session.auth == ("admin", "pw")
+        assert orchestrator.session.auth == ("admin", "pw")
 
 
 class TestScraperFormAuthStrategy:
@@ -108,15 +115,16 @@ class TestScraperFormAuthStrategy:
             "hidden_fields": {"csrf_token": "test_token"},
         }
 
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host=form_auth_server.url,
             username="admin",
             password="pw",
             auth_strategy="form_plain",
             auth_form_config=form_config,
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # Should succeed with form auth
         assert success is True
@@ -127,14 +135,15 @@ class TestScraperNoAuthStrategy:
 
     def test_no_auth_strategy_succeeds(self, http_server):
         """NO_AUTH strategy succeeds without any auth action."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host=http_server.url,
             username=None,
             password=None,
             auth_strategy="no_auth",
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         assert success is True
 
@@ -150,17 +159,18 @@ class TestScraperHNAPStrategy:
         mock_parser = MagicMock()
         # _json_builder will be set by AuthHandler if HNAP auth succeeds
 
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=mock_parser,
             auth_strategy="hnap_session",
+            timeout=TEST_TIMEOUT,
         )
 
         # Auth handler should be configured for HNAP
-        assert scraper._auth_handler is not None
-        assert scraper._auth_handler.strategy == AuthStrategyType.HNAP_SESSION
+        assert orchestrator._auth_handler is not None
+        assert orchestrator._auth_handler.strategy == AuthStrategyType.HNAP_SESSION
         # Parser.login() should NOT be called (auth handled by AuthHandler)
 
 
@@ -174,17 +184,18 @@ class TestScraperURLTokenStrategy:
         """URL token strategy uses AuthHandler directly."""
         mock_parser = MagicMock()
 
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=mock_parser,
             auth_strategy="url_token_session",
+            timeout=TEST_TIMEOUT,
         )
 
         # Auth handler should be configured for URL token
-        assert scraper._auth_handler is not None
-        assert scraper._auth_handler.strategy == AuthStrategyType.URL_TOKEN_SESSION
+        assert orchestrator._auth_handler is not None
+        assert orchestrator._auth_handler.strategy == AuthStrategyType.URL_TOKEN_SESSION
         # Parser.login() should NOT be called (auth handled by AuthHandler)
 
 
@@ -205,16 +216,17 @@ class TestScraperLegacyEntryHandling:
         mock_parser.auth_form_hints = None
 
         # Legacy entry: no auth_strategy or auth_form_config
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=mock_parser,
             auth_strategy=None,
             auth_form_config=None,
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # v3.12: No longer calls parser.login() - assumes no auth required
         mock_parser.login.assert_not_called()
@@ -227,15 +239,16 @@ class TestScraperLegacyEntryHandling:
         assume the modem doesn't require authentication. This supports
         modems with public status pages.
         """
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=None,
             auth_strategy=None,
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # v3.12: Assumes no auth required
         assert success is True
@@ -249,43 +262,46 @@ class TestScraperAuthHandlerIntegration:
         mock_parser = MagicMock()
 
         # Create scraper with form auth but no form config
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             parser=mock_parser,
             auth_strategy="form_plain",
             auth_form_config=None,  # Missing config will cause warning
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # Form auth without config should fail (no form_config)
         assert success is False
 
     def test_auth_handler_initialized_correctly(self):
         """Auth handler is initialized with correct strategy."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             auth_strategy="basic_http",
+            timeout=TEST_TIMEOUT,
         )
 
-        assert isinstance(scraper._auth_handler, AuthHandler)
-        assert scraper._auth_handler.strategy == AuthStrategyType.BASIC_HTTP
+        assert isinstance(orchestrator._auth_handler, AuthHandler)
+        assert orchestrator._auth_handler.strategy == AuthStrategyType.BASIC_HTTP
 
     def test_auth_handler_initialized_with_unknown_strategy(self):
         """Unknown strategy string handled gracefully."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="admin",
             password="pw",
             auth_strategy="not_a_real_strategy",
+            timeout=TEST_TIMEOUT,
         )
 
         # Should default to UNKNOWN
-        assert scraper._auth_handler.strategy == AuthStrategyType.UNKNOWN
+        assert orchestrator._auth_handler.strategy == AuthStrategyType.UNKNOWN
 
 
 class TestScraperNoCredentials:
@@ -293,14 +309,15 @@ class TestScraperNoCredentials:
 
     def test_no_credentials_skips_login(self):
         """Without credentials, _login() returns success immediately."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username=None,
             password=None,
             auth_strategy="basic_http",  # Strategy exists but no creds
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # Should return True immediately (skip login)
         assert success is True
@@ -308,14 +325,15 @@ class TestScraperNoCredentials:
 
     def test_empty_credentials_skips_login(self):
         """Empty string credentials skip login."""
-        scraper = DataOrchestrator(
+        orchestrator = DataOrchestrator(
             host="http://192.168.100.1",
             username="",
             password="",
             auth_strategy="basic_http",
+            timeout=TEST_TIMEOUT,
         )
 
-        success, html = scraper._login()
+        success, html = orchestrator._login()
 
         # Should return True immediately (skip login)
         assert success is True

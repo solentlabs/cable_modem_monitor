@@ -22,6 +22,9 @@ from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyTy
 # Suppress InsecureRequestWarning for tests with verify=False
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHTTPSFormAuth:
     """Test form authentication over HTTPS."""
@@ -31,7 +34,7 @@ class TestHTTPSFormAuth:
         session = requests.Session()
         session.verify = False
 
-        response = session.get(https_form_auth_server.url, timeout=10)
+        response = session.get(https_form_auth_server.url, timeout=TEST_TIMEOUT)
 
         assert response.status_code == 200
         assert 'type="password"' in response.text.lower()
@@ -46,7 +49,7 @@ class TestHTTPSFormAuth:
             f"{https_form_auth_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should have session cookie and be on data page
@@ -62,7 +65,7 @@ class TestHTTPSFormAuth:
             f"{https_form_auth_server.url}/login",
             data={"username": "wrong", "password": "wrong"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should show login form again
@@ -78,12 +81,12 @@ class TestHTTPSFormAuth:
             f"{https_form_auth_server.url}/login",
             data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Multiple requests should work
         for i in range(5):
-            response = session.get(f"{https_form_auth_server.url}/status.html", timeout=10)
+            response = session.get(f"{https_form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Request {i + 1} failed"
 
@@ -101,6 +104,7 @@ class TestHTTPSAuthHandler:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -115,7 +119,7 @@ class TestHTTPSAuthHandler:
 
         assert success is True
         # Should be able to access data
-        response = session.get(f"{https_form_auth_server.url}/status.html", timeout=10)
+        response = session.get(f"{https_form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
     def test_auth_handler_https_form_invalid_creds(self, https_form_auth_server):
@@ -128,6 +132,7 @@ class TestHTTPSAuthHandler:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -152,7 +157,7 @@ class TestHTTPSWithModernSSL:
         session.verify = False
 
         # Just verify we can connect and get response
-        response = session.get(https_modern_server.url, timeout=10)
+        response = session.get(https_modern_server.url, timeout=TEST_TIMEOUT)
         assert response.status_code == 200
 
 
@@ -164,7 +169,7 @@ class TestHTTPSCertificateHandling:
         session = requests.Session()
         session.verify = False
 
-        response = session.get(https_form_auth_server.url, timeout=10)
+        response = session.get(https_form_auth_server.url, timeout=TEST_TIMEOUT)
         assert response.status_code == 200
 
     def test_self_signed_cert_verify_true_fails(self, https_form_auth_server):
@@ -173,4 +178,4 @@ class TestHTTPSCertificateHandling:
         session.verify = True
 
         with pytest.raises(requests.exceptions.SSLError):
-            session.get(https_form_auth_server.url, timeout=10)
+            session.get(https_form_auth_server.url, timeout=TEST_TIMEOUT)

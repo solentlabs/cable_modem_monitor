@@ -8,6 +8,9 @@ import pytest
 
 from custom_components.cable_modem_monitor.core.actions.html import HTMLRestartAction
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHTMLRestartActionInit:
     """Test HTMLRestartAction initialization."""
@@ -83,7 +86,7 @@ class TestHTMLRestartActionExecution:
         mock_session.post.assert_called_once_with(
             "http://192.168.100.1/goform/restart",
             data={"action": "reboot"},
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
     def test_dynamic_endpoint_success(self):
@@ -128,7 +131,7 @@ class TestHTMLRestartActionExecution:
         mock_session.post.assert_called_once_with(
             "http://192.168.100.1/goform/RouterStatus?id=239640653",
             data={"buttonSelect": "2"},
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
     def test_dynamic_endpoint_extraction_failure(self):

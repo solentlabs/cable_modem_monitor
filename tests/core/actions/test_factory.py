@@ -17,6 +17,9 @@ from custom_components.cable_modem_monitor.core.actions.hnap import HNAPRestartA
 from custom_components.cable_modem_monitor.core.actions.html import HTMLRestartAction
 from custom_components.cable_modem_monitor.core.actions.rest import RESTRestartAction
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 # ┌────────────────────┬──────────────────────────────────┬───────────────────────┐
 # │ type               │ config                           │ expected result       │
 # ├────────────────────┼──────────────────────────────────┼───────────────────────┤
@@ -67,6 +70,7 @@ TEST_FACTORY_HNAP_CASES = [
 def test_create_restart_action_hnap(actions_config, auth_hnap_config, expected_type, desc):
     """Test ActionFactory.create_restart_action with HNAP configurations."""
     modem_config = {
+        "timeout": TEST_TIMEOUT,
         "paradigm": "hnap",
         "manufacturer": "TestMfg",
         "model": "TestModel",
@@ -109,6 +113,7 @@ TEST_FACTORY_HTML_CASES = [
 def test_create_restart_action_html(actions_config, expected_type, desc):
     """Test ActionFactory.create_restart_action with HTML form configurations."""
     modem_config = {
+        "timeout": TEST_TIMEOUT,
         "paradigm": "html",
         "manufacturer": "TestMfg",
         "model": "TestModel",
@@ -146,6 +151,7 @@ TEST_FACTORY_REST_CASES = [
 def test_create_restart_action_rest(actions_config, expected_type, desc):
     """Test ActionFactory.create_restart_action with REST API configurations."""
     modem_config = {
+        "timeout": TEST_TIMEOUT,
         "paradigm": "rest_api",
         "manufacturer": "TestMfg",
         "model": "TestModel",
@@ -164,6 +170,7 @@ def test_create_restart_action_rest(actions_config, expected_type, desc):
 def test_create_action_restart():
     """Test ActionFactory.create_action with RESTART action type."""
     modem_config = {
+        "timeout": TEST_TIMEOUT,
         "paradigm": "hnap",
         "manufacturer": "Arris",
         "model": "S33",
@@ -207,6 +214,7 @@ class TestHNAPRestartActionInit:
     def test_basic_config(self):
         """Test initialization with basic HNAP config."""
         modem_config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "auth": {
                 "hnap": {
@@ -239,6 +247,7 @@ class TestHNAPRestartActionInit:
     def test_config_with_prefetch(self):
         """Test initialization with pre-fetch action config."""
         modem_config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "auth": {
                 "hnap": {
@@ -269,6 +278,7 @@ class TestHNAPRestartActionInit:
     def test_fallback_to_deprecated_location(self):
         """Test that HNAP still reads from deprecated auth.hnap.actions.restart."""
         modem_config = {
+            "timeout": TEST_TIMEOUT,
             "paradigm": "hnap",
             "auth": {
                 "hnap": {
