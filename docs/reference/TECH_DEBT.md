@@ -82,6 +82,44 @@ Phase 5 (Documentation)
 
 ---
 
+
+### Config Entry Coupled to Parser Class Names
+
+**Status:** Backlog
+
+**Problem:** Config entries store `parser_name` (e.g., `"TechnicolorTC4400Parser"`) to lookup `modem.yaml` at runtime. This couples persistent config to implementation details - renaming a parser class breaks existing installations.
+
+**Current flow:**
+```
+config_entry.data["parser_name"] = "TechnicolorTC4400Parser"
+    ↓
+get_auth_adapter_for_parser("TechnicolorTC4400Parser")
+    ↓
+Searches all modem.yaml files for matching parser_class
+```
+
+**Proposed flow:**
+```
+config_entry.data["modem_path"] = "technicolor/tc4400"
+    ↓
+get_auth_adapter_by_modem_path("technicolor/tc4400")
+    ↓
+Direct file lookup: modems/technicolor/tc4400/modem.yaml
+```
+
+**Benefits:**
+- Decouples config from class names (can rename parsers freely)
+- Faster lookup (direct path vs search)
+- Clearer semantics (path is stable identifier)
+
+**Migration:** Add migration in `__init__.py` to populate `modem_path` for existing entries using reverse lookup from `parser_name`.
+
+**Files:** `const.py`, `__init__.py`, `config_flow.py`, `config_flow_helpers.py`, `modem_config/adapter.py`, `modem_config/loader.py`
+
+**Stash reference:** `stash@{1}` contains a working implementation
+
+---
+
 ## P2 - Medium Priority
 
 ### Sensor Value Access Lacks Validation
@@ -339,6 +377,7 @@ candidates = get_modem_configs_matching_signals({
 | Broad Exception Handling | Refactored ~36 `except Exception` blocks |
 | Pre-Push Hook | Added to `.pre-commit-config.yaml` |
 | Rename ModemScraper | Renamed to `DataOrchestrator` |
+| Hardcoded Auth Timeouts | Schema-defined `timeout` in modem.yaml, `TEST_TIMEOUT` constant in tests |
 
 ### v3.12.0 (January 2026)
 

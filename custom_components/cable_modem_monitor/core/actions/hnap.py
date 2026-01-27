@@ -42,6 +42,9 @@ class HNAPRestartAction(ModemAction):
         """Initialize from modem.yaml configuration."""
         super().__init__(modem_config)
 
+        # Get timeout from modem.yaml (schema guarantees this field exists)
+        self._timeout: int = modem_config["timeout"]
+
         # Get HNAP config for protocol settings
         hnap_config = self._get_hnap_config()
         self._endpoint = hnap_config.get("endpoint", "/HNAP1/")
@@ -139,6 +142,7 @@ class HNAPRestartAction(ModemAction):
             endpoint=self._endpoint,
             namespace=self._namespace,
             hmac_algorithm=HMACAlgorithm(self._hmac_algorithm),
+            timeout=self._timeout,
             empty_action_value=self._empty_action_value,
         )
 

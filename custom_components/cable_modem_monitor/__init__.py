@@ -206,7 +206,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # - DataOrchestrator: For known modems, uses modem.yaml as source of truth
     is_fallback_modem = modem_choice == "Unknown Modem (Fallback Mode)"
 
-    orchestrator_args = {
+    # Base args shared by both orchestrators
+    orchestrator_args: dict[str, Any] = {
         "host": host,
         "username": username,
         "password": password,
@@ -221,10 +222,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     }
 
     modem_client: DataOrchestrator
+    modem_adapter = None
     if is_fallback_modem:
+        # FallbackOrchestrator uses FALLBACK_TIMEOUT (20s) by default
         _LOGGER.info("Using FallbackOrchestrator for unknown modem (auth discovery enabled)")
         modem_client = FallbackOrchestrator(**orchestrator_args)
     else:
+        # Known modem - load adapter for timeout and other modem.yaml settings
+        parser_name = selected_parser.__class__.__name__
+        modem_adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, parser_name)
+        orchestrator_args["timeout"] = modem_adapter.get_timeout()
         _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
         modem_client = DataOrchestrator(**orchestrator_args)
 
@@ -257,17 +264,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
     # Must run before platform setup so sensors don't create duplicates
-    docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
-    # Fallback: get docsis_version from modem.yaml if not in config entry (pre-v3.11 installs)
-    # Run in executor to avoid blocking I/O in event loop (modem.yaml file reads)
-    if not docsis_version and modem_client.parser:
-        adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, modem_client.parser.__class__.__name__)
-        if adapter:
-            docsis_version = adapter.get_docsis_version()
+    # Only applies to known modems - fallback modems don't have entity naming conventions
+    # TODO: Remove after v3.14 release when all users have migrated
+    if not is_fallback_modem:
+        assert modem_adapter is not None  # Known modem path always sets modem_adapter
+        docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
+        if not docsis_version:
+            docsis_version = modem_adapter.get_docsis_version()
             _LOGGER.debug("Using modem.yaml docsis_version for migration: %s", docsis_version)
-    migrated = await async_migrate_docsis30_entities(hass, entry, docsis_version)
-    if migrated > 0:
-        _LOGGER.info("Entity migration complete: %d entities updated", migrated)
+        migrated = await async_migrate_docsis30_entities(hass, entry, docsis_version)
+        if migrated > 0:
+            _LOGGER.info("Entity migration complete: %d entities updated", migrated)
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

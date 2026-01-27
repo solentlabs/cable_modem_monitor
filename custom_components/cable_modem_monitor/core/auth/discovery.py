@@ -41,6 +41,21 @@ from bs4 import BeautifulSoup
 from .detection import has_login_form
 from .types import AuthStrategyType
 
+# Import directly to avoid triggering fallback/__init__.py (circular import)
+# Use lazy import inside the function that needs it
+_FALLBACK_TIMEOUT: int | None = None
+
+
+def _get_fallback_timeout() -> int:
+    """Lazy import of FALLBACK_TIMEOUT to avoid circular imports."""
+    global _FALLBACK_TIMEOUT
+    if _FALLBACK_TIMEOUT is None:
+        from ..fallback.data_orchestrator import FALLBACK_TIMEOUT
+
+        _FALLBACK_TIMEOUT = FALLBACK_TIMEOUT
+    return _FALLBACK_TIMEOUT
+
+
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import (
         HNAPJsonRequestBuilder,
@@ -660,6 +675,7 @@ class AuthDiscovery:
                 endpoint=hnap_config.get("endpoint", "/HNAP1/"),
                 namespace=hnap_config.get("namespace", "http://purenetworks.com/HNAP1/"),
                 hmac_algorithm=algorithm,
+                timeout=_get_fallback_timeout(),
                 empty_action_value=hnap_config.get("empty_action_value", ""),
             )
 

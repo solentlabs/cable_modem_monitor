@@ -216,6 +216,7 @@ def _build_s34_auth_config():
     return {
         "auth_strategy": AUTH_TYPE_TO_STRATEGY.get("hnap"),
         "auth_hnap_config": type_config,
+        "timeout": adapter.config.timeout,
     }
 
 
@@ -352,6 +353,7 @@ class TestProtocolFallback:
         auth_config = {
             "auth_strategy": AUTH_TYPE_TO_STRATEGY.get("form"),
             "auth_form_config": type_config,
+            "timeout": adapter.config.timeout,
         }
 
         # HTTP-only server (no SSL context)
@@ -399,9 +401,10 @@ class TestProtocolFallback:
             pytest.skip("SB6190 parser not found")
 
         # no_auth doesn't need additional config
-        _ = get_auth_adapter_for_parser(parser.__name__)  # Verify adapter exists
+        adapter = get_auth_adapter_for_parser(parser.__name__)
         auth_config = {
             "auth_strategy": AUTH_TYPE_TO_STRATEGY.get("none"),
+            "timeout": adapter.config.timeout,
         }
 
         cert_path, key_path = test_certs

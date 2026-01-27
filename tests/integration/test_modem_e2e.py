@@ -34,6 +34,9 @@ from .mock_modem_server import MockModemServer
 
 _LOGGER = logging.getLogger(__name__)
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 # Test credentials - use "pw" instead of "password" to avoid browser password managers
 # flagging these as real credentials during development
 TEST_USERNAME = "admin"
@@ -120,7 +123,7 @@ class TestModemE2E:
                 if any(public_path.endswith(ext) for ext in [".css", ".jpg", ".png", ".gif"]):
                     continue
 
-                resp = session.get(f"{server.url}{public_path}", timeout=10)
+                resp = session.get(f"{server.url}{public_path}", timeout=TEST_TIMEOUT)
                 assert resp.status_code == 200, f"Failed to access public page {public_path}"
 
     @pytest.mark.parametrize(
@@ -148,7 +151,7 @@ class TestModemE2E:
             session = requests.Session()
 
             for protected_path in protected_with_fixtures:
-                resp = session.get(f"{server.url}{protected_path}", timeout=10)
+                resp = session.get(f"{server.url}{protected_path}", timeout=TEST_TIMEOUT)
 
                 # Should either return login page (200) or 401
                 if resp.status_code == 200:
@@ -201,7 +204,7 @@ class TestModemE2E:
                 f"{server.url}{form_config.action}",
                 data=login_data,
                 allow_redirects=False,
-                timeout=10,
+                timeout=TEST_TIMEOUT,
             )
 
             # Should redirect on success
@@ -218,7 +221,7 @@ class TestModemE2E:
             # Now should be able to access protected pages
             if config.pages and config.pages.protected:
                 for protected_path in config.pages.protected:
-                    resp = session.get(f"{server.url}{protected_path}", timeout=10)
+                    resp = session.get(f"{server.url}{protected_path}", timeout=TEST_TIMEOUT)
                     assert resp.status_code == 200, f"Failed to access {protected_path} after auth"
                     # Should NOT contain login form (check for form action, not just "password" word)
                     yaml_form_config = get_form_config(config)
@@ -273,6 +276,7 @@ class TestModemE2E:
             handler = AuthHandler(
                 strategy=auth_strategy,
                 form_config=form_config_dict,
+                timeout=TEST_TIMEOUT,
             )
 
             session = requests.Session()
@@ -400,6 +404,7 @@ class TestModemE2EFullWorkflow:
                     endpoint=hnap_config.endpoint,
                     namespace=hnap_config.namespace,
                     hmac_algorithm=algorithm,
+                    timeout=config.timeout,
                     empty_action_value=hnap_config.empty_action_value,
                 )
 
@@ -429,7 +434,7 @@ class TestModemE2EFullWorkflow:
                     f"{server.url}{form_config.action}",
                     data=login_data,
                     allow_redirects=True,
-                    timeout=10,
+                    timeout=TEST_TIMEOUT,
                 )
                 assert resp.status_code == 200
 
@@ -448,7 +453,7 @@ class TestModemE2EFullWorkflow:
             else:
                 # HTML modems: fetch pages via GET and parse HTML
                 for data_type, data_path in config.pages.data.items():
-                    resp = session.get(f"{server.url}{data_path}", timeout=10)
+                    resp = session.get(f"{server.url}{data_path}", timeout=TEST_TIMEOUT)
                     assert resp.status_code == 200, f"Failed to fetch {data_path}"
 
                     # Parse the response - pass BeautifulSoup object

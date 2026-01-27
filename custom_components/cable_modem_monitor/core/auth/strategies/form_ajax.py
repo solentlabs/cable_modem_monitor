@@ -107,7 +107,7 @@ class FormAjaxAuthStrategy(AuthStrategy):
                 endpoint_url,
                 data=form_data,
                 headers={"Referer": base_url, "X-Requested-With": "XMLHttpRequest"},
-                timeout=10,
+                timeout=config.timeout,
                 verify=session.verify,
             )
 
@@ -169,7 +169,7 @@ class FormAjaxAuthStrategy(AuthStrategy):
                 data_response = session.get(
                     redirect_url,
                     headers={"Referer": base_url},
-                    timeout=10,
+                    timeout=config.timeout,
                     verify=session.verify,
                 )
                 return AuthResult.ok(data_response.text)

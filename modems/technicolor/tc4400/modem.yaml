@@ -4,6 +4,7 @@
 manufacturer: Technicolor
 model: TC4400
 paradigm: html
+timeout: 20 # TC4400 pages can take 12+ seconds to load (issue #94)
 
 hardware:
   docsis_version: "3.1"

@@ -17,7 +17,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 88 | Tests for Cable Modem Monitor scraper. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 88 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -280,14 +280,13 @@ Tests for Cable Modem Monitor coordinator improvements.
 
 ### test_data_orchestrator.py
 
-Tests for Cable Modem Monitor scraper.
+Tests for DataOrchestrator.
 
 These tests validate the DataOrchestrator core functionality using mock parsers.
-No modem-specific references - tests exercise the scraper mechanism itself.
+No modem-specific references - tests exercise the orchestrator mechanism itself.
 
-NOTE: The scraper is core/generic functionality that will be further abstracted
-in future versions. Using mock parsers (not real modems) ensures these tests
-remain stable as the architecture evolves toward declarative modem configs.
+NOTE: Using mock parsers (not real modems) ensures these tests remain stable
+as the architecture evolves toward declarative modem configs.
 
 **TestDataOrchestrator** (11 tests)
 : Test the DataOrchestrator class.
@@ -798,10 +797,6 @@ Tests for version logging and startup optimizations.
 
 - `test_version_constant_format`: Test that VERSION constant is in correct format.
 - `test_current_version`: Test that version is the correct current version.
-
-**TestParserSelectionOptimization** (0 tests)
-: Test parser selection optimization during startup.
-
 
 **TestProtocolOptimizationIntegration** (0 tests)
 : Test protocol optimization integration in startup.

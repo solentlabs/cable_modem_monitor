@@ -22,6 +22,9 @@ from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_
 
 from .mock_modem_server import MockModemServer
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 MODEMS_DIR = Path(__file__).parent.parent.parent / "modems"
 
 
@@ -39,6 +42,7 @@ def _build_sb8200_url_token_config():
     return {
         "auth_strategy": AUTH_TYPE_TO_STRATEGY.get("url_token"),
         "auth_url_token_config": type_config,
+        "timeout": adapter.config.timeout,
     }
 
 
@@ -119,6 +123,7 @@ class TestAuthHandlerUsage:
                 legacy_ssl=False,
                 auth_strategy="url_token_session",
                 auth_url_token_config=url_token_config,
+                timeout=TEST_TIMEOUT,
             )
 
             # Patch AuthHandler.authenticate to track calls
@@ -169,6 +174,7 @@ class TestAuthHandlerUsage:
                 legacy_ssl=False,
                 auth_strategy="url_token_session",
                 auth_url_token_config=url_token_config,
+                timeout=TEST_TIMEOUT,
             )
 
             # Patch AuthHandler.authenticate to track calls
@@ -322,6 +328,7 @@ class TestStrictUrlTokenAuth:
                 legacy_ssl=False,
                 auth_strategy="url_token_session",
                 auth_url_token_config=url_token_config,
+                timeout=TEST_TIMEOUT,
             )
 
             # This is the actual polling call
@@ -489,6 +496,7 @@ class TestTwoStepUrlTokenAuth:
                 legacy_ssl=False,
                 auth_strategy="url_token_session",
                 auth_url_token_config=url_token_config,
+                timeout=TEST_TIMEOUT,
             )
 
             # This is the actual polling call - should work end-to-end
@@ -546,6 +554,7 @@ class TestTwoStepUrlTokenAuth:
                 legacy_ssl=False,
                 auth_strategy="url_token_session",
                 auth_url_token_config=url_token_config,
+                timeout=TEST_TIMEOUT,
             )
 
             # Track all URLs requested by patching the session

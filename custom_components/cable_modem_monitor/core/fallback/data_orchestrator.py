@@ -27,9 +27,12 @@ from ..auth.types import AuthStrategyType
 from ..data_orchestrator import DataOrchestrator
 
 if TYPE_CHECKING:
-    pass
+    from ..base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
+
+# Fallback timeout is higher than DEFAULT_TIMEOUT to allow for slow/unknown modems
+FALLBACK_TIMEOUT = 20
 
 
 class FallbackOrchestrator(DataOrchestrator):
@@ -42,6 +45,45 @@ class FallbackOrchestrator(DataOrchestrator):
 
     Used when modem choice is "Unknown Modem (Fallback Mode)".
     """
+
+    def __init__(
+        self,
+        host: str,
+        username: str | None = None,
+        password: str | None = None,
+        parser: ModemParser | list[type[ModemParser]] | None = None,
+        cached_url: str | None = None,
+        verify_ssl: bool = False,
+        legacy_ssl: bool = False,
+        auth_strategy: str | None = None,
+        auth_form_config: dict[str, Any] | None = None,
+        auth_hnap_config: dict[str, Any] | None = None,
+        auth_url_token_config: dict[str, Any] | None = None,
+        authenticated_html: str | None = None,
+        session_pre_authenticated: bool = False,
+        timeout: int = FALLBACK_TIMEOUT,
+    ):
+        """Initialize fallback orchestrator with isolated timeout.
+
+        Uses FALLBACK_TIMEOUT by default since this orchestrator doesn't
+        have access to modem.yaml configuration.
+        """
+        super().__init__(
+            host=host,
+            username=username,
+            password=password,
+            parser=parser,
+            cached_url=cached_url,
+            verify_ssl=verify_ssl,
+            legacy_ssl=legacy_ssl,
+            auth_strategy=auth_strategy,
+            auth_form_config=auth_form_config,
+            auth_hnap_config=auth_hnap_config,
+            auth_url_token_config=auth_url_token_config,
+            authenticated_html=authenticated_html,
+            session_pre_authenticated=session_pre_authenticated,
+            timeout=timeout,
+        )
 
     def _login(self) -> tuple[bool, str | None]:
         """Log in with discovery fallback for unknown modems.
@@ -112,7 +154,7 @@ class FallbackOrchestrator(DataOrchestrator):
         hints = self._get_hnap_hints(adapter)
         if hints:
             _LOGGER.debug("Trying HNAP authentication via parser hints")
-            temp_handler = AuthHandler(strategy="hnap_session", hnap_config=hints)
+            temp_handler = AuthHandler(strategy="hnap_session", hnap_config=hints, timeout=self._timeout)
             auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
             if auth_result.success:
                 self._auth_handler = temp_handler
@@ -131,7 +173,9 @@ class FallbackOrchestrator(DataOrchestrator):
                 "token_prefix": hints.get("token_prefix", "ct_"),
                 "success_indicator": hints.get("success_indicator", "Downstream"),
             }
-            temp_handler = AuthHandler(strategy="url_token_session", url_token_config=url_token_config)
+            temp_handler = AuthHandler(
+                strategy="url_token_session", url_token_config=url_token_config, timeout=self._timeout
+            )
             auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
             if auth_result.success:
                 self._auth_handler = temp_handler
@@ -150,7 +194,7 @@ class FallbackOrchestrator(DataOrchestrator):
                 "password_encoding": hints.get("password_encoding", "plain"),
             }
 
-            temp_handler = AuthHandler(strategy="form_plain", form_config=form_config)
+            temp_handler = AuthHandler(strategy="form_plain", form_config=form_config, timeout=self._timeout)
             auth_result = temp_handler.authenticate(self.session, self.base_url, self.username, self.password)
             if auth_result.success:
                 self._auth_handler = temp_handler

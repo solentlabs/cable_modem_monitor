@@ -58,6 +58,7 @@ def build_static_auth_config(parser: type[ModemParser], auth_type: str) -> dict[
         "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
         "auth_hnap_config": type_config if auth_type == "hnap" else None,
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
+        "timeout": adapter.config.timeout,
     }
 
 

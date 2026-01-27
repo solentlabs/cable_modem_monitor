@@ -22,6 +22,9 @@ from custom_components.cable_modem_monitor.core.auth import (
     UrlTokenSessionStrategy,
 )
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 @pytest.fixture
 def mock_session():
@@ -43,6 +46,7 @@ def form_auth_config():
         username_field="username",
         password_field="password",
         success_indicator="/status.asp",
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -205,6 +209,7 @@ class TestFormPlainAuthStrategy:
             username_field="username",
             password_field="password",
             success_indicator="1000",  # Response must be > 1000 bytes
+            timeout=TEST_TIMEOUT,
         )
 
         strategy = FormPlainAuthStrategy()
@@ -233,6 +238,7 @@ class TestFormPlainAuthStrategy:
             login_url="/goform/logon",
             username_field="username_login",
             password_field="password_login",
+            timeout=TEST_TIMEOUT,
             # No success_indicator - relies on is_login_page() check
         )
 
@@ -266,6 +272,7 @@ class TestRedirectFormAuthStrategy:
             password_field="password",
             success_redirect_pattern="/home.jst",
             authenticated_page_url="/network_setup.jst",
+            timeout=TEST_TIMEOUT,
         )
 
     def test_redirect_form_success(self, mock_session, redirect_form_config):

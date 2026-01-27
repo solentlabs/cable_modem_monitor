@@ -28,6 +28,9 @@ from custom_components.cable_modem_monitor.core.auth.strategies.form_plain impor
     FormPlainAuthStrategy,
 )
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 # =============================================================================
 # Test Data: Simulated Login Page with Dynamic Form Action
 # =============================================================================
@@ -78,6 +81,7 @@ def form_plain_config():
         login_url=STATIC_ACTION,  # Missing the dynamic ?id= parameter!
         username_field="loginName",
         password_field="loginPassword",
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -91,6 +95,7 @@ def form_dynamic_config():
         password_field="loginPassword",
         login_page="/",  # Page containing the login form
         form_selector="form[name='loginform']",  # CSS selector for the form
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -228,6 +233,7 @@ class TestFormDynamicExtractsAction:
             password_field="pass",
             login_page="/login.html",
             form_selector=None,  # No selector
+            timeout=TEST_TIMEOUT,
         )
 
         strategy = FormDynamicAuthStrategy()

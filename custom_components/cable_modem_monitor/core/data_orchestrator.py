@@ -161,6 +161,7 @@ class DataOrchestrator:
         auth_url_token_config: dict[str, Any] | None = None,
         authenticated_html: str | None = None,
         session_pre_authenticated: bool = False,
+        timeout: int | None = None,
     ):
         """
         Initialize the polling orchestrator.
@@ -179,6 +180,7 @@ class DataOrchestrator:
             auth_url_token_config: URL token configuration (login_prefix, etc.) from config entry
             authenticated_html: Pre-fetched HTML from auth discovery (for instant parser detection)
             session_pre_authenticated: Session is already authenticated from auth discovery (skip _login)
+            timeout: Request timeout in seconds (ModemConfig.timeout)
         """
         self.host = host
         # Support both plain IP addresses and full URLs (http:// or https://)
@@ -238,11 +240,15 @@ class DataOrchestrator:
 
         # Auth strategy from config entry
         # This enables response-driven auth during polling
+        if timeout is None:
+            raise ValueError("timeout is required but was None. Schema defines DEFAULT_TIMEOUT in const.py.")
+        self._timeout = timeout
         self._auth_handler = AuthHandler(
             strategy=auth_strategy,
             form_config=auth_form_config,
             hnap_config=auth_hnap_config,
             url_token_config=auth_url_token_config,
+            timeout=timeout,
         )
         self._auth_strategy = auth_strategy
 

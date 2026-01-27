@@ -60,6 +60,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from custom_components.cable_modem_monitor.const import DEFAULT_TIMEOUT
+
 # =============================================================================
 # ENUMS
 # =============================================================================
@@ -856,6 +858,12 @@ class ModemConfig(BaseModel):
     default_host: str = Field(
         default="192.168.100.1",
         description="Default modem IP address",
+    )
+
+    # Request timeout - some modems are slow (TC4400 takes 12+ seconds)
+    timeout: int = Field(
+        default=DEFAULT_TIMEOUT,
+        description="Request timeout in seconds for auth and data requests",
     )
 
     # Authentication

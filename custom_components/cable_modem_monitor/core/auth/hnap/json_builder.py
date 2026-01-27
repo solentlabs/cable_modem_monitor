@@ -65,6 +65,7 @@ class HNAPJsonRequestBuilder:
         endpoint: str,
         namespace: str,
         hmac_algorithm: HMACAlgorithm,
+        timeout: int,
         empty_action_value: str | dict | None = None,
     ):
         """
@@ -74,6 +75,7 @@ class HNAPJsonRequestBuilder:
             endpoint: HNAP endpoint path (e.g., "/HNAP1/")
             namespace: HNAP namespace (e.g., "http://purenetworks.com/HNAP1/")
             hmac_algorithm: HMAC algorithm for authentication (from modem.yaml).
+            timeout: Request timeout in seconds (from modem.yaml).
             empty_action_value: Value to use for actions without parameters in GetMultipleHNAPs.
                 Different modem firmwares expect different formats:
                 - "" (empty string): observed in most HAR captures
@@ -87,6 +89,7 @@ class HNAPJsonRequestBuilder:
         self.endpoint = endpoint
         self.namespace = namespace
         self.hmac_algorithm = hmac_algorithm
+        self.timeout = timeout
         self.empty_action_value = empty_action_value
         self._private_key: str | None = None  # Stored after successful login for auth headers
         # Store last request/response for diagnostics (passwords redacted)
@@ -181,7 +184,7 @@ class HNAPJsonRequestBuilder:
             url,
             json=request_data,
             headers=headers,
-            timeout=10,
+            timeout=self.timeout,
             verify=session.verify,
         )
 
@@ -235,7 +238,7 @@ class HNAPJsonRequestBuilder:
                 "HNAP_AUTH": self._get_hnap_auth("GetMultipleHNAPs"),
                 "Content-Type": "application/json",
             },
-            timeout=10,
+            timeout=self.timeout,
             verify=session.verify,
         )
 
@@ -312,7 +315,7 @@ class HNAPJsonRequestBuilder:
                     "HNAP_AUTH": self._get_hnap_auth("Login"),
                     "Content-Type": "application/json",
                 },
-                timeout=10,
+                timeout=self.timeout,
                 verify=session.verify,
             )
 
@@ -407,7 +410,7 @@ class HNAPJsonRequestBuilder:
                     "HNAP_AUTH": self._get_hnap_auth("Login"),
                     "Content-Type": "application/json",
                 },
-                timeout=10,
+                timeout=self.timeout,
                 verify=session.verify,
             )
 

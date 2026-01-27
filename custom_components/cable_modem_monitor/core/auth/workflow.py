@@ -110,6 +110,7 @@ class AuthWorkflow:
         auth_type: str,
         username: str | None,
         password: str | None,
+        timeout: int | None = None,
     ) -> AuthWorkflowResult:
         """Authenticate using the specified auth type.
 
@@ -124,11 +125,16 @@ class AuthWorkflow:
             auth_type: Auth type from modem.yaml (e.g., "none", "form", "url_token")
             username: Username for authentication (None for no-auth)
             password: Password for authentication (None for no-auth)
+            timeout: Request timeout in seconds (from modem.yaml)
 
         Returns:
             AuthWorkflowResult with authenticated session and configs
         """
         from .handler import AuthHandler
+
+        # Get timeout from modem.yaml if not explicitly provided
+        if timeout is None:
+            timeout = self.adapter.config.timeout
 
         # Map user-facing auth type to internal strategy
         strategy = AUTH_TYPE_TO_STRATEGY.get(auth_type, "no_auth")
@@ -146,7 +152,7 @@ class AuthWorkflow:
         if not username and not password:
             _LOGGER.debug("No credentials provided, fetching page without auth")
             try:
-                resp = session.get(working_url, timeout=10)
+                resp = session.get(working_url, timeout=timeout)
                 return AuthWorkflowResult(
                     success=True,
                     strategy="no_auth",
@@ -160,7 +166,7 @@ class AuthWorkflow:
         if auth_type == "none":
             _LOGGER.debug("No auth required per config, fetching page")
             try:
-                resp = session.get(working_url, timeout=10)
+                resp = session.get(working_url, timeout=timeout)
                 return AuthWorkflowResult(
                     success=True,
                     strategy="no_auth",
@@ -188,6 +194,7 @@ class AuthWorkflow:
                 form_config=form_config,
                 hnap_config=hnap_config,
                 url_token_config=url_token_config,
+                timeout=timeout,
             )
 
             auth_result = handler.authenticate(
@@ -217,7 +224,7 @@ class AuthWorkflow:
                     working_url,
                 )
                 try:
-                    resp = session.get(working_url, timeout=10)
+                    resp = session.get(working_url, timeout=timeout)
                     html_content = resp.text
                 except Exception as e:
                     _LOGGER.warning("Failed to fetch page after auth: %s", e)
@@ -250,13 +257,14 @@ class AuthWorkflow:
         return {t: AUTH_TYPE_LABELS.get(t, t.title()) for t in auth_types}
 
     @classmethod
-    def authenticate_with_static_config(
+    def authenticate_with_static_config(  # noqa: C901
         cls,
         session: requests.Session,
         working_url: str,
         static_auth_config: dict[str, Any],
         username: str | None,
         password: str | None,
+        timeout: int | None = None,
     ) -> AuthWorkflowResult:
         """Authenticate using pre-built static config dict.
 
@@ -272,13 +280,21 @@ class AuthWorkflow:
                 - auth_form_config: dict | None
                 - auth_hnap_config: dict | None
                 - auth_url_token_config: dict | None
+                - timeout: int (from modem.yaml)
             username: Username for authentication (None for no-auth)
             password: Password for authentication (None for no-auth)
+            timeout: Request timeout in seconds (default: from static_auth_config)
 
         Returns:
             AuthWorkflowResult with authenticated session and configs
         """
         from .handler import AuthHandler
+
+        # Get timeout from static config if not explicitly provided
+        if timeout is None:
+            timeout = static_auth_config.get("timeout")
+            if timeout is None:
+                raise ValueError("timeout not found in static_auth_config - ensure modem.yaml has timeout")
 
         strategy = static_auth_config.get("auth_strategy", "no_auth")
         form_config = static_auth_config.get("auth_form_config")
@@ -299,7 +315,7 @@ class AuthWorkflow:
         if not username and not password:
             _LOGGER.debug("No credentials provided, fetching page without auth")
             try:
-                resp = session.get(working_url, timeout=10)
+                resp = session.get(working_url, timeout=timeout)
                 return AuthWorkflowResult(
                     success=True,
                     strategy="no_auth",
@@ -316,7 +332,7 @@ class AuthWorkflow:
         if strategy == "no_auth":
             _LOGGER.debug("No auth required per static config, fetching page")
             try:
-                resp = session.get(working_url, timeout=10)
+                resp = session.get(working_url, timeout=timeout)
                 return AuthWorkflowResult(
                     success=True,
                     strategy="no_auth",
@@ -336,6 +352,7 @@ class AuthWorkflow:
                 form_config=form_config,
                 hnap_config=hnap_config,
                 url_token_config=url_token_config,
+                timeout=timeout,
             )
 
             auth_result = handler.authenticate(
@@ -367,7 +384,7 @@ class AuthWorkflow:
                     working_url,
                 )
                 try:
-                    resp = session.get(working_url, timeout=10)
+                    resp = session.get(working_url, timeout=timeout)
                     html_content = resp.text
                     _LOGGER.debug(
                         "Fetched %d bytes of HTML from %s",

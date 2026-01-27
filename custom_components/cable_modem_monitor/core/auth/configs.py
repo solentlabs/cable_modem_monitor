@@ -14,35 +14,39 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ...const import DEFAULT_TIMEOUT
 from .types import AuthStrategyType, HMACAlgorithm
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AuthConfig:
     """Base dataclass for authentication configurations.
 
     Subclasses define strategy-specific fields. All configs have a strategy
     field that identifies which AuthStrategy implementation to use.
+
+    Timeout uses DEFAULT_TIMEOUT from schema. Modems override in modem.yaml if needed.
     """
 
     strategy: AuthStrategyType
+    timeout: int = DEFAULT_TIMEOUT
 
 
-@dataclass
+@dataclass(kw_only=True)
 class NoAuthConfig(AuthConfig):
     """No authentication required."""
 
     strategy: AuthStrategyType = AuthStrategyType.NO_AUTH
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BasicAuthConfig(AuthConfig):
     """HTTP Basic Authentication configuration."""
 
     strategy: AuthStrategyType = AuthStrategyType.BASIC_HTTP
 
 
-@dataclass
+@dataclass(kw_only=True)
 class FormAuthConfig(AuthConfig):
     """Form-based authentication configuration.
 
@@ -54,8 +58,8 @@ class FormAuthConfig(AuthConfig):
     For traditional mode, use username_field and password_field.
     """
 
-    strategy: AuthStrategyType
-    login_url: str  # Form action URL (relative to base_url)
+    strategy: AuthStrategyType = AuthStrategyType.FORM_PLAIN
+    login_url: str = ""  # Form action URL (relative to base_url)
     username_field: str = "username"
     password_field: str = "password"
     method: str = "POST"  # HTTP method for form submission
@@ -71,7 +75,7 @@ class FormAuthConfig(AuthConfig):
     credential_format: str | None = None  # Format string, e.g., "{username}:{password}"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class FormDynamicAuthConfig(AuthConfig):
     """Form auth with dynamic action URL extracted from login page.
 
@@ -112,7 +116,7 @@ class FormDynamicAuthConfig(AuthConfig):
     credential_format: str | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class FormAjaxAuthConfig(AuthConfig):
     """AJAX-based form auth with client-generated nonce.
 
@@ -135,7 +139,7 @@ class FormAjaxAuthConfig(AuthConfig):
     error_prefix: str = "Error:"  # Response prefix indicating failure
 
 
-@dataclass
+@dataclass(kw_only=True)
 class RedirectFormAuthConfig(AuthConfig):
     """Form auth with redirect validation configuration (e.g., XB7)."""
 
@@ -147,7 +151,7 @@ class RedirectFormAuthConfig(AuthConfig):
     authenticated_page_url: str = "/network_setup.jst"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class HNAPAuthConfig(AuthConfig):
     """HNAP JSON authentication configuration.
 
@@ -171,7 +175,7 @@ class HNAPAuthConfig(AuthConfig):
             raise ValueError("hmac_algorithm is required for HNAPAuthConfig")
 
 
-@dataclass
+@dataclass(kw_only=True)
 class HNAPSoapAuthConfig(AuthConfig):
     """HNAP XML/SOAP session authentication configuration (legacy modems).
 
@@ -185,7 +189,7 @@ class HNAPSoapAuthConfig(AuthConfig):
     soap_action_namespace: str = "http://purenetworks.com/HNAP1/"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class UrlTokenSessionConfig(AuthConfig):
     """URL-based token auth with session cookie.
 

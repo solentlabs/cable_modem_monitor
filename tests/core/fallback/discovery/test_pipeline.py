@@ -21,6 +21,9 @@ from custom_components.cable_modem_monitor.core.fallback.discovery.pipeline impo
     validate_parse,
 )
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 # =============================================================================
 # HELPER FUNCTIONS - Reduce mock setup boilerplate
 # =============================================================================
@@ -1277,7 +1280,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
         mock_response.text = "<html>Modem page</html>"
         mock_session.get.return_value = mock_response
 
-        static_config = {"auth_strategy": "no_auth"}
+        static_config = {"auth_strategy": "no_auth", "timeout": TEST_TIMEOUT}
         result = AuthWorkflow.authenticate_with_static_config(
             session=mock_session,
             working_url="http://192.168.100.1",
@@ -1304,6 +1307,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
             "auth_form_config": None,
             "auth_hnap_config": None,
             "auth_url_token_config": None,
+            "timeout": TEST_TIMEOUT,
         }
         result = AuthWorkflow.authenticate_with_static_config(
             session=mock_session,
@@ -1339,6 +1343,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
             },
             "auth_hnap_config": None,
             "auth_url_token_config": None,
+            "timeout": TEST_TIMEOUT,
         }
 
         result = AuthWorkflow.authenticate_with_static_config(
@@ -1375,6 +1380,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
                 "hmac_algorithm": "md5",
             },
             "auth_url_token_config": None,
+            "timeout": TEST_TIMEOUT,
         }
 
         result = AuthWorkflow.authenticate_with_static_config(
@@ -1412,6 +1418,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
                 "login_prefix": "login_",
                 "token_prefix": "ct_",
             },
+            "timeout": TEST_TIMEOUT,
         }
 
         result = AuthWorkflow.authenticate_with_static_config(
@@ -1442,6 +1449,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
         static_config = {
             "auth_strategy": "form_plain",
             "auth_form_config": {"action": "/login"},
+            "timeout": TEST_TIMEOUT,
         }
 
         result = AuthWorkflow.authenticate_with_static_config(
@@ -1462,7 +1470,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
         mock_session = _create_mock_session()
         mock_session.get.side_effect = requests.exceptions.ConnectionError("Failed")
 
-        static_config = {"auth_strategy": "no_auth"}
+        static_config = {"auth_strategy": "no_auth", "timeout": TEST_TIMEOUT}
         result = AuthWorkflow.authenticate_with_static_config(
             session=mock_session,
             working_url="http://192.168.100.1",
@@ -1500,6 +1508,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
         static_config = {
             "auth_strategy": "form_plain",
             "auth_form_config": {"action": "/login"},
+            "timeout": TEST_TIMEOUT,
         }
 
         result = AuthWorkflow.authenticate_with_static_config(
@@ -1513,7 +1522,7 @@ class TestAuthWorkflowAuthenticateWithStaticConfig:
         assert result.success is True
         assert result.html == "<html>Modem status page after login</html>"
         # Verify GET was called to fetch the page
-        mock_session.get.assert_called_once_with("http://192.168.100.1", timeout=10)
+        mock_session.get.assert_called_once_with("http://192.168.100.1", timeout=TEST_TIMEOUT)
 
 
 # =============================================================================
@@ -1569,6 +1578,7 @@ class TestRunDiscoveryPipelineWithStaticConfig:
         static_config = {
             "auth_strategy": "form_plain",
             "auth_form_config": {"action": "/login"},
+            "timeout": TEST_TIMEOUT,
         }
 
         result = run_discovery_pipeline(
@@ -1653,7 +1663,7 @@ class TestRunDiscoveryPipelineWithStaticConfig:
             error="Invalid credentials",
         )
 
-        static_config = {"auth_strategy": "form_plain"}
+        static_config = {"auth_strategy": "form_plain", "timeout": TEST_TIMEOUT}
 
         result = run_discovery_pipeline(
             "192.168.100.1",
