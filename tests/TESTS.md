@@ -4,14 +4,14 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 934 across 43 test files
+**Total Tests:** 941 across 43 test files
 
 ## Test Categories
 
 | Category | Tests | Files | Description |
 |----------|-------|-------|-------------|
 | [Core Module Tests](tests/core/README.md) | 386 | 16 | Unit tests for core functionality including sig... |
-| [Component Tests](tests/components/README.md) | 324 | 14 | Tests for Home Assistant components including c... |
+| [Component Tests](tests/components/README.md) | 331 | 14 | Tests for Home Assistant components including c... |
 | [Integration Tests](tests/integration/README.md) | 66 | 6 | End-to-end integration tests using mock HTTP/HT... |
 | [Parser Tests](tests/parsers/FIXTURES.md) | 38 | 2 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
@@ -70,7 +70,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
 - **Path:** `tests/components/`
-- **Tests:** 324
+- **Tests:** 331
 - **Files:** 14
 - **Documentation:** [tests/components/README.md](tests/components/README.md)
 

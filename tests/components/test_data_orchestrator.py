@@ -1859,3 +1859,172 @@ class TestV312ScraperInitialization:
         # Second call - should use auth handler
         orchestrator._login()
         assert mock_handler.authenticate.called
+
+
+# =============================================================================
+# Pre-authentication Tests (Issue #81)
+# =============================================================================
+
+
+class TestPreAuthenticate:
+    """Tests for _pre_authenticate behavior.
+
+    Issue #81: URL token modems (SB8200) fail on background polling because
+    pre-authenticating every poll causes 401 errors due to server-side session
+    tracking. The fix: skip pre-auth for url_token_session strategy.
+    """
+
+    def test_skips_pre_auth_for_url_token_session(self, mocker):
+        """Test that pre-auth is skipped for url_token_session strategy (Issue #81).
+
+        URL token modems return login pages (not 401s) when unauthenticated,
+        so reactive auth detection works. Pre-authenticating every poll causes
+        401 errors because the modem tracks sessions server-side.
+        """
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="motorola",
+            auth_strategy="url_token_session",
+            auth_url_token_config={"login_prefix": "/goform/Login"},
+            timeout=TEST_TIMEOUT,
+        )
+
+        # Mock _login to verify it's NOT called
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, None))
+
+        result = orchestrator._pre_authenticate()
+
+        # Should return success without calling _login
+        assert result == (True, None)
+        mock_login.assert_not_called()
+
+    def test_pre_authenticates_for_hnap_session(self, mocker):
+        """Test that pre-auth IS performed for hnap_session strategy.
+
+        HNAP modems return 401/403 errors without auth, so pre-auth is required.
+        """
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            auth_strategy="hnap_session",
+            auth_hnap_config={"endpoint": "/HNAP1/", "namespace": "http://example.com"},
+            timeout=TEST_TIMEOUT,
+        )
+
+        # Mock _login
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, "<html>auth</html>"))
+
+        result = orchestrator._pre_authenticate()
+
+        # Should call _login for HNAP
+        mock_login.assert_called_once()
+        assert result == (True, "<html>auth</html>")
+
+    def test_pre_authenticates_for_form_plain(self, mocker):
+        """Test that pre-auth IS performed for form_plain strategy."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            auth_strategy="form_plain",
+            timeout=TEST_TIMEOUT,
+        )
+
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, None))
+
+        result = orchestrator._pre_authenticate()
+
+        mock_login.assert_called_once()
+        assert result == (True, None)
+
+    def test_pre_authenticates_for_form_ajax(self, mocker):
+        """Test that pre-auth IS performed for form_ajax strategy."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            auth_strategy="form_ajax",
+            timeout=TEST_TIMEOUT,
+        )
+
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, None))
+
+        orchestrator._pre_authenticate()
+
+        mock_login.assert_called_once()
+
+    def test_skips_pre_auth_when_no_credentials(self, mocker):
+        """Test that pre-auth is skipped when no credentials provided."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username=None,
+            password=None,
+            auth_strategy="form_plain",
+            timeout=TEST_TIMEOUT,
+        )
+
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        result = orchestrator._pre_authenticate()
+
+        assert result == (True, None)
+        mock_login.assert_not_called()
+
+    def test_skips_pre_auth_when_no_strategy(self, mocker):
+        """Test that pre-auth is skipped when no auth strategy configured."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="password",
+            auth_strategy=None,
+            timeout=TEST_TIMEOUT,
+        )
+
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        result = orchestrator._pre_authenticate()
+
+        assert result == (True, None)
+        mock_login.assert_not_called()
+
+    def test_url_token_uses_reactive_auth_flow(self, mocker):
+        """Test that url_token_session uses reactive auth flow in get_modem_data.
+
+        When pre-auth is skipped, the reactive flow in _authenticate() handles
+        login page detection and re-fetches data after authenticating.
+        """
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            username="admin",
+            password="motorola",
+            auth_strategy="url_token_session",
+            auth_url_token_config={"login_prefix": "/goform/Login"},
+            timeout=TEST_TIMEOUT,
+        )
+
+        # Mock parser
+        mock_parser = mocker.Mock()
+        mock_parser.parse.return_value = {"downstream": [], "upstream": [], "system_info": {}}
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+
+        # Mock _fetch_data to return login page HTML initially
+        login_html = '<form><input type="password"></form>'
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=(login_html, "http://192.168.100.1/status", None),
+        )
+
+        # Mock _authenticate to simulate reactive auth succeeding
+        authenticated_html = "<html>Status page data</html>"
+        mocker.patch.object(orchestrator, "_authenticate", return_value=authenticated_html)
+
+        result = orchestrator.get_modem_data()
+
+        # Should succeed (authenticate handles the login)
+        assert "cable_modem_connection_status" in result
+        # _authenticate should have been called (reactive flow)
+        orchestrator._authenticate.assert_called()

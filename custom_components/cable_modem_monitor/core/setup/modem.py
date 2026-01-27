@@ -211,11 +211,14 @@ def setup_modem(
     # Track errors from each attempt for better error messages
     attempt_errors: list[tuple[str, str, str]] = []  # [(url, step, error), ...]
 
+    # Get timeout from static config (modem.yaml source of truth)
+    timeout = static_auth_config["timeout"]
+
     for candidate_url in candidate_urls:
         _LOGGER.debug("Trying candidate URL: %s", candidate_url)
 
         # Step 1: Connectivity check for this URL
-        conn = check_connectivity(candidate_url)
+        conn = check_connectivity(candidate_url, timeout=timeout)
         if not conn.success:
             _LOGGER.debug(
                 "Connectivity failed for %s: %s",

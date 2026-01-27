@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 324
+**Total Tests:** 331
 
 ## Test Files
 
@@ -17,7 +17,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 88 | Tests for DataOrchestrator. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 95 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -439,6 +439,17 @@ as the architecture evolves toward declarative modem configs.
 - `test_init_with_session_pre_authenticated`: Test initialization with pre-authenticated session flag.
 - `test_login_skipped_when_pre_authenticated`: Test _login returns success without auth when session is pre-authenticated.
 - `test_login_proceeds_after_pre_auth_flag_cleared`: Test subsequent _login calls proceed normally after flag is cleared.
+
+**TestPreAuthenticate** (7 tests)
+: Tests for _pre_authenticate behavior.
+
+- `test_skips_pre_auth_for_url_token_session`: Test that pre-auth is skipped for url_token_session strategy (Issue #81).
+- `test_pre_authenticates_for_hnap_session`: Test that pre-auth IS performed for hnap_session strategy.
+- `test_pre_authenticates_for_form_plain`: Test that pre-auth IS performed for form_plain strategy.
+- `test_pre_authenticates_for_form_ajax`: Test that pre-auth IS performed for form_ajax strategy.
+- `test_skips_pre_auth_when_no_credentials`: Test that pre-auth is skipped when no credentials provided.
+- `test_skips_pre_auth_when_no_strategy`: Test that pre-auth is skipped when no auth strategy configured.
+- `test_url_token_uses_reactive_auth_flow`: Test that url_token_session uses reactive auth flow in get_modem_data.
 
 ### test_diagnostics.py
 

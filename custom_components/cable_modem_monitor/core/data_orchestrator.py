@@ -1214,12 +1214,23 @@ class DataOrchestrator:
         For modems with an auth strategy configured, this authenticates BEFORE
         fetching. This handles modems that return 401/403 without auth.
 
+        URL token session modems are excluded because they return login pages
+        (not 401s), so reactive auth detection works. Pre-authenticating every
+        poll causes 401 errors due to server-side session tracking.
+
         Returns:
             tuple[bool, str | None]: (success, html_from_auth)
                 - success: True if auth succeeded or no auth needed
                 - html_from_auth: HTML returned during auth (some strategies return data), or None
         """
         if not self._auth_strategy or not self.username or not self.password:
+            return (True, None)
+
+        # URL token auth: skip pre-auth, use reactive auth flow instead
+        # These modems return login pages (not 401s) so reactive detection works.
+        # Pre-authenticating every poll causes 401 due to server-side session tracking.
+        if self._auth_strategy == "url_token_session":
+            _LOGGER.debug("Skipping pre-auth for url_token_session (using reactive auth)")
             return (True, None)
 
         _LOGGER.debug(

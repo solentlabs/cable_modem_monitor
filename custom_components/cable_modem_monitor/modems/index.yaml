@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-27T14:10:18.662837+00:00"
+generated: "2026-01-27T20:12:06.948952+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -298,7 +298,7 @@ modems:
     name: Technicolor CGA2121
     manufacturer: Technicolor
     model: CGA2121
-    verified: false
+    verified: true
     detection:
       pre_auth:
         - CGA2121

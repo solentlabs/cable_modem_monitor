@@ -226,7 +226,7 @@ These tests verify:
 **TestAuthHandlerUsage** (2 tests)
 : Tests verifying AuthHandler is used during data fetch.
 
-- `test_get_modem_data_uses_auth_handler`: Verify get_modem_data pre-authenticates before fetching.
+- `test_get_modem_data_uses_auth_handler`: Verify get_modem_data uses reactive auth for URL token sessions.
 - `test_login_uses_auth_handler`: Verify _login() uses AuthHandler.
 
 **TestUrlTokenAuthRequirement** (1 tests)
