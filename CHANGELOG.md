@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.5] - 2026-01-27
+
+### Fixed
+
+- **SB8200 Session Cookie Conflict** - Fixed URL token auth failing on re-login when stale session cookie exists. Session cookie is now cleared before login attempt. (#81)
+- **XB7 Parser Data Page Path** - Fixed parser error when XB7 modem.yaml specifies a data page path. Parser now correctly reads from the configured path. (#107)
+
+### Added
+
+- **XB7 Integration Tests** - Added mock server integration tests validating form auth flow for Technicolor XB7. (#107)
+
 ## [3.13.0-beta.4] - 2026-01-26
+
+### Added
+
+- **Dev: HA Reload Script** - Added `ha-reload.py` script for syncing changes and restarting Home Assistant during development.
+- **Mock Server Response Delay** - Added `--delay` parameter to `mock_server.py` for simulating slow modem responses during timeout testing.
 
 ## [3.13.0-beta.3] - 2026-01-25
 
