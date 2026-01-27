@@ -19,14 +19,15 @@ Start a mock modem server for testing the cable modem monitor integration locall
 
 ## Execution Steps
 
-1. **Find available port** - Use 8080, or find next available if in use
-2. **Get WSL2 IP address** - Run `hostname -I | awk '{print $1}'`
-3. **Start mock server** - Run in background (use project venv):
+1. **Sync & Run Home Assistant** - Run `python3 scripts/dev/ha-sync-run.py` to sync modem configs and ensure HA is running
+2. **Find available port** - Use 8080, or find next available if in use
+3. **Get WSL2 IP address** - Run `hostname -I | awk '{print $1}'`
+4. **Start mock server** - Run in background (use project venv):
    ```bash
-   .venv/bin/python scripts/mock_server.py <modem> --port <port> [--delay <seconds>] &
+   .venv/bin/python scripts/mock_modem.py <modem> --port <port> [--delay <seconds>] &
    ```
-4. **Read modem config** - Get auth type from `modems/<manufacturer>/<model>/modem.yaml`
-5. **Verify server is running** - Curl the endpoint to confirm
+5. **Read modem config** - Get auth type from `modems/<manufacturer>/<model>/modem.yaml`
+6. **Verify server is running** - Curl the endpoint to confirm
 
 ## Output Format
 
@@ -78,5 +79,5 @@ Modems are in `modems/` directory. Can specify:
 
 To stop a running mock server:
 ```bash
-pkill -f "mock_server.py"
+pkill -f "mock_modem.py"
 ```

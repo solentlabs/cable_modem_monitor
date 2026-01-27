@@ -54,7 +54,6 @@ cd cable_modem_monitor
 
 # Start Home Assistant with the integration
 make docker-start
-# Or: ./scripts/dev/docker-dev.sh start
 
 # View logs
 make docker-logs
@@ -94,8 +93,6 @@ make docker-status     # Check status
 make docker-shell      # Open a shell in the container
 make docker-clean      # Remove all data
 
-# Or use the script directly
-./scripts/dev/docker-dev.sh [command]
 ```
 
 #### Docker Development Workflow

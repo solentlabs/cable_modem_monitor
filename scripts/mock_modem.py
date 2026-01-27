@@ -4,30 +4,30 @@
 This script starts an HTTP server that emulates a cable modem,
 including authentication flows and fixture responses.
 
-Auto-discovers all modems with fixtures in modems/<manufacturer>/<model>/.
-
 Usage:
-    # List available modems (auto-discovered)
+    # List available modems
     python scripts/mock_modem.py --list
 
-    # Run a modem on default port (8080)
-    python scripts/mock_modem.py <manufacturer>/<model>
+    # Run by short name (auto-discovers manufacturer)
+    python scripts/mock_modem.py g54
+    python scripts/mock_modem.py mb7621
+
+    # Run by full path
+    python scripts/mock_modem.py arris/sb8200
 
     # Run on specific port
-    python scripts/mock_modem.py <manufacturer>/<model> --port 8888
+    python scripts/mock_modem.py g54 --port 8888
+
+    # Simulate slow modem
+    python scripts/mock_modem.py g54 --delay 15
 
     # Disable authentication (serve fixtures directly)
-    python scripts/mock_modem.py <manufacturer>/<model> --no-auth
+    python scripts/mock_modem.py g54 --no-auth
 
-    # Override auth type for modems with multiple variants
-    python scripts/mock_modem.py <manufacturer>/<model> --auth-type form
+    # Override auth type
+    python scripts/mock_modem.py sb6190 --auth-type form_ajax
 
-Then configure Home Assistant integration to connect to:
-    http://127.0.0.1:8080
-
-Test credentials:
-    Username: admin
-    Password: pw
+Test credentials: admin / pw
 """
 
 from __future__ import annotations
@@ -44,13 +44,17 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from tests.integration.mock_modem_server import MockModemServer  # noqa: E402
 
+MODEMS_DIR = PROJECT_ROOT / "modems"
 
-def list_modems() -> list[str]:
-    """List available modem configurations."""
-    modems_dir = PROJECT_ROOT / "modems"
+
+def list_modems() -> list[tuple[str, str]]:
+    """List available modem configurations.
+
+    Returns list of (full_path, model_name) tuples.
+    """
     available = []
 
-    for manufacturer_dir in sorted(modems_dir.iterdir()):
+    for manufacturer_dir in sorted(MODEMS_DIR.iterdir()):
         if not manufacturer_dir.is_dir():
             continue
         for model_dir in sorted(manufacturer_dir.iterdir()):
@@ -58,23 +62,57 @@ def list_modems() -> list[str]:
                 continue
             modem_yaml = model_dir / "modem.yaml"
             if modem_yaml.exists():
-                available.append(f"{manufacturer_dir.name}/{model_dir.name}")
+                full_path = f"{manufacturer_dir.name}/{model_dir.name}"
+                available.append((full_path, model_dir.name))
 
     return available
 
 
-def main() -> int:  # noqa: C901
+def find_modem_path(name: str) -> Path:
+    """Find modem path by short name or full path.
+
+    Args:
+        name: Either short name (g54, mb7621) or full path (arris/g54)
+
+    Returns:
+        Path to modem directory
+
+    Raises:
+        ValueError: If modem not found
+    """
+    # Direct path: arris/g54, motorola/mb7621
+    if "/" in name:
+        path = MODEMS_DIR / name
+        if path.exists() and (path / "modem.yaml").exists():
+            return path
+        raise ValueError(f"Modem not found: {name}")
+
+    # Search by model name (case-insensitive)
+    name_lower = name.lower()
+    for manufacturer in MODEMS_DIR.iterdir():
+        if not manufacturer.is_dir():
+            continue
+        for model in manufacturer.iterdir():
+            if model.name.lower() == name_lower and (model / "modem.yaml").exists():
+                return model
+
+    raise ValueError(f"Modem not found: {name}")
+
+
+def main() -> int:
     """Run the mock modem server."""
     parser = argparse.ArgumentParser(
         description="Run a mock modem server for development testing.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --list                                  List available modems (auto-discovered)
-  %(prog)s <manufacturer>/<model>                  Run modem with default auth
-  %(prog)s <manufacturer>/<model> --port 8888     Run on specific port
-  %(prog)s <manufacturer>/<model> --no-auth       Disable auth (serve fixtures directly)
-  %(prog)s <manufacturer>/<model> --auth-type form  Override auth type
+  %(prog)s --list                       List available modems
+  %(prog)s g54                          Run by short name
+  %(prog)s arris/sb8200                 Run by full path
+  %(prog)s g54 --port 8888              Run on specific port
+  %(prog)s g54 --delay 15               Simulate slow modem (15s delay)
+  %(prog)s g54 --no-auth                Disable auth (serve fixtures directly)
+  %(prog)s sb6190 --auth-type form_ajax Override auth type
 
 Test credentials: admin / pw
 """,
@@ -83,7 +121,7 @@ Test credentials: admin / pw
     parser.add_argument(
         "modem",
         nargs="?",
-        help="Modem path (manufacturer/model), e.g., motorola/mb8611",
+        help="Modem name (short: g54, mb7621) or path (arris/g54)",
     )
     parser.add_argument(
         "--list",
@@ -99,8 +137,8 @@ Test credentials: admin / pw
     parser.add_argument(
         "--host",
         type=str,
-        default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1, use 0.0.0.0 for Docker access)",
+        default="0.0.0.0",
+        help="Host to bind to (default: 0.0.0.0 for Docker access)",
     )
     parser.add_argument(
         "--no-auth",
@@ -110,13 +148,18 @@ Test credentials: admin / pw
     parser.add_argument(
         "--auth-type",
         type=str,
-        help="Override auth type (e.g., 'form', 'none', 'url_token'). For modems with multiple variants.",
+        help="Override auth type (e.g., 'form', 'none', 'form_ajax', 'url_token')",
+    )
+    parser.add_argument(
+        "--auth-redirect",
+        type=str,
+        help="Override redirect URL after auth (simulates modems that redirect to non-data page)",
     )
     parser.add_argument(
         "--delay",
         type=float,
         default=0.0,
-        help="Response delay in seconds (simulates slow modems, e.g., --delay 15)",
+        help="Response delay in seconds (simulates slow modems)",
     )
     parser.add_argument(
         "-v",
@@ -142,27 +185,24 @@ Test credentials: admin / pw
     # List modems if requested
     if args.list:
         print("Available modem configurations:\n")
-        for modem in list_modems():
-            print(f"  {modem}")
+        modems = list_modems()
+        # Group by short name availability
+        for full_path, model_name in modems:
+            print(f"  {full_path:<30} (or: {model_name})")
+        print(f"\nTotal: {len(modems)} modems")
         print("\nUsage: python scripts/mock_modem.py <modem>")
         return 0
 
     # Require modem argument
     if not args.modem:
-        parser.error("the following arguments are required: modem")
+        parser.error("the following arguments are required: modem (use --list to see available)")
 
     # Resolve modem path
-    modem_path = PROJECT_ROOT / "modems" / args.modem
-    if not modem_path.exists():
-        print(f"Error: Modem not found: {args.modem}")
-        print("\nAvailable modems:")
-        for modem in list_modems():
-            print(f"  {modem}")
-        return 1
-
-    modem_yaml = modem_path / "modem.yaml"
-    if not modem_yaml.exists():
-        print(f"Error: modem.yaml not found in {modem_path}")
+    try:
+        modem_path = find_modem_path(args.modem)
+    except ValueError as e:
+        print(f"Error: {e}")
+        print("\nUse --list to see available modems")
         return 1
 
     # Start server
@@ -172,6 +212,7 @@ Test credentials: admin / pw
         host=args.host,
         auth_enabled=not args.no_auth,
         auth_type=args.auth_type,
+        auth_redirect=args.auth_redirect,
         response_delay=args.delay,
     )
 
@@ -186,22 +227,22 @@ Test credentials: admin / pw
     server.start()
 
     delay_str = f"{args.delay}s" if args.delay > 0 else "none"
+    auth_status = "Disabled" if args.no_auth else "Enabled"
+
     print(f"""
-╔══════════════════════════════════════════════════════════════════╗
-║  Mock Modem Server Running                                       ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Modem:      {server.config.manufacturer} {server.config.model:<30} ║
-║  Auth Type:  {server.handler.__class__.__name__:<42} ║
-║  URL:        {server.url:<44} ║
-║  Auth:       {'Enabled' if args.no_auth is False else 'Disabled':<44} ║
-║  Delay:      {delay_str:<44} ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Test Credentials:                                               ║
-║    Username: admin                                               ║
-║    Password: pw                                            ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Press Ctrl+C to stop                                            ║
-╚══════════════════════════════════════════════════════════════════╝
+{'='*60}
+  Mock Modem Server Running
+{'='*60}
+  Modem:       {server.config.manufacturer} {server.config.model}
+  Auth:        {auth_status} ({server.handler.__class__.__name__})
+  Delay:       {delay_str}
+{'='*60}
+  URL (Docker): http://host.docker.internal:{args.port}
+  URL (direct): {server.url}
+{'='*60}
+  Credentials:  admin / pw
+{'='*60}
+  Press Ctrl+C to stop
 """)
 
     # Keep running until interrupted

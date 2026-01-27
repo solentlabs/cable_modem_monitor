@@ -44,9 +44,9 @@ else
     exit 1
 fi
 
-# Check HA start script
-echo -n "HA start script... "
-if python scripts/dev/ha-start.py --help &>/dev/null; then
+# Check HA sync-run script
+echo -n "HA sync-run script... "
+if python scripts/dev/ha-sync-run.py --help &>/dev/null; then
     echo "OK"
 else
     echo "FAILED"

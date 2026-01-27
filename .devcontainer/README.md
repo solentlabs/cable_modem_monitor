@@ -72,22 +72,22 @@ After installation, you should see:
 3. Navigate to the `cable_modem_monitor` folder
 4. The container will build and VS Code will reload
 
-### Option 3: Using the Docker Script
+### Option 3: Using Make Commands
 
 For manual control without VS Code Dev Containers:
 
 ```bash
-# Start Home Assistant with the integration
-./scripts/dev/docker-dev.sh start
+# Start Home Assistant with the integration (syncs configs automatically)
+make docker-start
 
 # View logs
-./scripts/dev/docker-dev.sh logs
+make docker-logs
 
 # Restart after making changes
-./scripts/dev/docker-dev.sh restart
+make docker-restart
 
 # Stop the environment
-./scripts/dev/docker-dev.sh stop
+make docker-stop
 ```
 
 ## What Gets Installed
@@ -120,7 +120,7 @@ Once the container is running:
    ```
 4. **Restart Home Assistant** to load changes:
    - In VS Code Dev Container: Use the built-in terminal
-   - Or from outside: `./scripts/dev/docker-dev.sh restart`
+   - Or from outside: `make docker-restart`
 
 ## Features
 
@@ -142,7 +142,7 @@ Once the container is running:
 - Or change the port in `docker-compose.test.yml`
 
 ### Changes not reflected
-- Restart Home Assistant: `./scripts/dev/docker-dev.sh restart`
+- Restart Home Assistant: `make docker-restart`
 - Or use Developer Tools → YAML → Restart in the HA UI
 
 ### Extensions not working
@@ -164,12 +164,7 @@ Once the container is running:
 To remove the container and all data:
 
 ```bash
-# Using the script
-./scripts/dev/docker-dev.sh clean
-
-# Or manually
-docker compose -f docker-compose.test.yml down -v
-rm -rf test-ha-config/
+make docker-clean
 ```
 
 ## Learn More
