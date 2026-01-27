@@ -11,13 +11,7 @@
 
 # Exclude test fixtures from GitHub language statistics
 # These are captured modem responses, not code we wrote
-tests/parsers/**/fixtures/**/*.html linguist-vendored
-tests/parsers/**/fixtures/**/*.htm linguist-vendored
-tests/parsers/**/fixtures/**/*.asp linguist-vendored
-tests/parsers/**/fixtures/**/*.js linguist-vendored
-tests/parsers/**/fixtures/**/*.json linguist-vendored
-tests/parsers/**/fixtures/**/*.xml linguist-vendored
-tests/parsers/**/fixtures/**/*.jst linguist-vendored
+**/fixtures/** linguist-vendored
 
 # HAR captures are also vendored data
 captures/** linguist-vendored
