@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.7] - 2026-01-28
+
+### Added
+
+- **SB6190 Auth Support (9.1.103+)** - Added `form_nonce` auth strategy for ARRIS SB6190 modems with newer firmware that require login. Uses plain form POST with client-generated nonce instead of base64-encoded credentials. (#93, #83)
+
 ## [3.13.0-beta.6] - 2026-01-27
+
+### Fixed
+
+- **Release Script Branch Handling** - Fixed release script pushing to `origin/main` regardless of current branch. Now correctly pushes to the current branch.
 
 ## [3.13.0-beta.5] - 2026-01-27
 
