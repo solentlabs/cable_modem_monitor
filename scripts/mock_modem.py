@@ -25,7 +25,7 @@ Usage:
     python scripts/mock_modem.py g54 --no-auth
 
     # Override auth type
-    python scripts/mock_modem.py sb6190 --auth-type form_ajax
+    python scripts/mock_modem.py sb6190 --auth-type form_nonce
 
 Test credentials: admin / pw
 """
@@ -112,7 +112,7 @@ Examples:
   %(prog)s g54 --port 8888              Run on specific port
   %(prog)s g54 --delay 15               Simulate slow modem (15s delay)
   %(prog)s g54 --no-auth                Disable auth (serve fixtures directly)
-  %(prog)s sb6190 --auth-type form_ajax Override auth type
+  %(prog)s sb6190 --auth-type form_nonce Override auth type
 
 Test credentials: admin / pw
 """,
@@ -148,7 +148,7 @@ Test credentials: admin / pw
     parser.add_argument(
         "--auth-type",
         type=str,
-        help="Override auth type (e.g., 'form', 'none', 'form_ajax', 'url_token')",
+        help="Override auth type (e.g., 'form', 'none', 'form_nonce', 'url_token')",
     )
     parser.add_argument(
         "--auth-redirect",

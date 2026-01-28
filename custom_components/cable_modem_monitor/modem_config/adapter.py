@@ -246,7 +246,8 @@ class ModemConfigAuthAdapter:
             "basic": "basic_http",  # HTTP Basic Auth (401 challenge)
             "form": "form_plain",
             "form_dynamic": "form_dynamic",  # Form with dynamic action URL extraction
-            "form_ajax": "form_ajax",  # AJAX-based form with nonce (SB6190)
+            "form_ajax": "form_ajax",  # AJAX-based form with base64 credentials
+            "form_nonce": "form_nonce",  # Form with client nonce (SB6190 9.1.103+)
             "hnap": "hnap_session",
             "url_token": "url_token_session",
             "rest_api": "no_auth",  # REST API = no traditional auth
@@ -255,13 +256,12 @@ class ModemConfigAuthAdapter:
         strategy_str = strategy_mapping.get(auth_type, "no_auth")
         type_config = self.get_auth_config_for_type(auth_type)
 
-        # form and form_dynamic both use auth_form_config
-        is_form_type = auth_type in ("form", "form_dynamic")
+        # form, form_dynamic, form_ajax, and form_nonce all use auth_form_config
+        is_form_type = auth_type in ("form", "form_dynamic", "form_ajax", "form_nonce")
 
         return {
             "auth_strategy": strategy_str,
             "auth_form_config": type_config if is_form_type else None,
-            "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
             "timeout": self.config.timeout,

@@ -405,6 +405,7 @@ class AuthHandler:
             FormAjaxAuthConfig,
             FormAuthConfig,
             FormDynamicAuthConfig,
+            FormNonceAuthConfig,
             HNAPAuthConfig,
             NoAuthConfig,
             UrlTokenSessionConfig,
@@ -457,6 +458,19 @@ class AuthHandler:
                 nonce_length=form_config.get("nonce_length", 8),
                 arguments_field=form_config.get("arguments_field", "arguments"),
                 credential_format=form_config.get("credential_format", "username={username}:password={password}"),
+                success_prefix=form_config.get("success_prefix", "Url:"),
+                error_prefix=form_config.get("error_prefix", "Error:"),
+            )
+
+        if strategy == AuthStrategyType.FORM_NONCE:
+            return FormNonceAuthConfig(
+                strategy=strategy,
+                timeout=timeout,
+                endpoint=form_config.get("endpoint", "/cgi-bin/adv_pwd_cgi"),
+                username_field=form_config.get("username_field", "username"),
+                password_field=form_config.get("password_field", "password"),
+                nonce_field=form_config.get("nonce_field", "ar_nonce"),
+                nonce_length=form_config.get("nonce_length", 8),
                 success_prefix=form_config.get("success_prefix", "Url:"),
                 error_prefix=form_config.get("error_prefix", "Error:"),
             )

@@ -4,7 +4,7 @@
 
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
-**Total Tests:** 66
+**Total Tests:** 73
 
 ## Test Files
 
@@ -15,6 +15,7 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 | [test_hnap_protocol_fallback.py](test_hnap_protocol_fallback.py) | 6 | Tests for HNAP modem protocol fallback behavior. |
 | [test_mock_server_delay.py](test_mock_server_delay.py) | 4 | Tests for MockModemServer response delay feature. |
 | [test_modem_e2e.py](test_modem_e2e.py) | 9 | End-to-end tests for modems using MockModemServer. |
+| [test_session_limit.py](test_session_limit.py) | 7 | Tests for single-session modem behavior (max_concurrent=1). |
 | [test_url_token_polling.py](test_url_token_polling.py) | 10 | Tests for URL token authentication during polling cycle. |
 
 ## Test Details
@@ -49,8 +50,8 @@ works correctly for all modems.
 **TestFormAuthE2E** (2 tests)
 : E2E tests for form-based authentication.
 
-- `test_sb6190_form_ajax_auth`: SB6190 form_ajax auth should authenticate and parse.
-- `test_sb6190_wrong_credentials`: SB6190 form_ajax auth should fail with wrong credentials.
+- `test_sb6190_form_nonce_auth`: SB6190 form_nonce auth should authenticate and parse.
+- `test_sb6190_wrong_credentials`: SB6190 form_nonce auth should fail with wrong credentials.
 
 **TestNoAuthE2E** (1 tests)
 : E2E tests for modems without authentication.
@@ -208,6 +209,29 @@ not custom_components/.../modems/ (deployment sync target).
 - `test_discovery_pipeline_dynamic_auth`: Test run_discovery_pipeline with dynamic auth discovery.
 - `test_discovery_pipeline_auto_detection`: Test discovery pipeline with auto-detection (no pre-selected parser).
 - `test_known_modem_setup_static_auth`: Test setup_modem with static auth config from modem.yaml.
+
+### test_session_limit.py
+
+Tests for single-session modem behavior (max_concurrent=1).
+
+Reproduces Issue #61: Netgear C7000v2 only allows one authenticated session.
+The v3.13 refactor introduced a bug where setup_modem() creates two separate
+sessions (connectivity check + auth check), causing auth to fail on single-session modems.
+
+**TestSessionLimit** (5 tests)
+: Test single-session modem behavior.
+
+- `test_single_session_allows_first_client`: First authenticated request should succeed.
+- `test_single_session_blocks_second_client`: Second client should be blocked when max_concurrent=1.
+- `test_logout_releases_session`: Logout should allow new client to connect.
+- `test_same_client_can_make_multiple_requests`: Same client should be able to make multiple requests.
+- `test_unlimited_sessions_allows_multiple_clients`: With max_concurrent=0 (default), multiple clients should work.
+
+**TestSetupModemSessionBug** (2 tests)
+: Test that reproduces the setup_modem() session bug from Issue #61.
+
+- `test_setup_modem_works_with_ip_based_sessions`: Test that setup_modem works when sessions are tracked by IP.
+- `test_setup_modem_with_connection_based_sessions`: Test setup_modem if Netgear tracks sessions by TCP connection.
 
 ### test_url_token_polling.py
 

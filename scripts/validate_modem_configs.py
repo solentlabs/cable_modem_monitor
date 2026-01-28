@@ -119,6 +119,20 @@ def validate_form_ajax_auth(type_config: dict, path: str, auth_type: str) -> lis
     return errors
 
 
+def validate_form_nonce_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
+    """Validate form_nonce auth configuration."""
+    errors = []
+
+    if type_config is None:
+        errors.append(ValidationError(path, f"auth.types.{auth_type}", "form_nonce config required"))
+        return errors
+
+    if not type_config.get("endpoint"):
+        errors.append(ValidationError(path, f"auth.types.{auth_type}.endpoint", "form endpoint required"))
+
+    return errors
+
+
 def validate_rest_api_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
     """Validate REST API auth configuration."""
     errors = []
@@ -210,6 +224,7 @@ def validate_auth_types(config: dict, path: str) -> list[ValidationError]:
         "form": validate_form_auth,
         "form_ajax": validate_form_ajax_auth,
         "form_dynamic": validate_form_auth,  # Uses same validation as form
+        "form_nonce": validate_form_nonce_auth,
         "hnap": validate_hnap_auth,
         "url_token": validate_url_token_auth,
         "basic": validate_basic_auth,

@@ -52,10 +52,11 @@ def build_static_auth_config(parser: type[ModemParser], auth_type: str) -> dict[
     type_config = adapter.get_auth_config_for_type(auth_type)
 
     # Build config dict matching AuthWorkflow.authenticate_with_static_config() expectations
+    # form, form_ajax, and form_nonce all use auth_form_config
+    is_form_type = auth_type in ("form", "form_ajax", "form_nonce")
     return {
         "auth_strategy": strategy,
-        "auth_form_config": type_config if auth_type == "form" else None,
-        "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
+        "auth_form_config": type_config if is_form_type else None,
         "auth_hnap_config": type_config if auth_type == "hnap" else None,
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
         "timeout": adapter.config.timeout,
@@ -117,14 +118,14 @@ def modem_path_to_display_name(modem_path: str) -> str:
 # │ modem           │ auth_type     │ needs_selection  │ expected_strategy   │
 # ├─────────────────┼───────────────┼──────────────────┼─────────────────────┤
 # │ arris/sb6190    │ none          │ True             │ no_auth             │
-# │ arris/sb6190    │ form_ajax     │ True             │ form_ajax           │
+# │ arris/sb6190    │ form_nonce    │ True             │ form_nonce          │
 # │ arris/sb8200    │ none          │ True             │ no_auth             │
 # │ arris/sb8200    │ url_token     │ True             │ url_token_session   │
 # │ motorola/mb7621 │ form          │ False            │ form_plain          │
 # └─────────────────┴───────────────┴──────────────────┴─────────────────────┘
 MULTI_AUTH_MODEMS = [
     ("arris/sb6190", "none", "no_auth"),
-    ("arris/sb6190", "form_ajax", "form_ajax"),
+    ("arris/sb6190", "form_nonce", "form_nonce"),
     ("arris/sb8200", "none", "no_auth"),
     ("arris/sb8200", "url_token", "url_token_session"),
 ]
@@ -270,15 +271,15 @@ class TestFormAuthE2E:
     Tests run on both HTTP and HTTPS protocols.
     """
 
-    def test_sb6190_form_ajax_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
-        """SB6190 form_ajax auth should authenticate and parse."""
+    def test_sb6190_form_nonce_auth(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
+        """SB6190 form_nonce auth should authenticate and parse."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
         with MockModemServer.from_modem_path(
-            modem_dir, auth_type="form_ajax", ssl_context=ssl_context_for_protocol
+            modem_dir, auth_type="form_nonce", ssl_context=ssl_context_for_protocol
         ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
-            static_config = build_static_auth_config(parser, "form_ajax")
+            static_config = build_static_auth_config(parser, "form_nonce")
 
             result = setup_modem(
                 host=f"127.0.0.1:{server.port}",
@@ -288,18 +289,18 @@ class TestFormAuthE2E:
                 password="pw",
             )
 
-            assert result.success, f"Form AJAX auth failed on {protocol}: {result.error}"
-            assert result.auth_strategy == "form_ajax"
+            assert result.success, f"Form nonce auth failed on {protocol}: {result.error}"
+            assert result.auth_strategy == "form_nonce"
 
     def test_sb6190_wrong_credentials(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
-        """SB6190 form_ajax auth should fail with wrong credentials."""
+        """SB6190 form_nonce auth should fail with wrong credentials."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
 
         with MockModemServer.from_modem_path(
-            modem_dir, auth_type="form_ajax", ssl_context=ssl_context_for_protocol
+            modem_dir, auth_type="form_nonce", ssl_context=ssl_context_for_protocol
         ) as server:
             parser = get_parser_by_name("ARRIS SB6190")
-            static_config = build_static_auth_config(parser, "form_ajax")
+            static_config = build_static_auth_config(parser, "form_nonce")
 
             result = setup_modem(
                 host=f"127.0.0.1:{server.port}",

@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 386
+**Total Tests:** 394
 
 ## Test Files
 
@@ -18,6 +18,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
 | [test_form_ajax_auth.py](test_form_ajax_auth.py) | 17 | Tests for FormAjaxAuthStrategy. |
 | [test_form_dynamic_auth.py](test_form_dynamic_auth.py) | 9 | Tests for FormDynamicAuthStrategy. |
+| [test_form_nonce_auth.py](test_form_nonce_auth.py) | 8 | Tests for FormNonceAuthStrategy. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
 | [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
@@ -639,6 +640,25 @@ page first and extracts the actual action URL including any dynamic parameters.
 
 - `test_submits_correct_form_data`: FormDynamic submits username/password in correct fields.
 - `test_missing_credentials_returns_failure`: FormDynamic inherits credential validation from FormPlain.
+
+### test_form_nonce_auth.py
+
+Tests for FormNonceAuthStrategy.
+
+Tests the form_nonce authentication strategy used by ARRIS SB6190 (firmware 9.1.103+).
+Based on HAR capture from Issue #93 (@HenryGeorge1978).
+
+**TestFormNonceAuthStrategy** (8 tests)
+: Tests for FormNonceAuthStrategy.
+
+- `test_login_success`: Test successful login with redirect response.
+- `test_login_invalid_credentials`: Test login with invalid credentials.
+- `test_login_missing_credentials`: Test login without credentials.
+- `test_login_unexpected_response`: Test handling of unexpected response format.
+- `test_login_connection_error`: Test handling of connection errors.
+- `test_nonce_generation`: Test that nonce is random and correct length.
+- `test_xhr_header_included`: Test that X-Requested-With header is included (AJAX marker).
+- `test_wrong_config_type`: Test that wrong config type is rejected.
 
 ### test_health_monitor.py
 

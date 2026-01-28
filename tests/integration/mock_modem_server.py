@@ -25,6 +25,7 @@ from .mock_handlers import (
     FormAjaxAuthHandler,
     FormAuthHandler,
     FormDynamicAuthHandler,
+    FormNonceAuthHandler,
     HnapAuthHandler,
     RestApiHandler,
     UrlTokenAuthHandler,
@@ -63,6 +64,7 @@ class MockModemServer:
         auth_type: str | None = None,
         auth_redirect: str | None = None,
         response_delay: float = 0.0,
+        max_concurrent: int = 0,
     ):
         """Initialize MockModemServer.
 
@@ -76,6 +78,8 @@ class MockModemServer:
             auth_redirect: Override redirect URL after auth. Used to simulate modems
                           that redirect to a different page than the data page.
             response_delay: Delay in seconds before sending responses (simulates slow modems).
+            max_concurrent: Max concurrent sessions (0 = unlimited). Simulates modems like
+                          Netgear C7000v2 that only allow one authenticated session at a time.
         """
         self.modem_path = Path(modem_path)
         self.port = port or _find_free_port()
@@ -85,6 +89,7 @@ class MockModemServer:
         self.auth_type_override = auth_type
         self.auth_redirect = auth_redirect
         self.response_delay = response_delay
+        self.max_concurrent = max_concurrent
 
         # Load configuration
         self.config = load_modem_config(self.modem_path)
@@ -134,6 +139,7 @@ class MockModemServer:
             "form": FormAuthHandler,
             "form_ajax": FormAjaxAuthHandler,
             "form_dynamic": FormDynamicAuthHandler,
+            "form_nonce": FormNonceAuthHandler,
             "none": NoAuthHandler,
             "basic": BasicAuthHandler,
             "hnap": HnapAuthHandler,
@@ -159,12 +165,21 @@ class MockModemServer:
                 )
 
         # Pass auth_redirect to form handlers
-        if auth_type in ("form", "form_ajax", "form_dynamic") and self.auth_redirect:
+        if auth_type in ("form", "form_ajax", "form_dynamic", "form_nonce") and self.auth_redirect:
             return handler_cls(  # type: ignore[no-any-return]
                 self.config,
                 self.fixtures_path,
                 auth_redirect=self.auth_redirect,
                 response_delay=self.response_delay,
+            )
+
+        # Pass max_concurrent to BasicAuthHandler (simulates single-session modems)
+        if auth_type == "basic" and self.max_concurrent > 0:
+            return handler_cls(  # type: ignore[no-any-return]
+                self.config,
+                self.fixtures_path,
+                response_delay=self.response_delay,
+                max_concurrent=self.max_concurrent,
             )
 
         return handler_cls(  # type: ignore[no-any-return]
@@ -268,6 +283,7 @@ class MockModemServer:
         auth_type: str | None = None,
         auth_redirect: str | None = None,
         response_delay: float = 0.0,
+        max_concurrent: int = 0,
     ) -> Generator[MockModemServer, None, None]:
         """Context manager to start and stop server.
 
@@ -279,6 +295,7 @@ class MockModemServer:
             auth_type: Override auth type (e.g., "form", "none"). If None, uses first from modem.yaml.
             auth_redirect: Override redirect URL after auth.
             response_delay: Delay in seconds before sending responses (simulates slow modems).
+            max_concurrent: Max concurrent sessions (0 = unlimited).
 
         Yields:
             Started MockModemServer instance.
@@ -291,6 +308,7 @@ class MockModemServer:
             auth_type=auth_type,
             auth_redirect=auth_redirect,
             response_delay=response_delay,
+            max_concurrent=max_concurrent,
         )
         server.start()
         try:
@@ -332,16 +350,104 @@ class NoAuthHandler(BaseAuthHandler):
 
 
 class BasicAuthHandler(BaseAuthHandler):
-    """Handler for HTTP Basic authentication."""
+    """Handler for HTTP Basic authentication.
+
+    Supports simulating single-session modems (like Netgear C7000v2) via max_concurrent.
+    When max_concurrent=1, only one authenticated session is allowed at a time.
+    New sessions are blocked until the active session calls the logout endpoint.
+    """
 
     def __init__(
         self,
         config: ModemConfig,
         fixtures_path: Path,
         response_delay: float = 0.0,
+        max_concurrent: int = 0,
     ):
-        """Initialize handler."""
+        """Initialize handler.
+
+        Args:
+            config: Modem configuration.
+            fixtures_path: Path to fixture files.
+            response_delay: Delay before responses (simulates slow modems).
+            max_concurrent: Max concurrent sessions. 0 = unlimited.
+        """
         super().__init__(config, fixtures_path, response_delay=response_delay)
+        self.max_concurrent = max_concurrent
+        # Track active sessions by client address (ip:port)
+        self.active_clients: dict[str, float] = {}  # client_id -> last_request_time
+        # Session timeout in seconds (clear stale sessions)
+        self.session_timeout = 30.0
+
+    def _get_client_id(self, handler: BaseHTTPRequestHandler, headers: dict[str, str]) -> str:
+        """Get unique client identifier from request handler.
+
+        For testing: Uses X-Mock-Client-ID header if present, allowing tests
+        to simulate multiple distinct clients from the same IP.
+
+        For real behavior: Uses client IP address. This approximates Netgear's
+        session tracking where requests from the same IP share a session.
+        """
+        # Allow tests to override client identity via header
+        test_client_id = headers.get("X-Mock-Client-ID")
+        if test_client_id:
+            return f"test:{test_client_id}"
+
+        # Default: use IP address (all localhost requests share a session)
+        client_addr = handler.client_address
+        return client_addr[0]
+
+    def _cleanup_stale_sessions(self) -> None:
+        """Remove sessions that have timed out."""
+        import time
+
+        now = time.time()
+        stale = [
+            client_id for client_id, last_time in self.active_clients.items() if now - last_time > self.session_timeout
+        ]
+        for client_id in stale:
+            _LOGGER.debug("Cleaning up stale session: %s", client_id)
+            del self.active_clients[client_id]
+
+    def _check_session_limit(self, client_id: str) -> bool:
+        """Check if this client can proceed given session limits.
+
+        Returns:
+            True if client can proceed, False if blocked by session limit.
+        """
+        if self.max_concurrent <= 0:
+            return True  # No limit
+
+        self._cleanup_stale_sessions()
+
+        # If this client already has a session, allow it
+        if client_id in self.active_clients:
+            return True
+
+        # Check if we're at capacity
+        if len(self.active_clients) >= self.max_concurrent:
+            _LOGGER.warning(
+                "Session limit reached (%d). Blocking client %s. Active: %s",
+                self.max_concurrent,
+                client_id,
+                list(self.active_clients.keys()),
+            )
+            return False
+
+        return True
+
+    def _register_session(self, client_id: str) -> None:
+        """Register an active session for this client."""
+        import time
+
+        self.active_clients[client_id] = time.time()
+        _LOGGER.debug("Registered session for %s. Active sessions: %d", client_id, len(self.active_clients))
+
+    def _clear_session(self, client_id: str) -> None:
+        """Clear session for this client (logout)."""
+        if client_id in self.active_clients:
+            del self.active_clients[client_id]
+            _LOGGER.debug("Cleared session for %s. Active sessions: %d", client_id, len(self.active_clients))
 
     def handle_request(
         self,
@@ -351,11 +457,23 @@ class BasicAuthHandler(BaseAuthHandler):
         headers: dict[str, str],
         body: bytes | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
-        """Handle request with Basic Auth check."""
+        """Handle request with Basic Auth check and session limits."""
         import base64
         from urllib.parse import urlparse
 
         clean_path = urlparse(path).path
+        client_id = self._get_client_id(handler, headers)
+
+        # Handle logout endpoint - always allowed, clears all sessions
+        # (Netgear logout clears the session regardless of which client calls it)
+        logout_endpoint = None
+        if self.config.auth and self.config.auth.session:
+            logout_endpoint = self.config.auth.session.logout_endpoint
+        if logout_endpoint and clean_path == logout_endpoint:
+            # Clear ALL sessions on logout (simulates Netgear behavior)
+            self.active_clients.clear()
+            _LOGGER.debug("Logout called - cleared all sessions")
+            return self.serve_fixture(clean_path)
 
         # Public paths don't need auth
         if self.is_public_path(clean_path):
@@ -373,6 +491,18 @@ class BasicAuthHandler(BaseAuthHandler):
                 from .mock_handlers.form import TEST_PASSWORD, TEST_USERNAME
 
                 if username == TEST_USERNAME and password == TEST_PASSWORD:
+                    # Check session limit BEFORE granting access
+                    if not self._check_session_limit(client_id):
+                        self.apply_delay()
+                        return (
+                            503,
+                            {"Content-Type": "text/plain", "Retry-After": "5"},
+                            b"Service Unavailable - maximum sessions reached",
+                        )
+
+                    # Register this client's session
+                    self._register_session(client_id)
+
                     # Handle form actions (restart, etc.)
                     if clean_path.startswith("/goform/"):
                         return self._handle_goform(method, clean_path)

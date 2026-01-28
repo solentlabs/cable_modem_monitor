@@ -190,6 +190,29 @@ class HNAPSoapAuthConfig(AuthConfig):
 
 
 @dataclass(kw_only=True)
+class FormNonceAuthConfig(AuthConfig):
+    """Form auth with client-generated nonce and text response.
+
+    Simple form POST with plain username/password fields plus a client-generated
+    nonce. Response is plain text with success/error prefix (not HTML).
+
+    Used by: ARRIS SB6190 (firmware 9.1.103+)
+
+    This is a dedicated config for modems that use this specific pattern.
+    Designed to be refactored into composable building blocks in v3.14+.
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_NONCE
+    endpoint: str = "/cgi-bin/adv_pwd_cgi"
+    username_field: str = "username"
+    password_field: str = "password"
+    nonce_field: str = "ar_nonce"
+    nonce_length: int = 8
+    success_prefix: str = "Url:"
+    error_prefix: str = "Error:"
+
+
+@dataclass(kw_only=True)
 class UrlTokenSessionConfig(AuthConfig):
     """URL-based token auth with session cookie.
 

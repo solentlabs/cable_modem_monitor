@@ -21,18 +21,18 @@ default_host: "192.168.100.1"
 auth:
   # SB6190 has two firmware variants with different auth:
   # - Older firmware: No auth required (public status page)
-  # - Newer firmware (9.1.103+): AJAX-based login required
+  # - Newer firmware (9.1.103+): Form login with client nonce
   # See: https://github.com/solentlabs/cable_modem_monitor/issues/93
   #
   # User selects their auth type during config flow.
   types:
     none: null # Older firmware - no auth needed
-    form_ajax: # Newer firmware (9.1.103+) - AJAX login required
+    form_nonce: # Newer firmware (9.1.103+) - form login with nonce
       endpoint: "/cgi-bin/adv_pwd_cgi"
+      username_field: "username"
+      password_field: "password"
       nonce_field: "ar_nonce"
       nonce_length: 8
-      arguments_field: "arguments"
-      credential_format: "username={username}:password={password}"
       success_prefix: "Url:"
       error_prefix: "Error:"
 
@@ -98,12 +98,14 @@ isps:
 notes: |
   Two firmware variants with different auth requirements:
   - Older firmware: No authentication required
-  - Newer firmware (9.1.103+): AJAX-based login required
+  - Newer firmware (9.1.103+): Form login with client-generated nonce
 
-  AJAX auth uses JavaScript XMLHttpRequest instead of traditional form.
-  Credentials: base64(urlencode("username=X:password=Y"))
-  Nonce: 8 random digits (client-generated)
-  Response: "Url:/path" (success) or "Error:msg" (failure)
+  Auth flow (form_nonce strategy):
+  - POST to /cgi-bin/adv_pwd_cgi with username, password, ar_nonce fields
+  - No encoding - plain form fields
+  - Nonce: 8 random digits (client-generated)
+  - Response: "Url:/path" (success) or "Error:msg" (failure)
+  - Session: credential cookie
 
   Parser based on SB6141 code; fixture provenance unknown.
   URL format differs from SB6141: uses .html extension vs .asp

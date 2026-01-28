@@ -4,15 +4,15 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 941 across 43 test files
+**Total Tests:** 956 across 45 test files
 
 ## Test Categories
 
 | Category | Tests | Files | Description |
 |----------|-------|-------|-------------|
-| [Core Module Tests](tests/core/README.md) | 386 | 16 | Unit tests for core functionality including sig... |
+| [Core Module Tests](tests/core/README.md) | 394 | 17 | Unit tests for core functionality including sig... |
 | [Component Tests](tests/components/README.md) | 331 | 14 | Tests for Home Assistant components including c... |
-| [Integration Tests](tests/integration/README.md) | 66 | 6 | End-to-end integration tests using mock HTTP/HT... |
+| [Integration Tests](tests/integration/README.md) | 73 | 7 | End-to-end integration tests using mock HTTP/HT... |
 | [Parser Tests](tests/parsers/FIXTURES.md) | 38 | 2 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
 | [Library Tests](tests/lib/README.md) | 120 | 5 | Tests for library modules including the HTML cr... |
@@ -61,8 +61,8 @@ pytest tests/core/test_signal_analyzer.py::TestSignalAnalyzerBasics::test_initia
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
 - **Path:** `tests/core/`
-- **Tests:** 386
-- **Files:** 16
+- **Tests:** 394
+- **Files:** 17
 - **Documentation:** [tests/core/README.md](tests/core/README.md)
 
 ### Component Tests
@@ -79,8 +79,8 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
 - **Path:** `tests/integration/`
-- **Tests:** 66
-- **Files:** 6
+- **Tests:** 73
+- **Files:** 7
 - **Documentation:** [tests/integration/README.md](tests/integration/README.md)
 
 ### Parser Tests

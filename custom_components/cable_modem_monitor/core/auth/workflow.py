@@ -71,6 +71,7 @@ AUTH_TYPE_TO_STRATEGY = {
     "none": "no_auth",
     "form": "form_plain",
     "form_ajax": "form_ajax",
+    "form_nonce": "form_nonce",
     "url_token": "url_token_session",
     "hnap": "hnap_session",
     "basic": "basic_http",
@@ -302,9 +303,10 @@ class AuthWorkflow:
         hnap_config = static_auth_config.get("auth_hnap_config")
         url_token_config = static_auth_config.get("auth_url_token_config")
 
-        # For form_ajax, use form_ajax_config as the form_config
+        # For form_ajax, use form_ajax_config as the form_config (legacy support)
         if strategy == "form_ajax" and form_ajax_config:
             form_config = form_ajax_config
+        # form_nonce uses form_config directly (no separate config key)
 
         _LOGGER.debug(
             "AuthWorkflow: authenticating with static config (strategy=%s)",

@@ -30,6 +30,7 @@ class AuthFactory:
         from .strategies.basic_http import BasicHttpAuthStrategy
         from .strategies.form_ajax import FormAjaxAuthStrategy
         from .strategies.form_dynamic import FormDynamicAuthStrategy
+        from .strategies.form_nonce import FormNonceAuthStrategy
         from .strategies.form_plain import FormPlainAuthStrategy
         from .strategies.hnap_json import HNAPJsonAuthStrategy
         from .strategies.hnap_session import HNAPSessionAuthStrategy
@@ -43,6 +44,7 @@ class AuthFactory:
             AuthStrategyType.FORM_PLAIN: FormPlainAuthStrategy,
             AuthStrategyType.FORM_DYNAMIC: FormDynamicAuthStrategy,
             AuthStrategyType.FORM_AJAX: FormAjaxAuthStrategy,
+            AuthStrategyType.FORM_NONCE: FormNonceAuthStrategy,
             AuthStrategyType.REDIRECT_FORM: RedirectFormAuthStrategy,
             AuthStrategyType.HNAP_SESSION: HNAPJsonAuthStrategy,  # Default to JSON HNAP
             AuthStrategyType.HNAP_SOAP: HNAPSessionAuthStrategy,  # Legacy XML/SOAP HNAP
@@ -101,6 +103,7 @@ class AuthFactory:
             "form": AuthStrategyType.FORM_PLAIN,
             "form_dynamic": AuthStrategyType.FORM_DYNAMIC,
             "form_ajax": AuthStrategyType.FORM_AJAX,
+            "form_nonce": AuthStrategyType.FORM_NONCE,
             "url_token": AuthStrategyType.URL_TOKEN_SESSION,
             "hnap": AuthStrategyType.HNAP_SESSION,
             "basic": AuthStrategyType.BASIC_HTTP,

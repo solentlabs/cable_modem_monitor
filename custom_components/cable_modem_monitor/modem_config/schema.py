@@ -271,6 +271,45 @@ class FormAjaxAuthConfig(BaseModel):
     )
 
 
+class FormNonceAuthConfig(BaseModel):
+    """Configuration for form authentication with client-generated nonce.
+
+    Used when the modem uses plain form fields with a client-generated nonce.
+    Unlike FormAjaxAuthConfig, credentials are NOT base64-encoded.
+
+    Used by: ARRIS SB6190 (firmware 9.1.103+)
+    """
+
+    endpoint: str = Field(
+        default="/cgi-bin/adv_pwd_cgi",
+        description="Form action endpoint",
+    )
+    username_field: str = Field(
+        default="username",
+        description="Form field name for username",
+    )
+    password_field: str = Field(
+        default="password",
+        description="Form field name for password",
+    )
+    nonce_field: str = Field(
+        default="ar_nonce",
+        description="Form field name for client-generated nonce",
+    )
+    nonce_length: int = Field(
+        default=8,
+        description="Length of random numeric nonce",
+    )
+    success_prefix: str = Field(
+        default="Url:",
+        description="Response prefix indicating successful login",
+    )
+    error_prefix: str = Field(
+        default="Error:",
+        description="Response prefix indicating failed login",
+    )
+
+
 class HnapAuthConfig(BaseModel):
     """Configuration for HNAP/SOAP authentication.
 
