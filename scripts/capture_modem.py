@@ -6,8 +6,6 @@ while you interact with your modem. You log in manually - the browser
 handles authentication perfectly regardless of the method used.
 
 Usage:
-    # Download and run (no git clone needed!)
-    curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
     python capture_modem.py --ip 192.168.100.1
 
     # Or with different IP
@@ -15,7 +13,7 @@ Usage:
 
 Requirements:
     - Python 3.9+
-    - Dependencies auto-install on first run
+    - pip install har-capture[capture]
 """
 
 from __future__ import annotations
@@ -27,7 +25,6 @@ import gzip
 import json
 import os
 import sys
-import tempfile
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -37,80 +34,27 @@ from pathlib import Path
 # Format: YYYY-MM-DD (used in capture metadata for debugging)
 SCRIPT_DATE = "2026-01-15"
 
-# GitHub raw URLs for self-bootstrapping
-GITHUB_RAW_BASE = "https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main"
-BOOTSTRAP_FILES = [
-    "scripts/utils/__init__.py",
-    "scripts/utils/sanitizer.py",
-]
 
-# Add local paths for imports (when running from repo)
-sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent))
+def _check_har_capture() -> None:
+    """Check if har-capture is installed.
 
-
-def _bootstrap_dependencies() -> Path | None:
-    """Download required dependencies from GitHub if not available locally.
-
-    Returns:
-        Path to temp directory with dependencies, or None if local imports work.
+    Exits with error message if not installed.
     """
-    # First, try local import (running from repo)
     try:
-        from utils.sanitizer import sanitize_har_file  # noqa: F401
-
-        return None  # Local imports work, no bootstrap needed
+        from har_capture.sanitization import sanitize_har_file  # noqa: F401
     except ImportError:
-        pass
-
-    # Need to bootstrap - download from GitHub
-    print("Downloading dependencies from GitHub...")
-
-    tmpdir = tempfile.mkdtemp(prefix="modem_capture_")
-    tmpdir_path = Path(tmpdir)
-    utils_dir = tmpdir_path / "utils"
-    utils_dir.mkdir()
-
-    try:
-        for file_path in BOOTSTRAP_FILES:
-            url = f"{GITHUB_RAW_BASE}/{file_path}"
-            # Extract just the filename relative to scripts/
-            local_name = file_path.replace("scripts/", "")
-            dest = tmpdir_path / local_name
-
-            try:
-                urllib.request.urlretrieve(url, dest)
-            except Exception as e:
-                print(f"  Failed to download {file_path}: {e}")
-                print()
-                print("  Cannot download dependencies. Options:")
-                print("    1. Check your internet connection")
-                print("    2. Clone the repo: git clone https://github.com/solentlabs/cable_modem_monitor.git")
-                print("       Then run: python scripts/capture_modem.py --ip <MODEM_IP>")
-                print()
-                # Clean up partial download
-                import shutil
-
-                shutil.rmtree(tmpdir, ignore_errors=True)
-                sys.exit(1)
-
-        print("  Dependencies ready.")
+        print("ERROR: har-capture library not found.")
         print()
-
-        # Add to path
-        sys.path.insert(0, str(tmpdir_path))
-        return tmpdir_path
-
-    except Exception as e:
-        print(f"  Bootstrap failed: {e}")
-        import shutil
-
-        shutil.rmtree(tmpdir, ignore_errors=True)
+        print("Install it with: pip install har-capture")
+        print()
+        print("Or use har-capture CLI directly:")
+        print("  har-capture capture 192.168.100.1")
+        print()
         sys.exit(1)
 
 
-# Bootstrap dependencies if needed (stores temp dir path for cleanup)
-_BOOTSTRAP_TMPDIR = _bootstrap_dependencies()
+# Check that har-capture is available
+_check_har_capture()
 
 
 def check_devcontainer() -> bool:
@@ -346,7 +290,7 @@ def _add_solent_labs_metadata(har: dict) -> None:
         "captured_at": datetime.now().isoformat(),
         "cache_disabled": True,
         "service_workers_blocked": True,
-        "bootstrapped": _BOOTSTRAP_TMPDIR is not None,
+        "uses_har_capture": True,
         "note": "Captured with Solent Labs Cable Modem Monitor",
     }
 
@@ -459,7 +403,7 @@ def _sanitize_capture(output_path: Path) -> None:
     print("Sanitizing HAR file...")
 
     try:
-        from utils.sanitizer import sanitize_har_file
+        from har_capture.sanitization import sanitize_har_file
 
         sanitized_path = sanitize_har_file(str(output_path))
         print(f"  Sanitized HAR: {sanitized_path}")
@@ -580,14 +524,9 @@ Why visit all pages and wait?
 
     from playwright.sync_api import sync_playwright
 
-    # Generate output filename
-    # When bootstrapped (curl download), use current directory
-    # When running from repo, use captures/ directory
-    if _BOOTSTRAP_TMPDIR is not None:
-        captures_dir = Path.cwd()
-    else:
-        captures_dir = Path(__file__).parent.parent / "captures"
-        captures_dir.mkdir(exist_ok=True)
+    # Generate output filename in captures/ directory
+    captures_dir = Path(__file__).parent.parent / "captures"
+    captures_dir.mkdir(exist_ok=True)
 
     if args.output:
         output_path = Path(args.output)
@@ -738,16 +677,5 @@ Why visit all pages and wait?
     return 0
 
 
-def _cleanup_bootstrap():
-    """Clean up bootstrapped temp directory if it exists."""
-    if _BOOTSTRAP_TMPDIR is not None:
-        import shutil
-
-        shutil.rmtree(_BOOTSTRAP_TMPDIR, ignore_errors=True)
-
-
 if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    finally:
-        _cleanup_bootstrap()
+    sys.exit(main())

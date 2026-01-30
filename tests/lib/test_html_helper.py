@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from custom_components.cable_modem_monitor.lib.html_helper import (
-    PII_ALLOWLIST,
-    PII_PATTERNS,
-    check_for_pii,
-    sanitize_html,
-)
+from har_capture.patterns import is_allowlisted, load_pii_patterns
+from har_capture.sanitization import check_for_pii, sanitize_html
 
 
 class TestCheckForPii:
@@ -44,12 +40,13 @@ class TestCheckForPii:
 
     def test_detects_ipv6(self):
         """Test detection of IPv6 addresses."""
-        content = "IPv6 Address: 2001:db8::1"
+        # Use link-local address (not documentation range which is allowlisted)
+        content = "IPv6 Address: fe80::1234:5678"
         findings = check_for_pii(content)
 
         ipv6_findings = [f for f in findings if f["pattern"] == "ipv6"]
         assert len(ipv6_findings) == 1
-        assert "2001:db8::1" in ipv6_findings[0]["match"]
+        assert "fe80::1234:5678" in ipv6_findings[0]["match"]
 
     def test_ignores_time_format(self):
         """Test that time formats are not flagged as IPv6."""
@@ -62,10 +59,14 @@ class TestCheckForPii:
 
     def test_ignores_allowlisted_placeholders(self):
         """Test that allowlisted placeholders are not flagged."""
+        # har-capture uses these formats for allowlisted values:
+        # - MAC: XX:XX:XX:XX:XX:XX or 02:xx:xx:xx:xx:xx (locally-administered)
+        # - IP: 192.0.2.x (TEST-NET-1 documentation range, RFC 5737)
+        # - Email: x@x.invalid or user@redacted.invalid
         content = """
         MAC: XX:XX:XX:XX:XX:XX
-        IP: ***PRIVATE_IP***
-        Email: ***EMAIL***
+        IP: 192.0.2.100
+        Email: x@x.invalid
         """
         findings = check_for_pii(content)
 
@@ -125,23 +126,26 @@ class TestCheckForPii:
 
 
 class TestPiiPatterns:
-    """Tests for PII pattern constants."""
+    """Tests for PII pattern definitions."""
 
     def test_patterns_defined(self):
         """Test that all expected patterns are defined."""
-        assert "mac_address" in PII_PATTERNS
-        assert "email" in PII_PATTERNS
-        assert "public_ip" in PII_PATTERNS
-        assert "ipv6" in PII_PATTERNS
+        data = load_pii_patterns()
+        patterns = data.get("patterns", data)  # Handle nested structure
+        assert "mac_address" in patterns
+        assert "email" in patterns
+        assert "public_ip" in patterns
+        assert "ipv6" in patterns
 
-    def test_allowlist_defined(self):
-        """Test that allowlist contains expected placeholders."""
-        assert "XX:XX:XX:XX:XX:XX" in PII_ALLOWLIST
-        assert "***REDACTED***" in PII_ALLOWLIST
-        assert "***PRIVATE_IP***" in PII_ALLOWLIST
-        assert "***PUBLIC_IP***" in PII_ALLOWLIST
-        assert "***IPv6***" in PII_ALLOWLIST
-        assert "***EMAIL***" in PII_ALLOWLIST
+    def test_allowlist_recognizes_placeholders(self):
+        """Test that allowlist recognizes expected placeholder formats."""
+        # Static placeholders
+        assert is_allowlisted("XX:XX:XX:XX:XX:XX")
+        assert is_allowlisted("[REDACTED]")
+        # Format-preserving hashes (MAC in locally-administered range)
+        assert is_allowlisted("02:ab:cd:ef:12:34")
+        # Hash prefixes
+        assert is_allowlisted("SERIAL_abcd1234")
 
 
 class TestSanitizeHtmlEdgeCases:
@@ -150,7 +154,8 @@ class TestSanitizeHtmlEdgeCases:
     def test_multiple_mac_formats(self):
         """Test sanitization of MACs with different separators."""
         content = "WAN: AA:BB:CC:DD:EE:FF, LAN: 11-22-33-44-55-66"
-        sanitized = sanitize_html(content)
+        # Use salt=None for static placeholders (legacy behavior)
+        sanitized = sanitize_html(content, salt=None)
 
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11-22-33-44-55-66" not in sanitized
@@ -159,10 +164,11 @@ class TestSanitizeHtmlEdgeCases:
     def test_ipv6_with_hex_letters(self):
         """Test that IPv6 with hex letters is sanitized."""
         content = "Gateway: fe80::1"
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, salt=None)
 
         assert "fe80::1" not in sanitized
-        assert "***IPv6***" in sanitized
+        # har-capture uses :: for static IPv6 placeholder
+        assert "::" in sanitized
 
     def test_ipv6_without_hex_letters_preserved(self):
         """Test that time-like patterns are not over-sanitized."""
@@ -177,8 +183,10 @@ class TestSanitizeHtmlEdgeCases:
         content = "Config File Name: customer123.cfg"
         sanitized = sanitize_html(content)
 
+        # Original config filename should be removed
         assert "customer123.cfg" not in sanitized
-        assert "***CONFIG_PATH***" in sanitized
+        # har-capture uses CONFIG_ prefix for redacted config paths
+        assert "CONFIG_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_signal_metrics(self):
         """Test that signal metrics are preserved."""
@@ -212,7 +220,8 @@ class TestTagValueListSanitization:
 
         # WiFi passphrases should be redacted
         assert "happymango167" not in sanitized
-        assert "***WIFI_CRED***" in sanitized
+        # har-capture uses WIFI_ prefix for redacted WiFi credentials
+        assert "WIFI_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_status_values_in_tagvaluelist(self):
         """Test that status values like 'Locked', 'Good' are preserved."""
@@ -255,7 +264,8 @@ class TestTagValueListSanitization:
 
         # Passphrase-like values should be redacted
         assert "secretpass99" not in sanitized
-        assert "***WIFI_CRED***" in sanitized
+        # har-capture uses WIFI_ prefix for redacted WiFi credentials
+        assert "WIFI_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_short_values_in_tagvaluelist(self):
         """Test that short values (< 8 chars) are preserved."""
@@ -281,8 +291,9 @@ class TestTagValueListSanitization:
         assert "345000000 Hz" in sanitized
 
     def test_wifi_cred_in_allowlist(self):
-        """Test that WIFI_CRED placeholder is in allowlist."""
-        assert "***WIFI_CRED***" in PII_ALLOWLIST
+        """Test that WIFI_CRED placeholder prefix is in allowlist."""
+        # WIFI_ is a hash prefix, so WIFI_xxxxxxxx values are recognized
+        assert is_allowlisted("WIFI_abcd1234")
 
     def test_sanitizes_device_names_before_ip(self):
         """Test that device names appearing before IP/MAC placeholders are redacted."""
@@ -296,6 +307,7 @@ class TestTagValueListSanitization:
         # Device names should be redacted
         assert "MyDevice" not in sanitized
         assert "AnotherDevice" not in sanitized
-        assert "***DEVICE***" in sanitized
+        # har-capture uses DEVICE_ prefix for device names
+        assert "DEVICE_" in sanitized or "[REDACTED]" in sanitized
         # Empty placeholder should be preserved
         assert "|--|" in sanitized

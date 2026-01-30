@@ -54,6 +54,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+from har_capture.sanitization import sanitize_html
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -69,7 +70,6 @@ from .const import (
 )
 from .core.data_orchestrator import _get_parser_url_patterns
 from .core.log_buffer import get_log_entries
-from .lib.html_helper import sanitize_html
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from har_capture.sanitization import sanitize_html
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -23,7 +24,6 @@ from custom_components.cable_modem_monitor.diagnostics import (
     _sanitize_log_message,
     async_get_config_entry_diagnostics,
 )
-from custom_components.cable_modem_monitor.lib.html_helper import sanitize_html
 
 # =============================================================================
 # AUTH STRATEGY DESCRIPTION TEST CASES
@@ -100,52 +100,55 @@ class TestSanitizeHtml:
 
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11-22-33-44-55-66" not in sanitized
-        assert "XX:XX:XX:XX:XX:XX" in sanitized
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        assert "02:" in sanitized or "XX:XX:XX:XX:XX:XX" in sanitized
 
     def test_removes_serial_numbers(self):
         """Test that serial numbers are sanitized."""
         test_cases = [
-            ("Serial Number: 123456789ABC", "Serial Number: ***REDACTED***"),
-            ("S/N: XYZ-999-ABC", "S/N: ***REDACTED***"),
-            ("SN: 111222333", "SN: ***REDACTED***"),
-        ]
-
-        for original, expected_pattern in test_cases:
-            sanitized = sanitize_html(original)
-            assert expected_pattern in sanitized
-            assert original not in sanitized
-
-    def test_removes_account_ids(self):
-        """Test that account/subscriber IDs are sanitized."""
-        test_cases = [
-            "Account ID: 123456789",
-            "Subscriber Number: ABC-999-XYZ",
-            "Customer ID: TEST-CUSTOMER-001",
-            "Device Number: DEV123456",
+            "Serial Number: 123456789ABC",
+            "S/N: XYZ-999-ABC",
+            "SN: 111222333",
         ]
 
         for original in test_cases:
             sanitized = sanitize_html(original)
-            assert "***REDACTED***" in sanitized
-            # Original ID should be removed (check for the digits/unique part)
-            assert not any(
-                char.isdigit() for word in sanitized.split("***REDACTED***") for char in word if char.isalnum()
-            )
+            # Original serial should be removed
+            original_value = original.split(": ")[1] if ": " in original else original.split(" ")[1]
+            assert original_value not in sanitized
+            # har-capture uses SERIAL_ prefix for serial numbers
+            assert "SERIAL_" in sanitized or "[REDACTED]" in sanitized
+
+    def test_removes_account_ids(self):
+        """Test that account/subscriber IDs are sanitized."""
+        test_cases = [
+            ("Account ID: 123456789", "123456789"),
+            ("Subscriber Number: ABC-999-XYZ", "ABC-999-XYZ"),
+            ("Customer ID: TEST-CUSTOMER-001", "TEST-CUSTOMER-001"),
+            ("Device Number: DEV123456", "DEV123456"),
+        ]
+
+        for original, sensitive_part in test_cases:
+            sanitized = sanitize_html(original)
+            # Original ID should be removed
+            assert sensitive_part not in sanitized
+            # har-capture uses ACCOUNT_ prefix for account IDs
+            assert "ACCOUNT_" in sanitized or "[REDACTED]" in sanitized
 
     def test_removes_private_ips(self):
         """Test that private IP addresses are sanitized."""
         test_cases = [
-            ("Gateway: 10.0.1.1", "Gateway: ***PRIVATE_IP***"),
-            ("Server: 172.16.5.10", "Server: ***PRIVATE_IP***"),
-            ("Host: 192.168.50.100", "Host: ***PRIVATE_IP***"),
+            ("Gateway: 10.0.1.1", "10.0.1.1"),
+            ("Server: 172.16.5.10", "172.16.5.10"),
+            ("Host: 192.168.50.100", "192.168.50.100"),
         ]
 
-        for original, expected in test_cases:
+        for original, original_ip in test_cases:
             sanitized = sanitize_html(original)
-            assert expected in sanitized
-            # Extract the original IP and verify it's gone
-            original_ip = original.split(": ")[1]
+            # Original IP should be removed
             assert original_ip not in sanitized
+            # har-capture uses 10.255.x.x format for redacted private IPs
+            assert "10.255." in sanitized or "0.0.0.0" in sanitized
 
     def test_preserves_common_modem_ips(self):
         """Test that common modem IPs are preserved for debugging."""
@@ -163,16 +166,18 @@ class TestSanitizeHtml:
     def test_removes_passwords(self):
         """Test that passwords and passphrases are sanitized."""
         test_cases = [
-            'password="secret123"',
-            "passphrase: MySecretPass",
-            'psk="wireless-key-123"',
-            "wpa2key: SuperSecret!",
+            ('password="secret123"', "secret123"),
+            ("passphrase: MySecretPass", "MySecretPass"),
+            ('psk="wireless-key-123"', "wireless-key-123"),
+            ("wpa2key: SuperSecret!", "SuperSecret!"),
         ]
 
-        for original in test_cases:
+        for original, sensitive_value in test_cases:
             sanitized = sanitize_html(original)
-            assert "***REDACTED***" in sanitized
-            assert "secret" not in sanitized.lower() or "***REDACTED***" in sanitized
+            # Original password should be removed
+            assert sensitive_value not in sanitized
+            # har-capture uses PASS_ prefix for passwords
+            assert "PASS_" in sanitized or "[REDACTED]" in sanitized
 
     def test_removes_password_form_values(self):
         """Test that password input field values are sanitized."""
@@ -180,7 +185,8 @@ class TestSanitizeHtml:
         sanitized = sanitize_html(html)
 
         assert "MyPassword123" not in sanitized
-        assert "***REDACTED***" in sanitized
+        # har-capture uses PASS_ prefix for passwords
+        assert "PASS_" in sanitized or "[REDACTED]" in sanitized
         assert 'type="password"' in sanitized  # Structure preserved
 
     def test_removes_session_tokens(self):
@@ -193,7 +199,8 @@ class TestSanitizeHtml:
 
         assert "abc123def456ghi789jkl012mno345pqr678stu" not in sanitized
         assert "xyz999abc888def777ghi666" not in sanitized
-        assert "***REDACTED***" in sanitized
+        # har-capture uses CSRF_ and TOKEN_ prefixes
+        assert "CSRF_" in sanitized or "TOKEN_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_signal_data(self):
         """Test that signal quality data is preserved for debugging."""
@@ -238,8 +245,9 @@ class TestSanitizeHtml:
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11:22:33:44:55:66" not in sanitized
         assert "99-88-77-66-55-44" not in sanitized
-        # Should have 3 XX:XX:XX:XX:XX:XX replacements
-        assert sanitized.count("XX:XX:XX:XX:XX:XX") == 3
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        # Should have 3 redacted MACs
+        assert sanitized.count("02:") == 3 or sanitized.count("XX:XX:XX:XX:XX:XX") == 3
 
     def test_handles_empty_string(self):
         """Test that empty string is handled gracefully."""
@@ -412,9 +420,11 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
     # Verify sanitization occurred
     captured_html = diagnostics["raw_html_capture"]["urls"][0]["content"]
     assert "AA:BB:CC:DD:EE:FF" not in captured_html  # MAC removed
-    assert "XX:XX:XX:XX:XX:XX" in captured_html  # MAC sanitized
+    # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+    assert "02:" in captured_html or "XX:XX:XX:XX:XX:XX" in captured_html  # MAC sanitized
     assert "ABC123XYZ" not in captured_html  # Serial removed
-    assert "***REDACTED***" in captured_html  # Serial sanitized
+    # har-capture uses SERIAL_ prefix for serials
+    assert "SERIAL_" in captured_html or "[REDACTED]" in captured_html  # Serial sanitized
     assert "7.0 dBmV" in captured_html  # Signal data preserved
 
 
@@ -513,7 +523,8 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
         if "AA:BB:CC:DD:EE:FF" in mock_coordinator.data["_raw_html_capture"]["urls"][urls.index(url_data)]["content"]:
             # Original MAC should be removed, replacement should be present
             assert "AA:BB:CC:DD:EE:FF" not in content
-            assert "XX:XX:XX:XX:XX:XX" in content
+            # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+            assert "02:" in content or "XX:XX:XX:XX:XX:XX" in content
 
 
 @pytest.mark.asyncio
@@ -885,7 +896,9 @@ class TestGetAuthConfigurationInfo:
 
         # MAC should be sanitized in html_sample
         assert "AA:BB:CC:DD:EE:FF" not in result["captured_response"]["html_sample"]
-        assert "XX:XX:XX:XX:XX:XX" in result["captured_response"]["html_sample"]
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        html_sample = result["captured_response"]["html_sample"]
+        assert "02:" in html_sample or "XX:XX:XX:XX:XX:XX" in html_sample
 
 
 @pytest.mark.asyncio

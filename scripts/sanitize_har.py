@@ -6,6 +6,9 @@ It removes passwords, cookies, MAC addresses, IP addresses, and other PII.
 
 Usage:
     python scripts/sanitize_har.py modem.har
+
+Requires:
+    pip install har-capture
 """
 
 from __future__ import annotations
@@ -13,10 +16,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-from utils.sanitizer import sanitize_har_file
+from har_capture.sanitization import sanitize_har_file
 
 
 def main() -> int:

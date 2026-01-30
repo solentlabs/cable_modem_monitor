@@ -177,10 +177,10 @@ Tests for HTML helper utilities.
 - `test_clean_content`: Test content with no PII.
 
 **TestPiiPatterns** (2 tests)
-: Tests for PII pattern constants.
+: Tests for PII pattern definitions.
 
 - `test_patterns_defined`: Test that all expected patterns are defined.
-- `test_allowlist_defined`: Test that allowlist contains expected placeholders.
+- `test_allowlist_recognizes_placeholders`: Test that allowlist recognizes expected placeholder formats.
 
 **TestSanitizeHtmlEdgeCases** (5 tests)
 : Additional edge case tests for sanitize_html.
@@ -201,7 +201,7 @@ Tests for HTML helper utilities.
 - `test_sanitizes_double_quoted_tagvaluelist`: Test that double-quoted tagValueList is also sanitized.
 - `test_preserves_short_values_in_tagvaluelist`: Test that short values (< 8 chars) are preserved.
 - `test_handles_docsis_channel_data`: Test that DOCSIS channel data is not incorrectly sanitized.
-- `test_wifi_cred_in_allowlist`: Test that WIFI_CRED placeholder is in allowlist.
+- `test_wifi_cred_in_allowlist`: Test that WIFI_CRED placeholder prefix is in allowlist.
 - `test_sanitizes_device_names_before_ip`: Test that device names appearing before IP/MAC placeholders are redacted.
 
 ### test_utils.py
