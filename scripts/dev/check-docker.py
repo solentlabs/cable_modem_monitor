@@ -232,27 +232,124 @@ def get_docker_start_instructions(system):
     ]
 
 
+def is_wsl():
+    """Check if running inside WSL (Windows Subsystem for Linux)."""
+    try:
+        with open("/proc/version") as f:
+            return "microsoft" in f.read().lower()
+    except (FileNotFoundError, PermissionError):
+        return False
+
+
+def find_docker_desktop_exe():
+    """Find Docker Desktop executable path in WSL."""
+    # Common installation paths
+    paths = [
+        "/mnt/c/Program Files/Docker/Docker/Docker Desktop.exe",
+        "/mnt/c/Program Files (x86)/Docker/Docker/Docker Desktop.exe",
+    ]
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def is_docker_desktop_running():
+    """Check if Docker Desktop is already running as a Windows process."""
+    try:
+        result = subprocess.run(
+            ["tasklist.exe", "/FI", "IMAGENAME eq Docker Desktop.exe"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return "Docker Desktop.exe" in result.stdout
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+
+def _wait_for_docker_ready(timeout_seconds=60):
+    """Poll for Docker to become ready. Returns True if ready within timeout."""
+    print("  Waiting for Docker to be ready", end="", flush=True)
+
+    for _ in range(timeout_seconds):
+        time.sleep(1)
+        print(".", end="", flush=True)
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                print("")
+                print(f"{GREEN}{CHECK}{NC} Docker is ready!")
+                print("")
+                return True
+        except subprocess.TimeoutExpired:
+            continue
+
+    # Timeout - Docker didn't become ready
+    print("")
+    print(f"  {YELLOW}Docker Desktop is still starting...{NC}")
+    print("  Please wait a moment and try your command again.")
+    print("")
+    return False
+
+
+def _prompt_start_docker_wsl(docker_exe):
+    """Handle Docker Desktop startup for WSL. Returns True if Docker is ready."""
+    # Check if Docker Desktop is already running but not responding
+    if is_docker_desktop_running():
+        print(f"  {YELLOW}Docker Desktop is running but not responding.{NC}")
+        print("")
+        print("  Try restarting Docker Desktop from the Windows system tray,")
+        print("  or quit and relaunch it manually.")
+        print("")
+        return False
+
+    print(f"  {CYAN}Would you like to start Docker Desktop now?{NC}")
+    print("")
+    try:
+        response = input("  Start Docker Desktop? [Y/n]: ").strip().lower()
+        if response in ("", "y", "yes"):
+            print("")
+            print("  Starting Docker Desktop...", end="", flush=True)
+            subprocess.Popen(
+                [docker_exe],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            print(" started")
+            return _wait_for_docker_ready()
+    except (EOFError, KeyboardInterrupt):
+        print("")
+    return False
+
+
 def prompt_start_docker(system):
     """Prompt user to start Docker Desktop automatically."""
     if system == "Darwin":
-        print("")
-        print(f"{CYAN}Would you like to start Docker Desktop now?{NC}")
+        print(f"  {CYAN}Would you like to start Docker Desktop now?{NC}")
         print("")
         try:
-            response = input("Start Docker Desktop? [Y/n]: ").strip().lower()
+            response = input("  Start Docker Desktop? [Y/n]: ").strip().lower()
             if response in ("", "y", "yes"):
                 print("")
-                print("Starting Docker Desktop...")
+                print("  Starting Docker Desktop...", end="", flush=True)
                 subprocess.Popen(
                     ["open", "-a", "Docker"],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-                print(f"{YELLOW}Docker Desktop is starting. This may take 30-60 seconds.{NC}")
-                print("")
-                return True
+                print(" started")
+                return _wait_for_docker_ready()
         except (EOFError, KeyboardInterrupt):
             print("")
+    elif system == "Linux" and is_wsl():
+        docker_exe = find_docker_desktop_exe()
+        if docker_exe:
+            return _prompt_start_docker_wsl(docker_exe)
     return False
 
 
@@ -261,12 +358,13 @@ def check_docker_installed(system):
     if shutil.which("docker"):
         return True
 
-    print_error("Docker is not installed")
+    print(f"{RED}{CROSS}{NC} Docker is not installed")
     print("")
-    print("Please install Docker Desktop:")
+    print("  Please install Docker Desktop:")
     print("")
     for line in get_docker_install_instructions(system):
-        print(line)
+        print(f"  {line}")
+    print("")
 
     # Offer to install Docker automatically
     prompt_docker_install(system)
@@ -275,6 +373,9 @@ def check_docker_installed(system):
 
 def check_docker_running(system):
     """Check if Docker daemon is running. Returns 0 if running, 1 otherwise."""
+    # Show checking status
+    print("  Checking Docker...", end="", flush=True)
+
     try:
         result = subprocess.run(
             ["docker", "info"],
@@ -283,21 +384,22 @@ def check_docker_running(system):
             timeout=15,
         )
         if result.returncode == 0:
-            print_success("Docker is running")
+            # Clear the "Checking..." line and show success
+            print(f"\r{GREEN}{CHECK}{NC} Docker is running       ")
             return 0
 
         # Docker command failed
         raise subprocess.CalledProcessError(result.returncode, "docker info")
 
     except subprocess.TimeoutExpired:
-        print_error("Docker command timed out")
+        print(f"\r{RED}{CROSS}{NC} Docker command timed out")
         print("")
-        print("Docker may be starting up. Please wait a moment and try again.")
+        print("  Docker may be starting up. Please wait a moment and try again.")
         print("")
         return 1
 
     except subprocess.CalledProcessError:
-        print_error("Docker is not running")
+        print(f"\r{RED}{CROSS}{NC} Docker is not running   ")
         print("")
 
         # Different guidance for container vs host environment
@@ -306,25 +408,31 @@ def check_docker_running(system):
             if try_start_docker_in_docker():
                 print_success("Docker daemon started inside container")
                 return 0
-            print("You're running inside a Dev Container.")
+            print("  You're running inside a Dev Container.")
             print("")
-            print("The Docker daemon inside the container failed to start.")
-            print("Try rebuilding the container:")
+            print("  The Docker daemon inside the container failed to start.")
+            print("  Try rebuilding the container:")
             print("")
-            print(f"  {CYAN}Ctrl+Shift+P → 'Dev Containers: Rebuild Container'{NC}")
+            print(f"    {CYAN}Ctrl+Shift+P → 'Dev Containers: Rebuild Container'{NC}")
             print("")
-        elif not prompt_start_docker(system):
-            print("Please start Docker Desktop:")
-            print("")
-            for line in get_docker_start_instructions(system):
-                print(line)
-            print("")
-            print("Then try your command again.")
-            print("")
+            return 1
+
+        # Try to start Docker Desktop
+        if prompt_start_docker(system):
+            return 0  # Docker is now running
+
+        # Show manual instructions
+        print("  Please start Docker Desktop:")
+        print("")
+        for line in get_docker_start_instructions(system):
+            print(f"  {line}")
+        print("")
+        print("  Then try your command again.")
+        print("")
         return 1
 
     except FileNotFoundError:
-        print_error("Docker command not found in PATH")
+        print(f"\r{RED}{CROSS}{NC} Docker command not found in PATH")
         print("")
         return 1
 
@@ -352,8 +460,15 @@ def print_separator():
     print(f"─── {timestamp} ───────────────────────────────────────────────")
 
 
+def clear_screen():
+    """Clear the terminal screen."""
+    # ANSI escape sequence works on Linux/macOS/WSL2
+    print("\033[2J\033[H", end="", flush=True)
+
+
 def main():
     """Main entry point."""
+    clear_screen()
     print_separator()
     sys.exit(check_docker())
 
