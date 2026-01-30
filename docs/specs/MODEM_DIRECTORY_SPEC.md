@@ -168,19 +168,20 @@ HAR files use `$fixture` references to avoid duplicating HTML content:
 
 ### 1. Capture
 
-Use the capture script which sanitizes automatically:
+Use har-capture which sanitizes automatically:
 
 ```bash
-python scripts/capture_modem.py --ip 192.168.100.1
+pip install "har-capture[full]"
+har-capture get 192.168.100.1
 ```
 
 Output:
-- `captures/modem_20260104_123456.har` (raw, local only)
-- `captures/modem_20260104_123456.sanitized.har` (safe to share)
+- `modem_20260104_123456.har` (raw, local only)
+- `modem_20260104_123456.sanitized.har.gz` (safe to share)
 
 ### 2. Sanitization
 
-Sanitization happens at capture time via `utils/har_sanitizer.py`:
+Sanitization happens at capture time via [har-capture](https://github.com/solentlabs/har-capture):
 
 **Automatically redacted:**
 - Sensitive headers: `Authorization`, `Cookie`, `Set-Cookie`
@@ -407,8 +408,8 @@ detection:
   "log": {
     "version": "1.2",
     "_solentlabs": {
-      "tool": "cable_modem_monitor/capture_modem.py",
-      "version": "3.12.0",
+      "tool": "har-capture",
+      "version": "0.2.0",
       "sanitized": true,
       "fixture_refs": true
     },

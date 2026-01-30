@@ -4,7 +4,7 @@ The challenge-response authentication implementation is based on reverse enginee
 work by BowlesCR (Chris Bowles) from Issue #40 and the prior art from xNinjaKittyx's mb8600
 repository. The HMAC authentication flow was documented through HAR file analysis
 of the modem's Login.js and SOAPAction.js files, captured using our Playwright-based
-HAR capture tool (scripts/capture_modem.py).
+HAR capture tool (https://github.com/solentlabs/har-capture).
 
 Supported HMAC algorithms (specified in modem.yaml):
 - MD5: Most common for HNAP modems

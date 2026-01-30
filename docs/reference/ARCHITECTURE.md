@@ -1189,11 +1189,10 @@ Fast tests with mocked dependencies. No network, no I/O.
 - `test_html_crawler.py` - URL discovery, link extraction
 - `test_utils.py` - General utility functions
 
-**`tests/utils/`** (~100 tests) - Utility functions:
-- `test_har_sanitizer.py` - PII removal from HAR files
-- `test_capture_modem.py` - Modem capture utilities
+**`tests/lib/`** (~100 tests) - Utility functions:
+- `test_har_sanitizer.py` - PII removal from HAR files (uses har-capture)
 - `test_host_validation.py` - Host/URL validation
-- `test_html_helper.py` - HTML parsing helpers
+- `test_html_helper.py` - HTML parsing helpers (uses har-capture)
 
 **`tests/modem_config/`** (~20 tests) - Config adapter:
 - `test_adapter.py` - modem.yaml to auth hint conversion
