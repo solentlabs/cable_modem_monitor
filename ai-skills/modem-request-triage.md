@@ -113,7 +113,7 @@ for entry in urls:
 
 **If auth feasibility fails:**
 → STOP here
-→ Request HAR capture via `scripts/capture_modem.py`
+→ Request HAR capture via `har-capture get <IP>` (see [har-capture](https://github.com/solentlabs/har-capture))
 → Do NOT proceed to data analysis (waste of time without auth)
 
 ---

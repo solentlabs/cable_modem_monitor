@@ -118,12 +118,15 @@ body:
         HAR capture records the full authentication flow, which helps us understand login requirements.
 
         ```bash
-        # Download and run (no git clone needed!)
-        curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
-        python capture_modem.py --ip 192.168.100.1
+        # Install har-capture (one-time)
+        pip install "har-capture[full]"
+
+        # Capture from your modem
+        har-capture get 192.168.100.1
         ```
 
-        The script **automatically downloads dependencies and sanitizes** passwords and sensitive data.
+        See [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.
+        The tool **automatically sanitizes** passwords and sensitive data.
 
         ---
 

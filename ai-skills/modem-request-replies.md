@@ -90,16 +90,16 @@ This is more complex than standard HTML parsing. HNAP modems (like Motorola MB86
 1. **HAR capture** to trace the auth flow
 2. **Multiple rounds** of testing and fixes
 
-Could you run the HAR capture script? This records the full browser session:
+Could you run the HAR capture tool? This records the full browser session:
 
 ```bash
-git clone https://github.com/solentlabs/cable_modem_monitor.git
-cd cable_modem_monitor
-pip install playwright && playwright install chromium
-python scripts/capture_modem.py --ip [YOUR_MODEM_IP]
+pip install "har-capture[full]"
+har-capture get [YOUR_MODEM_IP]
 ```
 
 Log in normally, navigate to the status/connection pages, then close the browser. Attach the resulting `.sanitized.har.gz` file here.
+
+See [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.
 
 Fair warning: HNAP parsers typically take longer and require more back-and-forth than simple HTML parsers. But we've done several successfully (MB8611, S33), so it's definitely doable.
 ```

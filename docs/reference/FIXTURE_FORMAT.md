@@ -132,14 +132,14 @@ Modems often have multiple pages with useful data. Capture all that are relevant
 The easiest way to capture fixtures properly:
 
 ```bash
-# Install dependencies
-pip install playwright && playwright install chromium
+# Install har-capture with browser support
+pip install "har-capture[full]"
 
-# Run the capture script
-python scripts/capture_modem.py
+# Capture from your modem
+har-capture get 192.168.100.1
 ```
 
-The script automatically:
+The tool automatically:
 - Records all pages you visit
 - Prompts for metadata
 - Sanitizes PII

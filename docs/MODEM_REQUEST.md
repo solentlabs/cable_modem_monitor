@@ -73,28 +73,36 @@ If you find credentials that weren't automatically redacted:
 5. **Review the JSON file** - search for your credentials before sharing
 6. Attach to your GitHub issue
 
-### Option 2: HAR Capture Script
+### Option 2: HAR Capture with har-capture
 
 **Best for:** Modems with login requirements, HNAP/API-based modems, or when Option 1 doesn't capture what's needed.
 
 [HAR (HTTP Archive)](http://www.softwareishard.com/blog/har-12-spec/) files capture the complete HTTP conversation including authentication and API calls.
 
 ```bash
-# Download and run (no git clone needed!)
-curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
-python capture_modem.py --ip 192.168.100.1
+# Install har-capture (one-time)
+pip install "har-capture[full]"
+
+# Capture from your modem (default cable modem IP)
+har-capture get 192.168.100.1
+
+# Or specify a different IP
+har-capture get 192.168.0.1
+
+# If your modem uses HTTP Basic Auth
+har-capture get 192.168.100.1 -u admin -p yourpassword
 ```
 
-The script automatically downloads dependencies on first run.
+See the [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.
 
 **During capture:**
 1. Browser opens to your modem
-2. Log in normally
+2. Log in normally (if form-based auth)
 3. Navigate to status/DOCSIS pages
 4. **Wait 3-5 seconds per page** (let async data load)
 5. Close browser when done
 
-The script generates a `.sanitized.har.gz` file. **Review before sharing.**
+The tool automatically sanitizes and compresses the output. **Review before sharing.**
 
 ### Which Method Do I Need?
 
@@ -165,9 +173,9 @@ If anything sensitive remains, either:
 | Data Type | What Happens |
 |-----------|--------------|
 | WiFi credentials | Should be auto-redacted, **verify before sharing** |
-| MAC addresses | Auto-redacted to `XX:XX:XX:XX:XX:XX` |
-| Serial numbers | Auto-redacted to `***SERIAL***` |
-| Public IPs | Auto-redacted to `***PUBLIC_IP***` |
+| MAC addresses | Auto-redacted (format-preserving hash, e.g., `02:xx:xx:xx:xx:xx`) |
+| Serial numbers | Auto-redacted (hash with `SERIAL_` prefix) |
+| Public IPs | Auto-redacted (reserved range, e.g., `240.x.x.x`) |
 | Channel data (power, SNR) | Preserved - needed for parser |
 | Firmware version | Preserved - useful for compatibility |
 | Uptime | Preserved - useful for testing |

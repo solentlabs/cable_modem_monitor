@@ -303,7 +303,7 @@
     {
       "label": "📹 Capture Modem Traffic",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python3 ${workspaceFolder}/scripts/capture_modem.py --ip ${input:modemIP}",
+      "command": "${workspaceFolder}/.venv/bin/har-capture get ${input:modemIP}",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -314,7 +314,7 @@
         "focus": true
       },
       "problemMatcher": [],
-      "detail": "Launch browser to capture modem traffic"
+      "detail": "Launch browser to capture modem traffic (uses har-capture)"
     }
   ],
   "inputs": [
