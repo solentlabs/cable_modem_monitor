@@ -10,6 +10,7 @@
 ## Related Documentation
 
 - **[MODEM_DIRECTORY_SPEC.md](./MODEM_DIRECTORY_SPEC.md)** - Directory structure for modem files
+- **[../reference/MODEM_LANDSCAPE.md](../reference/MODEM_LANDSCAPE.md)** - Complete mapping of auth, session, paradigm, and parser patterns
 - **[../reference/PARSER_GUIDE.md](../reference/PARSER_GUIDE.md)** - Writing parsers
 - **[../reference/ARCHITECTURE.md](../reference/ARCHITECTURE.md)** - System architecture
 
