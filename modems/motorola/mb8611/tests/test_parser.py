@@ -14,7 +14,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.motorola.mb8611.parser import (
+from modems.motorola.mb8611.parser import (
     MotorolaMB8611HnapParser,
 )
 from tests.fixtures import get_fixture_path, load_fixture

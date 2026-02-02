@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.modems.arris.cm3500b.parser import (
+from modems.arris.cm3500b.parser import (
     ArrisCM3500BParser,
 )
 

@@ -6,7 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.motorola.mb7621.parser import (
+from modems.motorola.mb7621.parser import (
     _DEFAULT_RESTART_WINDOW_SECONDS,
     MotorolaMB7621Parser,
 )

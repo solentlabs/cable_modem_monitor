@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.modems.technicolor.tc4400.parser import (
+from modems.technicolor.tc4400.parser import (
     _DEFAULT_RESTART_WINDOW_SECONDS,
     TechnicolorTC4400Parser,
 )

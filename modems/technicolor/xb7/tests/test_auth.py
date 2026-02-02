@@ -212,7 +212,7 @@ class TestXB7FormAuth:
             # Parse with XB7 parser
             from bs4 import BeautifulSoup
 
-            from custom_components.cable_modem_monitor.modems.technicolor.xb7.parser import (
+            from modems.technicolor.xb7.parser import (
                 TechnicolorXB7Parser,
             )
 

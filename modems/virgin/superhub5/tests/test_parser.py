@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.virgin.superhub5.parser import (
+from modems.virgin.superhub5.parser import (
     VirginSuperHub5Parser,
 )
 from tests.fixtures import get_fixture_path

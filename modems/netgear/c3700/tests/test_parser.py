@@ -27,7 +27,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.c3700.parser import NetgearC3700Parser
+from modems.netgear.c3700.parser import NetgearC3700Parser
 from tests.fixtures import load_fixture
 
 

@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.arris.s34.parser import ArrisS34HnapParser
+from modems.arris.s34.parser import ArrisS34HnapParser
 from tests.fixtures import load_fixture
 
 
