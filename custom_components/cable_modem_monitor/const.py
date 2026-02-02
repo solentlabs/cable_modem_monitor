@@ -5,7 +5,7 @@ from __future__ import annotations
 # IMPORTANT: Do not edit VERSION manually!
 # Use: python scripts/release.py <version>
 # The script updates this file, manifest.json, and test_version_and_startup.py
-VERSION = "3.13.0-beta.7"
+VERSION = "3.13.0-beta.8"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"
