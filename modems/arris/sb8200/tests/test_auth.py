@@ -12,7 +12,7 @@ import requests
 from custom_components.cable_modem_monitor.core.auth import AuthHandler, AuthStrategyType
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
 from custom_components.cable_modem_monitor.modem_config.adapter import get_auth_adapter_for_parser
-from custom_components.cable_modem_monitor.modems.arris.sb8200.parser import ArrisSB8200Parser
+from modems.arris.sb8200.parser import ArrisSB8200Parser
 
 # Test timeout constant - matches DEFAULT_TIMEOUT from schema
 TEST_TIMEOUT = 10

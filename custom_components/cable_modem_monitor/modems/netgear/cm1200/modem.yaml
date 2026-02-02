@@ -98,3 +98,6 @@ notes: |
   Uses HTTP Basic Auth (unlike CM2000's form-based auth).
   Supports up to 32 SC-QAM downstream, 2 OFDM, 8 ATDMA upstream, 2 OFDMA.
   Upstream ATDMA symbol rate appears before frequency (differs from CM2000).
+
+references:
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

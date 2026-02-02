@@ -8,7 +8,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.technicolor.xb7.parser import TechnicolorXB7Parser
+from modems.technicolor.xb7.parser import TechnicolorXB7Parser
 from tests.fixtures import load_fixture
 
 

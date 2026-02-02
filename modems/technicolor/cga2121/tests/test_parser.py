@@ -6,7 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.technicolor.cga2121.parser import (
+from modems.technicolor.cga2121.parser import (
     TechnicolorCGA2121Parser,
 )
 from tests.fixtures import load_fixture

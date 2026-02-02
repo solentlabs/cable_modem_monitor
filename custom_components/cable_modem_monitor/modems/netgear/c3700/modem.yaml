@@ -116,3 +116,6 @@ notes: |
   Combo modem/router device with 24x8 channel bonding (DOCSIS 3.0).
   Multi-page parsing: DocsisStatus.htm for channel data, RouterStatus.htm for system info.
   Channel data in pipe-delimited JavaScript: InitDsTableTagValue() and InitUsTableTagValue().
+
+references:
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

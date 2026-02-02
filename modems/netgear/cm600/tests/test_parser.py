@@ -21,7 +21,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.cm600.parser import NetgearCM600Parser
+from modems.netgear.cm600.parser import NetgearCM600Parser
 from tests.fixtures import load_fixture
 
 

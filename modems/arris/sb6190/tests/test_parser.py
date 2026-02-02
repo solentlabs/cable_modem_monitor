@@ -4,7 +4,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.arris.sb6190.parser import ArrisSB6190Parser
+from modems.arris.sb6190.parser import ArrisSB6190Parser
 from tests.fixtures import load_fixture
 
 
