@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.8] - 2026-02-01
+
+### Added
+
+- **ARRIS CM3500B Support** - EuroDOCSIS 3.1 cable modem with form-based authentication. Parses 24+ SC-QAM downstream, 2 OFDM downstream, 4 ATDMA upstream, and 1 OFDMA upstream channels. (Thanks [@ChBi89](https://github.com/ChBi89)! #73)
+
 ## [3.13.0-beta.7] - 2026-01-28
 
 ### Added
