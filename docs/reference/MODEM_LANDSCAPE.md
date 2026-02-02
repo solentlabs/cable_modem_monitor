@@ -8,7 +8,7 @@ An inventory of captured data and known characteristics for each cable modem.
 
 | Source | Count | Description |
 |--------|:-----:|-------------|
-| **HAR Captures** | 18 | Browser network recordings - ground truth for auth/session |
+| **HAR Captures** | 19 | Browser network recordings - ground truth for auth/session |
 | **JSON Diagnostics** | 36 | Modem directories with config_entry/diagnostics exports |
 | **GitHub Issues** | 38 | Modem-related issues (requests, bugs, data) |
 | **Direct PRs** | 2 | External contributor PRs with parser + fixtures (CM820B, S34) |
@@ -159,7 +159,7 @@ RESTful JSON API with clean structured responses.
 | arris-sb8200 | ✅ | none | stateless | html | ✓ | ✓ | #42 |
 | ↳ HTTPS variant | ✅ | url_token | session_cookie | html | - | ✓ | #81,#109 |
 | arris-tg3442de | 📦 | none | session_cookie | html | ✓ | ✓ | #86 |
-| arris-tm1602a | 📦 | none | stateless | html | - | ✓ | #112 |
+| arris-tm1602a | 📦 | none | stateless | html | ✓ | ✓ | #112 |
 | **Compal** |
 | compal-ch7465 | 📋 | form_js | ? | html | - | ✓ | #77 |
 | compal-ch7466 | 📦 | form_js | ? | html | - | ✓ | #80 |
