@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>QoS Statistics</title>
+	<meta http-equiv="Pragma" content="no-cache">
+        <script type="text/javascript" src="/validation.js"></script>
+    <link rel="stylesheet" href="/arris_style.css">
+</head>
+
+<body class="CM3500" onload="onPageLoad()">
+<div class="wrapper">
+
+	<div class="header">
+	<div class="header_text">
+            <h1>QoS Statistics</h1>
+            <a href="logout_cgi">Logout</a>
+	</div>
+	</div>
+
+	<div id="navbar">
+	<ul>
+	<li><a style="width: 16.66%; font-size: 90%;" href="product_cgi">Product</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="dhcp_cgi">DHCP</a></li>
+<li id="current"><a style="width: 16.66%; font-size: 90%;" href="qos_cgi">QoS</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="config_params_cgi">Config Params</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="spectrum_cgi">SPECTRUM</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="status_cgi">Basic</a></li>
+
+	</ul>
+	</div>
+
+	<div class="main_body">
+	<p>
+	<!-- INSERT ARRIS PAGE CONTENT HERE -->
+
+    <TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c><TBODY>
+    <TR>
+    <TD width=770><B><FONT color=#ffffff size=+1>&nbsp;QoS</FONT></B></TD></TR></TBODY></TABLE>
+    <table border ="1" width="660"><tr><td width="89" align="center">SFID</td>
+            <td width="216" align="center"> Service Class Name</td><td width="134" align="center"> Direction</td>
+            <td width="99" align="center"> Primary Flow</td><td width="88" align="center"> Packets</td></tr>
+        <tr><td>38168</td><td>----</td><td>Downstream</td><td>Yes</td><td>0</td></tr>
+<tr><td>988</td><td>----</td><td>Upstream</td><td>Yes</td><td>1400351</td></tr>
+<tr><td>1044</td><td>----</td><td>Upstream</td><td>No</td><td>0</td></tr>
+<tr><td>1045</td><td>----</td><td>Upstream</td><td>No</td><td>0</td></tr>
+<tr><td>38172</td><td>----</td><td>Downstream</td><td>No</td><td>0</td></tr>
+<tr><td>38173</td><td>----</td><td>Downstream</td><td>No</td><td>0</td></tr>
+
+    </table>
+
+    <table>
+        <tr valign="top"><td><a href="dsx_cgi">Show DSX Log</a></td></tr>
+    </table>
+    <table>
+        <form method="post" action="qos_cgi">
+            <tr><td><input type="submit" name="dsxLogging" value="Disable Logging"></td>
+                <td><input type="submit" name="dsxClear" value="Clear"></td></tr>
+        </form>
+    </table>
+
+	<!-- END ARRIS PAGE CONTENT -->
+	</p>
+	</div> <!-- main_body -->
+
+	<div class="push"></div>
+</div> <!-- wrapper -->
+
+<div class="footer">
+    &copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+</div>
+</body>
+</html>

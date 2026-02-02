@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>DHCP Parameters</title>
+	<meta http-equiv="Pragma" content="no-cache">
+        <script type="text/javascript" src="/validation.js"></script>
+    <link rel="stylesheet" href="/arris_style.css">
+</head>
+
+<body class="CM3500" onload="onPageLoad()">
+<div class="wrapper">
+
+	<div class="header">
+	<div class="header_text">
+          <h1>DHCP Parameters</h1>
+          <a href="logout_cgi">Logout</a>
+	</div>
+	</div>
+
+	<div id="navbar">
+	<ul>
+	<li><a style="width: 16.66%; font-size: 90%;" href="product_cgi">Product</a></li>
+<li id="current"><a style="width: 16.66%; font-size: 90%;" href="dhcp_cgi">DHCP</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="qos_cgi">QoS</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="config_params_cgi">Config Params</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="spectrum_cgi">SPECTRUM</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="status_cgi">Basic</a></li>
+
+	</ul>
+	</div>
+
+	<div class="main_body">
+	<p>
+	<!-- INSERT ARRIS PAGE CONTENT HERE -->
+
+    <TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c><TBODY><TR>
+    <TD width=770><B><FONT color=#ffffff size=+1>
+    &nbsp;SOFTWARE VERSION
+    </FONT></B></TD></TR></TBODY></TABLE>
+
+    <table CELLSPACING=0 CELLPADDING=0 >
+        <tr><td width="180">Firmware Name</td><td>TS11.05.042.02_031124_735.NCS.03</td></tr>
+        <tr><td>Software Filename</td><td>TS11.05.042.02_031124_735.NCS.03.X1.7.EU.simg</td></tr>
+    </table><br><TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c><TBODY><TR>
+    <TD width=770><B><FONT color=#ffffff size=+1>
+
+    &nbsp;CM DHCP PARAMETERS
+    </FONT></B></TD></TR></TBODY></TABLE>
+    <table CELLSPACING=0 CELLPADDING=0 >
+        <tr>
+            <td width=180>CM IP Addr</td>
+            <td width=200>***PRIVATE_IP***.141</td>
+            <td COLSPAN=2>DHCP - CM IP Time Remaining</td>
+        </tr>
+        <tr>
+            <td width=180>CM Subnet Mask</td><td>255.255.248.0</td>
+            <td width=120>Lease:</td>
+            <td width=310>604800 sec (577223 sec remaining)</td></tr>
+        <tr>
+            <td>CM IP Gateway</td>
+            <td>***PRIVATE_IP***.254</td>
+            <td>Rebind:</td>
+            <td>529200 sec (501623 sec remaining)</td></tr>
+        <tr>
+            <td>CM TFTP Server</td>
+            <td>***PUBLIC_IP***</td>
+            <td>Renew:</td>
+            <td>302400 sec (274823 sec remaining)</td></tr>
+        <tr><td>CM Time Server</td>
+            <td>***PUBLIC_IP***</td>
+            <td>MDD IP Override:</td>
+            <td>0 (Disabled)</td></tr>
+        <tr><td>CM Time Offset</td>
+            <td>0</td>
+            <td>MDD IP Mode:</td>
+            <td>2 (APM)</td>
+        </tr>
+    <tr><td>CM Boot file</td><td >f8790afea8f7_d0268c0da8be45f4dc825861cb9fa01c.cm</td>  </tr>
+    <tr> <td> CM Dhcp State : </td> <td> bound</td> </tr>
+    </table><br><br>
+
+    <table>
+        <tr valign="top"><td><a href="dhcp_cmLog_cgi">CM-DHCP</a></td>
+
+            <form method="post" action="dhcp_cgi">
+                <td><input type="submit" name="cmDhcpLogging" value="Disable CM Log"></td>
+                <td><input type="submit" name="cmClear" value="Clear"></td>
+            </form>
+        </tr>
+    </table>
+
+	<!-- END ARRIS PAGE CONTENT -->
+	</p>
+	</div> <!-- main_body -->
+
+	<div class="push"></div>
+</div> <!-- wrapper -->
+
+<div class="footer">
+    &copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+</div>
+</body>
+</html>

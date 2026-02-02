@@ -5,7 +5,7 @@ Auto-generated index of modem fixtures.
 **Data Sources:**
 - `modem.yaml` - Single source of truth (manufacturer, model, hardware, ISPs, status)
 
-**Supported Modems:** 19 (13 ✅ verified, 5 ⏳ awaiting, 1 🔧 in progress)
+**Supported Modems:** 20 (13 ✅ verified, 6 ⏳ awaiting, 1 🔧 in progress)
 
 ## Directory Structure
 
@@ -28,6 +28,7 @@ See [docs/specs/MODEM_DIRECTORY_SPEC.md](../docs/specs/MODEM_DIRECTORY_SPEC.md) 
 
 | Manufacturer | Model | DOCSIS | Protocol | Chipset | ISPs | Files | Status |
 |--------------|-------|--------|----------|---------|------|-------|--------|
+| ARRIS | [CM3500B](arris/cm3500b/README.md) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") |  | [![VDF](https://img.shields.io/badge/-VDF-aa6666?style=flat-square "Vodafone Kabel")](#vodafone) | 1 | ⏳ Awaiting |
 | ARRIS | [CM820B](arris/cm820b/README.md) | 3.0 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [Puma 5](#puma-5) | [![VOLY](https://img.shields.io/badge/-VOLY-5599aa?style=flat-square "Volia")](#volya) | 0 | ✅ Verified |
 | Arris/CommScope | [G54](arris/g54/README.md) | 3.1 | ![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square "Standard web scraping") | [BCM3390](#bcm3390) | [![XFI](https://img.shields.io/badge/-XFI-aa7788?style=flat-square "Xfinity")](#xfinity) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 1 | ⏳ Awaiting |
 | Arris/CommScope | [S33](arris/s33/README.md) | 3.1 | ![HNAP](https://img.shields.io/badge/-HNAP-5B8FBF?style=flat-square "SOAP-based, requires auth") | [BCM3390](#bcm3390) | [![COM](https://img.shields.io/badge/-COM-5588aa?style=flat-square "Comcast")](#comcast) [![COX](https://img.shields.io/badge/-COX-cc9966?style=flat-square "Cox Communications")](#cox) [![SPEC](https://img.shields.io/badge/-SPEC-6699aa?style=flat-square "Spectrum (Charter)")](#spectrum) | 2 | ✅ Verified |
@@ -70,6 +71,7 @@ DOCSIS 3.0
 └── 2017  Motorola    MB7621     ░░░░░░░░░███████████   8yr  Current
 
 DOCSIS 3.1
+├── 2016  ARRIS       CM3500B    ░░░░░░░░████████████   9yr  Current
 ├── 2017  Motorola    MB8600     ░░░░░░░░░███████████   8yr  Current
 ├── 2017  ARRIS       SB8200     ░░░░░░░░░███████████   8yr  Current
 ├── 2017  Technicolor TC4400     ░░░░░░░░░███████████   8yr  Current

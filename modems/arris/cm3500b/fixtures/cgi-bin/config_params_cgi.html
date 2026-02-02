@@ -1,0 +1,313 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>Configuration Parameters</title>
+	<meta http-equiv="Pragma" content="no-cache">
+        <script type="text/javascript" src="/validation.js"></script>
+    <link rel="stylesheet" href="/arris_style.css">
+</head>
+
+<body class="CM3500" onload="onPageLoad()">
+<div class="wrapper">
+
+	<div class="header">
+	<div class="header_text">
+          <h1>CM Configuration</h1>
+          <a href="logout_cgi">Logout</a>
+	</div>
+	</div>
+
+	<div id="navbar">
+	<ul>
+	<li><a style="width: 16.66%; font-size: 90%;" href="product_cgi">Product</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="dhcp_cgi">DHCP</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="qos_cgi">QoS</a></li>
+<li id="current"><a style="width: 16.66%; font-size: 90%;" href="config_params_cgi">Config Params</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="spectrum_cgi">SPECTRUM</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="status_cgi">Basic</a></li>
+
+	</ul>
+	</div>
+
+	<div class="main_body">
+	<p>
+	<!-- INSERT ARRIS PAGE CONTENT HERE -->
+
+    <table>
+          <tr valign="top"><td>CM Config File:</td><td>tftp://***PUBLIC_IP***/f8790afea8f7_d0268c0da8be45f4dc825861cb9fa01c.cm</td></tr>
+          <?MTA_CONFIG_FILE>
+        <table width="770"><tr><td>
+                    <font size="+2" color="red">Warning:</font> The modem does not store copies of its configuration files. Below
+                            you will find the currently used values of parameters commonly set using these files.  The files may or may not set these values or
+                                    contain additional information. This information is listed for convenience only.</td></tr></table>
+                        <br>
+                        <a name="cm"><br></a>
+
+                        <TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c><TBODY><TR>
+
+                            <TD width=770><B><FONT color=#ffffff size=+1>
+                            &nbsp;Common CM Config Parameters
+                            </FONT></B></TD></TR></TBODY></TABLE>
+                            <pre>
+NetworkAccess = Yes
+UpgradeServer = ***PRIVATE_IP***
+MaxCpeAllowed = 2
+PrivacyEnable = 1
+Sn: ***REDACTED*** = docsDevSwAdminStatus.0 2
+Sn: ***REDACTED*** = arrisCmDoc30AccessHttpTimeout.0 10
+DownstreamServiceFlow =
+    SfReference = 0
+#   SfId = 38168  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 0
+    SfMaxTrafficRate = 273920000
+    SfMaxTrafficBurst = 3044
+    SfMinReservedRate = 0
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+UpstreamServiceFlow =
+    SfReference = 0
+#   SfId = 988  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 0
+    SfMaxTrafficRate = 52480000
+    SfMaxTrafficBurst = 65535
+    SfMinReservedRate = 0
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+    SfMaxConcatBurst = 65535
+    SfSchedulingType  = 2
+UpstreamServiceFlow =
+    SfReference = 0
+#   SfId = 1044  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 4
+    SfMaxTrafficRate = 3450000
+    SfMaxTrafficBurst = 3044
+    SfMinReservedRate = 0
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+    SfMaxConcatBurst = 1522
+    SfSchedulingType  = 2
+UpstreamServiceFlow =
+    SfReference = 0
+#   SfId = 1045  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 0
+    SfMaxTrafficRate = 358400
+    SfMaxTrafficBurst = 3044
+    SfMinReservedRate = 3044
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+    SfMaxConcatBurst = 1522
+    SfSchedulingType  = 4
+DownstreamServiceFlow =
+    SfReference = 0
+#   SfId = 38172  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 4
+    SfMaxTrafficRate = 3450000
+    SfMaxTrafficBurst = 3044
+    SfMinReservedRate = 0
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+DownstreamServiceFlow =
+    SfReference = 0
+#   SfId = 38173  -- assigned by CMTS, correlates to PcSfId
+    SfClassName = ""
+    SfQosSetType = 7
+    SfTrafficPriority = 5
+    SfMaxTrafficRate = 400000
+    SfMaxTrafficBurst = 3044
+    SfMinReservedRate = 0
+    SfMinReservedRatePktsize = 0
+    SfActiveQosTimeout = 0
+    SfAdmittedQosTimeout = 200
+
+DownstreamPacketClassification =
+    PcServiceFlow = 38168
+    PcIdentifier = 1
+    PcRulePriority = 129
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38168
+    PcIdentifier = 2
+    PcRulePriority = 129
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 988
+    PcIdentifier = 3
+    PcRulePriority = 129
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 988
+    PcIdentifier = 4
+    PcRulePriority = 129
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1044
+    PcIdentifier = 5
+    PcRulePriority = 0
+    PcActivationState = 1
+        PcIpProtocol = 256
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1044
+    PcIdentifier = 6
+    PcRulePriority = 0
+    PcActivationState = 1
+        PcIpProtocol = 256
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1044
+    PcIdentifier = 7
+    PcRulePriority = 0
+    PcActivationState = 1
+        PcIpProtocol = 256
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 8
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 9
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 10
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 11
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 12
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+UpstreamPacketClassification =
+    PcServiceFlow = 1045
+    PcIdentifier = 13
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpSourcePortStart = 0
+        PcIpSourcePortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38172
+    PcIdentifier = 14
+    PcRulePriority = 0
+    PcActivationState = 1
+        PcIpProtocol = 256
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 15
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 16
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 17
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 18
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 19
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+DownstreamPacketClassification =
+    PcServiceFlow = 38173
+    PcIdentifier = 20
+    PcRulePriority = 140
+    PcActivationState = 1
+        PcIpProtocol = 17
+        PcIpDestPortStart = 0
+        PcIpDestPortEnd = 65535
+
+<FONT color=#0000ff># </FONT><br><FONT color=#0000ff># Note:<i> Items assigned by CMTS are not included in the config file.</i></FONT><br><FONT color=#0000ff># &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i> PcSfId maps to Instance of docsQosServiceFlowTable.</i></FONT><br><FONT color=#0000ff># </FONT><br></pre><a name="mta"><br></a><TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c><TBODY><TR>
+
+	<!-- END ARRIS PAGE CONTENT -->
+	</p>
+	</div> <!-- main_body -->
+
+	<div class="push"></div>
+</div> <!-- wrapper -->
+
+<div class="footer">
+    &copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+</div>
+</body>
+</html>

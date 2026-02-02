@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-28T11:48:33.906286+00:00"
+generated: "2026-02-02T00:45:48.931303+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -17,6 +17,7 @@ auth_patterns:
       - password
       - password_login
     actions:
+      - /cgi-bin/login_cgi
       - /cgi-bin/luci
       - /check.jst
       - /goform/Login
@@ -41,6 +42,20 @@ auth_patterns:
       - login_
       - sessionId
 modems:
+  ArrisCM3500BParser:
+    path: arris/cm3500b
+    name: ARRIS CM3500B
+    manufacturer: ARRIS
+    model: CM3500B
+    verified: false
+    detection:
+      pre_auth:
+        - CM3500B
+        - ARRIS
+      post_auth:
+        - CM3500B
+        - ARRIS
+      page_hint: /cgi-bin/status_cgi
   ArrisCM820BParser:
     path: arris/cm820b
     name: ARRIS CM820B

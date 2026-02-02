@@ -237,48 +237,31 @@ def generate_index(modems_root: Path) -> dict:
     return index
 
 
-def _get_committed_index(output_path: Path) -> dict | None:
-    """Get the committed version of index.yaml from git.
-
-    Returns None if file is not tracked or git command fails.
-    """
-    try:
-        # Get path relative to git root
-        rel_path = output_path.relative_to(PROJECT_ROOT)
-        result = subprocess.run(
-            ["git", "show", f"HEAD:{rel_path}"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            loaded: dict | None = yaml.safe_load(result.stdout)
-            return loaded
-    except (subprocess.SubprocessError, ValueError):
-        pass
-    return None
-
-
 def write_index(index: dict, output_path: Path) -> None:
     """Write index to YAML file.
 
-    Only writes if content has changed compared to the committed version.
+    Only writes if content has changed compared to the current file on disk.
     This prevents spurious changes when the script is run multiple times.
 
     Args:
         index: Index dictionary
         output_path: Path to write index file
     """
-    # Compare against committed version (ignoring generated timestamp)
-    committed = _get_committed_index(output_path)
-    if committed:
-        # Compare modems and auth_patterns only (not version or generated)
-        modems_unchanged = committed.get("modems") == index["modems"]
-        auth_unchanged = committed.get("auth_patterns") == index.get("auth_patterns")
-        if modems_unchanged and auth_unchanged:
-            print(f"\nNo content changes to {output_path}")
-            print(f"Total modems indexed: {len(index['modems'])}")
-            return
+    # Compare against current file on disk (ignoring generated timestamp)
+    if output_path.exists():
+        try:
+            with open(output_path) as f:
+                current = yaml.safe_load(f)
+            if current:
+                # Compare modems and auth_patterns only (not version or generated)
+                modems_unchanged = current.get("modems") == index["modems"]
+                auth_unchanged = current.get("auth_patterns") == index.get("auth_patterns")
+                if modems_unchanged and auth_unchanged:
+                    print(f"\nNo content changes to {output_path}")
+                    print(f"Total modems indexed: {len(index['modems'])}")
+                    return
+        except (yaml.YAMLError, OSError):
+            pass  # File corrupted or unreadable, regenerate
 
     # Custom YAML representer for cleaner output
     def str_representer(dumper, data):

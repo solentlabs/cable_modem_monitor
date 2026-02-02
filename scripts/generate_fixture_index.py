@@ -785,6 +785,12 @@ def generate_index(output_path: Path | None = None) -> str:
     markdown = "\n".join(lines) + "\n"
 
     if output_path:
+        # Only write if content changed (preserves timestamp for unchanged content)
+        if output_path.exists():
+            existing = output_path.read_text()
+            if existing == markdown:
+                print(f"No changes to {output_path}")
+                return markdown
         output_path.write_text(markdown)
         print(f"Written to {output_path}")
 
