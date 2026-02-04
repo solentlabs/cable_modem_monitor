@@ -292,6 +292,19 @@ class TestFormAuthE2E:
             assert result.success, f"Form nonce auth failed on {protocol}: {result.error}"
             assert result.auth_strategy == "form_nonce"
 
+            # CRITICAL: Verify parser actually extracted channel data
+            assert result.modem_data is not None, "Parser returned None for modem_data"
+            downstream = result.modem_data.get("downstream", [])
+            upstream = result.modem_data.get("upstream", [])
+
+            assert len(downstream) > 0, (
+                f"Parser returned 0 downstream channels! This reproduces issue #93. " f"Modem data: {result.modem_data}"
+            )
+            assert len(upstream) > 0, "Parser returned 0 upstream channels!"
+
+            # Log for debugging
+            print(f"\n✓ SB6190 form_nonce parsed: {len(downstream)} downstream, {len(upstream)} upstream")
+
     def test_sb6190_wrong_credentials(self, protocol: str, ssl_context_for_protocol: ssl.SSLContext | None):
         """SB6190 form_nonce auth should fail with wrong credentials."""
         modem_dir = MODEMS_DIR / "arris/sb6190"
@@ -345,6 +358,19 @@ class TestNoAuthE2E:
 
             assert result.success, f"No-auth failed on {protocol}: {result.error}"
             assert result.auth_strategy == "no_auth"
+
+            # CRITICAL: Verify parser actually extracted channel data
+            assert result.modem_data is not None, "Parser returned None for modem_data"
+            downstream = result.modem_data.get("downstream", [])
+            upstream = result.modem_data.get("upstream", [])
+
+            assert len(downstream) > 0, (
+                f"Parser returned 0 downstream channels in no-auth mode! " f"Modem data: {result.modem_data}"
+            )
+            assert len(upstream) > 0, "Parser returned 0 upstream channels in no-auth mode!"
+
+            # Log for debugging
+            print(f"\n✓ SB6190 no-auth parsed: {len(downstream)} downstream, {len(upstream)} upstream")
 
 
 # =============================================================================
