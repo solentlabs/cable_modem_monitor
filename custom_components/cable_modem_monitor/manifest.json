@@ -17,5 +17,5 @@
     "defusedxml==0.7.1",
     "har-capture>=0.2.4"
   ],
-  "version": "3.13.0-beta.8"
+  "version": "3.13.0-beta.9"
 }
