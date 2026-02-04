@@ -1203,12 +1203,13 @@ class DataOrchestrator:
 
                 # Check if parser is receiving login page HTML (session expired)
                 from .auth.detection import is_login_page
+
                 if is_login_page(html):
                     _LOGGER.error(
                         "Parser is receiving LOGIN page HTML instead of data! "
                         "Session may have expired. This will cause 0 channels to be parsed. "
                         "HTML size: %d bytes",
-                        len(html)
+                        len(html),
                     )
 
                 return self.parser.parse_resources(resources)
@@ -1220,12 +1221,13 @@ class DataOrchestrator:
 
         # Check if parser is receiving login page HTML (session expired)
         from .auth.detection import is_login_page
+
         if is_login_page(html):
             _LOGGER.error(
                 "Parser is receiving LOGIN page HTML instead of data! "
                 "Session may have expired. This will cause 0 channels to be parsed. "
                 "HTML size: %d bytes",
-                len(html)
+                len(html),
             )
 
         return self.parser.parse(soup)
