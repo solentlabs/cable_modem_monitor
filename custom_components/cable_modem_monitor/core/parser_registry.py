@@ -75,7 +75,7 @@ def get_parser_dropdown_from_index() -> list[str]:
     enables HTML capture for developing new parsers.
 
     Returns:
-        Sorted list of parser display names (e.g., ["ARRIS SB6190", "Motorola MB7621", ...])
+        Sorted list of parser display names (e.g., ["Manufacturer Model1", "Manufacturer Model2", ...])
         with fallback parser at the end.
     """
     index = _load_modem_index()

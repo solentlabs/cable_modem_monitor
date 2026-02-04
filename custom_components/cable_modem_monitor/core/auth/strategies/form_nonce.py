@@ -1,17 +1,12 @@
 """Form authentication with client-generated nonce and text response.
 
-Simple form POST with:
-- Separate username/password fields (no encoding)
-- Client-generated random nonce
-- Plain text response with success/error prefix
+Authentication pattern for modems that use:
+- Simple form POST with username/password fields (no encoding)
+- Client-generated random nonce for replay protection
+- Plain text response with success/error prefix (e.g., "Url:/path" or "Error:message")
 
-Used by: ARRIS SB6190 (firmware 9.1.103+)
-
-This is a dedicated strategy that does exactly what these modems need,
-without the complexity of the generic form_ajax strategy. Designed to be
-refactored into composable building blocks in v3.14+.
-
-HAR reference: Issue #93 (HenryGeorge1978)
+This is a dedicated strategy designed for modems using this specific pattern.
+Designed to be refactored into composable building blocks in v3.14+.
 """
 
 from __future__ import annotations

@@ -67,7 +67,7 @@ class AuthStrategyType(Enum):
     """AJAX-based form auth with client-generated nonce."""
 
     FORM_NONCE = "form_nonce"
-    """Form auth with client nonce and text response (SB6190)."""
+    """Form auth with client-generated nonce and text response."""
 
     REDIRECT_FORM = "redirect_form"
     """Form-based auth with redirect validation."""

@@ -16,12 +16,12 @@ Architecture:
     from the Fetcher. Parsers only parse - they never fetch.
 
 Example:
-    class ArrisSB8200Parser(ModemParser):
-        '''Parser for ARRIS SB8200 - metadata loaded from modem.yaml.'''
+    class CableModemParser(ModemParser):
+        '''Parser for cable modem - metadata loaded from modem.yaml.'''
 
         def parse_resources(self, resources):
-            main = resources.get("/cmconnectionstatus.html")
-            info = resources.get("/cmswinfo.html")
+            main = resources.get("/status.html")
+            info = resources.get("/info.html")
             return {"downstream": [...], "upstream": [...], "system_info": {...}}
 
 Note:
@@ -77,9 +77,9 @@ class ModemParser(ABC):
     """Abstract base class for modem-specific HTML parsers.
 
     Parser Identity (auto-populated from modem.yaml):
-        name: Display name (e.g., "ARRIS SB8200")
-        manufacturer: Manufacturer name (e.g., "ARRIS")
-        models: List of model identifiers (e.g., ["SB8200"])
+        name: Display name (e.g., "Manufacturer Model")
+        manufacturer: Manufacturer name (e.g., "Manufacturer")
+        models: List of model identifiers (e.g., ["Model123"])
 
     These are automatically populated from modem.yaml when the parser class is
     defined. Parsers should NOT define these attributes - they come from modem.yaml
@@ -117,7 +117,7 @@ class ModemParser(ABC):
 
         Note: `models` is only populated from modem.yaml if the parser hasn't
         defined its own custom list. Some parsers need multiple model strings
-        for detection heuristics (e.g., ["S33", "CommScope S33", "ARRIS S33"]).
+        for detection heuristics (e.g., ["M123", "Brand M123", "AltBrand M123"]).
         """
         super().__init_subclass__(**kwargs)
 

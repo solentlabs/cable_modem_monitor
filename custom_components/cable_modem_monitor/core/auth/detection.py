@@ -19,7 +19,7 @@ Usage:
 Note:
     The modem index pre_auth/post_auth patterns are for MODEM IDENTIFICATION
     (which modem is this?), NOT for login page detection. Those patterns include
-    modem names like "ARRIS", "SB8200" which appear on both login AND data pages.
+    manufacturer and model names which appear on both login AND data pages.
     Login detection should use password field presence, not modem-specific strings.
 """
 

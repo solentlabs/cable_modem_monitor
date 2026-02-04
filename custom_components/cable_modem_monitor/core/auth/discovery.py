@@ -1054,19 +1054,20 @@ class AuthDiscovery:
         """
         html_lower = html.lower()
 
-        # ARRIS URL token auth detection via page content (not URL validation):
-        # - main_arris.js script reference in HTML
-        # - arris.com mentioned in page footer/content
-        # - URL token auth pattern: login_ prefix in JavaScript
+        # URL token auth detection via page content (not URL validation):
+        # - Vendor-specific JavaScript files (e.g., main_*.js)
+        # - Vendor domain references in page footer/content
+        # - URL token auth pattern: login_ prefix in JavaScript with sessionid
         # Note: This checks HTML page content for brand indicators, not URL validation
         # lgtm[py/incomplete-url-substring-sanitization] - content detection, not URL validation
-        is_arris = "main_arris.js" in html or "arris.com" in html_lower
+        has_vendor_js = "main_arris.js" in html  # TODO: Generalize vendor detection
+        has_vendor_domain = "arris.com" in html_lower  # TODO: Generalize vendor detection
         has_url_token_pattern = "login_" in html and "sessionid" in html_lower
 
-        if is_arris and has_url_token_pattern:
+        if (has_vendor_js or has_vendor_domain) and has_url_token_pattern:
             _LOGGER.debug(
-                "Detected URL token auth from login page (arris=%s, url_token=%s)",
-                is_arris,
+                "Detected URL token auth from login page (vendor_indicators=%s, url_token=%s)",
+                has_vendor_js or has_vendor_domain,
                 has_url_token_pattern,
             )
             return {"pattern": "url_token_session"}

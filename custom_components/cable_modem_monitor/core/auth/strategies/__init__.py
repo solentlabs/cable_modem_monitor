@@ -6,31 +6,31 @@ each handling a specific authentication mechanism used by cable modems.
 Available Strategies:
     NoAuthStrategy
         For modems with no authentication (all pages public).
-        Used by: Older firmware versions, basic modems
+        Pattern: Older firmware versions, basic modem interfaces
 
     BasicHttpAuthStrategy
         HTTP Basic Auth (401 challenge with WWW-Authenticate header).
-        Used by: Some enterprise/commercial modems
+        Pattern: Enterprise/commercial grade modems
 
     FormPlainAuthStrategy
         HTML form-based login with plain or base64-encoded credentials.
-        Used by: Most traditional modem web interfaces
+        Pattern: Traditional modem web interfaces with standard forms
 
     FormDynamicAuthStrategy
         Form auth where action URL is extracted from the login page.
-        Used when form action contains dynamic parameters (e.g., session IDs).
+        Pattern: Forms with dynamic parameters (e.g., session IDs in action URL)
 
     HNAPSessionAuthStrategy
         HNAP/SOAP protocol authentication (XML format).
-        Used by: Some ARRIS modems with HNAP
+        Pattern: HNAP-enabled modems using XML responses
 
     HNAPJsonAuthStrategy
         HNAP protocol with JSON format responses.
-        Used by: HNAP modems with JSON responses
+        Pattern: HNAP-enabled modems using JSON responses
 
     UrlTokenSessionStrategy
         URL-based token authentication (tokens in URL path).
-        Used by: HTTPS modems with URL token auth
+        Pattern: Token-based authentication with session tokens in URLs
 
     RedirectFormAuthStrategy
         Form auth with redirect-based session establishment.

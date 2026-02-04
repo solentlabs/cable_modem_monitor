@@ -193,10 +193,10 @@ class HNAPSoapAuthConfig(AuthConfig):
 class FormNonceAuthConfig(AuthConfig):
     """Form auth with client-generated nonce and text response.
 
-    Simple form POST with plain username/password fields plus a client-generated
-    nonce. Response is plain text with success/error prefix (not HTML).
-
-    Used by: ARRIS SB6190 (firmware 9.1.103+)
+    Authentication pattern where:
+    - Form POST contains plain username/password fields plus a client-generated nonce
+    - Response is plain text with success/error prefix (e.g., "Url:/path" or "Error:message")
+    - No HTML parsing required for auth validation
 
     This is a dedicated config for modems that use this specific pattern.
     Designed to be refactored into composable building blocks in v3.14+.

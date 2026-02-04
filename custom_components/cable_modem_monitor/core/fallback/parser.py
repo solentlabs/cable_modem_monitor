@@ -170,10 +170,10 @@ class UniversalFallbackParser(ModemParser):
                     return str(content)
 
         # Try common modem identifiers in HTML
-        # Look for common patterns like "NETGEAR", "ARRIS", "CM600", etc.
+        # Look for manufacturer name + model number patterns in page text
         html_text = soup.get_text()
 
-        # Common modem brand patterns
+        # Common manufacturer + model number patterns
         patterns = [
             r"(NETGEAR\s+CM\d+)",
             r"(ARRIS\s+SB\d+)",
