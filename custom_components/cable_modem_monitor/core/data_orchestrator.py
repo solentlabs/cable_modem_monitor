@@ -1200,12 +1200,34 @@ class DataOrchestrator:
                 soup = BeautifulSoup(html, "html.parser")
                 resources["/"] = soup
                 _LOGGER.debug("Fetched %d resources via loader", len(resources))
+
+                # Check if parser is receiving login page HTML (session expired)
+                from .auth.detection import is_login_page
+                if is_login_page(html):
+                    _LOGGER.error(
+                        "Parser is receiving LOGIN page HTML instead of data! "
+                        "Session may have expired. This will cause 0 channels to be parsed. "
+                        "HTML size: %d bytes",
+                        len(html)
+                    )
+
                 return self.parser.parse_resources(resources)
 
         # No loader available - parse single page via parse()
         # This calls parse_resources({"/": soup}) via base class
         _LOGGER.debug("No loader available, using single-page parse")
         soup = BeautifulSoup(html, "html.parser")
+
+        # Check if parser is receiving login page HTML (session expired)
+        from .auth.detection import is_login_page
+        if is_login_page(html):
+            _LOGGER.error(
+                "Parser is receiving LOGIN page HTML instead of data! "
+                "Session may have expired. This will cause 0 channels to be parsed. "
+                "HTML size: %d bytes",
+                len(html)
+            )
+
         return self.parser.parse(soup)
 
     def _pre_authenticate(self) -> tuple[bool, str | None]:
@@ -1271,6 +1293,13 @@ class DataOrchestrator:
         self._try_instant_detection()
 
         try:
+            # Log session cookies for debugging auth issues
+            cookie_names = list(self.session.cookies.keys())
+            if cookie_names:
+                _LOGGER.debug("Session has cookies: %s", cookie_names)
+            else:
+                _LOGGER.debug("Session has no cookies - will need to authenticate")
+
             # Pre-authenticate for modems that require auth before any request
             success, pre_auth_html = self._pre_authenticate()
             if not success:
@@ -1435,7 +1464,10 @@ class DataOrchestrator:
         # This is normal on first poll or when logout_required is configured
         original_was_login_page = is_login_page(html)
         if original_was_login_page:
-            _LOGGER.debug("Login page detected - authenticating before data fetch")
+            _LOGGER.warning(
+                "Login page detected during data fetch - session expired or not authenticated. "
+                "Attempting re-authentication... (This is normal on first poll or after logout)"
+            )
 
         success, authenticated_html = self._login()
 
@@ -1459,7 +1491,11 @@ class DataOrchestrator:
                         _LOGGER.debug("Re-fetch successful (%s bytes)", len(response.text))
                         return response.text
                     else:
-                        _LOGGER.warning("Re-fetch after auth still returned login page - auth may have failed")
+                        _LOGGER.error(
+                            "Re-fetch after auth still returned login page! "
+                            "Authentication failed or session rejected. "
+                            "Parser will receive login HTML and return 0 channels."
+                        )
                 else:
                     _LOGGER.warning("Re-fetch failed with status %s", response.status_code)
             except requests.RequestException as e:
