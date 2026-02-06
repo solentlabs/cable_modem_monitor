@@ -473,6 +473,9 @@ class BasicAuthHandler(BaseAuthHandler):
             # Clear ALL sessions on logout (simulates Netgear behavior)
             self.active_clients.clear()
             _LOGGER.debug("Logout called - cleared all sessions")
+            # Use goform handler for /goform/logout (no fixture needed)
+            if clean_path.startswith("/goform/"):
+                return self._handle_goform(method, clean_path)
             return self.serve_fixture(clean_path)
 
         # Public paths don't need auth

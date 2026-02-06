@@ -1416,7 +1416,11 @@ class DataOrchestrator:
 
         try:
             logout_url = f"{self.base_url}{logout_endpoint}"
-            self.session.get(logout_url, timeout=5)
+            # Use POST for /goform/ endpoints (Netgear pattern), GET otherwise
+            if "/goform/" in logout_endpoint:
+                self.session.post(logout_url, timeout=5)
+            else:
+                self.session.get(logout_url, timeout=5)
             _LOGGER.debug("Session ended via %s", logout_endpoint)
         except requests.RequestException as e:
             # Don't fail the poll if logout fails - it's just cleanup

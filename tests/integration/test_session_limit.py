@@ -77,7 +77,8 @@ class TestSessionLimit:
             assert resp2.status_code == 503
 
             # Any client can trigger logout (clears all sessions)
-            logout_resp = session1.get(f"{server.url}/Logout.htm", timeout=5)
+            # C7000v2 uses POST /goform/logout (changed in v3.13.0-beta.10)
+            logout_resp = session1.post(f"{server.url}/goform/logout", timeout=5)
             assert logout_resp.status_code == 200
 
             # Second client can now connect

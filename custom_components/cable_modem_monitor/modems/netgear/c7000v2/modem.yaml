@@ -29,9 +29,9 @@ auth:
     basic: null
 
   session:
-    cookie_name: "session"
+    cookie_name: "XSRF_TOKEN"
     max_concurrent: 1
-    logout_endpoint: "/Logout.htm"
+    logout_endpoint: "/goform/logout" # POST with dynamic ?id=<timestamp> (HAR: 1359801763)
     logout_required: true
 
 pages:

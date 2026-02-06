@@ -24,8 +24,8 @@ Key pages:
 
 Authentication: HTTP Basic Auth
 
-Note: The C7000v2 is a combo modem/router device similar to the C7000v2.
-Page structure and parsing logic is nearly identical to C7000v2.
+Note: The C7000v2 is a combo modem/router device similar to the C3700.
+Page structure and parsing logic is nearly identical to C3700.
 """
 
 from __future__ import annotations
