@@ -527,11 +527,16 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
         )
 
     def _preserve_credentials(self, user_input: dict[str, Any]) -> None:
-        """Fill in existing credentials if user left fields empty."""
+        """Fill in existing credentials and auth type if user left fields empty."""
         if not user_input.get(CONF_PASSWORD):
             user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
         if not user_input.get(CONF_USERNAME):
             user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
+        # Preserve auth_type for modems with multiple auth variants (e.g., SB6190, SB8200)
+        if not user_input.get(CONF_AUTH_TYPE):
+            stored_auth_type = self.config_entry.data.get(CONF_AUTH_TYPE)
+            if stored_auth_type:
+                user_input[CONF_AUTH_TYPE] = stored_auth_type
 
     def _get_current_modem_choice(self) -> str:
         """Get stored modem choice, normalized to current dropdown format."""

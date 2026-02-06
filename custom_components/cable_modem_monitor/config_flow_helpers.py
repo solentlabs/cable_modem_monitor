@@ -240,7 +240,7 @@ async def load_parser_hints(hass: HomeAssistant, selected_parser: type[ModemPars
 
 
 async def load_static_auth_config(
-    hass: HomeAssistant, selected_parser: type[ModemParser] | None
+    hass: HomeAssistant, selected_parser: type[ModemParser] | None, auth_type: str | None = None
 ) -> dict[str, Any] | None:
     """Load static auth config from modem.yaml for known modems.
 
@@ -250,6 +250,8 @@ async def load_static_auth_config(
     Args:
         hass: Home Assistant instance
         selected_parser: Selected parser class or None
+        auth_type: Specific auth type to use (for modems with multiple auth variants).
+                   If None, uses the default (first) auth type from modem.yaml.
 
     Returns:
         Static auth config dict or None if not a known modem
@@ -264,10 +266,11 @@ async def load_static_auth_config(
         _LOGGER.info("Using dynamic auth discovery for %s (no modem.yaml)", selected_parser.name)
         return None
 
-    static_config: dict[str, Any] = await hass.async_add_executor_job(adapter.get_static_auth_config)
+    static_config: dict[str, Any] = await hass.async_add_executor_job(adapter.get_static_auth_config, auth_type)
     _LOGGER.info(
-        "Using modem.yaml auth config for %s (strategy=%s)",
+        "Using modem.yaml auth config for %s (auth_type=%s, strategy=%s)",
         selected_parser.name,
+        auth_type or "default",
         static_config.get("auth_strategy"),
     )
     return static_config
