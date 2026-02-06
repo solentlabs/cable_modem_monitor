@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0-beta.10] - 2026-02-05
+
+### Fixed
+
+- **Technicolor TC4400 Parser Error** - Fixed parser returning 0 channels in v3.13.0 betas despite successful authentication. Parser now prioritizes explicit path (`/cmconnectionstatus.html`) over root path (`/`) to avoid receiving auth response HTML instead of channel data. Same root cause as SB6190 #93. (#94)
+- **Netgear C7000v2 Session Management** - Fixed browser lockout and session issues by correcting session cookie name (`XSRF_TOKEN` instead of `session`) and logout endpoint (`/goform/logout` instead of `/Logout.htm`). Added POST support for `/goform/` logout endpoints. (#61)
+- **Config Flow Auth Type Preservation** - Fixed "Reset Entities" losing user's auth type selection for modems with multiple auth variants (SB6190, SB8200). Options flow now preserves `CONF_AUTH_TYPE` from config entry, preventing fallback to default auth type after entity reset. (#93)
+- **Enhanced PII Redaction with har-capture 0.3.2** - Integrated har-capture 0.3.2 with new `redact_flagged=True` parameter to automatically redact WiFi credentials and device names in diagnostics captures. Previously, har-capture 0.3.1 only flagged sensitive values without redacting them, potentially leaking PII in diagnostics. Bumped har-capture requirement from >=0.2.4 to >=0.3.2.
+
 ## [3.13.0-beta.9] - 2026-02-04
+
+### Fixed
+
+- **ARRIS SB6190 Parser Error** - Fixed parser returning 0 channels in production despite successful authentication. Parser now prioritizes explicit path (`/cgi-bin/status`) over root path (`/`) to avoid receiving auth response HTML instead of status page data. (#93, #83)
+
+### Added
+
+- **Diagnostic Logging Enhancement** - Added ERROR-level logging when parser receives login page HTML instead of data, making session expiration issues easier to diagnose during troubleshooting.
 
 ## [3.13.0-beta.8] - 2026-02-01
 
