@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Diagnostics PII Sanitization** - Updated to har-capture 0.3.3 fixing IPv4 address corruption (5-octet bug) and version string preservation. Firmware version strings like "5.7.1.5" are now correctly preserved instead of being sanitized as IP addresses. Private IPs are sanitized to valid 4-octet format.
+
 ## [3.13.0-beta.10] - 2026-02-05
 
 ### Fixed

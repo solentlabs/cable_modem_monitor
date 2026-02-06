@@ -4,7 +4,7 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 956 across 45 test files
+**Total Tests:** 959 across 45 test files
 
 ## Test Categories
 
@@ -15,7 +15,7 @@ This document provides an overview of the Cable Modem Monitor test suite.
 | [Integration Tests](tests/integration/README.md) | 73 | 7 | End-to-end integration tests using mock HTTP/HT... |
 | [Parser Tests](tests/parsers/FIXTURES.md) | 38 | 2 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
-| [Library Tests](tests/lib/README.md) | 120 | 5 | Tests for library modules including the HTML cr... |
+| [Library Tests](tests/lib/README.md) | 123 | 5 | Tests for library modules including the HTML cr... |
 
 ## Running Tests
 
@@ -105,7 +105,7 @@ Tests for utility functions including HTML helpers, HAR sanitization, entity mig
 Tests for library modules including the HTML crawler and general utilities.
 
 - **Path:** `tests/lib/`
-- **Tests:** 120
+- **Tests:** 123
 - **Files:** 5
 - **Documentation:** [tests/lib/README.md](tests/lib/README.md)
 

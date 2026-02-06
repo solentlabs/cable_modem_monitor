@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from har_capture.patterns import is_allowlisted, load_pii_patterns
@@ -211,6 +212,100 @@ class TestSanitizeHtmlEdgeCases:
         assert "38.2 dB" in sanitized
         assert "555000000" in sanitized
         assert "12345" in sanitized
+
+    def test_preserves_firmware_version_strings(self):
+        """Test that firmware version strings are preserved, not sanitized as IPs.
+
+        Regression test: Version strings like "5.7.1.5" should not be treated as IP addresses.
+        They are not PII and are critical for diagnostics.
+        """
+        test_cases = [
+            ("<td>Software Version: 7621-5.7.1.5</td>", "5.7.1.5"),
+            ("<td>Firmware: MB8611-8.1.0.24-GA</td>", "8.1.0.24"),
+            ("<td>Version: V2.4.6.8</td>", "2.4.6.8"),
+            ("<td>Build: SB8200-9.1.103AA6</td>", "9.1.103"),
+        ]
+
+        for html, version in test_cases:
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+            # Version string must be preserved
+            assert version in sanitized, (
+                f"Version string '{version}' was incorrectly sanitized. " f"Input: {html}\nOutput: {sanitized}"
+            )
+
+            # Should NOT be replaced with TEST-NET IPs
+            assert "192.0.2." not in sanitized, (
+                f"Version string was replaced with TEST-NET IP. " f"Input: {html}\nOutput: {sanitized}"
+            )
+
+    def test_ipv4_addresses_produce_valid_format(self):
+        """Test that sanitized IPv4 addresses have valid 4-octet format.
+
+        Regression test: Ensures IPv4 sanitization doesn't produce malformed addresses
+        with incorrect number of octets or out-of-range values.
+        """
+        test_cases = [
+            "<td>IP Address: 10.123.45.67</td>",
+            "<td>Gateway: 192.168.1.254</td>",
+            "<td>WAN IP: 172.16.0.1</td>",
+        ]
+
+        for html in test_cases:
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+            # Find all IP-like patterns in output
+            ip_patterns = re.findall(r"\d+\.\d+\.\d+(?:\.\d+)*", sanitized)
+
+            for ip_pattern in ip_patterns:
+                octets = ip_pattern.split(".")
+
+                # Must have exactly 4 octets (not 3, not 5)
+                assert len(octets) == 4, (
+                    f"Invalid IPv4 format with {len(octets)} octets: {ip_pattern}. "
+                    f"Input: {html}\nOutput: {sanitized}"
+                )
+
+                # Each octet must be 0-255
+                for octet in octets:
+                    octet_val = int(octet)
+                    assert 0 <= octet_val <= 255, (
+                        f"Invalid octet value {octet_val} in {ip_pattern}. " f"Input: {html}\nOutput: {sanitized}"
+                    )
+
+    def test_distinguishes_ips_from_versions(self):
+        """Test that IPs are sanitized while version strings are preserved in same HTML.
+
+        Regression test: Ensures context-aware sanitization correctly identifies
+        which dotted-decimal values are IPs vs. version strings.
+        """
+        html = """
+        <table>
+          <tr>
+            <td>IP Address</td>
+            <td>10.123.45.67</td>
+          </tr>
+          <tr>
+            <td>Software Version</td>
+            <td>5.7.1.5</td>
+          </tr>
+        </table>
+        """
+
+        sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+        # Original IP should be sanitized
+        assert "10.123.45.67" not in sanitized, "IP address was not sanitized"
+
+        # Version should be preserved
+        assert "5.7.1.5" in sanitized, "Version string was incorrectly sanitized"
+
+        # Verify sanitized IPs have valid format (exclude version string)
+        ip_patterns = re.findall(r"\d+\.\d+\.\d+\.\d+", sanitized)
+        for ip in ip_patterns:
+            if ip != "5.7.1.5":  # Exclude version string
+                octets = ip.split(".")
+                assert len(octets) == 4, f"Sanitized IP has invalid format: {ip}"
 
 
 class TestTagValueListSanitization:
