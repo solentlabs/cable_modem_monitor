@@ -15,7 +15,7 @@
   "requirements": [
     "beautifulsoup4==4.12.2",
     "defusedxml==0.7.1",
-    "har-capture>=0.2.4"
+    "har-capture>=0.3.2"
   ],
-  "version": "3.13.0-beta.9"
+  "version": "3.13.0-beta.10"
 }

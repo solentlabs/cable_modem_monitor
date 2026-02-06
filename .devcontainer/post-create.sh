@@ -6,6 +6,7 @@ set -e
 
 echo "📦 Installing Python dependencies..."
 pip install --root-user-action=ignore -r requirements-dev.txt
+pip install --root-user-action=ignore -r tests/requirements.txt
 
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then

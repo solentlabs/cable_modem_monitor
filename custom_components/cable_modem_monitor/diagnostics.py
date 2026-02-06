@@ -55,6 +55,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from har_capture.sanitization import sanitize_html
+from har_capture.sanitization.report import HeuristicMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -119,7 +120,7 @@ def _sanitize_url_list(url_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for url_data in url_list:
         entry = url_data.copy()
         if "content" in entry:
-            entry["content"] = sanitize_html(entry["content"])
+            entry["content"] = sanitize_html(entry["content"], heuristics=HeuristicMode.REDACT)
             entry["sanitized_size_bytes"] = len(entry["content"])
         sanitized.append(entry)
     return sanitized
@@ -523,7 +524,9 @@ def _get_auth_configuration_info(data: Mapping[str, Any]) -> dict[str, Any]:
             "url": captured_response.get("url"),
             "headers": {k: _sanitize_log_message(str(v)) for k, v in captured_response.get("headers", {}).items()},
             # Truncate and sanitize HTML sample
-            "html_sample": sanitize_html((captured_response.get("html_sample") or "")[:3000]),
+            "html_sample": sanitize_html(
+                (captured_response.get("html_sample") or "")[:3000], heuristics=HeuristicMode.REDACT
+            ),
             "note": (
                 "Captured response from unknown auth pattern. "
                 "This helps developers add support for your modem's auth method."
