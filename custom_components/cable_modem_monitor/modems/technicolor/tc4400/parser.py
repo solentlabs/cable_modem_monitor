@@ -41,8 +41,11 @@ class TechnicolorTC4400Parser(ModemParser):
 
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse modem data from pre-fetched resources."""
-        # Get channel status page (primary page)
-        soup = resources.get("/")
+        # Get channel status page - try explicit path first to avoid getting auth response
+        # Issue #94: orchestrator may add auth response to "/" key instead of data page
+        soup = resources.get("/cmconnectionstatus.html")
+        if soup is None:
+            soup = resources.get("/")
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):
