@@ -257,7 +257,7 @@ class TestFullHarSanitization:
             }
         }
 
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
 
         # Check first entry - MAC should be sanitized
         entry1 = result["log"]["entries"][0]
@@ -273,7 +273,7 @@ class TestFullHarSanitization:
     def test_handles_missing_log_key(self):
         """Test handling of invalid HAR without log key."""
         har_data = {"invalid": "structure"}
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
         assert "invalid" in result  # Returns input with warning
 
     def test_preserves_har_structure(self):
@@ -287,7 +287,7 @@ class TestFullHarSanitization:
             }
         }
 
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
 
         assert result["log"]["version"] == "1.2"
         assert result["log"]["creator"]["name"] == "Test"

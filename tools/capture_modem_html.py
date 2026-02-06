@@ -103,6 +103,7 @@ SEED_PAGES = generate_seed_pages()
 
 try:
     from har_capture.sanitization import sanitize_html
+    from har_capture.sanitization.report import HeuristicMode
 except ImportError:
     print("ERROR: har-capture library not found.")
     print("Please install it: pip install har-capture")
@@ -139,7 +140,7 @@ def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int
             html = response.text
 
             # Sanitize the HTML
-            sanitized = sanitize_html(html)
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
 
             return {
                 "path": path,

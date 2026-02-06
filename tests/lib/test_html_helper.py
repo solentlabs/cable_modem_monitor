@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from har_capture.patterns import is_allowlisted, load_pii_patterns
 from har_capture.sanitization import check_for_pii, sanitize_html
+from har_capture.sanitization.report import HeuristicMode
+
+# Path to custom PII patterns for cable modem sanitization
+CUSTOM_PATTERNS_PATH = (
+    Path(__file__).parent.parent.parent / "custom_components" / "cable_modem_monitor" / "pii_patterns.json"
+)
 
 
 class TestCheckForPii:
@@ -212,14 +220,14 @@ class TestTagValueListSanitization:
         """Test that WiFi passphrases in DashBoard tagValueList are sanitized."""
         content = (
             "var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|"
-            "happymango167|happymango167|20|0|1|0|none|NETGEAR-Guest|"
+            "TestWiFiPass123|TestWiFiPass123|20|0|1|0|none|NETGEAR-Guest|"
             "None|NETGEAR-5G-Guest|None|0|0|0|0|0|1|0|0|1|0|0|0|0|"
             "---.---.---.---|1|';"
         )
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # WiFi passphrases should be redacted
-        assert "happymango167" not in sanitized
+        assert "TestWiFiPass123" not in sanitized
         # har-capture uses WIFI_ prefix for redacted WiFi credentials
         assert "WIFI_" in sanitized or "[REDACTED]" in sanitized
 
@@ -260,7 +268,7 @@ class TestTagValueListSanitization:
     def test_sanitizes_double_quoted_tagvaluelist(self):
         """Test that double-quoted tagValueList is also sanitized."""
         content = 'var tagValueList = "0|Good|both|none|MySSID1234|secretpass99";'
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # Passphrase-like values should be redacted
         assert "secretpass99" not in sanitized
@@ -302,7 +310,7 @@ class TestTagValueListSanitization:
             "AnotherDevice|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|"
             "--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|';"
         )
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # Device names should be redacted
         assert "MyDevice" not in sanitized
