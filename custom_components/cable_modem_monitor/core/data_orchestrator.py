@@ -1189,6 +1189,17 @@ class DataOrchestrator:
         if self.parser is None:
             raise RuntimeError("Cannot parse data: parser is not set")
 
+        def _looks_like_markup(content: str | None) -> bool:
+            """Return True when content appears to contain HTML/XML markup."""
+            if not isinstance(content, str):
+                return False
+            stripped = content.lstrip()
+            if not stripped:
+                return False
+            if stripped.startswith(("{", "[")):
+                return False
+            return "<" in stripped and ">" in stripped
+
         # Create loader based on modem.yaml config
         fetcher = self._create_loader()
         if fetcher:
@@ -1197,8 +1208,9 @@ class DataOrchestrator:
                 # Add the initial HTML as a resource for parsers that need it
                 # Note: Parsers should prefer specific paths from modem.yaml
                 # over "/" since auth may redirect to a different page (Issue #75)
-                soup = BeautifulSoup(html, "html.parser")
-                resources["/"] = soup
+                if _looks_like_markup(html):
+                    soup = BeautifulSoup(html, "html.parser")
+                    resources["/"] = soup
                 _LOGGER.debug("Fetched %d resources via loader", len(resources))
 
                 # Check if parser is receiving login page HTML (session expired)
@@ -1217,6 +1229,10 @@ class DataOrchestrator:
         # No loader available - parse single page via parse()
         # This calls parse_resources({"/": soup}) via base class
         _LOGGER.debug("No loader available, using single-page parse")
+        if not _looks_like_markup(html):
+            _LOGGER.debug("Single-page parse input is not markup; returning empty data")
+            return {}
+
         soup = BeautifulSoup(html, "html.parser")
 
         # Check if parser is receiving login page HTML (session expired)

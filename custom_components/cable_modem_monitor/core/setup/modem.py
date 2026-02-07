@@ -82,6 +82,19 @@ _LOGGER = logging.getLogger(__name__)
 _HTTPS_FIRST_PARADIGMS = {"hnap", "rest_api"}
 
 
+def _looks_like_markup(content: str | None) -> bool:
+    """Return True when content appears to contain HTML/XML markup."""
+    if not isinstance(content, str):
+        return False
+    stripped = content.lstrip()
+    if not stripped:
+        return False
+    # Skip JSON and obvious path-like strings; only parse real markup.
+    if stripped.startswith(("{", "[")):
+        return False
+    return "<" in stripped and ">" in stripped
+
+
 def _get_paradigm_for_parser(parser_class: type) -> str | None:
     """Get the paradigm from modem.yaml for a parser.
 
@@ -393,7 +406,7 @@ def _validate_parse(  # noqa: C901
 
         # Parse the initial HTML as the "/" resource (if available)
         soup = None
-        if html:
+        if _looks_like_markup(html):
             soup = BeautifulSoup(html, "html.parser")
 
         # Use ResourceLoader for proper resource fetching (modem.yaml declares pages)
