@@ -7,11 +7,16 @@ expose JSON endpoints.
 from __future__ import annotations
 
 import logging
+import time
+from typing import TYPE_CHECKING
 from typing import Any
 
 from .base import ResourceLoader
 
 _LOGGER = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    import requests
 
 
 class RESTLoader(ResourceLoader):
@@ -40,10 +45,16 @@ class RESTLoader(ResourceLoader):
 
         for path in self._get_unique_paths():
             try:
-                url = f"{self.base_url}{path}"
+                self._set_api_session_cookies(path)
+                url = self._build_url(path)
                 _LOGGER.debug("RESTLoader fetching: %s", url)
 
-                response = self.session.get(url, timeout=timeout, verify=self.verify_ssl)
+                response = self.session.get(
+                    url,
+                    headers=self._build_headers(path),
+                    timeout=timeout,
+                    verify=self.verify_ssl,
+                )
 
                 if response.ok:
                     try:
@@ -70,3 +81,30 @@ class RESTLoader(ResourceLoader):
                 _LOGGER.warning("RESTLoader error fetching %s: %s", path, e)
 
         return resources
+
+    def _build_headers(self, path: str) -> dict[str, str]:
+        """Build headers for REST requests."""
+        referer = self.base_url if self.base_url.endswith("/") else f"{self.base_url}/"
+        headers = {"Referer": referer, "Accept": "*/*"}
+
+        # Technicolor-style JSON APIs commonly require AJAX header.
+        if "/api/" in path:
+            headers["X-Requested-With"] = "XMLHttpRequest"
+
+        return headers
+
+    def _build_url(self, path: str) -> str:
+        """Build request URL, adding cache-busting timestamp for API endpoints."""
+        url = f"{self.base_url}{path}"
+        if "/api/" not in path:
+            return url
+
+        separator = "&" if "?" in url else "?"
+        return f"{url}{separator}_={int(time.time() * 1000)}"
+
+    def _set_api_session_cookies(self, path: str) -> None:
+        """Set browser-like cookies commonly required by Technicolor APIs."""
+        if "/api/" not in path:
+            return
+        self.session.cookies.set("theme-value", "css/theme/dark/", path="/")
+        self.session.cookies.set("time", str(int(time.time())), path="/")

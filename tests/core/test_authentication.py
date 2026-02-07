@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,6 +32,7 @@ def mock_session():
     """Create a mock requests session."""
     session = MagicMock(spec=requests.Session)
     session.verify = False
+    session.headers = {}
     # Mock cookies as an empty dict-like object
     session.cookies = MagicMock()
     session.cookies.keys.return_value = []
@@ -158,6 +160,22 @@ class TestBasicHttpAuthStrategy:
 class TestFormPlainAuthStrategy:
     """Test FormPlainAuthStrategy."""
 
+    @staticmethod
+    def _json_response(
+        status: int,
+        body: dict,
+        url: str = "http://192.168.1.1/api/v1/session/login",
+    ) -> MagicMock:
+        response = MagicMock()
+        response.status_code = status
+        response.url = url
+        response.headers = {"Content-Type": "application/json"}
+        import json as _json
+
+        response.text = _json.dumps(body)
+        response.json.return_value = body
+        return response
+
     def test_form_auth_success(self, mock_session, form_auth_config):
         """Test successful form authentication."""
         strategy = FormPlainAuthStrategy()
@@ -257,6 +275,258 @@ class TestFormPlainAuthStrategy:
         # CRITICAL: HTML must be returned for discovery validation to work
         assert result.response_html is not None
         assert "Downstream Channels" in result.response_html
+
+    def test_form_auth_salt_challenge_uses_second_pbkdf2_request(self, mock_session):
+        """Technicolor flow: first login bootstrap returns salts, second submits PBKDF2 hash."""
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/api/v1/session/login",
+            username_field="username",
+            password_field="password",
+            timeout=TEST_TIMEOUT,
+        )
+        strategy = FormPlainAuthStrategy()
+
+        first = self._json_response(200, {"error": "ok", "salt": "abc123", "saltwebui": "def456"})
+        second = self._json_response(200, {"error": "ok"})
+        mock_session.post.side_effect = [first, second]
+
+        preflight_language = self._json_response(
+            200,
+            {"error": "ok", "data": {"lang": "en"}},
+            "http://192.168.1.1/api/v1/session/language",
+        )
+        preflight_menu = self._json_response(
+            401,
+            {"error": "error", "message": "Unauthorized"},
+            "http://192.168.1.1/api/v1/session/menu",
+        )
+        preflight_login = MagicMock()
+        preflight_login.status_code = 200
+        preflight_login.url = "http://192.168.1.1/views/login.html"
+        preflight_login.headers = {"Content-Type": "text/html"}
+        preflight_login.text = "<html>login</html>"
+
+        warm_language = self._json_response(
+            200,
+            {"error": "ok", "data": {"lang": "en"}},
+            "http://192.168.1.1/api/v1/session/language",
+        )
+        warm_menu = self._json_response(
+            200,
+            {"error": "ok", "message": "Menu OK"},
+            "http://192.168.1.1/api/v1/session/menu",
+        )
+        warm_model = self._json_response(
+            200,
+            {"error": "ok", "data": {"ModelName": "CGA4236TCH1"}},
+            "http://192.168.1.1/api/v1/system/ModelName",
+        )
+        mock_session.get.side_effect = [
+            preflight_language,
+            preflight_menu,
+            preflight_login,
+            warm_language,
+            warm_menu,
+            warm_model,
+        ]
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "user", "secret", config)
+
+        assert result.success is True
+        assert mock_session.post.call_count == 2
+
+        first_call = mock_session.post.call_args_list[0]
+        assert first_call.kwargs["data"]["password"] == "seeksalthash"
+
+        first_hash = hashlib.pbkdf2_hmac("sha256", b"secret", b"abc123", 1000, dklen=16).hex()
+        second_hash = hashlib.pbkdf2_hmac("sha256", first_hash.encode("utf-8"), b"def456", 1000, dklen=16).hex()
+
+        second_call = mock_session.post.call_args_list[1]
+        assert second_call.kwargs["data"]["username"] == "user"
+        assert second_call.kwargs["data"]["password"] == second_hash
+
+    def test_form_auth_http_404_fails(self, mock_session):
+        """HTTP error response should not be treated as successful auth."""
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/api/v1/session/login",
+            username_field="username",
+            password_field="password",
+            timeout=TEST_TIMEOUT,
+        )
+        strategy = FormPlainAuthStrategy()
+
+        response = MagicMock()
+        response.url = "http://192.168.1.1/api/v1/session/login"
+        response.status_code = 404
+        response.headers = {"Content-Type": "text/html"}
+        response.text = "Not Found"
+        mock_session.post.return_value = response
+        mock_session.get.side_effect = [
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"lang": "en"}},
+                "http://192.168.1.1/api/v1/session/language",
+            ),
+            self._json_response(
+                401,
+                {"error": "error", "message": "Unauthorized"},
+                "http://192.168.1.1/api/v1/session/menu",
+            ),
+            MagicMock(
+                status_code=200,
+                url="http://192.168.1.1/views/login.html",
+                headers={"Content-Type": "text/html"},
+                text="<html>login</html>",
+            ),
+        ]
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "user", "password", config)
+
+        assert result.success is False
+        assert "HTTP 404" in (result.error_message or "")
+
+    def test_form_auth_bootstrap_active_session_logout_then_salt_challenge(self, mock_session):
+        """If modem reports active session (MSG_LOGIN_150), retry bootstrap with logout=true."""
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/api/v1/session/login",
+            username_field="username",
+            password_field="password",
+            timeout=TEST_TIMEOUT,
+        )
+        strategy = FormPlainAuthStrategy()
+
+        first = self._json_response(200, {"error": "error", "message": "MSG_LOGIN_150"})
+        bootstrap = self._json_response(200, {"error": "ok", "salt": "abc123", "saltwebui": "def456"})
+        second = self._json_response(200, {"error": "ok"})
+        mock_session.post.side_effect = [first, bootstrap, second]
+        mock_session.get.side_effect = [
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"lang": "en"}},
+                "http://192.168.1.1/api/v1/session/language",
+            ),
+            self._json_response(
+                401,
+                {"error": "error", "message": "Unauthorized"},
+                "http://192.168.1.1/api/v1/session/menu",
+            ),
+            MagicMock(
+                status_code=200,
+                url="http://192.168.1.1/views/login.html",
+                headers={"Content-Type": "text/html"},
+                text="<html>login</html>",
+            ),
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"lang": "en"}},
+                "http://192.168.1.1/api/v1/session/language",
+            ),
+            self._json_response(
+                200,
+                {"error": "ok", "message": "Menu OK"},
+                "http://192.168.1.1/api/v1/session/menu",
+            ),
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"ModelName": "CGA4236TCH1"}},
+                "http://192.168.1.1/api/v1/system/ModelName",
+            ),
+        ]
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "user", "secret", config)
+
+        assert result.success is True
+        assert mock_session.post.call_count == 3
+
+        first_call = mock_session.post.call_args_list[0]
+        assert first_call.kwargs["data"]["password"] == "seeksalthash"
+        logout_bootstrap_call = mock_session.post.call_args_list[1]
+        assert logout_bootstrap_call.kwargs["data"]["password"] == "seeksalthash"
+        assert logout_bootstrap_call.kwargs["data"]["logout"] == "true"
+
+    def test_form_auth_bootstrap_msg_login_1_fails(self, mock_session):
+        """MSG_LOGIN_1 on bootstrap probe should fail as invalid credentials."""
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/api/v1/session/login",
+            username_field="username",
+            password_field="password",
+            timeout=TEST_TIMEOUT,
+        )
+        strategy = FormPlainAuthStrategy()
+
+        first = self._json_response(200, {"error": "error", "message": "MSG_LOGIN_1"})
+        mock_session.post.return_value = first
+        mock_session.get.side_effect = [
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"lang": "en"}},
+                "http://192.168.1.1/api/v1/session/language",
+            ),
+            self._json_response(
+                401,
+                {"error": "error", "message": "Unauthorized"},
+                "http://192.168.1.1/api/v1/session/menu",
+            ),
+            MagicMock(
+                status_code=200,
+                url="http://192.168.1.1/views/login.html",
+                headers={"Content-Type": "text/html"},
+                text="<html>login</html>",
+            ),
+        ]
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "user", "secret", config)
+
+        assert result.success is False
+        assert result.error_type.name == "INVALID_CREDENTIALS"
+        assert "MSG_LOGIN_1" in (result.error_message or "")
+
+    def test_form_auth_json_error_is_invalid_credentials(self, mock_session):
+        """JSON auth errors should not be treated as successful login."""
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/api/v1/session/login",
+            username_field="username",
+            password_field="password",
+            timeout=TEST_TIMEOUT,
+        )
+        strategy = FormPlainAuthStrategy()
+
+        response = MagicMock()
+        response.url = "http://192.168.1.1/api/v1/session/login"
+        response.status_code = 200
+        response.headers = {"Content-Type": "application/json"}
+        response.text = '{"error":"error","message":"Unauthorized access"}'
+        response.json.return_value = {"error": "error", "message": "Unauthorized access"}
+        mock_session.post.return_value = response
+        mock_session.get.side_effect = [
+            self._json_response(
+                200,
+                {"error": "ok", "data": {"lang": "en"}},
+                "http://192.168.1.1/api/v1/session/language",
+            ),
+            self._json_response(
+                401,
+                {"error": "error", "message": "Unauthorized"},
+                "http://192.168.1.1/api/v1/session/menu",
+            ),
+            MagicMock(
+                status_code=200,
+                url="http://192.168.1.1/views/login.html",
+                headers={"Content-Type": "text/html"},
+                text="<html>login</html>",
+            ),
+        ]
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "user", "badpw", config)
+
+        assert result.success is False
+        assert result.error_type.name == "INVALID_CREDENTIALS"
+        assert "Unauthorized access" in (result.error_message or "")
 
 
 class TestRedirectFormAuthStrategy:
