@@ -1,0 +1,99 @@
+# Technicolor CGA4236 Configuration
+# Source: User-provided HAR capture (sanitized)
+
+manufacturer: Technicolor
+model: CGA4236
+paradigm: rest_api
+
+hardware:
+  docsis_version: "3.1"
+
+# Provenance tracking
+sources:
+  detection_hints: "User-provided HAR capture (2026-02-05)"
+
+default_host: "192.168.100.1"
+
+auth:
+  types:
+    form:
+      action: "/api/v1/session/login"
+      method: POST
+      username_field: username
+      password_field: password
+      password_encoding: plain
+      hidden_fields: {}
+
+  session:
+    cookie_name: "PHPSESSID"
+    logout_endpoint: "/api/v1/session/logout"
+
+pages:
+  public:
+    - "/"
+
+  protected:
+    - "/api/v1/system/CMStatus,ModelName,Manufacturer,SerialNumber,HardwareVersion,SoftwareVersion,UpTime,BootloaderVersion,CoreVersion,FirmwareName,FirmwareBuildTime,ProcessorSpeed,CMMACAddress,LocalTime,Hardware,MemTotal,MemFree,MTAMACAddress"
+    - "/api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl"
+
+  data:
+    downstream_channels: "/api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl"
+    upstream_channels: "/api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl"
+    system_info: "/api/v1/system/CMStatus,ModelName,Manufacturer,SerialNumber,HardwareVersion,SoftwareVersion,UpTime,BootloaderVersion,CoreVersion,FirmwareName,FirmwareBuildTime,ProcessorSpeed,CMMACAddress,LocalTime,Hardware,MemTotal,MemFree,MTAMACAddress"
+
+parser:
+  class: TechnicolorCGA4236Parser
+  module: custom_components.cable_modem_monitor.modems.technicolor.cga4236tch1.parser
+  format:
+    type: json
+
+detection:
+  pre_auth:
+    - "Technicolor"
+    - "js/sjcl.js"
+    - "views/login.html"
+  post_auth:
+    - "CGA4236"
+    - "CGA4236TCH1"
+    - "Technicolor"
+    - "CMStatus"
+  page_hint: "/api/v1/system/ModelName"
+  model_aliases:
+    - "CGA4236"
+    - "CGA4236TCH1"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - system_uptime
+  - last_boot_time
+  - software_version
+  - hardware_version
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "User-provided HAR capture (2026-02-05)"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/technicolor/cga4236tch1/fixtures
+  source: diagnostics
+  firmware_tested: "CGA4236TCH1-19.3B71-031-PCU-RT-230724"
+  last_validated: "2026-02-07"
+
+attribution:
+  contributors:
+    - github: wolfganglienbacher
+      contribution: "Provided sanitized HAR capture for parser implementation"
+
+notes: |
+  DOCSIS 3.1 gateway using a JSON API under /api/v1/.
+  DOCSIS signal data is served by /api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl.
+  Login endpoint is /api/v1/session/login with cookie-based session.

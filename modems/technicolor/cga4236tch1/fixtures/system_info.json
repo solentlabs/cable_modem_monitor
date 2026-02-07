@@ -1,0 +1,25 @@
+{
+  "error": "ok",
+  "message": "all values retrieved",
+  "data": {
+    "CMStatus": "OPERATIONAL",
+    "CoreVersion": "1.0",
+    "CMMACAddress": "[REDACTED]",
+    "LocalTime": "2026-02-05 13:30:27",
+    "MTAMACAddress": "[REDACTED]",
+    "ModelName": "CGA4236TCH1",
+    "Manufacturer": "Technicolor",
+    "SerialNumber": "[REDACTED]",
+    "HardwareVersion": "1.0",
+    "SoftwareVersion": "CGA4236TCH1-19.3B71-031-PCU-RT-230724",
+    "UpTime": "153513",
+    "BootloaderVersion": "S1TC-3.80.1.181 &amp; S2T1-3.80.1.181",
+    "FirmwareName": "CGA4236TCH1-19.3B71-031-PCU-RT-230724",
+    "FirmwareBuildTime": "2023-07-24 15:40:18",
+    "ProcessorSpeed": "1503",
+    "Hardware": "512",
+    "MemTotal": "233520",
+    "MemFree": "28476"
+  },
+  "token": "[REDACTED]"
+}

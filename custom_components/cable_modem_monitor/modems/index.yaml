@@ -17,6 +17,7 @@ auth_patterns:
       - password
       - password_login
     actions:
+      - /api/v1/session/login
       - /cgi-bin/login_cgi
       - /cgi-bin/luci
       - /check.jst
@@ -325,6 +326,23 @@ modems:
         - DOCSIS Status
         - Downstream Channels
       page_hint: /st_docsis.html
+  TechnicolorCGA4236Parser:
+    path: technicolor/cga4236tch1
+    name: Technicolor CGA4236
+    manufacturer: Technicolor
+    model: CGA4236
+    verified: false
+    detection:
+      pre_auth:
+        - Technicolor
+        - js/sjcl.js
+        - views/login.html
+      post_auth:
+        - CGA4236
+        - CGA4236TCH1
+        - Technicolor
+        - CMStatus
+      page_hint: /api/v1/system/ModelName
   TechnicolorTC4400Parser:
     path: technicolor/tc4400
     name: Technicolor TC4400

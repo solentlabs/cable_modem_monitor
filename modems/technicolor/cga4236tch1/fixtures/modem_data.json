@@ -1,0 +1,395 @@
+{
+  "error": "ok",
+  "message": "all values retrieved",
+  "data": {
+    "exUSTbl": [
+      {
+        "__id": "1",
+        "ChannelID": "7",
+        "ChannelIndex": "5",
+        "StartFrequency": "49.0 MHz",
+        "PowerLevel": "37.2 dBmV",
+        "PLCFrequency": "45.300000 MHz",
+        "CentralFrequency": "56 MHz",
+        "BandWidth": "14 MHz",
+        "FFT": "16-qam",
+        "LockStatus": "Locked",
+        "ChannelType": "OFDMA"
+      }
+    ],
+    "exDSTbl": [
+      {
+        "__id": "1",
+        "ChannelID": "159",
+        "ChannelIndex": "17",
+        "StartFrequency": "248 MHz",
+        "PLCFrequency": "270 MHz",
+        "CentralFrequency": "272 MHz",
+        "BandWidth": "48 MHz",
+        "PowerLevel": "11.2 dBmV",
+        "SNRLevel": "42.1 dB",
+        "FFT": "256-qam/1024-qam/2048-qam/4096-qam",
+        "LockStatus": "Locked",
+        "Profile": "3",
+        "ChannelType": "OFDM"
+      }
+    ],
+    "USTbl": [
+      {
+        "__id": "1",
+        "ChannelID": "1",
+        "Frequency": "21.0 MHz",
+        "PowerLevel": "44.5 dBmV",
+        "ChannelType": "SC-QAM",
+        "SymbolRate": "5120000",
+        "Modulation": "64-qam",
+        "LockStatus": "Locked"
+      },
+      {
+        "__id": "2",
+        "ChannelID": "2",
+        "Frequency": "31.0 MHz",
+        "PowerLevel": "44.5 dBmV",
+        "ChannelType": "SC-QAM",
+        "SymbolRate": "5120000",
+        "Modulation": "64-qam",
+        "LockStatus": "Locked"
+      },
+      {
+        "__id": "3",
+        "ChannelID": "3",
+        "Frequency": "38.0 MHz",
+        "PowerLevel": "44.5 dBmV",
+        "ChannelType": "SC-QAM",
+        "SymbolRate": "5120000",
+        "Modulation": "64-qam",
+        "LockStatus": "Locked"
+      },
+      {
+        "__id": "4",
+        "ChannelID": "4",
+        "Frequency": "45.0 MHz",
+        "PowerLevel": "44.0 dBmV",
+        "ChannelType": "SC-QAM",
+        "SymbolRate": "5120000",
+        "Modulation": "64-qam",
+        "LockStatus": "Locked"
+      }
+    ],
+    "DSTbl": [
+      {
+        "__id": "1",
+        "ChannelID": "4",
+        "Frequency": "146 MHz",
+        "PowerLevel": "10.4 dBmV",
+        "SNRLevel": "41.0 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933992547",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "2",
+        "ChannelID": "1",
+        "Frequency": "122 MHz",
+        "PowerLevel": "10.6 dBmV",
+        "SNRLevel": "40.7 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933523951",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "3",
+        "ChannelID": "2",
+        "Frequency": "130 MHz",
+        "PowerLevel": "10.6 dBmV",
+        "SNRLevel": "40.7 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933369998",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "4",
+        "ChannelID": "3",
+        "Frequency": "138 MHz",
+        "PowerLevel": "10.4 dBmV",
+        "SNRLevel": "40.7 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933533013",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "5",
+        "ChannelID": "5",
+        "Frequency": "154 MHz",
+        "PowerLevel": "10.4 dBmV",
+        "SNRLevel": "40.7 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933537404",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "6",
+        "ChannelID": "6",
+        "Frequency": "162 MHz",
+        "PowerLevel": "10.3 dBmV",
+        "SNRLevel": "40.6 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933541102",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "7",
+        "ChannelID": "7",
+        "Frequency": "170 MHz",
+        "PowerLevel": "10.1 dBmV",
+        "SNRLevel": "40.6 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933545050",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "8",
+        "ChannelID": "8",
+        "Frequency": "178 MHz",
+        "PowerLevel": "10.1 dBmV",
+        "SNRLevel": "40.9 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933549117",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "9",
+        "ChannelID": "9",
+        "Frequency": "186 MHz",
+        "PowerLevel": "10.0 dBmV",
+        "SNRLevel": "40.5 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933552582",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "10",
+        "ChannelID": "10",
+        "Frequency": "194 MHz",
+        "PowerLevel": "9.9 dBmV",
+        "SNRLevel": "40.3 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933556422",
+        "Correcteds": "0",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "11",
+        "ChannelID": "11",
+        "Frequency": "202 MHz",
+        "PowerLevel": "9.7 dBmV",
+        "SNRLevel": "40.2 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933560172",
+        "Correcteds": "7",
+        "Uncorrectables": "0",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "12",
+        "ChannelID": "12",
+        "Frequency": "210 MHz",
+        "PowerLevel": "9.6 dBmV",
+        "SNRLevel": "40.4 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933563708",
+        "Correcteds": "90",
+        "Uncorrectables": "43",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "13",
+        "ChannelID": "13",
+        "Frequency": "218 MHz",
+        "PowerLevel": "9.3 dBmV",
+        "SNRLevel": "40.0 dB",
+        "Modulation": "256-QAM",
+        "Octets": "909470942",
+        "Correcteds": "26",
+        "Uncorrectables": "8",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "14",
+        "ChannelID": "14",
+        "Frequency": "226 MHz",
+        "PowerLevel": "9.1 dBmV",
+        "SNRLevel": "40.0 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933571830",
+        "Correcteds": "124",
+        "Uncorrectables": "261",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "15",
+        "ChannelID": "15",
+        "Frequency": "234 MHz",
+        "PowerLevel": "9.2 dBmV",
+        "SNRLevel": "40.3 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933575075",
+        "Correcteds": "72",
+        "Uncorrectables": "137",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      },
+      {
+        "__id": "16",
+        "ChannelID": "16",
+        "Frequency": "242 MHz",
+        "PowerLevel": "9.3 dBmV",
+        "SNRLevel": "40.3 dB",
+        "Modulation": "256-QAM",
+        "Octets": "933577041",
+        "Correcteds": "24",
+        "Uncorrectables": "68",
+        "LockStatus": "Locked",
+        "ChannelType": "SC-QAM"
+      }
+    ],
+    "ErrTbl": [
+      {
+        "__id": "1",
+        "Octets": "933992547",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "2",
+        "Octets": "933523951",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "3",
+        "Octets": "933589497",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "4",
+        "Octets": "933533013",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "5",
+        "Octets": "933537404",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "6",
+        "Octets": "933541102",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "7",
+        "Octets": "933545050",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "8",
+        "Octets": "933549117",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "9",
+        "Octets": "933552582",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "10",
+        "Octets": "933556422",
+        "Correcteds": "0",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "11",
+        "Octets": "933560172",
+        "Correcteds": "7",
+        "Uncorrectables": "0"
+      },
+      {
+        "__id": "12",
+        "Octets": "933563708",
+        "Correcteds": "90",
+        "Uncorrectables": "43"
+      },
+      {
+        "__id": "13",
+        "Octets": "909470942",
+        "Correcteds": "26",
+        "Uncorrectables": "8"
+      },
+      {
+        "__id": "14",
+        "Octets": "933571830",
+        "Correcteds": "124",
+        "Uncorrectables": "261"
+      },
+      {
+        "__id": "15",
+        "Octets": "933575075",
+        "Correcteds": "72",
+        "Uncorrectables": "137"
+      },
+      {
+        "__id": "16",
+        "Octets": "933577041",
+        "Correcteds": "24",
+        "Uncorrectables": "68"
+      },
+      {
+        "__id": "17",
+        "Octets": "3848731800",
+        "Correcteds": "1273462095",
+        "Uncorrectables": "708"
+      }
+    ]
+  },
+  "token": "[REDACTED]"
+}

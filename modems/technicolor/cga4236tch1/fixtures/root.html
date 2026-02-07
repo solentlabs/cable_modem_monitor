@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- change default theme to cool for copyright issue -->
+    <link type="text/css" rel="stylesheet" href="css/theme/dark/style.css" media="screen,projection" id="style_style" />
+    <!-- sample file start -->
+    <link type="text/css" rel="stylesheet" href="css/theme/dark/app.css" media="screen,projection" id="style_app" />
+    <!-- sample file end -->
+    <!-- layout start -->
+    <link type="text/css" rel="stylesheet" href="css/theme/dark/menuleft.css" layout="menuleft" id="style_menu">
+    <!-- layout end -->
+    <link rel="stylesheet" href="css/jquery.schedule.css">
+    <script src="js/ie.fix.js"></script>
+    <script src="js/sjcl.js"></script>
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    
+    <script src="js/clickjacking.js"></script>
+
+</head>
+
+<body class="mh-100">
+    <div id="login">
+    </div>
+    <div id="page" class="mh-100">
+        <div class="pushy pushy-left">
+            <ul id="side-menu"></ul>
+            <a href="#/logout" tabindex="-1" class='btn blue mb-40 mt-20 ml-20'>Logout</a>
+        </div>
+        <div class="site-overlay"></div>
+        <div id="container" class="mh-100" style="display:none;">
+            <div class="header">
+                <div class="main-wrap h-100">
+                    <div class="menu-btn">
+                        <div onclick="" class="icon m blue-bg" title="menu"><i class="icon-menu"></i></div>
+                    </div>
+
+                    <div class="logo">
+                        <a href="http://www.technicolor.com" class="logo-page">
+                            <img src="image/logo.svg">
+                        </a>
+                    </div>
+                    <div class="head-wrap">
+                        <div class="title">
+                            <span class="nav-bar"></span>
+                            <br>
+                            <span class="product-name" data-label="COM_TITLE"></span>
+                        </div>
+                        <ul class="header-nav" id="header-menu">
+                        </ul>
+                    </div>
+                    <div class="icons">
+                        <a id="to-basic" href="#/basic" class="icon s green-bg" original-title="MSG_CHANGE_VIEW"><i class="icon-thumbnail"></i></a>
+                        <a id="to-advance" href="#/status" class="icon s green-bg" original-title="MSG_CHANGE_VIEW" style="display:none;"><i class="icon-list"></i></a>
+                        <a id="to-logout" href="#/logout" class="icon s orange-bg" original-title="MSG_LOGOUT"><i class="icon-user"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="sub-header">
+                <div class="sub-nav-container main-wrap">
+                    <ul class="sub-nav" id="sub-menu">
+                    </ul>
+                </div>
+            </div>
+            <div class="main main-wrap h-100">
+                <ul class="left-nav pt-40 mr-20" id="left-menu"></ul>
+                <div id="main_container" class="mt-40 pb-60"></div>
+            </div>
+            <div class="basic-view">
+            </div>
+            <!-- <a href="#/logout" class="btn round-s help-bg" title="help"><i class="icon-s icon-help"></i></a> -->
+            <!-- <a href="" class="icon s blue-bg" title="help"><i class="icon-help"></i></a> -->
+        </div>
+        <div class="footer">
+            <div class="main-wrap">
+                <small>© <script>document.write( new Date().getFullYear() );</script> Technicolor. All rights reserved. </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="help-wrap" style="display:none;">
+        <a id="help-btn" class="animate-arrow" href="javascript:"> HELP &nbsp;</a>
+        <div id="help-container" class="main-wrap"></div>
+    </div>
+    <div class="dev-wrap">
+        <label for="theme-select">Theme</label>
+        <select id="theme-select">
+            <option value="css/">default</option>
+            <option value="css/theme/dark/">cool</option>
+            <option value="css/theme/warm/">warm</option>
+        </select>
+        <label for="menu-select">Menu</label>
+        <select id="menu-select">
+            <option value="default">top menu</option>
+            <option value="menuleft">left menu</option>
+        </select>
+        <label for="language-select">Language</label>
+        <select id="language-select">
+            <option value="en" href="lang/en.json">English</option>
+            <option value="fr" href="lang/fr.json">Français</option>
+            <option value="de" href="lang/de.json">Deutsch</option>
+            <option value="es" href="lang/es.json">Español</option>
+            <option value="nl" href="lang/nl.json">Nederlands</option>
+            <option value="pt" href="lang/pt.json">Português</option>
+            <option value="pl" href="lang/pl.json">Polish</option>
+        </select>
+    </div>
+    <script src="js/jquery-3.4.1.js"></script>
+    <script src="js/jquery.swipe-events.js"></script>
+    <script src="js/jquery.modal.js"></script>
+    <script src="js/jquery.tipsy.js"></script>
+    <script src="js/jquery.validate.js"></script>
+    <script src="js/jquery.siteCheck.js"></script>
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/path.js"></script>
+    <script src="js/path.helper.js"></script>
+    <script src="js/tmpl.js"></script>
+    <script src="js/pushy.js"></script>
+    <script src="js/preprocesser.js"></script>
+    <script src="js/translator.js"></script>
+    <script src="js/dragula.min.js"></script>
+    <script src="js/n: ***REDACTED***.js"></script>
+    <script src="js/sjcl.js"></script>
+    <script src="js/common_scripts.js"></script>
+    <script src="js/Chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/jquery.schedule.custom.2.2.0.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/jquery-ui-touch-punch.js"></script>
+
+    <!--[if IE]>
+        <script src="js/placeholders.jquery.min.js"></script>
+        <script src="js/html5shiv.min.js"></script>
+    <![endif] -->
+    <script> $.getScript("js/app/app.js");</script>
+
+    <script type="text/x-tmpl" id="menu-tmpl">
+        {% for(var i in o){ %}
+        <li>
+            <a href="{%#i %}" data-label="{%#o[i].value %}"></a>
+        </li>
+        {% }%}
+    </script>
+    <script type="text/x-tmpl" id="side-menu-tmpl">
+        {% for(var i in o){ %} {% if(o[i].sub){ var sub = o[i].sub; %}
+        <li class="pushy-dropdown">
+            <span tabindex="0" href="{%#i %}" data-label="{%#o[i].value %}"></span>
+            <ul>
+                {% for(var j in sub){ %}
+                <li>
+                    <a href="{%#j %}" data-label="{%#sub[j].value %}"></a>
+                </li>
+                {% } %}
+            </ul>
+        </li>
+        {% }else{ %}
+        <li><a href="{%#i %}">{%#o[i].value %}</a></li>
+        {% } %} {% }%}
+    </script>
+</body>
+
+</html>
