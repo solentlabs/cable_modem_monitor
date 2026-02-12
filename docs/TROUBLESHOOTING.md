@@ -167,7 +167,9 @@ the response for debugging.
    - Open browser Developer Tools → Network tab
    - Log into your modem
    - Right-click → Save all as HAR
-   - Attach to GitHub issue
+   - **Sanitize before sharing**: `pip install har-capture && har-capture sanitize modem.har -o safe.har`
+   - Attach sanitized file to GitHub issue
+   - See [har-capture](https://github.com/solentlabs/har-capture) for automatic PII removal
 
 **Common Auth Patterns:**
 

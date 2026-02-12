@@ -324,6 +324,7 @@ Please see the [Contributing Guide](./CONTRIBUTING.md) for details on how to add
 - **PII Sanitization**: Automatic removal of sensitive data from diagnostics
   - IP addresses, MAC addresses, serial numbers automatically redacted
   - Safe to share diagnostic files for support
+  - Uses [har-capture](https://github.com/solentlabs/har-capture) for secure HAR file sanitization
 - **Secure Credentials**: Stored in Home Assistant's encrypted storage
 
 ### Security Features
@@ -367,6 +368,9 @@ MIT License - see LICENSE file for details
 ### External Resources
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
 - [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)
+
+### Related Solent Labs Projects
+- [har-capture](https://github.com/solentlabs/har-capture) - Zero-dependency Python library for sanitizing HAR files. Used by this integration to safely capture diagnostic data from cable modems without exposing passwords or network credentials.
 
 ## Legal & Safety
 
