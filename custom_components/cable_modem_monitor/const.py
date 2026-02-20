@@ -36,6 +36,7 @@ CONF_DOCSIS_VERSION = "docsis_version"  # DOCSIS version (3.0, 3.1) for entity m
 CONF_WORKING_URL = "working_url"  # Last successful URL
 CONF_PARSER_SELECTED_AT = "parser_selected_at"  # Timestamp when parser was selected in config flow
 CONF_SUPPORTS_ICMP = "supports_icmp"  # Auto-detected ICMP ping support for configured host
+CONF_SUPPORTS_HEAD = "supports_head"  # Auto-detected HTTP HEAD support for health monitor
 CONF_ACTUAL_MODEL = "actual_model"  # Actual model name extracted from modem (e.g., "C3700-100NAS")
 CONF_LEGACY_SSL = "legacy_ssl"  # Auto-detected: True if modem requires SECLEVEL=0 ciphers
 

@@ -49,6 +49,7 @@ from .const import (
     CONF_MODEM_CHOICE,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
@@ -239,11 +240,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # Create health monitor
     health_monitor = await create_health_monitor(hass, legacy_ssl=legacy_ssl)
 
-    # Get ICMP support setting (auto-detected during setup, re-tested on options change)
+    # Get ICMP and HEAD support settings (auto-detected during setup, re-tested on options change)
     supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
+    supports_head = entry.data.get(CONF_SUPPORTS_HEAD, False)
 
     # Create coordinator
-    async_update_data = create_update_function(hass, modem_client, health_monitor, host, supports_icmp)
+    async_update_data = create_update_function(hass, modem_client, health_monitor, host, supports_icmp, supports_head)
     coordinator = DataUpdateCoordinator[dict[str, Any]](
         hass,
         _LOGGER,

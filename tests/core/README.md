@@ -912,6 +912,10 @@ Tests for core/network.py.
 : Tests for test_icmp_ping function.
 
 
+**TestHttpHead** (0 tests)
+: Tests for test_http_head function.
+
+
 ### test_parser_utils.py
 
 Tests for core/parser_utils.py.

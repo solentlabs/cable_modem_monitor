@@ -68,6 +68,7 @@ from .const import (
     CONF_PARSER_SELECTED_AT,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
@@ -438,6 +439,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         data = dict(user_input)
         data.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
 
         # Store entity prefix (default to "none" for backwards compatibility)
@@ -646,6 +648,7 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
 
         # These are re-tested on every validation
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
 
         # Apply new detection info, or preserve existing

@@ -672,9 +672,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             result = await validate_input(
                 mock_hass,
@@ -688,6 +694,7 @@ class TestValidateInput:
 
         assert result["title"] == "Arris SB8200 (192.168.100.1)"
         assert result["supports_icmp"] is True
+        assert result["supports_head"] is True
         assert result["working_url"] == "http://192.168.100.1"
         assert result["auth_strategy"] == "no_auth"
         assert result["detection_info"]["modem_name"] == "Arris SB8200"
@@ -862,9 +869,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=False,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=False,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=False,
+            ),
         ):
             result = await validate_input(
                 mock_hass,
@@ -877,6 +890,7 @@ class TestValidateInput:
             )
 
         assert result["supports_icmp"] is False
+        assert result["supports_head"] is False
 
     @pytest.mark.asyncio
     async def test_validation_without_actual_model(self, mock_hass, mock_parser_class, mock_adapter):
@@ -913,9 +927,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             validation_result = await validate_input(
                 mock_hass,
@@ -954,9 +974,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             result = await validate_input(
                 mock_hass,
@@ -1004,9 +1030,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             validation_result = await validate_input(
                 mock_hass,
@@ -1208,9 +1240,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             validation_result = await validate_input(
                 mock_hass,
@@ -1267,9 +1305,15 @@ class TestValidateInput:
 
         mock_hass.async_add_executor_job = mock_executor
 
-        with patch(
-            "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
-            return_value=True,
+        with (
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping",
+                return_value=True,
+            ),
+            patch(
+                "custom_components.cable_modem_monitor.config_flow_helpers.test_http_head",
+                return_value=True,
+            ),
         ):
             validation_result = await validate_input(
                 mock_hass,

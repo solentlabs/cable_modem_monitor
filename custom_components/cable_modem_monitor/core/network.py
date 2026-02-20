@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import ssl
+
+import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,3 +47,44 @@ async def test_icmp_ping(host: str) -> bool:
     except Exception as e:
         _LOGGER.debug("ICMP ping test exception for %s: %s", host, e)
         return False
+
+
+async def test_http_head(url: str, legacy_ssl: bool = False) -> bool:
+    """Test if HTTP HEAD requests work for the given URL.
+
+    Auto-detects HEAD support. Useful for health monitoring to avoid
+    HEAD requests on modems that don't support them (e.g., TC4400 micro_httpd).
+
+    Args:
+        url: Full URL to test (e.g., http://192.168.100.1)
+        legacy_ssl: Use legacy SSL ciphers (SECLEVEL=0) for older modem firmware
+
+    Returns:
+        True if HEAD succeeds (status < 500), False if it fails or times out
+    """
+    try:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        if legacy_ssl:
+            ssl_context.set_ciphers("DEFAULT:@SECLEVEL=0")
+
+        timeout = aiohttp.ClientTimeout(total=5)
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+
+        async with (
+            aiohttp.ClientSession(timeout=timeout, connector=connector) as session,
+            session.head(url, allow_redirects=False) as response,
+        ):
+            success: bool = response.status < 500
+            _LOGGER.info("HTTP HEAD test for %s: %s", url, "success" if success else "failed")
+            return success
+
+    except TimeoutError:
+        _LOGGER.info("HTTP HEAD test for %s: timeout", url)
+    except aiohttp.ClientConnectorError as e:
+        _LOGGER.info("HTTP HEAD test for %s: connection error (%s)", url, e)
+    except Exception as e:
+        _LOGGER.info("HTTP HEAD test for %s: failed (%s)", url, e)
+
+    return False

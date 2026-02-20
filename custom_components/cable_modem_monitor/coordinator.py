@@ -53,7 +53,14 @@ async def create_health_monitor(hass: HomeAssistant, legacy_ssl: bool = False) -
     )
 
 
-def create_update_function(hass: HomeAssistant, modem_client, health_monitor, host: str, supports_icmp: bool = True):
+def create_update_function(
+    hass: HomeAssistant,
+    modem_client,
+    health_monitor,
+    host: str,
+    supports_icmp: bool = True,
+    supports_head: bool = False,
+):
     """Create the async update function for the coordinator."""
 
     async def async_update_data() -> dict[str, Any]:
@@ -61,9 +68,10 @@ def create_update_function(hass: HomeAssistant, modem_client, health_monitor, ho
         # Host may already include protocol (http:// or https://)
         base_url = host if host.startswith(("http://", "https://")) else f"http://{host}"
 
-        # Use config-based ICMP setting (auto-detected during setup/options flow)
-        # This allows different IPs of the same modem to have different ICMP behavior
-        health_result = await health_monitor.check_health(base_url, skip_ping=not supports_icmp)
+        # Use config-based ICMP and HEAD settings (auto-detected during setup/options flow)
+        health_result = await health_monitor.check_health(
+            base_url, skip_ping=not supports_icmp, supports_head=supports_head
+        )
 
         try:
             data: dict[str, Any] = await hass.async_add_executor_job(modem_client.get_modem_data)
@@ -77,6 +85,7 @@ def create_update_function(hass: HomeAssistant, modem_client, health_monitor, ho
             data["http_latency_ms"] = health_result.http_latency_ms
             data["consecutive_failures"] = health_monitor.consecutive_failures
             data["supports_icmp"] = supports_icmp
+            data["supports_head"] = supports_head
 
             # Create indexed lookups for O(1) channel access (performance optimization)
             # This prevents O(n) linear searches in each sensor's native_value property
@@ -112,6 +121,7 @@ def create_update_function(hass: HomeAssistant, modem_client, health_monitor, ho
                     "http_latency_ms": health_result.http_latency_ms,
                     "consecutive_failures": health_monitor.consecutive_failures,
                     "supports_icmp": supports_icmp,
+                    "supports_head": supports_head,
                 }
             raise UpdateFailed(f"Error communicating with modem: {err}") from err
 

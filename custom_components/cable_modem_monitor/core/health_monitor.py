@@ -118,13 +118,16 @@ class ModemHealthMonitor:
                 "This is common for cable modems with self-signed certificates."
             )
 
-    async def check_health(self, base_url: str, skip_ping: bool = False) -> HealthCheckResult:
+    async def check_health(
+        self, base_url: str, skip_ping: bool = False, supports_head: bool = False
+    ) -> HealthCheckResult:
         """
         Perform health check.
 
         Args:
             base_url: Modem URL (e.g., http://192.168.100.1)
             skip_ping: If True, skip ICMP ping check (for modems that block ICMP)
+            supports_head: If True, use HEAD requests; otherwise use GET only
 
         Returns:
             HealthCheckResult with ping and HTTP status
@@ -152,7 +155,7 @@ class ModemHealthMonitor:
         if host:
             if skip_ping:
                 # Skip ping - only run HTTP check
-                http_result = await self._check_http(base_url)
+                http_result = await self._check_http(base_url, supports_head=supports_head)
                 if isinstance(http_result, BaseException):
                     _LOGGER.debug("HTTP check exception: %s", http_result)
                     http_success, http_latency = False, None
@@ -162,7 +165,9 @@ class ModemHealthMonitor:
             else:
                 # Run ping and HTTP check in parallel
                 results = await asyncio.gather(
-                    self._check_ping(host), self._check_http(base_url), return_exceptions=True
+                    self._check_ping(host),
+                    self._check_http(base_url, supports_head=supports_head),
+                    return_exceptions=True,
                 )
                 ping_result_raw, http_result_raw = results
 
@@ -257,13 +262,22 @@ class ModemHealthMonitor:
         success = response.status < 500
         return success, latency_ms if success else None
 
-    async def _check_http(self, base_url: str) -> tuple[bool, float | None]:
+    async def _check_http(self, base_url: str, supports_head: bool = False) -> tuple[bool, float | None]:
         """
         Perform HTTP check with SSL verification and redirect validation.
+
+        Uses HEAD or GET based on supports_head setting (auto-detected during setup).
+        No fallback chain — one method, determined at setup time, to avoid session
+        poisoning when HEAD fails on modems that don't support it.
+
+        Args:
+            base_url: Modem URL to check
+            supports_head: If True, use HEAD; otherwise use GET
 
         Returns:
             tuple: (success: bool, latency_ms: float | None)
         """
+        method = "HEAD" if supports_head else "GET"
         try:
             start_time = time.time()
 
@@ -277,30 +291,17 @@ class ModemHealthMonitor:
             connector = aiohttp.TCPConnector(ssl=self._ssl_context)
 
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
-                # Try HEAD first (lightweight)
-                head_failed = False
-                try:
-                    async with session.head(base_url, allow_redirects=False) as response:
-                        result = self._process_http_response(response, base_url, start_time)
-                        return result if result else (False, None)
-                except Exception as head_err:
-                    # HEAD failed - many modems don't support HEAD or reset the connection
-                    _LOGGER.debug("HEAD request failed, trying GET: %s", head_err)
-                    head_failed = True
-
-                # Fallback to GET if HEAD failed
-                if head_failed:
-                    start_time = time.time()  # Reset timer
-                    async with session.get(base_url, allow_redirects=False) as response:
-                        result = self._process_http_response(response, base_url, start_time)
-                        return result if result else (False, None)
+                request_method = session.head if supports_head else session.get
+                async with request_method(base_url, allow_redirects=False) as response:
+                    result = self._process_http_response(response, base_url, start_time)
+                    return result if result else (False, None)
 
         except TimeoutError:
-            _LOGGER.debug("HTTP check timeout for %s", base_url)
+            _LOGGER.debug("HTTP %s check timeout for %s", method, base_url)
         except aiohttp.ClientConnectorError as e:
-            _LOGGER.debug("HTTP check connection error for %s: %s", base_url, e)
+            _LOGGER.debug("HTTP %s check connection error for %s: %s", method, base_url, e)
         except Exception as e:
-            _LOGGER.debug("HTTP check exception for %s: %s", base_url, e)
+            _LOGGER.debug("HTTP %s check exception for %s: %s", method, base_url, e)
 
         return False, None
 

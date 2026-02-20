@@ -43,7 +43,7 @@ from .core.exceptions import (
     InvalidAuthError,
     UnsupportedModemError,
 )
-from .core.network import test_icmp_ping
+from .core.network import test_http_head, test_icmp_ping
 from .core.parser_registry import get_parser_by_name, get_parser_dropdown_from_index
 from .core.parser_utils import create_title
 from .lib.host_validation import extract_hostname as _validate_host_format
@@ -456,13 +456,15 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     title = create_title(detection_info, host)
 
-    # Test ICMP ping support AFTER discovery succeeds (for health monitoring)
+    # Test ICMP ping and HTTP HEAD support AFTER discovery succeeds (for health monitoring)
     supports_icmp = await test_icmp_ping(host)
+    supports_head = await test_http_head(result.working_url, legacy_ssl=result.legacy_ssl)
 
     return {
         "title": title,
         "detection_info": detection_info,
         "supports_icmp": supports_icmp,
+        "supports_head": supports_head,
         "legacy_ssl": result.legacy_ssl,
         # Store working URL for polling (skip protocol discovery)
         CONF_WORKING_URL: result.working_url,
