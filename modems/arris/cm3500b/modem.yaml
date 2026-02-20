@@ -40,7 +40,6 @@ auth:
       password_field: "password"
       success:
         redirect: "/cgi-bin/status_cgi"
-        indicator: "CM3500B"
   session:
     cookie_name: "credential"
 
