@@ -314,14 +314,17 @@ class TestHealthCheckHTTP:
             patch(connector_patch),
             patch(session_patch) as mock_session_class,
         ):
+            # Response returned when entering the async context manager
             mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {}
 
+            # aiohttp's head()/get() return an async context manager (not a coroutine)
             mock_head_cm = MagicMock()
             mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
             mock_head_cm.__aexit__ = AsyncMock(return_value=None)
 
+            # ClientSession itself is also an async context manager
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
@@ -356,10 +359,12 @@ class TestHealthCheckHTTP:
             mock_response.status = 200
             mock_response.headers = {}
 
+            # aiohttp's get() returns an async context manager (not a coroutine)
             mock_get_cm = MagicMock()
             mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
             mock_get_cm.__aexit__ = AsyncMock(return_value=None)
 
+            # ClientSession itself is also an async context manager
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
@@ -375,7 +380,11 @@ class TestHealthCheckHTTP:
             mock_session.get.assert_called_once()
 
     async def test_http_no_head_when_not_supported(self):
-        """Test that HEAD is never attempted when supports_head=False."""
+        """Test that HEAD is never attempted when supports_head=False.
+
+        This is critical for modems like the TC4400 whose micro_httpd resets
+        connections on HEAD, which can poison the aiohttp session for subsequent GET.
+        """
         monitor = ModemHealthMonitor()
 
         time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
@@ -397,6 +406,7 @@ class TestHealthCheckHTTP:
             mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
             mock_get_cm.__aexit__ = AsyncMock(return_value=None)
 
+            # ClientSession is an async context manager
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
@@ -412,7 +422,7 @@ class TestHealthCheckHTTP:
             mock_session.get.assert_called_once()
 
     async def test_http_accepts_4xx_as_alive(self):
-        """Test that 4xx responses are considered alive."""
+        """Test that 4xx responses are considered alive (status < 500 = server is up)."""
         monitor = ModemHealthMonitor()
 
         time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
@@ -426,10 +436,12 @@ class TestHealthCheckHTTP:
             patch(connector_patch),
             patch(session_patch) as mock_session_class,
         ):
+            # 404 = server is alive, just doesn't have this resource
             mock_response = MagicMock()
-            mock_response.status = 404  # Not Found, but server is alive
+            mock_response.status = 404
             mock_response.headers = {}
 
+            # aiohttp's get() returns an async context manager
             mock_get_cm = MagicMock()
             mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
             mock_get_cm.__aexit__ = AsyncMock(return_value=None)
@@ -443,10 +455,10 @@ class TestHealthCheckHTTP:
 
             success, latency = await monitor._check_http("http://192.168.1.1")
 
-            assert success is True  # Server responded
+            assert success is True  # Server responded, that's all we care about
 
     async def test_http_rejects_5xx(self):
-        """Test that 5xx responses are considered failures."""
+        """Test that 5xx responses are considered failures (server error = unhealthy)."""
         monitor = ModemHealthMonitor()
 
         time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
@@ -461,7 +473,7 @@ class TestHealthCheckHTTP:
             patch(session_patch) as mock_session_class,
         ):
             mock_response = MagicMock()
-            mock_response.status = 500  # Server error
+            mock_response.status = 500
             mock_response.headers = {}
 
             mock_get_cm = MagicMock()
@@ -489,7 +501,7 @@ class TestHealthCheckHTTP:
         assert latency is None
 
     async def test_http_timeout(self):
-        """Test HTTP check handles timeout."""
+        """Test HTTP check handles timeout (modem unreachable or rebooting)."""
         monitor = ModemHealthMonitor()
 
         time_patch = "custom_components.cable_modem_monitor.core.health_monitor.time.time"
@@ -503,6 +515,7 @@ class TestHealthCheckHTTP:
             patch(connector_patch),
             patch(session_patch) as mock_session_class,
         ):
+            # GET raises TimeoutError — modem is down or rebooting
             mock_session = MagicMock()
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)

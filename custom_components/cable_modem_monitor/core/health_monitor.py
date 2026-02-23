@@ -1,4 +1,11 @@
-"""Modem Health Monitor - Dual-layer network diagnostics."""
+"""Modem Health Monitor - Dual-layer network diagnostics.
+
+Uses aiohttp (not requests) intentionally. The health monitor runs ICMP ping
+and HTTP checks in parallel via asyncio.gather, which is critical for fast
+reboot detection. Using requests would require executor wrapping, breaking
+the parallel execution pattern. The rest of the codebase uses requests for
+synchronous scraping — this module is the exception for good reason.
+"""
 
 from __future__ import annotations
 

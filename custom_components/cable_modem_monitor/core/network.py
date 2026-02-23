@@ -2,6 +2,9 @@
 
 These functions handle network connectivity checks and diagnostics.
 They are independent of Home Assistant and can be used in any context.
+
+Uses aiohttp (not requests) to match the health monitor's async pattern.
+See health_monitor.py docstring for rationale.
 """
 
 from __future__ import annotations

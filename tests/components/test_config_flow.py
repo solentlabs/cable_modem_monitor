@@ -187,12 +187,14 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_http_head")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_success(
         self,
         mock_get_parser,
         mock_icmp_ping,
+        mock_http_head,
         mock_load_static_auth,
         mock_setup,
         mock_hass,
@@ -209,6 +211,7 @@ class TestValidateInput:
         # Mock setup to return success
         mock_setup.return_value = _create_success_result()
         mock_icmp_ping.return_value = True
+        mock_http_head.return_value = False
 
         # Mock async_add_executor_job to call the function
         async def mock_executor_job(func, *args):
@@ -223,12 +226,14 @@ class TestValidateInput:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_http_head")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_connection_failure(
         self,
         mock_get_parser,
         mock_icmp_ping,
+        mock_http_head,
         mock_load_static_auth,
         mock_setup,
         mock_hass,
@@ -249,6 +254,7 @@ class TestValidateInput:
             failed_step="connectivity",
         )
         mock_icmp_ping.return_value = False
+        mock_http_head.return_value = False
 
         # Mock async_add_executor_job to call the function
         async def mock_executor_job(func, *args):
@@ -333,12 +339,14 @@ class TestModemNameFormatting:
     )
     @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_http_head")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_formatting(
         self,
         mock_get_parser,
         mock_icmp_ping,
+        mock_http_head,
         mock_load_static_auth,
         mock_setup,
         mock_hass,
@@ -357,6 +365,7 @@ class TestModemNameFormatting:
             manufacturer=manufacturer,
         )
         mock_icmp_ping.return_value = True
+        mock_http_head.return_value = False
 
         async def mock_executor_job(func, *args):
             return func(*args)
@@ -370,12 +379,14 @@ class TestModemNameFormatting:
     @pytest.mark.asyncio
     @patch("custom_components.cable_modem_monitor.core.setup.setup_modem")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.load_static_auth_config")
+    @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_http_head")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.test_icmp_ping")
     @patch("custom_components.cable_modem_monitor.config_flow_helpers.get_parser_by_name")
     async def test_title_detection_info_included(
         self,
         mock_get_parser,
         mock_icmp_ping,
+        mock_http_head,
         mock_load_static_auth,
         mock_setup,
         mock_hass,
@@ -390,6 +401,7 @@ class TestModemNameFormatting:
             manufacturer="[MFG]",
         )
         mock_icmp_ping.return_value = True
+        mock_http_head.return_value = False
 
         async def mock_executor_job(func, *args):
             return func(*args)
