@@ -458,7 +458,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     # Test ICMP ping and HTTP HEAD support AFTER discovery succeeds (for health monitoring)
     supports_icmp = await test_icmp_ping(host)
-    supports_head = await test_http_head(result.working_url, legacy_ssl=result.legacy_ssl)
+    supports_head = (
+        await test_http_head(result.working_url, legacy_ssl=result.legacy_ssl) if result.working_url else False
+    )
 
     return {
         "title": title,
