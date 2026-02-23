@@ -9,11 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.13.0-beta.11] - 2026-02-23
 
-## [3.13.0-beta.11] - 2026-02-23
+### Added
+
+- **HTTP HEAD Auto-Detection** - Health monitor now auto-detects whether the modem supports HTTP HEAD requests during setup. Modems that don't support HEAD (e.g., TC4400's `micro_httpd`) use GET-only, eliminating session poisoning that caused permanent health check failures. Fixes missing "HTTP Latency" and "Status" entities on TC4400AM. (#94)
 
 ### Fixed
 
-- **Diagnostics PII Sanitization** - Updated to har-capture 0.3.3 fixing IPv4 address corruption (5-octet bug) and version string preservation. Firmware version strings like "5.7.1.5" are now correctly preserved instead of being sanitized as IP addresses. Private IPs are sanitized to valid 4-octet format.
+- **CM3500B Auth Config** - Removed incorrect `success_indicator` from CM3500B modem.yaml auth config that could interfere with authentication validation. (#73)
+- **Diagnostics PII Sanitization** - Updated to har-capture 0.3.3 fixing IPv4 address corruption (5-octet bug) and version string preservation. Firmware version strings like "5.7.1.5" are now correctly preserved instead of being sanitized as IP addresses.
+- **Build: mypy RAW_DATA exclusion** - Excluded `RAW_DATA/` from mypy checks. Contributor submissions and unreleased future work should not be part of quality gates.
+
+### Documentation
+
+- Added har-capture usage instructions to README and troubleshooting guide.
+- Added docstrings explaining why health monitor uses aiohttp (parallel ping+HTTP for reboot detection) vs requests used elsewhere.
 
 ## [3.13.0-beta.10] - 2026-02-05
 
