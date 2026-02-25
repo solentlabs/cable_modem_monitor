@@ -44,7 +44,6 @@ Scripts for maintaining the integration in production:
 | Script | Purpose | Exit Codes | Environment Variables |
 |--------|---------|------------|----------------------|
 | `cleanup_entities.py` | Cleans up Home Assistant entities | 0: Success, 1: Error | None |
-| `deploy_updates.sh` | Deploy to Home Assistant via SSH | 0: Success, 1: Error | SSH configured for `homeassistant` host |
 | `update_versions.py` | Sync version from const.py to manifest.json | 0: Success, 1: Error | None |
 
 ## Usage
@@ -122,14 +121,6 @@ code .
 
 ### Maintenance Operations
 
-**Deploy to Home Assistant:**
-```bash
-# SSH must be configured for 'homeassistant' host
-bash scripts/maintenance/deploy_updates.sh
-# OR use Make
-make deploy
-```
-
 **Version Management:**
 ```bash
 # Sync version from const.py to manifest.json and hacs.json
@@ -171,19 +162,12 @@ pre-commit run --all-files
 make check
 ```
 
-## SSH Configuration for Deployment
+## Testing on Home Assistant
 
-To use `deploy_updates.sh`, configure SSH access to your Home Assistant server:
+Use the Docker-based local HA instance for testing. See [TESTING_ON_HA.md](../docs/setup/TESTING_ON_HA.md) for details.
 
 ```bash
-# Add to ~/.ssh/config
-Host homeassistant
-    HostName 192.168.1.100  # Your HA server IP
-    User your-username
-    IdentityFile ~/.ssh/id_rsa
-```
-
-Test connection:
-```bash
-ssh homeassistant "echo Connection successful"
+make docker-start    # Start HA with integration mounted
+make docker-logs     # View logs
+make docker-restart  # Restart after code changes
 ```

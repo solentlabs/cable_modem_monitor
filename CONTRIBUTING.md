@@ -225,18 +225,17 @@ Make sure all tests pass before submitting your changes.
 pytest tests/ -v
 ```
 
-### 5. Deploy for Manual Testing (Optional)
+### 5. Test on Local HA (Optional)
 
-You can deploy your changes to a real Home Assistant instance for manual testing.
+You can test your changes on a local Home Assistant instance via Docker:
 
 ```bash
-# Interactive mode - guides you through deployment options
-./scripts/deploy_updates.sh
+# Start HA with integration bind-mounted
+make docker-start
 
-# Or specify directly:
-./scripts/deploy_updates.sh --local ~/homeassistant/config
-./scripts/deploy_updates.sh --ssh root@192.168.1.100
-./scripts/deploy_updates.sh --docker homeassistant --restart
+# Open http://localhost:8123 and add the integration
+# After code changes, restart to pick them up:
+make docker-restart
 ```
 
 See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and troubleshooting.

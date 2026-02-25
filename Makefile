@@ -122,10 +122,6 @@ validate-host:
 validate-ci:
 	@./scripts/ci-check.sh
 
-# Deploy to Home Assistant
-deploy:
-	@bash scripts/maintenance/deploy_updates.sh
-
 # Sync version numbers
 sync-version:
 	@python3 scripts/maintenance/update_versions.py
