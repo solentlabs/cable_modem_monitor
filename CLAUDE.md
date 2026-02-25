@@ -144,9 +144,10 @@ ruff check .                    # Full project lint
 pytest                          # Full test suite
 ```
 
-### 2. Dogfood on Local HA (if applicable)
-- Deploy to local Home Assistant via SSH or HACS beta
-- Verify core functionality works on real hardware
+### 2. Dogfood on Local HA
+- Ask the user to launch HA via VS Code task ("HA: Start (Fresh)") or `make docker-start`
+- User verifies: integration loads, sensors created, no blocking I/O warnings in logs
+- **Never deploy automatically** — no SSH, no SCP, no remote scripts
 - Fix any issues found, commit to release branch
 
 ### 3. Merge to Main

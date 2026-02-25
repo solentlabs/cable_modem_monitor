@@ -1,6 +1,6 @@
 # Testing on Home Assistant
 
-This guide explains how to deploy a development branch of Cable Modem Monitor to a real Home Assistant instance for testing.
+This guide explains how to test a development branch of Cable Modem Monitor on Home Assistant.
 
 > **For local development** (running tests, working on code): See [Getting Started](./GETTING_STARTED.md)
 >
@@ -8,30 +8,36 @@ This guide explains how to deploy a development branch of Cable Modem Monitor to
 
 ---
 
-## Quick Start
+## Quick Start (Docker — Recommended)
 
-### Using the Deploy Script (Recommended)
+The VS Code Dev Container or `docker-compose.test.yml` runs a real HA instance with your code bind-mounted:
 
 ```bash
-# Clone the repo (or switch to the branch you want to test)
-git clone https://github.com/solentlabs/cable_modem_monitor.git
-cd cable_modem_monitor
-git checkout feature/your-branch-name
+# From VS Code Dev Container:
+# Ctrl+Shift+P → Tasks: Run Task → "HA: Start (Fresh)"
 
-# Run the deployment script
-./scripts/maintenance/deploy_updates.sh
+# Or from the command line:
+make docker-start
 ```
 
-The script supports multiple deployment methods:
-- **Local path**: Direct copy to a local HA config directory
-- **SSH**: Remote deployment via SSH
-- **Docker**: Copy into a running Docker container
+Then open http://localhost:8123, complete onboarding, and add the integration.
+
+Your `custom_components/cable_modem_monitor/` is mounted directly — changes are reflected after restarting HA:
+
+```bash
+make docker-restart
+```
+
+View logs:
+```bash
+make docker-logs
+```
 
 ---
 
 ## Manual Deployment
 
-If the script doesn't work for your setup, follow these manual steps.
+For testing on a remote or standalone HA instance.
 
 ### Step 1: Get the Code
 
@@ -150,15 +156,15 @@ To test a specific pull request:
 git fetch origin pull/44/head:pr-44
 git checkout pr-44
 
-# Deploy
-./scripts/maintenance/deploy_updates.sh
+# Use docker-compose or copy manually (see above)
+make docker-start
 ```
 
 Or use GitHub CLI:
 
 ```bash
 gh pr checkout 44
-./scripts/maintenance/deploy_updates.sh
+make docker-start
 ```
 
 ---
