@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **URL Pattern Ordering** - Protected pages now prioritized in URL pattern ordering for polling
 - **Log Buffer Persistence** - Diagnostics log buffer preserved across integration reloads
 - **HTTP/HTTPS Detection** - Try HTTP before HTTPS to prevent protocol mismatch on setup
+- **HTTP HEAD SSL Blocking I/O** - Moved `ssl.create_default_context()` in HTTP HEAD auto-detection to executor to avoid blocking the HA event loop during config flow
 
 ### Improved
 
