@@ -16,6 +16,9 @@ import requests
 from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestSessionExpiry:
     """Test session expiration detection."""
@@ -30,12 +33,12 @@ class TestSessionExpiry:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Make requests within the limit (default 3)
         for i in range(3):
-            response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+            response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             # Should get data, not login form
             assert "Cable Modem Status" in response.text, f"Request {i + 1} should get data"
@@ -50,15 +53,15 @@ class TestSessionExpiry:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Make requests up to the limit
         for _ in range(3):
-            session.get(f"{session_expiry_server.url}/status", timeout=10)
+            session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
 
         # Next request should show login form (session expired)
-        response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+        response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
         assert 'type="password"' in response.text.lower(), "Should show login form after expiry"
 
     def test_reauth_after_expiry(self, session_expiry_server):
@@ -71,23 +74,23 @@ class TestSessionExpiry:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Exhaust session
         for _ in range(4):
-            session.get(f"{session_expiry_server.url}/status", timeout=10)
+            session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
 
         # Re-authenticate
         session.post(
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should work again
-        response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+        response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
 
@@ -100,15 +103,15 @@ class TestSessionPersistence:
         session.verify = False
 
         # Get login form first
-        response = session.get(form_auth_server.url, timeout=10)
+        response = session.get(form_auth_server.url, timeout=TEST_TIMEOUT)
         assert 'type="password"' in response.text.lower()
 
         # Login
         session.post(
             f"{form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Should have session cookie now
@@ -116,7 +119,7 @@ class TestSessionPersistence:
 
         # Multiple requests should maintain session
         for request_num in range(5):
-            response = session.get(f"{form_auth_server.url}/status.html", timeout=10)
+            response = session.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text, f"Request {request_num + 1} should succeed"
 
@@ -128,9 +131,9 @@ class TestSessionPersistence:
         # Login with redirect
         response = session.post(
             f"{form_auth_server.url}/login",
-            data={"username": "admin", "password": "password"},
+            data={"username": "admin", "password": "pw"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # After redirect, should still have cookies
@@ -152,6 +155,7 @@ class TestAuthHandlerReauth:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -162,7 +166,7 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success1 is True
 
@@ -174,17 +178,17 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success2 is True
 
         # Should be able to access data
-        response = session.get(f"{form_auth_server.url}/status.html", timeout=10)
+        response = session.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
         assert "Cable Modem Status" in response.text
 
     def test_basic_auth_persists(self, basic_auth_server):
         """Verify Basic Auth credentials persist across requests."""
-        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP)
+        handler = AuthHandler(strategy=AuthStrategyType.BASIC_HTTP, timeout=TEST_TIMEOUT)
 
         session = requests.Session()
         session.verify = False
@@ -193,17 +197,17 @@ class TestAuthHandlerReauth:
             session=session,
             base_url=basic_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
 
         # session.auth should be set
         assert session.auth is not None
-        assert session.auth == ("admin", "password")
+        assert session.auth == ("admin", "pw")
 
         # Multiple requests should work
         for _ in range(3):
-            response = session.get(basic_auth_server.url, timeout=10)
+            response = session.get(basic_auth_server.url, timeout=TEST_TIMEOUT)
             assert response.status_code == 200
             assert "Cable Modem Status" in response.text
 
@@ -221,6 +225,7 @@ class TestPollingSimulation:
                 "username_field": "username",
                 "password_field": "password",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -231,13 +236,13 @@ class TestPollingSimulation:
             session=session,
             base_url=form_auth_server.url,
             username="admin",
-            password="password",
+            password="pw",
         )
         assert success is True
 
         # Simulate 10 polling cycles
         for i in range(10):
-            response = session.get(f"{form_auth_server.url}/status.html", timeout=10)
+            response = session.get(f"{form_auth_server.url}/status.html", timeout=TEST_TIMEOUT)
             assert response.status_code == 200, f"Poll {i + 1} failed"
             assert "Cable Modem Status" in response.text, f"Poll {i + 1} didn't get data"
 
@@ -251,13 +256,13 @@ class TestPollingSimulation:
             f"{session_expiry_server.url}/login",
             data={"username": "admin", "password": "password"},
             allow_redirects=True,
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         # Poll until session expires
         polls_successful = 0
         for _ in range(10):
-            response = session.get(f"{session_expiry_server.url}/status", timeout=10)
+            response = session.get(f"{session_expiry_server.url}/status", timeout=TEST_TIMEOUT)
             if "Cable Modem Status" in response.text:
                 polls_successful += 1
             else:

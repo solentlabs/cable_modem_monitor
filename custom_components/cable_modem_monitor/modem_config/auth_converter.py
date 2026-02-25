@@ -17,52 +17,84 @@ from typing import TYPE_CHECKING
 from custom_components.cable_modem_monitor.core.auth.configs import (
     BasicAuthConfig,
     FormAuthConfig,
+    FormDynamicAuthConfig,
     HNAPAuthConfig,
     NoAuthConfig,
     UrlTokenSessionConfig,
 )
-from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
+from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType, HMACAlgorithm
 
 if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
         FormAuthConfig as ModemFormAuthConfig,
+        FormDynamicAuthConfig as ModemFormDynamicAuthConfig,
         HnapAuthConfig as ModemHnapAuthConfig,
         ModemConfig,
         UrlTokenAuthConfig as ModemUrlTokenAuthConfig,
     )
 
 # Type alias for return type
-AuthConfigType = FormAuthConfig | HNAPAuthConfig | UrlTokenSessionConfig | BasicAuthConfig | NoAuthConfig
+AuthConfigType = (
+    FormAuthConfig | FormDynamicAuthConfig | HNAPAuthConfig | UrlTokenSessionConfig | BasicAuthConfig | NoAuthConfig
+)
 
 
-def modem_config_to_auth_config(config: ModemConfig) -> tuple[AuthStrategyType, AuthConfigType]:
+def modem_config_to_auth_config(
+    config: ModemConfig, auth_type: str | None = None
+) -> tuple[AuthStrategyType, AuthConfigType]:
     """Convert ModemConfig auth settings to typed AuthConfig.
+
+    Uses auth.types{} as the source of truth. If auth_type is not specified,
+    uses the first/default auth type.
 
     Args:
         config: ModemConfig from modem.yaml
+        auth_type: Specific auth type to use, or None for default
 
     Returns:
         Tuple of (AuthStrategyType, AuthConfig instance)
     """
-    from custom_components.cable_modem_monitor.modem_config.schema import AuthStrategy
+    from custom_components.cable_modem_monitor.modem_config.schema import (
+        FormAuthConfig as SchemaFormAuthConfig,
+        FormDynamicAuthConfig as SchemaFormDynamicAuthConfig,
+        HnapAuthConfig as SchemaHnapAuthConfig,
+        UrlTokenAuthConfig as SchemaUrlTokenAuthConfig,
+    )
 
     auth = config.auth
-    strategy = auth.strategy
 
-    if strategy == AuthStrategy.NONE:
+    # Get auth type - use specified or default to first type
+    if auth_type is None:
+        if auth.types:
+            auth_type = next(iter(auth.types.keys()))
+        else:
+            return AuthStrategyType.NO_AUTH, NoAuthConfig()
+
+    # Handle "none" auth type
+    if auth_type == "none":
         return AuthStrategyType.NO_AUTH, NoAuthConfig()
 
-    if strategy == AuthStrategy.BASIC:
-        return AuthStrategyType.BASIC_HTTP, BasicAuthConfig()
+    # Get config for the auth type
+    if not auth.types or auth_type not in auth.types:
+        return AuthStrategyType.NO_AUTH, NoAuthConfig()
 
-    if strategy == AuthStrategy.FORM and auth.form:
-        return form_config_to_auth_config(auth.form)
+    type_config = auth.types.get(auth_type)
+    if type_config is None:
+        return AuthStrategyType.NO_AUTH, NoAuthConfig()
 
-    if strategy == AuthStrategy.HNAP and auth.hnap:
-        return hnap_config_to_auth_config(auth.hnap)
+    # Convert based on config type
+    # Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check order matters)
+    if isinstance(type_config, SchemaFormDynamicAuthConfig):
+        return form_dynamic_config_to_auth_config(type_config)
 
-    if strategy == AuthStrategy.URL_TOKEN and auth.url_token:
-        return url_token_config_to_auth_config(auth.url_token)
+    if isinstance(type_config, SchemaFormAuthConfig):
+        return form_config_to_auth_config(type_config)
+
+    if isinstance(type_config, SchemaHnapAuthConfig):
+        return hnap_config_to_auth_config(type_config)
+
+    if isinstance(type_config, SchemaUrlTokenAuthConfig):
+        return url_token_config_to_auth_config(type_config)
 
     # Default: no auth
     return AuthStrategyType.NO_AUTH, NoAuthConfig()
@@ -98,6 +130,33 @@ def form_config_to_auth_config(form: ModemFormAuthConfig) -> tuple[AuthStrategyT
     )
 
 
+def form_dynamic_config_to_auth_config(
+    form: ModemFormDynamicAuthConfig,
+) -> tuple[AuthStrategyType, FormDynamicAuthConfig]:
+    """Convert modem.yaml FormDynamicAuthConfig to auth.configs.FormDynamicAuthConfig.
+
+    Args:
+        form: FormDynamicAuthConfig from modem.yaml schema
+
+    Returns:
+        Tuple of (AuthStrategyType, FormDynamicAuthConfig)
+    """
+    strategy = AuthStrategyType.FORM_DYNAMIC
+
+    return strategy, FormDynamicAuthConfig(
+        strategy=strategy,
+        login_page=form.login_page,
+        login_url=form.action,
+        form_selector=form.form_selector,
+        username_field=form.username_field,
+        password_field=form.password_field,
+        method=form.method,
+        hidden_fields=dict(form.hidden_fields) if form.hidden_fields else None,
+        password_encoding=form.password_encoding.value,
+        success_indicator=form.success.indicator if form.success else None,
+    )
+
+
 def hnap_config_to_auth_config(hnap: ModemHnapAuthConfig) -> tuple[AuthStrategyType, HNAPAuthConfig]:
     """Convert modem.yaml HnapAuthConfig to auth.configs.HNAPAuthConfig.
 
@@ -107,11 +166,15 @@ def hnap_config_to_auth_config(hnap: ModemHnapAuthConfig) -> tuple[AuthStrategyT
     Returns:
         Tuple of (AuthStrategyType, HNAPAuthConfig)
     """
+    # Convert string from modem.yaml to enum
+    hmac_algo = HMACAlgorithm(hnap.hmac_algorithm)
+
     return AuthStrategyType.HNAP_SESSION, HNAPAuthConfig(
         strategy=AuthStrategyType.HNAP_SESSION,
         endpoint=hnap.endpoint,
         namespace=hnap.namespace,
         empty_action_value=hnap.empty_action_value,
+        hmac_algorithm=hmac_algo,
     )
 
 
@@ -133,4 +196,6 @@ def url_token_config_to_auth_config(
         token_prefix=url_token.token_prefix,
         session_cookie_name=url_token.session_cookie,
         success_indicator=url_token.success_indicator or "Downstream",
+        ajax_login=url_token.ajax_login,
+        auth_header_data=url_token.auth_header_data,
     )

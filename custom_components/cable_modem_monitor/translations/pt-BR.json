@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "Configurações do Modem",
-        "description": "Atual: {detected_modem}\nÚltima verificação: {last_detection}",
+        "description": "Atual: {detected_modem}\nÚltima verificação: {parser_selected_at}",
         "data": {
           "host": "IP do Modem",
           "username": "Usuário",

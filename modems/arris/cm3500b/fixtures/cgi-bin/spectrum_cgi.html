@@ -1,0 +1,457 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>Spectrum Data</title>
+	<meta http-equiv="Pragma" content="no-cache">
+	<link rel="stylesheet" href="/arris_style.css">
+	<link type="text/css" href="/jquery-ui-1.8.21.custom.css" rel="stylesheet"/>
+
+	<script type="text/javascript" src="/jquery-1.7.2.min.js"></script>
+	<script type="text/javascript" src="/jquery-ui-1.8.21.custom.min.js"></script>
+	<script type="text/javascript" src="/underscore.js"></script>
+	<script type="text/javascript" src="/excanvas.min.js"></script>
+	<script type="text/javascript" src="/jquery.jqplot.min.js"></script>
+
+	<script LANGUAGE="JavaScript">
+	var gatherer;
+	var plotter;
+
+	var spectrum_data = [0];
+
+	var OID_SCAN_ENABLE = "***PUBLIC_IP***.4.1.4115.***PUBLIC_IP***.***PUBLIC_IP***";
+	var OID_SCAN_RESULT = "***PUBLIC_IP***.4.1.4115.***PUBLIC_IP***.***PUBLIC_IP***.2";
+
+	function allocGatherer() {
+		var FIRSTWINDOW =  93000000;
+		var LASTWINDOW =  993000000;
+		var CHUNKWIDTH =   7500000;
+		var NUMCHUNK = (LASTWINDOW - FIRSTWINDOW) / CHUNKWIDTH;
+		var loChunk = 0;
+		var hiChunk = 0;
+		var chunk = 0;
+		var continuous = false;
+		var running = false;
+		var restart = false;
+
+		function pin(a,lo, hi) {
+			if (a<lo) return lo;
+			if (a>hi) return hi;
+			return a;
+		}
+
+		function dataStream(s) {
+			function twoscomp(a, bits) {
+				var mask = 1<<(bits-1);
+				if (a & mask)
+					a = -mask + (a^mask);
+				return a;
+			}
+
+			var o = { };
+			var data = s;
+			var pos = 0;
+			if (data.length && data.charAt(0)=="$")
+				pos++;
+			o.done = function() {
+				return pos >= data.length;
+			}
+			o.get2 = function() {
+				var s = data.substr(pos, 4);
+				pos += 4;
+				return twoscomp(parseInt(s,16),16);
+			}
+			o.get4 = function() {
+				var s = data.substr(pos, 8);
+				pos += 8;
+				return twoscomp(parseInt(s,16),32);
+			}
+		return o;
+		}
+
+		function parseData(s) {
+			var o = { };
+			var ds = dataStream(s);
+			o.ChCenterFreq = ds.get4();
+			o.FreqSpan = ds.get4();
+			o.NumberOfBins = ds.get4();
+			o.BinSpacing = ds.get4();
+			o.ResolutionBW = ds.get4();
+			o.data = [];
+			for (var i=0; i< o.NumberOfBins; i++)
+				o.data.push(ds.get2());
+			return o;
+		}
+
+		function start() {
+			enableScan(false);
+
+			loChunk = pin(Math.floor((plotter.getPlotBounds().lo*1000000+(CHUNKWIDTH/2)- FIRSTWINDOW) / CHUNKWIDTH), 0, NUMCHUNK-1);
+			hiChunk = pin(Math.floor((plotter.getPlotBounds().hi*1000000-(CHUNKWIDTH/2)- FIRSTWINDOW) / CHUNKWIDTH)+1, 0, NUMCHUNK-1);
+			chunk = loChunk;
+			running = true;
+
+			getResult(chunk);
+		}
+
+		function getResult(chunk){
+			if ( spectrum_data.length <= 1)
+			{
+				return noDataMsg();
+			}
+
+			var pts = [];
+			for (var i=0; i<spectrum_data.length; i++)
+			{
+				var pd = parseData(spectrum_data[i]);
+				if (parseInt(pd.NumberOfBins) == 0)
+				{
+					return;
+				}
+				pts = pts.concat( plotter.getPoints(pd) );
+			}
+
+			if ( pts.length == 0 )
+			{
+				return noDataMsg();
+			}
+
+			showMsg(null);
+			updatePlotBounds();
+			plotter.updatePlot(pts);
+			enableScan(true);
+			showContinueLoading(false);
+			if ( $("#continuous").attr("checked") )
+			{
+				nextResult();
+			}
+		}
+
+		function noDataMsg()
+		{
+			enableScan(true);
+			showContinueLoading(false);
+			if ($("#continuous").attr("checked"))
+			{
+				return nextResult();
+			}
+			return showMsg("No data found.");
+		}
+
+		function nextResult()
+		{
+			enableScan(false);
+			showContinueLoading(true);
+			$("#scan_config").submit();
+		}
+
+		return {
+			start: start,
+			isContinuous: function() { return continuous; },
+			setContinuous: function(b) { continuous = b; }
+		};
+	}
+
+	function allocPlotter() {
+		var MAX = 1000;
+		var points = null;
+		var plotLo = 0;
+		var plotHi = 1000;
+		var plot = null;
+
+		(function init(){
+			$.jqplot.postDrawHooks.push(function() {
+				var w = this.eventCanvas.getWidth()-2;
+				var h = this.eventCanvas.getHeight()-2;
+				var l = parseInt(this.eventCanvas._offsets.left)+1;
+				var t = parseInt(this.eventCanvas._offsets.top)+1;
+
+				this.target.append("<div id='message_tip_bg' class='spectrum_message_bg' style='display: block; width: 538px; height: 233px; left: 51px; top: 11px;'></div>");
+				//this.target.append("<div id='message_tip' class='spectrum_message_tip' style='display: block; width: 538px; left: 51px; top: 11px;'>Click \"Scan\" to perform a Spectrum scan</div>");
+			});
+
+			plot = $.jqplot('plotter',  [[0,0]], {
+				series:[{showMarker:false, lineWidth:1}],
+				cursor: {
+					show: true,
+					tooltipLocation:'sw',
+					zoom:true
+				},axes:{
+					xaxis:{
+						label:'Frequency (MHz)',
+						labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+						min:plotLo, max:plotHi
+					},yaxis:{
+						label:'Power (dBmV)',
+						labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+					}
+				}
+			});
+		})();
+
+		function updatePlot(pts) {
+			if (pts) points = pts;
+			var ddd =_.filter(points || [], function(xy){
+				if (!xy) return false;
+				return xy[1] != 0 && xy[0] != 0;
+			});
+			if (ddd.length == 0)
+				ddd = [[0,-50]];
+			if (plot){
+				plot.replot({data:[ddd],clear:true,
+					axes:{
+						xaxis:{
+							label:'Frequency (MHz)',
+							labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+							min:plotLo, max:plotHi
+						}
+					}
+				});
+			}
+		}
+
+		function getPoints(pd){
+			var points = null;
+			function xToIndex(x) {
+				var i= Math.floor(MAX*((x-plotLo)/(plotHi-plotLo)));
+				if (i>= MAX || i <0)
+					return -1;
+				return i;
+			}
+
+			var x = pd.ChCenterFreq - pd.FreqSpan/2;
+			var delta = pd.FreqSpan/pd.NumberOfBins;
+			if (xToIndex(x/1000000) == -1 && xToIndex((pd.ChCenterFreq + pd.FreqSpan/2)/1000000) == -1) {
+				updatePlot();
+				return;
+			}
+			if (!points)
+				points = _.map(_.range(pd.NumberOfBins), function() { return [0,0];});
+			for (var i = 0; i < pd.NumberOfBins; i++) {
+				var index = xToIndex(x/1000000);
+				if (index != -1)
+					points[index] = [x/1000000, pd.data[i]/100];
+				x += delta;
+			}
+			return points;
+		}
+
+		function setPlotBounds(lo,hi) {
+			plotLo=lo; plotHi=hi;
+		}
+		function updateBounds(lo, hi){
+			setPlotBounds(lo,hi);
+			updatePlot(points);
+		}
+
+		return {
+			getPlotBounds: function() { return { lo:plotLo, hi:plotHi }; },
+			updateBounds: updateBounds,
+			getPoints:getPoints,
+			updatePlot:updatePlot
+		};
+	}
+
+	function updatePlotBounds(){
+		var center = parseFloat($("#centerSeq").val());
+		var width = parseFloat($("#widthSeq").val());
+		plotter.updateBounds(center - width/2, center + width/2);
+	}
+
+	function showMsg(msg){
+		if (!msg || msg == ""){
+			$("#message_tip_bg").css("display","none");
+			$("#message_tip").css("display","none");
+			return;
+		}
+		$("#message_tip").text(msg);
+		$("#message_tip_bg").css("display","block");
+		$("#message_tip").css("display","block");
+	}
+
+	function enableScan(b){
+		if (b){
+			$("#scan").removeAttr("disabled");
+		}else{
+			$("#scan").attr("disabled",true);
+		}
+	}
+
+	function showContinueLoading(b){
+		if (b){
+			$("#con_loading").css("display","block");
+		}else{
+			$("#con_loading").css("display","none");
+		}
+	}
+
+	function validateCenterSeq()
+	{
+		var c = $("#centerSeq").val().trim();
+
+		if ( !$.isN: ***REDACTED***(c) || c<0 || c>1000 )
+		{
+			alert("Please enter a numeric value between 0 to 1000 for Center Frequency.");
+			if(!$.isN: ***REDACTED***(centerSeq))
+				$("#centerSeq").val(500);
+			else
+				$("#centerSeq").val(centerSeq);
+			return false;
+		}
+		else
+		{
+			centerSeq = c;
+			return true;
+		}
+	}
+
+	function validateWidthSeq()
+	{
+		var w = $("#widthSeq").val().trim();
+
+		if (!$.isN: ***REDACTED***(w) || w<0 || w>1000)
+		{
+			alert("Please enter a numeric value between 0 to 1000 for Width.");
+			if(!$.isN: ***REDACTED***(widthSeq))
+				$("#widthSeq").val(1000);
+			else
+				$("#widthSeq").val(widthSeq);
+			return false;
+		}
+		else
+		{
+			widthSeq = w;
+			return true;
+		}
+	}
+
+	jQuery.cachedScript = function (url, successCallback, opts){
+		var options = $.extend(opts||{}, {
+			dataType:"script",
+			cache:true,
+			url:url,
+			success:successCallback
+		});
+		return jQuery.ajax(options);
+	};
+
+
+	$(function () {
+		$("<link>").attr({
+			rel:"stylesheet",
+			type:"text/css",
+			href:"/jquery.jqplot.min.css"
+		}).appendTo("head");
+
+
+		if ($.browser.msie && parseFloat($.browser.version)<9.0){
+			$.cachedScript("/excanvas.min.js",function(){return;},{async:false});
+		}
+
+		$.cachedScript("/jquery.jqplot.min.js",function(){return;},{async:false});
+		$.cachedScript("/jqplot.canvasTextRenderer.min.js",function(){return;},{async:false});
+		$.cachedScript("/jqplot.canvasAxisLabelRenderer.min.js",function(){return;},{async:false});
+		$.cachedScript("/jqplot.cursor.min.js",function(){return;},{async:false});
+
+		if (typeof(Storage) == "undefined"){
+			alert("No Web Storage support, please upgrade your web browser.");
+		}
+
+		if ( "1" == localStorage.getItem("ls_continuous") ){
+			$("#continuous").prop("checked", true);
+		}else{
+			$("#continuous").prop("checked", false);
+		}
+
+		plotter = allocPlotter();
+		gatherer = allocGatherer();
+
+		if ( spectrum_data.length > 1 )
+		{
+			gatherer.start();
+		}
+
+		$("#scan").click(function(){
+			updatePlotBounds();
+			enableScan(false);
+			$("#scan_config").submit();
+		});
+
+		$("#centerSeq").change(function(){
+			if ( validateCenterSeq() == true)
+				updatePlotBounds();
+		});
+		$("#widthSeq").change(function(){
+			if ( validateWidthSeq() == true)
+				updatePlotBounds();
+		});
+
+		$("#continuous").change(function(){
+			if ( $("#continuous").prop("checked") ){
+				localStorage.setItem("ls_continuous", "1");
+			}else{
+				localStorage.setItem("ls_continuous", "0");
+			}
+		});
+	})
+
+	</script>
+</head>
+
+<body class="CM3500">
+<div class="wrapper">
+
+	<div class="header">
+	<div class="header_text">
+		<h1>RF Spectral View</h1>
+		<a href="logout_cgi">Logout</a>
+	</div>
+	</div>
+
+	<div id="navbar">
+	<ul>
+	<li><a style="width: 16.66%; font-size: 90%;" href="product_cgi">Product</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="dhcp_cgi">DHCP</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="qos_cgi">QoS</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="config_params_cgi">Config Params</a></li>
+<li id="current"><a style="width: 16.66%; font-size: 90%;" href="spectrum_cgi">SPECTRUM</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="status_cgi">Basic</a></li>
+
+	</ul>
+	</div>
+
+	<div class="main_body">
+	<p>
+	<!-- INSERT ARRIS PAGE CONTENT HERE -->
+<div id="plotter" style="width: 600px; height: 300px; position: relative;" class="jqplot-target">
+</div>
+
+<form id="scan_config" name="scan_config" method="post" action="" onsubmit="">
+<table width="770"><tbody>
+<div style="padding-left:46px;padding-top:10px;">
+	<input type="submit" style="float:left;" id="scan" name="scan" value="Scan">
+	<div style="float:left;padding-left:20px;padding-right:10px;">Center(MHz)</div>
+	<input id="centerSeq" name="centerSeq" value="500" size="3" type="text" style="float:left;">
+	<div style="float:left;padding-left:20px;padding-right:10px;">Width(MHz)</div>
+	<input id="widthSeq" name="widthSeq" value="1000" type="text" size="3" style="float:left;">
+	<div style="float:left;padding-left:20px;padding-right:10px;">Update Continuously</div>
+	<input id="continuous" name="continuous" value="1" type="checkbox" style="float:left;margin-top:6px;margin-right:10px;">
+	<img id="con_loading" src="/loading_16.gif" style="float:left;width:16px;height:16px;display:none;margin-top:6px;">
+</div>
+</tbody></table>
+</form>
+
+	<!-- END ARRIS PAGE CONTENT -->
+	</p>
+	</div> <!-- main_body -->
+
+	<div class="push"></div>
+</div> <!-- wrapper -->
+<p>
+<div class="footer">
+&copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+</div>
+</p>
+</body>
+</html>

@@ -27,7 +27,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.c3700.parser import NetgearC3700Parser
+from modems.netgear.c3700.parser import NetgearC3700Parser
 from tests.fixtures import load_fixture
 
 
@@ -386,143 +386,11 @@ class TestMetadata:
         parser = NetgearC3700Parser()
         assert ModemCapability.SYSTEM_UPTIME in parser.capabilities
         assert ModemCapability.LAST_BOOT_TIME in parser.capabilities
-        assert ModemCapability.RESTART in parser.capabilities
+        # Note: RESTART is now an action (check via ActionFactory.supports), not a capability
 
 
-class TestRestart:
-    """Test modem restart functionality."""
-
-    def test_restart_extracts_session_id_and_sends_request(self):
-        """Test that restart fetches RouterStatus.htm, extracts form action, and POSTs."""
-        from unittest.mock import Mock
-
-        parser = NetgearC3700Parser()
-        mock_session = Mock()
-
-        # Mock GET response with form action containing session ID
-        mock_get_response = Mock()
-        mock_get_response.status_code = 200
-        mock_get_response.text = """
-        <html><body>
-        <form action='/goform/RouterStatus?id=123456789' method="post">
-        </form>
-        </body></html>
-        """
-
-        # Mock POST response
-        mock_post_response = Mock()
-        mock_post_response.status_code = 200
-        mock_post_response.text = ""
-
-        mock_session.get.return_value = mock_get_response
-        mock_session.post.return_value = mock_post_response
-
-        result = parser.restart(mock_session, "http://192.168.100.1")
-
-        assert result is True
-        # Should fetch RouterStatus.htm first
-        mock_session.get.assert_called_once_with(
-            "http://192.168.100.1/RouterStatus.htm",
-            timeout=10,
-        )
-        # Should POST to URL with session ID
-        mock_session.post.assert_called_once_with(
-            "http://192.168.100.1/goform/RouterStatus?id=123456789",
-            data={"buttonSelect": "2"},
-            timeout=10,
-        )
-
-    def test_restart_falls_back_without_form_action(self):
-        """Test that restart falls back to default URL if form action not found."""
-        from unittest.mock import Mock
-
-        parser = NetgearC3700Parser()
-        mock_session = Mock()
-
-        # Mock GET response without form action
-        mock_get_response = Mock()
-        mock_get_response.status_code = 200
-        mock_get_response.text = "<html><body>No form here</body></html>"
-
-        # Mock POST response
-        mock_post_response = Mock()
-        mock_post_response.status_code = 200
-        mock_post_response.text = ""
-
-        mock_session.get.return_value = mock_get_response
-        mock_session.post.return_value = mock_post_response
-
-        result = parser.restart(mock_session, "http://192.168.100.1")
-
-        assert result is True
-        # Should fall back to default URL
-        mock_session.post.assert_called_once_with(
-            "http://192.168.100.1/goform/RouterStatus",
-            data={"buttonSelect": "2"},
-            timeout=10,
-        )
-
-    def test_restart_returns_true_on_connection_drop(self):
-        """Test that restart returns True when connection drops (modem rebooting)."""
-        from http.client import RemoteDisconnected
-        from unittest.mock import Mock
-
-        parser = NetgearC3700Parser()
-        mock_session = Mock()
-
-        # Mock successful GET
-        mock_get_response = Mock()
-        mock_get_response.status_code = 200
-        mock_get_response.text = "<form action='/goform/RouterStatus?id=123'>"
-        mock_session.get.return_value = mock_get_response
-
-        # Mock POST that drops connection (modem rebooting)
-        mock_session.post.side_effect = RemoteDisconnected("Connection dropped")
-
-        result = parser.restart(mock_session, "http://192.168.100.1")
-
-        assert result is True
-
-    def test_restart_returns_false_on_error_status(self):
-        """Test that restart returns False on non-200 POST status."""
-        from unittest.mock import Mock
-
-        parser = NetgearC3700Parser()
-        mock_session = Mock()
-
-        # Mock successful GET
-        mock_get_response = Mock()
-        mock_get_response.status_code = 200
-        mock_get_response.text = "<form action='/goform/RouterStatus?id=123'>"
-        mock_session.get.return_value = mock_get_response
-
-        # Mock failed POST
-        mock_post_response = Mock()
-        mock_post_response.status_code = 403
-        mock_post_response.text = "Forbidden"
-        mock_session.post.return_value = mock_post_response
-
-        result = parser.restart(mock_session, "http://192.168.100.1")
-
-        assert result is False
-
-    def test_restart_returns_false_if_status_page_fails(self):
-        """Test that restart returns False if RouterStatus.htm fetch fails."""
-        from unittest.mock import Mock
-
-        parser = NetgearC3700Parser()
-        mock_session = Mock()
-
-        # Mock failed GET
-        mock_get_response = Mock()
-        mock_get_response.status_code = 401
-        mock_session.get.return_value = mock_get_response
-
-        result = parser.restart(mock_session, "http://192.168.100.1")
-
-        assert result is False
-        # Should not attempt POST if GET failed
-        mock_session.post.assert_not_called()
+# Note: TestRestart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_html.py for HTML restart action tests
 
 
 class TestUptimeParsing:

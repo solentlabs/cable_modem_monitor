@@ -1,4 +1,4 @@
-.PHONY: help sync test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
+.PHONY: help sync test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell mock
 
 # Default target - show help
 help:
@@ -8,6 +8,7 @@ help:
 	@echo "  make test        - Run full test suite with coverage (creates venv)"
 	@echo "  make test-quick  - Quick test run (assumes venv exists)"
 	@echo "  make test-simple - Simple test without venv (global install)"
+	@echo "  make mock MODEM=g54 - Run mock server (e.g., g54, mb7621, sb8200)"
 	@echo "  make clean       - Remove test artifacts and cache files"
 	@echo ""
 	@echo "Code Quality:"
@@ -53,6 +54,11 @@ test-quick: sync
 # Simple test without venv
 test-simple:
 	@bash scripts/dev/test_simple.sh
+
+# Run mock modem server for manual testing
+# Usage: make mock MODEM=g54
+mock:
+	@python3 scripts/mock_modem.py $(MODEM)
 
 # Clean test artifacts
 clean:
@@ -116,32 +122,28 @@ validate-host:
 validate-ci:
 	@./scripts/ci-check.sh
 
-# Deploy to Home Assistant
-deploy:
-	@bash scripts/maintenance/deploy_updates.sh
-
 # Sync version numbers
 sync-version:
 	@python3 scripts/maintenance/update_versions.py
 
 # Docker development environment
 docker-start:
-	@bash scripts/dev/docker-dev.sh start
+	@python3 scripts/dev/ha-sync-run.py
 
 docker-stop:
-	@bash scripts/dev/docker-dev.sh stop
+	@docker compose -f docker-compose.test.yml down
 
 docker-restart:
-	@bash scripts/dev/docker-dev.sh restart
+	@docker restart ha-cable-modem-test
 
 docker-logs:
-	@bash scripts/dev/docker-dev.sh logs
+	@docker logs -f ha-cable-modem-test
 
 docker-status:
-	@bash scripts/dev/docker-dev.sh status
+	@docker ps -a --filter name=ha-cable-modem-test
 
 docker-shell:
-	@bash scripts/dev/docker-dev.sh shell
+	@docker exec -it ha-cable-modem-test bash
 
 docker-clean:
-	@bash scripts/dev/docker-dev.sh clean
+	@docker compose -f docker-compose.test.yml down -v && echo "Volumes removed"

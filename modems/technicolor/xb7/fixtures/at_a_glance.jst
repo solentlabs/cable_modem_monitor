@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+    Technicolor XB7 - at_a_glance.jst (Post-Login Landing Page)
+
+    PROVENANCE: Generated fixture for mock server testing
+    ========================================================
+    This is NOT captured from a real device. It was created to allow
+    the mock modem server to complete the form auth redirect flow.
+
+    Auth Flow (from Issue #2 - @esand):
+    1. Login form POSTs to /check.jst
+    2. Success redirects to /at_a_glance.jst (this page)
+    3. User navigates to /network_setup.jst for data
+
+    The real at_a_glance.jst page shows a dashboard overview.
+    This minimal version just needs to:
+    - Return HTTP 200
+    - NOT contain a login form (so auth detection knows login succeeded)
+
+    If you have access to a real XB7, please capture the actual page
+    and replace this file. See docs/MODEM_REQUEST.md for instructions.
+
+    Related: https://github.com/solentlabs/cable_modem_monitor/issues/2
+    Created: 2026-01-27 for v3.13.0-beta.5
+-->
+<html>
+<head>
+    <title>Technicolor XB7 - At A Glance</title>
+</head>
+<body>
+    <div id="content">
+        <h1>Gateway At A Glance</h1>
+        <p>Connection Status: Online</p>
+        <p>For detailed channel information, see Network Setup.</p>
+    </div>
+</body>
+</html>

@@ -70,7 +70,7 @@ class TestBasicAuthIntegration:
             base_url=basic_auth_server.url,
             data_url=f"{basic_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -128,7 +128,7 @@ class TestFormAuthIntegration:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -155,7 +155,7 @@ class TestHNAPAuthIntegration:
             base_url=hnap_auth_server.url,
             data_url=f"{hnap_auth_server.url}/Login.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -195,7 +195,7 @@ class TestRedirectAuthIntegration:
             base_url=redirect_auth_server.url,
             data_url=f"{redirect_auth_server.url}/status",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -241,7 +241,7 @@ class TestFormConfigSerialization:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -281,7 +281,7 @@ class TestSessionPersistence:
             base_url=form_auth_server.url,
             data_url=f"{form_auth_server.url}/status.html",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
         )
 
@@ -390,7 +390,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=parser_without_hint,
         )
 
@@ -410,9 +410,10 @@ class TestVerificationUrlIntegration:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect  # From modem.yaml
+        form_config = config.auth.types.get("form")
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect  # From modem.yaml
 
         session = requests.Session()
         session.verify = False
@@ -422,7 +423,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",  # Base URL still
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -437,9 +438,10 @@ class TestVerificationUrlIntegration:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect
+        form_config = config.auth.types.get("form")
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect
 
         session = requests.Session()
         session.verify = False
@@ -449,7 +451,7 @@ class TestVerificationUrlIntegration:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -495,8 +497,9 @@ class TestModemYamlDrivenAuthDiscovery:
 
         # Get verification URL and form hints from config
         verification_url = None
-        if config.auth.form and config.auth.form.success:
-            verification_url = config.auth.form.success.redirect
+        form_config = config.auth.types.get("form")
+        if form_config and form_config.success:
+            verification_url = form_config.success.redirect
 
         # Create mock parser with form hints from modem.yaml
         mock_parser = MagicMock()
@@ -522,7 +525,7 @@ class TestModemYamlDrivenAuthDiscovery:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             verification_url=verification_url,
         )
@@ -549,7 +552,7 @@ class TestModemYamlDrivenAuthDiscovery:
         from custom_components.cable_modem_monitor.modem_config import load_modem_config
 
         config = load_modem_config(mb7621_modem_server.modem_path)
-        form_config = config.auth.form
+        form_config = config.auth.types.get("form")
         assert form_config is not None, "MB7621 must have form auth"
         assert form_config.success is not None, "MB7621 must have success config"
 
@@ -557,7 +560,7 @@ class TestModemYamlDrivenAuthDiscovery:
         import base64
         from urllib.parse import quote
 
-        password = "password"
+        password = "pw"
         encoded_password = base64.b64encode(quote(password).encode()).decode()
 
         login_data = {

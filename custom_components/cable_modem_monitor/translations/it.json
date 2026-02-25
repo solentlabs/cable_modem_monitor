@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "Impostazioni Cable Modem",
-        "description": "Attuale: {detected_modem}\nUltimo controllo: {last_detection}",
+        "description": "Attuale: {detected_modem}\nUltimo controllo: {parser_selected_at}",
         "data": {
           "host": "IP del modem",
           "username": "Nome utente",

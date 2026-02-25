@@ -61,11 +61,13 @@ class TestVersionLogging:
 
         # Mock the necessary components
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser,
+            patch("custom_components.cable_modem_monitor.get_auth_adapter_for_parser") as mock_get_adapter,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
             patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
             caplog.at_level(logging.INFO),
         ):
@@ -73,7 +75,14 @@ class TestVersionLogging:
             mock_parser_class = Mock()
             mock_parser_class.return_value = Mock()
             mock_get_parser.return_value = mock_parser_class
-            mock_health.return_value = Mock()
+
+            # Mock adapter with get_timeout and get_docsis_version methods
+            mock_adapter = Mock()
+            mock_adapter.get_timeout.return_value = 10
+            mock_adapter.get_docsis_version.return_value = "3.1"
+            mock_get_adapter.return_value = mock_adapter
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -91,195 +100,20 @@ class TestVersionLogging:
 
     def test_version_constant_format(self):
         """Test that VERSION constant is in correct format."""
-        # Version should be semantic versioning format: X.Y.Z
-        parts = VERSION.split(".")
-        assert len(parts) == 3
-        assert all(part.isdigit() for part in parts)
+        import re
+
+        # Version should be semantic versioning: X.Y.Z or X.Y.Z-beta.N
+        pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
+        assert re.match(pattern, VERSION), f"Invalid version format: {VERSION}"
 
     def test_current_version(self):
-        """Test that version is the correct current version."""
-        assert VERSION == "3.12.1"
+        """Test that version is the correct current version.
 
-
-class TestParserSelectionOptimization:
-    """Test parser selection optimization during startup."""
-
-    @pytest.mark.asyncio
-    async def test_specific_modem_uses_get_parser_by_name(self):
-        """Test that specific modem choice uses fast get_parser_by_name."""
-        # Create a mock HomeAssistant instance
-        hass = Mock(spec=HomeAssistant)
-        hass.data = {}
-
-        # Mock async_add_executor_job to execute the function and return the result
-        async def mock_executor(func, *args):
-            return func(*args)
-
-        hass.async_add_executor_job = mock_executor
-
-        # Mock config_entries
-        hass.config_entries = Mock()
-        hass.config_entries.async_forward_entry_setups = AsyncMock()
-
-        # Mock services
-        hass.services = Mock()
-        hass.services.has_service = Mock(return_value=False)
-        hass.services.async_register = Mock()
-
-        mock_entry = Mock(spec=ConfigEntry)
-        mock_entry.data = {
-            CONF_HOST: "192.168.100.1",
-            CONF_MODEM_CHOICE: "[MFG] [Model]",  # Specific choice
-            CONF_WORKING_URL: "http://192.168.100.1/MotoConnection.asp",
-        }
-        mock_entry.entry_id = "test_entry"
-        mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
-
-        with (
-            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
-            patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
-            patch("custom_components.cable_modem_monitor._update_device_registry"),
-            patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
-        ):
-            # Setup mocks
-            mock_parser_class = Mock()
-            mock_parser_instance = Mock()
-            mock_parser_class.return_value = mock_parser_instance
-            mock_get_parser_by_name.return_value = mock_parser_class
-            mock_health.return_value = Mock()
-
-            # Create coordinator mock with async method
-            coordinator_instance = Mock()
-            coordinator_instance.async_config_entry_first_refresh = AsyncMock()
-            mock_coordinator.return_value = coordinator_instance
-
-            mock_forward.return_value = AsyncMock()
-
-            await async_setup_entry(hass, mock_entry)
-
-            # Verify get_parser_by_name was called (fast path)
-            mock_get_parser_by_name.assert_called_once_with("[MFG] [Model]")
-
-            # Verify get_parsers was NOT called (no full discovery)
-            mock_get_parsers.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_auto_mode_uses_get_parsers(self):
-        """Test that auto mode uses get_parsers for discovery."""
-        # Create a mock HomeAssistant instance
-        hass = Mock(spec=HomeAssistant)
-        hass.data = {}
-
-        # Mock async_add_executor_job to execute the function and return the result
-        async def mock_executor(func, *args):
-            return func(*args)
-
-        hass.async_add_executor_job = mock_executor
-
-        # Mock config_entries
-        hass.config_entries = Mock()
-        hass.config_entries.async_forward_entry_setups = AsyncMock()
-
-        # Mock services
-        hass.services = Mock()
-        hass.services.has_service = Mock(return_value=False)
-        hass.services.async_register = Mock()
-
-        mock_entry = Mock(spec=ConfigEntry)
-        mock_entry.data = {
-            CONF_HOST: "192.168.100.1",
-            CONF_MODEM_CHOICE: "auto",  # Auto mode
-        }
-        mock_entry.entry_id = "test_entry"
-        mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
-
-        with (
-            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
-            patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
-            patch("custom_components.cable_modem_monitor._update_device_registry"),
-            patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
-        ):
-            # Setup mocks
-            mock_get_parsers.return_value = []
-            mock_health.return_value = Mock()
-
-            # Create coordinator mock with async method
-            coordinator_instance = Mock()
-            coordinator_instance.async_config_entry_first_refresh = AsyncMock()
-            mock_coordinator.return_value = coordinator_instance
-
-            mock_forward.return_value = AsyncMock()
-
-            await async_setup_entry(hass, mock_entry)
-
-            # Verify get_parsers was called (need all parsers for auto)
-            mock_get_parsers.assert_called_once()
-
-            # Verify get_parser_by_name was NOT called
-            mock_get_parser_by_name.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_fallback_to_auto_if_parser_not_found(self, caplog):
-        """Test fallback to auto mode if specific parser not found."""
-        # Create a mock HomeAssistant instance
-        hass = Mock(spec=HomeAssistant)
-        hass.data = {}
-
-        # Mock async_add_executor_job to execute the function and return the result
-        async def mock_executor(func, *args):
-            return func(*args)
-
-        hass.async_add_executor_job = mock_executor
-
-        # Mock config_entries
-        hass.config_entries = Mock()
-        hass.config_entries.async_forward_entry_setups = AsyncMock()
-
-        # Mock services
-        hass.services = Mock()
-        hass.services.has_service = Mock(return_value=False)
-        hass.services.async_register = Mock()
-
-        mock_entry = Mock(spec=ConfigEntry)
-        mock_entry.data = {
-            CONF_HOST: "192.168.100.1",
-            CONF_MODEM_CHOICE: "Invalid Parser Name",
-        }
-        mock_entry.entry_id = "test_entry"
-        mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
-
-        with (
-            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser_by_name,
-            patch("custom_components.cable_modem_monitor.get_parsers") as mock_get_parsers,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
-            patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
-            patch("custom_components.cable_modem_monitor._update_device_registry"),
-            patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
-            caplog.at_level(logging.WARNING),
-        ):
-            # Setup mocks
-            mock_get_parser_by_name.return_value = None  # Parser not found
-            mock_get_parsers.return_value = []
-            mock_health.return_value = Mock()
-
-            # Create coordinator mock with async method
-            coordinator_instance = Mock()
-            coordinator_instance.async_config_entry_first_refresh = AsyncMock()
-            mock_coordinator.return_value = coordinator_instance
-
-            mock_forward.return_value = AsyncMock()
-
-            await async_setup_entry(hass, mock_entry)
-
-            # Should log warning
-            assert any("not found" in record.message for record in caplog.records)
-
-            # Should fall back to get_parsers
-            mock_get_parsers.assert_called_once()
+        IMPORTANT: Do not edit this version manually!
+        Use: python scripts/release.py <version>
+        The script updates const.py, manifest.json, and this file.
+        """
+        assert VERSION == "3.13.0"
 
 
 class TestProtocolOptimizationIntegration:
@@ -287,7 +121,7 @@ class TestProtocolOptimizationIntegration:
 
     @pytest.mark.asyncio
     async def test_cached_url_passed_to_scraper(self):
-        """Test that cached working URL is passed to ModemScraper."""
+        """Test that cached working URL is passed to DataOrchestrator."""
         # Create a mock HomeAssistant instance
         hass = Mock(spec=HomeAssistant)
         hass.data = {}
@@ -318,12 +152,14 @@ class TestProtocolOptimizationIntegration:
         mock_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
 
         with (
-            patch("custom_components.cable_modem_monitor.parsers.get_parser_by_name") as mock_get_parser,
-            patch("custom_components.cable_modem_monitor.ModemScraper") as mock_scraper_class,
-            patch("custom_components.cable_modem_monitor._create_health_monitor") as mock_health,
+            patch("custom_components.cable_modem_monitor.get_parser_by_name") as mock_get_parser,
+            patch("custom_components.cable_modem_monitor.get_auth_adapter_for_parser") as mock_get_adapter,
+            patch("custom_components.cable_modem_monitor.DataOrchestrator") as mock_scraper_class,
+            patch("custom_components.cable_modem_monitor.create_health_monitor") as mock_health,
             patch("custom_components.cable_modem_monitor.DataUpdateCoordinator") as mock_coordinator,
             patch("custom_components.cable_modem_monitor._update_device_registry"),
             patch("custom_components.cable_modem_monitor.async_migrate_docsis30_entities", return_value=0),
+            patch("custom_components.cable_modem_monitor.perform_initial_refresh") as mock_refresh,
             patch("homeassistant.config_entries.ConfigEntries.async_forward_entry_setups") as mock_forward,
         ):
             # Setup mocks
@@ -332,7 +168,14 @@ class TestProtocolOptimizationIntegration:
             mock_parser_class.return_value = mock_parser_instance
             mock_get_parser.return_value = mock_parser_class
             mock_scraper_class.return_value = Mock()
-            mock_health.return_value = Mock()
+
+            # Mock adapter with get_timeout and get_docsis_version methods
+            mock_adapter = Mock()
+            mock_adapter.get_timeout.return_value = 10
+            mock_adapter.get_docsis_version.return_value = "3.1"
+            mock_get_adapter.return_value = mock_adapter
+            mock_health.return_value = AsyncMock(return_value=Mock())
+            mock_refresh.return_value = AsyncMock()
 
             # Create coordinator mock with async method
             coordinator_instance = Mock()
@@ -343,7 +186,7 @@ class TestProtocolOptimizationIntegration:
 
             await async_setup_entry(hass, mock_entry)
 
-            # Verify ModemScraper was called with cached_url
+            # Verify DataOrchestrator was called with cached_url
             call_args = mock_scraper_class.call_args
             assert call_args is not None
             assert call_args.kwargs.get("cached_url") == cached_url

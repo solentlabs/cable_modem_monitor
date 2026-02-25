@@ -21,7 +21,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.cm2000.parser import NetgearCM2000Parser
+from modems.netgear.cm2000.parser import NetgearCM2000Parser
 from tests.fixtures import fixture_exists, load_fixture
 
 
@@ -58,7 +58,8 @@ class TestCM2000Detection:
         # The meta description should contain CM2000
         meta = soup.find("meta", attrs={"name": "description"})
         assert meta is not None
-        assert "CM2000" in meta.get("content", "")
+        content = meta.get("content", "")
+        assert isinstance(content, str) and "CM2000" in content
 
     def test_does_not_match_cm600(self):
         """Test that CM2000 parser doesn't match CM600 HTML via HintMatcher.
@@ -134,8 +135,40 @@ class TestCM2000Metadata:
         adapter = get_auth_adapter_for_parser("NetgearCM2000Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "loginName"
         assert hints.get("password_field") == "loginPassword"
+
+    def test_uses_form_dynamic_auth_type(self):
+        """Test CM2000 uses form_dynamic auth for dynamic login URL extraction.
+
+        Issue #38: CM2000 login form has a dynamic action URL that changes per
+        page load (e.g., /goform/Login?id=XXXXXXXXXX). The form_dynamic strategy
+        fetches the login page first and extracts the actual action URL.
+        """
+        from custom_components.cable_modem_monitor.modem_config.adapter import (
+            get_auth_adapter_for_parser,
+        )
+
+        adapter = get_auth_adapter_for_parser("NetgearCM2000Parser")
+        assert adapter is not None
+
+        # Verify form_dynamic is the auth type
+        auth_types = adapter.get_available_auth_types()
+        assert "form_dynamic" in auth_types
+
+        # Get the form_dynamic config
+        config = adapter.get_auth_config_for_type("form_dynamic")
+        assert config is not None
+
+        # form_dynamic-specific fields
+        assert config.get("login_page") == "/"
+        assert config.get("form_selector") == "form[name='loginform']"
+
+        # Standard form fields (inherited from FormAuthConfig)
+        assert config.get("username_field") == "loginName"
+        assert config.get("password_field") == "loginPassword"
+        assert config.get("action") == "/goform/Login"
 
 
 class TestCM2000Parsing:
@@ -202,10 +235,6 @@ class TestCM2000Fixtures:
         """Verify index.htm fixture is present."""
         assert fixture_exists("netgear", "cm2000", "index.htm"), "index.htm fixture should exist"
 
-    def test_readme_exists(self):
-        """Verify README.md is present in fixtures directory."""
-        assert fixture_exists("netgear", "cm2000", "README.md"), "README.md should exist"
-
     def test_docsis_status_fixture_exists(self):
         """Verify DocsisStatus.htm fixture is present."""
         assert fixture_exists("netgear", "cm2000", "DocsisStatus.htm"), "DocsisStatus.htm fixture should exist"
@@ -238,46 +267,8 @@ class TestCM2000SoftwareVersion:
         assert version is None
 
 
-class TestCM2000Restart:
-    """Tests for CM2000 restart functionality."""
-
-    def test_restart_capability_declared(self):
-        """Test that RESTART capability is declared."""
-        from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
-
-        assert ModemCapability.RESTART in NetgearCM2000Parser.capabilities
-
-    def test_restart_extracts_form_action(self, requests_mock):
-        """Test that restart extracts dynamic form action from RouterStatus.htm."""
-        import re
-
-        parser = NetgearCM2000Parser()
-        import requests
-
-        session = requests.Session()
-        session.verify = False
-        base_url = "https://192.168.100.1"
-
-        # Load actual RouterStatus.htm fixture
-        router_status_html = load_fixture("netgear", "cm2000", "RouterStatus.htm")
-
-        # Mock RouterStatus.htm
-        requests_mock.get(f"{base_url}/RouterStatus.htm", text=router_status_html)
-
-        # Mock the goform POST endpoint
-        requests_mock.register_uri(
-            "POST",
-            re.compile(r".*/goform/RouterStatus.*"),
-            text="<html><body>Rebooting...</body></html>",
-        )
-
-        result = parser.restart(session, base_url)
-
-        assert result is True
-        # Verify POST was made with buttonSelect=2
-        post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
-        assert len(post_requests) == 1
-        assert "buttonSelect=2" in post_requests[0].text
+# Note: TestCM2000Restart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_html.py for HTML restart action tests
 
 
 class TestCM2000OFDMParsing:

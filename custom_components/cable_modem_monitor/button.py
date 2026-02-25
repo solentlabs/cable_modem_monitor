@@ -1,4 +1,21 @@
-"""Button platform for Cable Modem Monitor."""
+"""Button platform for Cable Modem Monitor.
+
+Provides control buttons for modem management:
+
+    ModemRestartButton       Restart modem with post-restart monitoring
+    ResetEntitiesButton      Clear entity registry and reload
+    UpdateModemDataButton    Trigger immediate data refresh
+    CaptureModemDataButton   Capture raw modem data for diagnostics
+
+Architecture:
+    Buttons inherit ModemButtonBase which provides device linking and
+    a _notify() helper for persistent notifications.
+
+    Restart uses coordinator.modem_client (never creates new modem_clients) to
+    ensure proper auth config. Monitoring is delegated to RestartMonitor.
+
+    Capability checking is in modem_config/capabilities.py.
+"""
 
 from __future__ import annotations
 
@@ -8,35 +25,50 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
 
-from .const import CONF_ACTUAL_MODEL, CONF_DETECTED_MODEM, CONF_HOST, DOMAIN
-from .core.modem_scraper import ModemScraper
-from .parsers import get_parser_by_name, get_parsers
+from .const import (
+    CONF_ACTUAL_MODEL,
+    CONF_DETECTED_MODEM,
+    CONF_ENTITY_PREFIX,
+    CONF_HOST,
+    DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
+)
+from .core.restart_monitor import RestartMonitor
+from .modem_config.capabilities import check_restart_support
 
 _LOGGER = logging.getLogger(__name__)
 
+# Notification IDs (single ID per action so updates replace previous)
+_NOTIFY_RESTART = "cable_modem_restart"
+_NOTIFY_RESET = "cable_modem_reset"
+_NOTIFY_UPDATE = "cable_modem_update"
+_NOTIFY_CAPTURE = "cable_modem_capture"
+
 
 class ModemButtonBase(CoordinatorEntity, ButtonEntity):
-    """Base class for modem buttons."""
+    """Base class for modem buttons with device linking and notifications."""
 
     _attr_has_entity_name = True
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the button."""
+        """Initialize the button with coordinator and config entry."""
         super().__init__(coordinator)
         self._entry = entry
 
         # Get modem info from config entry
-        # NOTE: Device name is kept as "Cable Modem" for entity ID stability.
-        # With has_entity_name=True, entity IDs are generated from device name.
         manufacturer = entry.data.get("detected_manufacturer", "Unknown")
         actual_model = entry.data.get(CONF_ACTUAL_MODEL)
         detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
+        host = entry.data.get(CONF_HOST, "")
 
         # Use actual_model if available, otherwise fall back to detected_modem
         # Strip manufacturer prefix to avoid redundancy (e.g., "Motorola MB7621" -> "MB7621")
@@ -44,13 +76,38 @@ class ModemButtonBase(CoordinatorEntity, ButtonEntity):
         if model and manufacturer and model.lower().startswith(manufacturer.lower()):
             model = model[len(manufacturer) :].strip()
 
+        # Device name based on entity_prefix setting (for multi-modem disambiguation)
+        # With has_entity_name=True, entity IDs are generated from device_name + entity_name
+        entity_prefix = entry.data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+        if entity_prefix == ENTITY_PREFIX_MODEL:
+            device_name = f"Cable Modem {model}"
+        elif entity_prefix == ENTITY_PREFIX_IP:
+            sanitized_host = host.replace(".", "_").replace(":", "_")
+            device_name = f"Cable Modem {sanitized_host}"
+        else:
+            device_name = "Cable Modem"
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "Cable Modem",
+            "name": device_name,
             "manufacturer": manufacturer,
             "model": model,
-            "configuration_url": f"http://{entry.data[CONF_HOST]}",
+            "configuration_url": f"http://{host}",
         }
+
+    async def _notify(self, title: str, message: str, notification_id: str) -> None:
+        """Send a persistent notification.
+
+        Args:
+            title: Notification title
+            message: Notification body text
+            notification_id: ID for updates/dismissal (use _NOTIFY_* constants)
+        """
+        await self.hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {"title": title, "message": message, "notification_id": notification_id},
+        )
 
 
 async def async_setup_entry(
@@ -62,7 +119,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
     # Check restart availability once during setup (avoid blocking in property)
-    restart_available = await _check_restart_support(hass, entry)
+    restart_available = await check_restart_support(hass, entry)
 
     # Add control buttons
     # Note: Restart button will show error if modem doesn't support restart
@@ -71,42 +128,22 @@ async def async_setup_entry(
             ModemRestartButton(coordinator, entry, restart_available),
             ResetEntitiesButton(coordinator, entry),
             UpdateModemDataButton(coordinator, entry),
-            CaptureHtmlButton(coordinator, entry),
+            CaptureModemDataButton(coordinator, entry),
         ]
     )
-
-
-async def _check_restart_support(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Check if modem supports restart (run in executor to avoid blocking)."""
-    parser_name = entry.data.get("parser_name", "")
-    detected_modem = entry.data.get("detected_modem", "")
-
-    # Fallback mode doesn't support restart
-    if "Fallback Mode" in parser_name or "Unknown" in detected_modem:
-        return False
-
-    # Check if parser has restart method
-    modem_choice = entry.data.get("modem_choice", "")
-    if modem_choice and modem_choice != "auto":
-
-        def check_parser() -> bool:
-            try:
-                parser_class = get_parser_by_name(modem_choice)
-                return bool(parser_class and hasattr(parser_class, "restart"))
-            except Exception:
-                return False
-
-        return bool(await hass.async_add_executor_job(check_parser))
-
-    # Default to unavailable for safety
-    return False
 
 
 class ModemRestartButton(ModemButtonBase):
     """Button to restart the cable modem."""
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, is_available: bool) -> None:
-        """Initialize the button."""
+        """Initialize the restart button.
+
+        Args:
+            coordinator: Data update coordinator
+            entry: Config entry
+            is_available: Whether modem supports restart
+        """
         super().__init__(coordinator, entry)
         self._attr_name = "Restart Modem"
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
@@ -119,7 +156,7 @@ class ModemRestartButton(ModemButtonBase):
         return self._is_available
 
     @property
-    def extra_state_attributes(self) -> dict:
+    def extra_state_attributes(self) -> dict[str, str]:
         """Return additional state attributes."""
         parser_name = self._entry.data.get("parser_name", "Unknown")
         return {
@@ -129,335 +166,73 @@ class ModemRestartButton(ModemButtonBase):
 
     async def async_press(self) -> None:
         """Handle the button press."""
-        import asyncio
-
         _LOGGER.info("Modem restart button pressed")
 
-        # Get the scraper from the coordinator
-        # We need to access it from the coordinator's update method
-        # For now, we'll create a new scraper instance
-        from .const import (
-            CONF_HOST as HOST_KEY,
-            CONF_PASSWORD,
-            CONF_USERNAME,
-            CONF_WORKING_URL,
-            VERIFY_SSL,
-        )
-
-        host = self._entry.data[HOST_KEY]
-        username = self._entry.data.get(CONF_USERNAME)
-        password = self._entry.data.get(CONF_PASSWORD)
-        cached_url = self._entry.data.get(CONF_WORKING_URL)
-        modem_choice = self._entry.data.get("modem_choice", "auto")
-        # Use hardcoded VERIFY_SSL constant (see const.py for security rationale)
-        verify_ssl = VERIFY_SSL
-
-        # Optimization: Only load the specific parser if user selected one
-        if modem_choice and modem_choice != "auto":
-            parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
-            if parser_class:
-                parser = parser_class()
-                scraper = ModemScraper(host, username, password, parser, cached_url, verify_ssl=verify_ssl)
-            else:
-                # Fallback to all parsers
-                parsers = await self.hass.async_add_executor_job(get_parsers)
-                scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
-        else:
-            # Auto mode - get all parsers (but use cache for speed)
-            parsers = await self.hass.async_add_executor_job(get_parsers)
-            scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
+        # Use coordinator's modem_client (already has full auth config)
+        modem_client = getattr(self.coordinator, "modem_client", None)
+        if not modem_client:
+            _LOGGER.error("No modem_client available - cannot restart modem")
+            await self._notify(
+                "Modem Restart Failed",
+                "Internal error: modem_client not available. Try reloading the integration.",
+                _NOTIFY_RESTART,
+            )
+            return
 
         # Run the restart in an executor since it uses requests (blocking I/O)
-        success = await self.hass.async_add_executor_job(scraper.restart_modem)
+        success = await self.hass.async_add_executor_job(modem_client.restart_modem)
 
         if success:
             _LOGGER.info("Modem restart initiated successfully")
-            # Create a user notification
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restart",
-                    "message": "Modem restart command sent. Monitoring modem status...",
-                    "notification_id": "cable_modem_restart",
-                },
+            await self._notify(
+                "Modem Restart",
+                "Modem restart command sent. Monitoring modem status...",
+                _NOTIFY_RESTART,
             )
 
-            # Start monitoring task
-            asyncio.create_task(self._monitor_restart())
+            # Delegate monitoring to RestartMonitor
+            monitor = RestartMonitor(
+                self.hass,
+                self.coordinator,
+                lambda title, msg: self._notify(title, msg, _NOTIFY_RESTART),
+            )
+            self.hass.async_create_task(monitor.start())
         else:
             _LOGGER.warning("Failed to restart modem - may not be supported by this modem model")
-            # Check if it's an unsupported modem
             detected_modem = self._entry.data.get("detected_modem", "Unknown")
-            # Create an error notification with helpful message
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restart Failed",
-                    "message": (
-                        f"Failed to restart modem. Your modem ({detected_modem}) may not support "
-                        "remote restart. Check logs for details."
-                    ),
-                    "notification_id": "cable_modem_restart_error",
-                },
+            await self._notify(
+                "Modem Restart Failed",
+                f"Failed to restart modem. Your modem ({detected_modem}) may not support "
+                "remote restart. Check logs for details.",
+                _NOTIFY_RESTART,
             )
-
-    async def _wait_for_modem_response(self, max_wait: int) -> tuple[bool, int]:
-        """Phase 1: Wait for modem to respond to HTTP requests.
-
-        Returns:
-            Tuple of (modem_responding, elapsed_time)
-        """
-        import asyncio
-
-        _LOGGER.info("Phase 1: Waiting for modem to respond to HTTP requests...")
-        elapsed_time = 0
-
-        while elapsed_time < max_wait:
-            try:
-                await self.coordinator.async_request_refresh()
-                await asyncio.sleep(10)
-                elapsed_time += 10
-
-                if self.coordinator.last_update_success and self.coordinator.data:
-                    status = self.coordinator.data.get("cable_modem_connection_status")
-                    _LOGGER.info("Modem responding after %ss (status: %s)", elapsed_time, status)
-                    return True, elapsed_time
-
-                _LOGGER.debug("Modem not responding yet after %ss", elapsed_time)
-            except Exception as e:
-                _LOGGER.debug("Error during phase 1 monitoring: %s", e)
-                await asyncio.sleep(10)
-                elapsed_time += 10
-
-        return False, elapsed_time
-
-    async def _wait_for_channel_sync(self, max_wait: int) -> tuple[bool, int]:
-        """Phase 2: Wait for channels to synchronize.
-
-        Returns:
-            Tuple of (modem_fully_online, phase2_elapsed)
-        """
-        import asyncio
-
-        _LOGGER.info("Phase 2: Modem responding, waiting for channel sync...")
-        phase2_elapsed = 0
-        prev_downstream = 0
-        prev_upstream = 0
-        stable_count = 0
-        grace_period_active = False
-        grace_period_start = 0
-
-        while phase2_elapsed < max_wait:
-            try:
-                await self.coordinator.async_request_refresh()
-                await asyncio.sleep(10)
-                phase2_elapsed += 10
-
-                downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
-                upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-                connection_status = self.coordinator.data.get("cable_modem_connection_status")
-
-                # Check if channels are stable
-                if downstream_count == prev_downstream and upstream_count == prev_upstream:
-                    stable_count += 1
-                else:
-                    stable_count = 0
-                    grace_period_active = False
-                    _LOGGER.info(
-                        "Phase 2: %ss - Channels still synchronizing: %s→%s down, %s→%s up",
-                        phase2_elapsed,
-                        prev_downstream,
-                        downstream_count,
-                        prev_upstream,
-                        upstream_count,
-                    )
-
-                prev_downstream = downstream_count
-                prev_upstream = upstream_count
-
-                # Enter grace period after initial stability
-                if (
-                    connection_status == "online"
-                    and downstream_count > 0
-                    and upstream_count > 0
-                    and stable_count >= 3
-                    and not grace_period_active
-                ):
-                    grace_period_active = True
-                    grace_period_start = phase2_elapsed
-                    _LOGGER.info(
-                        "Phase 2: Channels stable (%s down, %s up), entering 30s grace period",
-                        downstream_count,
-                        upstream_count,
-                    )
-
-                # Check if grace period is complete
-                if grace_period_active and (phase2_elapsed - grace_period_start) >= 30:
-                    _LOGGER.info(
-                        "Modem fully online with stable channels (%s down, %s up)", downstream_count, upstream_count
-                    )
-                    return True, phase2_elapsed
-
-            except Exception as e:
-                _LOGGER.debug("Error during phase 2 monitoring: %s", e)
-                await asyncio.sleep(10)
-                phase2_elapsed += 10
-
-        return False, phase2_elapsed
-
-    async def _send_restart_notification(
-        self, modem_responding: bool, modem_fully_online: bool, total_time: int
-    ) -> None:
-        """Send final notification about restart status."""
-        if not modem_responding:
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restart Timeout",
-                    "message": f"Modem did not respond after {total_time} seconds. Check your modem.",
-                    "notification_id": "cable_modem_restart",
-                },
-            )
-        elif modem_fully_online:
-            downstream_count = self.coordinator.data.get("cable_modem_downstream_channel_count", 0)
-            upstream_count = self.coordinator.data.get("cable_modem_upstream_channel_count", 0)
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restart Complete",
-                    "message": (
-                        f"Modem fully online after {total_time}s with {downstream_count} downstream "
-                        f"and {upstream_count} upstream channels."
-                    ),
-                    "notification_id": "cable_modem_restart",
-                },
-            )
-        else:
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restart Warning",
-                    "message": (
-                        f"Modem responding but channels not fully synced after {total_time}s. "
-                        "This may be normal - check modem status."
-                    ),
-                    "notification_id": "cable_modem_restart",
-                },
-            )
-
-    async def _monitor_restart(self) -> None:
-        """Monitor modem restart and provide status updates."""
-        import asyncio
-        from datetime import timedelta
-
-        _LOGGER.info("Starting modem restart monitoring")
-
-        # Save original update interval
-        original_interval = self.coordinator.update_interval
-
-        try:
-            # Set fast polling (10 seconds)
-            self.coordinator.update_interval = timedelta(seconds=10)
-            _LOGGER.debug("Set polling interval to 10s (original: %s)", original_interval)
-
-            # Wait 5 seconds for modem to go offline
-            await asyncio.sleep(5)
-
-            # Clear auth cache before polling resumes
-            # Modem invalidates all sessions on reboot, so cached credentials become stale
-            if hasattr(self.coordinator, "scraper"):
-                self.coordinator.scraper.clear_auth_cache()
-                _LOGGER.debug("Cleared auth cache after modem restart")
-
-            # Phase 1: Wait for modem to respond (max 2 minutes)
-            phase1_max_wait = 120
-            modem_responding, elapsed_time = await self._wait_for_modem_response(phase1_max_wait)
-
-            if not modem_responding:
-                _LOGGER.error("Phase 1 failed: Modem did not respond after %ss", phase1_max_wait)
-                await self._send_restart_notification(False, False, elapsed_time)
-                return
-
-            # Send intermediate notification
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "Modem Restarting",
-                    "message": f"Modem responding after {elapsed_time}s. Waiting for channels to sync...",
-                    "notification_id": "cable_modem_restart",
-                },
-            )
-
-            # Phase 2: Wait for channels to sync (max 5 minutes)
-            phase2_max_wait = 300
-            modem_fully_online, phase2_elapsed = await self._wait_for_channel_sync(phase2_max_wait)
-
-            # Send final notification
-            total_time = elapsed_time + phase2_elapsed
-            await self._send_restart_notification(modem_responding, modem_fully_online, total_time)
-
-        except Exception as e:
-            _LOGGER.error("Critical error in restart monitoring: %s", e)
-        finally:
-            # ALWAYS restore original polling interval, even if there's an error
-            self.coordinator.update_interval = original_interval
-            _LOGGER.info("Restored polling interval to %s", original_interval)
-            # Force one final refresh with restored interval
-            await self.coordinator.async_request_refresh()
 
 
 class ResetEntitiesButton(ModemButtonBase):
     """Button to reset all entities and reload integration.
 
-    This button is useful for:
-    - Cleaning up after modem replacement (when entity names/counts change)
-    - Fixing entity registry issues or corruption
-    - Starting fresh without deleting the entire integration
+    Use cases:
+    - After modem replacement (entity names/counts changed)
+    - Fixing entity registry issues
+    - Starting fresh without deleting integration
 
-    Home Assistant Data Storage Architecture:
-    =========================================
+    How it works:
+    1. Deletes entities from registry (.storage/core.entity_registry)
+    2. Reloads integration (triggers async_setup_entry)
+    3. Entities recreated with SAME unique_id → SAME entity_id
+    4. Historical data preserved (recorder indexes by entity_id)
 
-    HA stores entity data in TWO separate locations:
-
-    1. Entity Registry (.storage/core.entity_registry)
-       - Metadata: entity names, unique_id, entity_id, enabled state, settings
-       - What this button DELETES
-
-    2. Recorder Database (home-assistant_v2.db)
-       - Historical states, statistics, history graphs
-       - Data indexed by entity_id
-       - What this button DOES NOT touch
-
-    How Reset Works:
-    ================
-    1. Delete all entities from registry (removes metadata)
-    2. Reload integration (triggers async_setup_entry)
-    3. Integration recreates entities with SAME unique_id
-       - unique_id = f"{entry.entry_id}_cable_modem_ping_latency"
-       - entry.entry_id is STABLE (doesn't change unless integration deleted)
-    4. HA generates SAME entity_id from unique_id
-       - entity_id = "sensor.cable_modem_ping_latency"
-    5. Recorder automatically links new entity to existing historical data
-       - Lookup by entity_id matches old data
-
-    Result: Entities reset, automations work, history preserved
+    Result: Fresh entities, automations work, history intact.
     """
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the button."""
+        """Initialize the reset entities button."""
         super().__init__(coordinator, entry)
         self._attr_name = "Reset Entities"
         self._attr_unique_id = f"{entry.entry_id}_reset_entities_button"
         self._attr_icon = "mdi:refresh"
         self._attr_entity_category = EntityCategory.CONFIG
         self._attr_entity_registry_enabled_default = True
-        # Add description to explain what this button does
         self._attr_extra_state_attributes = {
             "description": (
                 "Removes all cable modem entities from the registry and reloads the integration. "
@@ -471,17 +246,7 @@ class ResetEntitiesButton(ModemButtonBase):
         }
 
     async def async_press(self) -> None:
-        """Handle button press - remove all entities and reload integration.
-
-        Process:
-        1. Find all entities for this integration (by platform + config_entry_id)
-        2. Remove from entity registry (entity_reg.async_remove)
-        3. Reload integration (async_reload triggers async_setup_entry)
-        4. Integration recreates entities with same unique_id/entity_id
-        5. Historical data automatically links by entity_id
-        """
-        from homeassistant.helpers import entity_registry as er
-
+        """Handle button press - remove all entities and reload integration."""
         _LOGGER.info("Reset entities button pressed")
 
         entity_reg = er.async_get(self.hass)
@@ -504,18 +269,11 @@ class ResetEntitiesButton(ModemButtonBase):
         _LOGGER.info("Reloading integration to recreate entities")
         await self.hass.config_entries.async_reload(self._entry.entry_id)
 
-        # Create notification
-        await self.hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {
-                "title": "Entity Reset Complete",
-                "message": (
-                    f"Successfully removed {len(entities_to_remove)} entities and reloaded the integration. "
-                    "New entities have been created."
-                ),
-                "notification_id": "cable_modem_reset",
-            },
+        await self._notify(
+            "Entity Reset Complete",
+            f"Successfully removed {len(entities_to_remove)} entities and reloaded the integration. "
+            "New entities have been created.",
+            _NOTIFY_RESET,
         )
 
         _LOGGER.info("Entity reset completed")
@@ -525,7 +283,7 @@ class UpdateModemDataButton(ModemButtonBase):
     """Button to manually trigger modem data update."""
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the button."""
+        """Initialize the update data button."""
         super().__init__(coordinator, entry)
         self._attr_name = "Update Modem Data"
         self._attr_unique_id = f"{entry.entry_id}_update_data_button"
@@ -538,67 +296,44 @@ class UpdateModemDataButton(ModemButtonBase):
         # Trigger coordinator refresh
         await self.coordinator.async_request_refresh()
 
-        # Create notification
-        await self.hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {
-                "title": "Modem Data Update",
-                "message": "Modem data update has been triggered.",
-                "notification_id": "cable_modem_update",
-            },
+        await self._notify(
+            "Modem Data Update",
+            "Modem data update has been triggered.",
+            _NOTIFY_UPDATE,
         )
 
         _LOGGER.info("Modem data update triggered")
 
 
-class CaptureHtmlButton(ModemButtonBase):
-    """Button to capture raw HTML for diagnostics."""
+class CaptureModemDataButton(ModemButtonBase):
+    """Button to capture raw modem data for diagnostics."""
 
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the button."""
+        """Initialize the capture modem data button."""
         super().__init__(coordinator, entry)
-        self._attr_name = "Capture HTML"
-        self._attr_unique_id = f"{entry.entry_id}_capture_html_button"
+        self._attr_name = "Capture Modem Data"
+        self._attr_unique_id = f"{entry.entry_id}_capture_modem_data_button"
         self._attr_icon = "mdi:file-code"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     async def async_press(self) -> None:
-        """Handle the button press - capture raw HTML for diagnostics."""
-        _LOGGER.info("Capture HTML button pressed")
+        """Handle the button press - capture raw modem data for diagnostics."""
+        _LOGGER.info("Capture modem data button pressed")
 
-        # Get the scraper components from coordinator
-        from .const import (
-            CONF_HOST as HOST_KEY,
-            CONF_PASSWORD,
-            CONF_USERNAME,
-            CONF_WORKING_URL,
-            VERIFY_SSL,
-        )
+        # Use coordinator's modem_client (already has full auth config)
+        modem_client = getattr(self.coordinator, "modem_client", None)
+        if not modem_client:
+            _LOGGER.error("No modem_client available - cannot capture modem data")
+            await self._notify(
+                "Capture Failed",
+                "Internal error: modem_client not available. Try reloading the integration.",
+                _NOTIFY_CAPTURE,
+            )
+            return
 
-        host = self._entry.data[HOST_KEY]
-        username = self._entry.data.get(CONF_USERNAME)
-        password = self._entry.data.get(CONF_PASSWORD)
-        cached_url = self._entry.data.get(CONF_WORKING_URL)
-        modem_choice = self._entry.data.get("modem_choice", "auto")
-        verify_ssl = VERIFY_SSL
-
-        # Load parser (same logic as restart button)
-        if modem_choice and modem_choice != "auto":
-            parser_class = await self.hass.async_add_executor_job(get_parser_by_name, modem_choice)
-            if parser_class:
-                parser = parser_class()
-                scraper = ModemScraper(host, username, password, parser, cached_url, verify_ssl=verify_ssl)
-            else:
-                parsers = await self.hass.async_add_executor_job(get_parsers)
-                scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
-        else:
-            parsers = await self.hass.async_add_executor_job(get_parsers)
-            scraper = ModemScraper(host, username, password, parsers, cached_url, verify_ssl=verify_ssl)
-
-        # Fetch data with HTML capture enabled
+        # Fetch data with capture enabled
         try:
-            data = await self.hass.async_add_executor_job(scraper.get_modem_data, True)
+            data = await self.hass.async_add_executor_job(modem_client.get_modem_data, True)  # capture_html=True
 
             # Check if capture was successful
             if "_raw_html_capture" in data:
@@ -607,46 +342,33 @@ class CaptureHtmlButton(ModemButtonBase):
                 total_size = sum(url.get("size_bytes", 0) for url in capture.get("urls", []))
                 size_kb = total_size / 1024
 
-                # Update coordinator data with the capture
-                # This makes it available to diagnostics for the next 5 minutes
+                # Store capture in coordinator.data for diagnostics download.
+                # This is intentional mutation - capture is ephemeral user-triggered
+                # data that must survive until the user downloads diagnostics (5 min TTL).
                 if self.coordinator.data:
                     self.coordinator.data["_raw_html_capture"] = capture
 
-                _LOGGER.info("HTML capture successful: %d URLs, %.1f KB total", url_count, size_kb)
+                _LOGGER.info("Modem data capture successful: %d URLs, %.1f KB total", url_count, size_kb)
 
-                await self.hass.services.async_call(
-                    "persistent_notification",
-                    "create",
-                    {
-                        "title": "HTML Capture Complete",
-                        "message": (
-                            f"Captured {url_count} page(s) ({size_kb:.1f} KB). "
-                            "Download diagnostics within 5 minutes to retrieve the data. "
-                            "Go to: Settings → Devices → Cable Modem → Download Diagnostics."
-                        ),
-                        "notification_id": "cable_modem_html_capture",
-                    },
+                await self._notify(
+                    "Capture Complete",
+                    f"Captured {url_count} page(s) ({size_kb:.1f} KB). "
+                    "Download diagnostics within 5 minutes to retrieve the data. "
+                    "Go to: Settings → Devices → Cable Modem → Download Diagnostics.",
+                    _NOTIFY_CAPTURE,
                 )
             else:
-                _LOGGER.warning("HTML capture failed - no data captured")
-                await self.hass.services.async_call(
-                    "persistent_notification",
-                    "create",
-                    {
-                        "title": "HTML Capture Failed",
-                        "message": "Failed to capture HTML data. Check logs for details.",
-                        "notification_id": "cable_modem_html_capture",
-                    },
+                _LOGGER.warning("Modem data capture failed - no data captured")
+                await self._notify(
+                    "Capture Failed",
+                    "Failed to capture modem data. Check logs for details.",
+                    _NOTIFY_CAPTURE,
                 )
 
         except Exception as e:
-            _LOGGER.error("Error during HTML capture: %s", e, exc_info=True)
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "title": "HTML Capture Error",
-                    "message": f"Error capturing HTML: {str(e)}",
-                    "notification_id": "cable_modem_html_capture",
-                },
+            _LOGGER.error("Error during modem data capture: %s", e, exc_info=True)
+            await self._notify(
+                "Capture Error",
+                f"Error capturing modem data: {e!s}",
+                _NOTIFY_CAPTURE,
             )

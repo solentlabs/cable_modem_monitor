@@ -11,6 +11,7 @@ from custom_components.cable_modem_monitor.core.auth import (
     AuthStrategyType,
     BasicHttpAuthStrategy,
     FormAuthConfig,
+    FormDynamicAuthStrategy,
     FormPlainAuthStrategy,
     HNAPSessionAuthStrategy,
     HNAPSoapAuthConfig,
@@ -20,6 +21,9 @@ from custom_components.cable_modem_monitor.core.auth import (
     UrlTokenSessionConfig,
     UrlTokenSessionStrategy,
 )
+
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
 
 
 @pytest.fixture
@@ -42,6 +46,7 @@ def form_auth_config():
         username_field="username",
         password_field="password",
         success_indicator="/status.asp",
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -204,6 +209,7 @@ class TestFormPlainAuthStrategy:
             username_field="username",
             password_field="password",
             success_indicator="1000",  # Response must be > 1000 bytes
+            timeout=TEST_TIMEOUT,
         )
 
         strategy = FormPlainAuthStrategy()
@@ -219,6 +225,39 @@ class TestFormPlainAuthStrategy:
 
         assert success is True
 
+    def test_form_auth_no_indicator_returns_html_when_not_login_page(self, mock_session):
+        """Test form auth returns HTML when no success_indicator and response is not a login page.
+
+        This is the CGA2121 scenario: form auth redirects to DOCSIS status page,
+        no success_indicator configured, response should be returned for discovery validation.
+        Regression test for issue #75.
+        """
+        # Config WITHOUT success_indicator (like CGA2121)
+        config = FormAuthConfig(
+            strategy=AuthStrategyType.FORM_PLAIN,
+            login_url="/goform/logon",
+            username_field="username_login",
+            password_field="password_login",
+            timeout=TEST_TIMEOUT,
+            # No success_indicator - relies on is_login_page() check
+        )
+
+        strategy = FormPlainAuthStrategy()
+
+        # Mock response that is NOT a login page (DOCSIS status page after redirect)
+        mock_response = MagicMock()
+        mock_response.url = "http://192.168.1.1/st_docsis.html"
+        mock_response.text = "<html><h2>Downstream Channels</h2><table>...</table></html>"
+        mock_response.status_code = 200
+        mock_session.post.return_value = mock_response
+
+        result = strategy.login(mock_session, "http://192.168.1.1", "admin", "password", config)
+
+        assert result.success is True
+        # CRITICAL: HTML must be returned for discovery validation to work
+        assert result.response_html is not None
+        assert "Downstream Channels" in result.response_html
+
 
 class TestRedirectFormAuthStrategy:
     """Test RedirectFormAuthStrategy."""
@@ -233,6 +272,7 @@ class TestRedirectFormAuthStrategy:
             password_field="password",
             success_redirect_pattern="/home.jst",
             authenticated_page_url="/network_setup.jst",
+            timeout=TEST_TIMEOUT,
         )
 
     def test_redirect_form_success(self, mock_session, redirect_form_config):
@@ -511,6 +551,7 @@ class TestAuthStrategyFactoryPattern:
             NoAuthStrategy,
             BasicHttpAuthStrategy,
             FormPlainAuthStrategy,
+            FormDynamicAuthStrategy,
             RedirectFormAuthStrategy,
             HNAPSessionAuthStrategy,
             UrlTokenSessionStrategy,
@@ -755,8 +796,12 @@ class TestGetCookieSafe:
         result = get_cookie_safe(session, "nonexistent")
         assert result is None
 
-    def test_three_or_more_cookies_raises_error(self):
-        """Test that 3+ cookies with same name raises ValueError with details."""
+    def test_three_or_more_cookies_returns_root_path(self):
+        """Test that 3+ cookies with same name returns root path value.
+
+        This handles edge cases like Cox Business firmware that may set
+        multiple sessionId cookies with different paths.
+        """
         import time
         from http.cookiejar import Cookie
 
@@ -787,9 +832,6 @@ class TestGetCookieSafe:
             )
             session.cookies.set_cookie(cookie)
 
-        with pytest.raises(ValueError) as exc_info:
-            get_cookie_safe(session, "sessionId")
-
-        assert "3 cookies" in str(exc_info.value)
-        assert "sessionId" in str(exc_info.value)
-        assert "/page1" in str(exc_info.value)
+        # Should return root path value, not raise error
+        result = get_cookie_safe(session, "sessionId")
+        assert result == "value0"  # Root path "/" gets value0

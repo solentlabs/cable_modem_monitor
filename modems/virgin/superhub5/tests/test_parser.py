@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.virgin.superhub5.parser import (
+from modems.virgin.superhub5.parser import (
     VirginSuperHub5Parser,
 )
 from tests.fixtures import get_fixture_path
@@ -358,13 +358,16 @@ class TestFixtures:
 
     def test_fixtures_exist(self):
         """Verify required fixture files exist."""
+        from pathlib import Path
+
         from tests.fixtures import fixture_exists
 
         assert fixture_exists("virgin", "superhub5", "downstream.json")
         assert fixture_exists("virgin", "superhub5", "upstream.json")
         assert fixture_exists("virgin", "superhub5", "state.json")
-        assert fixture_exists("virgin", "superhub5", "metadata.yaml")
-        assert fixture_exists("virgin", "superhub5", "README.md")
+        # modem.yaml is now in the modem directory, not fixtures
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
     def test_downstream_fixture_valid_json(self, downstream_json):
         """Test downstream fixture is valid JSON with expected structure."""

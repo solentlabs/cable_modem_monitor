@@ -34,6 +34,7 @@ from .configs import (
     AuthConfig,
     BasicAuthConfig,
     FormAuthConfig,
+    FormDynamicAuthConfig,
     HNAPAuthConfig,
     HNAPSoapAuthConfig,
     NoAuthConfig,
@@ -46,6 +47,7 @@ from .handler import AuthHandler
 from .hnap import HNAPJsonRequestBuilder, HNAPRequestBuilder
 from .strategies import (
     BasicHttpAuthStrategy,
+    FormDynamicAuthStrategy,
     FormPlainAuthStrategy,
     HNAPJsonAuthStrategy,
     HNAPSessionAuthStrategy,
@@ -54,6 +56,7 @@ from .strategies import (
     UrlTokenSessionStrategy,
 )
 from .types import AuthErrorType, AuthStrategyType
+from .workflow import AUTH_TYPE_LABELS, AuthWorkflow, AuthWorkflowResult
 
 __all__ = [
     # Base
@@ -63,6 +66,7 @@ __all__ = [
     "AuthConfig",
     "BasicAuthConfig",
     "FormAuthConfig",
+    "FormDynamicAuthConfig",
     "HNAPAuthConfig",
     "HNAPSoapAuthConfig",
     "NoAuthConfig",
@@ -79,11 +83,16 @@ __all__ = [
     "AuthFactory",
     # Handler
     "AuthHandler",
+    # Workflow
+    "AUTH_TYPE_LABELS",
+    "AuthWorkflow",
+    "AuthWorkflowResult",
     # Request Builders
     "HNAPJsonRequestBuilder",
     "HNAPRequestBuilder",
     # Strategies
     "BasicHttpAuthStrategy",
+    "FormDynamicAuthStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",
     "HNAPSessionAuthStrategy",

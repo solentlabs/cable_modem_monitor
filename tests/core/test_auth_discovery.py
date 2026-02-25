@@ -8,6 +8,7 @@ import pytest
 import requests
 
 from custom_components.cable_modem_monitor.core.auth import AuthStrategyType
+from custom_components.cable_modem_monitor.core.auth.detection import has_login_form
 from custom_components.cable_modem_monitor.core.auth.discovery import (
     AuthDiscovery,
     DiscoveredFormConfig,
@@ -89,6 +90,7 @@ def mock_session():
     """Create a mock requests session."""
     session = MagicMock(spec=requests.Session)
     session.verify = False
+    session.cookies = MagicMock()  # Required for HNAP auth which sets cookies
     return session
 
 
@@ -526,6 +528,23 @@ class TestFormIntrospection:
         config = discovery._parse_login_form(html, mock_parser)
         assert config.password_field == "mySecretField"
 
+    def test_find_password_by_type_case_insensitive(self, discovery, mock_parser):
+        """Test finding password field with type='Password' (capital P).
+
+        Regression test for #75: CGA2121 uses type="Password" (capital P) which
+        was not matched by the case-sensitive check. This caused auth discovery
+        to fail.
+        """
+        html = """
+        <form>
+            <input type="text" name="username_login" />
+            <input type="Password" name="password_login" />
+        </form>
+        """
+        config = discovery._parse_login_form(html, mock_parser)
+        assert config is not None, "Form with type='Password' should be parsed"
+        assert config.password_field == "password_login"
+
     def test_hidden_fields_captured(self, discovery, mock_parser):
         """Test that hidden fields are captured from form."""
         html = """
@@ -666,6 +685,29 @@ class TestAuthDiscoveryRedirect:
 class TestAuthDiscoveryHNAP:
     """Test HNAP detection."""
 
+    def _setup_hnap_post_mocks(self, mock_session):
+        """Set up POST response mocks for HNAP two-step authentication."""
+        import json
+
+        # HNAP requires two POST requests: challenge and login
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TESTCHALLENGE1234567890ABCDEF",
+                    "Cookie": "session_cookie_value",
+                    "PublicKey": "TESTPUBLICKEY1234567890ABCDEF",
+                }
+            }
+        )
+
+        login_response = MagicMock()
+        login_response.status_code = 200
+        login_response.text = json.dumps({"LoginResponse": {"LoginResult": "OK"}})
+
+        mock_session.post.side_effect = [challenge_response, login_response]
+
     def test_hnap_detected_by_soapaction_script(self, discovery, mock_session, mock_parser):
         """Test HNAP detection via SOAPAction.js script."""
         mock_parser.parse.return_value = {"downstream": [], "upstream": []}
@@ -682,6 +724,9 @@ class TestAuthDiscoveryHNAP:
         """
         mock_response.url = "http://192.168.100.1/Login.html"
         mock_session.get.return_value = mock_response
+
+        # Set up POST mocks for HNAP authentication
+        self._setup_hnap_post_mocks(mock_session)
 
         result = discovery.discover(
             session=mock_session,
@@ -710,6 +755,9 @@ class TestAuthDiscoveryHNAP:
         """
         mock_response.url = "http://192.168.100.1/Login.html"
         mock_session.get.return_value = mock_response
+
+        # Set up POST mocks for HNAP authentication
+        self._setup_hnap_post_mocks(mock_session)
 
         result = discovery.discover(
             session=mock_session,
@@ -825,7 +873,8 @@ class TestAuthDiscoveryConnectionErrors:
 
     def test_connection_error_returns_failure(self, discovery, mock_session, mock_parser):
         """Test that connection errors return failure."""
-        mock_session.get.side_effect = Exception("Connection refused")
+        # Use OSError (ConnectionRefusedError is a subclass) for realistic simulation
+        mock_session.get.side_effect = OSError("Connection refused")
 
         result = discovery.discover(
             session=mock_session,
@@ -889,16 +938,16 @@ IS_LOGIN_FORM_CASES = [
 
 
 class TestIsLoginForm:
-    """Test login form detection - table-driven."""
+    """Test login form detection - table-driven.
 
-    @pytest.fixture
-    def discovery(self):
-        return AuthDiscovery()
+    Note: Tests now use the shared has_login_form() from detection module.
+    The AuthDiscovery class delegates to this shared function.
+    """
 
     @pytest.mark.parametrize("html,expected,desc", IS_LOGIN_FORM_CASES)
-    def test_is_login_form(self, discovery, html, expected, desc):
+    def test_is_login_form(self, html, expected, desc):
         """Table-driven test for login form detection."""
-        assert discovery._is_login_form(html) is expected, desc
+        assert has_login_form(html) is expected, desc
 
 
 # =============================================================================

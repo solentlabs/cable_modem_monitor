@@ -9,46 +9,127 @@ import pytest
 import requests
 
 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
-from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import _hmac_md5
+from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
+
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
 
 
 class TestHmacMd5:
-    """Test the HMAC-MD5 helper function."""
+    """Test the HMAC method with MD5 algorithm."""
 
-    def test_returns_uppercase_hex(self):
+    @pytest.fixture
+    def md5_builder(self):
+        """Create a builder with MD5 algorithm."""
+        return HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
+        )
+
+    def test_returns_uppercase_hex(self, md5_builder):
         """Test that HMAC-MD5 returns uppercase hexadecimal."""
-        result = _hmac_md5("key", "message")
+        result = md5_builder._hmac("key", "message")
         assert result == result.upper()
         assert all(c in "0123456789ABCDEF" for c in result)
 
-    def test_correct_length(self):
+    def test_correct_length(self, md5_builder):
         """Test that HMAC-MD5 returns 32 character hex string."""
-        result = _hmac_md5("key", "message")
+        result = md5_builder._hmac("key", "message")
         assert len(result) == 32
 
-    def test_known_value(self):
+    def test_known_value(self, md5_builder):
         """Test HMAC-MD5 against known value."""
         # This matches the JavaScript hex_hmac_md5 function behavior
-        result = _hmac_md5("testkey", "testmessage")
+        result = md5_builder._hmac("testkey", "testmessage")
         # Verify it's a valid HMAC-MD5 output
         assert len(result) == 32
         assert result.isupper()
 
-    def test_empty_strings(self):
+    def test_empty_strings(self, md5_builder):
         """Test HMAC-MD5 with empty strings."""
-        result = _hmac_md5("", "")
+        result = md5_builder._hmac("", "")
         assert len(result) == 32
 
-    def test_special_characters(self):
+    def test_special_characters(self, md5_builder):
         """Test HMAC-MD5 with special characters."""
-        result = _hmac_md5("key!@#$%", "message with spaces")
+        result = md5_builder._hmac("key!@#$%", "message with spaces")
         assert len(result) == 32
+
+
+class TestHmacSha256:
+    """Test the HMAC method with SHA256 algorithm."""
+
+    @pytest.fixture
+    def sha256_builder(self):
+        """Create a builder with SHA256 algorithm."""
+        return HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
+        )
+
+    def test_returns_uppercase_hex(self, sha256_builder):
+        """Test that HMAC-SHA256 returns uppercase hexadecimal."""
+        result = sha256_builder._hmac("key", "message")
+        assert result == result.upper()
+        assert all(c in "0123456789ABCDEF" for c in result)
+
+    def test_correct_length(self, sha256_builder):
+        """Test that HMAC-SHA256 returns 64 character hex string."""
+        result = sha256_builder._hmac("key", "message")
+        assert len(result) == 64  # SHA256 produces 64 hex chars vs MD5's 32
+
+    def test_different_from_md5(self, sha256_builder):
+        """Test that SHA256 produces different result than MD5."""
+        md5_builder = HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
+        )
+        sha256_result = sha256_builder._hmac("key", "message")
+        md5_result = md5_builder._hmac("key", "message")
+        assert sha256_result != md5_result
+        assert len(sha256_result) == 64
+        assert len(md5_result) == 32
+
+
+class TestHmacAlgorithmValidation:
+    """Test algorithm type safety in builder initialization."""
+
+    def test_enum_value_stored(self):
+        """Test that enum value is stored correctly."""
+        builder = HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
+        )
+        assert builder.hmac_algorithm == HMACAlgorithm.SHA256
+
+    def test_md5_enum_value_stored(self):
+        """Test that MD5 enum value is stored correctly."""
+        builder = HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
+        )
+        assert builder.hmac_algorithm == HMACAlgorithm.MD5
 
 
 @pytest.fixture
 def builder():
-    """Create a JSON HNAP request builder instance."""
-    return HNAPJsonRequestBuilder(endpoint="/HNAP1/", namespace="http://purenetworks.com/HNAP1/")
+    """Create a JSON HNAP request builder instance with MD5 algorithm."""
+    return HNAPJsonRequestBuilder(
+        endpoint="/HNAP1/",
+        namespace="http://purenetworks.com/HNAP1/",
+        hmac_algorithm=HMACAlgorithm.MD5,
+        timeout=TEST_TIMEOUT,
+    )
 
 
 @pytest.fixture
@@ -64,19 +145,31 @@ class TestHNAPJsonRequestBuilderInit:
     """Test JSON HNAP builder initialization."""
 
     def test_init(self):
-        """Test initialization with endpoint and namespace."""
-        builder = HNAPJsonRequestBuilder(endpoint="/HNAP1/", namespace="http://purenetworks.com/HNAP1/")
+        """Test initialization with endpoint, namespace, and algorithm."""
+        builder = HNAPJsonRequestBuilder(
+            endpoint="/HNAP1/",
+            namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
+        )
 
         assert builder.endpoint == "/HNAP1/"
         assert builder.namespace == "http://purenetworks.com/HNAP1/"
+        assert builder.hmac_algorithm == HMACAlgorithm.MD5
         assert builder._private_key is None
 
     def test_init_custom_values(self):
         """Test initialization with custom endpoint and namespace."""
-        builder = HNAPJsonRequestBuilder(endpoint="/api/hnap", namespace="http://custom.com/")
+        builder = HNAPJsonRequestBuilder(
+            endpoint="/api/hnap",
+            namespace="http://custom.com/",
+            hmac_algorithm=HMACAlgorithm.SHA256,
+            timeout=TEST_TIMEOUT,
+        )
 
         assert builder.endpoint == "/api/hnap"
         assert builder.namespace == "http://custom.com/"
+        assert builder.hmac_algorithm == HMACAlgorithm.SHA256
 
 
 class TestHnapAuth:
@@ -250,6 +343,8 @@ class TestCallMultiple:
         builder = HNAPJsonRequestBuilder(
             endpoint="/HNAP1/",
             namespace="http://purenetworks.com/HNAP1/",
+            hmac_algorithm=HMACAlgorithm.MD5,
+            timeout=TEST_TIMEOUT,
             empty_action_value="",
         )
 
@@ -416,8 +511,9 @@ class TestLogin:
 
         builder.login(mock_session, "http://192.168.100.1", "admin", "mypassword")
 
-        # PrivateKey = HMAC_MD5(PublicKey + password, Challenge)
-        expected_private_key = _hmac_md5("TESTPUBKEY" + "mypassword", "TESTCHALLENGE")
+        # PrivateKey = HMAC(PublicKey + password, Challenge)
+        # Use the builder's _hmac method to compute expected value
+        expected_private_key = builder._hmac("TESTPUBKEY" + "mypassword", "TESTCHALLENGE")
         assert builder._private_key == expected_private_key
 
     def test_login_failed_result(self, builder, mock_session):

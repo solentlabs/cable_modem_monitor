@@ -111,5 +111,9 @@ RAW_DATA/
 # Claude Code temporary files
 tmpclaude-*
 
+# curl/libcurl cookie jars
+*.cookies
+cookies.txt
+
 # Windows artifact from /dev/null writes
 nul

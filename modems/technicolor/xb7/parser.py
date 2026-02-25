@@ -18,7 +18,8 @@ class TechnicolorXB7Parser(ModemParser):
 
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse modem data from pre-fetched resources."""
-        soup = resources.get("/")
+        # Prefer specific data page over "/" since auth may redirect to a different page
+        soup = resources.get("/network_setup.jst") or resources.get("/")
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):

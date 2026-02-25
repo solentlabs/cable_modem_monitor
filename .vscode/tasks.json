@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Welcome",
+      "label": "👋 Welcome",
       "type": "shell",
       "command": "bash",
       "args": [
@@ -22,7 +22,7 @@
       }
     },
     {
-      "label": "Run All Tests",
+      "label": "🧪 Run All Tests",
       "type": "shell",
       "command": "make test",
       "group": {
@@ -36,7 +36,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Run Quick Tests",
+      "label": "⚡ Run Quick Tests",
       "type": "shell",
       "command": "make test-quick",
       "group": "test",
@@ -47,7 +47,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Lint Code",
+      "label": "✨ Lint Code",
       "type": "shell",
       "command": "make lint",
       "group": "build",
@@ -58,7 +58,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Format Code",
+      "label": "🎨 Format Code",
       "type": "shell",
       "command": "make format",
       "group": "build",
@@ -81,7 +81,7 @@
       "detail": "Sync modem.yaml and parser.py from modems/ to custom_components/"
     },
     {
-      "label": "Check Docker Status",
+      "label": "🐳 Check Docker Status",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/check-docker.py",
       "presentation": {
@@ -93,10 +93,10 @@
       "detail": "Verify Docker is installed and running before executing Docker commands"
     },
     {
-      "label": "HA: Start (Fresh)",
+      "label": "🚀 HA: Sync & Run",
       "type": "shell",
-      "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py --fresh",
-      "dependsOn": ["Check Docker Status"],
+      "command": "python3 ${workspaceFolder}/scripts/dev/ha-sync-run.py",
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -104,40 +104,14 @@
         "showReuseMessage": false,
         "clear": true
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Sync modem configs, start HA if needed, restart if running"
     },
     {
-      "label": "HA: Start (Keep Data)",
-      "type": "shell",
-      "command": "python3 ${workspaceFolder}/scripts/dev/ha-start.py",
-      "dependsOn": ["Check Docker Status"],
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "HA: Restart (Reload Integration)",
-      "type": "shell",
-      "command": "docker restart ha-cable-modem-test && echo '✅ Home Assistant restarted - integration code reloaded'",
-      "dependsOn": ["Check Docker Status"],
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "showReuseMessage": false
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "HA: Stop",
+      "label": "⏹️ HA: Stop",
       "type": "shell",
       "command": "docker compose -f docker-compose.test.yml down && echo '✅ Home Assistant stopped'",
-      "dependsOn": ["Check Docker Status"],
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -147,10 +121,10 @@
       "problemMatcher": []
     },
     {
-      "label": "HA: View Logs",
+      "label": "📋 HA: View Logs",
       "type": "shell",
       "command": "docker logs -f ha-cable-modem-test",
-      "dependsOn": ["Check Docker Status"],
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -161,10 +135,10 @@
       "isBackground": true
     },
     {
-      "label": "HA: Clean All Data (Reset)",
+      "label": "🗑️ HA: Clean All Data (Reset)",
       "type": "shell",
       "command": "docker compose -f docker-compose.test.yml down -v && docker run --rm -v \"$(pwd)/test-ha-config:/data\" alpine rm -rf /data/* /data/.[!.]* 2>/dev/null; echo '✅ All Home Assistant data cleaned'",
-      "dependsOn": ["Check Docker Status"],
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -174,10 +148,10 @@
       "problemMatcher": []
     },
     {
-      "label": "HA: Check Integration Status",
+      "label": "🔎 HA: Check Integration Status",
       "type": "shell",
       "command": "docker exec ha-cable-modem-test bash -c 'echo \"=== Integration Files ===\"; ls -la /config/custom_components/cable_modem_monitor/ 2>&1 | head -10; echo \"\"; echo \"=== Recent Integration Logs ===\"; grep -i cable_modem /config/home-assistant.log 2>&1 | tail -10 || echo \"No logs found (HA may not have started yet)\"'",
-      "dependsOn": ["Check Docker Status"],
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -188,7 +162,7 @@
       "detail": "Check if the integration is loaded and view any errors"
     },
     {
-      "label": "HA: Fix Port Conflicts",
+      "label": "🛠️ HA: Fix Port Conflicts",
       "type": "shell",
       "command": "bash scripts/dev/ha-cleanup.sh",
       "group": "none",
@@ -201,10 +175,10 @@
       "detail": "Stop any processes using port 8123 and clean up containers"
     },
     {
-      "label": "HA: Diagnose Port 8123",
+      "label": "🩺 HA: Diagnose Port 8123",
       "type": "shell",
       "command": "echo '=== Checking what is using port 8123 ===' && echo '' && echo 'Method 1: lsof' && sudo lsof -i :8123 2>/dev/null || echo 'No results from lsof' && echo '' && echo 'Method 2: netstat' && sudo netstat -tulpn 2>/dev/null | grep 8123 || echo 'No results from netstat' && echo '' && echo 'Method 3: ss' && sudo ss -tulpn 2>/dev/null | grep 8123 || echo 'No results from ss' && echo '' && echo '=== Docker containers ===' && docker ps -a && echo '' && echo '=== Docker networks ===' && docker network ls",
-      "dependsOn": ["Check Docker Status"],
+      "dependsOn": ["🐳 Check Docker Status"],
       "group": "none",
       "presentation": {
         "reveal": "always",
@@ -213,30 +187,6 @@
       },
       "problemMatcher": [],
       "detail": "Show detailed info about what's using port 8123"
-    },
-    {
-      "label": "Start Docker Dev Environment",
-      "type": "shell",
-      "command": "make docker-start",
-      "dependsOn": ["Check Docker Status"],
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Stop Docker Dev Environment",
-      "type": "shell",
-      "command": "make docker-stop",
-      "dependsOn": ["Check Docker Status"],
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": []
     },
     {
       "label": "🚀 Quick Validation (Pre-commit)",
@@ -353,7 +303,7 @@
     {
       "label": "📹 Capture Modem Traffic",
       "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python3 ${workspaceFolder}/scripts/capture_modem.py --ip ${input:modemIP}",
+      "command": "${workspaceFolder}/.venv/bin/har-capture get ${input:modemIP}",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -364,7 +314,7 @@
         "focus": true
       },
       "problemMatcher": [],
-      "detail": "Launch browser to capture modem traffic"
+      "detail": "Launch browser to capture modem traffic (uses har-capture)"
     }
   ],
   "inputs": [

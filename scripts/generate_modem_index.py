@@ -101,11 +101,16 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
     # URL token patterns
     url_token_indicators: set[str] = set()
 
+    # Form AJAX patterns
+    form_ajax_endpoints: set[str] = set()
+
     for config in configs:
         auth = config.get("auth", {})
+        # v3.12+ uses auth.types.{form,hnap,url_token}
+        auth_types = auth.get("types", {})
 
-        # Form auth
-        form = auth.get("form", {})
+        # Form auth - check auth.form (legacy), auth.types.form, and auth.types.form_dynamic
+        form = auth.get("form", {}) or auth_types.get("form", {}) or auth_types.get("form_dynamic", {})
         if form:
             if uf := form.get("username_field"):
                 username_fields.add(uf)
@@ -138,21 +143,26 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
                 if action := strategy_form.get("action"):
                     form_actions.add(action)
 
-        # HNAP auth
-        hnap = auth.get("hnap", {})
+        # HNAP auth - check both auth.hnap (legacy) and auth.types.hnap (v3.12+)
+        hnap = auth.get("hnap", {}) or auth_types.get("hnap", {})
         if hnap:
             if endpoint := hnap.get("endpoint"):
                 hnap_endpoints.add(endpoint)
             if namespace := hnap.get("namespace"):
                 hnap_namespaces.add(namespace)
 
-        # URL token auth
-        url_token = auth.get("url_token", {})
+        # URL token auth - check both auth.url_token and auth.types.url_token
+        url_token = auth.get("url_token", {}) or auth_types.get("url_token", {})
         if url_token:
             if prefix := url_token.get("login_prefix"):
                 url_token_indicators.add(prefix)
             if cookie := url_token.get("session_cookie"):
                 url_token_indicators.add(cookie)
+
+        # Form AJAX auth - check auth.types.form_ajax
+        form_ajax = auth_types.get("form_ajax", {})
+        if form_ajax and (endpoint := form_ajax.get("endpoint")):
+            form_ajax_endpoints.add(endpoint)
 
     return {
         "form": {
@@ -160,6 +170,9 @@ def _aggregate_auth_patterns(configs: list[dict]) -> dict:  # noqa: C901
             "password_fields": sorted(password_fields),
             "actions": sorted(form_actions),
             "encodings": encodings,
+        },
+        "form_ajax": {
+            "endpoints": sorted(form_ajax_endpoints),
         },
         "hnap": {
             "endpoints": sorted(hnap_endpoints),
@@ -224,48 +237,31 @@ def generate_index(modems_root: Path) -> dict:
     return index
 
 
-def _get_committed_index(output_path: Path) -> dict | None:
-    """Get the committed version of index.yaml from git.
-
-    Returns None if file is not tracked or git command fails.
-    """
-    try:
-        # Get path relative to git root
-        rel_path = output_path.relative_to(PROJECT_ROOT)
-        result = subprocess.run(
-            ["git", "show", f"HEAD:{rel_path}"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            loaded: dict | None = yaml.safe_load(result.stdout)
-            return loaded
-    except (subprocess.SubprocessError, ValueError):
-        pass
-    return None
-
-
 def write_index(index: dict, output_path: Path) -> None:
     """Write index to YAML file.
 
-    Only writes if content has changed compared to the committed version.
+    Only writes if content has changed compared to the current file on disk.
     This prevents spurious changes when the script is run multiple times.
 
     Args:
         index: Index dictionary
         output_path: Path to write index file
     """
-    # Compare against committed version (ignoring generated timestamp)
-    committed = _get_committed_index(output_path)
-    if committed:
-        # Compare modems and auth_patterns only (not version or generated)
-        modems_unchanged = committed.get("modems") == index["modems"]
-        auth_unchanged = committed.get("auth_patterns") == index.get("auth_patterns")
-        if modems_unchanged and auth_unchanged:
-            print(f"\nNo content changes to {output_path}")
-            print(f"Total modems indexed: {len(index['modems'])}")
-            return
+    # Compare against current file on disk (ignoring generated timestamp)
+    if output_path.exists():
+        try:
+            with open(output_path) as f:
+                current = yaml.safe_load(f)
+            if current:
+                # Compare modems and auth_patterns only (not version or generated)
+                modems_unchanged = current.get("modems") == index["modems"]
+                auth_unchanged = current.get("auth_patterns") == index.get("auth_patterns")
+                if modems_unchanged and auth_unchanged:
+                    print(f"\nNo content changes to {output_path}")
+                    print(f"Total modems indexed: {len(index['modems'])}")
+                    return
+        except (yaml.YAMLError, OSError):
+            pass  # File corrupted or unreadable, regenerate
 
     # Custom YAML representer for cleaner output
     def str_representer(dumper, data):

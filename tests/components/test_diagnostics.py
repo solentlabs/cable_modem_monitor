@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from har_capture.sanitization import sanitize_html
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -16,20 +17,18 @@ from custom_components.cable_modem_monitor.const import DOMAIN
 from custom_components.cable_modem_monitor.diagnostics import (
     _create_log_entry,
     _extract_auth_method,
-    _get_auth_discovery_info,
-    _get_detection_method,
+    _get_auth_configuration_info,
     _get_hnap_auth_attempt,
     _get_logs_from_file,
     _parse_legacy_record,
     _sanitize_log_message,
     async_get_config_entry_diagnostics,
 )
-from custom_components.cable_modem_monitor.lib.html_helper import sanitize_html
 
 # =============================================================================
 # AUTH STRATEGY DESCRIPTION TEST CASES
 # =============================================================================
-# Tests _get_auth_discovery_info() strategy_description field.
+# Tests _get_auth_configuration_info() strategy_description field for diagnostics.
 # Each auth strategy should have a human-readable description for diagnostics.
 #
 # ┌──────────────┬─────────────────────────────────────────────┐
@@ -101,52 +100,55 @@ class TestSanitizeHtml:
 
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11-22-33-44-55-66" not in sanitized
-        assert "XX:XX:XX:XX:XX:XX" in sanitized
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        assert "02:" in sanitized or "XX:XX:XX:XX:XX:XX" in sanitized
 
     def test_removes_serial_numbers(self):
         """Test that serial numbers are sanitized."""
         test_cases = [
-            ("Serial Number: 123456789ABC", "Serial Number: ***REDACTED***"),
-            ("S/N: XYZ-999-ABC", "S/N: ***REDACTED***"),
-            ("SN: 111222333", "SN: ***REDACTED***"),
-        ]
-
-        for original, expected_pattern in test_cases:
-            sanitized = sanitize_html(original)
-            assert expected_pattern in sanitized
-            assert original not in sanitized
-
-    def test_removes_account_ids(self):
-        """Test that account/subscriber IDs are sanitized."""
-        test_cases = [
-            "Account ID: 123456789",
-            "Subscriber Number: ABC-999-XYZ",
-            "Customer ID: TEST-CUSTOMER-001",
-            "Device Number: DEV123456",
+            "Serial Number: 123456789ABC",
+            "S/N: XYZ-999-ABC",
+            "SN: 111222333",
         ]
 
         for original in test_cases:
             sanitized = sanitize_html(original)
-            assert "***REDACTED***" in sanitized
-            # Original ID should be removed (check for the digits/unique part)
-            assert not any(
-                char.isdigit() for word in sanitized.split("***REDACTED***") for char in word if char.isalnum()
-            )
+            # Original serial should be removed
+            original_value = original.split(": ")[1] if ": " in original else original.split(" ")[1]
+            assert original_value not in sanitized
+            # har-capture uses SERIAL_ prefix for serial numbers
+            assert "SERIAL_" in sanitized or "[REDACTED]" in sanitized
+
+    def test_removes_account_ids(self):
+        """Test that account/subscriber IDs are sanitized."""
+        test_cases = [
+            ("Account ID: 123456789", "123456789"),
+            ("Subscriber Number: ABC-999-XYZ", "ABC-999-XYZ"),
+            ("Customer ID: TEST-CUSTOMER-001", "TEST-CUSTOMER-001"),
+            ("Device Number: DEV123456", "DEV123456"),
+        ]
+
+        for original, sensitive_part in test_cases:
+            sanitized = sanitize_html(original)
+            # Original ID should be removed
+            assert sensitive_part not in sanitized
+            # har-capture uses ACCOUNT_ prefix for account IDs
+            assert "ACCOUNT_" in sanitized or "[REDACTED]" in sanitized
 
     def test_removes_private_ips(self):
         """Test that private IP addresses are sanitized."""
         test_cases = [
-            ("Gateway: 10.0.1.1", "Gateway: ***PRIVATE_IP***"),
-            ("Server: 172.16.5.10", "Server: ***PRIVATE_IP***"),
-            ("Host: 192.168.50.100", "Host: ***PRIVATE_IP***"),
+            ("Gateway: 10.0.1.1", "10.0.1.1"),
+            ("Server: 172.16.5.10", "172.16.5.10"),
+            ("Host: 192.168.50.100", "192.168.50.100"),
         ]
 
-        for original, expected in test_cases:
+        for original, original_ip in test_cases:
             sanitized = sanitize_html(original)
-            assert expected in sanitized
-            # Extract the original IP and verify it's gone
-            original_ip = original.split(": ")[1]
+            # Original IP should be removed
             assert original_ip not in sanitized
+            # har-capture uses 10.255.x.x format for redacted private IPs
+            assert "10.255." in sanitized or "0.0.0.0" in sanitized
 
     def test_preserves_common_modem_ips(self):
         """Test that common modem IPs are preserved for debugging."""
@@ -164,16 +166,18 @@ class TestSanitizeHtml:
     def test_removes_passwords(self):
         """Test that passwords and passphrases are sanitized."""
         test_cases = [
-            'password="secret123"',
-            "passphrase: MySecretPass",
-            'psk="wireless-key-123"',
-            "wpa2key: SuperSecret!",
+            ('password="secret123"', "secret123"),
+            ("passphrase: MySecretPass", "MySecretPass"),
+            ('psk="wireless-key-123"', "wireless-key-123"),
+            ("wpa2key: SuperSecret!", "SuperSecret!"),
         ]
 
-        for original in test_cases:
+        for original, sensitive_value in test_cases:
             sanitized = sanitize_html(original)
-            assert "***REDACTED***" in sanitized
-            assert "secret" not in sanitized.lower() or "***REDACTED***" in sanitized
+            # Original password should be removed
+            assert sensitive_value not in sanitized
+            # har-capture uses PASS_ prefix for passwords
+            assert "PASS_" in sanitized or "[REDACTED]" in sanitized
 
     def test_removes_password_form_values(self):
         """Test that password input field values are sanitized."""
@@ -181,7 +185,8 @@ class TestSanitizeHtml:
         sanitized = sanitize_html(html)
 
         assert "MyPassword123" not in sanitized
-        assert "***REDACTED***" in sanitized
+        # har-capture uses PASS_ prefix for passwords
+        assert "PASS_" in sanitized or "[REDACTED]" in sanitized
         assert 'type="password"' in sanitized  # Structure preserved
 
     def test_removes_session_tokens(self):
@@ -194,7 +199,8 @@ class TestSanitizeHtml:
 
         assert "abc123def456ghi789jkl012mno345pqr678stu" not in sanitized
         assert "xyz999abc888def777ghi666" not in sanitized
-        assert "***REDACTED***" in sanitized
+        # har-capture uses CSRF_ and TOKEN_ prefixes
+        assert "CSRF_" in sanitized or "TOKEN_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_signal_data(self):
         """Test that signal quality data is preserved for debugging."""
@@ -239,8 +245,9 @@ class TestSanitizeHtml:
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11:22:33:44:55:66" not in sanitized
         assert "99-88-77-66-55-44" not in sanitized
-        # Should have 3 XX:XX:XX:XX:XX:XX replacements
-        assert sanitized.count("XX:XX:XX:XX:XX:XX") == 3
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        # Should have 3 redacted MACs
+        assert sanitized.count("02:") == 3 or sanitized.count("XX:XX:XX:XX:XX:XX") == 3
 
     def test_handles_empty_string(self):
         """Test that empty string is handled gracefully."""
@@ -311,7 +318,7 @@ def mock_config_entry():
         "detected_manufacturer": "[MFG]",
         "parser_name": "[MFG] [Model] (Static)",
         "working_url": "https://192.168.100.1/MotoConnection.asp",
-        "last_detection": "2025-11-11T10:00:00",
+        "parser_selected_at": "2025-11-11T10:00:00",
     }
     return entry
 
@@ -413,9 +420,11 @@ async def test_diagnostics_includes_html_capture_not_expired(mock_config_entry, 
     # Verify sanitization occurred
     captured_html = diagnostics["raw_html_capture"]["urls"][0]["content"]
     assert "AA:BB:CC:DD:EE:FF" not in captured_html  # MAC removed
-    assert "XX:XX:XX:XX:XX:XX" in captured_html  # MAC sanitized
+    # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+    assert "02:" in captured_html or "XX:XX:XX:XX:XX:XX" in captured_html  # MAC sanitized
     assert "ABC123XYZ" not in captured_html  # Serial removed
-    assert "***REDACTED***" in captured_html  # Serial sanitized
+    # har-capture uses SERIAL_ prefix for serials
+    assert "SERIAL_" in captured_html or "[REDACTED]" in captured_html  # Serial sanitized
     assert "7.0 dBmV" in captured_html  # Signal data preserved
 
 
@@ -514,7 +523,8 @@ async def test_diagnostics_includes_multiple_page_capture(mock_config_entry, moc
         if "AA:BB:CC:DD:EE:FF" in mock_coordinator.data["_raw_html_capture"]["urls"][urls.index(url_data)]["content"]:
             # Original MAC should be removed, replacement should be present
             assert "AA:BB:CC:DD:EE:FF" not in content
-            assert "XX:XX:XX:XX:XX:XX" in content
+            # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+            assert "02:" in content or "XX:XX:XX:XX:XX:XX" in content
 
 
 @pytest.mark.asyncio
@@ -630,216 +640,14 @@ async def test_diagnostics_includes_parser_detection_info(mock_config_entry, moc
 
     detection = diagnostics["detection"]
 
-    # Verify detection fields
+    # Verify detection fields (note: 'method' field removed in v3.13)
     assert "user_selection" in detection
-    assert "method" in detection
     assert "parser" in detection
+    assert "parser_selected_at" in detection
 
     # Verify values match config entry
     assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["method"] == "user_selected"
     assert detection["parser"] == "[MFG] [Model] (Static)"
-
-
-# ============================================================================
-# Detection Method Tests - TDD for 3 scenarios
-# ============================================================================
-
-
-@pytest.mark.asyncio
-async def test_detection_method_fresh_install_auto(mock_coordinator):
-    """
-    Scenario: Fresh install with auto-detection.
-
-    User selects "auto" → detection succeeds → modem_choice updated to parser name
-    → detection_method stored as "auto_detected"
-
-    Expected: method = "auto_detected"
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_fresh_auto"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # After auto-detection, modem_choice is updated to match parser_name
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        "last_detection": "2025-12-31T14:24:03.445441",
-        # KEY: This field tracks HOW the parser was selected
-        "detection_method": "auto_detected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    assert detection["method"] == "auto_detected"
-    assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["parser"] == "[MFG] [Model]"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_explicit_user_selection(mock_coordinator):
-    """
-    Scenario: User explicitly selects a parser from dropdown.
-
-    User picks "[MFG] [Model]" from dropdown (not auto)
-    → detection_method stored as "user_selected"
-
-    Expected: method = "user_selected"
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_explicit_select"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # User explicitly selected this parser
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        "last_detection": "2025-12-31T14:24:19.899726",
-        # KEY: User explicitly selected, not auto-detected
-        "detection_method": "user_selected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    assert detection["method"] == "user_selected"
-    assert detection["user_selection"] == "[MFG] [Model]"
-    assert detection["parser"] == "[MFG] [Model]"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_resubmit_after_auto(mock_coordinator):
-    """
-    Scenario: Re-submit with explicit selection after previous auto-detection.
-
-    1. Initial: auto-detection found "[MFG] [Model]"
-    2. Later: User re-opens config, explicitly selects same parser, saves
-    → detection_method should update to "user_selected"
-
-    Expected: method = "user_selected" (last action was explicit selection)
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_resubmit"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # Same parser name as before, but user explicitly re-selected it
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model]",
-        "detected_modem": "[MFG] [Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "http://192.168.100.1/MotoSwInfo.asp",
-        # Newer timestamp from re-submit
-        "last_detection": "2025-12-31T14:24:19.899726",
-        # KEY: Even though same parser, user explicitly selected this time
-        "detection_method": "user_selected",
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    # This is the critical assertion - re-submit should show user_selected
-    assert detection["method"] == "user_selected"
-
-
-@pytest.mark.asyncio
-async def test_detection_method_legacy_no_field(mock_coordinator):
-    """
-    Scenario: Legacy config entry without detection_method field.
-
-    For backwards compatibility, entries created before this field existed
-    should fall back to inferring from modem_choice vs parser_name.
-
-    Expected: Falls back to inference logic (user_selected if different)
-    """
-    entry = Mock(spec=ConfigEntry)
-    entry.entry_id = "test_legacy"
-    entry.title = "[MFG] [Model] (192.168.100.1)"
-    entry.data = {
-        "host": "192.168.100.1",
-        "username": "admin",
-        "password": "secret",
-        # Different modem_choice vs parser_name (legacy explicit selection)
-        "modem_choice": "[MFG] [Model]",
-        "parser_name": "[MFG] [Model] (Static)",
-        "detected_modem": "[Model]",
-        "detected_manufacturer": "[MFG]",
-        "working_url": "https://192.168.100.1/MotoConnection.asp",
-        "last_detection": "2025-11-11T10:00:00",
-        # NO detection_method field - legacy entry
-    }
-
-    hass = _create_mock_hass({DOMAIN: {entry.entry_id: mock_coordinator}})
-    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
-
-    detection = diagnostics["detection"]
-    # Fallback: modem_choice != parser_name → user_selected
-    assert detection["method"] == "user_selected"
-
-
-# ============================================================================
-# End Detection Method Tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
-async def test_diagnostics_parser_detection_history(mock_config_entry, mock_coordinator):
-    """Test parser detection history is included when available."""
-    hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
-
-    # Add parser detection history to coordinator data
-    mock_coordinator.data["_parser_detection_history"] = {
-        "attempted_parsers": ["[MFG] [Model] (Static)", "[MFG] [Model2]", "Generic [MFG]"],
-        "detection_phases_run": ["anonymous_probing", "suggested_parser", "prioritized"],
-        "timestamp": "2025-11-18T10:00:00",
-    }
-
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
-
-    # Verify parser detection history exists
-    assert "parser_detection_history" in diagnostics
-
-    history = diagnostics["parser_detection_history"]
-    assert "attempted_parsers" in history
-    assert len(history["attempted_parsers"]) == 3
-    assert "[MFG] [Model] (Static)" in history["attempted_parsers"]
-    assert "detection_phases_run" in history
-    assert "timestamp" in history
-
-
-@pytest.mark.asyncio
-async def test_diagnostics_parser_detection_history_not_available(mock_config_entry, mock_coordinator):
-    """Test parser detection history shows note when not available."""
-    hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
-
-    # Ensure no parser detection history in coordinator data
-    assert "_parser_detection_history" not in mock_coordinator.data
-
-    diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
-
-    # Verify parser detection history exists with note
-    assert "parser_detection_history" in diagnostics
-
-    history = diagnostics["parser_detection_history"]
-    assert "note" in history
-    assert "succeeded on first attempt" in history["note"]
-    assert history["attempted_parsers"] == []
 
 
 class TestGetHnapAuthAttempt:
@@ -854,22 +662,22 @@ class TestGetHnapAuthAttempt:
 
         assert result["note"] == "Scraper not available"
 
-    def test_returns_note_when_no_parser(self):
-        """Test returns explanatory note when parser not available."""
+    def test_returns_note_when_no_auth_handler(self):
+        """Test returns explanatory note when auth handler not available."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = None
+        coordinator.scraper._auth_handler = None
 
         result = _get_hnap_auth_attempt(coordinator)
 
-        assert result["note"] == "Parser not available (might be using fallback mode)"
+        assert result["note"] == "Auth handler not available (might be using no-auth mode)"
 
     def test_returns_note_when_no_json_builder(self):
         """Test returns explanatory note when no JSON builder (not HNAP modem)."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = None
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = None
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -879,9 +687,10 @@ class TestGetHnapAuthAttempt:
         """Test returns explanatory note when no auth attempt recorded."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = None
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = None
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -891,15 +700,16 @@ class TestGetHnapAuthAttempt:
         """Test returns auth attempt data when available."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = {
             "challenge_request": {"Login": {"Action": "request", "Username": "admin"}},
             "challenge_response": '{"LoginResponse": {"Challenge": "ABC"}}',
             "login_request": {"Login": {"Action": "login", "LoginPassword": "[REDACTED]"}},
             "login_response": '{"LoginResponse": {"LoginResult": "OK"}}',
             "error": None,
         }
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -911,15 +721,16 @@ class TestGetHnapAuthAttempt:
         """Test that auth attempt data is sanitized."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.return_value = {
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.return_value = {
             "challenge_request": {"Login": {"Username": "admin"}},
             "challenge_response": "password=secret123",
             "login_request": None,
             "login_response": None,
             "error": None,
         }
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -931,10 +742,10 @@ class TestGetHnapAuthAttempt:
         """Test that exceptions are handled gracefully."""
         coordinator = Mock()
         coordinator.scraper = Mock()
-        coordinator.scraper.parser = Mock()
-        # Simulate an exception
-        coordinator.scraper.parser._json_builder = Mock()
-        coordinator.scraper.parser._json_builder.get_last_auth_attempt.side_effect = Exception("Something went wrong")
+        mock_builder = Mock()
+        mock_builder.get_last_auth_attempt.side_effect = Exception("Something went wrong")
+        coordinator.scraper._auth_handler = Mock()
+        coordinator.scraper._auth_handler.get_hnap_builder.return_value = mock_builder
 
         result = _get_hnap_auth_attempt(coordinator)
 
@@ -942,15 +753,15 @@ class TestGetHnapAuthAttempt:
         assert "Exception" in result["note"]
 
 
-class TestGetAuthDiscoveryInfo:
-    """Test _get_auth_discovery_info helper function (v3.12.0+)."""
+class TestGetAuthConfigurationInfo:
+    """Test _get_auth_configuration_info helper function (v3.12.0+)."""
 
     def test_returns_minimal_info_when_no_strategy(self):
         """Test returns minimal info when no auth strategy configured."""
         entry = Mock(spec=ConfigEntry)
         entry.data = {}
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["status"] == "not_run"
         assert result["strategy"] == "not_set"
@@ -970,7 +781,7 @@ class TestGetAuthDiscoveryInfo:
             "auth_discovery_status": "success",
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["status"] == "success"
         assert result["strategy"] == strategy
@@ -993,7 +804,7 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["strategy"] == "form_plain"
         assert "form_config" in result
@@ -1022,7 +833,7 @@ class TestGetAuthDiscoveryInfo:
                 form_config["password_encoding"] = encoding
             entry.data["auth_form_config"] = form_config
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         if exact_match:
             assert result["strategy_description"] == expected, f"{test_id}: expected exact match"
@@ -1039,7 +850,7 @@ class TestGetAuthDiscoveryInfo:
             "auth_discovery_error": "Unknown authentication protocol detected",
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert result["discovery_failed"] is True
         assert "note" in result
@@ -1060,7 +871,7 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         assert "captured_response" in result
         assert result["captured_response"]["status_code"] == 200
@@ -1081,19 +892,21 @@ class TestGetAuthDiscoveryInfo:
             },
         }
 
-        result = _get_auth_discovery_info(entry.data)
+        result = _get_auth_configuration_info(entry.data)
 
         # MAC should be sanitized in html_sample
         assert "AA:BB:CC:DD:EE:FF" not in result["captured_response"]["html_sample"]
-        assert "XX:XX:XX:XX:XX:XX" in result["captured_response"]["html_sample"]
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        html_sample = result["captured_response"]["html_sample"]
+        assert "02:" in html_sample or "XX:XX:XX:XX:XX:XX" in html_sample
 
 
 @pytest.mark.asyncio
-async def test_diagnostics_includes_auth_discovery(mock_config_entry, mock_coordinator):
-    """Test that diagnostics includes auth_discovery section."""
+async def test_diagnostics_includes_auth_configuration(mock_config_entry, mock_coordinator):
+    """Test that diagnostics includes auth_configuration section."""
     hass = _create_mock_hass({DOMAIN: {mock_config_entry.entry_id: mock_coordinator}})
 
-    # Update config entry with auth discovery data
+    # Update config entry with auth configuration data
     mock_config_entry.data = {
         **mock_config_entry.data,
         "auth_strategy": "form_plain",
@@ -1108,9 +921,9 @@ async def test_diagnostics_includes_auth_discovery(mock_config_entry, mock_coord
 
     diagnostics = await async_get_config_entry_diagnostics(hass, mock_config_entry)
 
-    # Verify auth_discovery section exists
-    assert "auth_discovery" in diagnostics
-    auth = diagnostics["auth_discovery"]
+    # Verify auth_configuration section exists
+    assert "auth_configuration" in diagnostics
+    auth = diagnostics["auth_configuration"]
     assert auth["status"] == "success"
     assert auth["strategy"] == "form_plain"
     assert "form_config" in auth
@@ -1197,49 +1010,6 @@ class TestExtractAuthMethod:
         assert _extract_auth_method([{"auth_method": "hnap"}]) == "hnap"
         assert _extract_auth_method([{"auth_method": "basic"}]) == "basic"
         assert _extract_auth_method([{"auth_method": "form_base64"}]) == "form_base64"
-
-
-class TestGetDetectionMethod:
-    """Test _get_detection_method pure function."""
-
-    def test_returns_stored_method_when_present(self):
-        """Test returns stored detection_method when available."""
-        data = {"detection_method": "auto_detected"}
-        assert _get_detection_method(data) == "auto_detected"
-
-        data = {"detection_method": "user_selected"}
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_infers_auto_detected_from_matching_choice(self):
-        """Test infers auto_detected when modem_choice matches parser_name."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB8200Parser",
-            "last_detection": "2024-01-15T10:00:00",
-        }
-        assert _get_detection_method(data) == "auto_detected"
-
-    def test_infers_user_selected_when_no_match(self):
-        """Test infers user_selected when modem_choice differs."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB6190Parser",
-        }
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_returns_user_selected_when_no_last_detection(self):
-        """Test returns user_selected when no last_detection timestamp."""
-        data = {
-            "modem_choice": "ArrisSB8200Parser",
-            "parser_name": "ArrisSB8200Parser",
-            # No last_detection
-        }
-        assert _get_detection_method(data) == "user_selected"
-
-    def test_defaults_to_auto_for_empty_data(self):
-        """Test handles empty data dictionary."""
-        # Empty data defaults modem_choice to "auto", no match with parser_name
-        assert _get_detection_method({}) == "user_selected"
 
 
 class TestParseLegacyRecord:
@@ -1330,7 +1100,7 @@ class TestGetLogsFromFile:
 
         assert len(result) == 1
         assert result[0]["level"] == "INFO"
-        assert "No logs available" in result[0]["message"]
+        assert "No logs captured yet" in result[0]["message"]
 
     def test_parses_cable_modem_monitor_logs(self):
         """Test parses cable_modem_monitor log entries from file."""

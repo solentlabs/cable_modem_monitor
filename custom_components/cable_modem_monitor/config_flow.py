@@ -43,6 +43,8 @@ from homeassistant.helpers import selector
 from .config_flow_helpers import (
     build_parser_dropdown,
     classify_error,
+    get_auth_type_dropdown,
+    needs_auth_type_selection,
     validate_input,
 )
 from .const import (
@@ -51,23 +53,30 @@ from .const import (
     CONF_AUTH_DISCOVERY_FAILED,
     CONF_AUTH_DISCOVERY_STATUS,
     CONF_AUTH_FORM_CONFIG,
+    CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
+    CONF_AUTH_TYPE,
+    CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DETECTED_MANUFACTURER,
     CONF_DETECTED_MODEM,
-    CONF_DETECTION_METHOD,
     CONF_DOCSIS_VERSION,
+    CONF_ENTITY_PREFIX,
     CONF_HOST,
-    CONF_LAST_DETECTION,
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
     CONF_PARSER_NAME,
+    CONF_PARSER_SELECTED_AT,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
     CONF_USERNAME,
     CONF_WORKING_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+    ENTITY_PREFIX_NONE,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
@@ -198,19 +207,10 @@ class ConfigFlowMixin:
         data[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
         data[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
         data[CONF_DOCSIS_VERSION] = detection_info.get("docsis_version")
-        data[CONF_LAST_DETECTION] = datetime.now().isoformat()
+        data[CONF_PARSER_SELECTED_AT] = datetime.now().isoformat()
 
         if detection_info.get("actual_model"):
             data[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
-
-        # Track detection method for diagnostics
-        original_choice = data.get(CONF_MODEM_CHOICE)
-        if original_choice == "auto" and detected_modem_name:
-            _LOGGER.info("%sAuto-detection successful: detected '%s'", log_prefix, detected_modem_name)
-            data[CONF_MODEM_CHOICE] = detected_modem_name
-            data[CONF_DETECTION_METHOD] = "auto_detected"
-        else:
-            data[CONF_DETECTION_METHOD] = "user_selected"
 
     def _apply_auth_discovery_info(
         self,
@@ -226,7 +226,12 @@ class ConfigFlowMixin:
             fallback_data: Existing entry data for fallback values (options flow).
         """
         # Prefer new values, fall back to existing
-        for key in (CONF_AUTH_STRATEGY, CONF_AUTH_FORM_CONFIG):
+        for key in (
+            CONF_AUTH_STRATEGY,
+            CONF_AUTH_FORM_CONFIG,
+            CONF_AUTH_HNAP_CONFIG,
+            CONF_AUTH_URL_TOKEN_CONFIG,
+        ):
             if info.get(key):
                 data[key] = info[key]
             elif fallback_data and fallback_data.get(key):
@@ -251,9 +256,10 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
     """Handle initial setup flow for Cable Modem Monitor.
 
     This flow guides users through adding a new modem to Home Assistant:
-    1. Enter modem IP, credentials, and select parser (or auto-detect)
-    2. Validate connectivity and authentication
-    3. Create config entry on success
+    1. Enter modem IP, credentials, and select parser
+    2. Select auth type (only if modem has multiple options)
+    3. Validate connectivity and authentication
+    4. Create config entry on success
     """
 
     VERSION = 1
@@ -262,6 +268,7 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         """Initialize config flow state."""
         self._progress = ValidationProgressHelper()
         self._modem_choices: list[str] = []
+        self._selected_auth_type: str | None = None
 
     @staticmethod
     @callback
@@ -276,9 +283,29 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         default_host: str = "192.168.100.1",
         default_username: str = "",
         default_password: str = "",
-        default_modem: str = "auto",
+        default_modem: str = "",
+        default_entity_prefix: str = "",
     ) -> vol.Schema:
         """Build the form schema for user input step."""
+        # Determine entity prefix options based on existing entries
+        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+
+        if existing_entries:
+            # Second+ modem: no "None" option, default to "Model"
+            prefix_options = [
+                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+            ]
+            prefix_default = default_entity_prefix or ENTITY_PREFIX_MODEL
+        else:
+            # First modem: all options available, default to "None"
+            prefix_options = [
+                selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="None"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+            ]
+            prefix_default = default_entity_prefix or ENTITY_PREFIX_NONE
+
         return vol.Schema(
             {
                 vol.Required(CONF_HOST, default=default_host): str,
@@ -287,6 +314,12 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 vol.Required(CONF_MODEM_CHOICE, default=default_modem): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=self._modem_choices,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(CONF_ENTITY_PREFIX, default=prefix_default): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=prefix_options,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
@@ -303,11 +336,63 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
 
         if user_input is not None:
             self._progress.user_input = user_input
+
+            # Check if auth type selection is needed
+            from .core.parser_registry import get_parser_by_name
+
+            modem_choice = user_input.get(CONF_MODEM_CHOICE, "")
+            choice_clean = modem_choice.rstrip(" *")
+            selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
+
+            if await needs_auth_type_selection(self.hass, selected_parser):
+                return await self.async_step_auth_type()
+
             return await self.async_step_validate()
 
         return self.async_show_form(
             step_id="user",
             data_schema=self._build_user_schema(),
+        )
+
+    async def async_step_auth_type(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+        """Show auth type selection if modem has multiple types.
+
+        This step is only shown for modems with auth.types{} in modem.yaml
+        that have more than one option (e.g., SB8200 with "none" and "url_token").
+        """
+        from .core.parser_registry import get_parser_by_name
+
+        if user_input is not None:
+            # Store selected auth type and proceed to validation
+            self._selected_auth_type = user_input.get(CONF_AUTH_TYPE)
+            if self._progress.user_input:
+                self._progress.user_input[CONF_AUTH_TYPE] = self._selected_auth_type
+            return await self.async_step_validate()
+
+        # Get selected parser to build auth type dropdown
+        saved_input = self._progress.user_input or {}
+        modem_choice = saved_input.get(CONF_MODEM_CHOICE, "")
+        choice_clean = modem_choice.rstrip(" *")
+        selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
+
+        # Get auth type options for dropdown
+        auth_type_options = await get_auth_type_dropdown(self.hass, selected_parser)
+
+        return self.async_show_form(
+            step_id="auth_type",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_AUTH_TYPE): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[selector.SelectOptionDict(value=k, label=v) for k, v in auth_type_options.items()],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={
+                "modem_name": choice_clean,
+            },
         )
 
     async def async_step_validate(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
@@ -354,7 +439,15 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         data = dict(user_input)
         data.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
+
+        # Store entity prefix (default to "none" for backwards compatibility)
+        data[CONF_ENTITY_PREFIX] = user_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+
+        # Store auth type if selected
+        if self._selected_auth_type:
+            data[CONF_AUTH_TYPE] = self._selected_auth_type
 
         detection_info = info.get("detection_info", {})
         if detection_info:
@@ -382,7 +475,8 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 default_host=saved_input.get(CONF_HOST, "192.168.100.1"),
                 default_username=saved_input.get(CONF_USERNAME, ""),
                 default_password=saved_input.get(CONF_PASSWORD, ""),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, "auto"),
+                default_modem=saved_input.get(CONF_MODEM_CHOICE, ""),
+                default_entity_prefix=saved_input.get(CONF_ENTITY_PREFIX, ""),
             ),
             errors=errors,
         )
@@ -435,16 +529,21 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
         )
 
     def _preserve_credentials(self, user_input: dict[str, Any]) -> None:
-        """Fill in existing credentials if user left fields empty."""
+        """Fill in existing credentials and auth type if user left fields empty."""
         if not user_input.get(CONF_PASSWORD):
             user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
         if not user_input.get(CONF_USERNAME):
             user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
+        # Preserve auth_type for modems with multiple auth variants (e.g., SB6190, SB8200)
+        if not user_input.get(CONF_AUTH_TYPE):
+            stored_auth_type = self.config_entry.data.get(CONF_AUTH_TYPE)
+            if stored_auth_type:
+                user_input[CONF_AUTH_TYPE] = stored_auth_type
 
     def _get_current_modem_choice(self) -> str:
         """Get stored modem choice, normalized to current dropdown format."""
-        stored: str = self.config_entry.data.get(CONF_MODEM_CHOICE, "auto")
-        if stored and stored != "auto":
+        stored: str = self.config_entry.data.get(CONF_MODEM_CHOICE, "")
+        if stored:
             # Check if stored name is in current dropdown choices
             if stored in self._modem_choices:
                 return stored
@@ -454,15 +553,15 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
                 return stored_clean
         return stored
 
-    def _format_last_detection(self, last_detection: str) -> str:
+    def _format_parser_selected_at(self, parser_selected_at: str) -> str:
         """Format ISO timestamp for display."""
-        if last_detection and last_detection != "Never":
+        if parser_selected_at and parser_selected_at != "Never":
             try:
-                dt = datetime.fromisoformat(last_detection)
+                dt = datetime.fromisoformat(parser_selected_at)
                 return dt.strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
                 pass
-        return last_detection
+        return parser_selected_at
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
         """Show the options form."""
@@ -494,7 +593,7 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
             ),
             description_placeholders={
                 "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
-                "last_detection": self._format_last_detection(entry_data.get(CONF_LAST_DETECTION, "Never")),
+                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
             },
         )
 
@@ -549,6 +648,7 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
 
         # These are re-tested on every validation
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
+        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
         data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
 
         # Apply new detection info, or preserve existing
@@ -578,9 +678,8 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
         data[CONF_DETECTED_MODEM] = entry_data.get(CONF_DETECTED_MODEM, "Unknown")
         data[CONF_DETECTED_MANUFACTURER] = entry_data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
         data[CONF_DOCSIS_VERSION] = entry_data.get(CONF_DOCSIS_VERSION)
-        data[CONF_LAST_DETECTION] = entry_data.get(CONF_LAST_DETECTION)
+        data[CONF_PARSER_SELECTED_AT] = entry_data.get(CONF_PARSER_SELECTED_AT)
         data[CONF_ACTUAL_MODEL] = entry_data.get(CONF_ACTUAL_MODEL)
-        data[CONF_DETECTION_METHOD] = entry_data.get(CONF_DETECTION_METHOD)
 
     async def async_step_options_with_errors(
         self, user_input: dict[str, Any] | None = None
@@ -598,10 +697,14 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
             data_schema=self._build_options_schema(
                 default_host=saved_input.get(CONF_HOST, entry_data.get(CONF_HOST, "192.168.100.1")),
                 default_username=saved_input.get(CONF_USERNAME, entry_data.get(CONF_USERNAME, "")),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, entry_data.get(CONF_MODEM_CHOICE, "auto")),
+                default_modem=saved_input.get(CONF_MODEM_CHOICE, entry_data.get(CONF_MODEM_CHOICE, "")),
                 default_scan_interval=saved_input.get(
                     CONF_SCAN_INTERVAL, entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
                 ),
             ),
             errors=errors,
+            description_placeholders={
+                "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
+                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
+            },
         )

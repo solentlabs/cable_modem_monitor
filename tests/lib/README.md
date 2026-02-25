@@ -4,7 +4,7 @@
 
 Tests for library modules including the HTML crawler and general utilities.
 
-**Total Tests:** 120
+**Total Tests:** 123
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Tests for library modules including the HTML crawler and general utilities.
 | [test_har_sanitizer.py](test_har_sanitizer.py) | 18 | Tests for HAR sanitization utilities. |
 | [test_host_validation.py](test_host_validation.py) | 17 | Tests for host validation utilities. |
 | [test_html_crawler.py](test_html_crawler.py) | 36 | Tests for HTML crawler utility functions. |
-| [test_html_helper.py](test_html_helper.py) | 27 | Tests for HTML helper utilities. |
+| [test_html_helper.py](test_html_helper.py) | 30 | Tests for HTML helper utilities. |
 | [test_utils.py](test_utils.py) | 22 | Tests for utility functions in lib/utils.py. |
 
 ## Test Details
@@ -177,12 +177,12 @@ Tests for HTML helper utilities.
 - `test_clean_content`: Test content with no PII.
 
 **TestPiiPatterns** (2 tests)
-: Tests for PII pattern constants.
+: Tests for PII pattern definitions.
 
 - `test_patterns_defined`: Test that all expected patterns are defined.
-- `test_allowlist_defined`: Test that allowlist contains expected placeholders.
+- `test_allowlist_recognizes_placeholders`: Test that allowlist recognizes expected placeholder formats.
 
-**TestSanitizeHtmlEdgeCases** (5 tests)
+**TestSanitizeHtmlEdgeCases** (8 tests)
 : Additional edge case tests for sanitize_html.
 
 - `test_multiple_mac_formats`: Test sanitization of MACs with different separators.
@@ -190,6 +190,9 @@ Tests for HTML helper utilities.
 - `test_ipv6_without_hex_letters_preserved`: Test that time-like patterns are not over-sanitized.
 - `test_config_file_path_sanitized`: Test that config file paths are sanitized.
 - `test_preserves_signal_metrics`: Test that signal metrics are preserved.
+- `test_preserves_firmware_version_strings`: Test that firmware version strings are preserved, not sanitized as IPs.
+- `test_ipv4_addresses_produce_valid_format`: Test that sanitized IPv4 addresses have valid 4-octet format.
+- `test_distinguishes_ips_from_versions`: Test that IPs are sanitized while version strings are preserved in same HTML.
 
 **TestTagValueListSanitization** (9 tests)
 : Tests for WiFi credential sanitization in tagValueList.
@@ -201,7 +204,7 @@ Tests for HTML helper utilities.
 - `test_sanitizes_double_quoted_tagvaluelist`: Test that double-quoted tagValueList is also sanitized.
 - `test_preserves_short_values_in_tagvaluelist`: Test that short values (< 8 chars) are preserved.
 - `test_handles_docsis_channel_data`: Test that DOCSIS channel data is not incorrectly sanitized.
-- `test_wifi_cred_in_allowlist`: Test that WIFI_CRED placeholder is in allowlist.
+- `test_wifi_cred_in_allowlist`: Test that WIFI_CRED placeholder prefix is in allowlist.
 - `test_sanitizes_device_names_before_ip`: Test that device names appearing before IP/MAC placeholders are redacted.
 
 ### test_utils.py

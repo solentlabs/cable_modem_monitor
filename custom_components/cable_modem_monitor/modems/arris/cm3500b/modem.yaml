@@ -1,0 +1,133 @@
+# =============================================================================
+# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+#
+# Source: modems/arris/cm3500b/modem.yaml
+# This file is synced from modems/ during build. Edit the source file, then run:
+#     make sync
+# =============================================================================
+
+# =============================================================================
+# ARRIS CM3500B Cable Modem Configuration
+# =============================================================================
+# DOCSIS 3.1 modem - Euro variant
+#
+# Contributor: @ChBi89 (Issue #73)
+# HAR verified: Yes
+
+manufacturer: ARRIS
+model: CM3500B
+paradigm: html
+
+# =============================================================================
+# HARDWARE
+# =============================================================================
+hardware:
+  docsis_version: "3.1"
+  release_date: "2016"
+
+# Provenance tracking
+sources:
+  auth_config: "[Issue #73](https://github.com/solentlabs/cable_modem_monitor/issues/73)"
+  release_date: "[ARRIS CM3500 Datasheet](https://vectortechsolutions.com/wp-content/uploads/import/files/1314/231004_cm3500_datasheet.pdf) - ©2016 copyright"
+
+# =============================================================================
+# NETWORK
+# =============================================================================
+default_host: "192.168.100.1"
+
+# =============================================================================
+# AUTHENTICATION
+# =============================================================================
+# HAR shows credential cookie and login_cgi page
+# Auth flow needs validation with contributor
+auth:
+  types:
+    form:
+      action: "/cgi-bin/login_cgi"
+      username_field: "username"
+      password_field: "password"
+      success:
+        redirect: "/cgi-bin/status_cgi"
+  session:
+    cookie_name: "credential"
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+pages:
+  public: []
+  protected:
+    - "/cgi-bin/status_cgi"
+    - "/cgi-bin/spectrum_cgi"
+    - "/cgi-bin/vers_cgi"
+    - "/cgi-bin/event_cgi"
+    - "/cgi-bin/cm_state_cgi"
+    - "/cgi-bin/product_cgi"
+    - "/cgi-bin/dhcp_cgi"
+    - "/cgi-bin/qos_cgi"
+    - "/cgi-bin/config_params_cgi"
+  data:
+    downstream_channels: "/cgi-bin/status_cgi"
+    upstream_channels: "/cgi-bin/status_cgi"
+    system_info: "/cgi-bin/vers_cgi"
+
+# =============================================================================
+# PARSER
+# =============================================================================
+parser:
+  class: ArrisCM3500BParser
+  module: custom_components.cable_modem_monitor.modems.arris.cm3500b.parser
+  format:
+    type: html
+    table_layout: standard
+
+# =============================================================================
+# DETECTION
+# =============================================================================
+detection:
+  pre_auth:
+    - "CM3500B"
+    - "ARRIS"
+  post_auth:
+    - "CM3500B"
+    - "ARRIS"
+  page_hint: "/cgi-bin/status_cgi"
+
+# =============================================================================
+# CAPABILITIES
+# =============================================================================
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - ofdm_downstream
+  - ofdma_upstream
+  - system_uptime
+
+# =============================================================================
+# STATUS
+# =============================================================================
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/73"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+fixtures:
+  path: modems/arris/cm3500b/fixtures
+  source: har_capture
+  firmware_tested: "11.05.042.02"
+  last_validated: "2026-02-01"
+
+attribution:
+  contributors:
+    - github: ChBi89
+      contribution: "HAR capture and initial parser (Issue #73)"
+
+isps:
+  - Vodafone Germany
+
+notes: |
+  Euro DOCSIS 3.1 variant with HTTPS. Auth flow uses form login with credential cookie.
+  Parser from feat/cm3500b-parser branch - auth needs validation with contributor.
+  Hardware Model field shows CM3500B. OFDM/OFDMA capabilities supported.

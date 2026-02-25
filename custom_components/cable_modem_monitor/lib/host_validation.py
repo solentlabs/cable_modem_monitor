@@ -68,6 +68,10 @@ def extract_hostname(host: str) -> str:
             hostname = parsed.hostname or parsed.netloc.split(":")[0]
         except Exception as err:
             raise ValueError(f"Invalid URL format: {err}") from err
+    elif ":" in host_clean and "//" not in host_clean:
+        # Handle IP:port format (e.g., "192.168.1.1:8080")
+        # But not protocol schemes like "ftp://..."
+        hostname = host_clean.split(":")[0]
     else:
         hostname = host_clean
 

@@ -7,28 +7,26 @@ paradigm: html
 
 hardware:
   docsis_version: "3.0"
+  chipset: Broadcom BCM3384ZU
   release_date: "2015"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #75](https://github.com/solentlabs/cable_modem_monitor/issues/75)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/goform/logon"
-    method: POST
-    username_field: username_login
-    password_field: password_login
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/st_docsis.html"
+  types:
+    form:
+      action: "/goform/logon"
+      method: POST
+      username_field: username_login
+      password_field: password_login
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/st_docsis.html"
 
   session:
     cookie_name: "sec"
@@ -67,9 +65,6 @@ capabilities:
   - scqam_downstream
   - scqam_upstream
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================
@@ -90,3 +85,14 @@ attribution:
   contributors:
     - github: TBD
       contribution: "[Issue #75](https://github.com/solentlabs/cable_modem_monitor/issues/75) fixture data"
+
+isps:
+  - Telia
+
+notes: |
+  DOCSIS 3.0 Wireless Gateway (combo modem/router) for Telia Finland.
+  24 downstream channels and 4 upstream channels.
+  Known limitations:
+  - No frequency data exposed in status page
+  - No codeword counts exposed in status page
+  Form-based authentication to /goform/logon endpoint.

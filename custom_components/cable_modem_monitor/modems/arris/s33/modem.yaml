@@ -36,28 +36,26 @@ sources:
 # =============================================================================
 # NETWORK
 # =============================================================================
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
 auth:
-  strategy: hnap
-
-  hnap:
-    endpoint: "/HNAP1/"
-    namespace: "http://purenetworks.com/HNAP1/"
-    # S33-specific: uses empty string "" for action values (not {} like MB8611)
-    empty_action_value: ""
-    formats:
-      - json
-    actions:
-      login: "Login"
-      downstream: "GetCustomerStatusDownstreamChannelInfo"
-      upstream: "GetCustomerStatusUpstreamChannelInfo"
-      restart: "SetArrisConfigurationInfo"
+  types:
+    hnap:
+      endpoint: "/HNAP1/"
+      namespace: "http://purenetworks.com/HNAP1/"
+      # S33-specific: uses empty string "" for action values (not {} like MB8611)
+      empty_action_value: ""
+      hmac_algorithm: md5
+      formats:
+        - json
+      actions:
+        login: "Login"
+        downstream: "GetCustomerStatusDownstreamChannelInfo"
+        upstream: "GetCustomerStatusUpstreamChannelInfo"
+        restart: "SetArrisConfigurationInfo"
 
   session:
     cookie_name: "uid"
@@ -126,14 +124,33 @@ capabilities:
   - ofdm_downstream
   - ofdma_upstream
   - software_version
-  - restart
+
+# =============================================================================
+# ACTIONS
+# =============================================================================
+actions:
+  restart:
+    type: hnap
+    action_name: "SetArrisConfigurationInfo"
+    # Pre-fetch current config to preserve EEE and LED settings during restart
+    pre_fetch_action: "GetArrisConfigurationInfo"
+    pre_fetch_response_key: "GetArrisConfigurationInfoResponse"
+    params:
+      Action: "reboot"
+      # These use values from pre-fetch response, with defaults if not found
+      SetEEEEnable: "${ethSWEthEEE:0}"
+      LED_Status: "${LedStatus:1}"
+    response_key: "SetArrisConfigurationInfoResponse"
+    result_key: "SetArrisConfigurationInfoResult"
+    success_value: "OK"
 
 # =============================================================================
 # BEHAVIORS
 # =============================================================================
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # STATUS
@@ -155,3 +172,21 @@ attribution:
   contributors:
     - github: kwschulz
       contribution: "Maintainer - HNAP implementation from HAR analysis"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  HNAP protocol uses GetCustomer* action names (vs MB8611's GetMoto*).
+  JavaScript reveals identical protocol structure to MB8611.
+  Session stored in sessionStorage.getItem('PrivateKey').
+  S33 blocks ICMP ping - HTTP-only health checks required.
+  System uptime not available (only current time exposed).
+
+references:
+  issue_32: "https://github.com/solentlabs/cable_modem_monitor/issues/32"
+  modemguides: "https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison"
+  surfboard: "https://www.surfboard.com/products/cable-modems/s33/"

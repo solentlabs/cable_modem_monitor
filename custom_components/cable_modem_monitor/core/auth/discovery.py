@@ -35,13 +35,31 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
+import requests
 from bs4 import BeautifulSoup
 
+from .detection import has_login_form
 from .types import AuthStrategyType
 
-if TYPE_CHECKING:
-    import requests
+# Import directly to avoid triggering fallback/__init__.py (circular import)
+# Use lazy import inside the function that needs it
+_FALLBACK_TIMEOUT: int | None = None
 
+
+def _get_fallback_timeout() -> int:
+    """Lazy import of FALLBACK_TIMEOUT to avoid circular imports."""
+    global _FALLBACK_TIMEOUT
+    if _FALLBACK_TIMEOUT is None:
+        from ..fallback.data_orchestrator import FALLBACK_TIMEOUT
+
+        _FALLBACK_TIMEOUT = FALLBACK_TIMEOUT
+    return _FALLBACK_TIMEOUT
+
+
+if TYPE_CHECKING:
+    from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import (
+        HNAPJsonRequestBuilder,
+    )
     from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,7 +101,7 @@ class DiscoveredFormConfig:
     - password_encoding: How password should be encoded (plain or base64)
     - success_redirect: URL to verify login success (from modem.yaml)
 
-    For combined credential forms (SB6190-style):
+    For combined credential forms:
     - credential_field: Single field name containing encoded credentials
     - credential_format: Template for combining username/password
     """
@@ -95,7 +113,7 @@ class DiscoveredFormConfig:
     hidden_fields: dict[str, str] = field(default_factory=dict)
     password_encoding: str = "plain"  # "plain" or "base64"
     success_redirect: str | None = None  # URL to verify login success
-    # Combined credential mode (SB6190-style)
+    # Combined credential mode
     credential_field: str | None = None
     credential_format: str | None = None
 
@@ -117,9 +135,11 @@ class DiscoveryResult:
         success: Whether discovery completed and auth strategy was determined
         strategy: The detected AuthStrategyType (may be UNKNOWN if unrecognized)
         form_config: Discovered form configuration (if form-based auth)
-        hnap_config: HNAP config (endpoint, namespace, etc.) for HNAP auth
+        hnap_config: HNAP config (endpoint, namespace, hmac_algorithm) for HNAP auth
+        hnap_builder: Authenticated HNAP builder for data fetches (HNAP only)
         url_token_config: URL token config (login_prefix, etc.) for URL token auth
         response_html: HTML from authenticated page (for parser detection)
+                       Note: HNAP modems return None (data via SOAP API, not HTML)
         error_message: Human-readable error (if failed)
         captured_response: Debug info for unknown patterns (for diagnostics)
     """
@@ -128,6 +148,7 @@ class DiscoveryResult:
     strategy: AuthStrategyType | None = None
     form_config: DiscoveredFormConfig | None = None
     hnap_config: dict[str, Any] | None = None
+    hnap_builder: HNAPJsonRequestBuilder | None = None
     url_token_config: dict[str, Any] | None = None
     response_html: str | None = None
     error_message: str | None = None
@@ -184,7 +205,7 @@ class AuthDiscovery:
                     len(self._auth_patterns.get("form", {}).get("username_fields", [])),
                     len(self._auth_patterns.get("form", {}).get("password_fields", [])),
                 )
-            except Exception as e:
+            except (ImportError, FileNotFoundError, KeyError, TypeError) as e:
                 _LOGGER.debug("Failed to load aggregated auth patterns: %s", e)
                 self._auth_patterns = {
                     "form": {
@@ -260,8 +281,13 @@ class AuthDiscovery:
         # Step 1: Fetch anonymously (don't follow redirects)
         try:
             response = session.get(data_url, timeout=10, allow_redirects=False)
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Connection failed during discovery: %s", e)
+            return self._error_result(f"Connection failed: {e}")
+        except (OSError, ValueError) as e:
+            # OSError: SSL/socket errors not always wrapped as RequestException
+            # ValueError: URL parsing issues
+            _LOGGER.debug("Network error during discovery: %s", e, exc_info=True)
             return self._error_result(f"Connection failed: {e}")
 
         # Step 2: Inspect and react
@@ -335,7 +361,7 @@ class AuthDiscovery:
                     parser=parser,
                 )
 
-            # Is it an SB6190-style combined credential form?
+            # Is it a combined credential form (arguments + nonce pattern)?
             if self._is_combined_credential_form(response.text):
                 return self._handle_combined_auth(
                     session=session,
@@ -348,7 +374,7 @@ class AuthDiscovery:
                 )
 
             # Is it a login form?
-            if self._is_login_form(response.text):
+            if has_login_form(response.text):
                 # Check for JavaScript-based auth (button instead of submit)
                 if self._is_js_form(response.text):
                     return self._handle_js_auth(
@@ -387,7 +413,7 @@ class AuthDiscovery:
         _LOGGER.debug(
             "Unknown auth pattern: status=%d, has_form=%s",
             response.status_code,
-            self._is_login_form(response.text) if response.text else False,
+            has_login_form(response.text) if response.text else False,
         )
         return self._unknown_result(response)
 
@@ -420,7 +446,7 @@ class AuthDiscovery:
                     )
             elif response.status_code == 401:
                 return self._error_result("Invalid credentials (HTTP 401).")
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Basic auth failed: {e}")
 
         return self._unknown_result(response)
@@ -486,7 +512,7 @@ class AuthDiscovery:
                 response = session.post(action_url, data=form_data, timeout=10)
             else:
                 response = session.get(action_url, params=form_data, timeout=10)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Form submission failed: {e}")
 
         # FORM_PLAIN handles both plain and base64 via password_encoding field
@@ -501,7 +527,7 @@ class AuthDiscovery:
         # First check: if form submission response is NOT a login page, auth succeeded
         # MB7621 and similar modems return the home page directly after successful login
         # No need to fetch verification URL - the response itself proves success
-        form_response_is_login = self._is_login_form(response.text)
+        form_response_is_login = has_login_form(response.text)
         _LOGGER.debug(
             "Form submission response: HTTP %d, %d bytes, is_login_form=%s",
             response.status_code,
@@ -559,7 +585,7 @@ class AuthDiscovery:
             # BUT: only fail immediately if we have a reliable verification URL.
             # Some modems (e.g., MB7621) show login forms on root URL even when authenticated.
             # In fallback mode, we use cookies as a secondary indicator.
-            if self._is_login_form(data_response.text):
+            if has_login_form(data_response.text):
                 if using_reliable_verification:
                     _LOGGER.debug("Verification page still shows login form - credentials rejected")
                     return self._error_result("Invalid credentials. Still on login page after form submission.")
@@ -593,11 +619,11 @@ class AuthDiscovery:
                     error_message=None,
                     captured_response=None,
                 )
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Post-auth verification fetch failed: %s", e)
 
         # Check if we're still on login page (wrong credentials)
-        if self._is_login_form(response.text):
+        if has_login_form(response.text):
             return self._error_result("Invalid credentials. Login form returned.")
 
         return self._unknown_result(response)
@@ -613,28 +639,80 @@ class AuthDiscovery:
     ) -> DiscoveryResult:
         """Handle HNAP/SOAP session authentication.
 
-        HNAP auth is handled by the existing HNAPSessionAuthStrategy.
-        We detect it here and return HNAP_SESSION with the HNAP config
-        for storage in config entry.
+        Actually performs HNAP challenge-response authentication to validate
+        credentials during discovery. This ensures we catch auth failures
+        at setup time, not runtime.
+
+        Algorithm Discovery:
+            Since we don't know which modem this is yet (parser detection
+            happens after auth), we try both HMAC algorithms:
+            1. MD5 first (most common)
+            2. SHA256 if MD5 fails
+
+        Returns:
+            DiscoveryResult with authenticated hnap_builder for data fetches.
+            The hnap_config includes the discovered hmac_algorithm.
         """
+        from .hnap.json_builder import HNAPJsonRequestBuilder
+        from .types import HMACAlgorithm
+
         if not username or not password:
             return self._error_result("HNAP authentication detected. Please provide credentials.")
 
-        # Get HNAP config from modem.yaml via adapter, or use defaults
+        # Get base HNAP config (endpoint, namespace, empty_action_value)
         hnap_config = self._get_hnap_config(parser)
-        _LOGGER.debug("HNAP authentication detected, config: %s", hnap_config)
+        _LOGGER.debug("HNAP authentication detected, base config: %s", hnap_config)
 
-        # HNAP requires the full strategy to execute the challenge-response
-        # We return the strategy type and config; caller stores config in entry
-        return DiscoveryResult(
-            success=True,
-            strategy=AuthStrategyType.HNAP_SESSION,
-            form_config=None,
-            hnap_config=hnap_config,
-            response_html=None,  # Will be fetched by strategy
-            error_message=None,
-            captured_response=None,
-        )
+        # Try authentication with each HMAC algorithm until one works
+        # Most HNAP modems use MD5, but some (e.g., certain firmware versions) use SHA256
+        algorithms_to_try = [HMACAlgorithm.MD5, HMACAlgorithm.SHA256]
+        last_error = None
+
+        for algorithm in algorithms_to_try:
+            _LOGGER.debug("HNAP: trying authentication with %s", algorithm.value)
+
+            builder = HNAPJsonRequestBuilder(
+                endpoint=hnap_config.get("endpoint", "/HNAP1/"),
+                namespace=hnap_config.get("namespace", "http://purenetworks.com/HNAP1/"),
+                hmac_algorithm=algorithm,
+                timeout=_get_fallback_timeout(),
+                empty_action_value=hnap_config.get("empty_action_value", ""),
+            )
+
+            try:
+                success, response_text = builder.login(session, base_url, username, password)
+
+                if success:
+                    _LOGGER.info(
+                        "HNAP authentication successful with %s algorithm",
+                        algorithm.value,
+                    )
+                    # Store the working algorithm in config for runtime use
+                    hnap_config["hmac_algorithm"] = algorithm.value
+
+                    return DiscoveryResult(
+                        success=True,
+                        strategy=AuthStrategyType.HNAP_SESSION,
+                        form_config=None,
+                        hnap_config=hnap_config,
+                        hnap_builder=builder,
+                        response_html=None,  # HNAP returns JSON, not HTML
+                        error_message=None,
+                        captured_response=None,
+                    )
+                else:
+                    last_error = f"HNAP {algorithm.value} login failed"
+                    response_preview = response_text[:200] if response_text else "(empty)"
+                    _LOGGER.debug("HNAP %s login failed, response: %s", algorithm.value, response_preview)
+
+            except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+                # Intentionally broad: HNAP auth can fail in many ways (network, parsing, crypto)
+                last_error = f"HNAP {algorithm.value} error: {e}"
+                _LOGGER.debug("HNAP %s auth exception: %s", algorithm.value, e)
+
+        # All algorithms failed
+        _LOGGER.error("HNAP authentication failed with all algorithms")
+        return self._error_result(f"HNAP authentication failed. {last_error or 'Invalid credentials.'}")
 
     def _get_hnap_config(self, parser: ModemParser | None) -> dict[str, Any]:
         """Get HNAP config from modem.yaml or defaults.
@@ -671,7 +749,7 @@ class AuthDiscovery:
                     )
                     # Merge with defaults to ensure all required keys exist
                     return {**default_config, **hints}
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml HNAP config: %s", e)
 
         return default_config
@@ -688,9 +766,9 @@ class AuthDiscovery:
     ) -> DiscoveryResult:
         """Handle JavaScript-based authentication.
 
-        Some modems (like SB8200) have forms that use JavaScript for submission
-        instead of standard form submission. We check modem.yaml or parser hints
-        and return URL_TOKEN_SESSION with config for storage in config entry.
+        Some modems have forms that use JavaScript for submission instead of
+        standard form submission. We check modem.yaml or parser hints and
+        return URL_TOKEN_SESSION with config for storage in config entry.
         """
         # Get JS auth hints from modem.yaml, parser class, or login page detection
         js_auth_hints = self._get_js_auth_hints(parser, form_html)
@@ -730,7 +808,7 @@ class AuthDiscovery:
         Returns:
             URL token config dict with login_page, login_prefix, etc.
         """
-        # Default URL token config (SB8200 pattern)
+        # Default URL token config
         default_config = {
             "login_page": "/cmconnectionstatus.html",
             "login_prefix": "login_",
@@ -762,7 +840,7 @@ class AuthDiscovery:
                     # Filter out "pattern" key since it's not part of the config
                     merged = {**default_config, **_strip_pattern_key(url_token_hints)}
                     return merged
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml URL token config: %s", e)
 
         return default_config
@@ -777,7 +855,7 @@ class AuthDiscovery:
         password: str | None,
         parser: ModemParser | None,
     ) -> DiscoveryResult:
-        """Handle SB6190-style combined credential form.
+        """Handle combined credential form (arguments + nonce pattern).
 
         These forms encode username and password together in a single field:
         arguments=base64(urlencode("username=X:password=Y"))
@@ -823,7 +901,7 @@ class AuthDiscovery:
 
         try:
             response = session.post(action_url, data=form_data, timeout=10)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Form submission failed: {e}")
 
         # Check for success - fetch data page
@@ -845,13 +923,13 @@ class AuthDiscovery:
                     error_message=None,
                     captured_response=None,
                 )
-        except Exception as e:
+        except requests.RequestException as e:
             _LOGGER.debug("Post-auth data fetch failed: %s", e)
 
         return self._unknown_result(response)
 
     def _is_combined_credential_form(self, html: str) -> bool:
-        """Detect SB6190-style combined credential form.
+        """Detect combined credential form (arguments + nonce pattern).
 
         Signature:
         - Form action contains 'adv_pwd_cgi'
@@ -887,7 +965,7 @@ class AuthDiscovery:
         return has_nonce and has_arguments
 
     def _parse_combined_form(self, html: str) -> DiscoveredFormConfig | None:
-        """Parse SB6190-style combined credential form."""
+        """Parse combined credential form (arguments + nonce pattern)."""
         soup = BeautifulSoup(html, "html.parser")
         form = soup.find("form")
         if not form:
@@ -945,7 +1023,7 @@ class AuthDiscovery:
                             parser.__class__.__name__,
                         )
                         return hints
-            except Exception as e:
+            except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
                 _LOGGER.debug("Failed to load modem.yaml js_auth hints: %s", e)
 
             # Fall back to parser class attributes (legacy)
@@ -964,9 +1042,9 @@ class AuthDiscovery:
     def _detect_auth_hints_from_html(self, html: str) -> dict[str, str] | None:
         """Detect auth hints from login page markers when parser is unavailable.
 
-        This enables auth discovery for modems like SB8200 HTTPS that have no
-        public pages - we can't detect the parser, but we can recognize the
-        modem from login page content.
+        This enables auth discovery for HTTPS modems that have no public pages -
+        we can't detect the parser, but we can recognize the modem from login
+        page content.
 
         Args:
             html: Login page HTML
@@ -976,22 +1054,20 @@ class AuthDiscovery:
         """
         html_lower = html.lower()
 
-        # ARRIS SB8200 detection via page content (not URL validation):
-        # - main_arris.js script reference in HTML
-        # - arris.com mentioned in page footer/content
-        # - Model label with "SB8200"
-        # - URL token auth pattern: login_ prefix in JavaScript
+        # URL token auth detection via page content (not URL validation):
+        # - Vendor-specific JavaScript files (e.g., main_*.js)
+        # - Vendor domain references in page footer/content
+        # - URL token auth pattern: login_ prefix in JavaScript with sessionid
         # Note: This checks HTML page content for brand indicators, not URL validation
         # lgtm[py/incomplete-url-substring-sanitization] - content detection, not URL validation
-        is_arris = "main_arris.js" in html or "arris.com" in html_lower
-        has_sb8200 = "sb8200" in html_lower
+        has_vendor_js = "main_arris.js" in html  # TODO: Generalize vendor detection
+        has_vendor_domain = "arris.com" in html_lower  # TODO: Generalize vendor detection
         has_url_token_pattern = "login_" in html and "sessionid" in html_lower
 
-        if is_arris and (has_sb8200 or has_url_token_pattern):
+        if (has_vendor_js or has_vendor_domain) and has_url_token_pattern:
             _LOGGER.debug(
-                "Detected ARRIS SB8200 from login page (arris=%s, sb8200=%s, url_token=%s)",
-                is_arris,
-                has_sb8200,
+                "Detected URL token auth from login page (vendor_indicators=%s, url_token=%s)",
+                has_vendor_js or has_vendor_domain,
                 has_url_token_pattern,
             )
             return {"pattern": "url_token_session"}
@@ -1019,7 +1095,7 @@ class AuthDiscovery:
 
         try:
             response = session.get(redirect_url, timeout=10, allow_redirects=False)
-        except Exception as e:
+        except requests.RequestException as e:
             return self._error_result(f"Failed to follow redirect: {e}")
 
         # Re-inspect the redirected response
@@ -1122,7 +1198,7 @@ class AuthDiscovery:
                         list(hints.keys()),
                     )
                     return hints
-        except Exception as e:
+        except (ImportError, FileNotFoundError, AttributeError, KeyError) as e:
             _LOGGER.debug("Failed to load modem.yaml hints: %s", e)
 
         # Fall back to parser class attributes (legacy)
@@ -1172,24 +1248,17 @@ class AuthDiscovery:
         return None
 
     def _find_password_field(self, form) -> str | None:
-        """Find password field - type='password' is definitive."""
-        pwd_input = form.find("input", {"type": "password"})
+        """Find password field - type='password' is definitive.
+
+        Uses case-insensitive matching for type attribute since some modems
+        use type="Password" (capital P), e.g., Technicolor CGA2121.
+        """
+        # Case-insensitive match: some modems use type="Password" (capital P)
+        pwd_input = form.find("input", {"type": lambda t: t and t.lower() == "password"})
         if pwd_input:
             field_name = pwd_input.get("name")
             return str(field_name) if field_name else None
         return None
-
-    def _is_login_form(self, html: str) -> bool:
-        """Detect if HTML contains a login form."""
-        if not html:
-            return False
-        soup = BeautifulSoup(html, "html.parser")
-        # Must have a form with password field
-        form = soup.find("form")
-        if not form:
-            return False
-        # Case-insensitive match for type="password" (some modems use type="Password")
-        return form.find("input", {"type": lambda t: bool(t and t.lower() == "password")}) is not None
 
     def _is_js_form(self, html: str) -> bool:
         """Detect if form uses JavaScript submission instead of normal submit."""
@@ -1322,7 +1391,8 @@ class AuthDiscovery:
             downstream = result.get("downstream", [])
             upstream = result.get("upstream", [])
             return len(downstream) > 0 or len(upstream) > 0
-        except Exception:
+        except (AttributeError, TypeError, KeyError, ValueError):
+            # Parsing failed - expected when checking if page is parseable
             return False
 
     def _resolve_url(self, base_url: str, path: str) -> str:

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock
-
 import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.motorola.mb7621.parser import (
-    RESTART_WINDOW_SECONDS,
+from modems.motorola.mb7621.parser import (
+    _DEFAULT_RESTART_WINDOW_SECONDS,
     MotorolaMB7621Parser,
 )
 from tests.fixtures import load_fixture
@@ -39,65 +37,8 @@ def security_html():
     return load_fixture("motorola", "mb7621", "MotoSecurity.asp")
 
 
-class TestRestart:
-    """Test modem restart functionality."""
-
-    def test_success(self, security_html):
-        """Test the restart functionality."""
-        parser = MotorolaMB7621Parser()
-        session = Mock()
-        base_url = "http://192.168.100.1"
-
-        # Mock the GET request to MotoSecurity.asp
-        mock_security_response = Mock()
-        mock_security_response.status_code = 200
-        mock_security_response.text = security_html
-        session.get.return_value = mock_security_response
-
-        # Mock the POST request for restart
-        mock_restart_response = Mock()
-        mock_restart_response.status_code = 200
-        mock_restart_response.text = ""
-        session.post.return_value = mock_restart_response
-
-        # Test successful restart
-        result = parser.restart(session, base_url)
-        assert result is True
-
-        session.get.assert_called_once_with(f"{base_url}/MotoSecurity.asp", timeout=10)
-        session.post.assert_called_once_with(
-            f"{base_url}/goform/MotoSecurity",
-            data={
-                "UserId": "",
-                "OldPassword": "",
-                "NewUserId": "",
-                "Password": "",
-                "PasswordReEnter": "",
-                "MotoSecurityAction": "1",
-            },
-            timeout=10,
-        )
-
-    def test_with_connection_reset(self, security_html):
-        """Test restart with ConnectionResetError (expected behavior during reboot)."""
-        parser = MotorolaMB7621Parser()
-        session = Mock()
-        base_url = "http://192.168.100.1"
-
-        # Mock the GET request to MotoSecurity.asp
-        mock_security_response = Mock()
-        mock_security_response.status_code = 200
-        mock_security_response.text = security_html
-        session.get.return_value = mock_security_response
-
-        # Mock the POST request raising ConnectionResetError
-        session.post.side_effect = ConnectionResetError("Connection reset by peer")
-
-        result = parser.restart(session, base_url)
-        assert result is True
-
-        session.get.assert_called_once_with(f"{base_url}/MotoSecurity.asp", timeout=10)
-        session.post.assert_called_once()
+# Note: TestRestart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_html.py for restart action tests
 
 
 class TestParsing:
@@ -333,10 +274,10 @@ class TestRestartDetection:
         assert len(data["upstream"]) == 1
         assert data["upstream"][0]["power"] is None  # Filtered out
 
-    def test_restart_window_constant(self):
-        """Test that the restart window constant is correctly defined."""
-        assert RESTART_WINDOW_SECONDS == 300
-        assert RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes
+    def test_restart_window_default(self):
+        """Test that the restart window default is correctly defined."""
+        assert _DEFAULT_RESTART_WINDOW_SECONDS == 300
+        assert _DEFAULT_RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes
 
 
 class TestAutoDetection:

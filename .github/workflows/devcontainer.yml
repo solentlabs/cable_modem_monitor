@@ -22,10 +22,12 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           runCmd: |
+            set -e  # Exit on first error
             echo "=== Devcontainer Smoke Test ==="
             docker info
             docker pull --quiet alpine:latest
-            pytest --collect-only -q 2>/dev/null | tail -3
+            echo "Checking pytest can collect tests..."
+            pytest --collect-only -q
+            echo "Checking ruff is installed..."
             ruff --version
-            python scripts/dev/ha-start.py --help
             echo "=== All checks passed ==="

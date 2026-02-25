@@ -7,28 +7,26 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
-  release_date: "2018"
+  chipset: Broadcom BCM3390
+  release_date: "2020"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
 
-protocol: http
 default_host: "10.0.0.1"
-default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/check.jst"
-    method: POST
-    username_field: username
-    password_field: password
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/network_setup.jst"
+  types:
+    form:
+      action: "/check.jst"
+      method: POST
+      username_field: username
+      password_field: password
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/at_a_glance.jst"
 
   session:
     cookie_name: "session"
@@ -74,9 +72,6 @@ capabilities:
   - last_boot_time
   - software_version
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================
@@ -97,3 +92,16 @@ attribution:
   contributors:
     - github: esand
       contribution: "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2) verification"
+
+isps:
+  - Rogers
+  - Comcast
+  - Xfinity
+
+notes: |
+  DOCSIS 3.1 cable modem + router gateway (CGM4331COM).
+  Transposed table format: rows are metrics, columns are channels.
+  Default IP: 10.0.0.1 (router mode) or 192.168.100.1 (modem mode).
+  Form-based authentication to /check.jst endpoint.
+  System uptime format: "X days Xh: Xm: Xs" (note spaces around colons).
+  May have localized variants (Italian translations found in Rogers/Italian market).

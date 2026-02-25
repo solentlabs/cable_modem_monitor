@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+      - "v*.*.*-beta.*"
 
 permissions:
   contents: write
@@ -22,15 +23,24 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Extract version from tag
         id: version
         run: |
-          # Extract version from tag (e.g., v2.5.0 -> 2.5.0)
+          # Extract version from tag (e.g., v2.5.0 -> 2.5.0, v3.13.0-beta.1 -> 3.13.0-beta.1)
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+          # Check if this is a prerelease (beta)
+          if [[ "$VERSION" == *"-beta."* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "📦 Detected prerelease: $VERSION"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "📦 Detected stable release: $VERSION"
+          fi
 
       - name: Verify version consistency
         run: |
@@ -72,12 +82,13 @@ jobs:
           # Save to file to preserve formatting
           echo "$CHANGELOG" > /tmp/changelog.txt
 
+      - name: Install test dependencies
+        run: |
+          pip install -r tests/requirements.txt
+
       - name: Run tests
         run: |
-          python -m pip install --upgrade pip
-          pip install -r tests/requirements.txt
-          # Use pytest without path argument to respect pytest.ini testpaths (tests + modems)
-          pytest
+          pytest -v --tb=short
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -85,7 +96,7 @@ jobs:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: /tmp/changelog.txt
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
           token: ${{ secrets.GITHUB_TOKEN }}
 

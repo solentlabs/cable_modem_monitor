@@ -19,7 +19,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.cm1200.parser import NetgearCM1200Parser
+from modems.netgear.cm1200.parser import NetgearCM1200Parser
 from tests.fixtures import load_fixture
 
 
@@ -43,7 +43,8 @@ class TestCM1200Detection:
         soup = BeautifulSoup(cm1200_docsis_status_html, "html.parser")
         meta = soup.find("meta", attrs={"name": "description"})
         assert meta is not None
-        assert "CM1200" in meta.get("content", "")
+        content = meta.get("content", "")
+        assert isinstance(content, str) and "CM1200" in content
 
     def test_does_not_match_cm2000(self):
         """Test that CM1200 parser doesn't match CM2000 HTML via HintMatcher.
@@ -230,17 +231,12 @@ class TestCM1200Fixtures:
 
         assert fixture_exists("netgear", "cm1200", "DocsisStatus.htm"), "DocsisStatus.htm fixture should exist"
 
-    def test_readme_exists(self):
-        """Verify README.md is present in fixtures directory."""
-        from tests.fixtures import fixture_exists
+    def test_modem_yaml_exists(self):
+        """Verify modem.yaml is present in modem directory."""
+        from pathlib import Path
 
-        assert fixture_exists("netgear", "cm1200", "README.md"), "README.md should exist"
-
-    def test_metadata_exists(self):
-        """Verify metadata.yaml is present in fixtures directory."""
-        from tests.fixtures import fixture_exists
-
-        assert fixture_exists("netgear", "cm1200", "metadata.yaml"), "metadata.yaml should exist"
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
 
 class TestCM1200BootTimeCalculation:
@@ -452,11 +448,16 @@ class TestCM1200Capabilities:
 
         assert ModemCapability.SYSTEM_UPTIME in NetgearCM1200Parser.capabilities
 
-    def test_no_restart_capability(self):
-        """Test that RESTART capability is NOT declared (not in capture)."""
-        from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
+    def test_no_restart_action(self):
+        """Test that restart action is NOT configured (no actions.restart in modem.yaml)."""
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
 
-        assert ModemCapability.RESTART not in NetgearCM1200Parser.capabilities
+        adapter = get_auth_adapter_for_parser("NetgearCM1200Parser")
+        if adapter:
+            modem_config = adapter.get_modem_config_dict()
+            assert not ActionFactory.supports(ActionType.RESTART, modem_config)
 
     def test_ofdm_capability(self):
         """Test that OFDM capabilities are declared."""

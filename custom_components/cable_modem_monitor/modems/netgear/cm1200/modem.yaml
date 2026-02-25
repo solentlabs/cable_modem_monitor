@@ -15,18 +15,18 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
+  chipset: Broadcom BCM3390
   release_date: "2019"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: basic
+  types:
+    basic: null
 
 pages:
   public: []
@@ -66,9 +66,6 @@ capabilities:
   - system_uptime
   - last_boot_time
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================
@@ -89,3 +86,18 @@ attribution:
   contributors:
     - github: DeFlanko
       contribution: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63) diagnostics"
+
+isps:
+  - Comcast
+  - Spectrum
+  - Cox
+
+notes: |
+  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA support.
+  Channel data embedded in JavaScript functions (NOT HTML tables).
+  Uses HTTP Basic Auth (unlike CM2000's form-based auth).
+  Supports up to 32 SC-QAM downstream, 2 OFDM, 8 ATDMA upstream, 2 OFDMA.
+  Upstream ATDMA symbol rate appears before frequency (differs from CM2000).
+
+references:
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

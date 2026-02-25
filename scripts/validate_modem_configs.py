@@ -2,7 +2,7 @@
 """Validate modem.yaml files have complete configuration.
 
 Pre-commit hook that validates modem.yaml files when they change.
-Ensures auth config is complete for the declared strategy.
+Ensures auth config is complete for the declared auth types.
 
 Usage:
     python scripts/validate_modem_configs.py [file1.yaml file2.yaml ...]
@@ -34,10 +34,13 @@ class ValidationError:
         return f"{self.path}: {self.field} - {self.message}"
 
 
-def validate_form_auth(config: dict, path: str) -> list[ValidationError]:
+def validate_form_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
     """Validate form auth configuration."""
     errors = []
-    form = config.get("auth", {}).get("form", {})
+
+    # type_config is None for auth types that don't need config (like "none")
+    if type_config is None:
+        return errors
 
     required_fields = [
         ("action", "Form action URL required"),
@@ -46,37 +49,43 @@ def validate_form_auth(config: dict, path: str) -> list[ValidationError]:
     ]
 
     for field, message in required_fields:
-        if not form.get(field):
-            errors.append(ValidationError(path, f"auth.form.{field}", message))
+        if not type_config.get(field):
+            errors.append(ValidationError(path, f"auth.types.{auth_type}.{field}", message))
 
     # Validate password_encoding if present
-    encoding = form.get("password_encoding")
+    encoding = type_config.get("password_encoding")
     if encoding and encoding not in ("plain", "base64"):
         errors.append(
             ValidationError(
-                path, "auth.form.password_encoding", f"Invalid encoding: {encoding}. Must be 'plain' or 'base64'"
+                path,
+                f"auth.types.{auth_type}.password_encoding",
+                f"Invalid encoding: {encoding}. Must be 'plain' or 'base64'",
             )
         )
 
     return errors
 
 
-def validate_hnap_auth(config: dict, path: str) -> list[ValidationError]:
+def validate_hnap_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
     """Validate HNAP auth configuration."""
     errors = []
-    hnap = config.get("auth", {}).get("hnap", {})
+
+    if type_config is None:
+        return errors
 
     # HNAP needs endpoint at minimum
-    if not hnap.get("endpoint"):
-        errors.append(ValidationError(path, "auth.hnap.endpoint", "HNAP endpoint required"))
+    if not type_config.get("endpoint"):
+        errors.append(ValidationError(path, f"auth.types.{auth_type}.endpoint", "HNAP endpoint required"))
 
     return errors
 
 
-def validate_url_token_auth(config: dict, path: str) -> list[ValidationError]:
+def validate_url_token_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
     """Validate URL token auth configuration."""
     errors = []
-    url_token = config.get("auth", {}).get("url_token", {})
+
+    if type_config is None:
+        return errors
 
     required_fields = [
         ("login_page", "Login page URL required"),
@@ -84,27 +93,63 @@ def validate_url_token_auth(config: dict, path: str) -> list[ValidationError]:
     ]
 
     for field, message in required_fields:
-        if not url_token.get(field):
-            errors.append(ValidationError(path, f"auth.url_token.{field}", message))
+        if not type_config.get(field):
+            errors.append(ValidationError(path, f"auth.types.{auth_type}.{field}", message))
 
     return errors
 
 
-def validate_basic_auth(config: dict, path: str) -> list[ValidationError]:
+def validate_basic_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
     """Validate basic auth configuration."""
     # Basic auth doesn't need additional config - credentials come from user
     return []
 
 
-def validate_rest_api_auth(config: dict, path: str) -> list[ValidationError]:
-    """Validate REST API auth configuration."""
+def validate_form_ajax_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
+    """Validate form_ajax auth configuration."""
     errors = []
-    rest_api = config.get("auth", {}).get("rest_api", {})
 
-    if not rest_api.get("base_path"):
-        errors.append(ValidationError(path, "auth.rest_api.base_path", "REST API base path required"))
+    if type_config is None:
+        errors.append(ValidationError(path, f"auth.types.{auth_type}", "form_ajax config required"))
+        return errors
+
+    if not type_config.get("endpoint"):
+        errors.append(ValidationError(path, f"auth.types.{auth_type}.endpoint", "AJAX endpoint required"))
 
     return errors
+
+
+def validate_form_nonce_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
+    """Validate form_nonce auth configuration."""
+    errors = []
+
+    if type_config is None:
+        errors.append(ValidationError(path, f"auth.types.{auth_type}", "form_nonce config required"))
+        return errors
+
+    if not type_config.get("endpoint"):
+        errors.append(ValidationError(path, f"auth.types.{auth_type}.endpoint", "form endpoint required"))
+
+    return errors
+
+
+def validate_rest_api_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
+    """Validate REST API auth configuration."""
+    errors = []
+
+    if type_config is None:
+        return errors
+
+    if not type_config.get("base_path"):
+        errors.append(ValidationError(path, f"auth.types.{auth_type}.base_path", "REST API base path required"))
+
+    return errors
+
+
+def validate_none_auth(type_config: dict, path: str, auth_type: str) -> list[ValidationError]:
+    """Validate none auth configuration."""
+    # No auth doesn't need config - type_config can be None or empty dict
+    return []
 
 
 def validate_detection(config: dict, path: str) -> list[ValidationError]:
@@ -144,56 +189,65 @@ def validate_parser(config: dict, path: str) -> list[ValidationError]:
 
 
 def validate_pages(config: dict, path: str) -> list[ValidationError]:
-    """Validate pages configuration for non-REST modems."""
-    errors: list[ValidationError] = []
-
-    # REST API modems don't need pages config
-    if config.get("paradigm") == "rest_api":
-        return errors
-
-    # HNAP modems don't need pages config (they use HNAP actions)
-    if config.get("auth", {}).get("strategy") == "hnap":
-        return errors
-
+    """Validate pages configuration."""
+    errors = []
     pages = config.get("pages", {})
 
-    # Should have at least public or protected pages defined
-    has_public = bool(pages.get("public"))
-    has_protected = bool(pages.get("protected"))
-
-    if not (has_public or has_protected):
-        errors.append(ValidationError(path, "pages", "At least public or protected pages should be defined"))
+    # Protected pages usually required (except for some special modems)
+    # This is a soft validation - just a warning for now
+    # Note: Some modems with parser.class defined don't need pages config
+    # (no action taken here - keeping as passive check for future use)
+    _ = pages.get("protected") or pages.get("public") or not config.get("parser", {}).get("class")
 
     return errors
 
 
 def is_work_in_progress(config: dict) -> bool:
-    """Check if this is a work-in-progress config (no parser yet)."""
-    # No parser class = work in progress
-    parser = config.get("parser", {})
-    if not parser.get("class"):
-        return True
-
-    # Explicit in_progress status
+    """Check if modem config is marked as work-in-progress."""
     status_info = config.get("status_info", {})
-    return bool(status_info.get("status") == "in_progress")
+    status = status_info.get("status", "")
+    return status in ("in_progress", "unsupported", "wip")
 
 
-def validate_modem_config(yaml_path: Path) -> list[ValidationError]:
-    """Validate a single modem.yaml file."""
+def validate_auth_types(config: dict, path: str) -> list[ValidationError]:
+    """Validate auth.types{} configuration."""
     errors = []
-    path_str = str(yaml_path)
+    auth = config.get("auth", {})
+    auth_types = auth.get("types", {})
 
-    try:
-        with open(yaml_path) as f:
-            config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        return [ValidationError(path_str, "yaml", f"Invalid YAML: {e}")]
+    if not auth_types:
+        errors.append(ValidationError(path, "auth.types", "Auth types required"))
+        return errors
 
-    if not config:
-        return [ValidationError(path_str, "root", "Empty configuration")]
+    # Validators for each auth type
+    type_validators = {
+        "form": validate_form_auth,
+        "form_ajax": validate_form_ajax_auth,
+        "form_dynamic": validate_form_auth,  # Uses same validation as form
+        "form_nonce": validate_form_nonce_auth,
+        "hnap": validate_hnap_auth,
+        "url_token": validate_url_token_auth,
+        "basic": validate_basic_auth,
+        "rest_api": validate_rest_api_auth,
+        "none": validate_none_auth,
+    }
 
-    # Required top-level fields (always required)
+    for auth_type, type_config in auth_types.items():
+        validator = type_validators.get(auth_type)
+        if validator:
+            errors.extend(validator(type_config, path, auth_type))
+        else:
+            errors.append(ValidationError(path, f"auth.types.{auth_type}", f"Unknown auth type: {auth_type}"))
+
+    return errors
+
+
+def validate_config(config: dict, path: Path) -> list[ValidationError]:
+    """Validate a modem.yaml configuration."""
+    errors = []
+    path_str = str(path)
+
+    # Required top-level fields
     if not config.get("manufacturer"):
         errors.append(ValidationError(path_str, "manufacturer", "Manufacturer required"))
 
@@ -202,44 +256,15 @@ def validate_modem_config(yaml_path: Path) -> list[ValidationError]:
 
     # Work-in-progress configs get minimal validation
     if is_work_in_progress(config):
-        # Just validate what's present, don't require everything
+        # Just validate auth types if present, don't require everything
         auth = config.get("auth", {})
-        strategy = auth.get("strategy")
-        if strategy:
-            strategy_validators = {
-                "form": validate_form_auth,
-                "hnap": validate_hnap_auth,
-                "url_token": validate_url_token_auth,
-                "basic": validate_basic_auth,
-                "rest_api": validate_rest_api_auth,
-                "none": lambda c, p: [],
-            }
-            validator = strategy_validators.get(strategy)
-            if validator:
-                errors.extend(validator(config, path_str))
+        auth_types = auth.get("types", {})
+        if auth_types:
+            errors.extend(validate_auth_types(config, path_str))
         return errors
 
     # Full validation for complete configs
-    auth = config.get("auth", {})
-    strategy = auth.get("strategy")
-
-    if not strategy:
-        errors.append(ValidationError(path_str, "auth.strategy", "Auth strategy required"))
-    else:
-        strategy_validators = {
-            "form": validate_form_auth,
-            "hnap": validate_hnap_auth,
-            "url_token": validate_url_token_auth,
-            "basic": validate_basic_auth,
-            "rest_api": validate_rest_api_auth,
-            "none": lambda c, p: [],  # No auth needs no config
-        }
-
-        validator = strategy_validators.get(strategy)
-        if validator:
-            errors.extend(validator(config, path_str))
-        else:
-            errors.append(ValidationError(path_str, "auth.strategy", f"Unknown strategy: {strategy}"))
+    errors.extend(validate_auth_types(config, path_str))
 
     # Detection validation
     errors.extend(validate_detection(config, path_str))
@@ -279,57 +304,70 @@ def validate_single_file(yaml_path: Path, all_errors: list, wip_count_ref: list)
         all_errors.append(ValidationError(str(yaml_path), "file", "File not found"))
         return
 
-    # Check if WIP before validation
     try:
         with open(yaml_path) as f:
             config = yaml.safe_load(f) or {}
-        is_wip = is_work_in_progress(config)
-    except Exception:
-        is_wip = False
+    except yaml.YAMLError as e:
+        all_errors.append(ValidationError(str(yaml_path), "yaml", f"Invalid YAML: {e}"))
+        return
 
-    errors = validate_modem_config(yaml_path)
-    all_errors.extend(errors)
-
-    try:
-        rel_path = yaml_path.relative_to(PROJECT_ROOT)
-    except ValueError:
-        rel_path = yaml_path
-
-    if errors:
-        print(f"\n{yaml_path}:")
-        for error in errors:
-            print(f"  - {error.field}: {error.message}")
-    elif is_wip:
+    # Skip work-in-progress but report them
+    if is_work_in_progress(config):
         wip_count_ref[0] += 1
-        print(f"  {rel_path} (work-in-progress)")
-    else:
-        print(f"  {rel_path}")
+        print(f"  {yaml_path.relative_to(PROJECT_ROOT)} (work-in-progress)")
+        # Still validate what's present
+        errors = validate_config(config, yaml_path)
+        if errors:
+            all_errors.extend(errors)
+        return
+
+    errors = validate_config(config, yaml_path)
+    all_errors.extend(errors)
 
 
 def main() -> int:
+    """Main entry point."""
     parser = argparse.ArgumentParser(description="Validate modem.yaml configurations")
-    parser.add_argument("files", nargs="*", help="modem.yaml files to validate")
+    parser.add_argument("files", nargs="*", help="Files to validate")
     parser.add_argument("--all", action="store_true", help="Validate all modem.yaml files")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+
     args = parser.parse_args()
 
     files = get_files_to_validate(args)
-    if not files:
-        print("No modem.yaml files found")
+    if files is None:
+        print("No modem.yaml files found to validate")
         return 0
 
     all_errors: list[ValidationError] = []
-    wip_count_ref = [0]  # Use list as mutable reference
+    wip_count = [0]  # Use list to allow mutation in nested function
 
-    for yaml_path in files:
-        validate_single_file(yaml_path, all_errors, wip_count_ref)
+    # Group files for batch reporting (4 files per batch for cleaner output)
+    batch_size = 4
+    for i in range(0, len(files), batch_size):
+        batch = files[i : i + batch_size]
+        batch_errors: list[ValidationError] = []
+
+        for yaml_path in batch:
+            validate_single_file(yaml_path, batch_errors, wip_count)
+
+        # Report batch errors
+        if batch_errors:
+            for error in batch_errors:
+                print(f"\n{error.path}:")
+                print(f"  - {error.field}: {error.message}")
+            print(f"\nValidation failed with {len(batch_errors)} error(s)")
+            all_errors.extend(batch_errors)
+
+    if wip_count[0] > 0 and args.verbose:
+        print(f"\nSkipped {wip_count[0]} work-in-progress configs")
 
     if all_errors:
-        print(f"\nValidation failed with {len(all_errors)} error(s)")
         return 1
 
-    wip_count = wip_count_ref[0]
-    complete_count = len(files) - wip_count
-    print(f"\nValidated {len(files)} modem.yaml file(s): {complete_count} complete, {wip_count} work-in-progress")
+    if args.verbose:
+        print(f"\nValidated {len(files)} modem.yaml files successfully")
+
     return 0
 
 

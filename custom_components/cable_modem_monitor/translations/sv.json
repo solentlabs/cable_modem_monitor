@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "Cable Modem-inställningar",
-        "description": "Nuvarande: {detected_modem}\nSenast kontrollerad: {last_detection}",
+        "description": "Nuvarande: {detected_modem}\nSenast kontrollerad: {parser_selected_at}",
         "data": {
           "host": "Modem-IP",
           "username": "Användarnamn",

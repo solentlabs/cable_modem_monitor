@@ -14,63 +14,132 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .types import AuthStrategyType
+from ...const import DEFAULT_TIMEOUT
+from .types import AuthStrategyType, HMACAlgorithm
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AuthConfig:
     """Base dataclass for authentication configurations.
 
     Subclasses define strategy-specific fields. All configs have a strategy
     field that identifies which AuthStrategy implementation to use.
+
+    Timeout uses DEFAULT_TIMEOUT from schema. Modems override in modem.yaml if needed.
     """
 
     strategy: AuthStrategyType
+    timeout: int = DEFAULT_TIMEOUT
 
 
-@dataclass
+@dataclass(kw_only=True)
 class NoAuthConfig(AuthConfig):
     """No authentication required."""
 
     strategy: AuthStrategyType = AuthStrategyType.NO_AUTH
 
 
-@dataclass
+@dataclass(kw_only=True)
 class BasicAuthConfig(AuthConfig):
     """HTTP Basic Authentication configuration."""
 
     strategy: AuthStrategyType = AuthStrategyType.BASIC_HTTP
 
 
-@dataclass
+@dataclass(kw_only=True)
 class FormAuthConfig(AuthConfig):
     """Form-based authentication configuration.
 
     Supports two modes:
     1. Traditional: Separate username_field and password_field
-    2. Combined: Single credential_field with formatted value (e.g., SB6190)
+    2. Combined: Single credential_field with formatted value
 
     For combined mode, set credential_field and credential_format.
     For traditional mode, use username_field and password_field.
     """
 
-    strategy: AuthStrategyType
-    login_url: str  # Form action URL (relative to base_url)
+    strategy: AuthStrategyType = AuthStrategyType.FORM_PLAIN
+    login_url: str = ""  # Form action URL (relative to base_url)
     username_field: str = "username"
     password_field: str = "password"
     method: str = "POST"  # HTTP method for form submission
-    success_indicator: str | None = None  # URL fragment or min response size
+    success_redirect: str | None = None  # Expected URL path after successful login (e.g., "/at_a_glance.jst")
+    success_indicator: str | None = None  # Content string or min response size (legacy, prefer success_redirect)
     hidden_fields: dict[str, str] | None = None  # Additional hidden form fields
 
     # Password encoding (plain, base64)
     password_encoding: str = "plain"
 
-    # Combined credential mode (SB6190-style)
+    # Combined credential mode
     credential_field: str | None = None  # Field name for combined credentials
     credential_format: str | None = None  # Format string, e.g., "{username}:{password}"
 
 
-@dataclass
+@dataclass(kw_only=True)
+class FormDynamicAuthConfig(AuthConfig):
+    """Form auth with dynamic action URL extracted from login page.
+
+    Used when the login form's action attribute contains a dynamic parameter
+    that changes per page load (e.g., /goform/Login?id=XXXXXXXXXX where the
+    id value is regenerated on each page load).
+
+    The strategy fetches the login page first, parses the <form> element,
+    and extracts the actual action URL before submitting credentials.
+
+    Extends AuthConfig directly (not FormAuthConfig) to avoid dataclass
+    inheritance issues with required vs optional fields.
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_DYNAMIC
+
+    # Page containing the login form to scrape for dynamic action URL
+    login_page: str = "/"
+
+    # Fallback form action URL if extraction fails
+    login_url: str = "/login"
+
+    # CSS selector for form element (e.g., "form[name='loginform']")
+    # If None, uses the first <form> element found
+    form_selector: str | None = None
+
+    # Form field configuration (same as FormAuthConfig)
+    username_field: str = "username"
+    password_field: str = "password"
+    method: str = "POST"
+    success_redirect: str | None = None  # Expected URL path after successful login
+    success_indicator: str | None = None  # Content string or min response size (legacy)
+    hidden_fields: dict[str, str] | None = None
+    password_encoding: str = "plain"
+
+    # Combined credential mode - unlikely for dynamic forms but included for completeness
+    credential_field: str | None = None
+    credential_format: str | None = None
+
+
+@dataclass(kw_only=True)
+class FormAjaxAuthConfig(AuthConfig):
+    """AJAX-based form auth with client-generated nonce.
+
+    Auth flow:
+    1. POST to endpoint with:
+       - arguments: base64(urlencode("username={user}:password={pass}"))
+       - ar_nonce: random digits (client-generated)
+    2. Response is plain text:
+       - "Url:/path" = success, redirect to path
+       - "Error:message" = failure
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_AJAX
+    endpoint: str = "/cgi-bin/adv_pwd_cgi"  # AJAX endpoint for credentials
+    nonce_field: str = "ar_nonce"  # Field name for client-generated nonce
+    nonce_length: int = 8  # Length of random nonce
+    arguments_field: str = "arguments"  # Field name for encoded credentials
+    credential_format: str = "username={username}:password={password}"
+    success_prefix: str = "Url:"  # Response prefix indicating success
+    error_prefix: str = "Error:"  # Response prefix indicating failure
+
+
+@dataclass(kw_only=True)
 class RedirectFormAuthConfig(AuthConfig):
     """Form auth with redirect validation configuration (e.g., XB7)."""
 
@@ -82,23 +151,31 @@ class RedirectFormAuthConfig(AuthConfig):
     authenticated_page_url: str = "/network_setup.jst"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class HNAPAuthConfig(AuthConfig):
-    """HNAP JSON authentication configuration (MB8611, S33).
+    """HNAP JSON authentication configuration.
 
-    Uses HMAC-MD5 challenge-response authentication protocol.
+    Uses HMAC challenge-response authentication protocol.
     The HNAPJsonRequestBuilder is used internally for the authentication flow.
     """
 
     strategy: AuthStrategyType = AuthStrategyType.HNAP_SESSION
     endpoint: str = "/HNAP1/"
     namespace: str = "http://purenetworks.com/HNAP1/"
-    # Modem firmware bug: S33 expects "" for empty action, MB8611 expects {}.
-    # Both should accept {} per HNAP spec, but S33 firmware rejects it.
+    # Some firmware variants expect "" for empty action, others expect {}.
+    # Default to "" as it works with most modems observed in HAR captures.
     empty_action_value: str | dict = ""
+    # HMAC algorithm - required, specified in each modem's modem.yaml
+    # None sentinel triggers validation error if not overridden
+    hmac_algorithm: HMACAlgorithm | None = None
+
+    def __post_init__(self) -> None:
+        """Validate required fields."""
+        if self.hmac_algorithm is None:
+            raise ValueError("hmac_algorithm is required for HNAPAuthConfig")
 
 
-@dataclass
+@dataclass(kw_only=True)
 class HNAPSoapAuthConfig(AuthConfig):
     """HNAP XML/SOAP session authentication configuration (legacy modems).
 
@@ -112,15 +189,46 @@ class HNAPSoapAuthConfig(AuthConfig):
     soap_action_namespace: str = "http://purenetworks.com/HNAP1/"
 
 
-@dataclass
+@dataclass(kw_only=True)
+class FormNonceAuthConfig(AuthConfig):
+    """Form auth with client-generated nonce and text response.
+
+    Authentication pattern where:
+    - Form POST contains plain username/password fields plus a client-generated nonce
+    - Response is plain text with success/error prefix (e.g., "Url:/path" or "Error:message")
+    - No HTML parsing required for auth validation
+
+    This is a dedicated config for modems that use this specific pattern.
+    Designed to be refactored into composable building blocks in v3.14+.
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_NONCE
+    endpoint: str = "/cgi-bin/adv_pwd_cgi"
+    username_field: str = "username"
+    password_field: str = "password"
+    nonce_field: str = "ar_nonce"
+    nonce_length: int = 8
+    success_prefix: str = "Url:"
+    error_prefix: str = "Error:"
+
+
+@dataclass(kw_only=True)
 class UrlTokenSessionConfig(AuthConfig):
-    """URL-based token auth with session cookie (e.g., ARRIS SB8200 HTTPS).
+    """URL-based token auth with session cookie.
 
     Auth flow:
     1. Login: GET {base_url}{login_page}?{login_prefix}{base64(user:pass)}
        with Authorization: Basic {base64(user:pass)} header
+       (optionally with X-Requested-With: XMLHttpRequest if ajax_login=True)
     2. Response sets {session_cookie_name} cookie
     3. Subsequent requests: GET {url}?{token_prefix}{session_cookie_value}
+       (Authorization header included only if auth_header_data=True)
+
+    Behavioral attributes (configured via modem.yaml):
+        ajax_login: If True, add X-Requested-With: XMLHttpRequest to login request.
+            Some modems (jQuery-based auth) require this header. Default: False.
+        auth_header_data: If True, include Authorization header on data requests.
+            Most modems only need the session cookie. Default: True (backwards compat).
     """
 
     strategy: AuthStrategyType = AuthStrategyType.URL_TOKEN_SESSION
@@ -130,3 +238,6 @@ class UrlTokenSessionConfig(AuthConfig):
     token_prefix: str = "ct_"
     session_cookie_name: str = "sessionId"
     success_indicator: str = "Downstream Bonded Channels"
+    # Behavioral attributes - control header behavior based on modem requirements
+    ajax_login: bool = False  # Add X-Requested-With: XMLHttpRequest to login
+    auth_header_data: bool = True  # Include Authorization header on data requests

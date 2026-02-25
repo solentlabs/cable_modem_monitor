@@ -30,7 +30,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from .base import AuthResult
-from .types import AuthStrategyType
+from .types import AuthStrategyType, HMACAlgorithm
 
 if TYPE_CHECKING:
     import requests
@@ -46,7 +46,7 @@ DEFAULT_HNAP_CONFIG = {
     "empty_action_value": "",  # Both S33 and MB8611 use "" (verified from HAR captures)
 }
 
-# Default URL token configuration (SB8200)
+# Default URL token configuration
 DEFAULT_URL_TOKEN_CONFIG = {
     "login_page": "/cmconnectionstatus.html",
     "login_prefix": "login_",
@@ -69,7 +69,7 @@ class AuthHandler:
     - BASIC_HTTP: HTTP Basic Authentication
     - FORM_PLAIN: Form-based login (encoding controlled by password_encoding)
     - HNAP_SESSION: HNAP/SOAP authentication
-    - URL_TOKEN_SESSION: URL-based token auth (SB8200)
+    - URL_TOKEN_SESSION: URL-based token auth
     """
 
     def __init__(
@@ -79,6 +79,7 @@ class AuthHandler:
         hnap_config: dict[str, Any] | None = None,
         url_token_config: dict[str, Any] | None = None,
         fallback_strategies: list[dict[str, Any]] | None = None,
+        timeout: int | None = None,
     ):
         """Initialize auth handler.
 
@@ -89,7 +90,8 @@ class AuthHandler:
             url_token_config: URL token configuration (login_page, etc.)
             fallback_strategies: Ordered list of alternate strategies to try if primary fails.
                 Each entry is a dict with 'strategy' key and optional config keys.
-                Used for try-until-success pattern (e.g., SB6190 with firmware variations).
+                Used for try-until-success pattern (e.g., modems with firmware variations).
+            timeout: Request timeout in seconds (ModemConfig.timeout)
         """
         # Normalize strategy to AuthStrategyType
         if isinstance(strategy, str):
@@ -118,6 +120,9 @@ class AuthHandler:
         self.form_config = form_config or {}
         self.hnap_config = {**DEFAULT_HNAP_CONFIG, **(hnap_config or {})}
         self.url_token_config = {**DEFAULT_URL_TOKEN_CONFIG, **(url_token_config or {})}
+        if timeout is None:
+            raise ValueError("timeout is required but was None. Schema defines default in const.py.")
+        self.timeout = timeout
 
         # Fallback strategies for try-until-success
         self._fallback_strategies = fallback_strategies or []
@@ -125,139 +130,69 @@ class AuthHandler:
         # HNAP builder instance (created on first auth, reused for data fetches)
         self._hnap_builder: HNAPJsonRequestBuilder | None = None
 
+        # Session token from URL token auth (Issue #81)
+        # This is the token from the response body that must be used for subsequent
+        # page fetches. It's different from the cookie value on some firmware.
+        self._session_token: str | None = None
+
     @classmethod
-    def from_modem_config(cls, config: Any) -> AuthHandler:
+    def from_modem_config(cls, config: Any, auth_type: str | None = None) -> AuthHandler:
         """Create AuthHandler from a modem.yaml config.
 
-        This is the Phase 7 integration point - creates AuthHandler directly
-        from modem.yaml configuration instead of parser class attributes.
-
-        Supports auth.strategies[] for try-until-success pattern.
-        When strategies[] is defined, tries each in order until one succeeds.
+        Uses auth.types{} as the source of truth. Creates AuthHandler with
+        the appropriate strategy and config based on the selected auth type.
 
         Args:
             config: ModemConfig from modem.yaml
+            auth_type: Specific auth type to use, or None for default
 
         Returns:
             AuthHandler configured from modem.yaml
         """
-        from custom_components.cable_modem_monitor.modem_config import (
-            AuthStrategy,
-            ModemConfigAuthAdapter,
-        )
+        from custom_components.cable_modem_monitor.modem_config import ModemConfigAuthAdapter
 
         adapter = ModemConfigAuthAdapter(config)
 
-        # Map modem.yaml AuthStrategy to AuthStrategyType
-        strategy_map = {
-            AuthStrategy.NONE: AuthStrategyType.NO_AUTH,
-            AuthStrategy.BASIC: AuthStrategyType.BASIC_HTTP,
-            AuthStrategy.FORM: AuthStrategyType.FORM_PLAIN,  # Refined below
-            AuthStrategy.HNAP: AuthStrategyType.HNAP_SESSION,
-            AuthStrategy.URL_TOKEN: AuthStrategyType.URL_TOKEN_SESSION,
-            AuthStrategy.REST_API: AuthStrategyType.NO_AUTH,  # REST API = no auth
-        }
+        # Get static auth config for the specified (or default) auth type
+        static_config = adapter.get_static_auth_config(auth_type)
 
-        # Check for auth.strategies[] (v3.12+ try-until-success pattern)
-        if config.auth.strategies:
-            return cls._from_strategies_list(config.auth.strategies, strategy_map)
+        # Map strategy string to AuthStrategyType
+        strategy_str = static_config.get("auth_strategy", "no_auth")
+        strategy = cls._strategy_from_string(strategy_str)
 
-        # Fall back to primary auth.strategy
-        strategy = strategy_map.get(config.auth.strategy, AuthStrategyType.UNKNOWN)
+        # Get timeout from modem config - must be present (defined in schema with default)
+        timeout = config.timeout
+
+        _LOGGER.debug(
+            "Created AuthHandler from modem.yaml (strategy=%s, auth_type=%s, timeout=%d)",
+            strategy.value,
+            auth_type or adapter.get_default_auth_type(),
+            timeout,
+        )
 
         return cls(
             strategy=strategy,
-            form_config=adapter.get_form_config() if config.auth.form else None,
-            hnap_config=adapter.get_hnap_config() if config.auth.hnap else None,
-            url_token_config=adapter.get_url_token_config() if config.auth.url_token else None,
-        )
-
-    @classmethod
-    def _from_strategies_list(cls, strategies: list, strategy_map: dict) -> AuthHandler:
-        """Create AuthHandler from auth.strategies[] list.
-
-        Args:
-            strategies: List of AuthStrategyEntry from modem.yaml
-            strategy_map: Mapping from AuthStrategy enum to AuthStrategyType
-
-        Returns:
-            AuthHandler with primary strategy and fallbacks configured
-        """
-        if not strategies:
-            return cls(strategy=AuthStrategyType.NO_AUTH)
-
-        # Extract primary strategy configs
-        primary = strategies[0]
-        primary_strategy, primary_configs = cls._extract_strategy_config(primary, strategy_map)
-
-        # Build fallback strategies (remaining entries)
-        fallback_strategies = [cls._build_fallback_entry(entry, strategy_map) for entry in strategies[1:]]
-
-        _LOGGER.debug(
-            "Created AuthHandler with %d strategies (primary: %s, fallbacks: %d)",
-            len(strategies),
-            primary_strategy.value,
-            len(fallback_strategies),
-        )
-
-        return cls(
-            strategy=primary_strategy,
-            form_config=primary_configs.get("form_config"),
-            hnap_config=primary_configs.get("hnap_config"),
-            url_token_config=primary_configs.get("url_token_config"),
-            fallback_strategies=fallback_strategies,
+            form_config=static_config.get("auth_form_config"),
+            hnap_config=static_config.get("auth_hnap_config"),
+            url_token_config=static_config.get("auth_url_token_config"),
+            timeout=timeout,
         )
 
     @staticmethod
-    def _extract_strategy_config(entry: Any, strategy_map: dict) -> tuple[AuthStrategyType, dict[str, Any]]:
-        """Extract strategy type and configs from a strategy entry.
+    def _strategy_from_string(strategy_str: str) -> AuthStrategyType:
+        """Convert strategy string to AuthStrategyType.
+
+        Args:
+            strategy_str: Strategy string (e.g., "form_plain", "hnap_session")
 
         Returns:
-            Tuple of (AuthStrategyType, dict of config dicts)
+            AuthStrategyType enum value
         """
-        from custom_components.cable_modem_monitor.modem_config.schema import AuthStrategy
-
-        strategy = strategy_map.get(entry.strategy, AuthStrategyType.UNKNOWN)
-        configs: dict[str, Any] = {}
-
-        # Extract form config
-        if entry.strategy == AuthStrategy.FORM and entry.form:
-            configs["form_config"] = {
-                "action": entry.form.action,
-                "method": entry.form.method,
-                "username_field": entry.form.username_field,
-                "password_field": entry.form.password_field,
-                "hidden_fields": dict(entry.form.hidden_fields) if entry.form.hidden_fields else {},
-                "password_encoding": entry.form.password_encoding.value if entry.form.password_encoding else "plain",
-            }
-
-        # Extract HNAP config
-        if entry.strategy == AuthStrategy.HNAP and entry.hnap:
-            configs["hnap_config"] = {
-                "endpoint": entry.hnap.endpoint,
-                "namespace": entry.hnap.namespace,
-                "empty_action_value": entry.hnap.empty_action_value,
-            }
-
-        # Extract URL token config
-        if entry.strategy == AuthStrategy.URL_TOKEN and entry.url_token:
-            configs["url_token_config"] = {
-                "login_page": entry.url_token.login_page,
-                "login_prefix": entry.url_token.login_prefix,
-                "session_cookie_name": entry.url_token.session_cookie,
-                "token_prefix": entry.url_token.token_prefix,
-                "success_indicator": entry.url_token.success_indicator,
-            }
-
-        return strategy, configs
-
-    @classmethod
-    def _build_fallback_entry(cls, entry: Any, strategy_map: dict) -> dict[str, Any]:
-        """Build a fallback strategy dict from a strategy entry."""
-        strategy, configs = cls._extract_strategy_config(entry, strategy_map)
-        fallback: dict[str, Any] = {"strategy": strategy.value}
-        fallback.update(configs)
-        return fallback
+        try:
+            return AuthStrategyType(strategy_str.lower())
+        except ValueError:
+            _LOGGER.warning("Unknown auth strategy: %s, defaulting to NO_AUTH", strategy_str)
+            return AuthStrategyType.NO_AUTH
 
     @classmethod
     def from_parser(cls, parser_class_name: str) -> AuthHandler | None:
@@ -324,6 +259,10 @@ class AuthHandler:
         )
 
         if result.success:
+            # Store session token for subsequent page fetches (Issue #81)
+            if result.session_token:
+                self._session_token = result.session_token
+                _LOGGER.debug("Stored session token from auth (%d chars)", len(result.session_token))
             return result
 
         # Try fallback strategies if primary failed
@@ -375,6 +314,9 @@ class AuthHandler:
                         **DEFAULT_URL_TOKEN_CONFIG,
                         **fallback.get("url_token_config", {}),
                     }
+                    # Store session token from fallback (Issue #81)
+                    if fallback_result.session_token:
+                        self._session_token = fallback_result.session_token
                     return fallback_result
 
             _LOGGER.warning("All auth strategies failed (primary + %d fallbacks)", len(self._fallback_strategies))
@@ -424,7 +366,7 @@ class AuthHandler:
             return AuthResult.ok()
 
         # Convert dict config to typed AuthConfig
-        config = self._create_typed_config(strategy, form_config, hnap_config, url_token_config)
+        config = self._create_typed_config(strategy, form_config, hnap_config, url_token_config, self.timeout)
 
         # Delegate to strategy
         result = strategy_instance.login(session, base_url, username, password, config, verbose)
@@ -444,6 +386,7 @@ class AuthHandler:
         form_config: dict[str, Any],
         hnap_config: dict[str, Any],
         url_token_config: dict[str, Any],
+        timeout: int,
     ):
         """Create typed AuthConfig from dict configs.
 
@@ -452,31 +395,37 @@ class AuthHandler:
             form_config: Form configuration dict
             hnap_config: HNAP configuration dict
             url_token_config: URL token configuration dict
+            timeout: Request timeout in seconds
 
         Returns:
             Typed AuthConfig object appropriate for the strategy
         """
         from .configs import (
             BasicAuthConfig,
+            FormAjaxAuthConfig,
             FormAuthConfig,
+            FormDynamicAuthConfig,
+            FormNonceAuthConfig,
             HNAPAuthConfig,
             NoAuthConfig,
             UrlTokenSessionConfig,
         )
 
         if strategy == AuthStrategyType.NO_AUTH:
-            return NoAuthConfig()
+            return NoAuthConfig(timeout=timeout)
 
         if strategy == AuthStrategyType.BASIC_HTTP:
-            return BasicAuthConfig()
+            return BasicAuthConfig(timeout=timeout)
 
         if strategy == AuthStrategyType.FORM_PLAIN:
             return FormAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 login_url=form_config.get("action", ""),
                 username_field=form_config.get("username_field", "username"),
                 password_field=form_config.get("password_field", "password"),
                 method=form_config.get("method", "POST"),
+                success_redirect=form_config.get("success_redirect"),
                 success_indicator=form_config.get("success_indicator"),
                 hidden_fields=form_config.get("hidden_fields"),
                 password_encoding=form_config.get("password_encoding", "plain"),
@@ -484,19 +433,68 @@ class AuthHandler:
                 credential_format=form_config.get("credential_format"),
             )
 
+        if strategy == AuthStrategyType.FORM_DYNAMIC:
+            return FormDynamicAuthConfig(
+                strategy=strategy,
+                timeout=timeout,
+                login_page=form_config.get("login_page", "/"),
+                login_url=form_config.get("action", ""),
+                form_selector=form_config.get("form_selector"),
+                username_field=form_config.get("username_field", "username"),
+                password_field=form_config.get("password_field", "password"),
+                method=form_config.get("method", "POST"),
+                success_redirect=form_config.get("success_redirect"),
+                success_indicator=form_config.get("success_indicator"),
+                hidden_fields=form_config.get("hidden_fields"),
+                password_encoding=form_config.get("password_encoding", "plain"),
+            )
+
+        if strategy == AuthStrategyType.FORM_AJAX:
+            return FormAjaxAuthConfig(
+                strategy=strategy,
+                timeout=timeout,
+                endpoint=form_config.get("endpoint", "/cgi-bin/adv_pwd_cgi"),
+                nonce_field=form_config.get("nonce_field", "ar_nonce"),
+                nonce_length=form_config.get("nonce_length", 8),
+                arguments_field=form_config.get("arguments_field", "arguments"),
+                credential_format=form_config.get("credential_format", "username={username}:password={password}"),
+                success_prefix=form_config.get("success_prefix", "Url:"),
+                error_prefix=form_config.get("error_prefix", "Error:"),
+            )
+
+        if strategy == AuthStrategyType.FORM_NONCE:
+            return FormNonceAuthConfig(
+                strategy=strategy,
+                timeout=timeout,
+                endpoint=form_config.get("endpoint", "/cgi-bin/adv_pwd_cgi"),
+                username_field=form_config.get("username_field", "username"),
+                password_field=form_config.get("password_field", "password"),
+                nonce_field=form_config.get("nonce_field", "ar_nonce"),
+                nonce_length=form_config.get("nonce_length", 8),
+                success_prefix=form_config.get("success_prefix", "Url:"),
+                error_prefix=form_config.get("error_prefix", "Error:"),
+            )
+
         if strategy == AuthStrategyType.HNAP_SESSION:
             merged = {**DEFAULT_HNAP_CONFIG, **hnap_config}
+            # Convert string to enum if needed
+            hmac_algo = merged.get("hmac_algorithm")
+            if isinstance(hmac_algo, str):
+                hmac_algo = HMACAlgorithm(hmac_algo)
             return HNAPAuthConfig(
                 strategy=strategy,
+                timeout=timeout,
                 endpoint=merged.get("endpoint", "/HNAP1/"),
                 namespace=merged.get("namespace", "http://purenetworks.com/HNAP1/"),
                 empty_action_value=merged.get("empty_action_value", ""),
+                hmac_algorithm=hmac_algo,
             )
 
         if strategy == AuthStrategyType.URL_TOKEN_SESSION:
             merged = {**DEFAULT_URL_TOKEN_CONFIG, **url_token_config}
             return UrlTokenSessionConfig(
                 strategy=strategy,
+                timeout=timeout,
                 login_page=merged.get("login_page", "/cmconnectionstatus.html"),
                 data_page=merged.get("data_page", "/cmconnectionstatus.html"),
                 login_prefix=merged.get("login_prefix", "login_"),
@@ -506,7 +504,7 @@ class AuthHandler:
             )
 
         # Default: return NoAuthConfig for unknown strategies
-        return NoAuthConfig()
+        return NoAuthConfig(timeout=timeout)
 
     def get_hnap_builder(self) -> HNAPJsonRequestBuilder | None:
         """Get the HNAP builder for data fetches after authentication.
@@ -515,3 +513,15 @@ class AuthHandler:
         or None otherwise. The scraper can use this for HNAP data fetches.
         """
         return self._hnap_builder
+
+    def get_session_token(self) -> str | None:
+        """Get the session token for subsequent page fetches.
+
+        For URL token auth, returns the token from the login response body.
+        This token must be used for ?ct_<token> in subsequent requests.
+        Note: This may differ from the cookie value on some firmware.
+
+        Returns:
+            Session token string, or None if not URL token auth or auth not done.
+        """
+        return self._session_token

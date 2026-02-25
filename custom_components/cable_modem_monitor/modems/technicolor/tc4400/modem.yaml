@@ -12,21 +12,22 @@
 manufacturer: Technicolor
 model: TC4400
 paradigm: html
+timeout: 20 # TC4400 pages can take 12+ seconds to load (issue #94)
 
 hardware:
   docsis_version: "3.1"
+  chipset: Broadcom BCM3390
   release_date: "2017"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: basic
+  types:
+    basic: null
 
 pages:
   public: []
@@ -68,9 +69,9 @@ capabilities:
   - software_version
 
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
-  requires_multi_page_fetch: true # Needs cmswinfo.html for system info
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # STATUS
@@ -92,3 +93,23 @@ attribution:
   contributors:
     - github: Mar1usW3
       contribution: "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1) verification"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Rogers
+  - Shaw
+  - Videotron
+  - Vodafone Germany
+  - Unitymedia
+
+notes: |
+  DOCSIS 3.1 standalone cable modem. Supports SC-QAM and OFDM channel types.
+  System uptime available in cmswinfo.html.
+  Data across multiple pages: cmconnectionstatus.html (channels), cmswinfo.html (system info).
+  Restart reports zero power during reboot window (300 seconds).
+
+references:
+  prior_art: "https://github.com/philfry/check_tc4400"
+  techinfodepot: "https://techinfodepot.shoutwiki.com/wiki/Technicolor_TC4400"

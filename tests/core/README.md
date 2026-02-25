@@ -4,25 +4,66 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 325
+**Total Tests:** 394
 
 ## Test Files
 
 | File | Tests | Description |
 |------|-------|-------------|
-| [test_auth_discovery.py](test_auth_discovery.py) | 48 | Tests for Authentication Discovery. |
+| [test_auth_detection.py](test_auth_detection.py) | 10 | Tests for auth/detection.py - login page detection. |
+| [test_auth_discovery.py](test_auth_discovery.py) | 49 | Tests for Authentication Discovery. |
 | [test_auth_handler.py](test_auth_handler.py) | 29 | Tests for the AuthHandler class. |
-| [test_authentication.py](test_authentication.py) | 42 | Tests for Authentication Strategies. |
+| [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
+| [test_form_ajax_auth.py](test_form_ajax_auth.py) | 17 | Tests for FormAjaxAuthStrategy. |
+| [test_form_dynamic_auth.py](test_form_dynamic_auth.py) | 9 | Tests for FormDynamicAuthStrategy. |
+| [test_form_nonce_auth.py](test_form_nonce_auth.py) | 8 | Tests for FormNonceAuthStrategy. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
-| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 45 | Tests for JSON-based HNAP Request Builder with challenge-... |
+| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
+| [test_log_buffer.py](test_log_buffer.py) | 6 | Tests for the log buffer module. |
 | [test_network.py](test_network.py) | 0 | Tests for core/network.py. |
 | [test_parser_utils.py](test_parser_utils.py) | 13 | Tests for core/parser_utils.py. |
 | [test_signal_analyzer.py](test_signal_analyzer.py) | 22 | Tests for Signal Quality Analyzer. |
+| [test_url_token_session_auth.py](test_url_token_session_auth.py) | 12 | Tests for UrlTokenSessionStrategy. |
 
 ## Test Details
+
+### test_auth_detection.py
+
+Tests for auth/detection.py - login page detection.
+
+Tests:
+- has_password_field(): Lenient string search
+- has_login_form(): Strict DOM-based check
+- is_login_page(): Smart detection using aggregated hints from all modems
+
+**TestHasPasswordField** (1 tests)
+: Test lenient password field detection.
+
+- `test_has_password_field`: Table-driven test for lenient password detection.
+
+**TestHasLoginForm** (1 tests)
+: Test strict login form detection.
+
+- `test_has_login_form`: Table-driven test for strict form detection.
+
+**TestRealWorldSamples** (4 tests)
+: Test with realistic modem login page HTML.
+
+- `test_netgear_cm_login`: Netgear CM login page pattern.
+- `test_arris_sb_login`: ARRIS Surfboard login page pattern.
+- `test_motorola_status_page`: Motorola modem status page (not a login page).
+- `test_js_template_with_password`: JavaScript template containing password field string (edge case).
+
+**TestIsLoginPage** (4 tests)
+: Test is_login_page() which is an alias for has_password_field().
+
+- `test_login_page_with_password_field`: Page with password field is detected as login page.
+- `test_data_page_without_password_field`: Page without password field is NOT a login page.
+- `test_empty_and_none`: Empty string and None return False.
+- `test_is_alias_for_has_password_field`: is_login_page() returns same result as has_password_field().
 
 ### test_auth_discovery.py
 
@@ -64,13 +105,14 @@ Tests for Authentication Discovery.
 - `test_login_form_detected`: Test that login form is detected.
 - `test_login_form_without_credentials_returns_error`: Test that login form without credentials returns error.
 
-**TestFormIntrospection** (6 tests)
+**TestFormIntrospection** (7 tests)
 : Test form field detection - table-driven.
 
 - `test_username_field_detection`: Table-driven test for username field detection.
 - `test_form_attributes`: Table-driven test for form action and method extraction.
 - `test_invalid_forms_return_none`: Table-driven test for forms that should return None.
 - `test_find_password_by_type`: Test finding password field by type='password'.
+- `test_find_password_by_type_case_insensitive`: Test finding password field with type='Password' (capital P).
 - `test_hidden_fields_captured`: Test that hidden fields are captured from form.
 - `test_parser_hints_override_detection`: Test that parser hints override generic detection.
 
@@ -240,13 +282,14 @@ Tests for Authentication Strategies.
 - `test_basic_auth_401_returns_failure`: Test that 401 response returns failure and clears auth.
 - `test_basic_auth_connection_error`: Test connection error returns failure.
 
-**TestFormPlainAuthStrategy** (4 tests)
+**TestFormPlainAuthStrategy** (5 tests)
 : Test FormPlainAuthStrategy.
 
 - `test_form_auth_success`: Test successful form authentication.
 - `test_form_auth_without_credentials`: Test form auth fails without credentials.
 - `test_form_auth_wrong_config_type`: Test form auth with wrong config type.
 - `test_form_auth_large_response_indicator`: Test form auth with size-based success indicator.
+- `test_form_auth_no_indicator_returns_html_when_not_login_page`: Test form auth returns HTML when no success_indicator and response is not a login page.
 
 **TestRedirectFormAuthStrategy** (9 tests)
 : Test RedirectFormAuthStrategy.
@@ -296,7 +339,7 @@ Tests for Authentication Strategies.
 - `test_single_cookie_returns_value`: Test normal case with single cookie.
 - `test_duplicate_cookies_different_paths_returns_root`: Test that duplicate cookies with different paths returns root path value.
 - `test_missing_cookie_returns_none`: Test that missing cookie returns None.
-- `test_three_or_more_cookies_raises_error`: Test that 3+ cookies with same name raises ValueError with details.
+- `test_three_or_more_cookies_returns_root_path`: Test that 3+ cookies with same name returns root path value.
 
 ### test_base_parser.py
 
@@ -510,6 +553,113 @@ Tests for core/discovery_helpers.py.
 **TestParser** (0 tests)
 
 
+### test_form_ajax_auth.py
+
+Tests for FormAjaxAuthStrategy.
+
+This tests the AJAX-based form authentication where login is handled via
+JavaScript XMLHttpRequest instead of traditional form submission.
+
+Auth flow:
+1. Client generates random nonce (configurable length)
+2. Credentials are formatted and base64-encoded:
+   base64(urlencode("username={user}:password={pass}"))
+3. POST to endpoint with arguments + nonce
+4. Response is plain text: "Url:/path" (success) or "Error:msg" (failure)
+
+**TestFormAjaxSuccessfulLogin** (5 tests)
+: Test successful AJAX login flow.
+
+- `test_successful_login_returns_ok`: Successful login returns AuthResult.ok with post-login HTML.
+- `test_posts_to_correct_endpoint`: Verifies POST is sent to configured endpoint.
+- `test_sends_correct_form_data_structure`: Verifies form data contains arguments and nonce fields.
+- `test_credentials_are_properly_encoded`: Verifies credentials are base64(urlencode(format_string)).
+- `test_sends_ajax_headers`: Verifies X-Requested-With header is sent (AJAX indicator).
+
+**TestFormAjaxFailedLogin** (3 tests)
+: Test AJAX login failure handling.
+
+- `test_error_response_returns_failure`: Error: prefix in response returns AuthResult.fail.
+- `test_unexpected_response_returns_failure`: Unexpected response format returns AuthResult.fail.
+- `test_connection_error_returns_failure`: Connection error returns AuthResult.fail.
+
+**TestFormAjaxCredentialValidation** (3 tests)
+: Test credential validation.
+
+- `test_missing_username_returns_failure`: Missing username returns AuthResult.fail.
+- `test_missing_password_returns_failure`: Missing password returns AuthResult.fail.
+- `test_wrong_config_type_returns_failure`: Wrong config type returns AuthResult.fail.
+
+**TestFormAjaxNonceGeneration** (2 tests)
+: Test nonce generation.
+
+- `test_nonce_is_random`: Nonce is different on each call.
+- `test_custom_nonce_length`: Custom nonce length is respected.
+
+**TestFormAjaxCustomConfig** (4 tests)
+: Test custom configuration options.
+
+- `test_custom_endpoint`: Custom endpoint is used.
+- `test_custom_field_names`: Custom field names are used.
+- `test_custom_credential_format`: Custom credential format is used.
+- `test_custom_response_prefixes`: Custom success/error prefixes are recognized.
+
+### test_form_dynamic_auth.py
+
+Tests for FormDynamicAuthStrategy.
+
+This tests the dynamic form action extraction for modems where the login form
+contains a dynamic parameter that changes per page load:
+    <form action="/goform/Login?id=XXXXXXXXXX">
+
+The static FormPlainAuthStrategy would use the configured action "/goform/Login",
+missing the required ?id= parameter. FormDynamicAuthStrategy fetches the login
+page first and extracts the actual action URL including any dynamic parameters.
+
+**TestFormPlainStaticAction** (1 tests)
+: Demonstrate that FormPlain uses static action, missing dynamic params.
+
+- `test_form_plain_uses_static_action`: FormPlain submits to static action, missing the dynamic ?id=.
+
+**TestFormDynamicExtractsAction** (3 tests)
+: Test that FormDynamic correctly extracts and uses dynamic action URL.
+
+- `test_form_dynamic_fetches_page_and_extracts_action`: FormDynamic fetches login page, extracts form action with ?id=.
+- `test_form_dynamic_uses_css_selector`: FormDynamic uses the configured CSS selector to find the form.
+- `test_form_dynamic_falls_back_to_first_form`: Without a selector, FormDynamic uses the first form.
+
+**TestFormDynamicFallback** (3 tests)
+: Test fallback behavior when dynamic extraction fails.
+
+- `test_fallback_when_no_form_found`: Falls back to static action when no form element exists.
+- `test_fallback_when_form_has_no_action`: Falls back to static action when form has no action attribute.
+- `test_fallback_when_page_fetch_fails`: Falls back to static action when login page fetch fails.
+
+**TestFormDynamicInheritance** (2 tests)
+: Verify FormDynamic inherits form submission logic from FormPlain.
+
+- `test_submits_correct_form_data`: FormDynamic submits username/password in correct fields.
+- `test_missing_credentials_returns_failure`: FormDynamic inherits credential validation from FormPlain.
+
+### test_form_nonce_auth.py
+
+Tests for FormNonceAuthStrategy.
+
+Tests the form_nonce authentication strategy used by ARRIS SB6190 (firmware 9.1.103+).
+Based on HAR capture from Issue #93 (@HenryGeorge1978).
+
+**TestFormNonceAuthStrategy** (8 tests)
+: Tests for FormNonceAuthStrategy.
+
+- `test_login_success`: Test successful login with redirect response.
+- `test_login_invalid_credentials`: Test login with invalid credentials.
+- `test_login_missing_credentials`: Test login without credentials.
+- `test_login_unexpected_response`: Test handling of unexpected response format.
+- `test_login_connection_error`: Test handling of connection errors.
+- `test_nonce_generation`: Test that nonce is random and correct length.
+- `test_xhr_header_included`: Test that X-Requested-With header is included (AJAX marker).
+- `test_wrong_config_type`: Test that wrong config type is rejected.
+
 ### test_health_monitor.py
 
 Tests for Modem Health Monitor.
@@ -635,7 +785,7 @@ Tests for HNAP Request Builder.
 Tests for JSON-based HNAP Request Builder with challenge-response authentication.
 
 **TestHmacMd5** (5 tests)
-: Test the HMAC-MD5 helper function.
+: Test the HMAC method with MD5 algorithm.
 
 - `test_returns_uppercase_hex`: Test that HMAC-MD5 returns uppercase hexadecimal.
 - `test_correct_length`: Test that HMAC-MD5 returns 32 character hex string.
@@ -643,10 +793,23 @@ Tests for JSON-based HNAP Request Builder with challenge-response authentication
 - `test_empty_strings`: Test HMAC-MD5 with empty strings.
 - `test_special_characters`: Test HMAC-MD5 with special characters.
 
+**TestHmacSha256** (3 tests)
+: Test the HMAC method with SHA256 algorithm.
+
+- `test_returns_uppercase_hex`: Test that HMAC-SHA256 returns uppercase hexadecimal.
+- `test_correct_length`: Test that HMAC-SHA256 returns 64 character hex string.
+- `test_different_from_md5`: Test that SHA256 produces different result than MD5.
+
+**TestHmacAlgorithmValidation** (2 tests)
+: Test algorithm type safety in builder initialization.
+
+- `test_enum_value_stored`: Test that enum value is stored correctly.
+- `test_md5_enum_value_stored`: Test that MD5 enum value is stored correctly.
+
 **TestHNAPJsonRequestBuilderInit** (2 tests)
 : Test JSON HNAP builder initialization.
 
-- `test_init`: Test initialization with endpoint and namespace.
+- `test_init`: Test initialization with endpoint, namespace, and algorithm.
 - `test_init_custom_values`: Test initialization with custom endpoint and namespace.
 
 **TestHnapAuth** (3 tests)
@@ -719,12 +882,38 @@ Tests for JSON-based HNAP Request Builder with challenge-response authentication
 - `test_auth_attempt_stores_error_on_failed_login`: Test that failed login stores error information.
 - `test_auth_attempt_stores_challenge_request_format`: Test that challenge request includes PrivateLogin field.
 
+### test_log_buffer.py
+
+Tests for the log buffer module.
+
+**TestLogEntry** (1 tests)
+: Tests for LogEntry dataclass.
+
+- `test_to_dict`: Test LogEntry converts to dict correctly.
+
+**TestLogBuffer** (3 tests)
+: Tests for LogBuffer class.
+
+- `test_add_entry`: Test adding entries to buffer.
+- `test_rotation`: Test buffer rotates when full.
+- `test_clear`: Test clearing buffer.
+
+**TestBufferingHandler** (2 tests)
+: Tests for BufferingHandler class.
+
+- `test_captures_logs`: Test handler captures log records to buffer.
+- `test_filters_by_level`: Test handler respects log level filter.
+
 ### test_network.py
 
 Tests for core/network.py.
 
 **TestIcmpPing** (0 tests)
 : Tests for test_icmp_ping function.
+
+
+**TestHttpHead** (0 tests)
+: Tests for test_http_head function.
 
 
 ### test_parser_utils.py
@@ -809,6 +998,61 @@ Tests for Signal Quality Analyzer.
 : Test that metrics are included in recommendations.
 
 - `test_metrics_included`: Test that recommendation includes detailed metrics.
+
+### test_url_token_session_auth.py
+
+Tests for UrlTokenSessionStrategy.
+
+This tests URL-based token authentication with session cookies, used by
+modems like the ARRIS SB8200 HTTPS variant.
+
+Auth flow:
+1. Login: GET {login_page}?{login_prefix}{base64(user:pass)}
+   - With Authorization: Basic {token} header
+   - With X-Requested-With: XMLHttpRequest (if ajax_login=True)
+2. Response sets session cookie
+3. Data fetch: GET {data_page}?{token_prefix}{session_token}
+   - With session cookie
+   - WITHOUT Authorization header (if auth_header_data=False)
+
+These tests verify the correct headers are sent based on config attributes,
+matching real browser behavior observed in HAR captures (Issue #81).
+
+**TestLoginRequestHeaders** (3 tests)
+: Test that login request sends correct headers.
+
+- `test_login_sends_authorization_header`: Login request includes Authorization: Basic header.
+- `test_login_sends_ajax_header_when_configured`: Login request includes X-Requested-With when ajax_login=True.
+- `test_login_omits_ajax_header_when_not_configured`: Login request omits X-Requested-With when ajax_login not set (default).
+
+**TestDataRequestHeaders** (2 tests)
+: Test that data request sends correct headers after login.
+
+- `test_data_request_omits_auth_header_when_configured`: Data request does NOT include Authorization when auth_header_data=False.
+- `test_data_request_includes_auth_header_by_default`: Data request includes Authorization by default (backwards compatible).
+
+**TestDataRequestUrl** (1 tests)
+: Test that data request URL is correctly formed.
+
+- `test_data_request_includes_session_token_in_url`: Data request URL includes ?ct_<session_token> from response body.
+
+**TestSuccessfulAuthentication** (2 tests)
+: Test successful authentication flow.
+
+- `test_returns_data_html_on_success`: Successful auth returns AuthResult.ok with data page HTML.
+- `test_returns_data_directly_if_login_response_has_indicator`: If login response already has data, return it directly (no second fetch).
+
+**TestTokenSource** (2 tests)
+: Test that session token comes from the correct source.
+
+- `test_token_from_response_body_not_cookie`: Data request must use token from login RESPONSE BODY, not cookie value.
+- `test_token_from_response_body_when_cookie_empty`: Auth should work even if cookie is empty, using response body token.
+
+**TestSessionCookieClearing** (2 tests)
+: Test that session cookie is cleared before login attempts.
+
+- `test_clears_session_cookie_before_login`: Login must clear existing session cookie before sending request.
+- `test_does_not_fail_when_no_existing_cookie`: Login works when there's no existing session cookie (first auth).
 
 ---
 *Generated by `scripts/generate_test_docs.py`*

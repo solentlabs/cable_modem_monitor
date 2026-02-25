@@ -6,27 +6,31 @@ each handling a specific authentication mechanism used by cable modems.
 Available Strategies:
     NoAuthStrategy
         For modems with no authentication (all pages public).
-        Used by: Older firmware versions, basic modems
+        Pattern: Older firmware versions, basic modem interfaces
 
     BasicHttpAuthStrategy
         HTTP Basic Auth (401 challenge with WWW-Authenticate header).
-        Used by: Some enterprise/commercial modems
+        Pattern: Enterprise/commercial grade modems
 
     FormPlainAuthStrategy
         HTML form-based login with plain or base64-encoded credentials.
-        Used by: MB7621, CM2000, C3700, C7000v2, CGA2121, XB7
+        Pattern: Traditional modem web interfaces with standard forms
+
+    FormDynamicAuthStrategy
+        Form auth where action URL is extracted from the login page.
+        Pattern: Forms with dynamic parameters (e.g., session IDs in action URL)
 
     HNAPSessionAuthStrategy
         HNAP/SOAP protocol authentication (XML format).
-        Used by: Arris S33
+        Pattern: HNAP-enabled modems using XML responses
 
     HNAPJsonAuthStrategy
         HNAP protocol with JSON format responses.
-        Used by: Motorola MB8611
+        Pattern: HNAP-enabled modems using JSON responses
 
     UrlTokenSessionStrategy
         URL-based token authentication (tokens in URL path).
-        Used by: Arris SB8200 (HTTPS mode)
+        Pattern: Token-based authentication with session tokens in URLs
 
     RedirectFormAuthStrategy
         Form auth with redirect-based session establishment.
@@ -51,6 +55,8 @@ Usage:
 from __future__ import annotations
 
 from .basic_http import BasicHttpAuthStrategy
+from .form_ajax import FormAjaxAuthStrategy
+from .form_dynamic import FormDynamicAuthStrategy
 from .form_plain import FormPlainAuthStrategy
 from .hnap_json import HNAPJsonAuthStrategy
 from .hnap_session import HNAPSessionAuthStrategy
@@ -60,6 +66,8 @@ from .url_token_session import UrlTokenSessionStrategy
 
 __all__ = [
     "BasicHttpAuthStrategy",
+    "FormAjaxAuthStrategy",
+    "FormDynamicAuthStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",
     "HNAPSessionAuthStrategy",

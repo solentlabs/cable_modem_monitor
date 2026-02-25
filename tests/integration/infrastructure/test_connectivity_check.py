@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.cable_modem_monitor.core.discovery.pipeline import check_connectivity
+from custom_components.cable_modem_monitor.lib.connectivity import check_connectivity
 
 
 def _legacy_server_rejects_modern_client(url: str) -> bool:

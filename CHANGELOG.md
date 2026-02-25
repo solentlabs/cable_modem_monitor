@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.0] - 2026-02-24
+
+### Added
+
+- **Arris/CommScope S34 Support** - HNAP protocol with HMAC-SHA256 authentication. 32 downstream + 5 upstream SC-QAM channels, plus OFDM/OFDMA. (Thanks [@rplancha](https://github.com/rplancha)! Based on [PR #90](https://github.com/solentlabs/cable_modem_monitor/pull/90))
+- **ARRIS CM3500B Support** - EuroDOCSIS 3.1 cable modem with form-based authentication. Parses 24+ SC-QAM downstream, 2 OFDM downstream, 4 ATDMA upstream, and 1 OFDMA upstream channels. (Thanks [@ChBi89](https://github.com/ChBi89)! #73)
+- **SB6190 Auth Support (9.1.103+)** - Added `form_nonce` auth strategy for ARRIS SB6190 modems with newer firmware that require login. Uses plain form POST with client-generated nonce instead of base64-encoded credentials. (#93, #83)
+- **Entity Prefix Selection** - Multi-modem setups can now configure custom entity prefixes during setup to avoid naming conflicts
+- **HTTP HEAD Auto-Detection** - Health monitor now auto-detects whether the modem supports HTTP HEAD requests during setup. Modems that don't support HEAD (e.g., TC4400's `micro_httpd`) use GET-only, eliminating session poisoning that caused permanent health check failures. (#94)
+- **Configurable HMAC Algorithm** - `HNAPJsonRequestBuilder` now supports `hmac_algorithm` parameter ("md5" or "sha256") for modems with different authentication requirements
+- **Action Layer Architecture** - Restart functionality now uses data-driven action definitions in `modem.yaml` instead of hardcoded parser methods
+- **Circular Log Buffer** - New diagnostics buffer compatible with HA 2025.11+ that preserves logs across integration reloads
+- **Diagnostic Logging Enhancement** - Added ERROR-level logging when parser receives login page HTML instead of data, making session expiration issues easier to diagnose during troubleshooting
+
+### Changed
+
+- **Modular Init** - `__init__.py` monolith extracted into focused modules (`setup.py`, `lifecycle.py`, `data_update.py`) (#1)
+- **DataOrchestrator** - `ModemScraper` renamed to `DataOrchestrator` for clarity (#14)
+- **Parser Registry** - `parser_discovery` module renamed to `parser_registry`
+- **Fallback Subsystem** - Unknown modem discovery moved to `core/fallback/` directory
+- **Auth Config Consolidation** - All auth configuration now lives in `auth.types{}` section of `modem.yaml`
+- **Metadata Consolidation** - Separate `metadata.yaml` files merged into `modem.yaml`
+- **Protocol Detection** - Removed hardcoded `default_port` and `protocol` from `modem.yaml`; now auto-detected
+- **CGA2121 Data Page Config** - Parser now reads primary data page path from `modem.yaml` `pages.data` config instead of hardcoding, reducing duplication between parser and modem config
+
+### Fixed
+
+- **SB8200 HTTPS Session** - Match real browser behavior observed in HAR captures: login requests now include `X-Requested-With: XMLHttpRequest` header, data requests omit `Authorization` header. Session cookie cleared before login to prevent stale cookie conflicts. (#81)
+- **SB6190 Parser Error** - Fixed parser returning 0 channels in production despite successful authentication. Parser now prioritizes explicit path (`/cgi-bin/status`) over root path (`/`) to avoid receiving auth response HTML instead of status page data. (#93, #83)
+- **SB6190 Form AJAX Auth** - Fixed "invalid_credentials" error when using form_ajax authentication (firmware 9.1.103+). The config flow helper was not passing the form_ajax configuration to the auth workflow. (#93, #83)
+- **XB7 Parser Data Page Path** - Fixed parser error when XB7 modem.yaml specifies a data page path. Parser now correctly reads from the configured path. (#107)
+- **C7000v2 Session Management** - Fixed browser lockout and session issues by correcting session cookie name (`XSRF_TOKEN` instead of `session`) and logout endpoint (`/goform/logout` instead of `/Logout.htm`). Added POST support for `/goform/` logout endpoints. (#61)
+- **TC4400 Parser Error** - Fixed parser returning 0 channels in v3.13.0 betas despite successful authentication. Parser now prioritizes explicit path (`/cmconnectionstatus.html`) over root path (`/`) to avoid receiving auth response HTML instead of channel data. (#94)
+- **CGA2121 Auth Redirect** - Fixed parser receiving wrong page when modem redirects to `/basicUX.html` after login instead of the data page `/st_docsis.html`. Parser now tries the specific data page path first, then falls back to "/" for legacy compatibility. (#75)
+- **CM3500B Auth Config** - Removed incorrect `success_indicator` from CM3500B modem.yaml auth config that could interfere with authentication validation. (#73)
+- **Form Auth HTML Response** - Fixed form authentication discarding the HTML response when auth succeeded without a `success_indicator`, causing parsers like CGA2121 to see empty data (#75)
+- **Config Flow Auth Type Preservation** - Fixed "Reset Entities" losing user's auth type selection for modems with multiple auth variants (SB6190, SB8200). Options flow now preserves `CONF_AUTH_TYPE` from config entry, preventing fallback to default auth type after entity reset. (#93)
+- **Diagnostics PII Sanitization** - Updated to har-capture 0.3.3 with `redact_flagged=True` for automatic redaction of WiFi credentials and device names, plus fixes for IPv4 address corruption (5-octet bug) and version string preservation.
+- **Case-Insensitive Password Detection** - Password field detection now case-insensitive (#75)
+- **G54 OFDM Channel IDs** - Handle OFDM/OFDMA prefixed channel IDs correctly
+- **URL Pattern Ordering** - Protected pages now prioritized in URL pattern ordering for polling
+- **Log Buffer Persistence** - Diagnostics log buffer preserved across integration reloads
+- **HTTP/HTTPS Detection** - Try HTTP before HTTPS to prevent protocol mismatch on setup
+- **HTTP HEAD SSL Blocking I/O** - Moved `ssl.create_default_context()` in HTTP HEAD auto-detection to executor to avoid blocking the HA event loop during config flow
+
+### Improved
+
+- **Exception Handling** - Replaced broad `except Exception` blocks with specific exception types for better diagnostics (#6)
+- **Test Coverage** - Config flow tests now use proper HA test infrastructure (`pytest-homeassistant-custom-component`)
+- **Dev Tooling** - Mock server with `--auth-type` and `--delay` flags, HA reload script, E2E test framework, pre-push hooks (#20)
+
 ## [3.12.1] - 2026-01-20
 
 ### Fixed

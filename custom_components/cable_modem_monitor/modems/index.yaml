@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-01-20T14:48:20.245123+00:00"
+generated: "2026-02-02T00:45:48.931303+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -17,7 +17,7 @@ auth_patterns:
       - password
       - password_login
     actions:
-      - /cgi-bin/login
+      - /cgi-bin/login_cgi
       - /cgi-bin/luci
       - /check.jst
       - /goform/Login
@@ -30,6 +30,8 @@ auth_patterns:
         type: base64
       - detect: btoa\s*\(
         type: base64
+  form_ajax:
+    endpoints: []
   hnap:
     endpoints:
       - /HNAP1/
@@ -40,6 +42,20 @@ auth_patterns:
       - login_
       - sessionId
 modems:
+  ArrisCM3500BParser:
+    path: arris/cm3500b
+    name: ARRIS CM3500B
+    manufacturer: ARRIS
+    model: CM3500B
+    verified: false
+    detection:
+      pre_auth:
+        - CM3500B
+        - ARRIS
+      post_auth:
+        - CM3500B
+        - ARRIS
+      page_hint: /cgi-bin/status_cgi
   ArrisCM820BParser:
     path: arris/cm820b
     name: ARRIS CM820B
@@ -97,6 +113,28 @@ modems:
         - purenetworks.com/HNAP1
         - SURFboard
       page_hint: /HNAP1/
+  ArrisS34HnapParser:
+    path: arris/s34
+    name: Arris/CommScope S34
+    manufacturer: Arris/CommScope
+    model: S34
+    verified: true
+    detection:
+      pre_auth:
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+        - /Login.html
+      post_auth:
+        - S34
+        - ARRIS S34
+        - CommScope S34
+        - ARRIS
+        - CommScope
+        - HNAP
+        - purenetworks.com/HNAP1
+        - SURFboard
+      page_hint: /HNAP1/
   ArrisSB6141Parser:
     path: arris/sb6141
     name: ARRIS SB6141
@@ -118,7 +156,7 @@ modems:
     name: ARRIS SB6190
     manufacturer: ARRIS
     model: SB6190
-    verified: true
+    verified: false
     detection:
       pre_auth:
         - SB6190
@@ -134,7 +172,7 @@ modems:
     name: ARRIS SB8200
     manufacturer: ARRIS
     model: SB8200
-    verified: true
+    verified: false
     detection:
       pre_auth:
         - SB8200

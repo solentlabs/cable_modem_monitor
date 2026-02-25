@@ -102,23 +102,12 @@ SEED_PAGES = generate_seed_pages()
 
 
 try:
-    # Try to import from the custom_component structure
-    from custom_components.cable_modem_monitor.utils import sanitize_html  # type: ignore[attr-defined]
+    from har_capture.sanitization import sanitize_html
+    from har_capture.sanitization.report import HeuristicMode
 except ImportError:
-    # If running as a standalone script, adjust the path
-    try:
-        import sys
-        from pathlib import Path
-
-        # Add the parent directory of 'tools' to the path
-        # This allows importing from custom_components
-        sys.path.append(str(Path(__file__).parent.parent))
-        from custom_components.cable_modem_monitor.utils.html_helper import sanitize_html
-    except ImportError:
-        print("ERROR: Could not import sanitize_html function.")
-        print("Please ensure the script is run from the project's root directory,")
-        print("or that the 'custom_components' directory is in the Python path.")
-        sys.exit(1)
+    print("ERROR: har-capture library not found.")
+    print("Please install it: pip install har-capture")
+    sys.exit(1)
 
 
 def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int = 10) -> dict[str, Any] | None:
@@ -151,7 +140,7 @@ def fetch_page(session: requests.Session, base_url: str, path: str, timeout: int
             html = response.text
 
             # Sanitize the HTML
-            sanitized = sanitize_html(html)
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
 
             return {
                 "path": path,

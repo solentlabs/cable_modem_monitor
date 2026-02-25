@@ -65,7 +65,7 @@ The integration uses a **fallback parser** system that allows installation even 
 | Parser Discovery | `custom_components/.../parsers/__init__.py` |
 | Fallback Parser | `custom_components/.../parsers/universal/fallback.py` |
 | HTML Crawler | `custom_components/.../lib/html_crawler.py` |
-| Diagnostics Capture | `custom_components/.../core/modem_scraper.py` |
+| Diagnostics Capture | `custom_components/.../core/data_orchestrator.py` |
 | Parser Template | `custom_components/.../parsers/parser_template.py` |
 | Authentication | `custom_components/.../core/auth/` |
 | Config Adapter | `custom_components/.../modem_config/adapter.py` |

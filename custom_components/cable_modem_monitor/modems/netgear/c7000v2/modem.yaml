@@ -15,25 +15,23 @@ paradigm: html
 
 hardware:
   docsis_version: "3.0"
+  chipset: Broadcom BCM3384
   release_date: "2016"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: basic
-
-  basic: {}
+  types:
+    basic: null
 
   session:
-    cookie_name: "session"
+    cookie_name: "XSRF_TOKEN"
     max_concurrent: 1
-    logout_endpoint: "/Logout.htm"
+    logout_endpoint: "/goform/logout" # POST with dynamic ?id=<timestamp> (HAR: 1359801763)
     logout_required: true
 
 pages:
@@ -78,10 +76,14 @@ capabilities:
   - software_version
   - system_uptime
   - last_boot_time
-  - restart
 
-behaviors:
-  requires_multi_page_fetch: true
+actions:
+  restart:
+    # Dynamic endpoint: form action contains session ID (e.g., /goform/RouterStatus?id=123456)
+    pre_fetch_url: "/RouterStatus.htm"
+    endpoint_pattern: "RouterStatus"
+    params:
+      buttonSelect: "2"
 
 # =============================================================================
 # STATUS
@@ -103,3 +105,15 @@ attribution:
   contributors:
     - github: Anthranilic
       contribution: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) diagnostics"
+
+isps:
+  - Comcast
+
+notes: |
+  Nighthawk AC1900 WiFi Cable Modem Router combo. DOCSIS 3.0 with 24x8 channel bonding.
+  Same page structure and parsing logic as C3700.
+  User provided manually redacted diagnostics after sanitization gap was discovered.
+
+references:
+  issue: "https://github.com/solentlabs/cable_modem_monitor/issues/61"
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

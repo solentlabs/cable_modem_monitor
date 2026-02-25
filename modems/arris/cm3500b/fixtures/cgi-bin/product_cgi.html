@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC
+"-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>Product Details</title>
+	<meta http-equiv="Pragma" content="no-cache">
+        <script type="text/javascript" src="/validation.js"></script>
+    <link rel="stylesheet" href="/arris_style.css">
+</head>
+
+<body class="CM3500" onload="onPageLoad()">
+<div class="wrapper">
+
+	<div class="header">
+	<div class="header_text">
+          <h1>Product Details</h1>
+          <a href="logout_cgi">Logout</a>
+	</div>
+	</div>
+
+	<div id="navbar">
+	<ul>
+	<li id="current"><a style="width: 16.66%; font-size: 90%;" href="product_cgi">Product</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="dhcp_cgi">DHCP</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="qos_cgi">QoS</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="config_params_cgi">Config Params</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="spectrum_cgi">SPECTRUM</a></li>
+<li><a style="width: 16.66%; font-size: 90%;" href="status_cgi">Basic</a></li>
+
+	</ul>
+	</div>
+
+	<div class="main_body">
+	<p>
+	<!-- INSERT ARRIS PAGE CONTENT HERE -->
+
+    <TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c>
+      <TBODY>
+        <TR>
+          <TD width=770><B><FONT color=#ffffff size=+1>&nbsp;Component Logging Levels</FONT></B></TD></TR>
+      </TBODY>
+    </TABLE>
+    <br><b>[3] COMMON_COMPONENTS</b>: Enabled <br>
+<table CELLSPACING=0 CELLPADDING=0>
+<tr><td width=250>[ 0] CLI: Enabled </td><td width=250>[ 1] ENVOY: Enabled </td><td width=250>[ 2] EVENT_MNGR: Enabled </td></tr>
+<tr><td width=250>[ 3] EVENT_MNGR_IF: Enabled </td><td width=250>[ 4] ICC: Enabled </td><td width=250>[ 5] LOGGER: Enabled </td></tr>
+<tr><td width=250>[ 6] NVRAM_MNGR: Enabled </td><td width=250>[ 7] SHMDB: Enabled </td><td width=250>[ 8] SME: Enabled </td></tr>
+<tr><td width=250>[ 9] TLV_PARSER: Enabled </td><td width=250>[10] NET_STATS: Enabled </td><td width=250>[11] BBU: Enabled </td></tr>
+<tr><td width=250>[12] BBU_EVENTS: Enabled </td><td width=250>[13] GPTIMER: Enabled </td><td width=250>[14] PCD: Enabled </td></tr>
+<tr><td width=250>[15] GIM: Enabled </td><td width=250>[16] SWT: Enabled </td><td width=250>[17] LSD: Enabled </td></tr>
+<tr><td width=250>[18] LSDDB: Enabled </td><td width=250>[19] RPC_MGM: Enabled </td><td width=250>[20] MOCA: Enabled </td></tr>
+<tr><td width=250>[21] WLAN_RPC_DEPRECATED: Enabled </td><td width=250>[22] EXT_SWITCH: Enabled </td><td width=250>[23] IMG_SIGNATURE: Enabled </td></tr>
+<tr><td width=250>[24] L2SWITCH: Enabled </td><td width=250>[25] SYNC_APP_NP: Enabled </td><td width=250>[26] UPGRADEBOX: Enabled </td></tr>
+<tr><td width=250>[27] EXT_PHY: Enabled </td><td width=250>[28] PM_LAN: Enabled </td><td width=250>[29] PP_FW_DOWNLOAD: Enabled </td></tr>
+<tr><td width=250>[30] PROD_DB: Enabled </td><td width=250>[31] PSM: Enabled </td><td width=250>[32] SEMOPS: Enabled </td></tr>
+<tr><td width=250>[33] BOOT_MONITOR: Enabled </td><td width=250>[34] MONITOR: Enabled </td><td width=250>[35] PM: Enabled </td></tr>
+<tr><td width=250>[36] PCE_APP: Enabled </td><td width=250>[37] PCE_COMP: Enabled </td><td width=250>[38] PCE_API: Enabled </td></tr>
+<tr><td width=250>[39] PCE_SM: Enabled </td><td width=250>[40] PCE_REG: Enabled </td><td width=250>[41] PMP_APP: Enabled </td></tr>
+<tr><td width=250>[42] PMP_API: Enabled </td><td width=250>[43] PMP_SM: Enabled </td><td width=250>[44] AFEATURES_APP: Enabled </td></tr>
+<tr><td width=250>[45] AFEATURES_API: Enabled </td><td width=250>[46] AFEATURES_DRIVER: Enabled </td><td width=250>[47] PMSRV: Enabled </td></tr>
+<tr><td width=250>[48] PCE_ADAPTER: Enabled </td><td width=250>[49] MEMORY_MONITOR: Enabled </td><td width=250>[50] HW_MBOX: Enabled </td></tr>
+<tr><td width=250>[51] RCE: Enabled </td><td width=250>[52] DSR: Enabled </td><td width=250>[53] ITS: Enabled </td></tr>
+<tr><td width=250>[54] MAC_ADDR_DB: Enabled </td><td width=250>[55] MODPHY: Enabled </td><td width=250>[56] LAN_SERVICE: Enabled </td></tr>
+<tr><td width=250>[57] DNS_API: Enabled </td><td width=250>[58] SNMP_CMD: Enabled </td><td width=250>[59] RPC_IFCFG: Enabled </td></tr>
+<tr><td width=250>[60] MOCA_VAL: Enabled </td><td width=250>[61] MOCA_HSIF_MGR: Enabled </td><td width=250>[62] SET_STARTUP: Enabled </td></tr>
+<tr><td width=250>[63] LAN_INIT: Enabled </td><td width=250>[64] CC_INIT_ONCE: Enabled </td><td width=250>[65] PRODUCTION_DATA: Enabled </td></tr>
+<tr><td width=250>[66] PM_INIT: Enabled </td><td width=250>[67] PM_DOCS_SRVC_MNG: Enabled </td><td width=250>[68] MTA_PRODUCTION_DB: Enabled </td></tr>
+<tr><td width=250>[69] FEATURE_DB: Enabled </td><td width=250>[70] DHCP6C: Enabled </td><td width=250>[71] OAM: Enabled </td></tr>
+<tr><td width=250>[72] HEALTH_MONITOR: Enabled </td></tr>
+</table>
+<br><b>[6] ARRIS</b>: Enabled <br>
+<table CELLSPACING=0 CELLPADDING=0>
+<tr><td width=250>[ 0] SYS: Enabled </td><td width=250>[ 1] WDT: Enabled </td><td width=250>[ 2] NVM: Enabled </td></tr>
+<tr><td width=250>[ 3] RESET_REASON: Enabled </td><td width=250>[ 4] MINICLI_LOGIN_FAILED: Enabled </td><td width=250>[ 7] SNMP: Enabled </td></tr>
+<tr><td width=250>[11] INIT: Enabled </td><td width=250>[12] DB: Enabled </td><td width=250>[13] RF: Enabled </td></tr>
+<tr><td width=250>[14] RF_SCAN: Enabled </td><td width=250>[15] HTTP: Enabled </td><td width=250>[28] QUEUE: Enabled </td></tr>
+<tr><td width=250>[29] DATAPATH: Enabled </td><td width=250>[31] PPDB: Enabled </td><td width=250>[32] ALARMS: Enabled </td></tr>
+<tr><td width=250>[33] ARP: Enabled </td><td width=250>[37] KLOG: Enabled </td><td width=250>[39] SSH_LOGIN_ATTEMPT_EVT: Enabled </td></tr>
+<tr><td width=250>[40] HTTPS_LOGIN_ATTEMPT_EVT: Enabled </td><td width=250>[41] TELNET_LOGIN_ATTEMPT_EVT: Enabled </td><td width=250>[42] SPEEDTEST: Enabled </td></tr>
+<tr></tr>
+</table>
+
+<br>
+
+    <TABLE cellSpacing=0 cols=1 cellPadding=0 width=770 bgColor=#0c055c>
+      <TBODY>
+        <TR>
+          <TD width=770><B><FONT color=#ffffff size=+1>&nbsp;Severity Levels</FONT></B></TD></TR>
+      </TBODY>
+    </TABLE><br>
+    <table CELLSPACING=0 CELLPADDING=0 >
+      <td width=250>[ 0] FATAL: Enabled </td><td width=250>[ 1] ERROR: Enabled </td><td width=250>[ 2] WARNING: Enabled </td></tr>
+<tr><td width=250>[ 3] INFO: Enabled </td><td width=250>[ 4] INIT: Enabled </td><td width=250>[ 5] STATISTICS: Enabled </td></tr>
+<tr><td width=250>[ 6] ENTER: Enabled </td><td width=250>[ 7] EXIT: Enabled </td><td width=250>[ 8] USER_DEFINED: Enabled </td></tr>
+<tr><td width=250>[ 9] DEBUG: Enabled </td><td width=250>[10] FATAL_BUFFER: Enabled </td><td width=250>[11] ERROR_BUFFER: Enabled </td></tr>
+<tr><td width=250>[12] WARNING_BUFFER: Enabled </td><td width=250>[13] INFO_BUFFER: Enabled </td><td width=250>[14] DEBUG_BUFFER: Enabled </td></tr>
+<tr><td width=250>[15] INFO_VERBOSE: Disabled</td><td width=250>[16] PLUGIN_BUFFER: Disabled</td></tr>
+</table>
+
+    </table>
+
+	<!-- END ARRIS PAGE CONTENT -->
+	</p>
+	</div> <!-- main_body -->
+
+	<div class="push"></div>
+</div> <!-- wrapper -->
+
+<div class="footer">
+    &copy; 2024 ARRIS Enterprises, LLC.  All rights reserved.
+</div>
+</body>
+</html>

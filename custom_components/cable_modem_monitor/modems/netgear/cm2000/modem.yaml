@@ -15,28 +15,31 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
+  chipset: Broadcom BCM3390
   release_date: "2020-08"
 
 # Provenance tracking
 sources:
   detection_hints: "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/goform/Login"
-    method: POST
-    username_field: loginName
-    password_field: loginPassword
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/DocsisStatus.htm"
+  types:
+    form_dynamic:
+      # Dynamic action: modem generates /goform/Login?id=XXXXXXXXXX per page load
+      # The integration must fetch the login page, extract the form action,
+      # and submit to the exact URL including the ?id= parameter
+      action: "/goform/Login"
+      login_page: "/"
+      form_selector: "form[name='loginform']"
+      method: POST
+      username_field: loginName
+      password_field: loginPassword
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/DocsisStatus.htm"
 
   session:
     cookie_name: "session"
@@ -82,10 +85,14 @@ capabilities:
   - last_boot_time
   - hardware_version
   - software_version
-  - restart
 
-behaviors:
-  requires_multi_page_fetch: false
+actions:
+  restart:
+    # Dynamic endpoint: form action contains session ID (e.g., /goform/RouterStatus?id=123456)
+    pre_fetch_url: "/RouterStatus.htm"
+    endpoint_pattern: "RouterStatus"
+    params:
+      buttonSelect: "2"
 
 # =============================================================================
 # STATUS
@@ -107,3 +114,20 @@ attribution:
   contributors:
     - github: m4dh4tt3r-88
       contribution: "[Issue #38](https://github.com/solentlabs/cable_modem_monitor/issues/38) diagnostics"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  Nighthawk DOCSIS 3.1 modem with 2.5 Gbps max downstream speed.
+  32 SC-QAM downstream channels plus OFDM (DOCSIS 3.1).
+  Provides system uptime and time data (unlike CM600).
+  Reboot via RouterStatus.htm with buttonSelect values and dynamic session ID.
+
+references:
+  product_page: "https://www.netgear.com/home/wifi/modems/cm2000/"
+  support: "https://www.netgear.com/support/product/cm2000"
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

@@ -8,6 +8,9 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.loaders.html import HTMLLoader
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHTMLLoader:
     """Tests for HTMLLoader."""
@@ -21,13 +24,14 @@ class TestHTMLLoader:
         session.get.return_value = response
 
         config = {
+            "timeout": TEST_TIMEOUT,
             "pages": {
                 "data": {
                     "downstream_channels": "/page1.html",
                     "upstream_channels": "/page1.html",  # Duplicate
                     "system_info": "/page2.html",
                 }
-            }
+            },
         }
 
         fetcher = HTMLLoader(
@@ -53,12 +57,13 @@ class TestHTMLLoader:
         session.get.return_value = response
 
         config = {
+            "timeout": TEST_TIMEOUT,
             "pages": {
                 "data": {
                     "downstream_channels": "/HNAP1/",
                     "system_info": "/status.html",
                 }
-            }
+            },
         }
 
         fetcher = HTMLLoader(
@@ -87,7 +92,7 @@ class TestHTMLLoaderUrlToken:
         response.text = "<html>Test</html>"
         session.get.return_value = response
 
-        config = {"pages": {"data": {"status": "/status.html"}}}
+        config = {"timeout": TEST_TIMEOUT, "pages": {"data": {"status": "/status.html"}}}
         url_token_config = {"session_cookie": "sessionId", "token_prefix": "ct_"}
 
         fetcher = HTMLLoader(
@@ -113,9 +118,9 @@ class TestHTMLLoaderUrlToken:
         """Handles URLs that already have query parameters."""
         # Test internal URL building logic
         session = MagicMock()
-        session.cookies = []
+        session.cookies = {}
 
-        config = {"pages": {"data": {}}}
+        config = {"timeout": TEST_TIMEOUT, "pages": {"data": {}}}
         url_token_config = {"session_cookie": "sessionId", "token_prefix": "ct_"}
 
         fetcher = HTMLLoader(
@@ -140,14 +145,14 @@ class TestHTMLLoaderUrlToken:
     def test_no_token_appended_when_cookie_not_found(self):
         """No token appended when session cookie is not found."""
         session = MagicMock()
-        session.cookies = []
+        session.cookies = {}
 
         response = MagicMock()
         response.ok = True
         response.text = "<html>Test</html>"
         session.get.return_value = response
 
-        config = {"pages": {"data": {"status": "/status.html"}}}
+        config = {"timeout": TEST_TIMEOUT, "pages": {"data": {"status": "/status.html"}}}
         url_token_config = {"session_cookie": "sessionId", "token_prefix": "ct_"}
 
         fetcher = HTMLLoader(

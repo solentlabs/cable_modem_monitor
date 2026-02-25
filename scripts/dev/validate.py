@@ -136,7 +136,7 @@ def check_commit_message(message: str) -> bool:
     print("📝 Checking commit message format...")
 
     # Get first line (subject)
-    subject = message.split("\n")[0].strip()
+    subject = message.split("\n", maxsplit=1)[0].strip()
 
     if not subject:
         print("  ✗ Commit message is empty")

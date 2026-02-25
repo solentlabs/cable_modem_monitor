@@ -2,6 +2,12 @@
 
 Handles URL-based token authentication with session cookies.
 Implements URL_TOKEN_SESSION auth pattern.
+
+Modes:
+- Normal: Login returns data directly (like Spectrum no-auth variant)
+- Strict: Requires URL token in every request (rejects cookie-only requests)
+- Two-step: Login returns JUST the token in response body, data requires ?ct_<token>
+  This simulates the real SB8200 HTTPS firmware behavior from Issue #81.
 """
 
 from __future__ import annotations
@@ -11,7 +17,7 @@ import logging
 import secrets
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
 from .base import BaseAuthHandler
@@ -24,9 +30,10 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Test credentials for MockModemServer
+# Test credentials for MockModemServer - use "pw" instead of "password" to avoid
+# browser password managers flagging these as real credentials during development
 TEST_USERNAME = "admin"
-TEST_PASSWORD = "password"
+TEST_PASSWORD = "pw"
 
 
 class UrlTokenAuthHandler(BaseAuthHandler):
@@ -40,21 +47,57 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     Variants:
     - Some firmware (Spectrum) doesn't require auth at all
     - Other firmware (HTTPS) requires URL token auth
+
+    Strict mode (strict=True):
+    - Simulates real SB8200 HTTPS behavior where cookies alone don't work
+    - Session token MUST be in URL query string for EVERY request
+    - Used for testing Issue #81 (polling fails without URL tokens)
+
+    Two-step mode (two_step=True):
+    - Login returns ONLY the session token in response body (not HTML!)
+    - Client must use that token for subsequent requests: ?ct_<token>
+    - This matches the real JavaScript behavior:
+        success: function(result) { var token = result; }
+    - Used for testing Issue #81 token-from-response-body fix
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(
+        self,
+        config: ModemConfig,
+        fixtures_path: Path,
+        *,
+        strict: bool = False,
+        two_step: bool = False,
+        response_delay: float = 0.0,
+    ):
         """Initialize URL token auth handler.
 
         Args:
             config: Modem configuration.
             fixtures_path: Path to fixtures directory.
+            strict: If True, require URL token in every request (reject cookies).
+                    Simulates real SB8200 HTTPS firmware behavior.
+            two_step: If True, login returns just the token (not HTML).
+                      Used for testing token-from-response-body fix (Issue #81).
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
-        # Extract URL token config (validated as non-None)
-        if not config.auth.url_token:
-            raise ValueError("URL token auth handler requires url_token config")
-        self.url_token_config: UrlTokenAuthConfig = config.auth.url_token
+        # Extract URL token config from auth.types{}
+        url_token_config = config.auth.types.get("url_token")
+        if not url_token_config:
+            raise ValueError("URL token auth handler requires url_token config in auth.types")
+        self.url_token_config: UrlTokenAuthConfig = cast("UrlTokenAuthConfig", url_token_config)
+
+        # Strict mode: require URL token, reject cookie-only requests
+        self.strict = strict
+        if strict:
+            _LOGGER.debug("UrlTokenAuthHandler in strict mode - cookies will be ignored")
+
+        # Two-step mode: login returns just token, data requires ?ct_<token>
+        self.two_step = two_step
+        if two_step:
+            _LOGGER.debug("UrlTokenAuthHandler in two-step mode - login returns token only")
 
         # Session state
         self.authenticated_sessions: dict[str, str] = {}  # session_id -> username
@@ -145,26 +188,58 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         self,
         username: str,
     ) -> tuple[int, dict[str, str], bytes]:
-        """Create authenticated session and return data page.
+        """Create authenticated session and return response.
+
+        In two-step mode: Returns just the session token in response body.
+        In normal mode: Returns data page with session cookie.
 
         Args:
             username: Authenticated username.
 
         Returns:
-            Response with session cookie and data.
+            Response with session cookie and data (or just token in two-step mode).
         """
+        self.apply_delay()
         # Generate session token
         session_token = secrets.token_hex(16)
         self.authenticated_sessions[session_token] = username
 
-        # Get the data page content
+        cookie_name = self.url_token_config.session_cookie
+
+        # Two-step mode: return JUST the token in response body
+        # This matches real SB8200 HTTPS firmware behavior:
+        #   success: function(result) { var token = result; }
+        if self.two_step:
+            # CRITICAL: Real SB8200 firmware sets the cookie to a DIFFERENT value
+            # than the response body token. The response body is the ct_ token,
+            # while the cookie is used for session tracking but NOT for URL auth.
+            # This is the root cause of Issue #81 - code was using cookie value
+            # when it should use response body.
+            cookie_value = secrets.token_hex(16)  # Different from session_token!
+
+            _LOGGER.debug(
+                "URL token auth (two-step): returning token in response body for %s " "(cookie=%s..., body=%s...)",
+                username,
+                cookie_value[:8],
+                session_token[:8],
+            )
+            return (
+                200,
+                {
+                    "Content-Type": "text/plain",
+                    "Content-Length": str(len(session_token)),
+                    "Set-Cookie": f"{cookie_name}={cookie_value}; Path=/",
+                },
+                session_token.encode(),
+            )
+
+        # Normal mode: return data page with session cookie
         data_page = self.url_token_config.login_page
         content = self.get_fixture_content(data_page)
 
         if content is None:
             content = b"<html><body>Authenticated</body></html>"
 
-        cookie_name = self.url_token_config.session_cookie
         response_headers = {
             "Content-Type": self.get_content_type(data_page),
             "Content-Length": str(len(content)),
@@ -182,6 +257,9 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     def _is_authenticated(self, headers: dict[str, str], query: str) -> bool:
         """Check if request is authenticated via session token.
 
+        In strict mode (simulating real SB8200 HTTPS), only URL tokens are accepted.
+        In normal mode, either URL token or session cookie is accepted.
+
         Args:
             headers: Request headers.
             query: Query string.
@@ -198,7 +276,12 @@ class UrlTokenAuthHandler(BaseAuthHandler):
                     if token in self.authenticated_sessions:
                         return True
 
-        # Check for session cookie
+        # In strict mode, only URL token is accepted (cookies ignored)
+        if self.strict:
+            _LOGGER.debug("Strict mode: No URL token found, rejecting request")
+            return False
+
+        # Check for session cookie (only in non-strict mode)
         cookie_name = self.url_token_config.session_cookie
         cookie_header = headers.get("Cookie", "")
 
@@ -225,9 +308,8 @@ class UrlTokenAuthHandler(BaseAuthHandler):
     ) -> tuple[int, dict[str, str], bytes]:
         """Serve response for unauthenticated request.
 
-        Some URL_TOKEN modems serve data without auth (certain firmware versions),
-        others require auth. We serve the fixture if available
-        to support the no-auth variant.
+        In strict mode: Always return login page (no no-auth fallback).
+        In normal mode: Serve fixture if available (for Spectrum no-auth variant).
 
         Args:
             path: Request path.
@@ -235,6 +317,11 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple.
         """
+        # In strict mode, always return login page
+        if self.strict:
+            _LOGGER.debug("Strict mode: Serving login page for unauthenticated request to %s", path)
+            return self._serve_login_page()
+
         # Try to serve the fixture (for no-auth variant testing)
         content = self.get_fixture_content(path)
 
@@ -261,15 +348,20 @@ class UrlTokenAuthHandler(BaseAuthHandler):
         Returns:
             Response tuple.
         """
+        self.apply_delay()
         # Try to serve Login.html fixture if it exists
         login_content = self.get_fixture_content("/Login.html")
         if login_content:
             return 200, {"Content-Type": "text/html; charset=utf-8"}, login_content
 
-        # Try root.html
+        # Try root.html, but only if it doesn't contain data (check success indicator)
+        # In strict mode, we need a real login page, not a data page
         root_content = self.get_fixture_content("/root.html")
         if root_content:
-            return 200, {"Content-Type": "text/html; charset=utf-8"}, root_content
+            success_indicator = self.url_token_config.success_indicator
+            if not success_indicator or success_indicator.encode() not in root_content:
+                return 200, {"Content-Type": "text/html; charset=utf-8"}, root_content
+            # root.html contains data, don't use it as login page
 
         # Synthesize minimal login page with model detection
         login_html = f"""<!DOCTYPE html>

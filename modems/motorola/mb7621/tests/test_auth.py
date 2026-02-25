@@ -24,6 +24,13 @@ from custom_components.cable_modem_monitor.modem_config import load_modem_config
 from custom_components.cable_modem_monitor.modem_config.adapter import ModemConfigAuthAdapter
 
 
+def get_form_config(config):
+    """Get form auth config from auth.types['form']."""
+    if config.auth.types and "form" in config.auth.types:
+        return config.auth.types["form"]
+    return None
+
+
 @pytest.fixture
 def discovery():
     """Create an AuthDiscovery instance."""
@@ -94,7 +101,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=parser_without_hint,
         )
 
@@ -112,9 +119,10 @@ class TestMB7621VerificationUrl:
         so auth discovery checks that page instead of base URL.
         """
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect  # From modem.yaml
+        form_config = get_form_config(config)
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect  # From modem.yaml
 
         session = requests.Session()
         session.verify = False
@@ -124,7 +132,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",  # Base URL still
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -137,9 +145,10 @@ class TestMB7621VerificationUrl:
     def test_authenticated_session_can_access_protected_page(self, discovery, mb7621_modem_server, mb7621_parser):
         """Verify session cookies persist and allow access to protected pages."""
         config = load_modem_config(mb7621_modem_server.modem_path)
-        assert config.auth.form is not None, "MB7621 must have form auth"
-        assert config.auth.form.success is not None, "MB7621 must have success config"
-        verification_url = config.auth.form.success.redirect
+        form_config = get_form_config(config)
+        assert form_config is not None, "MB7621 must have form auth"
+        assert form_config.success is not None, "MB7621 must have success config"
+        verification_url = form_config.success.redirect
 
         session = requests.Session()
         session.verify = False
@@ -149,7 +158,7 @@ class TestMB7621VerificationUrl:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mb7621_parser,
             verification_url=verification_url,
         )
@@ -186,8 +195,9 @@ class TestMB7621AuthDiscovery:
 
         # Get verification URL and form hints from config
         verification_url = None
-        if config.auth.form and config.auth.form.success:
-            verification_url = config.auth.form.success.redirect
+        form_config = get_form_config(config)
+        if form_config and form_config.success:
+            verification_url = form_config.success.redirect
 
         # Create mock parser with form hints from modem.yaml
         mock_parser = MagicMock()
@@ -213,7 +223,7 @@ class TestMB7621AuthDiscovery:
             base_url=mb7621_modem_server.url,
             data_url=f"{mb7621_modem_server.url}/",
             username="admin",
-            password="password",
+            password="pw",
             parser=mock_parser,
             verification_url=verification_url,
         )
@@ -238,12 +248,12 @@ class TestMB7621AuthDiscovery:
 
         # Login via form
         config = load_modem_config(mb7621_modem_server.modem_path)
-        form_config = config.auth.form
+        form_config = get_form_config(config)
         assert form_config is not None, "MB7621 must have form auth"
         assert form_config.success is not None, "MB7621 must have success config"
 
         # Encode password for MB7621 (base64)
-        password = "password"
+        password = "pw"
         encoded_password = base64.b64encode(quote(password).encode()).decode()
 
         login_data = {

@@ -17,21 +17,35 @@ from bs4 import BeautifulSoup, Tag
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number, parse_uptime_to_seconds
+from custom_components.cable_modem_monitor.modem_config.adapter import get_behaviors_for_parser
 
 _LOGGER = logging.getLogger(__name__)
 
-# During modem restart, power readings may be temporarily zero.
-# Ignore zero power readings during the first 5 minutes after boot.
-RESTART_WINDOW_SECONDS = 300
+# Default value if modem.yaml behaviors not found
+_DEFAULT_RESTART_WINDOW_SECONDS = 300
 
 
 class TechnicolorTC4400Parser(ModemParser):
     """Parser for Technicolor TC4400 cable modem."""
 
+    def __init__(self) -> None:
+        """Initialize parser and load behaviors from modem.yaml."""
+        super().__init__()
+        # Load restart window from modem.yaml behaviors config
+        behaviors = get_behaviors_for_parser(self.__class__.__name__)
+        restart_behaviors = behaviors.get("restart") if behaviors else None
+        if restart_behaviors:
+            self._restart_window_seconds = restart_behaviors.get("window_seconds", _DEFAULT_RESTART_WINDOW_SECONDS)
+        else:
+            self._restart_window_seconds = _DEFAULT_RESTART_WINDOW_SECONDS
+
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse modem data from pre-fetched resources."""
-        # Get channel status page (primary page)
-        soup = resources.get("/")
+        # Get channel status page - try explicit path first to avoid getting auth response
+        # Issue #94: orchestrator may add auth response to "/" key instead of data page
+        soup = resources.get("/cmconnectionstatus.html")
+        if soup is None:
+            soup = resources.get("/")
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):
@@ -68,7 +82,7 @@ class TechnicolorTC4400Parser(ModemParser):
         Parse downstream channel data from Technicolor TC4400.
         """
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
-        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        is_restarting = uptime_seconds is not None and uptime_seconds < self._restart_window_seconds
         _LOGGER.debug(
             "TC4400 Uptime: %s, Seconds: %s, Restarting: %s",
             system_info.get("system_uptime"),
@@ -126,7 +140,7 @@ class TechnicolorTC4400Parser(ModemParser):
         Parse upstream channel data from Technicolor TC4400.
         """
         uptime_seconds = parse_uptime_to_seconds(system_info.get("system_uptime", ""))
-        is_restarting = uptime_seconds is not None and uptime_seconds < RESTART_WINDOW_SECONDS
+        is_restarting = uptime_seconds is not None and uptime_seconds < self._restart_window_seconds
         _LOGGER.debug(
             "TC4400 Uptime: %s, Seconds: %s, Restarting: %s",
             system_info.get("system_uptime"),

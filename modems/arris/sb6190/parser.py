@@ -23,8 +23,11 @@ class ArrisSB6190Parser(ModemParser):
 
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse all data from pre-fetched resources."""
-        # Get soup from resources
-        soup = resources.get("/")
+        # Get soup from resources - try explicit path first to avoid getting auth response
+        # Issue #93: orchestrator may add 341 byte auth response to "/" key instead of status page
+        soup = resources.get("/cgi-bin/status")
+        if soup is None:
+            soup = resources.get("/")
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):

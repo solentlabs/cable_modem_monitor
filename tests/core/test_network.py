@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import pytest
 
 from custom_components.cable_modem_monitor.core import network as network_module
@@ -83,3 +84,153 @@ class TestIcmpPing:
         # Verify hostname was passed correctly
         call_args = mock_exec.call_args[0]
         assert "modem.local" in call_args
+
+
+class TestHttpHead:
+    """Tests for test_http_head function."""
+
+    @pytest.mark.asyncio
+    async def test_http_head_success(self):
+        """Test successful HEAD request returns True."""
+        session_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientSession"
+        timeout_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.TCPConnector"
+
+        with (
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            mock_response = MagicMock()
+            mock_response.status = 200
+
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
+
+            mock_session_class.return_value = mock_session
+
+            result = await network_module.test_http_head("http://192.168.100.1")
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_http_head_failure_connection_error(self):
+        """Test HEAD request with connection error returns False."""
+        session_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientSession"
+        timeout_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.TCPConnector"
+
+        with (
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.head = MagicMock(
+                side_effect=aiohttp.ClientConnectorError(
+                    connection_key=MagicMock(), os_error=OSError("Connection refused")
+                )
+            )
+
+            mock_session_class.return_value = mock_session
+
+            result = await network_module.test_http_head("http://192.168.100.1")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_http_head_timeout(self):
+        """Test HEAD request timeout returns False."""
+        session_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientSession"
+        timeout_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.TCPConnector"
+
+        with (
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.head = MagicMock(side_effect=TimeoutError("Connection timeout"))
+
+            mock_session_class.return_value = mock_session
+
+            result = await network_module.test_http_head("http://192.168.100.1")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_http_head_legacy_ssl(self):
+        """Test HEAD request creates legacy SSL context when legacy_ssl=True."""
+        session_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientSession"
+        timeout_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.TCPConnector"
+        ssl_patch = "custom_components.cable_modem_monitor.core.network.ssl.create_default_context"
+
+        with (
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+            patch(ssl_patch) as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.return_value = mock_ctx
+
+            mock_response = MagicMock()
+            mock_response.status = 200
+
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
+
+            mock_session_class.return_value = mock_session
+
+            result = await network_module.test_http_head("https://192.168.100.1", legacy_ssl=True)
+
+        assert result is True
+        mock_ctx.set_ciphers.assert_called_once_with("DEFAULT:@SECLEVEL=0")
+
+    @pytest.mark.asyncio
+    async def test_http_head_5xx_returns_false(self):
+        """Test HEAD request with 5xx status returns False."""
+        session_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientSession"
+        timeout_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.ClientTimeout"
+        connector_patch = "custom_components.cable_modem_monitor.core.network.aiohttp.TCPConnector"
+
+        with (
+            patch(timeout_patch),
+            patch(connector_patch),
+            patch(session_patch) as mock_session_class,
+        ):
+            mock_response = MagicMock()
+            mock_response.status = 500
+
+            mock_head_cm = MagicMock()
+            mock_head_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_head_cm.__aexit__ = AsyncMock(return_value=None)
+
+            mock_session = MagicMock()
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session.head = MagicMock(return_value=mock_head_cm)
+
+            mock_session_class.return_value = mock_session
+
+            result = await network_module.test_http_head("http://192.168.100.1")
+
+        assert result is False

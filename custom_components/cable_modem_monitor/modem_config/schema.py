@@ -55,17 +55,19 @@ Note:
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any
+from enum import StrEnum
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from custom_components.cable_modem_monitor.const import DEFAULT_TIMEOUT
 
 # =============================================================================
 # ENUMS
 # =============================================================================
 
 
-class AuthStrategy(str, Enum):
+class AuthStrategy(StrEnum):
     """Supported authentication strategies."""
 
     NONE = "none"  # No authentication required (all pages public)
@@ -76,14 +78,14 @@ class AuthStrategy(str, Enum):
     REST_API = "rest_api"  # JSON REST API
 
 
-class PasswordEncoding(str, Enum):
+class PasswordEncoding(StrEnum):
     """Password encoding methods for form auth."""
 
     PLAIN = "plain"
     BASE64 = "base64"
 
 
-class DataFormat(str, Enum):
+class DataFormat(StrEnum):
     """Data format types."""
 
     HTML = "html"
@@ -91,7 +93,7 @@ class DataFormat(str, Enum):
     XML = "xml"
 
 
-class TableLayout(str, Enum):
+class TableLayout(StrEnum):
     """Table layout for HTML parsing."""
 
     STANDARD = "standard"  # Rows = channels, cols = metrics
@@ -99,14 +101,14 @@ class TableLayout(str, Enum):
     JAVASCRIPT_EMBEDDED = "javascript_embedded"  # Data in JS variables, not HTML tables
 
 
-class DocsisVersion(str, Enum):
+class DocsisVersion(StrEnum):
     """DOCSIS specification versions."""
 
     V30 = "3.0"
     V31 = "3.1"
 
 
-class ParserStatus(str, Enum):
+class ParserStatus(StrEnum):
     """Parser verification/lifecycle status."""
 
     IN_PROGRESS = "in_progress"  # Actively being developed
@@ -115,7 +117,7 @@ class ParserStatus(str, Enum):
     UNSUPPORTED = "unsupported"  # Modem locked down, kept for documentation
 
 
-class DataParadigm(str, Enum):
+class DataParadigm(StrEnum):
     """How the modem presents data.
 
     Used by Discovery Intelligence to filter modem candidates.
@@ -126,7 +128,7 @@ class DataParadigm(str, Enum):
     REST_API = "rest_api"  # JSON REST API
 
 
-class Capability(str, Enum):
+class Capability(StrEnum):
     """Modem capabilities that can be declared in modem.yaml.
 
     These define what data a parser can extract. The integration uses these
@@ -152,9 +154,8 @@ class Capability(str, Enum):
         software_version: Firmware/software version
             Parser returns: system_info.software_version
 
-    Actions:
-        restart: Modem supports remote restart
-            Parser implements: restart(session, base_url) -> bool
+    Note: Actions like restart are NOT capabilities. They are defined in the
+    actions section and checked via ActionFactory.supports().
     """
 
     # Channel data (by modulation type)
@@ -168,9 +169,6 @@ class Capability(str, Enum):
     LAST_BOOT_TIME = "last_boot_time"
     HARDWARE_VERSION = "hardware_version"
     SOFTWARE_VERSION = "software_version"
-
-    # Actions
-    RESTART = "restart"
 
 
 # =============================================================================
@@ -194,7 +192,7 @@ class FormSuccessConfig(BaseModel):
 class FormAuthConfig(BaseModel):
     """Configuration for form-based authentication.
 
-    Used by: MB7621, CM2000, XB7, CGA2121, G54
+    Used by: MB7621, XB7, CGA2121, G54
     """
 
     action: str = Field(description="Form submission URL")
@@ -215,6 +213,103 @@ class FormAuthConfig(BaseModel):
     )
 
 
+class FormDynamicAuthConfig(FormAuthConfig):
+    """Configuration for form auth with dynamic action URL extraction.
+
+    Used when the login form's action attribute contains a dynamic parameter
+    that changes per page load (e.g., /goform/Login?id=XXXXXXXXXX).
+
+    The strategy fetches the login page first, parses the <form> element,
+    and extracts the actual action URL before submitting credentials.
+    """
+
+    login_page: str = Field(
+        default="/",
+        description="Page containing the login form to scrape for dynamic action",
+    )
+    form_selector: str | None = Field(
+        default=None,
+        description="CSS selector for form element (e.g., 'form[name=loginform]')",
+    )
+
+
+class FormAjaxAuthConfig(BaseModel):
+    """Configuration for AJAX-based form authentication.
+
+    Used when the modem uses JavaScript XMLHttpRequest for login instead of
+    traditional form submission. Credentials are base64-encoded and submitted
+    with a client-generated nonce.
+    """
+
+    endpoint: str = Field(
+        default="/cgi-bin/adv_pwd_cgi",
+        description="AJAX endpoint for credential submission",
+    )
+    nonce_field: str = Field(
+        default="ar_nonce",
+        description="Form field name for client-generated nonce",
+    )
+    nonce_length: int = Field(
+        default=8,
+        description="Length of random numeric nonce",
+    )
+    arguments_field: str = Field(
+        default="arguments",
+        description="Form field name for encoded credentials",
+    )
+    credential_format: str = Field(
+        default="username={username}:password={password}",
+        description="Format string for credentials before encoding",
+    )
+    success_prefix: str = Field(
+        default="Url:",
+        description="Response prefix indicating successful login",
+    )
+    error_prefix: str = Field(
+        default="Error:",
+        description="Response prefix indicating failed login",
+    )
+
+
+class FormNonceAuthConfig(BaseModel):
+    """Configuration for form authentication with client-generated nonce.
+
+    Used when the modem uses plain form fields with a client-generated nonce.
+    Unlike FormAjaxAuthConfig, credentials are NOT base64-encoded.
+
+    Used by: ARRIS SB6190 (firmware 9.1.103+)
+    """
+
+    endpoint: str = Field(
+        default="/cgi-bin/adv_pwd_cgi",
+        description="Form action endpoint",
+    )
+    username_field: str = Field(
+        default="username",
+        description="Form field name for username",
+    )
+    password_field: str = Field(
+        default="password",
+        description="Form field name for password",
+    )
+    nonce_field: str = Field(
+        default="ar_nonce",
+        description="Form field name for client-generated nonce",
+    )
+    nonce_length: int = Field(
+        default=8,
+        description="Length of random numeric nonce",
+    )
+    success_prefix: str = Field(
+        default="Url:",
+        description="Response prefix indicating successful login",
+    )
+    error_prefix: str = Field(
+        default="Error:",
+        description="Response prefix indicating failed login",
+    )
+
+
 class HnapAuthConfig(BaseModel):
     """Configuration for HNAP/SOAP authentication.
 
@@ -229,6 +324,10 @@ class HnapAuthConfig(BaseModel):
     empty_action_value: str = Field(
         default="",
         description="Value for empty SOAP actions (modem-specific quirk)",
+    )
+    hmac_algorithm: str = Field(
+        ...,  # Required - forces explicit declaration for new HNAP modems
+        description="HMAC algorithm for auth: 'md5' or 'sha256'",
     )
     formats: list[str] = Field(
         default_factory=lambda: ["json"],
@@ -273,6 +372,15 @@ class UrlTokenAuthConfig(BaseModel):
         default=None,
         description="String indicating successful auth",
     )
+    # Behavioral attributes controlling header behavior (Issue #81)
+    ajax_login: bool = Field(
+        default=False,
+        description="Add X-Requested-With: XMLHttpRequest to login request",
+    )
+    auth_header_data: bool = Field(
+        default=True,
+        description="Include Authorization header on data requests",
+    )
 
 
 class RestApiAuthConfig(BaseModel):
@@ -285,43 +393,6 @@ class RestApiAuthConfig(BaseModel):
     endpoints: dict[str, str] = Field(
         default_factory=dict,
         description="Endpoint paths for various data types",
-    )
-
-
-class AuthVariant(BaseModel):
-    """Configuration for auth variants (firmware-specific)."""
-
-    strategy: AuthStrategy = Field(description="Auth strategy for this variant")
-    condition: str | None = Field(
-        default=None,
-        description="Condition for this variant (e.g., firmware version)",
-    )
-    fallback: bool = Field(
-        default=False,
-        description="Try this variant if primary fails",
-    )
-
-
-class AuthStrategyEntry(BaseModel):
-    """A single auth strategy configuration for ordered try-until-success.
-
-    Used in `auth.strategies[]` to define multiple auth approaches for modems
-    where firmware variations change auth requirements (e.g., SB6190 with
-    older firmware has no auth, newer firmware requires form auth).
-    """
-
-    strategy: AuthStrategy = Field(description="Auth strategy type")
-    form: FormAuthConfig | None = Field(
-        default=None,
-        description="Form auth config (if strategy=form)",
-    )
-    hnap: HnapAuthConfig | None = Field(
-        default=None,
-        description="HNAP auth config (if strategy=hnap)",
-    )
-    url_token: UrlTokenAuthConfig | None = Field(
-        default=None,
-        description="URL token auth config (if strategy=url_token)",
     )
 
 
@@ -347,26 +418,97 @@ class SessionConfig(BaseModel):
 
 
 class AuthConfig(BaseModel):
-    """Complete authentication configuration."""
+    """Complete authentication configuration.
 
-    strategy: AuthStrategy = Field(
-        default=AuthStrategy.NONE,
-        description="Primary auth strategy (defaults to none, discovery determines actual)",
+    Auth configuration uses `types{}` as the single source of truth.
+    Each key is an auth type name, and the value is the config for that type.
+
+    Single-type modem example:
+        auth:
+          types:
+            form:
+              action: "/goform/login"
+              username_field: "user"
+              password_field: "pass"
+
+    Multi-type modem example (user selects during config flow):
+        auth:
+          types:
+            none: null  # No auth variant
+            url_token:
+              login_page: "/status.html"
+              token_prefix: "ct_"
+
+    Supported type keys:
+        - none: No authentication (value should be null or empty dict)
+        - form: Form-based login (value is FormAuthConfig fields)
+        - hnap: HNAP/SOAP protocol (value is HnapAuthConfig fields)
+        - url_token: URL token session (value is UrlTokenAuthConfig fields)
+        - rest_api: REST API auth (value is RestApiAuthConfig fields)
+    """
+
+    # types{} is the single source of truth for auth configuration
+    # Key = auth type name (none, form, form_dynamic, form_ajax, hnap, url_token, rest_api)
+    # Value = config dict for that type, or null for "none"
+    # Note: FormDynamicAuthConfig must come before FormAuthConfig in the union
+    # because it's a subclass - Pydantic tries types in order and stops at first match
+    types: dict[
+        str,
+        FormDynamicAuthConfig
+        | FormAjaxAuthConfig
+        | FormAuthConfig
+        | HnapAuthConfig
+        | UrlTokenAuthConfig
+        | RestApiAuthConfig
+        | None,
+    ] = Field(
+        default_factory=dict,
+        description="Auth type configurations. Keys are type names "
+        "(none, form, form_dynamic, form_ajax, url_token, hnap, rest_api), "
+        "values are the config for that type (or null for 'none').",
     )
-    form: FormAuthConfig | None = Field(default=None)
-    basic: dict[str, Any] | None = Field(default=None)
-    hnap: HnapAuthConfig | None = Field(default=None)
-    url_token: UrlTokenAuthConfig | None = Field(default=None)
-    rest_api: RestApiAuthConfig | None = Field(default=None)
-    variants: list[AuthVariant] = Field(default_factory=list)
+
+    # Session management (shared across all auth types)
     session: SessionConfig | None = Field(default=None)
 
-    strategies: list[AuthStrategyEntry] = Field(
-        default_factory=list,
-        description="Ordered list of auth strategies to try until success. "
-        "Used when firmware variations change auth requirements.",
-    )
-    # Note: login_markers moved to detection.pre_auth
+    @model_validator(mode="before")
+    @classmethod
+    def discriminate_auth_types_by_key(cls, data: dict) -> dict:
+        """Use dict key to determine correct auth config type.
+
+        Pydantic's union matching can't use dict keys as discriminators,
+        so we manually map keys like 'form_dynamic' to FormDynamicAuthConfig.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        types_dict = data.get("types")
+        if not types_dict or not isinstance(types_dict, dict):
+            return data
+
+        # Map keys to their correct Pydantic model classes
+        key_to_class = {
+            "form_dynamic": FormDynamicAuthConfig,
+            "form_ajax": FormAjaxAuthConfig,
+            "form": FormAuthConfig,
+            "hnap": HnapAuthConfig,
+            "url_token": UrlTokenAuthConfig,
+            "rest_api": RestApiAuthConfig,
+        }
+
+        converted: dict[str, Any] = {}
+        for key, value in types_dict.items():
+            if value is None:
+                converted[key] = None
+            elif key in key_to_class and isinstance(value, dict):
+                # Parse as the correct type based on key
+                converted[key] = key_to_class[key](**value)
+            else:
+                # Unknown key or already parsed - pass through
+                converted[key] = value
+
+        data["types"] = converted
+        return data
 
 
 # =============================================================================
@@ -493,20 +635,111 @@ class HardwareConfig(BaseModel):
 # =============================================================================
 
 
-class BehaviorsConfig(BaseModel):
-    """Special modem behaviors."""
+# =============================================================================
+# ACTIONS CONFIGURATION
+# =============================================================================
 
-    restart_window_seconds: int = Field(
-        default=0,
-        description="Seconds to ignore zero power during restart",
+
+class RestartActionConfig(BaseModel):
+    """Configuration for restart action (non-HNAP modems).
+
+    Used by HTML form-based and REST API modems to define how to trigger
+    a restart. HNAP modems use auth.hnap.actions.restart instead.
+
+    Example (HTML form):
+        restart:
+          type: html_form
+          pre_fetch_url: "/MotoSecurity.asp"
+          endpoint: "/goform/MotoSecurity"
+          params:
+            MotoSecurityAction: "1"
+    """
+
+    type: Literal["hnap", "html_form", "rest_api"] = Field(
+        default="html_form",
+        description="Action type: hnap, html_form, rest_api",
     )
-    zero_power_during_restart: bool = Field(
+
+    # HNAP-specific
+    action_name: str | None = Field(
+        default=None,
+        description="HNAP action name (e.g., 'Reboot'). Required when type=hnap",
+    )
+
+    # HTML/REST-specific
+    endpoint: str | None = Field(
+        default=None,
+        description="Static endpoint URL for restart action",
+    )
+    endpoint_pattern: str | None = Field(
+        default=None,
+        description="Dynamic endpoint pattern (e.g., '/restart_{session_token}')",
+    )
+    pre_fetch_url: str | None = Field(
+        default=None,
+        description="URL to fetch before executing action (for tokens/cookies)",
+    )
+    params: dict[str, str] = Field(
+        default_factory=dict,
+        description="Form parameters or request body fields",
+    )
+    method: str = Field(
+        default="POST",
+        description="HTTP method (POST, GET)",
+    )
+
+    @model_validator(mode="after")
+    def validate_type_requirements(self) -> RestartActionConfig:
+        """Ensure type-specific required fields are present."""
+        if self.type == "hnap":
+            if not self.action_name:
+                raise ValueError("HNAP restart requires action_name field")
+        elif self.type in ("html_form", "rest_api") and not self.endpoint and not self.endpoint_pattern:
+            raise ValueError(f"{self.type} restart requires endpoint or endpoint_pattern")
+        return self
+
+
+class ActionsConfig(BaseModel):
+    """Top-level actions configuration for non-HNAP modems.
+
+    Contains action definitions for restart and potentially other
+    operations in the future.
+    """
+
+    restart: RestartActionConfig | None = Field(
+        default=None,
+        description="Restart action configuration",
+    )
+
+
+# =============================================================================
+# BEHAVIORS CONFIGURATION
+# =============================================================================
+
+
+class RestartBehaviorsConfig(BaseModel):
+    """Restart-related modem behaviors.
+
+    These affect how the parser interprets data after a restart,
+    not how the restart action is executed.
+    """
+
+    window_seconds: int = Field(
+        default=0,
+        description="Seconds to filter zero-power channels after restart",
+    )
+    zero_power_reported: bool = Field(
         default=False,
         description="Whether modem reports zero power during restart",
     )
-    requires_multi_page_fetch: bool = Field(
-        default=False,
-        description="Whether data requires fetching multiple pages",
+
+
+class BehaviorsConfig(BaseModel):
+    """Special modem behaviors."""
+
+    restart: RestartBehaviorsConfig | None = Field(
+        default=None,
+        description="Restart-related parsing behaviors",
     )
 
 
@@ -660,13 +893,17 @@ class ModemConfig(BaseModel):
         description="Provenance tracking for where facts came from",
     )
 
-    # Network
-    protocol: str = Field(default="http", description="HTTP or HTTPS")
+    # Network - only default_host is needed; protocol is auto-detected at setup
     default_host: str = Field(
         default="192.168.100.1",
         description="Default modem IP address",
     )
-    default_port: int = Field(default=80, description="Default port")
+
+    # Request timeout - some modems are slow (TC4400 takes 12+ seconds)
+    timeout: int = Field(
+        default=DEFAULT_TIMEOUT,
+        description="Request timeout in seconds for auth and data requests",
+    )
 
     # Authentication
     auth: AuthConfig = Field(description="Authentication configuration")
@@ -684,6 +921,12 @@ class ModemConfig(BaseModel):
     capabilities: list[Capability] = Field(
         default_factory=list,
         description="Supported capabilities - see Capability enum for valid values",
+    )
+
+    # Actions (for non-HNAP modems)
+    actions: ActionsConfig | None = Field(
+        default=None,
+        description="Action configurations (restart, etc.) for HTML/REST modems",
     )
 
     # Behaviors
@@ -708,10 +951,8 @@ class ModemConfig(BaseModel):
         description="External documentation links (e.g., {'review': 'https://...', 'gpl_source': 'https://...'})",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        populate_by_name = True
+    # Pydantic v2 config: reject unknown fields to catch typos early
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     @model_validator(mode="after")
     def validate_required_fields_by_status(self) -> ModemConfig:
@@ -757,6 +998,5 @@ class ModemConfig(BaseModel):
 
 FormAuthConfig.model_rebuild()
 HnapAuthConfig.model_rebuild()
-AuthStrategyEntry.model_rebuild()
 AuthConfig.model_rebuild()
 ModemConfig.model_rebuild()

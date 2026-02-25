@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.arris.cm820b.parser import ArrisCM820BParser
+from modems.arris.cm820b.parser import ArrisCM820BParser
 from tests.fixtures import load_fixture
 
 

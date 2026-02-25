@@ -54,7 +54,6 @@ cd cable_modem_monitor
 
 # Start Home Assistant with the integration
 make docker-start
-# Or: ./scripts/dev/docker-dev.sh start
 
 # View logs
 make docker-logs
@@ -94,8 +93,6 @@ make docker-status     # Check status
 make docker-shell      # Open a shell in the container
 make docker-clean      # Remove all data
 
-# Or use the script directly
-./scripts/dev/docker-dev.sh [command]
 ```
 
 #### Docker Development Workflow
@@ -123,7 +120,8 @@ cd cable_modem_monitor
 
 # Option 2: Manual installation
 pip install -r requirements-dev.txt  # Comprehensive dev dependencies (includes types, linters, pre-commit)
-pre-commit install  # Install git hooks for automatic code formatting
+pre-commit install                   # Install pre-commit hooks (runs on each commit)
+pre-commit install --hook-type pre-push  # Install pre-push hooks (runs full validation before push)
 ```
 
 **Having environment issues?** See [Getting Started Guide](./docs/setup/GETTING_STARTED.md) for:
@@ -193,18 +191,21 @@ bash scripts/dev/lint.sh
 
 **Automated Quality Checks:**
 
-The repository includes a **pre-push hook** that automatically runs quality checks before pushing to GitHub. This prevents CI failures by catching issues locally.
+The repository includes **pre-push hooks** that automatically run full project validation before pushing to GitHub. This prevents CI failures by catching issues locally.
 
 ```bash
+# Install pre-push hooks (one-time setup)
+pre-commit install --hook-type pre-push
+
 # The pre-push hook runs automatically and checks:
-# - Code formatting (Black)
-# - Linting (Ruff)
+# - Full project linting (ruff check .)
+# - Full test suite (pytest)
 
 # To skip the hook in emergencies (not recommended):
 git push --no-verify
 ```
 
-**Pre-commit hooks (alternative method):**
+**Pre-commit hooks (runs on each commit):**
 ```bash
 # Install pre-commit hooks (runs automatically on commit)
 pip install pre-commit
@@ -213,7 +214,7 @@ pre-commit install
 # Run manually on all files
 pre-commit run --all-files
 
-# Note: May have permission issues in WSL environments
+# Note: Pre-commit only checks staged files. Pre-push checks the full project.
 ```
 
 ### 4. Run Tests
@@ -224,18 +225,17 @@ Make sure all tests pass before submitting your changes.
 pytest tests/ -v
 ```
 
-### 5. Deploy for Manual Testing (Optional)
+### 5. Test on Local HA (Optional)
 
-You can deploy your changes to a real Home Assistant instance for manual testing.
+You can test your changes on a local Home Assistant instance via Docker:
 
 ```bash
-# Interactive mode - guides you through deployment options
-./scripts/deploy_updates.sh
+# Start HA with integration bind-mounted
+make docker-start
 
-# Or specify directly:
-./scripts/deploy_updates.sh --local ~/homeassistant/config
-./scripts/deploy_updates.sh --ssh root@192.168.1.100
-./scripts/deploy_updates.sh --docker homeassistant --restart
+# Open http://localhost:8123 and add the integration
+# After code changes, restart to pick them up:
+make docker-restart
 ```
 
 See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and troubleshooting.

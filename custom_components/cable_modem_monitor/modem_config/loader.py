@@ -130,7 +130,7 @@ def get_detection_hints_from_index(parser_class_name: str) -> dict[str, str | li
     This is the fastest path for YAML-driven detection - reads pre-computed
     hints from the cached index without loading any modem.yaml files.
 
-    Used by modem_scraper Phase 0a for fast parser detection.
+    Used by data_orchestrator Phase 0a for fast parser detection.
 
     Args:
         parser_class_name: Parser class name (e.g., "MotorolaMB7621Parser")
@@ -412,7 +412,7 @@ def load_modem_by_path(manufacturer: str, model: str, modems_root: Path | str | 
     manufacturer_variants = [
         manufacturer.lower(),
         manufacturer.lower().replace("/", "").replace(" ", ""),
-        manufacturer.split("/")[0].lower() if "/" in manufacturer else None,
+        manufacturer.split("/", maxsplit=1)[0].lower() if "/" in manufacturer else None,
     ]
 
     model_lower = model.lower()

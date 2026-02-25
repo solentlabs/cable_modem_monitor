@@ -4,18 +4,18 @@
 
 This document provides an overview of the Cable Modem Monitor test suite.
 
-**Total Tests:** 817 across 34 test files
+**Total Tests:** 959 across 45 test files
 
 ## Test Categories
 
 | Category | Tests | Files | Description |
 |----------|-------|-------|-------------|
-| [Core Module Tests](tests/core/README.md) | 325 | 11 | Unit tests for core functionality including sig... |
-| [Component Tests](tests/components/README.md) | 283 | 13 | Tests for Home Assistant components including c... |
-| [Integration Tests](tests/integration/README.md) | 34 | 2 | End-to-end integration tests using mock HTTP/HT... |
-| [Parser Tests](tests/parsers/FIXTURES.md) | 55 | 3 | Tests for modem-specific parsers, parser contra... |
+| [Core Module Tests](tests/core/README.md) | 394 | 17 | Unit tests for core functionality including sig... |
+| [Component Tests](tests/components/README.md) | 331 | 14 | Tests for Home Assistant components including c... |
+| [Integration Tests](tests/integration/README.md) | 73 | 7 | End-to-end integration tests using mock HTTP/HT... |
+| [Parser Tests](tests/parsers/FIXTURES.md) | 38 | 2 | Tests for modem-specific parsers, parser contra... |
 | [Utility Tests](tests/utils/README.md) | 0 | 0 | Tests for utility functions including HTML help... |
-| [Library Tests](tests/lib/README.md) | 120 | 5 | Tests for library modules including the HTML cr... |
+| [Library Tests](tests/lib/README.md) | 123 | 5 | Tests for library modules including the HTML cr... |
 
 ## Running Tests
 
@@ -61,8 +61,8 @@ pytest tests/core/test_signal_analyzer.py::TestSignalAnalyzerBasics::test_initia
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
 - **Path:** `tests/core/`
-- **Tests:** 325
-- **Files:** 11
+- **Tests:** 394
+- **Files:** 17
 - **Documentation:** [tests/core/README.md](tests/core/README.md)
 
 ### Component Tests
@@ -70,8 +70,8 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
 - **Path:** `tests/components/`
-- **Tests:** 283
-- **Files:** 13
+- **Tests:** 331
+- **Files:** 14
 - **Documentation:** [tests/components/README.md](tests/components/README.md)
 
 ### Integration Tests
@@ -79,8 +79,8 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Tests real SSL/TLS handling, authentication flows, and modem communication patterns.
 
 - **Path:** `tests/integration/`
-- **Tests:** 34
-- **Files:** 2
+- **Tests:** 73
+- **Files:** 7
 - **Documentation:** [tests/integration/README.md](tests/integration/README.md)
 
 ### Parser Tests
@@ -88,8 +88,8 @@ End-to-end integration tests using mock HTTP/HTTPS servers with fixture data. Te
 Tests for modem-specific parsers, parser contracts, and fixture validation.
 
 - **Path:** `tests/parsers/`
-- **Tests:** 55
-- **Files:** 3
+- **Tests:** 38
+- **Files:** 2
 
 ### Utility Tests
 
@@ -105,7 +105,7 @@ Tests for utility functions including HTML helpers, HAR sanitization, entity mig
 Tests for library modules including the HTML crawler and general utilities.
 
 - **Path:** `tests/lib/`
-- **Tests:** 120
+- **Tests:** 123
 - **Files:** 5
 - **Documentation:** [tests/lib/README.md](tests/lib/README.md)
 

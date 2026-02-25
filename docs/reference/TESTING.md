@@ -82,7 +82,7 @@ This runs tests with minimal output for rapid feedback during development.
 ## Test Suite Overview
 
 ### Unit Tests
-Located in `tests/test_modem_scraper.py`
+Located in `tests/test_data_orchestrator.py`
 
 **Coverage:**
 - ✅ Downstream channel parsing (24 channels)

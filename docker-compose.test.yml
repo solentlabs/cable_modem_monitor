@@ -22,3 +22,6 @@ services:
     restart: unless-stopped
     privileged: true
     working_dir: /workspace
+    stop_grace_period: 30s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

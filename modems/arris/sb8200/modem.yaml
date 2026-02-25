@@ -19,7 +19,7 @@ paradigm: html
 hardware:
   docsis_version: "3.1"
   chipset: Broadcom BCM3390
-  release_date: "2016"
+  release_date: "2017"
 
 # Provenance tracking
 sources:
@@ -31,17 +31,19 @@ sources:
 # =============================================================================
 # NETWORK
 # =============================================================================
-# Protocol varies by firmware - can be HTTP (no auth) or HTTPS (with auth)
-protocol: http
+# Protocol (HTTP/HTTPS) is auto-detected at setup - varies by firmware
 default_host: "192.168.100.1"
-default_port: 80
 
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
-# URL-based token authentication with session cookie
+# SB8200 has two distinct firmware variants with different auth:
+# - Spectrum LA firmware: No auth required (HTTP, public pages)
+# - Other ISP firmware: URL token auth (HTTPS, requires credentials)
 #
-# Auth flow (when required):
+# User selects their auth type during config flow.
+#
+# URL token auth flow (when required):
 # 1. Credentials are base64-encoded as "username:password"
 # 2. Login URL: /cmconnectionstatus.html?login_<base64_token>
 # 3. Authorization header: Basic <base64_token>
@@ -49,23 +51,24 @@ default_port: 80
 # 5. Subsequent requests use: ?ct_<session_token>
 
 auth:
-  strategy: url_token
-
-  url_token:
-    login_page: "/cmconnectionstatus.html"
-    login_prefix: "login_"
-    token_prefix: "ct_"
-    session_cookie: "sessionId"
-    success_indicator: "Downstream Bonded Channels"
-
-  # Firmware variants
-  variants:
-    - strategy: none
-      condition: "HTTP firmware (Spectrum LA)"
-      fallback: true
-    - strategy: url_token
-      condition: "HTTPS firmware"
-      fallback: false
+  # SB8200 has two distinct firmware variants with different auth:
+  # - Spectrum LA firmware: No auth required (HTTP, public pages)
+  # - Other ISP firmware: URL token auth (HTTPS, requires credentials)
+  #
+  # User selects their auth type during config flow.
+  types:
+    none: null # Spectrum LA firmware - no auth needed
+    url_token: # Other ISP firmware - URL token auth
+      login_page: "/cmconnectionstatus.html"
+      login_prefix: "login_"
+      token_prefix: "ct_"
+      session_cookie: "sessionId"
+      success_indicator: "Downstream Bonded Channels"
+      # Browser behavior from HAR capture (Issue #81):
+      # - Login uses jQuery $.ajax() which adds X-Requested-With header
+      # - Data request (redirect) does NOT include Authorization header
+      ajax_login: true
+      auth_header_data: false
 # =============================================================================
 # PAGES
 # =============================================================================
@@ -121,20 +124,14 @@ capabilities:
   - hardware_version
 
 # =============================================================================
-# BEHAVIORS
-# =============================================================================
-behaviors:
-  requires_multi_page_fetch: true # Needs cmswinfo.html for uptime
-
-# =============================================================================
 # METADATA
 # =============================================================================
 # =============================================================================
 # STATUS
 # =============================================================================
 status_info:
-  status: verified
-  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/42"
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/81"
 
 # =============================================================================
 # METADATA
@@ -148,4 +145,41 @@ fixtures:
 attribution:
   contributors:
     - github: undotcom
-      contribution: "Initial SB8200 support and fixture capture"
+      contribution: "Initial SB8200 support and fixture capture (HTTP variant, Issue #42)"
+    - github: ctravis8892
+      contribution: "HTTPS authentication variant (Issue #81)"
+
+isps:
+  - Comcast
+  - Xfinity
+  - Cox
+  - Spectrum
+
+notes: |
+  Reboot Capability: DISABLED (server-side blocked by ISP firmware)
+
+  In 2015-2016, ARRIS SURFboard modems (particularly SB6141) had a critical
+  security vulnerability: the admin interface required NO authentication,
+  allowing anyone on the local network unrestricted access. The interface
+  was vulnerable to CSRF attacks - attackers could embed malicious image tags
+  like <img src="http://192.168.100.1/reset.htm"> to remotely trigger reboots.
+
+  With 135 million affected modems worldwide, rather than implementing proper
+  auth controls, ARRIS disabled reboot/reset functionality in firmware updates.
+  This persists in modern models like the SB8200.
+
+  Technical: The SB8200 firmware includes a reboot button in cmconfiguration.html
+  with a disabled attribute. Direct POST requests to /cmconfiguration.html with
+  Rebooting=1 are rejected server-side by ISP firmware (tested on Spectrum).
+
+  Parser handles both firmware variants automatically:
+  - No credentials: Assumes HTTP variant, fetches without auth
+  - With credentials: Uses URL Token Session auth
+  - HTTPS auth fails (non-401): Falls back to unauthenticated fetch
+
+references:
+  security_vulnerability: "https://thehackernews.com/2016/04/hack-modem-internet.html"
+  community_letter: "https://community.surfboard.com/sb8200-59/open-letter-to-arris-why-do-you-disable-basic-functionality-e-g-software-reboot-on-the-sb8200-5829"
+  issue_http: "https://github.com/solentlabs/cable_modem_monitor/issues/42"
+  issue_https: "https://github.com/solentlabs/cable_modem_monitor/issues/81"
+  source_code: "https://sourceforge.net/projects/c8200-cable-modem.arris/"

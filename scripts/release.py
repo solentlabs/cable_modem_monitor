@@ -60,9 +60,14 @@ def print_warning(msg: str) -> None:
 
 
 def validate_version(version: str) -> bool:
-    """Validate that version follows semantic versioning (X.Y.Z)."""
-    pattern = r"^\d+\.\d+\.\d+$"
+    """Validate that version follows semantic versioning (X.Y.Z or X.Y.Z-beta.N)."""
+    pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
     return bool(re.match(pattern, version))
+
+
+def is_prerelease(version: str) -> bool:
+    """Check if version is a prerelease (beta)."""
+    return "-beta." in version
 
 
 def get_repo_root() -> Path:
@@ -265,13 +270,22 @@ def push_changes(version: str, skip_verify: bool = False) -> bool:
     try:
         tag_name = f"v{version}"
 
-        # Push commit
-        cmd = ["git", "push", "origin", "main"]
+        # Get current branch name
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        current_branch = result.stdout.strip()
+
+        # Push commit to current branch
+        cmd = ["git", "push", "origin", current_branch]
         if skip_verify:
             cmd.append("--no-verify")
 
         subprocess.run(cmd, check=True)
-        print_success("Pushed commit to origin/main")
+        print_success(f"Pushed commit to origin/{current_branch}")
 
         # Push tag
         cmd = ["git", "push", "origin", tag_name]
@@ -306,20 +320,24 @@ def create_github_release(version: str, repo_root: Path) -> bool:
         else:
             release_notes = f"Release version {version}"
 
-        # Create release
-        subprocess.run(
-            [
-                "gh",
-                "release",
-                "create",
-                tag_name,
-                "--title",
-                f"Version {version}",
-                "--notes",
-                release_notes,
-            ],
-            check=True,
-        )
+        # Build release command
+        cmd = [
+            "gh",
+            "release",
+            "create",
+            tag_name,
+            "--title",
+            f"Version {version}",
+            "--notes",
+            release_notes,
+        ]
+
+        # Mark as prerelease if beta version
+        if is_prerelease(version):
+            cmd.append("--prerelease")
+            print_info(f"Creating prerelease (beta) for {tag_name}")
+
+        subprocess.run(cmd, check=True)
 
         print_success(f"Created GitHub release: {tag_name}")
         return True
@@ -551,7 +569,7 @@ def validate_release_preconditions(version: str, repo_root: Path) -> None:
     """Validate all preconditions for creating a release."""
     # Validate version format
     if not validate_version(version):
-        print_error(f"Invalid version format: {version}. Must be X.Y.Z (e.g., 3.5.1)")
+        print_error(f"Invalid version format: {version}. Must be X.Y.Z or X.Y.Z-beta.N (e.g., 3.5.1 or 3.5.1-beta.1)")
         sys.exit(1)
 
     # Check if pre-commit is installed

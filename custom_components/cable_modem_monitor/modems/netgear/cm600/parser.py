@@ -57,50 +57,6 @@ class NetgearCM600Parser(ModemParser):
 
     # login() not needed - uses base class default (AuthDiscovery handles auth)
 
-    def restart(self, session, base_url) -> bool:
-        """Restart the modem.
-
-        Args:
-            session: Requests session (already authenticated)
-            base_url: Base URL of the modem
-
-        Returns:
-            True if restart command sent successfully, False otherwise
-        """
-        from http.client import RemoteDisconnected
-
-        from requests.exceptions import ChunkedEncodingError, ConnectionError
-
-        try:
-            restart_url = f"{base_url}/goform/RouterStatus"
-            data = {"RsAction": "2"}
-
-            _LOGGER.info("CM600: Sending reboot command to %s", restart_url)
-            response = session.post(restart_url, data=data, timeout=10)
-
-            # Log the response for debugging
-            _LOGGER.info(
-                "CM600: Reboot response - status=%d, length=%d bytes",
-                response.status_code,
-                len(response.text) if response.text else 0,
-            )
-            _LOGGER.debug("CM600: Reboot response body: %s", response.text[:500] if response.text else "(empty)")
-
-            if response.status_code == 200:
-                _LOGGER.info("CM600: Reboot command accepted by modem")
-                return True
-            else:
-                _LOGGER.warning("CM600: Reboot command failed with status %d", response.status_code)
-                return False
-
-        except (RemoteDisconnected, ConnectionError, ChunkedEncodingError) as e:
-            # Connection dropped = modem is rebooting (success!)
-            _LOGGER.info("CM600: Modem rebooting (connection dropped as expected): %s", type(e).__name__)
-            return True
-        except Exception as e:
-            _LOGGER.error("CM600: Error sending reboot command: %s", e)
-            return False
-
     def parse_resources(self, resources: dict[str, Any]) -> dict:
         """Parse modem data from pre-fetched resources.
 
@@ -150,53 +106,24 @@ class NetgearCM600Parser(ModemParser):
         }
 
     def parse(self, soup: BeautifulSoup, session=None, base_url=None) -> dict:
-        """Parse all data from the modem (legacy interface).
+        """Parse data from BeautifulSoup or delegate to parse_resources().
+
+        This method exists for backwards compatibility. New code should use
+        parse_resources() which receives pre-fetched pages via HTMLLoader.
+
+        Note: session and base_url parameters are deprecated. Page fetching
+        is now handled by HTMLLoader based on modem.yaml pages.data config.
 
         Args:
-            soup: BeautifulSoup object of the page
-            session: Requests session (optional, for multi-page parsing)
-            base_url: Base URL of the modem (optional)
+            soup: BeautifulSoup object (used as fallback)
+            session: Deprecated - network calls moved to HTMLLoader
+            base_url: Deprecated - network calls moved to HTMLLoader
 
         Returns:
-            Dictionary with downstream, upstream, and system_info
+            Dict with downstream, upstream, and system_info
         """
-        # Build resources dict
+        # Build resources dict and delegate to parse_resources
         resources: dict[str, Any] = {"/": soup}
-
-        if session and base_url:
-            try:
-                _LOGGER.debug("CM600: Fetching DocsisStatus.asp for channel data")
-                docsis_url = f"{base_url}/DocsisStatus.asp"
-                docsis_response = session.get(docsis_url, timeout=10)
-
-                if docsis_response.status_code == 200:
-                    resources["/DocsisStatus.asp"] = BeautifulSoup(docsis_response.text, "html.parser")
-                    _LOGGER.debug("CM600: Successfully fetched DocsisStatus.asp (%d bytes)", len(docsis_response.text))
-                else:
-                    _LOGGER.warning(
-                        "CM600: Failed to fetch DocsisStatus.asp, status %d - using provided page",
-                        docsis_response.status_code,
-                    )
-            except Exception as e:
-                _LOGGER.warning("CM600: Error fetching DocsisStatus.asp: %s - using provided page", e)
-
-            # Also fetch RouterStatus.asp for hardware/firmware version
-            try:
-                _LOGGER.debug("CM600: Fetching RouterStatus.asp for system info")
-                router_url = f"{base_url}/RouterStatus.asp"
-                router_response = session.get(router_url, timeout=10)
-
-                if router_response.status_code == 200:
-                    resources["/RouterStatus.asp"] = BeautifulSoup(router_response.text, "html.parser")
-                    _LOGGER.debug("CM600: Successfully fetched RouterStatus.asp (%d bytes)", len(router_response.text))
-                else:
-                    _LOGGER.warning(
-                        "CM600: Failed to fetch RouterStatus.asp, status %d - using provided page",
-                        router_response.status_code,
-                    )
-            except Exception as e:
-                _LOGGER.warning("CM600: Error fetching RouterStatus.asp: %s - using provided page", e)
-
         return self.parse_resources(resources)
 
     def parse_downstream(self, soup: BeautifulSoup) -> list[dict]:  # noqa: C901

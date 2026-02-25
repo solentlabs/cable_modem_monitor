@@ -27,17 +27,18 @@ class RestApiHandler(BaseAuthHandler):
     Maps paths like /rest/v1/cablemodem/downstream to downstream.json fixtures.
     """
 
-    def __init__(self, config: ModemConfig, fixtures_path: Path):
+    def __init__(self, config: ModemConfig, fixtures_path: Path, response_delay: float = 0.0):
         """Initialize REST API handler.
 
         Args:
             config: Modem configuration.
             fixtures_path: Path to fixtures directory.
+            response_delay: Delay in seconds before sending responses (simulates slow modems).
         """
-        super().__init__(config, fixtures_path)
+        super().__init__(config, fixtures_path, response_delay=response_delay)
 
-        # Extract REST API config
-        self.rest_api_config = config.auth.rest_api
+        # Extract REST API config from auth.types['rest_api']
+        self.rest_api_config = config.auth.types.get("rest_api") if config.auth.types else None
 
     def handle_request(
         self,
@@ -59,6 +60,7 @@ class RestApiHandler(BaseAuthHandler):
         Returns:
             Response tuple (status, headers, body).
         """
+        self.apply_delay()
         parsed = urlparse(path)
         clean_path = parsed.path
 

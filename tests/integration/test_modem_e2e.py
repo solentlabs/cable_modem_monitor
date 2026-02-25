@@ -2,6 +2,9 @@
 
 Auto-discovers all modems in modems/**/modem.yaml and runs
 a complete auth + parse workflow against MockModemServer.
+
+Note: Tests use the repo root modems/ directory (source of truth),
+not custom_components/.../modems/ (deployment sync target).
 """
 
 from __future__ import annotations
@@ -31,9 +34,17 @@ from .mock_modem_server import MockModemServer
 
 _LOGGER = logging.getLogger(__name__)
 
-# Test credentials
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
+# Test credentials - use "pw" instead of "password" to avoid browser password managers
+# flagging these as real credentials during development
 TEST_USERNAME = "admin"
-TEST_PASSWORD = "password"
+TEST_PASSWORD = "pw"
+
+# Use repo root modems/ directory (has fixtures), not custom_components/.../modems/
+REPO_ROOT = Path(__file__).parent.parent.parent
+MODEMS_ROOT = REPO_ROOT / "modems"
 
 
 def get_modems_with_fixtures() -> list[tuple[str, Path]]:
@@ -43,7 +54,7 @@ def get_modems_with_fixtures() -> list[tuple[str, Path]]:
         List of (modem_id, modem_path) tuples.
     """
     result = []
-    for modem_path, config in discover_modems():
+    for modem_path, config in discover_modems(modems_root=MODEMS_ROOT):
         fixtures = list_modem_fixtures(modem_path)
         if fixtures:
             modem_id = f"{config.manufacturer}_{config.model}"
@@ -53,6 +64,35 @@ def get_modems_with_fixtures() -> list[tuple[str, Path]]:
 
 # Parametrize tests with discovered modems
 MODEMS_WITH_FIXTURES = get_modems_with_fixtures()
+
+
+def has_fixture_for_path(modem_path: Path, url_path: str) -> bool:
+    """Check if a fixture file exists for the given URL path.
+
+    Args:
+        modem_path: Path to modem directory containing fixtures/.
+        url_path: URL path (e.g., "/cgi-bin/login", "/cmconnectionstatus.html").
+
+    Returns:
+        True if fixture exists, False otherwise.
+    """
+    fixtures_path = get_modem_fixtures_path(modem_path)
+    if not fixtures_path:
+        return False
+
+    # Strip leading slash and try to find fixture
+    clean_path = url_path.lstrip("/")
+
+    # Try exact path (e.g., cgi-bin/login)
+    if (fixtures_path / clean_path).exists():
+        return True
+
+    # Try with .html extension
+    if (fixtures_path / f"{clean_path}.html").exists():
+        return True
+
+    # Try as nested directory with index
+    return (fixtures_path / clean_path / "index.html").exists()
 
 
 class TestModemE2E:
@@ -83,7 +123,7 @@ class TestModemE2E:
                 if any(public_path.endswith(ext) for ext in [".css", ".jpg", ".png", ".gif"]):
                     continue
 
-                resp = session.get(f"{server.url}{public_path}", timeout=10)
+                resp = session.get(f"{server.url}{public_path}", timeout=TEST_TIMEOUT)
                 assert resp.status_code == 200, f"Failed to access public page {public_path}"
 
     @pytest.mark.parametrize(
@@ -99,14 +139,19 @@ class TestModemE2E:
             pytest.skip("No protected pages defined")
 
         # Skip no-auth modems
-        if config.auth.strategy == AuthStrategy.NONE:
+        if has_auth_strategy(config, AuthStrategy.NONE) and len(config.auth.types) == 1:
             pytest.skip("Modem has no auth")
+
+        # Filter to only protected pages with fixtures
+        protected_with_fixtures = [p for p in config.pages.protected if has_fixture_for_path(modem_path, p)]
+        if not protected_with_fixtures:
+            pytest.skip("No fixtures for protected pages")
 
         with MockModemServer.from_modem_path(modem_path) as server:
             session = requests.Session()
 
-            for protected_path in config.pages.protected:
-                resp = session.get(f"{server.url}{protected_path}", timeout=10)
+            for protected_path in protected_with_fixtures:
+                resp = session.get(f"{server.url}{protected_path}", timeout=TEST_TIMEOUT)
 
                 # Should either return login page (200) or 401
                 if resp.status_code == 200:
@@ -124,15 +169,16 @@ class TestModemE2E:
         """Test complete form authentication workflow."""
         config = load_modem_config(modem_path)
 
-        if config.auth.strategy != AuthStrategy.FORM:
+        if not has_auth_strategy(config, AuthStrategy.FORM):
             pytest.skip("Not a form auth modem")
 
-        if not config.auth.form:
+        form_config = get_form_config(config)
+        if not form_config:
             pytest.skip("No form config")
 
-        with MockModemServer.from_modem_path(modem_path) as server:
+        # Explicitly request form auth type for modems with multiple auth types
+        with MockModemServer.from_modem_path(modem_path, auth_type="form") as server:
             session = requests.Session()
-            form_config = config.auth.form
 
             # Prepare password based on encoding
             from custom_components.cable_modem_monitor.modem_config.schema import (
@@ -158,7 +204,7 @@ class TestModemE2E:
                 f"{server.url}{form_config.action}",
                 data=login_data,
                 allow_redirects=False,
-                timeout=10,
+                timeout=TEST_TIMEOUT,
             )
 
             # Should redirect on success
@@ -175,10 +221,11 @@ class TestModemE2E:
             # Now should be able to access protected pages
             if config.pages and config.pages.protected:
                 for protected_path in config.pages.protected:
-                    resp = session.get(f"{server.url}{protected_path}", timeout=10)
+                    resp = session.get(f"{server.url}{protected_path}", timeout=TEST_TIMEOUT)
                     assert resp.status_code == 200, f"Failed to access {protected_path} after auth"
                     # Should NOT contain login form (check for form action, not just "password" word)
-                    form_action = config.auth.form.action if config.auth.form else None
+                    yaml_form_config = get_form_config(config)
+                    form_action = yaml_form_config.action if yaml_form_config else None
                     if form_action:
                         # If page contains form action URL, it's likely a login redirect
                         is_login_form = f'action="{form_action}"' in resp.text.lower()
@@ -194,7 +241,8 @@ class TestModemE2E:
         config = load_modem_config(modem_path)
 
         # Skip no-auth modems for this test
-        if config.auth.strategy == AuthStrategy.NONE:
+        modem_strategies = get_auth_strategies_from_config(config)
+        if modem_strategies == {AuthStrategy.NONE}:
             pytest.skip("Modem has no auth")
 
         # Map schema strategy to AuthHandler strategy type
@@ -204,27 +252,31 @@ class TestModemE2E:
             AuthStrategy.BASIC: AuthStrategyType.BASIC_HTTP,
         }
 
-        if config.auth.strategy not in strategy_map:
-            pytest.skip(f"Strategy {config.auth.strategy} not yet mapped")
+        # Find a supported strategy
+        primary_strategy = get_primary_auth_strategy(config)
+        if primary_strategy not in strategy_map:
+            pytest.skip(f"Strategy {primary_strategy} not yet mapped")
 
-        auth_strategy = strategy_map[config.auth.strategy]
+        auth_strategy = strategy_map[primary_strategy]
 
         # Build form config if needed
-        form_config: dict[str, str | dict[str, str] | None] | None = None
-        if config.auth.strategy == AuthStrategy.FORM and config.auth.form:
-            form_config = {
-                "action": config.auth.form.action,
-                "method": config.auth.form.method,
-                "username_field": config.auth.form.username_field,
-                "password_field": config.auth.form.password_field,
+        form_config_dict: dict[str, str | dict[str, str] | None] | None = None
+        yaml_form_config = get_form_config(config)
+        if primary_strategy == AuthStrategy.FORM and yaml_form_config:
+            form_config_dict = {
+                "action": yaml_form_config.action,
+                "method": yaml_form_config.method,
+                "username_field": yaml_form_config.username_field,
+                "password_field": yaml_form_config.password_field,
             }
-            if config.auth.form.hidden_fields:
-                form_config["hidden_fields"] = config.auth.form.hidden_fields
+            if yaml_form_config.hidden_fields:
+                form_config_dict["hidden_fields"] = yaml_form_config.hidden_fields
 
         with MockModemServer.from_modem_path(modem_path) as server:
             handler = AuthHandler(
                 strategy=auth_strategy,
-                form_config=form_config,
+                form_config=form_config_dict,
+                timeout=TEST_TIMEOUT,
             )
 
             session = requests.Session()
@@ -316,24 +368,43 @@ class TestModemE2EFullWorkflow:
             pytest.skip(f"Failed to import parser: {e}")
             raise  # Unreachable - pytest.skip raises, but explicit for static analysis
 
-        with MockModemServer.from_modem_path(modem_path) as server:
+        hnap_config = get_hnap_config(config)
+        form_config = get_form_config(config)
+
+        # Determine which auth type to use for the mock server
+        # Priority: BASIC > HNAP > FORM > NONE (matches test logic below)
+        server_auth_type = None
+        if has_auth_strategy(config, AuthStrategy.BASIC):
+            server_auth_type = "basic"
+        elif has_auth_strategy(config, AuthStrategy.HNAP):
+            server_auth_type = "hnap"
+        elif has_auth_strategy(config, AuthStrategy.FORM):
+            server_auth_type = "form"
+        elif has_auth_strategy(config, AuthStrategy.NONE):
+            server_auth_type = "none"
+
+        with MockModemServer.from_modem_path(modem_path, auth_type=server_auth_type) as server:
             session = requests.Session()
             session.verify = False
 
             # Step 1: Authenticate if needed
-            if config.auth.strategy == AuthStrategy.BASIC:
+            if has_auth_strategy(config, AuthStrategy.BASIC):
                 # Set up HTTP Basic Auth on the session
                 session.auth = (TEST_USERNAME, TEST_PASSWORD)
 
-            elif config.auth.strategy == AuthStrategy.HNAP and config.auth.hnap:
+            elif has_auth_strategy(config, AuthStrategy.HNAP) and hnap_config:
                 # HNAP uses challenge-response authentication via JSON
                 # Use the HNAPJsonRequestBuilder for authentication
                 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
+                from custom_components.cable_modem_monitor.core.auth.hnap.json_builder import HMACAlgorithm
 
-                hnap_config = config.auth.hnap
+                # Convert string algorithm to enum
+                algorithm = HMACAlgorithm(hnap_config.hmac_algorithm)
                 builder = HNAPJsonRequestBuilder(
                     endpoint=hnap_config.endpoint,
                     namespace=hnap_config.namespace,
+                    hmac_algorithm=algorithm,
+                    timeout=config.timeout,
                     empty_action_value=hnap_config.empty_action_value,
                 )
 
@@ -343,33 +414,33 @@ class TestModemE2EFullWorkflow:
                 # Store builder on parser for data fetching
                 parser._json_builder = builder
 
-            elif config.auth.strategy == AuthStrategy.FORM and config.auth.form:
+            elif has_auth_strategy(config, AuthStrategy.FORM) and form_config:
                 # Encode password
                 from custom_components.cable_modem_monitor.modem_config.schema import (
                     PasswordEncoding,
                 )
 
-                if config.auth.form.password_encoding == PasswordEncoding.BASE64:
+                if form_config.password_encoding == PasswordEncoding.BASE64:
                     encoded_password = base64.b64encode(quote(TEST_PASSWORD).encode()).decode()
                 else:
                     encoded_password = TEST_PASSWORD
 
                 login_data = {
-                    config.auth.form.username_field: TEST_USERNAME,
-                    config.auth.form.password_field: encoded_password,
+                    form_config.username_field: TEST_USERNAME,
+                    form_config.password_field: encoded_password,
                 }
 
                 resp = session.post(
-                    f"{server.url}{config.auth.form.action}",
+                    f"{server.url}{form_config.action}",
                     data=login_data,
                     allow_redirects=True,
-                    timeout=10,
+                    timeout=TEST_TIMEOUT,
                 )
                 assert resp.status_code == 200
 
             # Step 2: Fetch and parse data pages
             # HNAP modems use POST to /HNAP1/ for JSON data, not GET to HTML pages
-            if config.auth.strategy == AuthStrategy.HNAP:
+            if has_auth_strategy(config, AuthStrategy.HNAP):
                 # HNAP: call parse() which uses stored builder to fetch data
                 try:
                     soup = BeautifulSoup("", "html.parser")  # Placeholder, HNAP ignores it
@@ -382,7 +453,7 @@ class TestModemE2EFullWorkflow:
             else:
                 # HTML modems: fetch pages via GET and parse HTML
                 for data_type, data_path in config.pages.data.items():
-                    resp = session.get(f"{server.url}{data_path}", timeout=10)
+                    resp = session.get(f"{server.url}{data_path}", timeout=TEST_TIMEOUT)
                     assert resp.status_code == 200, f"Failed to fetch {data_path}"
 
                     # Parse the response - pass BeautifulSoup object
@@ -399,3 +470,290 @@ class TestModemE2EFullWorkflow:
             config.manufacturer,
             config.model,
         )
+
+
+TYPE_TO_STRATEGY = {
+    "none": AuthStrategy.NONE,
+    "form": AuthStrategy.FORM,
+    "hnap": AuthStrategy.HNAP,
+    "url_token": AuthStrategy.URL_TOKEN,
+    "basic": AuthStrategy.BASIC,
+    "rest_api": AuthStrategy.REST_API,
+}
+
+
+def get_auth_strategies_from_config(config) -> set[AuthStrategy]:
+    """Extract auth strategies from config.auth.types dict.
+
+    New schema uses auth.types{} dict instead of auth.strategy.
+    This converts type names to AuthStrategy enum values.
+    """
+    if not config.auth.types:
+        return {AuthStrategy.NONE}
+
+    return {TYPE_TO_STRATEGY[t] for t in config.auth.types if t in TYPE_TO_STRATEGY}
+
+
+def get_primary_auth_strategy(config) -> AuthStrategy:
+    """Get the first/primary auth strategy from config.auth.types.
+
+    Returns NONE if no types defined.
+    """
+    if not config.auth.types:
+        return AuthStrategy.NONE
+    first_type = next(iter(config.auth.types.keys()))
+    return TYPE_TO_STRATEGY.get(first_type, AuthStrategy.NONE)
+
+
+def has_auth_strategy(config, strategy: AuthStrategy) -> bool:
+    """Check if config has a specific auth strategy."""
+    return strategy in get_auth_strategies_from_config(config)
+
+
+def get_form_config(config):
+    """Get form auth config from auth.types['form']."""
+    if config.auth.types and "form" in config.auth.types:
+        return config.auth.types["form"]
+    return None
+
+
+def get_hnap_config(config):
+    """Get HNAP auth config from auth.types['hnap']."""
+    if config.auth.types and "hnap" in config.auth.types:
+        return config.auth.types["hnap"]
+    return None
+
+
+class TestDiscoveryPipelineE2E:
+    """Test the actual discovery pipeline against MockModemServer.
+
+    These tests exercise the REAL code path users experience during setup:
+    config_flow -> validate_input -> run_discovery_pipeline
+
+    This is critical because other E2E tests bypass discovery by using
+    direct auth (HNAPJsonRequestBuilder, form POST, etc.). This class
+    ensures the discovery pipeline works end-to-end.
+
+    Added after issue #102: HNAP discovery returned html=None which
+    caused AssertionError in validation step. Direct auth tests passed
+    but the actual user flow was broken.
+    """
+
+    # Auth strategies supported by dynamic discovery
+    # FORM and HNAP work with dynamic auth discovery
+    DYNAMIC_DISCOVERY_STRATEGIES = {AuthStrategy.FORM, AuthStrategy.HNAP}
+
+    # All auth strategies supported via static_auth_config (modem.yaml as source of truth)
+    # MockModemServer has handlers for all of these
+    STATIC_AUTH_STRATEGIES = {
+        AuthStrategy.FORM,
+        AuthStrategy.HNAP,
+        AuthStrategy.NONE,
+        AuthStrategy.BASIC,
+        AuthStrategy.URL_TOKEN,
+        AuthStrategy.REST_API,
+    }
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_discovery_pipeline_dynamic_auth(self, modem_path: Path):
+        """Test run_discovery_pipeline with dynamic auth discovery.
+
+        Tests the legacy path where auth is discovered dynamically.
+        Only FORM and HNAP strategies support dynamic discovery.
+        """
+        from custom_components.cable_modem_monitor.core.fallback.discovery import (
+            run_discovery_pipeline,
+        )
+
+        config = load_modem_config(modem_path)
+
+        # Skip modems with strategies that don't support dynamic discovery
+        modem_strategies = get_auth_strategies_from_config(config)
+        if not modem_strategies.intersection(self.DYNAMIC_DISCOVERY_STRATEGIES):
+            pytest.skip(
+                f"Auth strategies {modem_strategies} require static auth config "
+                f"(see test_discovery_pipeline_static_auth)"
+            )
+
+        # Get the parser class for user-selected flow
+        import importlib
+
+        parser_class: type | None = None
+        try:
+            module = importlib.import_module(config.parser.module)
+            parser_class = getattr(module, config.parser.class_name)
+        except Exception as e:
+            pytest.skip(f"Failed to import parser: {e}")
+        assert parser_class is not None
+
+        # Determine which dynamic auth type to use for the server
+        # FORM and HNAP are the only strategies supported by dynamic discovery
+        server_auth_type = None
+        if has_auth_strategy(config, AuthStrategy.FORM):
+            server_auth_type = "form"
+        elif has_auth_strategy(config, AuthStrategy.HNAP):
+            server_auth_type = "hnap"
+        else:
+            pytest.skip("No dynamic-discovery auth type available")
+
+        with MockModemServer.from_modem_path(modem_path, auth_type=server_auth_type) as server:
+            # Run the ACTUAL discovery pipeline - same as config_flow
+            result = run_discovery_pipeline(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+                selected_parser=parser_class,
+            )
+
+            # Pipeline should succeed
+            assert result.success, (
+                f"Discovery pipeline failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have detected the correct strategy
+            assert result.auth_strategy is not None, "No auth strategy detected"
+            _LOGGER.info(
+                "Discovery pipeline succeeded: %s %s (strategy=%s)",
+                config.manufacturer,
+                config.model,
+                result.auth_strategy,
+            )
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_discovery_pipeline_auto_detection(self, modem_path: Path):
+        """Test discovery pipeline with auto-detection (no pre-selected parser).
+
+        This tests the fully automatic flow where users don't select a modem.
+        HNAP modems will fail gracefully (require manual selection).
+        Form-based modems should auto-detect successfully.
+        """
+        from custom_components.cable_modem_monitor.core.fallback.discovery import (
+            run_discovery_pipeline,
+        )
+
+        config = load_modem_config(modem_path)
+        modem_strategies = get_auth_strategies_from_config(config)
+
+        # Skip HNAP modems - they require manual parser selection
+        # (HNAP returns JSON, not HTML, so can't auto-detect parser)
+        if has_auth_strategy(config, AuthStrategy.HNAP):
+            pytest.skip("HNAP modems require manual parser selection")
+
+        # Skip modems with unsupported auth strategies for dynamic discovery
+        if not modem_strategies.intersection(self.DYNAMIC_DISCOVERY_STRATEGIES):
+            pytest.skip(
+                f"Auth strategies {modem_strategies} not yet supported "
+                f"by MockModemServer + AuthDiscovery integration"
+            )
+
+        # Determine which dynamic auth type to use for the server
+        server_auth_type = None
+        if has_auth_strategy(config, AuthStrategy.FORM):
+            server_auth_type = "form"
+        elif has_auth_strategy(config, AuthStrategy.HNAP):
+            server_auth_type = "hnap"
+        else:
+            pytest.skip("No dynamic-discovery auth type available")
+
+        with MockModemServer.from_modem_path(modem_path, auth_type=server_auth_type) as server:
+            # Run discovery WITHOUT selected_parser (auto-detection)
+            result = run_discovery_pipeline(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+                selected_parser=None,  # Auto-detect
+            )
+
+            # Pipeline should succeed for non-HNAP modems
+            assert result.success, (
+                f"Auto-detection failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have detected the parser
+            assert result.parser_name is not None, "No parser detected"
+            _LOGGER.info(
+                "Auto-detection succeeded: %s %s -> %s",
+                config.manufacturer,
+                config.model,
+                result.parser_name,
+            )
+
+    @pytest.mark.parametrize(
+        "modem_path",
+        [path for _, path in MODEMS_WITH_FIXTURES],
+        ids=[modem_id for modem_id, _ in MODEMS_WITH_FIXTURES],
+    )
+    def test_known_modem_setup_static_auth(self, modem_path: Path):
+        """Test setup_modem with static auth config from modem.yaml.
+
+        This tests the "modem.yaml as source of truth" architecture where
+        users select their modem model and we use verified config directly.
+        This is the KNOWN MODEM path - separate from fallback discovery.
+
+        This enables support for ALL auth strategies (NONE, BASIC, URL_TOKEN,
+        REST_API) that don't work well with dynamic discovery.
+        """
+        from custom_components.cable_modem_monitor.core.setup import setup_modem
+        from custom_components.cable_modem_monitor.modem_config import (
+            get_auth_adapter_for_parser,
+        )
+
+        config = load_modem_config(modem_path)
+
+        # Skip modems with strategies not in our static auth support list
+        modem_strategies = get_auth_strategies_from_config(config)
+        if not modem_strategies.intersection(self.STATIC_AUTH_STRATEGIES):
+            pytest.skip(f"Auth strategies {modem_strategies} not yet supported")
+
+        # Get the parser class
+        import importlib
+
+        parser_class: type | None = None
+        try:
+            module = importlib.import_module(config.parser.module)
+            parser_class = getattr(module, config.parser.class_name)
+        except Exception as e:
+            pytest.skip(f"Failed to import parser: {e}")
+        assert parser_class is not None
+
+        # Get static auth config from modem.yaml adapter
+        adapter = get_auth_adapter_for_parser(parser_class.__name__)
+        if adapter is None:
+            pytest.skip(f"No adapter for {parser_class.__name__}")
+
+        static_auth_config = adapter.get_static_auth_config()
+
+        with MockModemServer.from_modem_path(modem_path) as server:
+            # Run known modem setup with static auth config
+            result = setup_modem(
+                host=server.url.replace("http://", "").replace("https://", ""),
+                parser_class=parser_class,
+                static_auth_config=static_auth_config,
+                username=TEST_USERNAME,
+                password=TEST_PASSWORD,
+            )
+
+            # Setup should succeed
+            assert result.success, (
+                f"Known modem setup failed for {config.manufacturer} {config.model}: "
+                f"step={result.failed_step}, error={result.error}"
+            )
+
+            # Should have used the strategy from static config
+            assert result.auth_strategy is not None, "No auth strategy in result"
+            _LOGGER.info(
+                "Known modem setup succeeded: %s %s (strategy=%s)",
+                config.manufacturer,
+                config.model,
+                result.auth_strategy,
+            )

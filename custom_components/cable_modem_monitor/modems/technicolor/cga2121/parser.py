@@ -13,10 +13,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemParser
 from custom_components.cable_modem_monitor.lib.utils import extract_float, extract_number
+from custom_components.cable_modem_monitor.modem_config.adapter import (
+    get_auth_adapter_for_parser,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,9 +27,38 @@ _LOGGER = logging.getLogger(__name__)
 class TechnicolorCGA2121Parser(ModemParser):
     """Parser for Technicolor CGA2121 cable modem (Telia Finland)."""
 
+    def _get_primary_data_page(self) -> str | None:
+        """Get primary data page path from modem.yaml."""
+        adapter = get_auth_adapter_for_parser(self.__class__.__name__)
+        if adapter:
+            return adapter.get_primary_data_page()
+        return None
+
     def parse_resources(self, resources: dict[str, Any]) -> dict:
-        """Parse modem data from pre-fetched resources."""
-        soup = resources.get("/")
+        """Parse modem data from pre-fetched resources.
+
+        Tries to find the data page in this order:
+        1. Primary data page from modem.yaml (pages.data.downstream_channels)
+        2. Root path (/) - legacy compatibility
+        3. First BeautifulSoup in resources - fallback
+
+        This handles the case where auth redirects to a different page
+        than the data page (Issue #75).
+        """
+        soup = None
+
+        # Try primary data page from modem.yaml first
+        primary_page = self._get_primary_data_page()
+        if primary_page:
+            soup = resources.get(primary_page)
+            if soup:
+                _LOGGER.debug("CGA2121: Using primary data page %s", primary_page)
+
+        # Fall back to root path (legacy compatibility)
+        if soup is None:
+            soup = resources.get("/")
+
+        # Final fallback: iterate through all resources
         if soup is None:
             for value in resources.values():
                 if isinstance(value, BeautifulSoup):
@@ -50,7 +82,7 @@ class TechnicolorCGA2121Parser(ModemParser):
         """Parse modem data (legacy interface)."""
         return self.parse_resources({"/": soup})
 
-    def _find_channel_tbody(self, soup: BeautifulSoup, section_name: str, i18n_key: str) -> BeautifulSoup | None:
+    def _find_channel_tbody(self, soup: BeautifulSoup, section_name: str, i18n_key: str) -> Tag | None:
         """Find the tbody element for a channel section by header text or i18n key."""
         # Look for header containing section name
         header = None
@@ -141,13 +173,13 @@ class TechnicolorCGA2121Parser(ModemParser):
 
         return channels
 
-    def _parse_system_info(self, soup: BeautifulSoup) -> dict:
+    def _parse_system_info(self, soup: BeautifulSoup) -> dict[str, Any]:
         """
         Parse system information from CGA2121.
 
         The status page has limited system info - mainly operational status.
         """
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
             # Try to find operational status

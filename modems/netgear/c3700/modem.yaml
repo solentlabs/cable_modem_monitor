@@ -7,21 +7,19 @@ paradigm: html
 
 hardware:
   docsis_version: "3.0"
-  release_date: "2014-09"
-  end_of_life: "2020"
+  chipset: Broadcom BCM3383
+  release_date: "2014"
+  end_of_life: "2022"
 
 # Provenance tracking
 sources:
   detection_hints: "Maintainer verified"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: basic
-
-  basic: {}
+  types:
+    basic: null
 
   session:
     cookie_name: "session"
@@ -71,10 +69,14 @@ capabilities:
   - software_version
   - system_uptime
   - last_boot_time
-  - restart
 
-behaviors:
-  requires_multi_page_fetch: true
+actions:
+  restart:
+    # Dynamic endpoint: form action contains session ID (e.g., /goform/RouterStatus?id=123456)
+    pre_fetch_url: "/RouterStatus.htm"
+    endpoint_pattern: "RouterStatus"
+    params:
+      buttonSelect: "2"
 
 # =============================================================================
 # STATUS
@@ -96,3 +98,16 @@ attribution:
   contributors:
     - github: kwschulz
       contribution: "Maintainer verified"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+
+notes: |
+  Combo modem/router device with 24x8 channel bonding (DOCSIS 3.0).
+  Multi-page parsing: DocsisStatus.htm for channel data, RouterStatus.htm for system info.
+  Channel data in pipe-delimited JavaScript: InitDsTableTagValue() and InitUsTableTagValue().
+
+references:
+  firmware_versions: "https://kb.netgear.com/000036375/What-is-the-latest-firmware-version-of-my-NETGEAR-cable-modem-or-modem-router"

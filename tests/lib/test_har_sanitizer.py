@@ -2,7 +2,7 @@
 
 import json
 
-from custom_components.cable_modem_monitor.lib.har_sanitizer import (
+from har_capture.sanitization import (
     is_sensitive_field,
     sanitize_entry,
     sanitize_har,
@@ -152,7 +152,8 @@ class TestEntrySanitization:
 
         cookie_header = next(h for h in result["request"]["headers"] if h["name"] == "Cookie")
         assert "secret123" not in cookie_header["value"]
-        assert "[REDACTED]" in cookie_header["value"]
+        # har-capture uses COOKIE_ prefix or [REDACTED] for cookie values
+        assert "COOKIE_" in cookie_header["value"] or "[REDACTED]" in cookie_header["value"]
 
     def test_sanitizes_response_content(self):
         """Test response HTML content is sanitized."""
@@ -176,7 +177,8 @@ class TestEntrySanitization:
 
         content = result["response"]["content"]["text"]
         assert "AA:BB:CC:DD:EE:FF" not in content
-        assert "XX:XX:XX:XX:XX:XX" in content
+        # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
+        assert "02:" in content or "XX:XX:XX:XX:XX:XX" in content
 
     def test_sanitizes_post_data(self):
         """Test POST data is sanitized."""
@@ -203,12 +205,13 @@ class TestEntrySanitization:
 
         result = sanitize_entry(entry)
 
-        # Check params
+        # Check params - original password should be removed
         password_param = next(p for p in result["request"]["postData"]["params"] if p["name"] == "password")
-        assert password_param["value"] == "[REDACTED]"
+        assert password_param["value"] != "secret"
+        # har-capture uses FIELD_ prefix or [REDACTED] for field values
+        assert "FIELD_" in password_param["value"] or "[REDACTED]" in password_param["value"]
 
-        # Check text
-        assert "password=[REDACTED]" in result["request"]["postData"]["text"]
+        # Check text - original password should be removed
         assert "secret" not in result["request"]["postData"]["text"]
 
 
@@ -254,20 +257,23 @@ class TestFullHarSanitization:
             }
         }
 
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
 
-        # Check first entry
+        # Check first entry - MAC should be sanitized
         entry1 = result["log"]["entries"][0]
         assert "11:22:33:44:55:66" not in entry1["response"]["content"]["text"]
 
-        # Check second entry
+        # Check second entry - password should be sanitized
         entry2 = result["log"]["entries"][1]
-        assert entry2["request"]["postData"]["params"][0]["value"] == "[REDACTED]"
+        password_value = entry2["request"]["postData"]["params"][0]["value"]
+        assert password_value != "secret"
+        # har-capture uses FIELD_ prefix or [REDACTED] for field values
+        assert "FIELD_" in password_value or "[REDACTED]" in password_value
 
     def test_handles_missing_log_key(self):
         """Test handling of invalid HAR without log key."""
         har_data = {"invalid": "structure"}
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
         assert "invalid" in result  # Returns input with warning
 
     def test_preserves_har_structure(self):
@@ -281,7 +287,7 @@ class TestFullHarSanitization:
             }
         }
 
-        result = sanitize_har(har_data)
+        result, report = sanitize_har(har_data)
 
         assert result["log"]["version"] == "1.2"
         assert result["log"]["creator"]["name"] == "Test"

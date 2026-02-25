@@ -10,13 +10,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from custom_components.cable_modem_monitor.button import (
-    CaptureHtmlButton,
+    CaptureModemDataButton,
     ModemRestartButton,
     ResetEntitiesButton,
     UpdateModemDataButton,
     async_setup_entry,
 )
 from custom_components.cable_modem_monitor.const import DOMAIN
+from custom_components.cable_modem_monitor.core.restart_monitor import RestartMonitor
 
 
 @pytest.fixture
@@ -34,8 +35,18 @@ def mock_config_entry():
 
 
 @pytest.fixture
-def mock_coordinator():
-    """Create a mock coordinator."""
+def mock_modem_client():
+    """Create a mock modem_client."""
+    modem_client = Mock()
+    modem_client.restart_modem = Mock(return_value=True)
+    modem_client.get_modem_data = Mock(return_value={"cable_modem_connection_status": "online"})
+    modem_client.clear_auth_cache = Mock()
+    return modem_client
+
+
+@pytest.fixture
+def mock_coordinator(mock_modem_client):
+    """Create a mock coordinator with modem_client attached."""
     coordinator = Mock(spec=DataUpdateCoordinator)
     coordinator.data = {
         "cable_modem_connection_status": "online",
@@ -45,6 +56,7 @@ def mock_coordinator():
     coordinator.last_update_success = True
     coordinator.update_interval = timedelta(seconds=600)
     coordinator.async_request_refresh = AsyncMock()
+    coordinator.modem_client = mock_modem_client  # Attach modem_client to coordinator
     return coordinator
 
 
@@ -84,81 +96,69 @@ async def test_restart_button_initialization(mock_coordinator, mock_config_entry
 async def test_restart_button_success(mock_coordinator, mock_config_entry):
     """Test successful modem restart."""
     hass = Mock(spec=HomeAssistant)
-    hass.async_add_executor_job = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value=True)  # restart_modem returns True
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
+    hass.async_create_task = Mock()  # Mock the task creation
 
     button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
-    # Mock scraper restart to return success
-    with patch("custom_components.cable_modem_monitor.core.modem_scraper.ModemScraper") as mock_scraper_class:
-        mock_scraper = Mock()
-        mock_scraper.restart_modem = Mock(return_value=True)
-        mock_scraper_class.return_value = mock_scraper
+    # Coordinator.modem_client.restart_modem returns True (success)
+    mock_coordinator.modem_client.restart_modem.return_value = True
 
-        # Mock get_parsers
-        with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
-            hass.async_add_executor_job.side_effect = [
-                [],  # get_parsers result
-                True,  # restart_modem result
-            ]
+    await button.async_press()
 
-            # Mock asyncio.create_task to not actually start the task
-            with patch("asyncio.create_task"):
-                await button.async_press()
+    # Verify notification was created
+    assert hass.services.async_call.call_count >= 1
+    call_args = hass.services.async_call.call_args_list[0]
+    assert call_args[0][0] == "persistent_notification"
+    assert call_args[0][1] == "create"
+    notification_data = call_args[0][2]
+    assert "Modem restart command sent" in notification_data["message"]
 
-            # Verify notification was created
-            assert hass.services.async_call.call_count >= 1
-            call_args = hass.services.async_call.call_args_list[0]
-            assert call_args[0][0] == "persistent_notification"
-            assert call_args[0][1] == "create"
-            notification_data = call_args[0][2]
-            assert "Modem restart command sent" in notification_data["message"]
+    # Verify RestartMonitor task was created
+    hass.async_create_task.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_restart_button_failure(mock_coordinator, mock_config_entry):
     """Test failed modem restart."""
     hass = Mock(spec=HomeAssistant)
-    hass.async_add_executor_job = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value=False)  # restart_modem returns False
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
     button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
     button.hass = hass
 
-    # Mock scraper restart to return failure
-    with patch("custom_components.cable_modem_monitor.core.modem_scraper.ModemScraper") as mock_scraper_class:
-        mock_scraper = Mock()
-        mock_scraper.restart_modem = Mock(return_value=False)
-        mock_scraper_class.return_value = mock_scraper
+    # Coordinator.modem_client.restart_modem returns False (failure)
+    mock_coordinator.modem_client.restart_modem.return_value = False
 
-        with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
-            hass.async_add_executor_job.side_effect = [
-                [],  # get_parsers result
-                False,  # restart_modem result (failed)
-            ]
+    await button.async_press()
 
-            await button.async_press()
+    # Verify error notification was created
+    call_args = hass.services.async_call.call_args_list[0]
+    assert call_args[0][0] == "persistent_notification"
+    notification_data = call_args[0][2]
+    assert "Failed to restart modem" in notification_data["message"]
 
-            # Verify error notification was created
-            call_args = hass.services.async_call.call_args_list[0]
-            assert call_args[0][0] == "persistent_notification"
-            notification_data = call_args[0][2]
-            assert "Failed to restart modem" in notification_data["message"]
+
+# =============================================================================
+# RestartMonitor Tests
+# =============================================================================
 
 
 @pytest.mark.asyncio
-async def test_monitor_restart_phase1_success_phase2_success(mock_coordinator, mock_config_entry):
-    """Test restart monitoring: both phases succeed."""
+async def test_restart_monitor_phase1_success_phase2_success(mock_coordinator):
+    """Test RestartMonitor: both phases succeed."""
     hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
+    notifications = []
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
     # Simulate modem restart: offline -> responding -> online with channels
     response_sequence = [
@@ -198,29 +198,28 @@ async def test_monitor_restart_phase1_success_phase2_success(mock_coordinator, m
 
     # Mock sleep to speed up test
     with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
+        await monitor.start()
 
     # Verify final success notification
-    final_call = hass.services.async_call.call_args_list[-1]
-    notification_data = final_call[0][2]  # Third positional arg is the service data
-    assert "Modem fully online" in notification_data["message"]
-    assert "32 downstream" in notification_data["message"]
-    assert "4 upstream" in notification_data["message"]
+    final_notification = notifications[-1]
+    assert "Modem fully online" in final_notification["message"]
+    assert "32 downstream" in final_notification["message"]
+    assert "4 upstream" in final_notification["message"]
 
     # Verify polling interval was restored
     assert mock_coordinator.update_interval == timedelta(seconds=600)
 
 
 @pytest.mark.asyncio
-async def test_monitor_restart_phase1_timeout(mock_coordinator, mock_config_entry):
-    """Test restart monitoring: phase 1 timeout (modem never responds)."""
+async def test_restart_monitor_phase1_timeout(mock_coordinator):
+    """Test RestartMonitor: phase 1 timeout (modem never responds)."""
     hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
+    notifications = []
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
     # Modem never responds
     mock_coordinator.last_update_success = False
@@ -228,28 +227,27 @@ async def test_monitor_restart_phase1_timeout(mock_coordinator, mock_config_entr
 
     # Mock sleep to speed up test
     with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
+        await monitor.start()
 
     # Verify timeout notification
-    final_call = hass.services.async_call.call_args_list[-1]
-    notification_data = final_call[0][2]  # Third positional arg is the service data
-    assert "Modem did not respond" in notification_data["message"]
-    assert "120 seconds" in notification_data["message"]
+    final_notification = notifications[-1]
+    assert "Modem did not respond" in final_notification["message"]
+    assert "120 seconds" in final_notification["message"]
 
     # Verify polling interval was restored
     assert mock_coordinator.update_interval == timedelta(seconds=600)
 
 
 @pytest.mark.asyncio
-async def test_monitor_restart_phase2_timeout(mock_coordinator, mock_config_entry):
-    """Test restart monitoring: phase 1 succeeds, phase 2 times out (channels don't sync)."""
+async def test_restart_monitor_phase2_timeout(mock_coordinator):
+    """Test RestartMonitor: phase 1 succeeds, phase 2 times out (channels don't sync)."""
     hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
+    notifications = []
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
     # Modem responds immediately but channels never sync
     mock_coordinator.last_update_success = True
@@ -261,28 +259,27 @@ async def test_monitor_restart_phase2_timeout(mock_coordinator, mock_config_entr
 
     # Mock sleep to speed up test
     with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
+        await monitor.start()
 
     # Verify warning notification (not error, since modem IS responding)
-    final_call = hass.services.async_call.call_args_list[-1]
-    notification_data = final_call[0][2]  # Third positional arg is the service data
-    assert "Modem responding but channels not fully synced" in notification_data["message"]
-    assert "This may be normal" in notification_data["message"]
+    final_notification = notifications[-1]
+    assert "Modem responding but channels not fully synced" in final_notification["message"]
+    assert "This may be normal" in final_notification["message"]
 
     # Verify polling interval was restored
     assert mock_coordinator.update_interval == timedelta(seconds=600)
 
 
 @pytest.mark.asyncio
-async def test_monitor_restart_exception_handling(mock_coordinator, mock_config_entry):
-    """Test restart monitoring handles exceptions and always restores polling interval."""
+async def test_restart_monitor_exception_handling(mock_coordinator):
+    """Test RestartMonitor handles exceptions and always restores polling interval."""
     hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
+    notifications = []
 
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
 
     # Make refresh catch exceptions silently and eventually timeout phase 1
     call_count = [0]
@@ -297,10 +294,187 @@ async def test_monitor_restart_exception_handling(mock_coordinator, mock_config_
 
     # Mock sleep to speed up test
     with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
+        await monitor.start()
 
     # Verify polling interval was restored despite phase 1 timeout (try/finally)
     assert mock_coordinator.update_interval == timedelta(seconds=600)
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_clears_auth_cache(mock_coordinator):
+    """Test that auth cache is cleared after restart, before polling resumes."""
+    from unittest.mock import MagicMock
+
+    hass = Mock(spec=HomeAssistant)
+    notifications = []
+
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    # Create a mock modem_client with cached auth
+    mock_modem_client = MagicMock()
+    mock_modem_client.clear_auth_cache = MagicMock()
+    mock_coordinator.modem_client = mock_modem_client
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
+
+    # Simulate immediate success for monitoring
+    mock_coordinator.last_update_success = True
+    mock_coordinator.data = {
+        "cable_modem_connection_status": "online",
+        "cable_modem_downstream_channel_count": 32,
+        "cable_modem_upstream_channel_count": 4,
+    }
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        await monitor.start()
+
+    # CRITICAL: Verify auth cache was cleared
+    mock_modem_client.clear_auth_cache.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_handles_missing_modem_client(mock_coordinator):
+    """Test that cache clear gracefully handles coordinator without modem_client attribute."""
+    hass = Mock(spec=HomeAssistant)
+    notifications = []
+
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    # Coordinator WITHOUT modem_client attribute (old behavior)
+    if hasattr(mock_coordinator, "modem_client"):
+        delattr(mock_coordinator, "modem_client")
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
+
+    mock_coordinator.last_update_success = True
+    mock_coordinator.data = {
+        "cable_modem_connection_status": "online",
+        "cable_modem_downstream_channel_count": 32,
+        "cable_modem_upstream_channel_count": 4,
+    }
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        # Should not raise AttributeError
+        await monitor.start()
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_reauth_after_cache_clear(mock_coordinator):
+    """Test that polling successfully re-authenticates after cache is cleared."""
+    from unittest.mock import MagicMock
+
+    hass = Mock(spec=HomeAssistant)
+    notifications = []
+
+    async def mock_notify(title: str, message: str):
+        notifications.append({"title": title, "message": message})
+
+    # Create mock modem_client with HNAP builder that has cached private key
+    mock_json_builder = MagicMock()
+    mock_json_builder._private_key = "OLD_CACHED_KEY_123"
+    mock_json_builder.clear_auth_cache = MagicMock()
+
+    mock_parser = MagicMock()
+    mock_parser._json_builder = mock_json_builder
+
+    mock_modem_client = MagicMock()
+    mock_modem_client.parser = mock_parser
+    mock_modem_client.session = MagicMock()
+
+    def clear_cache_impl():
+        """Simulate actual cache clearing."""
+        mock_json_builder._private_key = None
+        mock_json_builder.clear_auth_cache()
+        mock_modem_client.session = MagicMock()  # New session
+
+    mock_modem_client.clear_auth_cache = clear_cache_impl
+    mock_coordinator.modem_client = mock_modem_client
+
+    monitor = RestartMonitor(hass, mock_coordinator, mock_notify)
+
+    # Track polling calls to verify re-auth happens
+    poll_count = [0]
+    original_session = mock_modem_client.session
+
+    async def mock_refresh():
+        poll_count[0] += 1
+        mock_coordinator.last_update_success = True
+        mock_coordinator.data = {
+            "cable_modem_connection_status": "online",
+            "cable_modem_downstream_channel_count": 32,
+            "cable_modem_upstream_channel_count": 4,
+        }
+
+    mock_coordinator.async_request_refresh = mock_refresh
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        await monitor.start()
+
+    # Verify:
+    # 1. Old private key was cleared
+    assert mock_json_builder._private_key is None
+
+    # 2. New session was created (different object)
+    assert mock_modem_client.session is not original_session
+
+    # 3. HNAP builder's clear was called
+    mock_json_builder.clear_auth_cache.assert_called()
+
+    # 4. Polling occurred (which would trigger re-auth in real code)
+    assert poll_count[0] > 0
+
+
+# =============================================================================
+# RestartMonitor Source Code Verification Tests
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_has_grace_period_logic():
+    """Test that RestartMonitor has grace period logic for channel sync."""
+    import inspect
+
+    source = inspect.getsource(RestartMonitor)
+
+    # Verify grace period logic exists
+    assert "grace_period" in source.lower()
+    assert "stable_count" in source
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_has_channel_stability_detection():
+    """Test that RestartMonitor detects when channels are stable."""
+    import inspect
+
+    source = inspect.getsource(RestartMonitor)
+
+    # Verify stability checking logic exists
+    assert "prev_downstream" in source
+    assert "prev_upstream" in source
+    assert "stable_count" in source
+
+    # Verify reset logic when channels change
+    assert "stable_count = 0" in source
+
+
+@pytest.mark.asyncio
+async def test_restart_monitor_has_grace_period_reset_logic():
+    """Test that RestartMonitor resets grace period if more channels appear."""
+    import inspect
+
+    source = inspect.getsource(RestartMonitor)
+
+    # Verify grace period reset logic exists
+    assert "grace_period_active = False" in source
+    # Should reset grace period when channels change
+    assert "stable_count = 0" in source
+
+
+# =============================================================================
+# ResetEntitiesButton Tests
+# =============================================================================
 
 
 @pytest.mark.asyncio
@@ -379,50 +553,9 @@ async def test_reset_button_removes_all_entities_and_reloads(mock_coordinator, m
         assert "Successfully removed 2 entities" in notification_data["message"]
 
 
-@pytest.mark.asyncio
-async def test_restart_monitoring_grace_period_detects_all_channels(mock_coordinator, mock_config_entry):
-    """Test that grace period waits for all channels to sync."""
-    import inspect
-
-    # Check that the grace period pattern exists in the code
-    source = inspect.getsource(ModemRestartButton)
-
-    # Verify grace period logic exists
-    assert "grace_period" in source.lower()
-    assert "stable_count" in source
-
-
-@pytest.mark.asyncio
-async def test_restart_monitoring_channel_stability_detection(mock_coordinator, mock_config_entry):
-    """Test that restart monitoring detects when channels are stable."""
-    import inspect
-
-    from custom_components.cable_modem_monitor.button import ModemRestartButton
-
-    source = inspect.getsource(ModemRestartButton)
-
-    # Verify stability checking logic exists
-    assert "prev_downstream" in source
-    assert "prev_upstream" in source
-    assert "stable_count" in source
-
-    # Verify reset logic when channels change
-    assert "stable_count = 0" in source
-
-
-@pytest.mark.asyncio
-async def test_restart_monitoring_grace_period_resets_on_change(mock_coordinator, mock_config_entry):
-    """Test that grace period resets if more channels appear."""
-    import inspect
-
-    from custom_components.cable_modem_monitor.button import ModemRestartButton
-
-    source = inspect.getsource(ModemRestartButton)
-
-    # Verify grace period reset logic exists
-    assert "grace_period_active = False" in source
-    # Should reset grace period when channels change
-    assert "stable_count = 0" in source
+# =============================================================================
+# UpdateModemDataButton Tests
+# =============================================================================
 
 
 @pytest.mark.asyncio
@@ -460,13 +593,18 @@ async def test_update_data_button_press(mock_coordinator, mock_config_entry):
     assert notification_data["notification_id"] == "cable_modem_update"
 
 
-@pytest.mark.asyncio
-async def test_capture_html_button_initialization(mock_coordinator, mock_config_entry):
-    """Test capture HTML button initialization."""
-    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+# =============================================================================
+# CaptureModemDataButton Tests
+# =============================================================================
 
-    assert button._attr_name == "Capture HTML"
-    assert button._attr_unique_id == "test_entry_id_capture_html_button"
+
+@pytest.mark.asyncio
+async def test_capture_modem_data_button_initialization(mock_coordinator, mock_config_entry):
+    """Test capture modem data button initialization."""
+    button = CaptureModemDataButton(mock_coordinator, mock_config_entry)
+
+    assert button._attr_name == "Capture Modem Data"
+    assert button._attr_unique_id == "test_entry_id_capture_modem_data_button"
     assert button._attr_icon == "mdi:file-code"
     from homeassistant.const import EntityCategory
 
@@ -474,17 +612,16 @@ async def test_capture_html_button_initialization(mock_coordinator, mock_config_
 
 
 @pytest.mark.asyncio
-async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
-    """Test successful HTML capture."""
+async def test_capture_modem_data_button_success(mock_coordinator, mock_config_entry):
+    """Test successful modem data capture."""
     hass = Mock(spec=HomeAssistant)
-    hass.async_add_executor_job = AsyncMock()
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+    button = CaptureModemDataButton(mock_coordinator, mock_config_entry)
     button.hass = hass
 
-    # Mock get_modem_data to return captured HTML
+    # Mock get_modem_data to return captured data
     mock_capture_data = {
         "cable_modem_connection_status": "online",
         "_raw_html_capture": {
@@ -504,41 +641,34 @@ async def test_capture_html_button_success(mock_coordinator, mock_config_entry):
         },
     }
 
-    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
-        hass.async_add_executor_job.side_effect = [
-            [],  # get_parsers result
-            mock_capture_data,  # get_modem_data result
-        ]
+    # Configure coordinator.modem_client.get_modem_data to return capture data
+    mock_coordinator.modem_client.get_modem_data.return_value = mock_capture_data
+    hass.async_add_executor_job = AsyncMock(return_value=mock_capture_data)
 
-        await button.async_press()
+    await button.async_press()
 
-        # Verify capture was stored in coordinator
-        assert "_raw_html_capture" in mock_coordinator.data
-        assert (
-            mock_coordinator.data["_raw_html_capture"]["urls"][0]["url"] == "https://192.168.100.1/MotoConnection.asp"
-        )
+    # Verify capture was stored in coordinator
+    assert "_raw_html_capture" in mock_coordinator.data
+    assert mock_coordinator.data["_raw_html_capture"]["urls"][0]["url"] == "https://192.168.100.1/MotoConnection.asp"
 
-        # Verify success notification
-        notification_calls = [
-            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
-        ]
-        assert len(notification_calls) == 1
-        notification_data = notification_calls[0][0][2]
-        assert "HTML Capture Complete" in notification_data["title"]
-        assert "Captured 1 page(s)" in notification_data["message"]
-        assert "12.2 KB" in notification_data["message"]
-        assert "Download diagnostics within 5 minutes" in notification_data["message"]
+    # Verify success notification
+    notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+    assert len(notification_calls) == 1
+    notification_data = notification_calls[0][0][2]
+    assert "Capture Complete" in notification_data["title"]
+    assert "Captured 1 page(s)" in notification_data["message"]
+    assert "12.2 KB" in notification_data["message"]
+    assert "Download diagnostics within 5 minutes" in notification_data["message"]
 
 
 @pytest.mark.asyncio
-async def test_capture_html_button_failure(mock_coordinator, mock_config_entry):
-    """Test HTML capture failure when no data captured."""
+async def test_capture_modem_data_button_failure(mock_coordinator, mock_config_entry):
+    """Test modem data capture failure when no data captured."""
     hass = Mock(spec=HomeAssistant)
-    hass.async_add_executor_job = AsyncMock()
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
+    button = CaptureModemDataButton(mock_coordinator, mock_config_entry)
     button.hass = hass
 
     # Mock get_modem_data to return data without capture
@@ -546,204 +676,39 @@ async def test_capture_html_button_failure(mock_coordinator, mock_config_entry):
         "cable_modem_connection_status": "online",
     }
 
-    with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
-        hass.async_add_executor_job.side_effect = [
-            [],  # get_parsers result
-            mock_data,  # get_modem_data result without capture
-        ]
+    # Configure coordinator.modem_client.get_modem_data to return data without capture
+    mock_coordinator.modem_client.get_modem_data.return_value = mock_data
+    hass.async_add_executor_job = AsyncMock(return_value=mock_data)
 
-        await button.async_press()
+    await button.async_press()
 
-        # Verify failure notification
-        notification_calls = [
-            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
-        ]
-        assert len(notification_calls) == 1
-        notification_data = notification_calls[0][0][2]
-        assert "HTML Capture Failed" in notification_data["title"]
-        assert "Failed to capture HTML data" in notification_data["message"]
+    # Verify failure notification
+    notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+    assert len(notification_calls) == 1
+    notification_data = notification_calls[0][0][2]
+    assert "Capture Failed" in notification_data["title"]
+    assert "Failed to capture modem data" in notification_data["message"]
 
 
 @pytest.mark.asyncio
-async def test_capture_html_button_exception(mock_coordinator, mock_config_entry):
-    """Test HTML capture handles exceptions gracefully."""
-    hass = Mock(spec=HomeAssistant)
-    hass.async_add_executor_job = AsyncMock()
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
-
-    button = CaptureHtmlButton(mock_coordinator, mock_config_entry)
-    button.hass = hass
-
-    # Mock scraper.get_modem_data to raise exception
-    with patch("custom_components.cable_modem_monitor.core.modem_scraper.ModemScraper") as mock_scraper_class:
-        mock_scraper = Mock()
-        mock_scraper.get_modem_data.side_effect = Exception("Test error")
-        mock_scraper_class.return_value = mock_scraper
-
-        with patch("custom_components.cable_modem_monitor.parsers.get_parsers", return_value=[]):
-            hass.async_add_executor_job.side_effect = [
-                [],  # get_parsers result
-                Exception("Test error"),  # get_modem_data result (will be caught by the mock)
-            ]
-        await button.async_press()
-
-        # Verify error notification
-        notification_calls = [
-            c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"
-        ]
-        assert len(notification_calls) == 1
-        notification_data = notification_calls[0][0][2]
-        assert "HTML Capture Error" in notification_data["title"]
-        assert "Test error" in notification_data["message"]
-
-
-@pytest.mark.asyncio
-async def test_restart_clears_auth_cache_before_monitoring(mock_coordinator, mock_config_entry):
-    """Test that auth cache is cleared after restart, before polling resumes.
-
-    This test verifies the fix for the issue where after modem restart,
-    the cached HNAP auth tokens become invalid, causing 500 errors until
-    the cache naturally expires.
-
-    Flow:
-    1. Coordinator has scraper with cached auth
-    2. User clicks restart button
-    3. Restart succeeds, modem reboots
-    4. Cache is cleared BEFORE monitoring starts
-    5. Next poll re-authenticates successfully
-    """
-    from unittest.mock import MagicMock
-
+async def test_capture_modem_data_button_exception(mock_coordinator, mock_config_entry):
+    """Test modem data capture handles exceptions gracefully."""
     hass = Mock(spec=HomeAssistant)
     hass.services = Mock()
     hass.services.async_call = AsyncMock()
 
-    # Create a mock scraper with cached auth
-    mock_scraper = MagicMock()
-    mock_scraper.clear_auth_cache = MagicMock()
-
-    # Attach scraper to coordinator (simulating the fix in __init__.py)
-    mock_coordinator.scraper = mock_scraper
-
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
+    button = CaptureModemDataButton(mock_coordinator, mock_config_entry)
     button.hass = hass
-    button.coordinator = mock_coordinator
 
-    # Simulate immediate success for monitoring
-    mock_coordinator.last_update_success = True
-    mock_coordinator.data = {
-        "cable_modem_connection_status": "online",
-        "cable_modem_downstream_channel_count": 32,
-        "cable_modem_upstream_channel_count": 4,
-    }
+    # Configure coordinator.modem_client.get_modem_data to raise exception
+    mock_coordinator.modem_client.get_modem_data.side_effect = Exception("Test error")
+    hass.async_add_executor_job = AsyncMock(side_effect=Exception("Test error"))
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
+    await button.async_press()
 
-    # CRITICAL: Verify auth cache was cleared
-    mock_scraper.clear_auth_cache.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_restart_cache_clear_handles_missing_scraper(mock_coordinator, mock_config_entry):
-    """Test that cache clear gracefully handles coordinator without scraper attribute.
-
-    This ensures backwards compatibility if the scraper isn't attached to the coordinator.
-    """
-    hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
-
-    # Coordinator WITHOUT scraper attribute (old behavior)
-    # This should NOT raise an error
-    if hasattr(mock_coordinator, "scraper"):
-        delattr(mock_coordinator, "scraper")
-
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
-
-    mock_coordinator.last_update_success = True
-    mock_coordinator.data = {
-        "cable_modem_connection_status": "online",
-        "cable_modem_downstream_channel_count": 32,
-        "cable_modem_upstream_channel_count": 4,
-    }
-
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        # Should not raise AttributeError
-        await button._monitor_restart()
-
-
-@pytest.mark.asyncio
-async def test_restart_reauth_after_cache_clear(mock_coordinator, mock_config_entry):
-    """Test that polling successfully re-authenticates after cache is cleared.
-
-    Simulates the full flow:
-    1. Cached auth exists
-    2. Restart clears cache
-    3. First poll after restart triggers re-authentication
-    4. Re-auth succeeds with new credentials from rebooted modem
-    """
-    from unittest.mock import MagicMock
-
-    hass = Mock(spec=HomeAssistant)
-    hass.services = Mock()
-    hass.services.async_call = AsyncMock()
-
-    # Create mock scraper with HNAP builder that has cached private key
-    mock_json_builder = MagicMock()
-    mock_json_builder._private_key = "OLD_CACHED_KEY_123"
-    mock_json_builder.clear_auth_cache = MagicMock()
-
-    mock_parser = MagicMock()
-    mock_parser._json_builder = mock_json_builder
-
-    mock_scraper = MagicMock()
-    mock_scraper.parser = mock_parser
-    mock_scraper.session = MagicMock()
-
-    def clear_cache_impl():
-        """Simulate actual cache clearing."""
-        mock_json_builder._private_key = None
-        mock_json_builder.clear_auth_cache()
-        mock_scraper.session = MagicMock()  # New session
-
-    mock_scraper.clear_auth_cache = clear_cache_impl
-    mock_coordinator.scraper = mock_scraper
-
-    button = ModemRestartButton(mock_coordinator, mock_config_entry, is_available=True)
-    button.hass = hass
-    button.coordinator = mock_coordinator
-
-    # Track polling calls to verify re-auth happens
-    poll_count = [0]
-    original_session = mock_scraper.session
-
-    async def mock_refresh():
-        poll_count[0] += 1
-        mock_coordinator.last_update_success = True
-        mock_coordinator.data = {
-            "cable_modem_connection_status": "online",
-            "cable_modem_downstream_channel_count": 32,
-            "cable_modem_upstream_channel_count": 4,
-        }
-
-    mock_coordinator.async_request_refresh = mock_refresh
-
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        await button._monitor_restart()
-
-    # Verify:
-    # 1. Old private key was cleared
-    assert mock_json_builder._private_key is None
-
-    # 2. New session was created (different object)
-    assert mock_scraper.session is not original_session
-
-    # 3. HNAP builder's clear was called
-    mock_json_builder.clear_auth_cache.assert_called()
-
-    # 4. Polling occurred (which would trigger re-auth in real code)
-    assert poll_count[0] > 0
+    # Verify error notification
+    notification_calls = [c for c in hass.services.async_call.call_args_list if c[0][0] == "persistent_notification"]
+    assert len(notification_calls) == 1
+    notification_data = notification_calls[0][0][2]
+    assert "Capture Error" in notification_data["title"]
+    assert "Test error" in notification_data["message"]

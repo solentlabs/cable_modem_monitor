@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from custom_components.cable_modem_monitor.lib.html_helper import (
-    PII_ALLOWLIST,
-    PII_PATTERNS,
-    check_for_pii,
-    sanitize_html,
+import re
+from pathlib import Path
+
+from har_capture.patterns import is_allowlisted, load_pii_patterns
+from har_capture.sanitization import check_for_pii, sanitize_html
+from har_capture.sanitization.report import HeuristicMode
+
+# Path to custom PII patterns for cable modem sanitization
+CUSTOM_PATTERNS_PATH = (
+    Path(__file__).parent.parent.parent / "custom_components" / "cable_modem_monitor" / "pii_patterns.json"
 )
 
 
@@ -44,12 +49,13 @@ class TestCheckForPii:
 
     def test_detects_ipv6(self):
         """Test detection of IPv6 addresses."""
-        content = "IPv6 Address: 2001:db8::1"
+        # Use link-local address (not documentation range which is allowlisted)
+        content = "IPv6 Address: fe80::1234:5678"
         findings = check_for_pii(content)
 
         ipv6_findings = [f for f in findings if f["pattern"] == "ipv6"]
         assert len(ipv6_findings) == 1
-        assert "2001:db8::1" in ipv6_findings[0]["match"]
+        assert "fe80::1234:5678" in ipv6_findings[0]["match"]
 
     def test_ignores_time_format(self):
         """Test that time formats are not flagged as IPv6."""
@@ -62,10 +68,14 @@ class TestCheckForPii:
 
     def test_ignores_allowlisted_placeholders(self):
         """Test that allowlisted placeholders are not flagged."""
+        # har-capture uses these formats for allowlisted values:
+        # - MAC: XX:XX:XX:XX:XX:XX or 02:xx:xx:xx:xx:xx (locally-administered)
+        # - IP: 192.0.2.x (TEST-NET-1 documentation range, RFC 5737)
+        # - Email: x@x.invalid or user@redacted.invalid
         content = """
         MAC: XX:XX:XX:XX:XX:XX
-        IP: ***PRIVATE_IP***
-        Email: ***EMAIL***
+        IP: 192.0.2.100
+        Email: x@x.invalid
         """
         findings = check_for_pii(content)
 
@@ -125,23 +135,26 @@ class TestCheckForPii:
 
 
 class TestPiiPatterns:
-    """Tests for PII pattern constants."""
+    """Tests for PII pattern definitions."""
 
     def test_patterns_defined(self):
         """Test that all expected patterns are defined."""
-        assert "mac_address" in PII_PATTERNS
-        assert "email" in PII_PATTERNS
-        assert "public_ip" in PII_PATTERNS
-        assert "ipv6" in PII_PATTERNS
+        data = load_pii_patterns()
+        patterns = data.get("patterns", data)  # Handle nested structure
+        assert "mac_address" in patterns
+        assert "email" in patterns
+        assert "public_ip" in patterns
+        assert "ipv6" in patterns
 
-    def test_allowlist_defined(self):
-        """Test that allowlist contains expected placeholders."""
-        assert "XX:XX:XX:XX:XX:XX" in PII_ALLOWLIST
-        assert "***REDACTED***" in PII_ALLOWLIST
-        assert "***PRIVATE_IP***" in PII_ALLOWLIST
-        assert "***PUBLIC_IP***" in PII_ALLOWLIST
-        assert "***IPv6***" in PII_ALLOWLIST
-        assert "***EMAIL***" in PII_ALLOWLIST
+    def test_allowlist_recognizes_placeholders(self):
+        """Test that allowlist recognizes expected placeholder formats."""
+        # Static placeholders
+        assert is_allowlisted("XX:XX:XX:XX:XX:XX")
+        assert is_allowlisted("[REDACTED]")
+        # Format-preserving hashes (MAC in locally-administered range)
+        assert is_allowlisted("02:ab:cd:ef:12:34")
+        # Hash prefixes
+        assert is_allowlisted("SERIAL_abcd1234")
 
 
 class TestSanitizeHtmlEdgeCases:
@@ -150,7 +163,8 @@ class TestSanitizeHtmlEdgeCases:
     def test_multiple_mac_formats(self):
         """Test sanitization of MACs with different separators."""
         content = "WAN: AA:BB:CC:DD:EE:FF, LAN: 11-22-33-44-55-66"
-        sanitized = sanitize_html(content)
+        # Use salt=None for static placeholders (legacy behavior)
+        sanitized = sanitize_html(content, salt=None)
 
         assert "AA:BB:CC:DD:EE:FF" not in sanitized
         assert "11-22-33-44-55-66" not in sanitized
@@ -159,10 +173,11 @@ class TestSanitizeHtmlEdgeCases:
     def test_ipv6_with_hex_letters(self):
         """Test that IPv6 with hex letters is sanitized."""
         content = "Gateway: fe80::1"
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, salt=None)
 
         assert "fe80::1" not in sanitized
-        assert "***IPv6***" in sanitized
+        # har-capture uses :: for static IPv6 placeholder
+        assert "::" in sanitized
 
     def test_ipv6_without_hex_letters_preserved(self):
         """Test that time-like patterns are not over-sanitized."""
@@ -177,8 +192,10 @@ class TestSanitizeHtmlEdgeCases:
         content = "Config File Name: customer123.cfg"
         sanitized = sanitize_html(content)
 
+        # Original config filename should be removed
         assert "customer123.cfg" not in sanitized
-        assert "***CONFIG_PATH***" in sanitized
+        # har-capture uses CONFIG_ prefix for redacted config paths
+        assert "CONFIG_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_signal_metrics(self):
         """Test that signal metrics are preserved."""
@@ -196,6 +213,100 @@ class TestSanitizeHtmlEdgeCases:
         assert "555000000" in sanitized
         assert "12345" in sanitized
 
+    def test_preserves_firmware_version_strings(self):
+        """Test that firmware version strings are preserved, not sanitized as IPs.
+
+        Regression test: Version strings like "5.7.1.5" should not be treated as IP addresses.
+        They are not PII and are critical for diagnostics.
+        """
+        test_cases = [
+            ("<td>Software Version: 7621-5.7.1.5</td>", "5.7.1.5"),
+            ("<td>Firmware: MB8611-8.1.0.24-GA</td>", "8.1.0.24"),
+            ("<td>Version: V2.4.6.8</td>", "2.4.6.8"),
+            ("<td>Build: SB8200-9.1.103AA6</td>", "9.1.103"),
+        ]
+
+        for html, version in test_cases:
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+            # Version string must be preserved
+            assert version in sanitized, (
+                f"Version string '{version}' was incorrectly sanitized. " f"Input: {html}\nOutput: {sanitized}"
+            )
+
+            # Should NOT be replaced with TEST-NET IPs
+            assert "192.0.2." not in sanitized, (
+                f"Version string was replaced with TEST-NET IP. " f"Input: {html}\nOutput: {sanitized}"
+            )
+
+    def test_ipv4_addresses_produce_valid_format(self):
+        """Test that sanitized IPv4 addresses have valid 4-octet format.
+
+        Regression test: Ensures IPv4 sanitization doesn't produce malformed addresses
+        with incorrect number of octets or out-of-range values.
+        """
+        test_cases = [
+            "<td>IP Address: 10.123.45.67</td>",
+            "<td>Gateway: 192.168.1.254</td>",
+            "<td>WAN IP: 172.16.0.1</td>",
+        ]
+
+        for html in test_cases:
+            sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+            # Find all IP-like patterns in output
+            ip_patterns = re.findall(r"\d+\.\d+\.\d+(?:\.\d+)*", sanitized)
+
+            for ip_pattern in ip_patterns:
+                octets = ip_pattern.split(".")
+
+                # Must have exactly 4 octets (not 3, not 5)
+                assert len(octets) == 4, (
+                    f"Invalid IPv4 format with {len(octets)} octets: {ip_pattern}. "
+                    f"Input: {html}\nOutput: {sanitized}"
+                )
+
+                # Each octet must be 0-255
+                for octet in octets:
+                    octet_val = int(octet)
+                    assert 0 <= octet_val <= 255, (
+                        f"Invalid octet value {octet_val} in {ip_pattern}. " f"Input: {html}\nOutput: {sanitized}"
+                    )
+
+    def test_distinguishes_ips_from_versions(self):
+        """Test that IPs are sanitized while version strings are preserved in same HTML.
+
+        Regression test: Ensures context-aware sanitization correctly identifies
+        which dotted-decimal values are IPs vs. version strings.
+        """
+        html = """
+        <table>
+          <tr>
+            <td>IP Address</td>
+            <td>10.123.45.67</td>
+          </tr>
+          <tr>
+            <td>Software Version</td>
+            <td>5.7.1.5</td>
+          </tr>
+        </table>
+        """
+
+        sanitized = sanitize_html(html, heuristics=HeuristicMode.REDACT)
+
+        # Original IP should be sanitized
+        assert "10.123.45.67" not in sanitized, "IP address was not sanitized"
+
+        # Version should be preserved
+        assert "5.7.1.5" in sanitized, "Version string was incorrectly sanitized"
+
+        # Verify sanitized IPs have valid format (exclude version string)
+        ip_patterns = re.findall(r"\d+\.\d+\.\d+\.\d+", sanitized)
+        for ip in ip_patterns:
+            if ip != "5.7.1.5":  # Exclude version string
+                octets = ip.split(".")
+                assert len(octets) == 4, f"Sanitized IP has invalid format: {ip}"
+
 
 class TestTagValueListSanitization:
     """Tests for WiFi credential sanitization in tagValueList."""
@@ -204,15 +315,16 @@ class TestTagValueListSanitization:
         """Test that WiFi passphrases in DashBoard tagValueList are sanitized."""
         content = (
             "var tagValueList = '0|Good|| |NETGEAR38|NETGEAR38-5G|"
-            "happymango167|happymango167|20|0|1|0|none|NETGEAR-Guest|"
+            "TestWiFiPass123|TestWiFiPass123|20|0|1|0|none|NETGEAR-Guest|"
             "None|NETGEAR-5G-Guest|None|0|0|0|0|0|1|0|0|1|0|0|0|0|"
             "---.---.---.---|1|';"
         )
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # WiFi passphrases should be redacted
-        assert "happymango167" not in sanitized
-        assert "***WIFI_CRED***" in sanitized
+        assert "TestWiFiPass123" not in sanitized
+        # har-capture uses WIFI_ prefix for redacted WiFi credentials
+        assert "WIFI_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_status_values_in_tagvaluelist(self):
         """Test that status values like 'Locked', 'Good' are preserved."""
@@ -251,11 +363,12 @@ class TestTagValueListSanitization:
     def test_sanitizes_double_quoted_tagvaluelist(self):
         """Test that double-quoted tagValueList is also sanitized."""
         content = 'var tagValueList = "0|Good|both|none|MySSID1234|secretpass99";'
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # Passphrase-like values should be redacted
         assert "secretpass99" not in sanitized
-        assert "***WIFI_CRED***" in sanitized
+        # har-capture uses WIFI_ prefix for redacted WiFi credentials
+        assert "WIFI_" in sanitized or "[REDACTED]" in sanitized
 
     def test_preserves_short_values_in_tagvaluelist(self):
         """Test that short values (< 8 chars) are preserved."""
@@ -281,8 +394,9 @@ class TestTagValueListSanitization:
         assert "345000000 Hz" in sanitized
 
     def test_wifi_cred_in_allowlist(self):
-        """Test that WIFI_CRED placeholder is in allowlist."""
-        assert "***WIFI_CRED***" in PII_ALLOWLIST
+        """Test that WIFI_CRED placeholder prefix is in allowlist."""
+        # WIFI_ is a hash prefix, so WIFI_xxxxxxxx values are recognized
+        assert is_allowlisted("WIFI_abcd1234")
 
     def test_sanitizes_device_names_before_ip(self):
         """Test that device names appearing before IP/MAC placeholders are redacted."""
@@ -291,11 +405,13 @@ class TestTagValueListSanitization:
             "AnotherDevice|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|1|"
             "--|***PRIVATE_IP***|XX:XX:XX:XX:XX:XX|1|';"
         )
-        sanitized = sanitize_html(content)
+        sanitized = sanitize_html(content, heuristics=HeuristicMode.REDACT)
 
         # Device names should be redacted
         assert "MyDevice" not in sanitized
         assert "AnotherDevice" not in sanitized
-        assert "***DEVICE***" in sanitized
+        # har-capture redacts with hash prefixes (DEVICE_, WIFI_, etc.)
+        # Accept any redaction - the important thing is sensitive values are gone
+        assert re.search(r"[A-Z]+_[a-f0-9]{8}", sanitized), "Expected hash-based redaction pattern"
         # Empty placeholder should be preserved
         assert "|--|" in sanitized

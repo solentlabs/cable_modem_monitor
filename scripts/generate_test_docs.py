@@ -185,7 +185,7 @@ def _truncate(text: str, max_len: int = 60) -> str:
     """Truncate text to max length, adding ellipsis if needed."""
     if not text:
         return ""
-    first_line = text.split("\n")[0].strip()
+    first_line = text.split("\n", maxsplit=1)[0].strip()
     if len(first_line) <= max_len:
         return first_line
     return first_line[: max_len - 3] + "..."

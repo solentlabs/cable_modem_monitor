@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "Cable Modem-instellingen",
-        "description": "Huidig: {detected_modem}\nLaatst gecontroleerd: {last_detection}",
+        "description": "Huidig: {detected_modem}\nLaatst gecontroleerd: {parser_selected_at}",
         "data": {
           "host": "Modem IP",
           "username": "Gebruikersnaam",

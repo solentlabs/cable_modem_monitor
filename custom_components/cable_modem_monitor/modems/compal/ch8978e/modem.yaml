@@ -15,6 +15,7 @@ paradigm: html
 
 hardware:
   docsis_version: "3.1"
+  release_date: "2023"
 
 status_info:
   status: unsupported
@@ -25,7 +26,8 @@ capabilities: []
 # Auth strategy unknown - awaiting user data
 # Parser not yet implemented - using none until fixtures available
 auth:
-  strategy: none
+  types:
+    none: null
 
 # Known ISPs
 isps:

@@ -4,6 +4,7 @@
 manufacturer: ARRIS
 model: CM820B
 paradigm: html
+timeout: 15 # CM820B (older Intel Puma 5 chipset) can be slow to respond
 
 hardware:
   docsis_version: "3.0"
@@ -14,12 +15,11 @@ hardware:
 sources:
   detection_hints: "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: none
+  types:
+    none: null
 
 pages:
   public:
@@ -56,9 +56,6 @@ capabilities:
   - hardware_version
   - software_version
 
-behaviors:
-  requires_multi_page_fetch: true
-
 # =============================================================================
 # STATUS
 # =============================================================================
@@ -79,3 +76,16 @@ attribution:
   contributors:
     - github: dimkalinux
       contribution: "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57) verification"
+
+isps:
+  - Volya
+
+notes: |
+  EuroDOCSIS 3.0 modem for European markets.
+  Intel Puma 5 chipset (predecessor to problematic Puma 6).
+  No authentication required for status pages.
+  Uses CGI-based URLs with /cgi-bin/ prefix.
+  Known limitation: Software version parsing returns "Unknown".
+
+references:
+  pr_57: "https://github.com/solentlabs/cable_modem_monitor/pull/57"

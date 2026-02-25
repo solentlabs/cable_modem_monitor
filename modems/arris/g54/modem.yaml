@@ -16,22 +16,19 @@ sources:
   hardware: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
   detection_hints: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72)"
 
-protocol: http
 default_host: "192.168.0.1"
-default_port: 80
 
 auth:
-  strategy: form
-
-  form:
-    action: "/cgi-bin/luci"
-    method: POST
-    username_field: luci_username
-    password_field: luci_password
-    password_encoding: plain
-    hidden_fields: {}
-    success:
-      redirect: "/cgi-bin/luci/admin/gateway/wan_status"
+  types:
+    form:
+      action: "/cgi-bin/luci"
+      method: POST
+      username_field: luci_username
+      password_field: luci_password
+      password_encoding: plain
+      hidden_fields: {}
+      success:
+        redirect: "/cgi-bin/luci/admin/gateway/wan_status"
 
   session:
     cookie_name: "sysauth"
@@ -82,9 +79,6 @@ capabilities:
   - software_version
   - hardware_version
 
-behaviors:
-  requires_multi_page_fetch: false
-
 # =============================================================================
 # STATUS
 # =============================================================================
@@ -105,3 +99,20 @@ attribution:
   contributors:
     - github: unknown
       contribution: "[Issue #72](https://github.com/solentlabs/cable_modem_monitor/issues/72) diagnostics"
+
+isps:
+  - Cox
+  - Spectrum
+  - Xfinity
+
+notes: |
+  Gateway device (modem + router combo) with DOCSIS 3.1.
+  Uses LuCI (OpenWrt-based) web interface with JSON endpoints.
+  Form-based authentication with sysauth cookie.
+  Modem was in Bridge mode during fixture capture (WiFi disabled).
+  puma_hw_ver fields are legacy naming - actual chipset is BCM3390.
+  Default IPs: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+
+references:
+  issue_72: "https://github.com/solentlabs/cable_modem_monitor/issues/72"
+  source_code: "https://github.com/openwrt/luci"

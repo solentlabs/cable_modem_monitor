@@ -30,24 +30,21 @@ sources:
 # NETWORK
 # =============================================================================
 # REST API over HTTP, no authentication required
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
 # No authentication required - all endpoints are public
 auth:
-  strategy: rest_api
-
-  rest_api:
-    base_path: "/rest/v1/cablemodem"
-    endpoints:
-      state: "/state_"
-      downstream: "/downstream"
-      upstream: "/upstream"
-      serviceflows: "/serviceflows"
+  types:
+    rest_api:
+      base_path: "/rest/v1/cablemodem"
+      endpoints:
+        state: "/state_"
+        downstream: "/downstream"
+        upstream: "/upstream"
+        serviceflows: "/serviceflows"
 # =============================================================================
 # PAGES
 # =============================================================================
@@ -115,12 +112,6 @@ capabilities:
   # bootFilename contains config file version (e.g., "bbt076-b"), not firmware
 
 # =============================================================================
-# BEHAVIORS
-# =============================================================================
-behaviors:
-  requires_multi_page_fetch: true # Needs separate downstream/upstream/state endpoints
-
-# =============================================================================
 # METADATA
 # =============================================================================
 # =============================================================================
@@ -144,3 +135,17 @@ attribution:
   contributors:
     - github: Dinth
       contribution: "Initial Hub 5 support and fixture capture"
+
+isps:
+  - Virgin Media UK
+
+notes: |
+  DOCSIS 3.1 gateway. OEM: Sagemcom F3896LG-VMB. Chipset: Broadcom BCM3390.
+  Also marketed as "Hub 5" or "SuperHub 5".
+  REST API at /rest/v1/cablemodem/ - no authentication required.
+  33 SC-QAM downstream + 1 OFDM, 5 ATDMA upstream + 1 OFDMA.
+  bootFilename shows "vmdg660" (Virgin's internal designation).
+  Default IP: 192.168.100.1 (modem mode) or 192.168.0.1 (router mode).
+
+references:
+  hardware_source: "https://www.ispreview.co.uk/index.php/2021/10/virgin-media-o2-officially-launches-hub-5-broadband-router.html"

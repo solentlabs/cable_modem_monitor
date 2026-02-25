@@ -8,19 +8,18 @@ paradigm: html
 hardware:
   docsis_version: "3.0"
   chipset: Broadcom BCM3380
-  release_date: "2012"
-  end_of_life: "2020"
+  release_date: "2011"
+  end_of_life: "2019"
 
 # Provenance tracking
 sources:
   detection_hints: "HA Community thread"
 
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 auth:
-  strategy: none
+  types:
+    none: null
 
 pages:
   public:
@@ -75,4 +74,24 @@ attribution:
     - github: captain-coredump
       contribution: "Original fixture data"
     - github: vreihen
-      contribution: "HA Community verification"
+      contribution: "HA Community verification (October 2025)"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+  - Mediacom
+
+notes: |
+  DOCSIS 3.0 modem (released 2011, EOL 2019).
+  No authentication required for status page.
+  User verified: "57-58 entities working" (October 2025).
+  Known limitations:
+  - Software version not available from web interface
+  - System uptime not exposed
+  HTML tables are transposed (rows = metrics, columns = channels).
+
+references:
+  community_forum: "https://community.home-assistant.io/t/cable-modem-monitor-track-your-internet-signal-quality-in-home-assistant"
+  source_code: "https://sourceforge.net/projects/sb6141.arris/"

@@ -365,12 +365,13 @@ def main():  # noqa: C901
     print_step("Setting up pre-commit hooks...")
     try:
         run_command(f"{pip_cmd} show pre-commit", quiet=True)
-        # Install both pre-commit and commit-msg hooks to catch formatting AND commit message issues
-        run_command(
-            f"{precommit_cmd} install --install-hooks --hook-type pre-commit --hook-type commit-msg",
-            quiet=True,
-        )
-        print_success("Pre-commit hooks installed (pre-commit + commit-msg)")
+        # Install pre-commit, commit-msg, and pre-push hooks
+        # pre-commit: format/lint staged files
+        # commit-msg: validate commit message format
+        # pre-push: full project validation (ruff check . && pytest)
+        hook_types = "--hook-type pre-commit --hook-type commit-msg --hook-type pre-push"
+        run_command(f"{precommit_cmd} install --install-hooks {hook_types}", quiet=True)
+        print_success("Pre-commit hooks installed (pre-commit + commit-msg + pre-push)")
     except Exception as e:
         print_warning(f"Pre-commit hook installation failed: {e}")
         print("  Run manually: pre-commit install --hook-type pre-commit --hook-type commit-msg")
@@ -451,7 +452,8 @@ def main():  # noqa: C901
     print("What's installed:")
     print("  • Python virtual environment (.venv/)")
     print("  • All development dependencies")
-    print("  • Pre-commit hooks (including email privacy check)")
+    print("  • Pre-commit hooks (format/lint on commit, email privacy check)")
+    print("  • Pre-push hooks (full validation before push)")
     print("  • Code formatters and linters")
     print("  • Git email privacy protection")
     print("")

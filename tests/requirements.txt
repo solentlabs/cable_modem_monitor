@@ -1,17 +1,19 @@
+# Home Assistant core (>= 2025.1.0 for pydantic v2 compatibility)
+homeassistant>=2025.1.0
+
 # Test framework
 pytest>=8.0.0
 pytest-mock>=3.12.0
 pytest-asyncio>=0.23.0
 pytest-cov>=4.1.0
+pytest-homeassistant-custom-component>=0.13.0
 requests-mock>=1.11.0
 
 # Integration tests (SSL certificate generation)
 cryptography>=41.0.0
 
-# Home Assistant core (minimal version for type checking)
-homeassistant>=2024.1.0
-
 # Required by integration
+har-capture>=0.3.2
 beautifulsoup4>=4.12.0
 requests>=2.31.0
 lxml>=5.0.0

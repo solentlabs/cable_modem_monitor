@@ -5,7 +5,7 @@ integrations in Home Assistant. It collects and sanitizes:
 
 - Configuration and detection information
 - Modem channel data (downstream/upstream)
-- Authentication discovery details
+- Authentication configuration details
 - Recent log entries from cable_modem_monitor
 - Raw HTML captures (when available, for debugging parsers)
 
@@ -36,8 +36,7 @@ Functions:
 
     Info Extraction:
         _get_auth_method: Get auth method from parser
-        _get_detection_method: Determine how parser was detected
-        _get_auth_discovery_info: Get auth discovery data
+        _get_auth_configuration_info: Get auth configuration data
         _get_hnap_auth_attempt: Get HNAP auth debug info
 
     Main:
@@ -55,6 +54,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+from har_capture.sanitization import sanitize_html
+from har_capture.sanitization.report import HeuristicMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -68,7 +69,8 @@ from .const import (
     DOMAIN,
     VERSION,
 )
-from .lib.html_helper import sanitize_html
+from .core.data_orchestrator import _get_parser_url_patterns
+from .core.log_buffer import get_log_entries
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -118,7 +120,7 @@ def _sanitize_url_list(url_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for url_data in url_list:
         entry = url_data.copy()
         if "content" in entry:
-            entry["content"] = sanitize_html(entry["content"])
+            entry["content"] = sanitize_html(entry["content"], heuristics=HeuristicMode.REDACT)
             entry["sanitized_size_bytes"] = len(entry["content"])
         sanitized.append(entry)
     return sanitized
@@ -161,10 +163,9 @@ def _no_logs_available_entry() -> list[dict[str, Any]]:
             "level": "INFO",
             "logger": "diagnostics",
             "message": (
-                "No logs available in diagnostics. "
-                "Note: system_log only captures errors/warnings, not INFO/DEBUG logs. "
-                "For full logs: 1) Check HA logs UI, 2) Use 'journalctl -u home-assistant' (supervised), "
-                "or 3) Check container logs (Docker/dev environments)."
+                "No logs captured yet. The integration's log buffer may not have "
+                "been initialized (happens on first setup). Try reloading the "
+                "integration and capturing diagnostics again."
             ),
         }
     ]
@@ -371,9 +372,9 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     """Get recent log records for cable_modem_monitor.
 
     Attempts multiple methods to retrieve logs:
-    1. system_log integration via handler.records (modern HA)
-    2. system_log.records directly (older HA versions)
-    3. Reading from home-assistant.log file
+    1. Our own log buffer (captures INFO+ since integration start)
+    2. system_log integration (WARNING/ERROR only)
+    3. home-assistant.log file (if enabled, removed in HA 2025.11+ by default)
 
     Args:
         hass: Home Assistant instance
@@ -382,7 +383,13 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     Returns:
         List of log record dicts with timestamp, level, logger, and message
     """
-    # Method 1: Try system_log integration
+    # Method 1: Our own log buffer (most reliable, captures INFO+)
+    logs = get_log_entries(hass)
+    if logs:
+        _LOGGER.debug("Retrieved %d logs from internal buffer", len(logs))
+        return logs[-max_records:]
+
+    # Method 2: Try system_log integration (WARNING/ERROR only)
     try:
         if "system_log" in hass.data:
             system_log = hass.data["system_log"]
@@ -406,7 +413,7 @@ def _get_recent_logs(hass: HomeAssistant, max_records: int = MAX_LOG_RECORDS) ->
     except Exception as err:
         _LOGGER.warning("Could not retrieve logs from system_log: %s", err, exc_info=True)
 
-    # Method 2: Try reading from log file
+    # Method 3: Try reading from log file (removed in HA 2025.11+ by default)
     try:
         log_file_path = Path(hass.config.path("home-assistant.log"))
         logs = _get_logs_from_file(log_file_path)
@@ -441,6 +448,10 @@ def _get_auth_method_from_coordinator(coordinator: Any) -> str:
     This is a thin wrapper that handles HA object traversal and delegates
     to the pure _extract_auth_method function.
 
+    Uses _get_parser_url_patterns() which checks both modem.yaml config
+    (via adapter) and parser class attributes, ensuring correct auth_method
+    is reported even for parsers that rely solely on modem.yaml.
+
     Args:
         coordinator: DataUpdateCoordinator with scraper reference
 
@@ -456,49 +467,20 @@ def _get_auth_method_from_coordinator(coordinator: Any) -> str:
         if not parser:
             return "unknown"
 
-        url_patterns = getattr(parser, "url_patterns", None)
+        # Use _get_parser_url_patterns which checks modem.yaml via adapter
+        # This fixes incorrect "none" for parsers without class-level url_patterns
+        url_patterns = _get_parser_url_patterns(parser)
         return _extract_auth_method(url_patterns)
     except Exception:
         return "unknown"
 
 
-def _get_detection_method(data: Mapping[str, Any]) -> str:
-    """Determine how parser was detected.
+def _get_auth_configuration_info(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Get authentication configuration information from config data.
 
-    Pure function that analyzes config entry data to determine detection method.
-
-    Args:
-        data: Config entry data (MappingProxyType or dict)
-
-    Returns:
-        Detection method: "user_selected" or "auto_detected"
-    """
-    # Prefer explicit detection_method if stored (new entries)
-    stored_method = data.get("detection_method")
-    if stored_method in ("auto_detected", "user_selected"):
-        return str(stored_method)
-
-    # Fallback for legacy entries without detection_method field:
-    # Infer from whether modem_choice matches parser_name
-    modem_choice = data.get("modem_choice", "auto")
-    parser_name = data.get("parser_name")
-    last_detection = data.get("last_detection")
-
-    # If modem_choice matches parser_name and we have a detection timestamp,
-    # auto-detection ran and cached the result
-    if modem_choice == parser_name and last_detection:
-        return "auto_detected"
-    else:
-        # User explicitly selected a specific parser from dropdown
-        return "user_selected"
-
-
-def _get_auth_discovery_info(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Get authentication discovery information from config data.
-
-    Pure function that extracts auth debugging info from response-driven
-    auth discovery. For modems with unknown auth patterns, captured_response
-    contains the login page HTML and headers for debugging.
+    Pure function that extracts auth configuration info for diagnostics.
+    For modems with unknown auth patterns, captured_response contains
+    the login page HTML and headers for debugging.
 
     Args:
         data: Config entry data (MappingProxyType or dict)
@@ -542,7 +524,9 @@ def _get_auth_discovery_info(data: Mapping[str, Any]) -> dict[str, Any]:
             "url": captured_response.get("url"),
             "headers": {k: _sanitize_log_message(str(v)) for k, v in captured_response.get("headers", {}).items()},
             # Truncate and sanitize HTML sample
-            "html_sample": sanitize_html((captured_response.get("html_sample") or "")[:3000]),
+            "html_sample": sanitize_html(
+                (captured_response.get("html_sample") or "")[:3000], heuristics=HeuristicMode.REDACT
+            ),
             "note": (
                 "Captured response from unknown auth pattern. "
                 "This helps developers add support for your modem's auth method."
@@ -587,16 +571,16 @@ def _get_hnap_auth_attempt(coordinator) -> dict[str, Any]:
         Dict with auth attempt details or explanatory note if not available
     """
     try:
-        # Navigate: coordinator -> scraper -> parser -> _json_builder
+        # Navigate: coordinator -> scraper -> auth_handler -> hnap_builder
         scraper = getattr(coordinator, "scraper", None)
         if not scraper:
             return {"note": "Scraper not available"}
 
-        parser = getattr(scraper, "parser", None)
-        if not parser:
-            return {"note": "Parser not available (might be using fallback mode)"}
+        auth_handler = getattr(scraper, "_auth_handler", None)
+        if not auth_handler:
+            return {"note": "Auth handler not available (might be using no-auth mode)"}
 
-        json_builder = getattr(parser, "_json_builder", None)
+        json_builder = auth_handler.get_hnap_builder()
         if not json_builder:
             return {"note": "Not an HNAP modem (no JSON builder)"}
 
@@ -667,7 +651,6 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "supports_icmp": entry.data.get("supports_icmp", False),
         },
         "detection": {
-            "method": _get_detection_method(entry.data),
             "user_selection": entry.data.get("modem_choice", "auto"),
             "parser": entry.data.get("parser_name", "Unknown"),
             "manufacturer": entry.data.get("detected_manufacturer", "Unknown"),
@@ -677,10 +660,10 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "protocol": "https" if (entry.data.get("working_url") or "").startswith("https") else "http",
             "auth_method": _get_auth_method_from_coordinator(coordinator),
             "legacy_ssl": entry.data.get("legacy_ssl", False),
-            "last_detection": entry.data.get("last_detection", "Never"),
+            "parser_selected_at": entry.data.get("parser_selected_at", "Never"),
         },
-        # Auth discovery info - shows how authentication was detected
-        "auth_discovery": _get_auth_discovery_info(entry.data),
+        # Auth configuration info - shows how authentication is configured
+        "auth_configuration": _get_auth_configuration_info(entry.data),
         "coordinator": {
             "last_update_success": coordinator.last_update_success,
             "update_interval": str(coordinator.update_interval),
@@ -745,15 +728,6 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "type": exception_type,
             "message": exception_msg,
             "note": "Exception details have been sanitized for security",
-        }
-
-    # Add parser detection history if available (helpful for troubleshooting)
-    if "_parser_detection_history" in data:
-        diagnostics["parser_detection_history"] = data["_parser_detection_history"]
-    else:
-        diagnostics["parser_detection_history"] = {
-            "note": "Parser detection succeeded on first attempt",
-            "attempted_parsers": [],
         }
 
     # Add HNAP authentication attempt details if available

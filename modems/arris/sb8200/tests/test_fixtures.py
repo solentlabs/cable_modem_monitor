@@ -79,7 +79,7 @@ class TestSB8200FixtureValidation:
         if not html:
             pytest.skip("Data page fixture not available")
 
-        from custom_components.cable_modem_monitor.modems.arris.sb8200.parser import (
+        from modems.arris.sb8200.parser import (
             ArrisSB8200Parser,
         )
 

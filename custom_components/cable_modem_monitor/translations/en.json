@@ -66,13 +66,25 @@
           "host": "Modem IP Address",
           "username": "Username",
           "password": "Password",
-          "modem_choice": "Modem Model"
+          "modem_choice": "Modem Model",
+          "entity_prefix": "Entity ID Prefix"
         },
         "data_description": {
           "host": "Usually 192.168.100.1",
           "username": "Leave blank if not required",
           "password": "Leave blank if not required",
-          "modem_choice": "Use 'auto' for automatic detection"
+          "modem_choice": "Select your modem model. Use 'Unknown Modem (Fallback Mode)' if not listed.",
+          "entity_prefix": "Adds model or IP to entity IDs to avoid conflicts with multiple modems."
+        }
+      },
+      "auth_type": {
+        "title": "Authentication Type",
+        "description": "Your {modem_name} has multiple firmware variants with different authentication.\nSelect the type that matches your modem:",
+        "data": {
+          "auth_type": "Authentication Type"
+        },
+        "data_description": {
+          "auth_type": "No Auth: Data pages load without login\nForm Login: Login page with username/password\nURL Token: Uses URL-based session tokens"
         }
       }
     },
@@ -95,7 +107,7 @@
     "step": {
       "init": {
         "title": "Cable Modem Settings",
-        "description": "Current: {detected_modem}\nLast checked: {last_detection}",
+        "description": "Current: {detected_modem}\nParser selected: {parser_selected_at}",
         "data": {
           "host": "Modem IP",
           "username": "Username",
@@ -107,7 +119,7 @@
           "host": "Usually 192.168.100.1",
           "username": "Leave blank if not required",
           "password": "Blank = keep current",
-          "modem_choice": "Use 'auto' for detection. Change if incorrect.",
+          "modem_choice": "Select your modem model. Change if incorrect.",
           "scan_interval": "60-1800 sec. Default 600 (10 min)"
         }
       }

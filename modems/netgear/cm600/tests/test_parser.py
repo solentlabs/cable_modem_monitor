@@ -21,7 +21,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.netgear.cm600.parser import NetgearCM600Parser
+from modems.netgear.cm600.parser import NetgearCM600Parser
 from tests.fixtures import load_fixture
 
 
@@ -230,84 +230,8 @@ def test_calculate_boot_time():
     assert boot_time_str is None
 
 
-def test_parse_with_session_fetches_pages(cm600_docsis_status_html, cm600_router_status_html):
-    """Test that parse() fetches additional pages when session is provided."""
-    from unittest.mock import Mock
-
-    parser = NetgearCM600Parser()
-
-    # Create mock session that returns our fixture data
-    mock_session = Mock()
-
-    # Mock responses for DocsisStatus.asp and RouterStatus.asp
-    docsis_response = Mock()
-    docsis_response.status_code = 200
-    docsis_response.text = cm600_docsis_status_html
-
-    router_response = Mock()
-    router_response.status_code = 200
-    router_response.text = cm600_router_status_html
-
-    def mock_get(url, **kwargs):
-        if "DocsisStatus" in url:
-            return docsis_response
-        elif "RouterStatus" in url:
-            return router_response
-        return Mock(status_code=404)
-
-    mock_session.get.side_effect = mock_get
-
-    # Parse with an empty initial soup - should fetch real data
-    empty_soup = BeautifulSoup("<html></html>", "html.parser")
-    data = parser.parse(empty_soup, session=mock_session, base_url="http://192.168.100.1")
-
-    # Verify pages were fetched
-    assert mock_session.get.call_count == 2
-
-    # Verify data was parsed from fetched pages
-    assert len(data["downstream"]) == 24
-    assert len(data["upstream"]) == 6
-    assert "system_uptime" in data["system_info"]
-
-
-def test_parse_with_session_handles_fetch_failures(cm600_docsis_status_html):
-    """Test that parse() gracefully handles page fetch failures."""
-    from unittest.mock import Mock
-
-    parser = NetgearCM600Parser()
-
-    # Create mock session that returns errors
-    mock_session = Mock()
-    error_response = Mock()
-    error_response.status_code = 500
-    mock_session.get.return_value = error_response
-
-    # Parse with fixture data as initial soup - should use it as fallback
-    soup = BeautifulSoup(cm600_docsis_status_html, "html.parser")
-    data = parser.parse(soup, session=mock_session, base_url="http://192.168.100.1")
-
-    # Should still work using the provided soup as fallback
-    assert len(data["downstream"]) == 24
-    assert len(data["upstream"]) == 6
-
-
-def test_parse_with_session_handles_exceptions():
-    """Test that parse() handles network exceptions gracefully."""
-    from unittest.mock import Mock
-
-    parser = NetgearCM600Parser()
-
-    # Create mock session that raises exceptions
-    mock_session = Mock()
-    mock_session.get.side_effect = Exception("Network error")
-
-    # Parse with minimal soup
-    soup = BeautifulSoup("<html></html>", "html.parser")
-    data = parser.parse(soup, session=mock_session, base_url="http://192.168.100.1")
-
-    # Should return empty data without crashing
-    assert data["downstream"] == []
-    assert data["upstream"] == []
+# Note: Legacy test_parse_with_session_* functions removed
+# The new architecture uses parse_resources() instead of parse() with session parameter
 
 
 def test_parsing_downstream(cm600_docsis_status_html):
@@ -477,95 +401,8 @@ class TestEdgeCases:
         assert data["system_info"] == {}
 
 
-class TestRestart:
-    """Test modem restart functionality."""
-
-    def test_restart_method_exists(self):
-        """Test that CM600 parser has restart method."""
-        parser = NetgearCM600Parser()
-        assert hasattr(parser, "restart")
-        assert callable(parser.restart)
-
-    def test_restart_sends_correct_request(self):
-        """Test that restart sends correct POST request."""
-        from unittest.mock import Mock
-
-        parser = NetgearCM600Parser()
-        mock_session = Mock()
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.text = ""  # Must be set for len() in logging
-        mock_session.post.return_value = mock_response
-
-        base_url = "http://192.168.100.1"
-        success = parser.restart(mock_session, base_url)
-
-        assert success is True
-        mock_session.post.assert_called_once_with(
-            "http://192.168.100.1/goform/RouterStatus",
-            data={"RsAction": "2"},
-            timeout=10,
-        )
-
-    def test_restart_handles_failure(self):
-        """Test that restart handles HTTP errors gracefully."""
-        from unittest.mock import Mock
-
-        parser = NetgearCM600Parser()
-        mock_session = Mock()
-        mock_response = Mock()
-        mock_response.status_code = 500
-        mock_session.post.return_value = mock_response
-
-        base_url = "http://192.168.100.1"
-        success = parser.restart(mock_session, base_url)
-
-        assert success is False
-
-    def test_restart_handles_connection_drop(self):
-        """Test that restart succeeds when connection drops (modem rebooting)."""
-        from http.client import RemoteDisconnected
-        from unittest.mock import Mock
-
-        parser = NetgearCM600Parser()
-        mock_session = Mock()
-        mock_session.post.side_effect = RemoteDisconnected("Connection dropped")
-
-        base_url = "http://192.168.100.1"
-        success = parser.restart(mock_session, base_url)
-
-        # Connection drop = modem is rebooting = success
-        assert success is True
-
-    def test_restart_handles_connection_error(self):
-        """Test that restart succeeds on ConnectionError (modem rebooting)."""
-        from unittest.mock import Mock
-
-        from requests.exceptions import ConnectionError
-
-        parser = NetgearCM600Parser()
-        mock_session = Mock()
-        mock_session.post.side_effect = ConnectionError("Connection refused")
-
-        base_url = "http://192.168.100.1"
-        success = parser.restart(mock_session, base_url)
-
-        # ConnectionError during restart = modem is rebooting = success
-        assert success is True
-
-    def test_restart_handles_generic_exception(self):
-        """Test that restart fails on unexpected exceptions."""
-        from unittest.mock import Mock
-
-        parser = NetgearCM600Parser()
-        mock_session = Mock()
-        mock_session.post.side_effect = ValueError("Unexpected error")
-
-        base_url = "http://192.168.100.1"
-        success = parser.restart(mock_session, base_url)
-
-        # Generic exception = failure
-        assert success is False
+# Note: TestRestart class removed - restart functionality moved to action layer
+# See tests/core/actions/test_html.py for HTML restart action tests
 
 
 class TestMetadata:
@@ -601,4 +438,4 @@ class TestMetadata:
         assert ModemCapability.SCQAM_UPSTREAM in parser.capabilities
         assert ModemCapability.HARDWARE_VERSION in parser.capabilities
         assert ModemCapability.SOFTWARE_VERSION in parser.capabilities
-        assert ModemCapability.RESTART in parser.capabilities
+        # Note: RESTART is now an action (check via ActionFactory.supports), not a capability

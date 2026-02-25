@@ -6,7 +6,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.technicolor.cga2121.parser import (
+from modems.technicolor.cga2121.parser import (
     TechnicolorCGA2121Parser,
 )
 from tests.fixtures import load_fixture
@@ -170,8 +170,80 @@ class TestAuthHints:
         adapter = get_auth_adapter_for_parser("TechnicolorCGA2121Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "username_login"
         assert hints.get("password_field") == "password_login"
+
+
+class TestParseResources:
+    """Test parse_resources() with realistic resource dictionaries.
+
+    Issue #75: When auth redirects to a different page than the data page,
+    the parser must find the correct page in the resources dict.
+
+    Real-world scenario for CGA2121:
+    - Auth POST redirects to /basicUX.html (home page)
+    - Data page is /st_docsis.html
+    - resources["/"] gets auth HTML (wrong page)
+    - resources["/st_docsis.html"] gets data page (correct)
+    - Parser must use the correct page, not resources["/"]
+    """
+
+    def test_parse_resources_with_wrong_page_at_root(self, parser, st_docsis_html, logon_html):
+        """Parser should find data even when resources['/'] contains wrong page.
+
+        This reproduces Issue #75 where auth redirects to /basicUX.html but
+        the data page is /st_docsis.html. The parser was using resources["/"]
+        which contained the wrong page.
+        """
+        data_soup = BeautifulSoup(st_docsis_html, "html.parser")
+        wrong_soup = BeautifulSoup(logon_html, "html.parser")  # Simulates auth redirect page
+
+        # Simulate the bug: wrong page at "/", correct page at actual path
+        resources = {
+            "/st_docsis.html": data_soup,  # Loader fetches this (correct)
+            "/": wrong_soup,  # Auth HTML added here (wrong page)
+        }
+
+        data = parser.parse_resources(resources)
+
+        # Parser MUST find channels from /st_docsis.html, not from "/"
+        assert len(data["downstream"]) == 24, "Parser should find downstream channels"
+        assert len(data["upstream"]) == 4, "Parser should find upstream channels"
+
+    def test_parse_resources_without_root_key(self, parser, st_docsis_html):
+        """Parser should work when resources['/'] is not present at all.
+
+        After the fix, resources['/'] won't be added, so parser must
+        find the data page by iterating through resources.
+        """
+        data_soup = BeautifulSoup(st_docsis_html, "html.parser")
+
+        # No "/" key - only the actual path from loader
+        resources = {
+            "/st_docsis.html": data_soup,
+        }
+
+        data = parser.parse_resources(resources)
+
+        assert len(data["downstream"]) == 24
+        assert len(data["upstream"]) == 4
+
+    def test_parse_resources_with_correct_page_at_root(self, parser, st_docsis_html):
+        """Parser should work when resources['/'] contains the correct page.
+
+        This is the legacy case where auth returns the data page directly.
+        """
+        data_soup = BeautifulSoup(st_docsis_html, "html.parser")
+
+        resources = {
+            "/": data_soup,
+        }
+
+        data = parser.parse_resources(resources)
+
+        assert len(data["downstream"]) == 24
+        assert len(data["upstream"]) == 4
 
 
 class TestFixtures:
@@ -179,13 +251,16 @@ class TestFixtures:
 
     def test_fixture_file_exists(self):
         """Test that required fixture files exist."""
+        from pathlib import Path
+
         from tests.fixtures import fixture_exists, get_fixture_dir
 
         fixtures_dir = get_fixture_dir("technicolor", "cga2121")
         assert fixtures_dir.exists()
         assert fixture_exists("technicolor", "cga2121", "st_docsis.html")
-        assert fixture_exists("technicolor", "cga2121", "metadata.yaml")
-        assert fixture_exists("technicolor", "cga2121", "README.md")
+        # modem.yaml is now in the modem directory, not fixtures
+        modem_yaml = Path(__file__).parent.parent / "modem.yaml"
+        assert modem_yaml.exists(), "modem.yaml should exist"
 
     def test_extended_fixture_exists(self):
         """Test that extended fixture files exist."""

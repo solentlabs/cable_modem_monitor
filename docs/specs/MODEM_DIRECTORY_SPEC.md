@@ -27,8 +27,7 @@ modems/
         ├── modem.yaml           # REQUIRED: Configuration and auth hints
         ├── fixtures/            # OPTIONAL: Extracted HTML/JSON responses
         │   ├── {page_name}.html
-        │   ├── {page_name}.asp
-        │   └── metadata.yaml    # Fixture metadata (firmware, capture date)
+        │   └── {page_name}.asp
         └── har/                 # OPTIONAL: Sanitized HAR captures
             ├── modem.har        # Primary capture
             └── modem-{variant}.har  # Variant captures (if applicable)
@@ -43,8 +42,7 @@ modems/motorola/mb7621/
 ├── fixtures/
 │   ├── index.html              # Login page
 │   ├── MotoConnection.asp      # Channel data
-│   ├── MotoHome.asp            # System info
-│   └── metadata.yaml
+│   └── MotoHome.asp            # System info
 └── har/
     └── modem.har
 ```
@@ -109,14 +107,7 @@ Contains extracted HTML/JSON responses from HAR captures. Used for:
 - Use actual endpoint names from the modem: `MotoStatus.asp`, not `status_page.html`
 - Preserves traceability to real modem URLs
 
-**metadata.yaml:**
-```yaml
-firmware_version: "8601.0.6.1.6-SCM00"
-captured_date: "2026-01-04"
-contributor: "@username"
-issue: 123  # GitHub issue number
-notes: "Captured via diagnostics export"
-```
+**Note:** Fixture metadata (firmware version, capture date, contributor) is stored in the `fixtures` section of `modem.yaml`.
 
 ### har/ Directory (Optional)
 
@@ -177,19 +168,20 @@ HAR files use `$fixture` references to avoid duplicating HTML content:
 
 ### 1. Capture
 
-Use the capture script which sanitizes automatically:
+Use har-capture which sanitizes automatically:
 
 ```bash
-python scripts/capture_modem.py --ip 192.168.100.1
+pip install "har-capture[full]"
+har-capture get 192.168.100.1
 ```
 
 Output:
-- `captures/modem_20260104_123456.har` (raw, local only)
-- `captures/modem_20260104_123456.sanitized.har` (safe to share)
+- `modem_20260104_123456.har` (raw, local only)
+- `modem_20260104_123456.sanitized.har.gz` (safe to share)
 
 ### 2. Sanitization
 
-Sanitization happens at capture time via `utils/har_sanitizer.py`:
+Sanitization happens at capture time via [har-capture](https://github.com/solentlabs/har-capture):
 
 **Automatically redacted:**
 - Sensitive headers: `Authorization`, `Cookie`, `Set-Cookie`
@@ -215,7 +207,6 @@ python scripts/extract_fixtures.py captures/modem.sanitized.har --modem mb7621
 This:
 1. Extracts HTML/JSON responses to `modems/{mfr}/{model}/fixtures/`
 2. Replaces HAR content with `$fixture` references
-3. Creates `metadata.yaml` with capture info
 
 ### 4. Validate
 
@@ -339,8 +330,8 @@ RAW_DATA/                       # Unsanitized HARs (gitignored)
 ### Target State
 ```
 modems/{mfr}/{model}/
-├── modem.yaml                  # Config (exists)
-├── fixtures/                   # HTML (exists, may need metadata.yaml)
+├── modem.yaml                  # Config (exists) - includes fixture metadata
+├── fixtures/                   # HTML (exists)
 └── har/                        # NEW: sanitized HARs
     └── modem.har
 
@@ -353,8 +344,7 @@ RAW_DATA/                       # Raw captures (remains gitignored)
 
 1. **Add har/ directories** to existing modems with captures
 2. **Sanitize and extract** from RAW_DATA/ HARs
-3. **Add metadata.yaml** to existing fixtures/
-4. **Update HAR_FILES** in test conftest.py to use new paths
+3. **Update HAR_FILES** in test conftest.py to use new paths
 
 ---
 
@@ -411,26 +401,6 @@ detection:
   body_contains: ["MB7621"]
 ```
 
-### modems/motorola/mb7621/fixtures/metadata.yaml
-
-```yaml
-firmware_version: "8601.0.6.1.6-SCM00"
-captured_date: "2026-01-04"
-contributor: "@kwschulz"
-issue: 81
-capture_method: "scripts/capture_modem.py"
-pages:
-  - name: "index.html"
-    url: "/"
-    description: "Login page"
-  - name: "MotoConnection.asp"
-    url: "/MotoConnection.asp"
-    description: "Downstream/upstream channel data"
-  - name: "MotoHome.asp"
-    url: "/MotoHome.asp"
-    description: "System info, uptime, firmware version"
-```
-
 ### modems/motorola/mb7621/har/modem.har
 
 ```json
@@ -438,8 +408,8 @@ pages:
   "log": {
     "version": "1.2",
     "_solentlabs": {
-      "tool": "cable_modem_monitor/capture_modem.py",
-      "version": "3.12.0",
+      "tool": "har-capture",
+      "version": "0.2.0",
       "sanitized": true,
       "fixture_refs": true
     },

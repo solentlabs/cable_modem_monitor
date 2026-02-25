@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from bs4 import BeautifulSoup
 
-from custom_components.cable_modem_monitor.modems.technicolor.tc4400.parser import (
-    RESTART_WINDOW_SECONDS,
+from modems.technicolor.tc4400.parser import (
+    _DEFAULT_RESTART_WINDOW_SECONDS,
     TechnicolorTC4400Parser,
 )
 from tests.fixtures import load_fixture
@@ -202,7 +202,7 @@ class TestRestartDetection:
 class TestConstants:
     """Test parser constants."""
 
-    def test_window_constant(self):
-        """Test that the restart window constant is correctly defined."""
-        assert RESTART_WINDOW_SECONDS == 300
-        assert RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes
+    def test_window_default(self):
+        """Test that the restart window default is correctly defined."""
+        assert _DEFAULT_RESTART_WINDOW_SECONDS == 300
+        assert _DEFAULT_RESTART_WINDOW_SECONDS == 5 * 60  # 5 minutes

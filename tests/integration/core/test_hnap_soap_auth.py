@@ -18,6 +18,9 @@ from custom_components.cable_modem_monitor.core.auth.handler import AuthHandler
 from custom_components.cable_modem_monitor.core.auth.types import AuthStrategyType
 from tests.integration.conftest import HNAPSoapMockHandler
 
+# Test timeout constant - matches DEFAULT_TIMEOUT from schema
+TEST_TIMEOUT = 10
+
 
 class TestHNAPSoapLogin:
     """Test HNAP SOAP login with challenge-response."""
@@ -45,7 +48,7 @@ class TestHNAPSoapLogin:
                 "SOAPAction": '"http://purenetworks.com/HNAP1/Login"',
                 "Content-Type": "text/xml; charset=utf-8",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -76,7 +79,7 @@ class TestHNAPSoapLogin:
                 "SOAPAction": '"http://purenetworks.com/HNAP1/Login"',
                 "Content-Type": "text/xml; charset=utf-8",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -104,7 +107,7 @@ class TestHNAPSoapLogin:
                 "SOAPAction": '"http://purenetworks.com/HNAP1/Login"',
                 "Content-Type": "text/xml; charset=utf-8",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -136,7 +139,7 @@ class TestHNAPDataFetch:
                 "SOAPAction": '"http://purenetworks.com/HNAP1/GetMotoStatusConnectionInfo"',
                 "Content-Type": "text/xml; charset=utf-8",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -165,7 +168,7 @@ class TestHNAPDataFetch:
                 "SOAPAction": '"http://purenetworks.com/HNAP1/Login"',
                 "Content-Type": "text/xml; charset=utf-8",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
         assert "<LoginResult>OK</LoginResult>" in login_response.text
 
@@ -190,7 +193,7 @@ class TestHNAPDataFetch:
                 "Content-Type": "text/xml; charset=utf-8",
                 "HNAP_AUTH": "ABCD1234567890ABCDEF1234567890AB 1234567890",
             },
-            timeout=10,
+            timeout=TEST_TIMEOUT,
         )
 
         assert response.status_code == 200
@@ -208,7 +211,9 @@ class TestHNAPAuthHandler:
             hnap_config={
                 "endpoint": "/HNAP1/",
                 "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         assert handler.strategy == AuthStrategyType.HNAP_SESSION
@@ -221,7 +226,9 @@ class TestHNAPAuthHandler:
             hnap_config={
                 "endpoint": "/HNAP1/",
                 "namespace": "http://purenetworks.com/HNAP1/",
+                "hmac_algorithm": "md5",
             },
+            timeout=TEST_TIMEOUT,
         )
 
         session = requests.Session()
@@ -245,7 +252,7 @@ class TestHNAPLoginPageDetection:
         session = requests.Session()
         session.verify = False
 
-        response = session.get(hnap_soap_server.url, timeout=10)
+        response = session.get(hnap_soap_server.url, timeout=TEST_TIMEOUT)
 
         assert response.status_code == 200
         assert "SOAPAction.js" in response.text
@@ -255,7 +262,7 @@ class TestHNAPLoginPageDetection:
         session = requests.Session()
         session.verify = False
 
-        response = session.get(hnap_soap_server.url, timeout=10)
+        response = session.get(hnap_soap_server.url, timeout=TEST_TIMEOUT)
 
         assert response.status_code == 200
         assert 'type="password"' in response.text.lower() or "type='password'" in response.text.lower()

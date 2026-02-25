@@ -29,29 +29,27 @@ sources:
 # =============================================================================
 # NETWORK
 # =============================================================================
-protocol: http
 default_host: "192.168.100.1"
-default_port: 80
 
 # =============================================================================
 # AUTHENTICATION
 # =============================================================================
 auth:
-  strategy: hnap
-
-  hnap:
-    endpoint: "/HNAP1/"
-    namespace: "http://purenetworks.com/HNAP1/"
-    # MB8611 uses empty string "" for action values (verified from HAR capture)
-    empty_action_value: ""
-    formats:
-      - json
-      - xml
-    actions:
-      login: "Login"
-      downstream: "GetMotoStatusDownstreamChannelInfo"
-      upstream: "GetMotoStatusUpstreamChannelInfo"
-      restart: "SetStatusSecuritySettings"
+  types:
+    hnap:
+      endpoint: "/HNAP1/"
+      namespace: "http://purenetworks.com/HNAP1/"
+      # MB8611 uses empty string "" for action values (verified from HAR capture)
+      empty_action_value: ""
+      hmac_algorithm: md5
+      formats:
+        - json
+        - xml
+      actions:
+        login: "Login"
+        downstream: "GetMotoStatusDownstreamChannelInfo"
+        upstream: "GetMotoStatusUpstreamChannelInfo"
+        restart: "SetStatusSecuritySettings"
 
   session:
     cookie_name: "uid"
@@ -123,14 +121,28 @@ capabilities:
   - system_uptime
   - hardware_version
   - software_version
-  - restart
+
+# =============================================================================
+# ACTIONS
+# =============================================================================
+actions:
+  restart:
+    type: hnap
+    action_name: "SetStatusSecuritySettings"
+    params:
+      MotoStatusSecurityAction: "1"
+      MotoStatusSecXXX: "XXX"
+    response_key: "SetStatusSecuritySettingsResponse"
+    result_key: "SetStatusSecuritySettingsResult"
+    success_value: "OK"
 
 # =============================================================================
 # BEHAVIORS
 # =============================================================================
 behaviors:
-  restart_window_seconds: 300
-  zero_power_during_restart: true
+  restart:
+    window_seconds: 300
+    zero_power_reported: true
 
 # =============================================================================
 # METADATA
@@ -153,9 +165,38 @@ fixtures:
 
 attribution:
   contributors:
+    - github: dlindnegm
+      contribution: "Original HTML page captures (Issue #4, October 2025)"
     - github: cvonk
-      contribution: "Initial verification and testing ([Issue #6](https://github.com/solentlabs/cable_modem_monitor/issues/6))"
+      contribution: "HAR captures, debug logs, iterative testing (Issue #6, November 2025)"
     - github: BowlesCR
-      contribution: "HNAP authentication implementation ([Issue #40](https://github.com/solentlabs/cable_modem_monitor/issues/40))"
+      contribution: "HNAP authentication implementation (Issue #40)"
     - github: kwschulz
       contribution: "Maintainer"
+
+isps:
+  - Comcast
+  - Xfinity
+  - Cox
+  - Spectrum
+
+notes: |
+  HNAP Channel Data Format: Caret-delimited fields, pipe-separated records
+  Format: ID^Status^Mod^ChID^Freq^Power^SNR^Corr^Uncorr^|+|...
+
+  Default credentials: admin / motorola
+
+  Parser built from:
+  - User captures in RAW_DATA/MB8611/ (diagnostics JSON files)
+  - MotoStatusConnection.html JavaScript analysis revealing HNAP actions
+  - External reference implementations (see references)
+
+references:
+  tatsh_mb8611: "https://github.com/Tatsh/mb8611"
+  johlym_metrics: "https://github.com/johlym/mb8611-metrics"
+  xninjakittyx_mb8600: "https://github.com/xNinjaKittyx/mb8600"
+  bowlescr_login: "https://github.com/BowlesCR/MB8600_Login"
+  issue_fixtures: "https://github.com/solentlabs/cable_modem_monitor/issues/4"
+  issue_verification: "https://github.com/solentlabs/cable_modem_monitor/issues/6"
+  gpl_source: "https://help.motorolanetwork.com/kb/general/gpl-code-center"
+  source_code: "https://help.motorolanetwork.com/kb/general/gpl-code-center"

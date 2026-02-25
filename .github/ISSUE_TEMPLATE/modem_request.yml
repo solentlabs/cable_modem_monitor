@@ -14,7 +14,7 @@ body:
 
         **New here?** Read [Improving the Modem Request Process](https://github.com/solentlabs/cable_modem_monitor/discussions/88) to understand what makes a complete submission.
 
-        **The easiest way:** Install the integration with your modem's IP address. Even if your modem isn't supported, it will enter **Fallback Mode** which lets you capture data safely.
+        **The best way:** Use `har-capture` to record your modem's web interface. HAR files capture the complete HTTP flow and have a much higher success rate for parser development than HTML-only captures.
 
   - type: input
     id: modem-model
@@ -76,9 +76,8 @@ body:
       label: How are you providing data?
       description: Choose the method you're using to share modem data
       options:
-        - "Fallback Mode + Capture HTML (Recommended) - Used built-in capture button"
-        - "HAR Capture - Used playwright script (for auth issues)"
-        - "Built-in Diagnostics - Downloaded diagnostics JSON from HA"
+        - "HAR Capture (Recommended) - Best success rate for parser development"
+        - "Fallback Mode + Capture HTML - Used built-in capture button"
         - "Haven't captured yet - Need instructions"
     validations:
       required: true
@@ -90,9 +89,34 @@ body:
 
         ## 📥 How to Provide Modem Data
 
-        ### ✅ Method 1: Fallback Mode + Capture HTML (RECOMMENDED)
+        ### ✅ Method 1: HAR Capture (RECOMMENDED)
 
-        **This is the easiest and safest method** - works even if your modem isn't supported yet!
+        **HAR files have a much higher success rate** for parser development than HTML-only captures. They record the complete HTTP flow including authentication, headers, and async API calls.
+
+        ```bash
+        # Install har-capture (one-time)
+        pip install har-capture
+
+        # Capture from your modem
+        har-capture capture 192.168.100.1
+        ```
+
+        **During capture:**
+        1. Log in if your modem requires authentication
+        2. Visit **all pages** - status, settings, system info, restart/reboot
+        3. Wait 3-5 seconds on each page for async data to load
+        4. If your modem requires auth, **log out** before closing the browser
+        5. Close the browser when done
+
+        **Before sharing:** Search the `.sanitized.har` file for your WiFi password and any other credentials - the sanitizer is best-effort but HAR files are complex. Attach the `.sanitized.har.gz` file to this issue.
+
+        See [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.
+
+        ---
+
+        ### 📋 Method 2: Fallback Mode + Capture HTML
+
+        **Use this if** you can't run the HAR capture tool. Note: HTML-only captures often require follow-up requests for additional data.
 
         1. **Install the integration** via HACS or manually
         2. **Add your modem** (Settings → Devices & Services → Add Integration → Cable Modem Monitor)
@@ -102,52 +126,7 @@ body:
         6. **Download Diagnostics** (three dots menu → Download Diagnostics)
         7. **Attach the JSON file** to this issue
 
-        **Why this method is best:**
-        - ✅ Automatic PII sanitization (MAC addresses, serial numbers, IPs removed)
-        - ✅ Captures all relevant pages automatically
-        - ✅ No developer tools needed
-
-        > ⚠️ **Before sharing:** Automated sanitization is best-effort. Please search your diagnostics file for your WiFi password and SSID to verify they're not present. See the [Modem Request Guide](https://github.com/solentlabs/cable_modem_monitor/blob/main/docs/MODEM_REQUEST.md) for details.
-
-        ---
-
-        ### 🔐 Method 2: HAR Capture (For Authentication Issues)
-
-        **Use this only if** your modem requires login AND Fallback Mode can't reach the status pages.
-
-        HAR capture records the full authentication flow, which helps us understand login requirements.
-
-        ```bash
-        # Download and run (no git clone needed!)
-        curl -O https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/scripts/capture_modem.py
-        python capture_modem.py --ip 192.168.100.1
-        ```
-
-        The script **automatically downloads dependencies and sanitizes** passwords and sensitive data.
-
-        ---
-
-        ### ⚠️ Method 3: Manual HTML Capture (Last Resort)
-
-        **Only use this if Methods 1 and 2 don't work for your situation.**
-
-        > **🛑 PII WARNING:** Manually captured HTML often contains sensitive information!
-        >
-        > Before sharing, you MUST manually review and remove:
-        > - MAC addresses (format: `AA:BB:CC:DD:EE:FF`)
-        > - Serial numbers
-        > - Account IDs
-        > - IP addresses (except common modem IPs like 192.168.100.1)
-        > - Any passwords or session tokens
-        >
-        > **We strongly recommend Method 1 instead**, which handles sanitization automatically.
-
-        If you must capture manually:
-        1. Open your modem's web interface in a browser
-        2. Navigate to signal/status pages
-        3. Right-click → View Page Source (Ctrl+U)
-        4. **Review for PII before saving**
-        5. Save and attach HTML files
+        > ⚠️ **Before sharing:** Automated sanitization is best-effort. Please search your diagnostics file for your WiFi password and SSID to verify they're not present.
 
   - type: textarea
     id: files-attached
@@ -156,13 +135,10 @@ body:
       description: List the files you're attaching (drag and drop files below this form)
       placeholder: |
         Preferred:
+        - modem_capture.sanitized.har.gz (from har-capture)
+
+        Alternative:
         - diagnostics_cable_modem_monitor_xyz.json (from Fallback Mode)
-
-        Or:
-        - modem_capture.har (from HAR capture script)
-
-        Last resort (ensure PII is removed!):
-        - status_page.html
     validations:
       required: false
 
@@ -185,7 +161,7 @@ body:
       label: Checklist
       description: Please confirm the following
       options:
-        - label: I have used Fallback Mode + Capture HTML, OR sanitized my files to remove PII
+        - label: I have provided a HAR capture, OR used Fallback Mode + Capture HTML
           required: true
         - label: I have searched my capture file for my WiFi SSID and password to verify they're not present
           required: true

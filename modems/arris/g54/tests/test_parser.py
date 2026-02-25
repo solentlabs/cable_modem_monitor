@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from custom_components.cable_modem_monitor.core.base_parser import ModemCapability
 from custom_components.cable_modem_monitor.core.discovery_helpers import HintMatcher
-from custom_components.cable_modem_monitor.modems.arris.g54.parser import ArrisG54Parser
+from modems.arris.g54.parser import ArrisG54Parser
 from tests.fixtures import get_fixture_path, load_fixture
 
 
@@ -108,9 +108,21 @@ class TestG54ParserCapabilities:
         """Test software version capability."""
         assert ArrisG54Parser.has_capability(ModemCapability.SOFTWARE_VERSION)
 
-    def test_no_restart_capability(self):
-        """Test that restart is NOT yet supported (could be added later)."""
-        assert not ArrisG54Parser.has_capability(ModemCapability.RESTART)
+    def test_no_restart_action(self):
+        """Test that restart is NOT yet supported (could be added later).
+
+        Note: Restart is now an action (actions.restart in modem.yaml), not a capability.
+        Use ActionFactory.supports() to check restart support.
+        """
+        from custom_components.cable_modem_monitor.core.actions import ActionFactory
+        from custom_components.cable_modem_monitor.core.actions.base import ActionType
+        from custom_components.cable_modem_monitor.modem_config import get_auth_adapter_for_parser
+
+        adapter = get_auth_adapter_for_parser("ArrisG54Parser")
+        if adapter:
+            modem_config = adapter.get_modem_config_dict()
+            assert not ActionFactory.supports(ActionType.RESTART, modem_config)
+        # If no adapter, modem doesn't have modem.yaml so definitely no restart
 
 
 class TestG54DownstreamParsing:
@@ -352,6 +364,7 @@ class TestG54AuthHints:
         adapter = get_auth_adapter_for_parser("ArrisG54Parser")
         assert adapter is not None
         hints = adapter.get_auth_form_hints()
+        assert hints is not None
         assert hints.get("username_field") == "luci_username"
         assert hints.get("password_field") == "luci_password"
 

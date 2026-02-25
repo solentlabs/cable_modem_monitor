@@ -19,23 +19,20 @@ Exit codes:
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 import sys
 from pathlib import Path
 
-# Load html_helper directly to avoid Home Assistant dependencies in __init__.py
-_html_helper_path = (
-    Path(__file__).parent.parent.parent / "custom_components" / "cable_modem_monitor" / "lib" / "html_helper.py"
-)
-_spec = importlib.util.spec_from_file_location("html_helper", _html_helper_path)
-assert _spec is not None and _spec.loader is not None
-_html_helper = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_html_helper)
+from har_capture.patterns import load_allowlist
+from har_capture.sanitization import check_for_pii
 
-PII_ALLOWLIST = _html_helper.PII_ALLOWLIST
-check_for_pii = _html_helper.check_for_pii
+# Build a simple set of known allowlisted values for backwards compatibility
+_allowlist = load_allowlist()
+PII_ALLOWLIST = set(_allowlist.get("static_placeholders", {}).get("values", []))
+# Add hash prefixes as well (e.g., "SERIAL_", "WIFI_")
+for prefix in _allowlist.get("hash_prefixes", {}).get("values", []):
+    PII_ALLOWLIST.add(prefix.rstrip("_"))  # Add without trailing underscore
 
 # Additional patterns specific to fixture validation
 WIFI_CRED_PATTERN = re.compile(

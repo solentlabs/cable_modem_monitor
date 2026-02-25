@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-VERSION = "3.12.1"
+# IMPORTANT: Do not edit VERSION manually!
+# Use: python scripts/release.py <version>
+# The script updates this file, manifest.json, and test_version_and_startup.py
+VERSION = "3.13.0"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"
@@ -31,13 +34,14 @@ CONF_DETECTED_MODEM = "detected_modem"  # Display name for UI
 CONF_DETECTED_MANUFACTURER = "detected_manufacturer"  # Display manufacturer for UI
 CONF_DOCSIS_VERSION = "docsis_version"  # DOCSIS version (3.0, 3.1) for entity migration
 CONF_WORKING_URL = "working_url"  # Last successful URL
-CONF_LAST_DETECTION = "last_detection"  # Timestamp of last detection
+CONF_PARSER_SELECTED_AT = "parser_selected_at"  # Timestamp when parser was selected in config flow
 CONF_SUPPORTS_ICMP = "supports_icmp"  # Auto-detected ICMP ping support for configured host
+CONF_SUPPORTS_HEAD = "supports_head"  # Auto-detected HTTP HEAD support for health monitor
 CONF_ACTUAL_MODEL = "actual_model"  # Actual model name extracted from modem (e.g., "C3700-100NAS")
 CONF_LEGACY_SSL = "legacy_ssl"  # Auto-detected: True if modem requires SECLEVEL=0 ciphers
-CONF_DETECTION_METHOD = "detection_method"  # How parser was selected: "auto_detected" or "user_selected"
 
 # Auth discovery fields
+CONF_AUTH_TYPE = "auth_type"  # User-selected auth type (for modems with variants)
 CONF_AUTH_STRATEGY = "auth_strategy"  # Discovered auth strategy type
 CONF_AUTH_FORM_CONFIG = "auth_form_config"  # Discovered form config (for form-based auth)
 CONF_AUTH_HNAP_CONFIG = "auth_hnap_config"  # HNAP config (endpoint, namespace, etc.)
@@ -61,10 +65,17 @@ MAX_SCAN_INTERVAL = 1800  # 30 minutes - maximum useful interval
 
 # HTTP request timeouts (seconds)
 # Used throughout parsers and core modules for consistent behavior
-DEFAULT_TIMEOUT = 20  # Standard timeout for modem requests (some modems take 12+ seconds)
+DEFAULT_TIMEOUT = 10  # Standard timeout for modem requests (slow modems override in modem.yaml)
 QUICK_TIMEOUT = 5  # For link crawling and secondary requests
 DISCOVERY_TIMEOUT = 3  # For initial modem discovery probes
 
 # Host validation - characters that could enable command injection
 # Used by both config_flow and health_monitor for input validation
 INVALID_HOST_CHARS = [";", "&", "|", "$", "`", "\n", "\r", "\t", " ", "<", ">", "(", ")", "{", "}", "\\"]
+
+# Entity prefix options for multi-modem setups
+# Allows users to choose how entity IDs are prefixed to avoid conflicts
+CONF_ENTITY_PREFIX = "entity_prefix"
+ENTITY_PREFIX_NONE = "none"
+ENTITY_PREFIX_MODEL = "model"
+ENTITY_PREFIX_IP = "ip"

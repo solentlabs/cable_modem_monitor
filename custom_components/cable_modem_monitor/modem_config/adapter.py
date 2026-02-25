@@ -4,11 +4,11 @@ Bridges ModemConfig (Pydantic models from modem.yaml) to auth, detection,
 and polling subsystems.
 
 Source of truth:
-- Auth strategy type (form_plain, hnap_session, etc.) is discovered at setup
-  and stored in config entry. This allows ISP-specific firmware variations.
-- Auth implementation details (form field names, HNAP endpoints) come from
-  modem.yaml via this adapter at discovery time and are stored in config entry.
-  Runtime uses the stored config, not this adapter.
+- Auth config comes from modem.yaml auth.types{} which is the single source
+  of truth for auth configuration.
+- Auth implementation details (form field names, HNAP endpoints) are stored
+  in config entry at discovery time. Runtime uses the stored config, not
+  this adapter.
 
 Functions:
     Adapter Creation:
@@ -32,7 +32,15 @@ from functools import lru_cache
 from typing import Any, cast
 
 from .loader import discover_modems, load_modem_config_by_parser
-from .schema import AuthStrategy, ModemConfig
+from .schema import (
+    FormAjaxAuthConfig,
+    FormAuthConfig,
+    FormDynamicAuthConfig,
+    HnapAuthConfig,
+    ModemConfig,
+    RestApiAuthConfig,
+    UrlTokenAuthConfig,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,15 +51,22 @@ class ModemConfigAuthAdapter:
     Used during discovery to extract auth configs from modem.yaml. The extracted
     configs are stored in config entry and used at runtime (not this adapter).
 
+    Auth configuration uses auth.types{} as the single source of truth:
+        auth:
+          types:
+            form:              # type key
+              action: "..."    # config directly under type
+              username_field: "..."
+
     Usage:
         config = load_modem_config(modem_path)
         adapter = ModemConfigAuthAdapter(config)
 
-        # During discovery - extract hints for auth detection
-        form_hints = adapter.get_auth_form_hints()
+        # Get available auth types (for config flow dropdown)
+        auth_types = adapter.get_available_auth_types()
 
-        # During discovery - extract config to store in config entry
-        hnap_config = adapter.get_hnap_config()
+        # Get config for a specific auth type
+        form_config = adapter.get_auth_config_for_type("form")
     """
 
     def __init__(self, config: ModemConfig):
@@ -62,154 +77,194 @@ class ModemConfigAuthAdapter:
         """
         self.config = config
 
-    def get_auth_form_hints(self) -> dict[str, str]:
-        """Get form auth hints from modem.yaml in legacy parser format.
+    # =========================================================================
+    # AUTH TYPES (single source of truth)
+    # =========================================================================
 
-        Returns dict with keys matching `parser.auth_form_hints`:
-        - login_url: Form action URL from modem.yaml auth.form.action
-        - username_field: Username input name from modem.yaml
-        - password_field: Password input name from modem.yaml
-        - password_encoding: "plain" or "base64" from modem.yaml
-        - success_redirect: URL to verify login success (optional)
+    def get_available_auth_types(self) -> list[str]:
+        """Get list of auth types this modem supports.
+
+        Returns:
+            List of auth type strings (e.g., ["none", "url_token"]).
+            Empty list if no auth types configured.
         """
-        if self.config.auth.strategy != AuthStrategy.FORM or not self.config.auth.form:
+        if self.config.auth.types:
+            return list(self.config.auth.types.keys())
+        return []
+
+    def get_auth_config_for_type(self, auth_type: str) -> dict[str, Any] | None:
+        """Get the config dict for a specific auth type.
+
+        Args:
+            auth_type: Auth type name (e.g., "none", "form", "url_token", "hnap")
+
+        Returns:
+            Config dict for the auth type, or None if not found.
+            For "none", returns an empty dict.
+        """
+        # No auth / basic auth - no config needed
+        if auth_type in ("none", "basic"):
             return {}
 
-        form = self.config.auth.form
-        hints: dict[str, str] = {
-            "login_url": form.action,
-            "username_field": form.username_field,
-            "password_field": form.password_field,
-            "password_encoding": form.password_encoding.value,
+        # Check if type exists
+        if not self.config.auth.types or auth_type not in self.config.auth.types:
+            return None
+
+        type_config = self.config.auth.types.get(auth_type)
+
+        # Type exists but has no config (e.g., "none: null")
+        if type_config is None:
+            return {}
+
+        return self._convert_type_config_to_dict(type_config)
+
+    def _convert_type_config_to_dict(self, type_config: Any) -> dict[str, Any] | None:
+        """Convert a Pydantic auth config model to dict.
+
+        Args:
+            type_config: Pydantic model (FormAuthConfig, HnapAuthConfig, etc.)
+
+        Returns:
+            Dict representation of the config, or None if unknown type.
+        """
+        # Note: Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check first)
+        if isinstance(type_config, FormDynamicAuthConfig):
+            return self._convert_form_config(type_config, include_dynamic_fields=True)
+        if isinstance(type_config, FormAjaxAuthConfig):
+            return self._convert_form_ajax_config(type_config)
+        if isinstance(type_config, FormAuthConfig):
+            return self._convert_form_config(type_config, include_dynamic_fields=False)
+        if isinstance(type_config, UrlTokenAuthConfig):
+            return self._convert_url_token_config(type_config)
+        if isinstance(type_config, HnapAuthConfig):
+            return {
+                "endpoint": type_config.endpoint,
+                "namespace": type_config.namespace,
+                "empty_action_value": type_config.empty_action_value,
+                "hmac_algorithm": type_config.hmac_algorithm,
+            }
+        if isinstance(type_config, RestApiAuthConfig):
+            return {
+                "base_path": type_config.base_path,
+                "endpoints": type_config.endpoints,
+            }
+        return None
+
+    def _convert_form_config(self, config: FormAuthConfig, *, include_dynamic_fields: bool) -> dict[str, Any]:
+        """Convert form auth config to dict."""
+        result: dict[str, Any] = {
+            "action": config.action,
+            "method": config.method,
+            "username_field": config.username_field,
+            "password_field": config.password_field,
+            "hidden_fields": config.hidden_fields,
+            "password_encoding": (config.password_encoding.value if config.password_encoding else "plain"),
         }
+        # Include success config from modem.yaml
+        # success_redirect: URL path to check in response.url after login (e.g., "/at_a_glance.jst")
+        # success_indicator: Content check - string in response or min size (legacy, avoid using)
+        if config.success:
+            if config.success.redirect:
+                result["success_redirect"] = config.success.redirect
+            if config.success.indicator:
+                result["success_indicator"] = config.success.indicator
+        if include_dynamic_fields and isinstance(config, FormDynamicAuthConfig):
+            result["login_page"] = config.login_page
+            result["form_selector"] = config.form_selector
+        return result
 
-        # Add success redirect URL if available (for auth discovery verification)
-        if form.success and form.success.redirect:
-            hints["success_redirect"] = form.success.redirect
-
-        return hints
-
-    def get_hnap_hints(self) -> dict[str, str]:
-        """Get HNAP hints from modem.yaml in legacy parser format.
-
-        Returns dict with keys matching `parser.hnap_hints`:
-        - endpoint: HNAP endpoint (standard: "/HNAP1/")
-        - namespace: HNAP namespace (standard: "http://purenetworks.com/HNAP1/")
-        - empty_action_value: Value for empty actions (usually "")
-
-        Note: HNAP values are protocol constants, same across all HNAP modems.
-        """
-        if self.config.auth.strategy != AuthStrategy.HNAP or not self.config.auth.hnap:
-            return {}
-
-        hnap = self.config.auth.hnap
+    def _convert_form_ajax_config(self, config: FormAjaxAuthConfig) -> dict[str, Any]:
+        """Convert form ajax auth config to dict."""
         return {
-            "endpoint": hnap.endpoint,
-            "namespace": hnap.namespace,
-            "empty_action_value": hnap.empty_action_value,
+            "endpoint": config.endpoint,
+            "nonce_field": config.nonce_field,
+            "nonce_length": config.nonce_length,
+            "arguments_field": config.arguments_field,
+            "credential_format": config.credential_format,
+            "success_prefix": config.success_prefix,
+            "error_prefix": config.error_prefix,
         }
 
-    def get_hnap_config(self) -> dict[str, str]:
-        """Get HNAP config for AuthHandler.
-
-        Returns format expected by AuthHandler.__init__(hnap_config=...):
-        Same as get_hnap_hints() but could diverge for future needs.
-        """
-        return self.get_hnap_hints()
-
-    def get_js_auth_hints(self) -> dict[str, str]:
-        """Get URL token auth hints from modem.yaml in legacy parser format.
-
-        Returns dict with keys matching `parser.js_auth_hints`:
-        - pattern: Auth pattern type (e.g., "url_token_session")
-        - login_page: Page containing login form from modem.yaml
-        - login_prefix: URL prefix for login links from modem.yaml
-        - session_cookie_name: Session cookie name from modem.yaml
-        - data_page: Data page URL from modem.yaml
-        - token_prefix: Token URL prefix from modem.yaml
-        - success_indicator: Text indicating successful auth from modem.yaml
-
-        Returns empty dict if not URL_TOKEN strategy.
-        """
-        if self.config.auth.strategy != AuthStrategy.URL_TOKEN:
-            return {}
-
-        if not self.config.auth.url_token:
-            return {"pattern": "url_token_session"}
-
-        ut = self.config.auth.url_token
-        hints: dict[str, str] = {"pattern": "url_token_session"}
-
-        if ut.login_page:
-            hints["login_page"] = ut.login_page
-            hints["data_page"] = ut.data_page or ut.login_page
-        if ut.login_prefix:
-            hints["login_prefix"] = ut.login_prefix
-        if ut.token_prefix:
-            hints["token_prefix"] = ut.token_prefix
-        if ut.session_cookie:
-            hints["session_cookie_name"] = ut.session_cookie
-        if ut.success_indicator:
-            hints["success_indicator"] = ut.success_indicator
-
-        return hints
-
-    def get_url_token_config(self) -> dict[str, str]:
-        """Get URL token config for AuthHandler.
-
-        Returns format expected by AuthHandler.__init__(url_token_config=...):
-        {
-            "login_page": "/cmconnectionstatus.html",
-            "data_page": "/cmconnectionstatus.html",
-            "login_prefix": "login_",
-            "token_prefix": "ct_",
-            "session_cookie_name": "credential",
-            "success_indicator": "Downstream",
+    def _convert_url_token_config(self, config: UrlTokenAuthConfig) -> dict[str, Any]:
+        """Convert URL token auth config to dict."""
+        result: dict[str, Any] = {
+            "login_page": config.login_page,
+            "data_page": config.data_page or config.login_page,
+            "login_prefix": config.login_prefix,
+            "token_prefix": config.token_prefix,
         }
-        """
-        if self.config.auth.strategy != AuthStrategy.URL_TOKEN or not self.config.auth.url_token:
-            return {}
+        if config.session_cookie:
+            result["session_cookie_name"] = config.session_cookie
+        if config.success_indicator:
+            result["success_indicator"] = config.success_indicator
+        return result
 
-        ut = self.config.auth.url_token
-        config = {
-            "login_page": ut.login_page,
-            "data_page": ut.data_page or ut.login_page,
-            "login_prefix": ut.login_prefix,
-            "token_prefix": ut.token_prefix,
+    def get_default_auth_type(self) -> str:
+        """Get the default/primary auth type.
+
+        Returns the first type in auth.types{}.
+
+        Returns:
+            Default auth type string (e.g., "form", "none").
+        """
+        if self.config.auth.types:
+            return next(iter(self.config.auth.types.keys()))
+        return "none"
+
+    def has_multiple_auth_types(self) -> bool:
+        """Check if this modem has multiple user-selectable auth types.
+
+        Returns:
+            True if modem has auth.types{} with more than one entry.
+        """
+        return len(self.config.auth.types) > 1
+
+    def get_static_auth_config(self, auth_type: str | None = None) -> dict[str, Any]:
+        """Get complete auth config for direct use (skip discovery).
+
+        Returns a dict with all auth configuration needed to authenticate
+        without running dynamic auth discovery. This is the key method for
+        the "modem.yaml as source of truth" architecture.
+
+        Args:
+            auth_type: Specific auth type to use, or None for default.
+
+        Returns:
+            Dict with keys matching DiscoveryPipelineResult/AuthResult fields:
+            - auth_strategy: str (e.g., "form_plain", "hnap_session", "no_auth")
+            - auth_form_config: dict | None
+            - auth_hnap_config: dict | None
+            - auth_url_token_config: dict | None
+        """
+        if auth_type is None:
+            auth_type = self.get_default_auth_type()
+
+        # Map auth type to strategy string
+        # These match AuthStrategyType enum values from core/auth/types.py
+        strategy_mapping = {
+            "none": "no_auth",
+            "basic": "basic_http",  # HTTP Basic Auth (401 challenge)
+            "form": "form_plain",
+            "form_dynamic": "form_dynamic",  # Form with dynamic action URL extraction
+            "form_ajax": "form_ajax",  # AJAX-based form with base64 credentials
+            "form_nonce": "form_nonce",  # Form with client nonce (SB6190 9.1.103+)
+            "hnap": "hnap_session",
+            "url_token": "url_token_session",
+            "rest_api": "no_auth",  # REST API = no traditional auth
         }
 
-        if ut.session_cookie:
-            config["session_cookie_name"] = ut.session_cookie
+        strategy_str = strategy_mapping.get(auth_type, "no_auth")
+        type_config = self.get_auth_config_for_type(auth_type)
 
-        if ut.success_indicator:
-            config["success_indicator"] = ut.success_indicator
+        # form, form_dynamic, form_ajax, and form_nonce all use auth_form_config
+        is_form_type = auth_type in ("form", "form_dynamic", "form_ajax", "form_nonce")
 
-        return config
-
-    def get_form_config(self) -> dict[str, str | dict]:
-        """Get form config for AuthHandler.
-
-        Returns format expected by AuthHandler.__init__(form_config=...):
-        {
-            "action": "/goform/login",
-            "method": "POST",
-            "username_field": "loginUsername",
-            "password_field": "loginPassword",
-            "hidden_fields": {},
-            "password_encoding": "base64",  # or "plain"
-        }
-        """
-        if self.config.auth.strategy != AuthStrategy.FORM or not self.config.auth.form:
-            return {}
-
-        form = self.config.auth.form
         return {
-            "action": form.action,
-            "method": form.method,
-            "username_field": form.username_field,
-            "password_field": form.password_field,
-            "hidden_fields": form.hidden_fields,
-            "password_encoding": form.password_encoding.value if form.password_encoding else "plain",
+            "auth_strategy": strategy_str,
+            "auth_form_config": type_config if is_form_type else None,
+            "auth_hnap_config": type_config if auth_type == "hnap" else None,
+            "auth_url_token_config": type_config if auth_type == "url_token" else None,
+            "timeout": self.config.timeout,
         }
 
     def get_logout_endpoint(self) -> str | None:
@@ -222,13 +277,54 @@ class ModemConfigAuthAdapter:
             return self.config.auth.session.logout_endpoint
         return None
 
-    def get_auth_strategy(self) -> AuthStrategy:
-        """Get the auth strategy from modem.yaml.
+    def get_timeout(self) -> int:
+        """Get request timeout from modem.yaml.
 
         Returns:
-            AuthStrategy enum value (NONE, BASIC, FORM, HNAP, URL_TOKEN, REST_API).
+            Timeout in seconds (from modem.yaml override or schema default).
         """
-        return self.config.auth.strategy
+        return self.config.timeout
+
+    # =========================================================================
+    # AUTH HINTS (convenience methods for discovery)
+    # =========================================================================
+
+    def get_hnap_hints(self) -> dict[str, Any] | None:
+        """Get HNAP auth config hints for discovery.
+
+        Returns config from auth.types.hnap if available.
+
+        Returns:
+            HNAP config dict with endpoint, namespace, etc., or None.
+        """
+        return self.get_auth_config_for_type("hnap")
+
+    def get_js_auth_hints(self) -> dict[str, Any] | None:
+        """Get JavaScript/URL token auth hints for discovery.
+
+        Returns config from auth.types.url_token if available.
+        Named 'js_auth_hints' for historical compatibility - URL token
+        auth typically uses JavaScript for token generation.
+
+        Returns:
+            URL token config dict with login_page, token_prefix, etc., or None.
+        """
+        config = self.get_auth_config_for_type("url_token")
+        if config:
+            # Add 'pattern' key expected by discovery code
+            config["pattern"] = "url_token_session"
+        return config
+
+    def get_auth_form_hints(self) -> dict[str, Any] | None:
+        """Get form auth config hints for discovery.
+
+        Returns config from auth.types.form or auth.types.form_dynamic if available.
+
+        Returns:
+            Form config dict with action, username_field, password_field, etc., or None.
+        """
+        # Check both form and form_dynamic
+        return self.get_auth_config_for_type("form") or self.get_auth_config_for_type("form_dynamic")
 
     # =========================================================================
     # DEVICE METADATA
@@ -338,7 +434,7 @@ class ModemConfigAuthAdapter:
         """Get detection hints from modem.yaml for YAML-driven detection.
 
         These hints enable fast parser detection via HintMatcher.
-        Used by modem_scraper Phase 0 quick detection.
+        Used by data_orchestrator Phase 0 quick detection.
 
         Returns:
             Dict with keys:
@@ -400,12 +496,16 @@ class ModemConfigAuthAdapter:
     def get_modem_config_dict(self) -> dict[str, Any]:
         """Get the raw modem config as a dict.
 
-        Used by FetcherFactory to determine fetcher type and get pages.data.
+        Used by ActionFactory and FetcherFactory to determine action/fetcher
+        type and get configuration.
+
+        Uses mode='json' to serialize enums as their string values, ensuring
+        checks like `"restart" in capabilities` work correctly.
 
         Returns:
-            Modem config dict suitable for FetcherFactory.
+            Modem config dict suitable for ActionFactory and FetcherFactory.
         """
-        result: dict[str, Any] = self.config.model_dump()
+        result: dict[str, Any] = self.config.model_dump(mode="json")
         return result
 
     def get_url_token_config_for_loader(self) -> dict[str, str] | None:
@@ -420,52 +520,95 @@ class ModemConfigAuthAdapter:
         Returns:
             URL token config dict, or None if not URL token auth.
         """
-        if self.config.auth.strategy != AuthStrategy.URL_TOKEN or not self.config.auth.url_token:
+        # Check if url_token is an available auth type
+        if "url_token" not in self.config.auth.types:
+            _LOGGER.debug(
+                "get_url_token_config_for_loader: url_token not in auth.types (available: %s)",
+                list(self.config.auth.types.keys()),
+            )
             return None
 
-        ut = self.config.auth.url_token
-        return {
-            "session_cookie": ut.session_cookie or "sessionId",
-            "token_prefix": ut.token_prefix or "ct_",
+        type_config = self.config.auth.types.get("url_token")
+        if not isinstance(type_config, UrlTokenAuthConfig):
+            _LOGGER.debug(
+                "get_url_token_config_for_loader: url_token config is not UrlTokenAuthConfig (type: %s)",
+                type(type_config).__name__,
+            )
+            return None
+
+        config = {
+            "session_cookie": type_config.session_cookie or "sessionId",
+            "token_prefix": type_config.token_prefix or "ct_",
         }
+        _LOGGER.debug("get_url_token_config_for_loader: returning %s", config)
+        return config
+
+    def get_behaviors(self) -> dict[str, Any]:
+        """Get modem behaviors from modem.yaml.
+
+        Returns:
+            Dict with behavior settings:
+            - restart.window_seconds: Seconds to filter zero-power channels after restart
+            - restart.zero_power_reported: Whether modem reports zero power during restart
+        """
+        result: dict[str, Any] = {"restart": None}
+
+        if self.config.behaviors and self.config.behaviors.restart:
+            result["restart"] = {
+                "window_seconds": self.config.behaviors.restart.window_seconds,
+                "zero_power_reported": self.config.behaviors.restart.zero_power_reported,
+            }
+
+        return result
+
+    def get_primary_data_page(self) -> str | None:
+        """Get the primary data page path from modem.yaml.
+
+        Returns the page path that contains channel data, prioritizing
+        downstream_channels if specified, otherwise the first data page.
+
+        Used by parsers to know which resource to look at first in
+        parse_resources(), avoiding reliance on "/" which may contain
+        auth redirect pages instead of data (Issue #75).
+
+        Returns:
+            Page path (e.g., "/st_docsis.html") or None if not configured.
+        """
+        if self.config.pages and self.config.pages.data:
+            return self.config.pages.data.get(
+                "downstream_channels",
+                next(iter(self.config.pages.data.values()), None),
+            )
+        return None
 
     def get_url_patterns(self) -> list[dict[str, str | bool]]:
         """Generate url_patterns from pages config.
 
-        Combines pages.public (auth_required=False) and
-        pages.protected (auth_required=True) with auth.strategy.
+        Combines pages.protected (auth_required=True) and
+        pages.public (auth_required=False) with the default auth type.
 
-        Protected pages are sorted to prioritize the primary data page
-        (from pages.data.downstream_channels) to ensure the correct page
-        is fetched and cached during polling.
+        Protected pages come FIRST and are sorted to prioritize the primary
+        data page (from pages.data.downstream_channels). This ensures data
+        pages are fetched during polling, avoiding false session expiry
+        detection from public login pages (e.g., MB7621's root URL always
+        shows login form even with valid session).
+
+        Public pages come AFTER protected pages - they're useful for
+        anonymous detection during discovery but shouldn't be used for
+        data fetching.
 
         Returns:
             List of url_pattern dicts with 'path', 'auth_method', 'auth_required'.
         """
         patterns: list[dict[str, str | bool]] = []
-        auth_method = self.config.auth.strategy.value
+        auth_method = self.get_default_auth_type()
 
         if self.config.pages:
-            # Public pages - no auth required
-            for path in self.config.pages.public:
-                patterns.append(
-                    {
-                        "path": path,
-                        "auth_method": "none",
-                        "auth_required": False,
-                    }
-                )
-
             # Get primary data page for prioritization
-            primary_data_page = None
-            if self.config.pages.data:
-                # Prefer downstream_channels, fall back to first data page
-                primary_data_page = self.config.pages.data.get(
-                    "downstream_channels",
-                    next(iter(self.config.pages.data.values()), None),
-                )
+            primary_data_page = self.get_primary_data_page()
 
-            # Protected pages - auth required, with data page first
+            # Protected pages FIRST - auth required, with data page first
+            # This ensures data pages are fetched during polling
             protected = list(self.config.pages.protected)
             if primary_data_page and primary_data_page in protected:
                 protected.remove(primary_data_page)
@@ -477,6 +620,16 @@ class ModemConfigAuthAdapter:
                         "path": path,
                         "auth_method": auth_method,
                         "auth_required": True,
+                    }
+                )
+
+            # Public pages AFTER protected - for anonymous detection only
+            for path in self.config.pages.public:
+                patterns.append(
+                    {
+                        "path": path,
+                        "auth_method": "none",
+                        "auth_required": False,
                     }
                 )
 
@@ -506,7 +659,7 @@ def get_modem_config_for_parser(parser_class_name: str) -> ModemConfig | None:
         config = get_modem_config_for_parser(parser.__class__.__name__)
         if config:
             adapter = ModemConfigAuthAdapter(config)
-            hints = adapter.get_hnap_hints()
+            hints = adapter.get_auth_config_for_type("hnap")
     """
     # Fast path: Use index for direct lookup (no scanning)
     config = load_modem_config_by_parser(parser_class_name)
@@ -609,7 +762,7 @@ def get_docsis_version_for_parser(parser_class_name: str) -> str | None:
 def get_detection_hints_for_parser(parser_class_name: str) -> dict[str, str | list[str] | None] | None:
     """Get detection hints for a parser class from modem.yaml.
 
-    Used by modem_scraper for YAML-driven detection in Phase 0.
+    Used by data_orchestrator for YAML-driven detection in Phase 0.
     Enables fast parser matching via HintMatcher.
 
     Args:
@@ -621,6 +774,19 @@ def get_detection_hints_for_parser(parser_class_name: str) -> dict[str, str | li
     """
     result = _get_from_adapter(parser_class_name, "get_detection_hints")
     return cast(dict[str, str | list[str] | None] | None, result)
+
+
+def get_behaviors_for_parser(parser_class_name: str) -> dict[str, Any] | None:
+    """Get behaviors config for a parser class from modem.yaml.
+
+    Args:
+        parser_class_name: The parser class name (e.g., "MotorolaMB7621Parser")
+
+    Returns:
+        Dict with restart_window_seconds and zero_power_during_restart, or None if not found.
+    """
+    result = _get_from_adapter(parser_class_name, "get_behaviors")
+    return cast(dict[str, Any] | None, result)
 
 
 def clear_cache() -> None:

@@ -1,7 +1,11 @@
-"""HNAP JSON authentication strategy with HMAC-MD5 challenge-response.
+"""HNAP JSON authentication strategy with HMAC challenge-response.
 
-Used by modems like MB8611 and S33 that use JSON-formatted HNAP requests
-with a two-step challenge-response authentication protocol.
+Used by modems that use JSON-formatted HNAP requests with a two-step
+challenge-response authentication protocol.
+
+Supports configurable HMAC algorithm (specified in modem.yaml):
+- MD5: Most common for HNAP modems
+- SHA256: Used by newer firmware variants
 """
 
 from __future__ import annotations
@@ -22,10 +26,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HNAPJsonAuthStrategy(AuthStrategy):
-    """HNAP JSON authentication with HMAC-MD5 challenge-response.
+    """HNAP JSON authentication with HMAC challenge-response.
 
     This strategy wraps HNAPJsonRequestBuilder to provide challenge-response
-    authentication for modems like MB8611 and S33.
+    authentication for HNAP-based modems.
+
+    Supports configurable HMAC algorithm via HNAPAuthConfig.hmac_algorithm:
+    - HMACAlgorithm.MD5: Most common
+    - HMACAlgorithm.SHA256: Newer firmware variants
 
     After successful login, the builder is stored internally and can be
     accessed via the `builder` property for making authenticated HNAP calls.
@@ -92,10 +100,20 @@ class HNAPJsonAuthStrategy(AuthStrategy):
         # Import builder here to avoid circular imports
         from ..hnap import HNAPJsonRequestBuilder
 
+        # hmac_algorithm is validated as non-None in HNAPAuthConfig.__post_init__
+        if config.hmac_algorithm is None:
+            _LOGGER.error("HNAPAuthConfig.hmac_algorithm is None (should be impossible)")
+            return AuthResult.fail(
+                AuthErrorType.STRATEGY_NOT_CONFIGURED,
+                "HNAPAuthConfig missing hmac_algorithm",
+            )
+
         # Create builder with config
         self._builder = HNAPJsonRequestBuilder(
             endpoint=config.endpoint,
             namespace=config.namespace,
+            hmac_algorithm=config.hmac_algorithm,
+            timeout=config.timeout,
             empty_action_value=config.empty_action_value,
         )
 

@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""Generate a fixture index from multiple sources.
+"""Generate a fixture index from modem.yaml configuration files.
 
 Data sources (in priority order):
-1. modem.yaml - manufacturer, model, status, hardware (source of truth)
-2. metadata.yaml (per fixture) - release_date, end_of_life, docsis_version, isps (legacy)
-3. README.md - model name (fallback only)
-
-This separation allows:
-- Contributors to focus on parser code, not research
-- Maintainers to backfill metadata independently
-- No merge conflicts (each modem has its own files)
+1. modem.yaml - Single source of truth for all modem configuration
+   (manufacturer, model, status, hardware, isps, references, etc.)
+2. README.md - Model name (fallback only)
 
 Usage:
     python scripts/generate_fixture_index.py
@@ -19,7 +14,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -458,145 +452,6 @@ def load_modem_yaml(modem_dir: Path) -> dict:
     return {}
 
 
-def load_fixture_metadata(modem_dir: Path) -> dict:
-    """Load metadata from metadata.yaml file.
-
-    Searches in order:
-    1. {modem_dir}/fixtures/metadata.yaml (new structure)
-    2. {modem_dir}/metadata.yaml (legacy fallback)
-
-    Args:
-        modem_dir: Path to modem directory (modems/{mfr}/{model}/)
-
-    Returns:
-        Dict with release_date, end_of_life, docsis_version, isps
-    """
-    # New structure: metadata in fixtures/ subdirectory
-    metadata_file = modem_dir / "fixtures" / "metadata.yaml"
-    if metadata_file.exists():
-        with open(metadata_file) as f:
-            return yaml.safe_load(f) or {}
-
-    # Legacy fallback: metadata at modem root
-    metadata_file = modem_dir / "metadata.yaml"
-    if metadata_file.exists():
-        with open(metadata_file) as f:
-            return yaml.safe_load(f) or {}
-    return {}
-
-
-# Markers for auto-generated README section
-README_START_MARKER = "<!-- AUTO-GENERATED FROM metadata.yaml - DO NOT EDIT BELOW -->"
-README_END_MARKER = "<!-- END AUTO-GENERATED -->"
-
-
-def generate_quick_facts(metadata: dict, modem_config: dict | None) -> str:
-    """Generate Quick Facts markdown table from metadata.
-
-    Args:
-        metadata: Dict from metadata.yaml
-        modem_config: Dict from modem.yaml (status_info, hardware)
-
-    Returns:
-        Markdown string with Quick Facts table
-    """
-    lines = [
-        README_START_MARKER,
-        "## Quick Facts",
-        "",
-        "| Spec | Value |",
-        "|------|-------|",
-    ]
-
-    if metadata.get("docsis_version"):
-        lines.append(f"| **DOCSIS** | {metadata['docsis_version']} |")
-
-    if metadata.get("release_date"):
-        lines.append(f"| **Released** | {metadata['release_date']} |")
-
-    eol = metadata.get("end_of_life")
-    lines.append(f"| **Status** | {'EOL ' + str(eol) if eol else 'Current'} |")
-
-    if metadata.get("isps"):
-        isps = metadata["isps"]
-        if isinstance(isps, list):
-            isps = ", ".join(isps)
-        lines.append(f"| **ISPs** | {isps} |")
-
-    if modem_config:
-        status_info = modem_config.get("status_info", {})
-        status = status_info.get("status", "awaiting_verification")
-        verified = status == "verified"
-        status_display = "✅ Verified" if verified else "⏳ Pending"
-        lines.append(f"| **Parser** | {status_display} |")
-
-    lines.append("")
-    lines.append(README_END_MARKER)
-
-    return "\n".join(lines)
-
-
-def update_readme_quick_facts(fixture_dir: Path, metadata: dict, modem_config: dict | None) -> bool:
-    """Update README.md with auto-generated Quick Facts section.
-
-    Args:
-        fixture_dir: Path to fixture directory
-        metadata: Dict from metadata.yaml
-        modem_config: Dict from modem.yaml
-
-    Returns:
-        True if README was updated, False otherwise
-    """
-    readme_path = fixture_dir / "README.md"
-    if not readme_path.exists():
-        return False
-
-    content = readme_path.read_text()
-    quick_facts = generate_quick_facts(metadata, modem_config)
-
-    # Check if markers exist
-    if README_START_MARKER in content and README_END_MARKER in content:
-        # Replace existing section
-        pattern = re.compile(re.escape(README_START_MARKER) + r".*?" + re.escape(README_END_MARKER), re.DOTALL)
-        new_content = pattern.sub(quick_facts, content)
-    else:
-        # Insert after first heading (# Title)
-        match = re.match(r"(#[^\n]+\n+)", content)
-        if match:
-            new_content = match.group(1) + "\n" + quick_facts + "\n\n" + content[match.end() :]
-        else:
-            # No heading found, prepend
-            new_content = quick_facts + "\n\n" + content
-
-    if new_content != content:
-        readme_path.write_text(new_content)
-        return True
-    return False
-
-
-def _apply_metadata_to_info(info: dict[str, str | int | bool | None], metadata: dict) -> None:
-    """Apply metadata.yaml fields to info dict (mutates info in place)."""
-    if metadata.get("release_date"):
-        info["release_year"] = str(metadata["release_date"])[:4]
-    if metadata.get("end_of_life"):
-        info["eol_year"] = str(metadata["end_of_life"])[:4]
-    if metadata.get("docsis_version"):
-        info["docsis"] = metadata["docsis_version"]
-    if metadata.get("protocol"):
-        info["protocol"] = metadata["protocol"]
-    if metadata.get("chipset"):
-        info["chipset"] = metadata["chipset"]
-    if metadata.get("isps"):
-        info["isps"] = metadata["isps"]  # Keep as list
-    # Status can come from metadata.yaml for fixtures without parsers
-    if metadata.get("status"):
-        info["status"] = metadata["status"]
-    if metadata.get("tracking_issue"):
-        info["tracking_issue"] = metadata["tracking_issue"]
-    if metadata.get("source_code"):
-        info["source_code"] = metadata["source_code"]
-
-
 def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
     """Apply modem.yaml configuration to fixture info dict."""
     info["manufacturer"] = modem_config.get("manufacturer") or info["manufacturer"]
@@ -611,7 +466,7 @@ def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
     # Get hardware info
     hardware = modem_config.get("hardware", {})
     if hardware.get("docsis_version"):
-        info["docsis_version"] = hardware["docsis_version"]
+        info["docsis"] = hardware["docsis_version"]
     if hardware.get("chipset"):
         info["chipset"] = hardware["chipset"]
     if hardware.get("release_date"):
@@ -621,20 +476,29 @@ def _apply_modem_config_to_info(info: dict, modem_config: dict) -> None:
         if release_str:
             info["release_year"] = int(release_str[:4])
     if hardware.get("end_of_life"):
-        info["end_of_life"] = hardware["end_of_life"]
+        eol_str = str(hardware["end_of_life"])
+        info["eol_year"] = int(eol_str[:4]) if eol_str else None
 
-    # Get paradigm for protocol display
-    if modem_config.get("paradigm"):
-        info["paradigm"] = modem_config["paradigm"]
+    # Get paradigm and convert to protocol display format
+    paradigm = modem_config.get("paradigm", "").lower()
+    if paradigm:
+        # Map paradigm values to protocol badge names
+        paradigm_to_protocol = {
+            "html": "HTML",
+            "hnap": "HNAP",
+            "rest": "REST_API",
+            "rest_api": "REST_API",
+            "luci": "LuCI",
+        }
+        info["protocol"] = paradigm_to_protocol.get(paradigm, "HTML")
+
+    # Get ISPs from modem.yaml
+    if modem_config.get("isps"):
+        info["isps"] = modem_config["isps"]
 
 
 def extract_fixture_info(fixture_dir: Path, base_dir: Path) -> dict[str, str | int | bool | None]:
-    """Extract modem info from modem.yaml, metadata.yaml, and README.
-
-    Priority:
-    1. modem.yaml - manufacturer, model, status, hardware (source of truth)
-    2. metadata.yaml - release_date, end_of_life, docsis_version, isps (legacy research data)
-    3. README.md - model name (fallback)
+    """Extract modem info from modem.yaml.
 
     Args:
         fixture_dir: Path to modem directory (modems/{mfr}/{model}/)
@@ -649,28 +513,13 @@ def extract_fixture_info(fixture_dir: Path, base_dir: Path) -> dict[str, str | i
         ),
     }
 
-    # 1. Load from modem.yaml (source of truth for modem configuration)
+    # Load from modem.yaml (source of truth for modem configuration)
     modem_config = load_modem_yaml(fixture_dir)
     if modem_config:
         _apply_modem_config_to_info(info, modem_config)
 
-    # 2. Load from metadata.yaml (legacy research data - supplements modem.yaml)
-    metadata = load_fixture_metadata(fixture_dir)
-    if metadata:
-        _apply_metadata_to_info(info, metadata)
-
-    # 3. Fallback to README.md for model name (check fixtures/ first, then root)
-    readme_path = fixture_dir / "fixtures" / "README.md"
-    if not readme_path.exists():
-        readme_path = fixture_dir / "README.md"
-    if readme_path.exists():
-        content = readme_path.read_text()
-        model_match = re.search(r"\*\*Model\*\*\s*\|\s*([^|]+)", content, re.IGNORECASE)
-        if model_match:
-            info["model"] = model_match.group(1).strip()
-
     # Count fixture files (in fixtures/ subdirectory)
-    exclude_files = {"README.md", "diagnostics.json", "metadata.yaml"}
+    exclude_files = {"README.md", "diagnostics.json"}
     fixtures_subdir = fixture_dir / "fixtures"
     if fixtures_subdir.exists():
         fixture_files = [f for f in fixtures_subdir.iterdir() if f.is_file() and f.name not in exclude_files]
@@ -718,11 +567,11 @@ def generate_timeline(modems: list[dict]) -> list[str]:
         prefix = "└──" if is_last else "├──"
 
         mfr_full = str(m.get("manufacturer", ""))
-        mfr = mfr_full.split()[0] if mfr_full else ""
+        mfr = mfr_full.split(maxsplit=1)[0] if mfr_full else ""
         mfr = mfr.rstrip(",")[:11]
 
         model_full = str(m.get("model", ""))
-        model = model_full.split("(")[0].split("/")[0].strip()[:10]
+        model = model_full.split("(", maxsplit=1)[0].split("/", maxsplit=1)[0].strip()[:10]
 
         return f"{prefix} {release}  {mfr:<11} {model:<10} {bar}  {years_active:>2}yr  {status}"
 
@@ -779,34 +628,20 @@ def _format_status_summary(modems: list[dict], exclude_unsupported: bool = True)
     return f" ({', '.join(status_parts)})" if status_parts else ""
 
 
-def generate_index(output_path: Path | None = None, update_readmes: bool = True) -> str:
-    """Generate the fixture index markdown and optionally update READMEs.
+def generate_index(output_path: Path | None = None) -> str:
+    """Generate the fixture index markdown.
 
     Args:
         output_path: Path to write modems/README.md (None for no write)
-        update_readmes: If True, update Quick Facts in each README.md
     """
     modems_dir = repo_root / "modems"
 
     modems = []
-    readmes_updated = 0
 
     for fixture_dir in sorted(modems_dir.glob("*/*/")):
-        # Check for README.md in fixtures/ subdirectory or modem root
-        has_readme = (fixture_dir / "fixtures" / "README.md").exists() or (fixture_dir / "README.md").exists()
-        if has_readme:
-            # Load modem.yaml configuration (source of truth)
-            modem_config = load_modem_yaml(fixture_dir)
-
-            # Load metadata and update README
-            metadata = load_fixture_metadata(fixture_dir)
-            if update_readmes and metadata and update_readme_quick_facts(fixture_dir, metadata, modem_config):
-                readmes_updated += 1
-
+        # Check for modem.yaml (required for all modems)
+        if (fixture_dir / "modem.yaml").exists():
             modems.append(extract_fixture_info(fixture_dir, modems_dir))
-
-    if update_readmes and readmes_updated > 0:
-        print(f"Updated {readmes_updated} README files with Quick Facts")
 
     # Split modems into supported and unsupported
     supported_modems = [m for m in modems if m.get("status") != "unsupported"]
@@ -820,9 +655,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "Auto-generated index of modem fixtures.",
         "",
         "**Data Sources:**",
-        "- `metadata.yaml` - Release dates, EOL, DOCSIS version, protocol, chipset, ISPs",
-        "- Parser classes - Verified status, manufacturer",
-        "- `README.md` - Model name, contributor notes",
+        "- `modem.yaml` - Single source of truth (manufacturer, model, hardware, ISPs, status)",
         "",
         f"**Supported Modems:** {len(supported_modems)}{status_summary}",
         "",
@@ -836,8 +669,7 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
         "    └── {model}/",
         "        ├── modem.yaml           # REQUIRED: Configuration and auth hints",
         "        ├── fixtures/            # OPTIONAL: Extracted HTML/JSON responses",
-        "        │   ├── {page_name}.html",
-        "        │   └── metadata.yaml    # Fixture metadata (firmware, capture date)",
+        "        │   └── {page_name}.html",
         "        └── har/                 # OPTIONAL: Sanitized HAR captures",
         "            └── modem.har        # Primary capture",
         "```",
@@ -953,6 +785,12 @@ def generate_index(output_path: Path | None = None, update_readmes: bool = True)
     markdown = "\n".join(lines) + "\n"
 
     if output_path:
+        # Only write if content changed (preserves timestamp for unchanged content)
+        if output_path.exists():
+            existing = output_path.read_text()
+            if existing == markdown:
+                print(f"No changes to {output_path}")
+                return markdown
         output_path.write_text(markdown)
         print(f"Written to {output_path}")
 
