@@ -66,7 +66,10 @@ async def test_http_head(url: str, legacy_ssl: bool = False) -> bool:
         True if HEAD succeeds (status < 500), False if it fails or times out
     """
     try:
-        ssl_context = ssl.create_default_context()
+        # ssl.create_default_context() loads system certs from disk (blocking I/O).
+        # Run in executor to avoid blocking the HA event loop.
+        loop = asyncio.get_running_loop()
+        ssl_context = await loop.run_in_executor(None, ssl.create_default_context)
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         if legacy_ssl:
