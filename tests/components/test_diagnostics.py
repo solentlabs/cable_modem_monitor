@@ -246,8 +246,12 @@ class TestSanitizeHtml:
         assert "11:22:33:44:55:66" not in sanitized
         assert "99-88-77-66-55-44" not in sanitized
         # har-capture uses format-preserving hashes (02:xx:xx:xx:xx:xx) for MACs
-        # Should have 3 redacted MACs
-        assert sanitized.count("02:") == 3 or sanitized.count("XX:XX:XX:XX:XX:XX") == 3
+        # All 3 original MACs should be replaced (don't count "02:" substrings
+        # since redacted hashes can also contain "02:" in middle octets)
+        import re
+
+        redacted_macs = re.findall(r"02:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}", sanitized)
+        assert len(redacted_macs) == 3
 
     def test_handles_empty_string(self):
         """Test that empty string is handled gracefully."""
