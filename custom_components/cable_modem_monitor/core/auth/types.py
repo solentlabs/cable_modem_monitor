@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 
-class HMACAlgorithm(str, Enum):
+class HMACAlgorithm(StrEnum):
     """HMAC algorithm for HNAP authentication.
 
     Different modem firmwares use different HMAC algorithms for

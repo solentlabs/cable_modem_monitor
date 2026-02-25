@@ -567,11 +567,11 @@ def generate_timeline(modems: list[dict]) -> list[str]:
         prefix = "└──" if is_last else "├──"
 
         mfr_full = str(m.get("manufacturer", ""))
-        mfr = mfr_full.split()[0] if mfr_full else ""
+        mfr = mfr_full.split(maxsplit=1)[0] if mfr_full else ""
         mfr = mfr.rstrip(",")[:11]
 
         model_full = str(m.get("model", ""))
-        model = model_full.split("(")[0].split("/")[0].strip()[:10]
+        model = model_full.split("(", maxsplit=1)[0].split("/", maxsplit=1)[0].strip()[:10]
 
         return f"{prefix} {release}  {mfr:<11} {model:<10} {bar}  {years_active:>2}yr  {status}"
 

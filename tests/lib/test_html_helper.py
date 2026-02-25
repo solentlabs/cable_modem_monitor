@@ -412,8 +412,6 @@ class TestTagValueListSanitization:
         assert "AnotherDevice" not in sanitized
         # har-capture redacts with hash prefixes (DEVICE_, WIFI_, etc.)
         # Accept any redaction - the important thing is sensitive values are gone
-        import re
-
         assert re.search(r"[A-Z]+_[a-f0-9]{8}", sanitized), "Expected hash-based redaction pattern"
         # Empty placeholder should be preserved
         assert "|--|" in sanitized

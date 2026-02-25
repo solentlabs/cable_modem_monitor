@@ -32,6 +32,7 @@ def get_test_modem_path() -> Path:
             if (model / "fixtures").exists():
                 return model
     pytest.skip("No modem with fixtures available")
+    raise AssertionError("unreachable")  # satisfy static analyzers
 
 
 class TestResponseDelay:

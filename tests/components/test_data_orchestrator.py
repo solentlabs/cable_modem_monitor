@@ -695,7 +695,7 @@ class TestFallbackParserDetection:
         attempted_parser_names = []
         mock_circuit_breaker = mocker.Mock()
         mock_circuit_breaker.should_continue.return_value = True
-        mock_circuit_breaker.record_attempt.side_effect = lambda name: attempted_parser_names.append(name)
+        mock_circuit_breaker.record_attempt.side_effect = attempted_parser_names.append
 
         # Call _try_anonymous_probing
         attempted_parsers: list[type] = []
@@ -725,7 +725,7 @@ class TestFallbackParserDetection:
         attempted_parser_names = []
         mock_circuit_breaker = mocker.Mock()
         mock_circuit_breaker.should_continue.return_value = True
-        mock_circuit_breaker.record_attempt.side_effect = lambda name: attempted_parser_names.append(name)
+        mock_circuit_breaker.record_attempt.side_effect = attempted_parser_names.append
 
         # Call _try_prioritized_parsers
         attempted_parsers: list[type] = []

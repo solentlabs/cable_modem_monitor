@@ -161,6 +161,7 @@ class DualProtocolModem:
 
         # Start HTTPS server (HNAP works)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(self.cert_path, self.key_path)
 
         self._https_server = HTTPServer(("127.0.0.1", self.https_port), HttpsHnapHandler)

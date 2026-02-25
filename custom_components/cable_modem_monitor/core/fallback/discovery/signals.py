@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class SignalType(str, Enum):
+class SignalType(StrEnum):
     """Types of discovery signals that can be gathered."""
 
     # Paradigm detection - how the modem presents data

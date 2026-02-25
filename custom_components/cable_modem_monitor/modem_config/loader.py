@@ -412,7 +412,7 @@ def load_modem_by_path(manufacturer: str, model: str, modems_root: Path | str | 
     manufacturer_variants = [
         manufacturer.lower(),
         manufacturer.lower().replace("/", "").replace(" ", ""),
-        manufacturer.split("/")[0].lower() if "/" in manufacturer else None,
+        manufacturer.split("/", maxsplit=1)[0].lower() if "/" in manufacturer else None,
     ]
 
     model_lower = model.lower()

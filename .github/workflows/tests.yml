@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout code
@@ -63,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy types-requests pytest-socket pydantic types-cryptography requests-mock
+          pip install ruff black mypy types-requests pytest-socket pydantic types-cryptography requests-mock har-capture>=0.3.2
 
       - name: Lint with ruff
         run: |
@@ -138,7 +138,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4
+          pip install beautifulsoup4 har-capture>=0.3.2
 
       - name: Check fixtures for PII
         run: |

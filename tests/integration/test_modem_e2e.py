@@ -582,11 +582,13 @@ class TestDiscoveryPipelineE2E:
         # Get the parser class for user-selected flow
         import importlib
 
+        parser_class: type | None = None
         try:
             module = importlib.import_module(config.parser.module)
             parser_class = getattr(module, config.parser.class_name)
         except Exception as e:
             pytest.skip(f"Failed to import parser: {e}")
+        assert parser_class is not None
 
         # Determine which dynamic auth type to use for the server
         # FORM and HNAP are the only strategies supported by dynamic discovery
@@ -716,11 +718,13 @@ class TestDiscoveryPipelineE2E:
         # Get the parser class
         import importlib
 
+        parser_class: type | None = None
         try:
             module = importlib.import_module(config.parser.module)
             parser_class = getattr(module, config.parser.class_name)
         except Exception as e:
             pytest.skip(f"Failed to import parser: {e}")
+        assert parser_class is not None
 
         # Get static auth config from modem.yaml adapter
         adapter = get_auth_adapter_for_parser(parser_class.__name__)

@@ -55,7 +55,7 @@ Note:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -67,7 +67,7 @@ from custom_components.cable_modem_monitor.const import DEFAULT_TIMEOUT
 # =============================================================================
 
 
-class AuthStrategy(str, Enum):
+class AuthStrategy(StrEnum):
     """Supported authentication strategies."""
 
     NONE = "none"  # No authentication required (all pages public)
@@ -78,14 +78,14 @@ class AuthStrategy(str, Enum):
     REST_API = "rest_api"  # JSON REST API
 
 
-class PasswordEncoding(str, Enum):
+class PasswordEncoding(StrEnum):
     """Password encoding methods for form auth."""
 
     PLAIN = "plain"
     BASE64 = "base64"
 
 
-class DataFormat(str, Enum):
+class DataFormat(StrEnum):
     """Data format types."""
 
     HTML = "html"
@@ -93,7 +93,7 @@ class DataFormat(str, Enum):
     XML = "xml"
 
 
-class TableLayout(str, Enum):
+class TableLayout(StrEnum):
     """Table layout for HTML parsing."""
 
     STANDARD = "standard"  # Rows = channels, cols = metrics
@@ -101,14 +101,14 @@ class TableLayout(str, Enum):
     JAVASCRIPT_EMBEDDED = "javascript_embedded"  # Data in JS variables, not HTML tables
 
 
-class DocsisVersion(str, Enum):
+class DocsisVersion(StrEnum):
     """DOCSIS specification versions."""
 
     V30 = "3.0"
     V31 = "3.1"
 
 
-class ParserStatus(str, Enum):
+class ParserStatus(StrEnum):
     """Parser verification/lifecycle status."""
 
     IN_PROGRESS = "in_progress"  # Actively being developed
@@ -117,7 +117,7 @@ class ParserStatus(str, Enum):
     UNSUPPORTED = "unsupported"  # Modem locked down, kept for documentation
 
 
-class DataParadigm(str, Enum):
+class DataParadigm(StrEnum):
     """How the modem presents data.
 
     Used by Discovery Intelligence to filter modem candidates.
@@ -128,7 +128,7 @@ class DataParadigm(str, Enum):
     REST_API = "rest_api"  # JSON REST API
 
 
-class Capability(str, Enum):
+class Capability(StrEnum):
     """Modem capabilities that can be declared in modem.yaml.
 
     These define what data a parser can extract. The integration uses these

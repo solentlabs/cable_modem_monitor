@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from bs4 import BeautifulSoup
@@ -49,7 +49,7 @@ if TYPE_CHECKING:  # pragma: no cover
 _LOGGER = logging.getLogger(__name__)
 
 
-class ParserStatus(str, Enum):
+class ParserStatus(StrEnum):
     """Parser verification/lifecycle status.
 
     Tracks where a parser is in its development and validation lifecycle:

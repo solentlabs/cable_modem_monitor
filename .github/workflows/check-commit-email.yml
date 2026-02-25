@@ -71,6 +71,8 @@ jobs:
       - name: Comment on PR (informational)
         if: steps.check-emails.outputs.found_personal == 'true'
         uses: actions/github-script@v8
+        env:
+          PERSONAL_EMAILS: ${{ steps.check-emails.outputs.emails }}
         with:
           script: |
             // Check if we already commented on this PR to avoid spam
@@ -90,35 +92,39 @@ jobs:
               return;
             }
 
-            const message = `## :information_source: Personal Email Detected in Commits
+            const emails = process.env.PERSONAL_EMAILS;
 
-            > **Note:** This is an informational check only. It does **not** block your PR.
-
-            One or more commits in this PR contain personal email addresses:
-            ${{ steps.check-emails.outputs.emails }}
-
-            ### Why This Matters
-            Personal emails in git history are **permanently public** and can be harvested by spammers.
-
-            ### How to Fix (Optional but Recommended)
-
-            1. **Configure GitHub email privacy:**
-               - Go to [GitHub Email Settings](https://github.com/settings/emails)
-               - Check "Keep my email addresses private"
-               - Copy your noreply address (e.g., \`ID+username@users.noreply.github.com\`)
-
-            2. **For this repo, run the setup script:**
-               \`\`\`bash
-               ./scripts/dev/setup-git-email.sh
-               \`\`\`
-
-            3. **Or use VS Code task:** "🔒 Setup Git Email Privacy"
-
-            ### For Future Commits
-            Once configured, all your future commits will use the privacy-safe email automatically.
-
-            ---
-            *This check helps protect contributor privacy. Feel free to merge if you're okay with the email being public.*`;
+            const message = [
+              '## :information_source: Personal Email Detected in Commits',
+              '',
+              '> **Note:** This is an informational check only. It does **not** block your PR.',
+              '',
+              'One or more commits in this PR contain personal email addresses:',
+              emails,
+              '',
+              '### Why This Matters',
+              'Personal emails in git history are **permanently public** and can be harvested by spammers.',
+              '',
+              '### How to Fix (Optional but Recommended)',
+              '',
+              '1. **Configure GitHub email privacy:**',
+              '   - Go to [GitHub Email Settings](https://github.com/settings/emails)',
+              '   - Check "Keep my email addresses private"',
+              '   - Copy your noreply address (e.g., `ID+username@users.noreply.github.com`)',
+              '',
+              '2. **For this repo, run the setup script:**',
+              '   ```bash',
+              '   ./scripts/dev/setup-git-email.sh',
+              '   ```',
+              '',
+              '3. **Or use VS Code task:** "Setup Git Email Privacy"',
+              '',
+              '### For Future Commits',
+              'Once configured, all your future commits will use the privacy-safe email automatically.',
+              '',
+              '---',
+              '*This check helps protect contributor privacy. Feel free to merge if you\'re okay with the email being public.*',
+            ].join('\n');
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
