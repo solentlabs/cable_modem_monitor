@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.13.1] - 2026-02-27
 
+### Fixed
+
+- **CM1200 zero channel data regression** - Fixed redundant authentication call that caused basic_http modems (CM1200, C7000v2, CM600, C3700, TC4400) to make an extra HTTP request per poll cycle. The `_pre_authenticate()` gate condition incorrectly used HTML presence as a proxy for "auth was performed," but basic_http auth is stateless and never returns HTML. This caused connection resets on modems that rate-limit rapid HTTPS requests. (#121)
+
 ## [3.13.0] - 2026-02-24
 
 ### Added

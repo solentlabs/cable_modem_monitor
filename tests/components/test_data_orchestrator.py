@@ -1895,8 +1895,8 @@ class TestPreAuthenticate:
 
         result = orchestrator._pre_authenticate()
 
-        # Should return success without calling _login
-        assert result == (True, None)
+        # Should return success without calling _login, auth_performed=False
+        assert result == (True, None, False)
         mock_login.assert_not_called()
 
     def test_pre_authenticates_for_hnap_session(self, mocker):
@@ -1918,9 +1918,9 @@ class TestPreAuthenticate:
 
         result = orchestrator._pre_authenticate()
 
-        # Should call _login for HNAP
+        # Should call _login for HNAP, auth_performed=True
         mock_login.assert_called_once()
-        assert result == (True, "<html>auth</html>")
+        assert result == (True, "<html>auth</html>", True)
 
     def test_pre_authenticates_for_form_plain(self, mocker):
         """Test that pre-auth IS performed for form_plain strategy."""
@@ -1937,7 +1937,7 @@ class TestPreAuthenticate:
         result = orchestrator._pre_authenticate()
 
         mock_login.assert_called_once()
-        assert result == (True, None)
+        assert result == (True, None, True)
 
     def test_pre_authenticates_for_form_ajax(self, mocker):
         """Test that pre-auth IS performed for form_ajax strategy."""
@@ -1969,7 +1969,7 @@ class TestPreAuthenticate:
 
         result = orchestrator._pre_authenticate()
 
-        assert result == (True, None)
+        assert result == (True, None, False)
         mock_login.assert_not_called()
 
     def test_skips_pre_auth_when_no_strategy(self, mocker):
@@ -1986,7 +1986,7 @@ class TestPreAuthenticate:
 
         result = orchestrator._pre_authenticate()
 
-        assert result == (True, None)
+        assert result == (True, None, False)
         mock_login.assert_not_called()
 
     def test_url_token_uses_reactive_auth_flow(self, mocker):
