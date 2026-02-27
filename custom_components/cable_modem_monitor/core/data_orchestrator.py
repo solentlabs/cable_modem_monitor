@@ -1232,7 +1232,7 @@ class DataOrchestrator:
 
         return self.parser.parse(soup)
 
-    def _pre_authenticate(self) -> tuple[bool, str | None]:
+    def _pre_authenticate(self) -> tuple[bool, str | None, bool]:
         """Pre-authenticate before data fetch for modems requiring auth.
 
         For modems with an auth strategy configured, this authenticates BEFORE
@@ -1243,25 +1243,27 @@ class DataOrchestrator:
         poll causes 401 errors due to server-side session tracking.
 
         Returns:
-            tuple[bool, str | None]: (success, html_from_auth)
+            tuple[bool, str | None, bool]: (success, html_from_auth, auth_performed)
                 - success: True if auth succeeded or no auth needed
                 - html_from_auth: HTML returned during auth (some strategies return data), or None
+                - auth_performed: True if authentication was actually executed (not skipped)
         """
         if not self._auth_strategy or not self.username or not self.password:
-            return (True, None)
+            return (True, None, False)
 
         # URL token auth: skip pre-auth, use reactive auth flow instead
         # These modems return login pages (not 401s) so reactive detection works.
         # Pre-authenticating every poll causes 401 due to server-side session tracking.
         if self._auth_strategy == "url_token_session":
             _LOGGER.debug("Skipping pre-auth for url_token_session (using reactive auth)")
-            return (True, None)
+            return (True, None, False)
 
         _LOGGER.debug(
             "Pre-authenticating with strategy %s before data fetch",
             self._auth_strategy,
         )
-        return self._login()
+        success, html = self._login()
+        return (success, html, True)
 
     def get_modem_data(self, capture_raw: bool = False) -> dict:  # noqa: C901
         """Fetch and parse modem data.
@@ -1303,7 +1305,7 @@ class DataOrchestrator:
                 _LOGGER.debug("Session has no cookies - will need to authenticate")
 
             # Pre-authenticate for modems that require auth before any request
-            success, pre_auth_html = self._pre_authenticate()
+            success, pre_auth_html, pre_auth_performed = self._pre_authenticate()
             if not success:
                 _LOGGER.error("Pre-authentication failed")
                 return self._create_error_response("auth_failed")
@@ -1325,9 +1327,13 @@ class DataOrchestrator:
             if not self._ensure_parser(html, successful_url, suggested_parser):
                 return self._create_error_response("offline")
 
-            # Additional auth check if we didn't pre-authenticate
-            # (handles session expiration for no-auth modems that later require login)
-            if not pre_auth_html:
+            # Additional auth check only if pre-auth was NOT performed
+            # Strategies like basic_http that pre-authenticated don't return HTML but
+            # DID authenticate — calling _authenticate() again would redundantly
+            # re-verify credentials (extra HTTP request to root URL per poll).
+            # This caused failures on modems that rate-limit or reset connections
+            # on rapid HTTPS requests (e.g., CM1200). Related: Issue #121.
+            if not pre_auth_performed:
                 authenticated = self._authenticate(html, data_url=successful_url)
                 if authenticated is None:
                     return self._create_error_response("auth_failed")
