@@ -190,6 +190,8 @@ git push --force-with-lease
 ## PR and Issue Rules
 
 **NEVER use "Closes #X", "Fixes #X", or similar auto-close keywords.**
+- This applies to **both PR bodies AND commit messages**
+- GitHub scans all commit messages in a merge — a `Fixes #X` buried in any commit on the branch will auto-close the issue when merged to main
 - Users should close their own tickets after confirming fixes work
 - Use "Related to #X" or "Addresses #X" instead
 
