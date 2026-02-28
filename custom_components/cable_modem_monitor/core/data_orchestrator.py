@@ -36,7 +36,6 @@ from typing import TYPE_CHECKING, Any, cast
 import requests
 from bs4 import BeautifulSoup
 
-from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
 from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
@@ -461,7 +460,7 @@ class DataOrchestrator:
                     auth = (self.username, self.password)
                     _LOGGER.debug("Using basic auth for %s", url)
 
-                response = self.session.get(url, timeout=DEFAULT_TIMEOUT, auth=auth)
+                response = self.session.get(url, timeout=self._timeout, auth=auth)
 
                 if response.status_code == 200:
                     self._capture_response(response, f"Parser URL pattern: {path}")
@@ -572,7 +571,7 @@ class DataOrchestrator:
 
                 try:
                     _LOGGER.debug("Fetching %s: %s", resource_type, url)
-                    response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
+                    response = self.session.get(url, timeout=self._timeout)
 
                     if response.status_code == 200:
                         # Capture with resource type info
@@ -795,7 +794,7 @@ class DataOrchestrator:
                         auth = (self.username, self.password)
 
                     # Use configured SSL verification setting
-                    response = self.session.get(target_url, timeout=DEFAULT_TIMEOUT, auth=auth, verify=self.verify_ssl)
+                    response = self.session.get(target_url, timeout=self._timeout, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.debug(
@@ -1548,7 +1547,7 @@ class DataOrchestrator:
         if original_was_login_page and data_url:
             _LOGGER.debug("Re-fetching data URL after authentication: %s", data_url)
             try:
-                response = self.session.get(data_url, timeout=DEFAULT_TIMEOUT, verify=self.session.verify)
+                response = self.session.get(data_url, timeout=self._timeout, verify=self.session.verify)
                 if response.ok:
                     # Verify we didn't get another login page
                     if not is_login_page(response.text):
