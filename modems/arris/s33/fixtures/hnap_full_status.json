@@ -1,0 +1,41 @@
+{
+  "GetMultipleHNAPsResponse": {
+    "GetMultipleHNAPsResult": "OK",
+    "GetCustomerStatusDownstreamChannelInfoResponse": {
+      "CustomerConnDownstreamChannel": "1^Locked^QAM256^24^567000000^3^41^0^0^|+|2^Locked^QAM256^1^423000000^2^40^0^0^|+|3^Locked^QAM256^2^429000000^2^40^0^0^|+|4^Locked^QAM256^3^435000000^2^40^0^0^|+|5^Locked^QAM256^4^441000000^2^40^0^0^|+|6^Locked^QAM256^5^447000000^2^40^0^0^|+|7^Locked^QAM256^6^453000000^2^40^0^0^|+|8^Locked^QAM256^7^459000000^2^40^0^0^",
+      "GetCustomerStatusDownstreamChannelInfoResult": "OK"
+    },
+    "GetCustomerStatusUpstreamChannelInfoResponse": {
+      "CustomerConnUpstreamChannel": "1^Locked^SC-QAM^3^6400000^22800000^37.8^|+|2^Locked^SC-QAM^6^3200000^40400000^38.0^|+|3^Locked^SC-QAM^5^6400000^35600000^37.5^|+|4^Locked^SC-QAM^4^6400000^29200000^37.8^",
+      "GetCustomerStatusUpstreamChannelInfoResult": "OK"
+    },
+    "GetCustomerStatusStartupSequenceResponse": {
+      "CustomerConnDSFreq": "567000000 Hz",
+      "CustomerConnDSComment": "Locked",
+      "CustomerConnConnectivityStatus": "OK",
+      "CustomerConnConnectivityComment": "Operational",
+      "CustomerConnBootStatus": "OK",
+      "CustomerConnBootComment": "Operational",
+      "CustomerConnConfigurationFileStatus": "OK",
+      "CustomerConnConfigurationFileComment": "",
+      "CustomerConnSecurityStatus": "Enabled",
+      "CustomerConnSecurityComment": "BPI+",
+      "GetCustomerStatusStartupSequenceResult": "OK"
+    },
+    "GetCustomerStatusConnectionInfoResponse": {
+      "CustomerConnNetworkAccess": "Allowed",
+      "StatusSoftwareModelName": "S33",
+      "GetCustomerStatusConnectionInfoResult": "OK"
+    },
+    "GetArrisDeviceStatusResponse": {
+      "FirmwareVersion": "TB01.02.001.10_082021_212.S3",
+      "InternetConnection": "Connected",
+      "DownstreamFrequency": "567000000 Hz",
+      "DownstreamSignalPower": "3 dBmV",
+      "DownstreamSignalSnr": "41 dB",
+      "StatusSoftwareModelName": "S33",
+      "StatusSoftwareModelName2": "S33",
+      "GetArrisDeviceStatusResult": "OK"
+    }
+  }
+}
