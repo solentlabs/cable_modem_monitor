@@ -82,6 +82,7 @@ class TestS33v2HmacAlgorithm:
 
         for e in hnap_posts:
             hnap_auth = e.request.get_header("HNAP_AUTH")
+            assert hnap_auth is not None, f"HNAP_AUTH header missing at index {e.index}"
             # Format: "<32-hex-hash> <timestamp>"
             parts = hnap_auth.split(" ", 1)
             hash_part = parts[0]
