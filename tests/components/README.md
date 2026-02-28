@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 331
+**Total Tests:** 336
 
 ## Test Files
 
@@ -17,7 +17,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 95 | Tests for DataOrchestrator. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 100 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -450,6 +450,15 @@ as the architecture evolves toward declarative modem configs.
 - `test_skips_pre_auth_when_no_credentials`: Test that pre-auth is skipped when no credentials provided.
 - `test_skips_pre_auth_when_no_strategy`: Test that pre-auth is skipped when no auth strategy configured.
 - `test_url_token_uses_reactive_auth_flow`: Test that url_token_session uses reactive auth flow in get_modem_data.
+
+**TestSessionReuse** (5 tests)
+: Tests for session reuse logic (_has_valid_session, pre-auth skip, stale retry).
+
+- `test_has_valid_session`: Table-driven test for _has_valid_session().
+- `test_pre_auth_session_skip`: Table-driven test for _pre_authenticate() session reuse logic.
+- `test_subsequent_poll_reuses_session_instead_of_relogin`: Subsequent polls reuse existing session instead of re-authenticating.
+- `test_stale_session_no_retry`: Table-driven test for stale session no-retry conditions.
+- `test_stale_session_retry_clears_cache_and_retries`: Reused session with zero channels triggers cache clear + fresh login + re-fetch.
 
 ### test_diagnostics.py
 
