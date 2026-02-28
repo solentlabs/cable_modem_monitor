@@ -2051,24 +2051,28 @@ class TestSessionReuse:
     # _has_valid_session() — table-driven
     # =========================================================================
     #
-    # ┌──────────┬────────────┬─────────────┬──────────┬──────────────────────────────────┐
-    # │ strategy │ uid_cookie │ private_key │ expected │ description                      │
-    # ├──────────┼────────────┼─────────────┼──────────┼──────────────────────────────────┤
-    # │ hnap     │ ✓          │ ✓           │ True     │ both present → valid             │
-    # │ hnap     │ ✗          │ ✓           │ False    │ no cookie → invalid              │
-    # │ hnap     │ ✓          │ ✗           │ False    │ no key → invalid                 │
-    # │ basic    │ —          │ —           │ False    │ stateless — always invalid       │
-    # │ None     │ —          │ —           │ False    │ no strategy — always invalid     │
-    # └──────────┴────────────┴─────────────┴──────────┴──────────────────────────────────┘
+    # ┌──────────────┬────────────┬─────────────┬──────────┬───────────────────────────────────────────┐
+    # │ strategy     │ uid_cookie │ private_key │ expected │ description                               │
+    # ├──────────────┼────────────┼─────────────┼──────────┼───────────────────────────────────────────┤
+    # │ hnap_session │ ✓          │ ✓           │ True     │ runtime strategy — both present → valid   │
+    # │ hnap_session │ ✗          │ ✓           │ False    │ runtime strategy — no cookie → invalid    │
+    # │ hnap_session │ ✓          │ ✗           │ False    │ runtime strategy — no key → invalid       │
+    # │ hnap         │ ✓          │ ✓           │ True     │ yaml short form — also accepted           │
+    # │ basic_http   │ —          │ —           │ False    │ runtime basic — always invalid            │
+    # │ basic        │ —          │ —           │ False    │ yaml short form — always invalid          │
+    # │ None         │ —          │ —           │ False    │ no strategy — always invalid              │
+    # └──────────────┴────────────┴─────────────┴──────────┴───────────────────────────────────────────┘
     #
     # fmt: off
     HAS_VALID_SESSION_CASES: list[tuple[str | None, bool, str | None, bool, str]] = [
-        # (strategy,  uid_cookie, private_key,          expected, description)
-        ("hnap",      True,       "cached-private-key", True,     "both present → valid"),
-        ("hnap",      False,      "cached-private-key", False,    "no cookie → invalid"),
-        ("hnap",      True,       None,                 False,    "no key → invalid"),
-        ("basic",     False,      None,                 False,    "stateless — always invalid"),
-        (None,        False,      None,                 False,    "no strategy — always invalid"),
+        # (strategy,       uid_cookie, private_key,          expected, description)
+        ("hnap_session",   True,       "cached-private-key", True,     "runtime strategy — both present → valid"),
+        ("hnap_session",   False,      "cached-private-key", False,    "runtime strategy — no cookie → invalid"),
+        ("hnap_session",   True,       None,                 False,    "runtime strategy — no key → invalid"),
+        ("hnap",           True,       "cached-private-key", True,     "yaml short form — also accepted"),
+        ("basic_http",     False,      None,                 False,    "runtime basic — always invalid"),
+        ("basic",          False,      None,                 False,    "yaml short form — always invalid"),
+        (None,             False,      None,                 False,    "no strategy — always invalid"),
     ]
     # fmt: on
 
@@ -2084,7 +2088,7 @@ class TestSessionReuse:
         if uid_cookie:
             orchestrator.session.cookies.set("uid", "test-uid-value")
 
-        if strategy == "hnap":
+        if strategy in ("hnap", "hnap_session"):
             mock_hnap_builder = mocker.Mock()
             mock_hnap_builder._private_key = private_key
             mock_auth_handler = mocker.Mock()
@@ -2121,7 +2125,7 @@ class TestSessionReuse:
     )
     def test_pre_auth_session_skip(self, mocker, valid_session, capture_enabled, login_called, auth_performed, desc):
         """Table-driven test for _pre_authenticate() session reuse logic."""
-        orchestrator = self._make_orchestrator(auth_strategy="hnap")
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
         orchestrator._capture_enabled = capture_enabled
         mocker.patch.object(orchestrator, "_has_valid_session", return_value=valid_session)
         mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, None))
@@ -2146,7 +2150,7 @@ class TestSessionReuse:
         with anti-brute-force protection, this can trigger lockout or reboot.
         Related: Issue #117.
         """
-        orchestrator = self._make_orchestrator(auth_strategy="hnap")
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
 
         # Simulate state after a successful first login:
         # uid cookie set by server, private key cached by HNAP builder
@@ -2194,7 +2198,7 @@ class TestSessionReuse:
     )
     def test_stale_session_no_retry(self, mocker, session_reused, parse_channels, expected_status, should_retry, desc):
         """Table-driven test for stale session no-retry conditions."""
-        orchestrator = self._make_orchestrator(auth_strategy="hnap")
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
         mock_parser = mocker.Mock()
         mock_parser.name = "Test"
         mock_parser.logout_endpoint = None
@@ -2233,7 +2237,7 @@ class TestSessionReuse:
 
     def test_stale_session_retry_clears_cache_and_retries(self, mocker):
         """Reused session with zero channels triggers cache clear + fresh login + re-fetch."""
-        orchestrator = self._make_orchestrator(auth_strategy="hnap")
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
         mock_parser = mocker.Mock()
         mock_parser.name = "Test"
         mock_parser.logout_endpoint = None

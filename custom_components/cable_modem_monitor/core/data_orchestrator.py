@@ -298,10 +298,10 @@ class DataOrchestrator:
         where re-login can be safely skipped. Stateless strategies (basic) and
         strategies without auth always return False.
         """
-        if not self._auth_strategy or self._auth_strategy == "basic":
+        if not self._auth_strategy or self._auth_strategy in ("basic", "basic_http"):
             return False
 
-        if self._auth_strategy == "hnap":
+        if self._auth_strategy in ("hnap", "hnap_session"):
             has_cookies = bool(self.session.cookies.get("uid"))
             hnap_builder = self._auth_handler.get_hnap_builder() if self._auth_handler else None
             has_private_key = bool(hnap_builder and hnap_builder._private_key)
