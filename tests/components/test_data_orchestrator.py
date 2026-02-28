@@ -2028,3 +2028,248 @@ class TestPreAuthenticate:
         assert "cable_modem_connection_status" in result
         # _authenticate should have been called (reactive flow)
         orchestrator._authenticate.assert_called()
+
+
+class TestSessionReuse:
+    """Tests for session reuse logic (_has_valid_session, pre-auth skip, stale retry).
+
+    Issue #117: HNAP modems crash when polled every 60s because _pre_authenticate()
+    unconditionally calls _login(). At ~1440 logins/day, anti-brute-force protection
+    triggers a reboot. The fix reuses existing sessions (uid cookie + HNAP private key)
+    to skip redundant logins.
+    """
+
+    def _make_orchestrator(self, auth_strategy=None):
+        """Create an orchestrator with optional auth strategy."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1", "admin", "password", parser=MockTestParser(), timeout=TEST_TIMEOUT
+        )
+        orchestrator._auth_strategy = auth_strategy
+        return orchestrator
+
+    # =========================================================================
+    # _has_valid_session() — table-driven
+    # =========================================================================
+    #
+    # ┌──────────────┬────────────┬─────────────┬──────────┬───────────────────────────────────────────┐
+    # │ strategy     │ uid_cookie │ private_key │ expected │ description                               │
+    # ├──────────────┼────────────┼─────────────┼──────────┼───────────────────────────────────────────┤
+    # │ hnap_session │ ✓          │ ✓           │ True     │ runtime strategy — both present → valid   │
+    # │ hnap_session │ ✗          │ ✓           │ False    │ runtime strategy — no cookie → invalid    │
+    # │ hnap_session │ ✓          │ ✗           │ False    │ runtime strategy — no key → invalid       │
+    # │ hnap         │ ✓          │ ✓           │ True     │ yaml short form — also accepted           │
+    # │ basic_http   │ —          │ —           │ False    │ runtime basic — always invalid            │
+    # │ basic        │ —          │ —           │ False    │ yaml short form — always invalid          │
+    # │ None         │ —          │ —           │ False    │ no strategy — always invalid              │
+    # └──────────────┴────────────┴─────────────┴──────────┴───────────────────────────────────────────┘
+    #
+    # fmt: off
+    HAS_VALID_SESSION_CASES: list[tuple[str | None, bool, str | None, bool, str]] = [
+        # (strategy,       uid_cookie, private_key,          expected, description)
+        ("hnap_session",   True,       "cached-private-key", True,     "runtime strategy — both present → valid"),
+        ("hnap_session",   False,      "cached-private-key", False,    "runtime strategy — no cookie → invalid"),
+        ("hnap_session",   True,       None,                 False,    "runtime strategy — no key → invalid"),
+        ("hnap",           True,       "cached-private-key", True,     "yaml short form — also accepted"),
+        ("basic_http",     False,      None,                 False,    "runtime basic — always invalid"),
+        ("basic",          False,      None,                 False,    "yaml short form — always invalid"),
+        (None,             False,      None,                 False,    "no strategy — always invalid"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "strategy,uid_cookie,private_key,expected,desc",
+        HAS_VALID_SESSION_CASES,
+        ids=[c[-1] for c in HAS_VALID_SESSION_CASES],
+    )
+    def test_has_valid_session(self, mocker, strategy, uid_cookie, private_key, expected, desc):
+        """Table-driven test for _has_valid_session()."""
+        orchestrator = self._make_orchestrator(auth_strategy=strategy)
+
+        if uid_cookie:
+            orchestrator.session.cookies.set("uid", "test-uid-value")
+
+        if strategy in ("hnap", "hnap_session"):
+            mock_hnap_builder = mocker.Mock()
+            mock_hnap_builder._private_key = private_key
+            mock_auth_handler = mocker.Mock()
+            mock_auth_handler.get_hnap_builder.return_value = mock_hnap_builder
+            orchestrator._auth_handler = mock_auth_handler
+
+        assert orchestrator._has_valid_session() is expected
+
+    # =========================================================================
+    # _pre_authenticate() session skip — table-driven
+    # =========================================================================
+    #
+    # ┌───────────────┬─────────────────┬──────────────┬────────────────┬─────────────────────────────────┐
+    # │ valid_session │ capture_enabled │ login_called │ auth_performed │ description                     │
+    # ├───────────────┼─────────────────┼──────────────┼────────────────┼─────────────────────────────────┤
+    # │ True          │ False           │ False        │ True           │ valid session → skip login      │
+    # │ False         │ False           │ True         │ True           │ no session → call login         │
+    # │ True          │ True            │ True         │ True           │ capture mode → always login     │
+    # └───────────────┴─────────────────┴──────────────┴────────────────┴─────────────────────────────────┘
+    #
+    # fmt: off
+    PRE_AUTH_SKIP_CASES: list[tuple[bool, bool, bool, bool, str]] = [
+        # (valid_session, capture_enabled, login_called, auth_performed, description)
+        (True,            False,           False,        True,           "valid session → skip login"),
+        (False,           False,           True,         True,           "no session → call login"),
+        (True,            True,            True,         True,           "capture mode → always login"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "valid_session,capture_enabled,login_called,auth_performed,desc",
+        PRE_AUTH_SKIP_CASES,
+        ids=[c[-1] for c in PRE_AUTH_SKIP_CASES],
+    )
+    def test_pre_auth_session_skip(self, mocker, valid_session, capture_enabled, login_called, auth_performed, desc):
+        """Table-driven test for _pre_authenticate() session reuse logic."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        orchestrator._capture_enabled = capture_enabled
+        mocker.patch.object(orchestrator, "_has_valid_session", return_value=valid_session)
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, None))
+
+        success, html, performed = orchestrator._pre_authenticate()
+
+        assert success is True
+        assert performed is auth_performed
+        if login_called:
+            mock_login.assert_called_once()
+        else:
+            mock_login.assert_not_called()
+
+    # =========================================================================
+    # Issue #117 scenario — subsequent poll reuses session
+    # =========================================================================
+
+    def test_subsequent_poll_reuses_session_instead_of_relogin(self, mocker):
+        """Subsequent polls reuse existing session instead of re-authenticating.
+
+        Without session reuse, every poll performs a full login. For HNAP modems
+        with anti-brute-force protection, this can trigger lockout or reboot.
+        Related: Issue #117.
+        """
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+
+        # Simulate state after a successful first login:
+        # uid cookie set by server, private key cached by HNAP builder
+        orchestrator.session.cookies.set("uid", "session-uid")
+        mock_hnap_builder = mocker.Mock()
+        mock_hnap_builder._private_key = "cached-private-key"
+        mock_auth_handler = mocker.Mock()
+        mock_auth_handler.get_hnap_builder.return_value = mock_hnap_builder
+        orchestrator._auth_handler = mock_auth_handler
+
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        # Second poll — _has_valid_session() runs for real (not mocked)
+        success, html, auth_performed = orchestrator._pre_authenticate()
+
+        assert success is True
+        # auth_performed=True prevents _authenticate() from calling _login()
+        assert auth_performed is True
+        assert orchestrator._session_reused is True
+        mock_login.assert_not_called()
+
+    # =========================================================================
+    # Stale session retry — table-driven (no-retry cases)
+    # =========================================================================
+    #
+    # ┌────────────────┬────────────────┬────────────────┬──────────────┬────────────────────────────────┐
+    # │ session_reused │ parse_channels │ expected_status│ should_retry │ description                    │
+    # ├────────────────┼────────────────┼────────────────┼──────────────┼────────────────────────────────┤
+    # │ False          │ 0              │ parser_issue   │ False        │ fresh login → no retry         │
+    # │ True           │ 1              │ online         │ False        │ reused + channels → no retry   │
+    # └────────────────┴────────────────┴────────────────┴──────────────┴────────────────────────────────┘
+    #
+    # fmt: off
+    STALE_RETRY_NO_RETRY_CASES: list[tuple[bool, int, str, bool, str]] = [
+        # (session_reused, parse_channels, expected_status, should_retry, description)
+        (False,            0,              "parser_issue",  False,        "fresh login → no retry"),
+        (True,             1,              "online",        False,        "reused + channels → no retry"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "session_reused,parse_channels,expected_status,should_retry,desc",
+        STALE_RETRY_NO_RETRY_CASES,
+        ids=[c[-1] for c in STALE_RETRY_NO_RETRY_CASES],
+    )
+    def test_stale_session_no_retry(self, mocker, session_reused, parse_channels, expected_status, should_retry, desc):
+        """Table-driven test for stale session no-retry conditions."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+
+        def fake_pre_auth():
+            if session_reused:
+                orchestrator._session_reused = True
+            return (True, None, True)
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", side_effect=fake_pre_auth)
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=("<html>data</html>", "http://192.168.100.1", None),
+        )
+
+        channels = [{"channel": i} for i in range(parse_channels)]
+        mocker.patch.object(
+            orchestrator,
+            "_parse_data",
+            return_value={"downstream": channels, "upstream": channels, "system_info": {}},
+        )
+
+        mock_clear = mocker.patch.object(orchestrator, "clear_auth_cache")
+
+        result = orchestrator.get_modem_data()
+
+        assert result["cable_modem_connection_status"] == expected_status
+        if should_retry:
+            mock_clear.assert_called_once()
+        else:
+            mock_clear.assert_not_called()
+
+    def test_stale_session_retry_clears_cache_and_retries(self, mocker):
+        """Reused session with zero channels triggers cache clear + fresh login + re-fetch."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+
+        def fake_pre_auth():
+            orchestrator._session_reused = True
+            return (True, None, True)
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", side_effect=fake_pre_auth)
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+
+        # First parse returns no channels (stale session), retry returns channels
+        parse_results = [
+            {"downstream": [], "upstream": [], "system_info": {}},
+            {"downstream": [{"channel": 1}], "upstream": [{"channel": 1}], "system_info": {}},
+        ]
+        mocker.patch.object(orchestrator, "_parse_data", side_effect=parse_results)
+
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=("<html>retry data</html>", "http://192.168.100.1", None),
+        )
+
+        mock_clear = mocker.patch.object(orchestrator, "clear_auth_cache")
+        mock_login = mocker.patch.object(orchestrator, "_login", return_value=(True, "<html>fresh</html>"))
+
+        result = orchestrator.get_modem_data()
+
+        mock_clear.assert_called_once()
+        mock_login.assert_called_once()
+        assert result["cable_modem_connection_status"] == "online"
+        assert len(result["cable_modem_downstream"]) == 1

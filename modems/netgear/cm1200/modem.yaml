@@ -15,6 +15,7 @@ sources:
   detection_hints: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
 
 default_host: "192.168.100.1"
+timeout: 20 # CM1200 over HTTPS is slow; 10s default causes read timeouts (#121)
 
 auth:
   types:

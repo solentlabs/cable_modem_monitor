@@ -30,7 +30,7 @@ hardware:
 sources:
   chipset: "[ModemGuides](https://www.modemguides.com/blogs/modemguides-blog/arris-s33-vs-sb8200-comparison)"
   hardware: "[SURFboard S33 page](https://www.surfboard.com/products/cable-modems/s33/)"
-  auth_config: "HAR analysis by maintainer"
+  auth_config: "HAR capture by @gmogoody (Issue #32)"
   detection_hints: "[Issue #87](https://github.com/solentlabs/cable_modem_monitor/issues/87)"
 
 # =============================================================================
@@ -115,6 +115,9 @@ detection:
   model_aliases:
     - "CommScope S33"
     - "ARRIS S33"
+    - "S33v2"
+    - "CommScope S33v2"
+    - "ARRIS S33v2"
 # =============================================================================
 # CAPABILITIES
 # =============================================================================
@@ -170,8 +173,10 @@ fixtures:
 
 attribution:
   contributors:
-    - github: kwschulz
-      contribution: "Maintainer - HNAP implementation from HAR analysis"
+    - github: gmogoody
+      contribution: "S33 HAR capture and iterative testing (Issue #32, #87)"
+    - github: mmiller7
+      contribution: "S33v2 HAR capture and issue #117 report"
 
 isps:
   - Comcast

@@ -36,7 +36,6 @@ from typing import TYPE_CHECKING, Any, cast
 import requests
 from bs4 import BeautifulSoup
 
-from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
 from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
@@ -291,6 +290,24 @@ class DataOrchestrator:
 
         _LOGGER.debug("Cleared auth cache and created fresh session")
 
+    def _has_valid_session(self) -> bool:
+        """Check if current session has reusable auth credentials.
+
+        Returns True only for auth strategies with stateful sessions (e.g., HNAP)
+        where re-login can be safely skipped. Stateless strategies (basic) and
+        strategies without auth always return False.
+        """
+        if not self._auth_strategy or self._auth_strategy in ("basic", "basic_http"):
+            return False
+
+        if self._auth_strategy in ("hnap", "hnap_session"):
+            has_cookies = bool(self.session.cookies.get("uid"))
+            hnap_builder = self._auth_handler.get_hnap_builder() if self._auth_handler else None
+            has_private_key = bool(hnap_builder and hnap_builder._private_key)
+            return has_cookies and has_private_key
+
+        return False
+
     def _capture_response(self, response: requests.Response, description: str = "") -> None:
         """Capture HTTP response for diagnostics.
 
@@ -443,7 +460,7 @@ class DataOrchestrator:
                     auth = (self.username, self.password)
                     _LOGGER.debug("Using basic auth for %s", url)
 
-                response = self.session.get(url, timeout=DEFAULT_TIMEOUT, auth=auth)
+                response = self.session.get(url, timeout=self._timeout, auth=auth)
 
                 if response.status_code == 200:
                     self._capture_response(response, f"Parser URL pattern: {path}")
@@ -554,7 +571,7 @@ class DataOrchestrator:
 
                 try:
                     _LOGGER.debug("Fetching %s: %s", resource_type, url)
-                    response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
+                    response = self.session.get(url, timeout=self._timeout)
 
                     if response.status_code == 200:
                         # Capture with resource type info
@@ -777,7 +794,7 @@ class DataOrchestrator:
                         auth = (self.username, self.password)
 
                     # Use configured SSL verification setting
-                    response = self.session.get(target_url, timeout=DEFAULT_TIMEOUT, auth=auth, verify=self.verify_ssl)
+                    response = self.session.get(target_url, timeout=self._timeout, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.debug(
@@ -1258,6 +1275,17 @@ class DataOrchestrator:
             _LOGGER.debug("Skipping pre-auth for url_token_session (using reactive auth)")
             return (True, None, False)
 
+        # Reuse existing session if credentials are still valid (e.g., HNAP cookies + private key).
+        # This avoids re-login on every poll, which can trigger anti-brute-force protection
+        # on modems like the Arris S33 (Issue #117).
+        # Capture mode always does fresh login to ensure clean capture data.
+        # Returns auth_performed=True to skip _authenticate() — we already have valid credentials,
+        # and _authenticate() unconditionally calls _login() which would defeat session reuse.
+        if not self._capture_enabled and self._has_valid_session():
+            _LOGGER.debug("Reusing existing session (skipping login)")
+            self._session_reused = True
+            return (True, None, True)
+
         _LOGGER.debug(
             "Pre-authenticating with strategy %s before data fetch",
             self._auth_strategy,
@@ -1278,6 +1306,7 @@ class DataOrchestrator:
         self._captured_urls = []
         self._failed_urls = []
         self._capture_enabled = capture_raw
+        self._session_reused = False
 
         # Replace session with capturing session if capture is enabled
         original_session = None
@@ -1342,6 +1371,28 @@ class DataOrchestrator:
             # Parse data and build response
             data = self._parse_data(html)
             response = self._build_response(data)
+
+            # Stale session retry: if we reused a session (skipped login) and got
+            # zero channels, the session may have expired. Clear cache and retry
+            # once with a fresh login. One retry only — no loops.
+            status = response.get("cable_modem_connection_status")
+            if self._session_reused and not capture_raw and status == "parser_issue":
+                _LOGGER.warning(
+                    "Zero channels with reused session — session may be stale. "
+                    "Clearing auth cache and retrying with fresh login."
+                )
+                self.clear_auth_cache()
+                success, _login_html = self._login()
+                if success:
+                    fetched_data = self._fetch_data(capture_raw=False)
+                    if fetched_data:
+                        html, successful_url, _ = fetched_data
+                        data = self._parse_data(html)
+                        response = self._build_response(data)
+                    else:
+                        _LOGGER.debug("Stale session retry: re-fetch returned no data")
+                else:
+                    _LOGGER.debug("Stale session retry: fresh login failed")
 
             # Capture additional pages if in capture mode
             if capture_raw and self._captured_urls:
@@ -1496,7 +1547,7 @@ class DataOrchestrator:
         if original_was_login_page and data_url:
             _LOGGER.debug("Re-fetching data URL after authentication: %s", data_url)
             try:
-                response = self.session.get(data_url, timeout=DEFAULT_TIMEOUT, verify=self.session.verify)
+                response = self.session.get(data_url, timeout=self._timeout, verify=self.session.verify)
                 if response.ok:
                     # Verify we didn't get another login page
                     if not is_login_page(response.text):

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **HNAP Session Reuse** - Reuse existing HNAP sessions (uid cookie + private key) across poll cycles instead of re-authenticating every 60 seconds. Prevents anti-brute-force reboots on Arris S33/S33v2 modems (~1440 logins/day reduced to 1). Includes stale session detection with automatic retry on expired sessions. (#117)
+- **S33v2 Model Aliases** - Added S33v2, CommScope S33v2, and ARRIS S33v2 to S33 detection aliases for hardware revision compatibility. (#117)
+
+### Fixed
+
+- **Modem-specific timeout not applied** - All `_fetch_data` HTTP requests now use the modem's configured `timeout` instead of the hardcoded 10-second default. This fixes CM1200 read timeouts over HTTPS. (#121)
+- **CM1200 request timeout** - Increased default timeout from 10s to 20s for CM1200 modems, which respond slowly over HTTPS. (#121)
+
 ## [3.13.1] - 2026-02-27
 
 ### Fixed
