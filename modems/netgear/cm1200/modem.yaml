@@ -24,7 +24,6 @@ auth:
 pages:
   public:
     - "/DocsisStatus.htm"
-    - "/index.htm"
 
   protected: []
 
