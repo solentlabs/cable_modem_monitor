@@ -161,9 +161,9 @@ class TestDataOrchestrator:
 
         # Using MockTestParser defined at module level
 
-        # Create scraper with HTTPS URL and parser instance
+        # Create scraper with bare IP (defaults to HTTPS, unlocked — can fallback to HTTP)
         orchestrator = DataOrchestrator(
-            "https://192.168.100.1", "admin", "motorola", parser=MockTestParser(), timeout=TEST_TIMEOUT
+            "192.168.100.1", "admin", "motorola", parser=MockTestParser(), timeout=TEST_TIMEOUT
         )
 
         # Mock session.get to simulate HTTPS failure, HTTP success
@@ -692,7 +692,7 @@ class TestFallbackParserDetection:
         mocker.patch.object(orchestrator.session, "get", return_value=mock_response)
 
         # Create circuit breaker mock that tracks which parsers were attempted
-        attempted_parser_names = []
+        attempted_parser_names: list[str] = []
         mock_circuit_breaker = mocker.Mock()
         mock_circuit_breaker.should_continue.return_value = True
         mock_circuit_breaker.record_attempt.side_effect = attempted_parser_names.append
@@ -722,7 +722,7 @@ class TestFallbackParserDetection:
         url = "http://192.168.100.1/"
 
         # Create circuit breaker mock that tracks which parsers were attempted
-        attempted_parser_names = []
+        attempted_parser_names: list[str] = []
         mock_circuit_breaker = mocker.Mock()
         mock_circuit_breaker.should_continue.return_value = True
         mock_circuit_breaker.record_attempt.side_effect = attempted_parser_names.append
@@ -1436,12 +1436,12 @@ class TestSessionExpiryHandling:
         mock_response = mocker.Mock()
         mock_response.ok = True
         mock_response.text = "<h1>Connection Status</h1><table>...</table>"
-        orchestrator.session.get = mocker.Mock(return_value=mock_response)
+        mock_get = mocker.patch.object(orchestrator.session, "get", return_value=mock_response)
 
         result = orchestrator._authenticate(login_html, data_url="http://192.168.100.1/status.html")
 
         # Should have re-fetched and returned the authenticated content
-        orchestrator.session.get.assert_called_once()
+        mock_get.assert_called_once()
         assert result == mock_response.text
 
     def test_authenticate_skips_refetch_when_not_login_page(self, mocker):
@@ -1455,12 +1455,12 @@ class TestSessionExpiryHandling:
         data_html = "<h1>Connection Status</h1><table>...</table>"
 
         # session.get should NOT be called
-        orchestrator.session.get = mocker.Mock()
+        mock_get = mocker.patch.object(orchestrator.session, "get")
 
         result = orchestrator._authenticate(data_html, data_url="http://192.168.100.1/status.html")
 
         # Should return original HTML without re-fetching
-        orchestrator.session.get.assert_not_called()
+        mock_get.assert_not_called()
         assert result == data_html
 
     def test_authenticate_uses_auth_html_when_provided(self, mocker):
@@ -1475,12 +1475,12 @@ class TestSessionExpiryHandling:
         login_html = '<form><input type="password"></form>'
 
         # session.get should NOT be called (we have auth HTML)
-        orchestrator.session.get = mocker.Mock()
+        mock_get = mocker.patch.object(orchestrator.session, "get")
 
         result = orchestrator._authenticate(login_html, data_url="http://192.168.100.1/status.html")
 
         # Should use authenticated HTML from _login, not re-fetch
-        orchestrator.session.get.assert_not_called()
+        mock_get.assert_not_called()
         assert result == auth_html
 
     def test_authenticate_returns_none_on_login_failure(self, mocker):
@@ -1509,7 +1509,7 @@ class TestSessionExpiryHandling:
         mock_response = mocker.Mock()
         mock_response.ok = True
         mock_response.text = '<form><input type="password">Still login page</form>'
-        orchestrator.session.get = mocker.Mock(return_value=mock_response)
+        mocker.patch.object(orchestrator.session, "get", return_value=mock_response)
 
         result = orchestrator._authenticate(login_html, data_url="http://192.168.100.1/status.html")
 
@@ -2020,14 +2020,14 @@ class TestPreAuthenticate:
 
         # Mock _authenticate to simulate reactive auth succeeding
         authenticated_html = "<html>Status page data</html>"
-        mocker.patch.object(orchestrator, "_authenticate", return_value=authenticated_html)
+        mock_auth = mocker.patch.object(orchestrator, "_authenticate", return_value=authenticated_html)
 
         result = orchestrator.get_modem_data()
 
         # Should succeed (authenticate handles the login)
         assert "cable_modem_connection_status" in result
         # _authenticate should have been called (reactive flow)
-        orchestrator._authenticate.assert_called()
+        mock_auth.assert_called()
 
 
 class TestSessionReuse:

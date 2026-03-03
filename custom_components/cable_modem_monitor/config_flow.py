@@ -67,6 +67,7 @@ from .const import (
     CONF_PARSER_NAME,
     CONF_PARSER_SELECTED_AT,
     CONF_PASSWORD,
+    CONF_PROTOCOL,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
@@ -86,6 +87,7 @@ from .core.exceptions import (
     UnsupportedModemError,
 )
 from .core.parser_utils import create_title
+from .lib.host_validation import parse_host_input
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -427,8 +429,9 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         info = self._progress.info
         self._progress.reset()
 
-        # Prevent duplicate entries for same host
-        await self.async_set_unique_id(user_input[CONF_HOST])
+        # Prevent duplicate entries for same host (use bare hostname for unique_id)
+        hostname, _ = parse_host_input(user_input[CONF_HOST])
+        await self.async_set_unique_id(hostname)
         self._abort_if_unique_id_configured()
 
         entry_data = self._build_entry_data(user_input, info)
@@ -437,6 +440,12 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
     def _build_entry_data(self, user_input: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
         """Build config entry data from user input and validation results."""
         data = dict(user_input)
+
+        # Decompose protocol from host: "https://192.168.100.1" → host="192.168.100.1", protocol="https"
+        hostname, protocol = parse_host_input(data[CONF_HOST])
+        data[CONF_HOST] = hostname
+        data[CONF_PROTOCOL] = protocol
+
         data.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
         data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
@@ -645,6 +654,11 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
     def _build_updated_entry_data(self, user_input: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
         """Build updated config entry data from user input and validation results."""
         data = dict(user_input)
+
+        # Decompose protocol from host (same as initial config flow)
+        hostname, protocol = parse_host_input(data[CONF_HOST])
+        data[CONF_HOST] = hostname
+        data[CONF_PROTOCOL] = protocol
 
         # These are re-tested on every validation
         data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)

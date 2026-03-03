@@ -161,12 +161,13 @@ class DataOrchestrator:
         authenticated_html: str | None = None,
         session_pre_authenticated: bool = False,
         timeout: int | None = None,
+        protocol: str | None = None,
     ):
         """
         Initialize the polling orchestrator.
 
         Args:
-            host: Modem IP address (or full URL with http:// or https://)
+            host: Modem IP address (bare hostname — should NOT include protocol prefix for new entries)
             username: Optional login username
             password: Optional login password
             parser: Parser instance for the selected modem (from config entry)
@@ -180,16 +181,25 @@ class DataOrchestrator:
             authenticated_html: Pre-fetched HTML from auth discovery (for instant parser detection)
             session_pre_authenticated: Session is already authenticated from auth discovery (skip _login)
             timeout: Request timeout in seconds (ModemConfig.timeout)
+            protocol: Explicit protocol override ("http", "https", or None for auto-detect)
         """
         self.host = host
-        # Support both plain IP addresses and full URLs (http:// or https://)
-        if host.startswith(("http://", "https://")):
+        self._explicit_protocol = protocol
+
+        # Build base_url from protocol, host, and cached_url
+        if protocol:
+            # Explicit protocol from CONF_PROTOCOL — hard override, no fallback
+            self.base_url = f"{protocol}://{host}"
+            _LOGGER.debug("Using explicit protocol %s from config entry", protocol)
+        elif host.startswith(("http://", "https://")):
+            # Legacy: host includes protocol (old entries without CONF_PROTOCOL)
             self.base_url = host.rstrip("/")
+            self._explicit_protocol = "https" if host.startswith("https://") else "http"
         elif cached_url and (cached_url.startswith("http://") or cached_url.startswith("https://")):
             # Optimization: Use protocol from cached working URL (skip protocol discovery)
-            protocol = "https" if cached_url.startswith("https://") else "http"
-            self.base_url = f"{protocol}://{host}"
-            _LOGGER.debug("Using cached protocol %s from working URL: %s", protocol, cached_url)
+            cached_protocol = "https" if cached_url.startswith("https://") else "http"
+            self.base_url = f"{cached_protocol}://{host}"
+            _LOGGER.debug("Using cached protocol %s from working URL: %s", cached_protocol, cached_url)
         else:
             # Try HTTPS first (MB8611 and newer modems), fallback to HTTP
             self.base_url = f"https://{host}"
@@ -770,9 +780,20 @@ class DataOrchestrator:
             _LOGGER.error("No URL patterns available to try")
             return None
 
-        # Try HTTPS first, then HTTP fallback for each URL
-        protocols_to_try = ["https", "http"] if self.base_url.startswith("https://") else ["http"]
-        _LOGGER.debug("Protocols to try: %s (base_url: %s)", protocols_to_try, self.base_url)
+        # Determine which protocols to try
+        if self._explicit_protocol:
+            # Explicit protocol — no fallback
+            protocols_to_try = [self._explicit_protocol]
+        elif self.base_url.startswith("https://"):
+            protocols_to_try = ["https", "http"]
+        else:
+            protocols_to_try = ["http"]
+        _LOGGER.debug(
+            "Protocols to try: %s (base_url: %s, locked: %s)",
+            protocols_to_try,
+            self.base_url,
+            bool(self._explicit_protocol),
+        )
 
         for protocol in protocols_to_try:
             current_base_url = self.base_url.replace("https://", f"{protocol}://").replace("http://", f"{protocol}://")
@@ -808,9 +829,13 @@ class DataOrchestrator:
                         self._capture_response(response, "Initial connection page")
 
                         # Update base_url to the working protocol
-                        _LOGGER.debug("About to update base_url from %s to %s", self.base_url, current_base_url)
+                        if not self._explicit_protocol and current_base_url != self.base_url:
+                            _LOGGER.warning(
+                                "Protocol fallback: switching from %s to %s",
+                                self.base_url.split("://")[0],
+                                protocol,
+                            )
                         self.base_url = current_base_url
-                        _LOGGER.debug("Updated! base_url is now: %s", self.base_url)
                         return response.text, target_url, parser_class
                     else:
                         _LOGGER.debug("Got status %s from %s", response.status_code, target_url)

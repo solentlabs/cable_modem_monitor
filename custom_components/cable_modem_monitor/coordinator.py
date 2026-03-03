@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from .channel_utils import normalize_channels
 from .const import VERIFY_SSL
 from .core.health_monitor import ModemHealthMonitor
+from .lib.host_validation import build_url
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,13 +61,13 @@ def create_update_function(
     host: str,
     supports_icmp: bool = True,
     supports_head: bool = False,
+    protocol: str | None = None,
 ):
     """Create the async update function for the coordinator."""
 
     async def async_update_data() -> dict[str, Any]:
         """Fetch data from the modem."""
-        # Host may already include protocol (http:// or https://)
-        base_url = host if host.startswith(("http://", "https://")) else f"http://{host}"
+        base_url = build_url(host, protocol or "http")
 
         # Use config-based ICMP and HEAD settings (auto-detected during setup/options flow)
         health_result = await health_monitor.check_health(

@@ -100,21 +100,27 @@ def _get_paradigm_for_parser(parser_class: type) -> str | None:
     return None
 
 
-def _build_candidate_urls(host: str, paradigm: str | None) -> list[str]:
+def _build_candidate_urls(host: str, paradigm: str | None, protocol: str | None = None) -> list[str]:
     """Build list of candidate URLs to try, ordered by paradigm preference.
 
-    If user specified an explicit protocol (http:// or https://), returns
-    only that URL. Otherwise, builds both HTTP and HTTPS URLs in an order
+    If user specified an explicit protocol (via CONF_PROTOCOL or baked into host),
+    returns only that URL. Otherwise, builds both HTTP and HTTPS URLs in an order
     based on the modem's paradigm.
 
     Args:
-        host: User-provided host (may include protocol, port, etc.)
+        host: User-provided host (may include protocol for old entries)
         paradigm: Modem paradigm from modem.yaml (e.g., "html", "hnap")
+        protocol: Explicit protocol from CONF_PROTOCOL ("http", "https", or None)
 
     Returns:
         List of URLs to try in order.
     """
-    # If user specified explicit protocol, honor it
+    # Explicit protocol from config entry — single candidate, no fallback
+    if protocol:
+        _LOGGER.debug("Explicit protocol '%s' from config entry — single candidate", protocol)
+        return [f"{protocol}://{host}"]
+
+    # Legacy: host includes protocol (old entries without CONF_PROTOCOL)
     if host.startswith(("http://", "https://")):
         return [host]
 

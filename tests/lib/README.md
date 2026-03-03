@@ -4,7 +4,7 @@
 
 Tests for library modules including the HTML crawler and general utilities.
 
-**Total Tests:** 123
+**Total Tests:** 129
 
 ## Test Files
 
@@ -14,6 +14,7 @@ Tests for library modules including the HTML crawler and general utilities.
 | [test_host_validation.py](test_host_validation.py) | 17 | Tests for host validation utilities. |
 | [test_html_crawler.py](test_html_crawler.py) | 36 | Tests for HTML crawler utility functions. |
 | [test_html_helper.py](test_html_helper.py) | 30 | Tests for HTML helper utilities. |
+| [test_parse_host_input.py](test_parse_host_input.py) | 6 | Tests for parse_host_input() and build_url() utilities. |
 | [test_utils.py](test_utils.py) | 22 | Tests for utility functions in lib/utils.py. |
 
 ## Test Details
@@ -206,6 +207,31 @@ Tests for HTML helper utilities.
 - `test_handles_docsis_channel_data`: Test that DOCSIS channel data is not incorrectly sanitized.
 - `test_wifi_cred_in_allowlist`: Test that WIFI_CRED placeholder prefix is in allowlist.
 - `test_sanitizes_device_names_before_ip`: Test that device names appearing before IP/MAC placeholders are redacted.
+
+### test_parse_host_input.py
+
+Tests for parse_host_input() and build_url() utilities.
+
+Table-driven tests covering bare IP, protocol prefix, trailing slash,
+port numbers, hostnames, IPv6, and uppercase scheme normalization.
+
+**TestParseHostInput** (1 tests)
+: Verify parse_host_input decomposes raw user input correctly.
+
+- `test_parse_host_input`
+
+**TestBuildUrl** (1 tests)
+: Verify build_url reconstructs URLs correctly.
+
+- `test_build_url`
+
+**TestRoundTrip** (4 tests)
+: Verify parse → build round-trip preserves intent.
+
+- `test_bare_ip_round_trip`
+- `test_explicit_https_round_trip`
+- `test_explicit_http_round_trip`
+- `test_port_round_trip`
 
 ### test_utils.py
 
