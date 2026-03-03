@@ -26,7 +26,11 @@ from custom_components.cable_modem_monitor.core.parser_registry import (
 from custom_components.cable_modem_monitor.modem_config import (
     get_auth_adapter_for_parser,
 )
-from tests.integration.mock_handlers.hnap import TEST_PASSWORD, TEST_USERNAME
+from tests.integration.mock_handlers.hnap import (
+    TEST_PASSWORD,
+    TEST_USERNAME,
+    HnapAuthHandler,
+)
 from tests.integration.mock_modem_server import MockModemServer
 
 MODEMS_DIR = Path(__file__).parent.parent.parent.parent / "modems"
@@ -37,8 +41,10 @@ TEST_TIMEOUT = 10
 def _build_orchestrator(server_url: str) -> DataOrchestrator:
     """Build a DataOrchestrator configured for S33 HNAP auth."""
     parser_class = get_parser_by_name("Arris/CommScope S33")
+    assert parser_class is not None, "S33 parser not found"
     parser = parser_class()
     adapter = get_auth_adapter_for_parser(parser_class.__name__)
+    assert adapter is not None, "S33 adapter not found"
     hnap_config = adapter.get_auth_config_for_type("hnap")
 
     return DataOrchestrator(
@@ -65,33 +71,38 @@ class TestHnapSessionReuse:
         and skips the login entirely.
         """
         with MockModemServer.from_modem_path(S33_PATH, auth_type="hnap") as server:
+            handler = server.handler
+            assert isinstance(handler, HnapAuthHandler)
             orchestrator = _build_orchestrator(server.url)
 
             # Track login verification calls on the mock handler
             login_count = 0
-            original_verify = server.handler._handle_login_verification
+            original_verify = handler._handle_login_verification
 
             def counting_verify(*args, **kwargs):
                 nonlocal login_count
                 login_count += 1
                 return original_verify(*args, **kwargs)
 
-            server.handler._handle_login_verification = counting_verify
+            handler._handle_login_verification = counting_verify  # type: ignore[assignment]
 
             # First poll — full HNAP login
             result1 = orchestrator.get_modem_data()
             assert result1.get("cable_modem_connection_status") != "auth_failed", "First poll auth failed"
             assert login_count == 1, f"Expected 1 login on first poll, got {login_count}"
+            logins_after_first_poll = login_count
 
             # Session credentials should now exist
             assert (
                 orchestrator._has_valid_session()
             ), "Expected valid session after first poll (uid cookie + private key)"
 
-            # Second poll — should reuse session
+            # Second poll — should reuse session (login_count must not increase)
             result2 = orchestrator.get_modem_data()
             assert result2.get("cable_modem_connection_status") != "auth_failed", "Second poll auth failed"
-            assert login_count == 1, f"Expected login count to stay at 1 after second poll, got {login_count}"
+            assert (
+                login_count == logins_after_first_poll
+            ), f"Expected no new logins after second poll, got {login_count - logins_after_first_poll}"
             assert orchestrator._session_reused is True
 
     def test_first_poll_does_not_set_session_reused(self):
@@ -112,6 +123,8 @@ class TestHnapSessionReuse:
         detect zero channels, clear auth cache, re-login, and succeed.
         """
         with MockModemServer.from_modem_path(S33_PATH, auth_type="hnap") as server:
+            handler = server.handler
+            assert isinstance(handler, HnapAuthHandler)
             orchestrator = _build_orchestrator(server.url)
 
             # First poll — establish session
@@ -119,18 +132,18 @@ class TestHnapSessionReuse:
             assert result1.get("cable_modem_connection_status") != "auth_failed", "First poll failed"
 
             # Simulate modem expiring the session (reboot, timeout, etc.)
-            server.handler.authenticated_sessions.clear()
+            handler.authenticated_sessions.clear()
 
             # Track logins for the retry
             login_count = 0
-            original_verify = server.handler._handle_login_verification
+            original_verify = handler._handle_login_verification
 
             def counting_verify(*args, **kwargs):
                 nonlocal login_count
                 login_count += 1
                 return original_verify(*args, **kwargs)
 
-            server.handler._handle_login_verification = counting_verify
+            handler._handle_login_verification = counting_verify  # type: ignore[assignment]
 
             # Second poll — session reuse attempted, fails, retries with fresh login
             orchestrator.get_modem_data()
@@ -141,6 +154,8 @@ class TestHnapSessionReuse:
     def test_capture_mode_always_does_fresh_login(self):
         """Capture mode bypasses session reuse to ensure clean diagnostic data."""
         with MockModemServer.from_modem_path(S33_PATH, auth_type="hnap") as server:
+            handler = server.handler
+            assert isinstance(handler, HnapAuthHandler)
             orchestrator = _build_orchestrator(server.url)
 
             # First poll — establish session
@@ -148,14 +163,14 @@ class TestHnapSessionReuse:
             assert orchestrator._has_valid_session()
 
             login_count = 0
-            original_verify = server.handler._handle_login_verification
+            original_verify = handler._handle_login_verification
 
             def counting_verify(*args, **kwargs):
                 nonlocal login_count
                 login_count += 1
                 return original_verify(*args, **kwargs)
 
-            server.handler._handle_login_verification = counting_verify
+            handler._handle_login_verification = counting_verify  # type: ignore[assignment]
 
             # Enable capture mode
             orchestrator._capture_enabled = True
