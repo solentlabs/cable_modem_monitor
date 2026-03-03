@@ -67,7 +67,6 @@ pages:
   public:
     - "/Login.html"
   protected:
-    - "/cmconnectionstatus.html"
     - "/Cmconnectionstatus.html"
   data:
     downstream_channels: "/HNAP1/"
