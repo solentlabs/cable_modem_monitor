@@ -3,7 +3,7 @@
 This validates the parser works with the real HTML structure from
 issue #93 (Paul's SB6190 with firmware 9.1.103AA65L).
 
-Fixture extracted from: RAW_DATA/v3.13.0/arris-sb6190-paul/modem_20260127_paul.har
+Fixture extracted from contributor HAR capture (issue #93).
 """
 
 from pathlib import Path
@@ -31,7 +31,7 @@ class TestPaulHARParsing:
         """Load Paul's status page HTML from HAR.
 
         Location: modems/arris/sb6190/fixtures/status-firmware-9.1.103.html
-        Source: RAW_DATA/v3.13.0/arris-sb6190-paul/modem_20260127_paul.har
+        Source: Contributor HAR capture (issue #93)
         """
         # Fixture is in modems/ directory, not custom_components/
         fixture_path = FIXTURES_DIR / "status-firmware-9.1.103.html"

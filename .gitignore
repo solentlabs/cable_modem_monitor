@@ -102,7 +102,7 @@ custom_components/cable_modem_monitor/modems/**/__init__.py
 
 # HAR capture artifacts (may contain PII)
 captures/
-**/har/
+modems/**/har/
 
 # Raw data from issue debugging (user-submitted logs, configs, etc.)
 RAW_DATA/

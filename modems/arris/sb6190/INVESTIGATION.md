@@ -278,8 +278,8 @@ Differences:
 
 | Source | Location | Size | Channels | Status |
 |--------|----------|------|----------|--------|
-| Paul (auth) | `RAW_DATA/v3.13.0/arris-sb6190-paul/modem_20260127_paul.har` | 15,127B | 28 DS, 4 US | ✅ Complete |
-| Unknown (non-auth?) | `RAW_DATA/har/arris-sb6190.har` | 16,270B | 36 DS | ✅ Complete |
+| Paul (auth) | Contributor HAR (issue #93) | 15,127B | 28 DS, 4 US | ✅ Complete |
+| Unknown (non-auth?) | Contributor HAR | 16,270B | 36 DS | ✅ Complete |
 
 ### Fixtures
 

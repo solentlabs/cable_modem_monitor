@@ -1,31 +1,11 @@
 # Testing Guide
 
-This guide explains how to run tests locally before pushing to GitHub, preventing CI failures and speeding up development.
+This guide covers the test architecture, how to run tests locally, and how to add
+new tests. Run tests locally before pushing to prevent CI failures.
 
 ## Automated Testing Status
 
 [![Tests](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
-
----
-
-## Prerequisites
-
-Before running tests locally, ensure you have:
-
-```bash
-# Check Python version (3.11+ required)
-python3 --version
-
-# Install required system packages (Ubuntu/Debian/WSL)
-sudo apt update
-sudo apt install python3-pip python3-venv
-
-# Verify installation
-python3 -m pip --version
-python3 -m venv --help
-```
-
-**Note:** If you're using Windows with WSL, make sure these packages are installed in your WSL distribution.
 
 ---
 
@@ -56,22 +36,10 @@ After initial setup, use the quick test script:
 ./scripts/dev/quick_test.sh
 ```
 
-This runs tests with minimal output for rapid feedback during development.
-
 **Time:** ~5-10 seconds
 
----
+### Recommended Workflow
 
-## Why Test Locally?
-
-**Benefits:**
-- ⚡ Catch errors before CI runs (faster feedback)
-- 💰 Save GitHub Actions minutes
-- 🎯 Prevent "fix CI" commits
-- 📈 Maintain code quality
-- 🚀 Faster development cycle
-
-**Recommended Workflow:**
 1. Make code changes
 2. Run `./scripts/dev/quick_test.sh` frequently during development
 3. Run `./scripts/dev/run_tests_local.sh` before committing
@@ -79,32 +47,264 @@ This runs tests with minimal output for rapid feedback during development.
 
 ---
 
-## Test Suite Overview
+## Prerequisites
 
-### Unit Tests
-Located in `tests/test_data_orchestrator.py`
+```bash
+# Check Python version (3.12+ required)
+python3 --version
 
-**Coverage:**
-- ✅ Downstream channel parsing (24 channels)
-- ✅ Upstream channel parsing (5 channels)
-- ✅ Software version extraction
-- ✅ System uptime parsing
-- ✅ Channel count validation
-- ✅ Total error calculation
+# Install required system packages (Ubuntu/Debian/WSL)
+sudo apt update
+sudo apt install python3-pip python3-venv
+```
 
-### Integration Tests
-Real-world scenario testing with actual modem HTML fixtures
+---
 
-**Tests:**
-- ✅ Full parse workflow (Motorola MB series)
-- ✅ Power level validation (-20 to +20 dBmV downstream, 20-60 dBmV upstream)
-- ✅ SNR validation (0-60 dB)
-- ✅ Frequency validation (DOCSIS 3.0 ranges)
+## Test Architecture
 
-### Test Fixtures
-Real HTML responses from modems in `tests/fixtures/`:
-- `moto_connection.html` - Channel data and uptime
-- `moto_home.html` - Software version and channel counts
+The test suite (~2950 tests) is organized into **core** tests (static, mechanism-focused)
+and **dynamic** tests (scale with the modem list).
+
+### Core vs Dynamic Tests
+
+| Type | Location | Tests | Scales with |
+|------|----------|------:|-------------|
+| **Core** | `tests/` | ~2400 | Codebase (mechanisms) |
+| **Dynamic** | `modems/<mfr>/<model>/tests/` | ~550 | Modem list |
+
+**Core tests** validate mechanisms independent of specific modems. Adding a new modem
+doesn't require touching these tests.
+
+**Dynamic tests** are colocated with the modem they test. Adding a new modem means
+adding tests alongside its `modem.yaml` and `fixtures/`.
+
+---
+
+### Core Tests (~2400)
+
+#### 1. Unit Tests
+
+Fast tests with mocked dependencies. No network, no I/O.
+
+**`tests/core/`** - Core module logic:
+- `test_auth_handler.py` - AuthHandler initialization, strategy selection
+- `test_auth_discovery.py` - Auth discovery logic (mocked responses)
+- `test_hnap_builder.py`, `test_hnap_json_builder.py` - HNAP envelope construction
+- `test_signal_analyzer.py` - Signal quality analysis
+- `test_health_monitor.py` - Health monitoring logic
+
+**`tests/lib/`** - Library utilities:
+- `test_html_crawler.py` - URL discovery, link extraction
+- `test_har_sanitizer.py` - PII removal from HAR files
+- `test_host_validation.py` - Host/URL validation
+- `test_html_helper.py` - HTML parsing helpers
+- `test_utils.py` - General utility functions
+
+**`tests/modem_config/`** - Config adapter:
+- `test_adapter.py` - modem.yaml to auth hint conversion
+
+**Answers:** "Does our core logic work correctly?"
+
+#### 2. Component Tests
+
+Tests Home Assistant integration behavior with mocked HA core.
+
+**`tests/components/`**:
+- `test_coordinator.py` - Data coordinator, polling, caching
+- `test_config_flow.py` - Setup wizard, options flow
+- `test_sensor.py` - Sensor entity creation and updates
+- `test_button.py` - Button entities (restart, refresh)
+- `test_diagnostics.py` - Diagnostics download
+- `test_init.py` - Integration setup/teardown
+- `test_data_orchestrator.py` - Scraper behavior
+
+**Answers:** "Does the HA integration behave correctly?"
+
+#### 3. Parser Infrastructure Tests
+
+Tests parser system mechanics, not individual parsers.
+
+**`tests/parsers/`**:
+- `test_parser_contract.py` - Validates all parsers implement required interface
+- `test_parser_loading.py` - Plugin discovery and registration
+- `universal/test_fallback.py` - Universal fallback parser behavior
+
+**Answers:** "Does the parser plugin system work?"
+
+#### 4. Integration Tests
+
+Tests with real network I/O against mock servers.
+
+| Sub-category | Location | Purpose |
+|--------------|----------|---------|
+| Core Mechanism | `tests/integration/core/` | Auth strategies with synthetic data |
+| Infrastructure | `tests/integration/infrastructure/` | SSL/TLS, connectivity |
+| HAR Tooling | `tests/integration/har_replay/` | HAR parser utilities |
+
+**Core Mechanism** (`tests/integration/core/`):
+- Tests auth strategies independent of any specific modem
+- Uses synthetic `MOCK_MODEM_RESPONSE` — fake HTML that exercises auth flows
+- `test_hnap_soap_auth.py`, `test_form_base64_auth.py`, `test_https_form_auth.py`
+
+**Infrastructure** (`tests/integration/infrastructure/`):
+- `test_ssl_modern.py`, `test_ssl_legacy.py` - TLS negotiation
+- `test_connectivity_check.py` - Network reachability
+
+**HAR Tooling** (`tests/integration/har_replay/`):
+- `har_parser.py` - HAR parsing utility (not a test)
+- `test_har_parser.py` - Tests the HAR parser utility
+- `conftest.py` - Shared fixtures (`@requires_har`, `mock_har_for_modem`)
+- Note: Modem-specific HAR tests live in `modems/<mfr>/<model>/tests/test_har.py`
+
+**Answers:** "Does auth/network work against a mock server?"
+
+---
+
+### Dynamic Tests (~550)
+
+All dynamic tests live in `modems/<mfr>/<model>/tests/` alongside the modem config.
+
+#### Per-Modem Tests
+
+Each modem directory can contain:
+
+```
+modems/arris/sb8200/
+├── modem.yaml              # Single source of truth
+├── fixtures/               # Real modem responses
+└── tests/
+    ├── test_parser.py      # Parser detection + parsing
+    └── test_auth.py        # Auth E2E for this modem (optional)
+```
+
+**`test_parser.py`** - Parser-specific tests:
+- Loads real HTML/JSON fixtures from `fixtures/`
+- Tests `can_parse()` detection
+- Tests `parse()` data extraction
+- Validates channel data structure
+
+**`test_auth.py`** - Modem-specific auth scenarios (optional):
+- Tests auth variants (HTTP vs HTTPS, auth vs no-auth)
+- Uses MockModemServer with modem's fixtures
+
+**Answers:** "Does this specific modem work?"
+
+#### Cross-Cutting Dynamic Tests
+
+**`tests/integration/test_modem_e2e.py`** - Auto-discovers all modems:
+- Parametrizes over all `modem.yaml` files
+- Runs standardized tests for each modem
+- No code changes needed when adding modems
+
+**`tests/integration/test_fixture_validation.py`** - Validates all fixtures:
+- Checks fixture files exist and are valid
+- Cross-modem validation
+
+---
+
+### Directory Structure
+
+```
+tests/                              # CORE TESTS (~2400)
+├── conftest.py                     # Root fixtures, pytest plugins
+├── fixtures.py                     # Fixture loading helpers
+├── core/                           # Core module unit tests
+│   ├── test_auth_handler.py
+│   ├── test_auth_discovery.py
+│   └── test_hnap_builder.py
+├── lib/                            # Library utility tests
+├── utils/                          # Utility function tests
+├── modem_config/                   # Config adapter tests
+├── components/                     # HA component tests
+│   ├── test_coordinator.py
+│   ├── test_config_flow.py
+│   └── test_sensor.py
+├── parsers/                        # Parser INFRASTRUCTURE tests only
+│   ├── test_parser_contract.py
+│   ├── test_parser_loading.py
+│   └── universal/test_fallback.py
+└── integration/                    # Integration tests
+    ├── conftest.py                 # Mock servers, modem fixtures
+    ├── mock_modem_server.py        # MockModemServer implementation
+    ├── core/                       # Auth mechanism tests
+    ├── infrastructure/             # SSL, connectivity tests
+    └── har_replay/                 # HAR parser utility + tests
+
+modems/                             # DYNAMIC TESTS (~550)
+├── conftest.py                     # Imports fixtures from tests/integration/
+├── arris/
+│   └── sb8200/
+│       ├── modem.yaml
+│       ├── fixtures/
+│       ├── har/                    # Gitignored - PII concerns
+│       └── tests/
+│           ├── test_parser.py
+│           └── test_har.py
+├── motorola/
+│   └── mb7621/
+│       └── ...
+└── ...
+```
+
+---
+
+### HAR File Architecture
+
+HAR files serve three roles in the test pipeline:
+
+| Role | Description | Output |
+|------|-------------|--------|
+| **Fixture Extraction** | HAR → HTML/JSON files | Populates `fixtures/` directory |
+| **Mock Replay** | HAR drives MockModemServer | Simulates modem in tests |
+| **Live Validation** | Compare HAR to real modem | Detects firmware changes |
+
+**HAR Replay Tests:**
+- Full session simulation — auth flow, cookies, multiple requests
+- Run locally if HAR files are present on developer's filesystem
+- Skip in CI/CD — HAR files are gitignored until PII validation complete
+- Tests skip gracefully when HAR files aren't present
+
+**Answers:** "Does the full auth + fetch flow work against a realistic simulation?"
+
+---
+
+### Key Testing Infrastructure
+
+#### MockModemServer
+
+Reads `modem.yaml` and serves fixtures with auth behavior:
+
+```python
+# Basic usage - serves fixtures with configured auth
+with MockModemServer.from_modem_path(modem_path) as server:
+    response = session.get(server.url)
+
+# Variants for testing
+MockModemServer.from_modem_path(modem_path, auth_enabled=False)  # Skip auth
+MockModemServer.from_modem_path(modem_path, ssl_context=ctx)     # HTTPS
+```
+
+#### conftest.py Organization
+
+| File | Purpose |
+|------|---------|
+| `tests/conftest.py` | Root fixtures, pytest plugins |
+| `tests/integration/conftest.py` | Mock servers, SSL fixtures, modem.yaml fixtures |
+| `tests/integration/core/conftest.py` | Synthetic auth handlers for mechanism tests |
+| `modems/conftest.py` | Imports integration fixtures for colocated tests |
+
+#### pytest Configuration
+
+Both `pytest.ini` and `pyproject.toml` configure:
+```ini
+testpaths = tests modems
+```
+
+This enables pytest to discover:
+- Standard tests in `tests/`
+- Modem-colocated tests in `modems/<mfr>/<model>/tests/`
+
+---
 
 ## CI/CD Pipeline
 
@@ -112,7 +312,7 @@ Real HTML responses from modems in `tests/fixtures/`:
 
 **On Every Push/PR:**
 1. **Tests Job**
-   - Matrix testing: Python 3.11 & 3.12
+   - Matrix testing: Python 3.12 & 3.13
    - Runs full pytest suite
    - Generates coverage report
    - Uploads to Codecov
@@ -120,189 +320,121 @@ Real HTML responses from modems in `tests/fixtures/`:
 2. **Lint Job**
    - Code quality checks with ruff
    - Enforces Python best practices
-   - Validates code style
 
 3. **Validate Job**
    - HACS validation
    - Ensures integration meets HACS requirements
 
-## Manual Testing (Alternative)
+---
+
+## Manual Testing
 
 If you prefer manual control over the test environment:
 
-### 1. Set Up Virtual Environment (Once)
+### Set Up Virtual Environment
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate it
-source venv/bin/activate  # Linux/Mac/WSL
-# OR
-venv\Scripts\activate  # Windows CMD
-# OR
-venv\Scripts\Activate.ps1  # Windows PowerShell
-```
-
-### 2. Install Dependencies (Once)
-
-```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install --upgrade pip
 pip install -r tests/requirements.txt
 ```
 
-### 3. Run Tests
+### Run Tests
 
 ```bash
 # Run all tests
-pytest tests/ -v
+pytest tests/ modems/ -v
 
 # Run specific test file
-pytest tests/test_config_flow.py -v
-
-# Run specific test
-pytest tests/test_config_flow.py::TestConfigFlow::test_scan_interval_minimum_valid -v
+pytest tests/components/test_config_flow.py -v
 
 # Run with coverage
 pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=term
 
-# Generate HTML coverage report
-pytest tests/ --cov=custom_components/cable_modem_monitor --cov-report=html
-# Open htmlcov/index.html in browser
+# Run code quality checks
+ruff check .
 ```
 
-### 4. Run Code Quality Checks
-
-```bash
-# Check code quality
-ruff check custom_components/cable_modem_monitor/
-
-# Auto-fix issues
-ruff check --fix custom_components/cable_modem_monitor/
-```
-
-### 5. Deactivate Virtual Environment (When Done)
-
-```bash
-deactivate
-```
-
-## Test Results
-
-### Current Status
-**Total Tests:** 443 tests across 26 test files
-- ✅ **Components (162 tests):** diagnostics, sensors, buttons, config flow, coordinator, modem scraper
-- ✅ **Parsers (146 tests):** All 10 modem parsers with comprehensive coverage
-- ✅ **Core Modules (115 tests):** signal_analyzer, health_monitor, hnap_builder, authentication, discovery, crawler
-- ✅ **Utils (20 tests):** entity cleanup, HTML helpers
-
-### Coverage Goals
-- **Current:** ~70% (test-to-code ratio)
-- **Required:** 60%+ (enforced in CI/CD)
-- **Status:** ✅ Target achieved and maintained
-- **Critical paths:** All user-facing functionality, parsers, and core infrastructure fully tested
+---
 
 ## Adding New Tests
 
-### For New Features
-1. Add HTML fixture if parsing new data
-2. Write unit test for parsing function
-3. Write integration test for complete workflow
-4. Validate data ranges and types
+### For New Modems
 
-### Example
+Add tests in `modems/<mfr>/<model>/tests/`:
+1. `test_parser.py` — detection (`can_parse`) and parsing (`parse`) tests
+2. Use real HTML/JSON fixtures from `fixtures/`
+3. Validate channel data structure and ranges
+4. Optionally add `test_auth.py` for auth variant testing
+
+### For Core Features
+
+Add tests in the appropriate `tests/` subdirectory:
+- Core logic → `tests/core/`
+- HA components → `tests/components/`
+- Utilities → `tests/lib/`
+- Integration → `tests/integration/`
+
+### Table-Driven Test Pattern
+
+Use table-driven tests for multiple cases with same structure (see `CLAUDE.md` for template):
+
 ```python
-def test_new_feature(self, scraper, html_fixture):
-    """Test new feature parsing."""
-    soup = BeautifulSoup(html_fixture, 'html.parser')
-    result = scraper._parse_new_feature(soup)
+# fmt: off
+TEST_CASES = [
+    # (input,   expected, description)
+    ("valid",   True,     "normal case"),
+    ("",        False,    "empty input"),
+]
+# fmt: on
 
-    assert result is not None, "Should parse feature"
-    assert isinstance(result, expected_type)
-    assert result in valid_range
+@pytest.mark.parametrize("input,expected,desc", TEST_CASES)
+def test_validation(input, expected, desc):
+    assert validate(input) == expected
 ```
+
+---
 
 ## Regression Testing
 
 Before each release:
-1. Run full test suite locally
+1. Run full test suite locally (`pytest tests/ modems/`)
 2. Verify all tests pass
 3. Check coverage hasn't decreased
 4. Test with live modem if possible
 5. Review GitHub Actions results
 
+---
+
 ## Troubleshooting
 
 ### "ModuleNotFoundError" when running tests
 
-**Solution:** Install test dependencies
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 pip install -r tests/requirements.txt
-```
-
-### Virtual environment not activating
-
-**Linux/Mac/WSL:**
-```bash
-source venv/bin/activate
-```
-
-**Windows (PowerShell):**
-```powershell
-venv\Scripts\Activate.ps1
-```
-
-**Windows (CMD):**
-```cmd
-venv\Scripts\activate.bat
 ```
 
 ### Tests pass locally but fail in CI
 
 **Possible causes:**
-1. **Missing dependency** - Check `tests/requirements.txt` includes all imports
-2. **Python version difference** - CI tests on 3.11 and 3.12
-3. **File path issues** - Use relative imports in tests
-4. **Environment-specific code** - Mock external dependencies properly
+1. **Missing dependency** — Check `tests/requirements.txt` includes all imports
+2. **Python version difference** — CI tests on 3.12 and 3.13
+3. **File path issues** — Use relative imports in tests
+4. **Environment-specific code** — Mock external dependencies properly
+5. **Ruff version drift** — Local ruff version differs from CI
 
 ### Permission denied on test scripts
 
-**Solution:** Make scripts executable
 ```bash
 chmod +x scripts/dev/run_tests_local.sh scripts/dev/quick_test.sh
 ```
 
 ---
 
-## Continuous Improvement
-
-### Planned Enhancements
-- [x] Add tests for config_flow.py
-- [x] Add tests for coordinator.py
-- [ ] Add tests for sensor.py
-- [ ] Add tests for button.py
-- [ ] Integration tests with Home Assistant test framework
-- [ ] Mock HTTP requests for network isolation
-- [ ] Performance benchmarks
-
-### Contributing Tests
-When adding support for new modem models:
-1. Capture HTML from modem status pages
-2. Add to `tests/fixtures/`
-3. Create test cases for new HTML structure
-4. Ensure backward compatibility with existing tests
-
 ## Resources
 
 - [pytest Documentation](https://docs.pytest.org/)
 - [Home Assistant Testing](https://developers.home-assistant.io/docs/development_testing)
 - [Coverage.py](https://coverage.readthedocs.io/)
-
-## Support
-
-If tests fail:
-1. Check GitHub Actions logs for details
-2. Run tests locally to reproduce
-3. Review test output and tracebacks
-4. Open issue with test failure details
