@@ -8,8 +8,8 @@ Takes a HAR file and:
 4. Outputs the modified HAR to modems/{mfr}/{model}/har/modem.har
 
 Usage:
-    python scripts/extract_fixtures.py RAW_DATA/modem.har --modem mb7621
-    python scripts/extract_fixtures.py RAW_DATA/modem.har --modem sb8200 --variant noauth
+    python scripts/extract_fixtures.py path/to/modem.har --modem mb7621
+    python scripts/extract_fixtures.py path/to/modem.har --modem sb8200 --variant noauth
 """
 
 from __future__ import annotations

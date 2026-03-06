@@ -173,7 +173,7 @@ git push --force-with-lease
 ```
 
 ### 6. Post-Release
-- Update `RAW_DATA/RELEASE_PLAN.md` status
+- Update release plan status
 - Add journal entry for significant releases
 - Close related GitHub issues
 - Update issue labels (`in-development` → closed, or `needs-testing` if user verification needed)

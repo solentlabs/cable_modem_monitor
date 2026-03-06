@@ -62,6 +62,7 @@ class FallbackOrchestrator(DataOrchestrator):
         authenticated_html: str | None = None,
         session_pre_authenticated: bool = False,
         timeout: int = FALLBACK_TIMEOUT,
+        protocol: str | None = None,
     ):
         """Initialize fallback orchestrator with isolated timeout.
 
@@ -83,6 +84,7 @@ class FallbackOrchestrator(DataOrchestrator):
             authenticated_html=authenticated_html,
             session_pre_authenticated=session_pre_authenticated,
             timeout=timeout,
+            protocol=protocol,
         )
 
     def _login(self) -> tuple[bool, str | None]:

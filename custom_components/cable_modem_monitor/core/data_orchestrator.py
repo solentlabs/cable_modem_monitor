@@ -36,7 +36,6 @@ from typing import TYPE_CHECKING, Any, cast
 import requests
 from bs4 import BeautifulSoup
 
-from ..const import DEFAULT_TIMEOUT
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
 from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
@@ -162,12 +161,13 @@ class DataOrchestrator:
         authenticated_html: str | None = None,
         session_pre_authenticated: bool = False,
         timeout: int | None = None,
+        protocol: str | None = None,
     ):
         """
         Initialize the polling orchestrator.
 
         Args:
-            host: Modem IP address (or full URL with http:// or https://)
+            host: Modem IP address (bare hostname — should NOT include protocol prefix for new entries)
             username: Optional login username
             password: Optional login password
             parser: Parser instance for the selected modem (from config entry)
@@ -181,16 +181,25 @@ class DataOrchestrator:
             authenticated_html: Pre-fetched HTML from auth discovery (for instant parser detection)
             session_pre_authenticated: Session is already authenticated from auth discovery (skip _login)
             timeout: Request timeout in seconds (ModemConfig.timeout)
+            protocol: Explicit protocol override ("http", "https", or None for auto-detect)
         """
         self.host = host
-        # Support both plain IP addresses and full URLs (http:// or https://)
-        if host.startswith(("http://", "https://")):
+        self._explicit_protocol = protocol
+
+        # Build base_url from protocol, host, and cached_url
+        if protocol:
+            # Explicit protocol from CONF_PROTOCOL — hard override, no fallback
+            self.base_url = f"{protocol}://{host}"
+            _LOGGER.debug("Using explicit protocol %s from config entry", protocol)
+        elif host.startswith(("http://", "https://")):
+            # Legacy: host includes protocol (old entries without CONF_PROTOCOL)
             self.base_url = host.rstrip("/")
+            self._explicit_protocol = "https" if host.startswith("https://") else "http"
         elif cached_url and (cached_url.startswith("http://") or cached_url.startswith("https://")):
             # Optimization: Use protocol from cached working URL (skip protocol discovery)
-            protocol = "https" if cached_url.startswith("https://") else "http"
-            self.base_url = f"{protocol}://{host}"
-            _LOGGER.debug("Using cached protocol %s from working URL: %s", protocol, cached_url)
+            cached_protocol = "https" if cached_url.startswith("https://") else "http"
+            self.base_url = f"{cached_protocol}://{host}"
+            _LOGGER.debug("Using cached protocol %s from working URL: %s", cached_protocol, cached_url)
         else:
             # Try HTTPS first (MB8611 and newer modems), fallback to HTTP
             self.base_url = f"https://{host}"
@@ -290,6 +299,24 @@ class DataOrchestrator:
                 hnap_builder.clear_auth_cache()
 
         _LOGGER.debug("Cleared auth cache and created fresh session")
+
+    def _has_valid_session(self) -> bool:
+        """Check if current session has reusable auth credentials.
+
+        Returns True only for auth strategies with stateful sessions (e.g., HNAP)
+        where re-login can be safely skipped. Stateless strategies (basic) and
+        strategies without auth always return False.
+        """
+        if not self._auth_strategy or self._auth_strategy in ("basic", "basic_http"):
+            return False
+
+        if self._auth_strategy in ("hnap", "hnap_session"):
+            has_cookies = bool(self.session.cookies.get("uid"))
+            hnap_builder = self._auth_handler.get_hnap_builder() if self._auth_handler else None
+            has_private_key = bool(hnap_builder and hnap_builder._private_key)
+            return has_cookies and has_private_key
+
+        return False
 
     def _capture_response(self, response: requests.Response, description: str = "") -> None:
         """Capture HTTP response for diagnostics.
@@ -443,7 +470,7 @@ class DataOrchestrator:
                     auth = (self.username, self.password)
                     _LOGGER.debug("Using basic auth for %s", url)
 
-                response = self.session.get(url, timeout=DEFAULT_TIMEOUT, auth=auth)
+                response = self.session.get(url, timeout=self._timeout, auth=auth)
 
                 if response.status_code == 200:
                     self._capture_response(response, f"Parser URL pattern: {path}")
@@ -554,7 +581,7 @@ class DataOrchestrator:
 
                 try:
                     _LOGGER.debug("Fetching %s: %s", resource_type, url)
-                    response = self.session.get(url, timeout=DEFAULT_TIMEOUT)
+                    response = self.session.get(url, timeout=self._timeout)
 
                     if response.status_code == 200:
                         # Capture with resource type info
@@ -753,9 +780,20 @@ class DataOrchestrator:
             _LOGGER.error("No URL patterns available to try")
             return None
 
-        # Try HTTPS first, then HTTP fallback for each URL
-        protocols_to_try = ["https", "http"] if self.base_url.startswith("https://") else ["http"]
-        _LOGGER.debug("Protocols to try: %s (base_url: %s)", protocols_to_try, self.base_url)
+        # Determine which protocols to try
+        if self._explicit_protocol:
+            # Explicit protocol — no fallback
+            protocols_to_try = [self._explicit_protocol]
+        elif self.base_url.startswith("https://"):
+            protocols_to_try = ["https", "http"]
+        else:
+            protocols_to_try = ["http"]
+        _LOGGER.debug(
+            "Protocols to try: %s (base_url: %s, locked: %s)",
+            protocols_to_try,
+            self.base_url,
+            bool(self._explicit_protocol),
+        )
 
         for protocol in protocols_to_try:
             current_base_url = self.base_url.replace("https://", f"{protocol}://").replace("http://", f"{protocol}://")
@@ -777,7 +815,7 @@ class DataOrchestrator:
                         auth = (self.username, self.password)
 
                     # Use configured SSL verification setting
-                    response = self.session.get(target_url, timeout=DEFAULT_TIMEOUT, auth=auth, verify=self.verify_ssl)
+                    response = self.session.get(target_url, timeout=self._timeout, auth=auth, verify=self.verify_ssl)
 
                     if response.status_code == 200:
                         _LOGGER.debug(
@@ -791,9 +829,13 @@ class DataOrchestrator:
                         self._capture_response(response, "Initial connection page")
 
                         # Update base_url to the working protocol
-                        _LOGGER.debug("About to update base_url from %s to %s", self.base_url, current_base_url)
+                        if not self._explicit_protocol and current_base_url != self.base_url:
+                            _LOGGER.warning(
+                                "Protocol fallback: switching from %s to %s",
+                                self.base_url.split("://")[0],
+                                protocol,
+                            )
                         self.base_url = current_base_url
-                        _LOGGER.debug("Updated! base_url is now: %s", self.base_url)
                         return response.text, target_url, parser_class
                     else:
                         _LOGGER.debug("Got status %s from %s", response.status_code, target_url)
@@ -1258,6 +1300,17 @@ class DataOrchestrator:
             _LOGGER.debug("Skipping pre-auth for url_token_session (using reactive auth)")
             return (True, None, False)
 
+        # Reuse existing session if credentials are still valid (e.g., HNAP cookies + private key).
+        # This avoids re-login on every poll, which can trigger anti-brute-force protection
+        # on modems like the Arris S33 (Issue #117).
+        # Capture mode always does fresh login to ensure clean capture data.
+        # Returns auth_performed=True to skip _authenticate() — we already have valid credentials,
+        # and _authenticate() unconditionally calls _login() which would defeat session reuse.
+        if not self._capture_enabled and self._has_valid_session():
+            _LOGGER.debug("Reusing existing session (skipping login)")
+            self._session_reused = True
+            return (True, None, True)
+
         _LOGGER.debug(
             "Pre-authenticating with strategy %s before data fetch",
             self._auth_strategy,
@@ -1278,6 +1331,7 @@ class DataOrchestrator:
         self._captured_urls = []
         self._failed_urls = []
         self._capture_enabled = capture_raw
+        self._session_reused = False
 
         # Replace session with capturing session if capture is enabled
         original_session = None
@@ -1342,6 +1396,28 @@ class DataOrchestrator:
             # Parse data and build response
             data = self._parse_data(html)
             response = self._build_response(data)
+
+            # Stale session retry: if we reused a session (skipped login) and got
+            # zero channels, the session may have expired. Clear cache and retry
+            # once with a fresh login. One retry only — no loops.
+            status = response.get("cable_modem_connection_status")
+            if self._session_reused and not capture_raw and status == "parser_issue":
+                _LOGGER.warning(
+                    "Zero channels with reused session — session may be stale. "
+                    "Clearing auth cache and retrying with fresh login."
+                )
+                self.clear_auth_cache()
+                success, _login_html = self._login()
+                if success:
+                    fetched_data = self._fetch_data(capture_raw=False)
+                    if fetched_data:
+                        html, successful_url, _ = fetched_data
+                        data = self._parse_data(html)
+                        response = self._build_response(data)
+                    else:
+                        _LOGGER.debug("Stale session retry: re-fetch returned no data")
+                else:
+                    _LOGGER.debug("Stale session retry: fresh login failed")
 
             # Capture additional pages if in capture mode
             if capture_raw and self._captured_urls:
@@ -1496,7 +1572,7 @@ class DataOrchestrator:
         if original_was_login_page and data_url:
             _LOGGER.debug("Re-fetching data URL after authentication: %s", data_url)
             try:
-                response = self.session.get(data_url, timeout=DEFAULT_TIMEOUT, verify=self.session.verify)
+                response = self.session.get(data_url, timeout=self._timeout, verify=self.session.verify)
                 if response.ok:
                     # Verify we didn't get another login page
                     if not is_login_page(response.text):

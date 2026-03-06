@@ -48,6 +48,7 @@ from .const import (
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
     CONF_PASSWORD,
+    CONF_PROTOCOL,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
@@ -159,6 +160,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Extract configuration
     host = entry.data[CONF_HOST]
+    protocol: str | None = entry.data.get(CONF_PROTOCOL)
+
+    # Backward compat: old entries may have protocol baked into CONF_HOST
+    if protocol is None and host.startswith(("http://", "https://")):
+        protocol = "https" if host.startswith("https://") else "http"
+        host = host.split("://", 1)[1].rstrip("/")
+
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
@@ -210,6 +218,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # Base args shared by both orchestrators
     orchestrator_args: dict[str, Any] = {
         "host": host,
+        "protocol": protocol,
         "username": username,
         "password": password,
         "parser": selected_parser,
@@ -245,7 +254,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     supports_head = entry.data.get(CONF_SUPPORTS_HEAD, False)
 
     # Create coordinator
-    async_update_data = create_update_function(hass, modem_client, health_monitor, host, supports_icmp, supports_head)
+    async_update_data = create_update_function(
+        hass, modem_client, health_monitor, host, supports_icmp, supports_head, protocol=protocol
+    )
     coordinator = DataUpdateCoordinator[dict[str, Any]](
         hass,
         _LOGGER,

@@ -143,76 +143,45 @@ If your modem isn't listed, you can still install the integration! It will enter
 
 ## Installation
 
-### Method 1: HACS (Recommended)
+### HACS (Recommended)
 
-**Prerequisites:** You must have HACS installed. If you don't have HACS yet:
-1. Go to Settings → Add-ons → Add-on Store
-2. Click three dots (⋮) → Repositories
-3. Add: `https://github.com/hacs/addons`
-4. Install and start the "Get HACS" add-on
-5. Restart Home Assistant
-6. Go to Settings → Devices & Services → Add Integration → Search for "HACS"
-7. Complete HACS setup (requires free GitHub account)
+> **Don't have HACS?** Follow the [HACS installation guide](https://www.hacs.xyz/docs/use/download/download/) first.
 
-**Installing Cable Modem Monitor via HACS:**
-
-1. Open **HACS** from the Home Assistant sidebar
+1. Open **HACS** from the sidebar
 2. Search for **"Cable Modem Monitor"**
-3. Click **"Download"**
-4. **Restart Home Assistant**
-5. Add the integration: **Settings → Devices & Services → Add Integration → Cable Modem Monitor**
-
-### Method 2: Manual Installation
-
-1. Download the [latest release](https://github.com/solentlabs/cable_modem_monitor/releases/latest)
-2. Extract the zip file
-3. Copy the `custom_components/cable_modem_monitor` folder to your Home Assistant's `config/custom_components/` directory
+3. Click **Download**
 4. Restart Home Assistant
-5. Go to Settings → Devices & Services
-6. Click "+ Add Integration"
-7. Search for "Cable Modem Monitor"
-8. Enter your modem's IP address (typically `192.168.100.1`)
 
-### Testing Unreleased Versions
+### Testing a Branch or Pre-Release
 
-Already have Cable Modem Monitor installed via HACS? You can switch to any branch, tag, or commit to test new features before they're officially released:
+If you already have Cable Modem Monitor installed via HACS, you can switch to any branch or tag without reinstalling:
 
 1. Go to **Developer Tools → Actions**
 2. Search for **`update.install`**
 3. Under **Targets**, select your Cable Modem Monitor update entity (e.g., `update.cable_modem_monitor_update`)
-4. In the **version** field, enter the branch name (e.g., `feat/new-modem-parser`)
+4. In the **version** field, enter the branch name or tag (e.g., `feature/v3.13.2`)
 5. Click **Perform action**
 6. Restart Home Assistant
 
-The version field accepts branch names, tags, full commit SHAs, or the first 7 characters of a commit SHA.
+To go back to the latest release, repeat the steps above with the release tag (e.g., `v3.13.1`), or redownload from HACS.
 
-> 💡 *Thanks to [@ChBi89](https://github.com/ChBi89) for [documenting this workflow](https://github.com/solentlabs/cable_modem_monitor/issues/63#issuecomment-2556672682)!*
+> *Thanks to [@ChBi89](https://github.com/ChBi89) for [discovering this workflow](https://github.com/solentlabs/cable_modem_monitor/issues/63#issuecomment-2556672682).*
 
-## Configuration
+## Setup
 
-1. **Find your modem's IP address**: Usually `192.168.100.1` or `192.168.0.1`
-2. **Verify web interface access**: Open `http://192.168.100.1` (or your modem's IP) in a browser
-3. **Add the integration**:
-   - Settings → Devices & Services → Add Integration
-   - Search for "Cable Modem Monitor"
-   - Enter the IP address
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **Cable Modem Monitor**
+3. Enter your modem's IP address (typically `192.168.100.1`)
+4. Select your modem model or leave on "Auto" for automatic detection
 
-### Configuration Options
+### Options
 
-After installation, you can configure additional settings:
+After setup, configure via **Settings → Devices & Services → Cable Modem Monitor → Configure**:
 
-1. Go to **Settings → Devices & Services**
-2. Find **Cable Modem Monitor** and click **Configure**
-3. Available options:
-   - **Modem IP Address**: Update if your modem's IP changes
-   - **Username/Password**: Update authentication credentials
-   - **Modem Model**: Select your modem model or use "auto" for automatic detection (recommended)
-   - **Polling Interval**: How often to check modem status (60-1800 seconds, default: 600 - 10 minutes)
-   - **History Retention**: Number of days to keep when using Clear History button (1-365 days, default: 30)
-
-<img src="https://raw.githubusercontent.com/solentlabs/cable_modem_monitor/main/images/cable-modem-settings.png" alt="Cable Modem Configuration Settings" width="400">
-
-*Configuration options available through the Settings UI*
+- **Polling Interval**: How often to check modem status (60–1800 seconds, default: 600)
+- **Modem Model**: Change model selection or switch to auto-detection
+- **Credentials**: Update username/password if your modem requires authentication
+- **History Retention**: Days to keep when using Clear History (1–365, default: 30)
 
 ---
 

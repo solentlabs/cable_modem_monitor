@@ -26,7 +26,7 @@ Tests the parser against Paul's actual SB6190 HTML (firmware 9.1.103AA65L) extra
 - ✓ Validates channel data completeness
 - ✓ Tests `parse_resources()` with various resource dict keys
 
-**Fixture**: `fixtures/status-firmware-9.1.103.html` (extracted from RAW_DATA HAR)
+**Fixture**: `fixtures/status-firmware-9.1.103.html`
 
 **Run**: `pytest modems/arris/sb6190/tests/test_har_variant.py -v -s`
 
@@ -146,6 +146,4 @@ All fixtures in `fixtures/`:
 - `login.html` - Login page for form_nonce auth
 - `status-firmware-9.1.103.html` - Paul's real modem HTML (24 channels) ← NEW
 
-Source HAR files in `RAW_DATA/`:
-- `RAW_DATA/v3.13.0/arris-sb6190-paul/modem_20260127_paul.har`
-- `RAW_DATA/har/arris-sb6190.har` (non-auth variant)
+Fixtures extracted from contributor HAR captures (issue #93).

@@ -9,6 +9,7 @@ VERSION = "3.13.1"
 
 DOMAIN = "cable_modem_monitor"
 CONF_HOST = "host"
+CONF_PROTOCOL = "protocol"  # "http", "https", or None (auto-detect)
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
 CONF_SCAN_INTERVAL = "scan_interval"
