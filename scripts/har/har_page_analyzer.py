@@ -185,7 +185,7 @@ def _get_response_text(entry: dict) -> str:
 def _get_response_mime(entry: dict) -> str:
     """Extract response MIME type from a HAR entry."""
     mime: str = entry.get("response", {}).get("content", {}).get("mimeType", "")
-    return mime.split(";")[0].strip() if mime else ""
+    return mime.partition(";")[0].strip() if mime else ""
 
 
 def _get_url_path(entry: dict) -> str:
