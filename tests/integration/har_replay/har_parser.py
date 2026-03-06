@@ -6,7 +6,7 @@ needed to mock HTTP responses in tests. It focuses on:
 - Authentication-related exchanges (login pages, form posts, HNAP calls)
 - Cookie and session tracking
 
-Unlike scripts/har_auth_extractor.py (which is a developer triage tool),
+Unlike scripts/har/har_auth_extractor.py (which is a developer triage tool),
 this module is designed for test infrastructure integration.
 """
 

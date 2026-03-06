@@ -137,7 +137,7 @@ ssh <host> "cd /tmp && tar xzf cmm.tar.gz && sudo cp -rf cable_modem_monitor/* /
 
 | Topic | Location |
 |-------|----------|
-| **Architecture & Discovery** | `docs/reference/ARCHITECTURE.md` |
+| **Architecture** | `docs/reference/ARCHITECTURE.md` |
 | **modem.yaml Schema** | `docs/specs/MODEM_YAML_SPEC.md` |
 | Development setup | `docs/setup/GETTING_STARTED.md` |
 | Contributing guide | `CONTRIBUTING.md` |
