@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 394
+**Total Tests:** 396
 
 ## Test Files
 
@@ -13,7 +13,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_auth_detection.py](test_auth_detection.py) | 10 | Tests for auth/detection.py - login page detection. |
 | [test_auth_discovery.py](test_auth_discovery.py) | 49 | Tests for Authentication Discovery. |
 | [test_auth_handler.py](test_auth_handler.py) | 29 | Tests for the AuthHandler class. |
-| [test_authentication.py](test_authentication.py) | 43 | Tests for Authentication Strategies. |
+| [test_authentication.py](test_authentication.py) | 45 | Tests for Authentication Strategies. |
 | [test_base_parser.py](test_base_parser.py) | 19 | Tests for core/base_parser.py. |
 | [test_discovery_helpers.py](test_discovery_helpers.py) | 55 | Tests for core/discovery_helpers.py. |
 | [test_form_ajax_auth.py](test_form_ajax_auth.py) | 17 | Tests for FormAjaxAuthStrategy. |
@@ -272,15 +272,17 @@ Tests for Authentication Strategies.
 - `test_no_auth_always_succeeds`: Test that NoAuthStrategy always returns success.
 - `test_no_auth_with_credentials`: Test NoAuthStrategy ignores credentials.
 
-**TestBasicHttpAuthStrategy** (6 tests)
+**TestBasicHttpAuthStrategy** (8 tests)
 : Test BasicHttpAuthStrategy.
 
 - `test_basic_auth_sets_session_auth`: Test that Basic Auth sets credentials on session and verifies.
 - `test_basic_auth_without_credentials`: Test Basic Auth fails without credentials.
 - `test_basic_auth_missing_username`: Test Basic Auth fails with missing username.
 - `test_basic_auth_missing_password`: Test Basic Auth fails with missing password.
-- `test_basic_auth_401_returns_failure`: Test that 401 response returns failure and clears auth.
+- `test_basic_auth_401_returns_failure`: Test that 401 response returns failure and clears auth (no challenge_cookie).
 - `test_basic_auth_connection_error`: Test connection error returns failure.
+- `test_basic_auth_challenge_cookie_succeeds`: Test challenge_cookie=True retries after 401 and succeeds with session cookie.
+- `test_basic_auth_challenge_cookie_still_fails`: Test challenge_cookie=True still fails when both requests return 401.
 
 **TestFormPlainAuthStrategy** (5 tests)
 : Test FormPlainAuthStrategy.

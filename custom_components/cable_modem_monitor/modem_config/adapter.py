@@ -33,6 +33,7 @@ from typing import Any, cast
 
 from .loader import discover_modems, load_modem_config_by_parser
 from .schema import (
+    BasicAuthSchemaConfig,
     FormAjaxAuthConfig,
     FormAuthConfig,
     FormDynamicAuthConfig,
@@ -102,8 +103,8 @@ class ModemConfigAuthAdapter:
             Config dict for the auth type, or None if not found.
             For "none", returns an empty dict.
         """
-        # No auth / basic auth - no config needed
-        if auth_type in ("none", "basic"):
+        # No auth - no config needed
+        if auth_type == "none":
             return {}
 
         # Check if type exists
@@ -127,6 +128,8 @@ class ModemConfigAuthAdapter:
         Returns:
             Dict representation of the config, or None if unknown type.
         """
+        if isinstance(type_config, BasicAuthSchemaConfig):
+            return {"challenge_cookie": type_config.challenge_cookie}
         # Note: Check FormDynamicAuthConfig BEFORE FormAuthConfig (subclass check first)
         if isinstance(type_config, FormDynamicAuthConfig):
             return self._convert_form_config(type_config, include_dynamic_fields=True)
@@ -259,11 +262,19 @@ class ModemConfigAuthAdapter:
         # form, form_dynamic, form_ajax, and form_nonce all use auth_form_config
         is_form_type = auth_type in ("form", "form_dynamic", "form_ajax", "form_nonce")
 
+        # Extract challenge_cookie for basic auth
+        challenge_cookie = (
+            type_config.get("challenge_cookie", False)
+            if auth_type == "basic" and isinstance(type_config, dict)
+            else False
+        )
+
         return {
             "auth_strategy": strategy_str,
             "auth_form_config": type_config if is_form_type else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
+            "challenge_cookie": challenge_cookie,
             "timeout": self.config.timeout,
         }
 

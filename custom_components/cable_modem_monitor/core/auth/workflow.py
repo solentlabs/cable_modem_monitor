@@ -189,6 +189,11 @@ class AuthWorkflow:
         elif auth_type == "hnap":
             hnap_config = config
 
+        # Extract challenge_cookie for basic auth
+        challenge_cookie = False
+        if auth_type == "basic" and isinstance(config, dict):
+            challenge_cookie = config.get("challenge_cookie", False)
+
         try:
             handler = AuthHandler(
                 strategy=strategy,
@@ -196,6 +201,7 @@ class AuthWorkflow:
                 hnap_config=hnap_config,
                 url_token_config=url_token_config,
                 timeout=timeout,
+                challenge_cookie=challenge_cookie,
             )
 
             auth_result = handler.authenticate(
@@ -347,6 +353,9 @@ class AuthWorkflow:
             except Exception as e:
                 return AuthWorkflowResult(success=False, error=f"Connection failed: {e}")
 
+        # Extract challenge_cookie for basic auth
+        challenge_cookie = static_auth_config.get("challenge_cookie", False)
+
         # Use AuthHandler with static config
         try:
             handler = AuthHandler(
@@ -355,6 +364,7 @@ class AuthWorkflow:
                 hnap_config=hnap_config,
                 url_token_config=url_token_config,
                 timeout=timeout,
+                challenge_cookie=challenge_cookie,
             )
 
             auth_result = handler.authenticate(

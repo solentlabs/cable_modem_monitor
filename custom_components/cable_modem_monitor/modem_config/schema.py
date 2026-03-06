@@ -189,6 +189,12 @@ class FormSuccessConfig(BaseModel):
     )
 
 
+class BasicAuthSchemaConfig(BaseModel):
+    """Configuration for HTTP Basic Auth with optional challenge cookie."""
+
+    challenge_cookie: bool = Field(default=False, description="401 sets required session cookie")
+
+
 class FormAuthConfig(BaseModel):
     """Configuration for form-based authentication.
 
@@ -454,7 +460,8 @@ class AuthConfig(BaseModel):
     # because it's a subclass - Pydantic tries types in order and stops at first match
     types: dict[
         str,
-        FormDynamicAuthConfig
+        BasicAuthSchemaConfig
+        | FormDynamicAuthConfig
         | FormAjaxAuthConfig
         | FormAuthConfig
         | HnapAuthConfig
@@ -488,6 +495,7 @@ class AuthConfig(BaseModel):
 
         # Map keys to their correct Pydantic model classes
         key_to_class = {
+            "basic": BasicAuthSchemaConfig,
             "form_dynamic": FormDynamicAuthConfig,
             "form_ajax": FormAjaxAuthConfig,
             "form": FormAuthConfig,

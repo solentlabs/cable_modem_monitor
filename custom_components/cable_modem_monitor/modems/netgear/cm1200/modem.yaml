@@ -30,11 +30,13 @@ auth:
   # - HTTP: Pages served without auth (original capture, issue #63)
   # - HTTPS: Basic Auth required (WWW-Authenticate: Basic realm="Netgear")
   #
-  # The 401 challenge also sets an XSRF_TOKEN cookie, but the server
-  # does not enforce it — Basic Auth alone is sufficient (HAR confirmed #121).
+  # The 401 challenge sets an XSRF_TOKEN cookie that MUST accompany the
+  # Authorization header. A bare Authorization header is rejected with 401.
+  # Confirmed via har-capture v0.4.4 probe (#121).
   types:
     none: null # HTTP variant (some ISPs serve pages without auth)
-    basic: null # HTTPS variant (requires credentials)
+    basic:
+      challenge_cookie: true # HTTPS variant: 401 sets required session cookie
 
 pages:
   public:

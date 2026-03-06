@@ -9,6 +9,7 @@ import requests
 
 from custom_components.cable_modem_monitor.core.auth import (
     AuthStrategyType,
+    BasicAuthConfig,
     BasicHttpAuthStrategy,
     FormAuthConfig,
     FormDynamicAuthStrategy,
@@ -80,7 +81,7 @@ class TestBasicHttpAuthStrategy:
     def test_basic_auth_sets_session_auth(self, mock_session):
         """Test that Basic Auth sets credentials on session and verifies."""
         strategy = BasicHttpAuthStrategy()
-        config = MagicMock()
+        config = BasicAuthConfig(timeout=TEST_TIMEOUT)
 
         # Mock successful verification response
         mock_response = MagicMock()
@@ -102,6 +103,7 @@ class TestBasicHttpAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", None, None, config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "username and password" in result.error_message.lower()
         # session.auth is never set when credentials are missing
 
@@ -113,6 +115,7 @@ class TestBasicHttpAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", None, "password", config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "username and password" in result.error_message.lower()
 
     def test_basic_auth_missing_password(self, mock_session):
@@ -123,12 +126,13 @@ class TestBasicHttpAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", "admin", None, config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "username and password" in result.error_message.lower()
 
     def test_basic_auth_401_returns_failure(self, mock_session):
-        """Test that 401 response returns failure and clears auth."""
+        """Test that 401 response returns failure and clears auth (no challenge_cookie)."""
         strategy = BasicHttpAuthStrategy()
-        config = MagicMock()
+        config = BasicAuthConfig(timeout=TEST_TIMEOUT)
 
         # Mock 401 response
         mock_response = MagicMock()
@@ -138,13 +142,14 @@ class TestBasicHttpAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", "admin", "password", config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "401" in result.error_message
         assert mock_session.auth is None  # Should be cleared on failure
 
     def test_basic_auth_connection_error(self, mock_session):
         """Test connection error returns failure."""
         strategy = BasicHttpAuthStrategy()
-        config = MagicMock()
+        config = BasicAuthConfig(timeout=TEST_TIMEOUT)
 
         # Mock connection error
         mock_session.get.side_effect = Exception("Connection refused")
@@ -152,7 +157,47 @@ class TestBasicHttpAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", "admin", "password", config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "Connection" in result.error_message
+
+    def test_basic_auth_challenge_cookie_succeeds(self, mock_session):
+        """Test challenge_cookie=True retries after 401 and succeeds with session cookie."""
+        strategy = BasicHttpAuthStrategy()
+        config = BasicAuthConfig(timeout=TEST_TIMEOUT, challenge_cookie=True)
+
+        # First GET returns 401 (sets XSRF_TOKEN cookie in session jar)
+        mock_401 = MagicMock()
+        mock_401.status_code = 401
+        # Second GET returns 200 (session now has cookie)
+        mock_200 = MagicMock()
+        mock_200.status_code = 200
+        mock_session.get.side_effect = [mock_401, mock_200]
+
+        result = strategy.login(mock_session, "https://192.168.100.1", "admin", "password", config)
+
+        assert result.success is True
+        assert mock_session.get.call_count == 2
+        assert mock_session.auth == ("admin", "password")
+
+    def test_basic_auth_challenge_cookie_still_fails(self, mock_session):
+        """Test challenge_cookie=True still fails when both requests return 401."""
+        strategy = BasicHttpAuthStrategy()
+        config = BasicAuthConfig(timeout=TEST_TIMEOUT, challenge_cookie=True)
+
+        # Both GETs return 401
+        mock_401_first = MagicMock()
+        mock_401_first.status_code = 401
+        mock_401_second = MagicMock()
+        mock_401_second.status_code = 401
+        mock_session.get.side_effect = [mock_401_first, mock_401_second]
+
+        result = strategy.login(mock_session, "https://192.168.100.1", "admin", "password", config)
+
+        assert result.success is False
+        assert result.error_message is not None
+        assert "401" in result.error_message
+        assert mock_session.auth is None  # Cleared on failure
+        assert mock_session.get.call_count == 2
 
 
 class TestFormPlainAuthStrategy:
@@ -187,6 +232,7 @@ class TestFormPlainAuthStrategy:
         result = strategy.login(mock_session, "http://192.168.1.1", None, None, form_auth_config)
 
         assert result.success is False
+        assert result.error_message is not None
         assert "username and password" in result.error_message.lower()
         mock_session.post.assert_not_called()
 

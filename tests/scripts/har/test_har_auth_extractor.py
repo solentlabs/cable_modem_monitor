@@ -914,7 +914,7 @@ CORPUS_CASES = [
     ("motorola-mb8611",          "hnap_session",     False,     ["Secure", "uid", "PrivateKey"],   "high"),
     ("netgear-c7000v2",          "unknown",       True,  ["XSRF_TOKEN"], "insufficient_evidence"),
     ("netgear-cm100",            "form_plain",    False, ["Secure"],     "high"),
-    ("netgear-cm1200-https",     "unknown",       False, ["XSRF_TOKEN"], "low"),
+    ("netgear-cm1200-https",     "unknown",       False, ["XSRF_TOKEN"], "high"),
     ("netgear-cm1200",           "unknown",          False,     [],                                "low"),
     ("netgear-cm2050v",          "form_plain",       False,     [],                                "high"),
     ("sercomm-dm1000",           "form_plain",       False,     [],                                "high"),
@@ -974,15 +974,21 @@ def test_cm1200_regression_never_no_auth() -> None:
     session ghosts) and no login flow.  The extractor must:
     1. NOT flag as post-auth (csrf alone isn't proof)
     2. NOT classify as no_auth (has cookies in requests)
-    3. NOT classify as high confidence
+
+    Note: Confidence is "high" because the v0.4.4 probe data contains a clear
+    401 + WWW-Authenticate: Basic realm="Netgear" response. Without probe data,
+    confidence would be "low" (ghost csrf cookie alone is insufficient).
     """
     har = load_har(RAW_DATA_HAR / "netgear-cm1200-https.har")
     flow = analyze_har(har)
 
     assert flow.is_post_auth is False
-    assert flow.auth_confidence in ("low", "insufficient_evidence")
     assert flow.auth_pattern != "no_auth"
     assert flow.auth_pattern != "none"
+    # Probe data (v0.4.4) provides definitive Basic Auth evidence
+    assert flow.probe is not None
+    assert flow.probe.www_authenticate == 'Basic realm="Netgear"'
+    assert flow.auth_confidence == "high"
 
 
 @pytest.mark.skipif(not CORPUS_AVAILABLE, reason="RAW_DATA/har/ not available (CI)")
@@ -997,13 +1003,19 @@ def test_c7000v2_regression_post_auth() -> None:
 
 
 # -------------------------------------------------------------------
-# Corpus: no HAR file has _probes (all pre-v0.4.0)
+# Corpus: probe data presence check
 # -------------------------------------------------------------------
+
+# HARs captured with har-capture v0.4.4+ include a _probes section
+HARS_WITH_PROBES = {"netgear-cm1200-https.har"}
 
 
 @pytest.mark.skipif(not CORPUS_AVAILABLE, reason="RAW_DATA/har/ not available (CI)")
 def test_corpus_no_probes() -> None:
-    """All current corpus HARs are pre-v0.4.0 — no _probes section."""
+    """Pre-v0.4.0 corpus HARs have no _probes section; v0.4.4+ HARs do."""
     for har_path in sorted(RAW_DATA_HAR.glob("*.har")):
         har = load_har(har_path)
-        assert extract_probes(har) is None, f"{har_path.name} unexpectedly has _probes"
+        if har_path.name in HARS_WITH_PROBES:
+            assert extract_probes(har) is not None, f"{har_path.name} should have _probes (v0.4.4+ capture)"
+        else:
+            assert extract_probes(har) is None, f"{har_path.name} unexpectedly has _probes"

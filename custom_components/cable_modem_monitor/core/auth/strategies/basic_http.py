@@ -70,14 +70,14 @@ class BasicHttpAuthStrategy(AuthStrategy):
         log("Basic auth credentials set on session")
 
         # Verify auth works by fetching base URL
-        return self._verify_credentials(session, base_url, log, config.timeout)
+        return self._verify_credentials(session, base_url, log, config)
 
     def _verify_credentials(
         self,
         session: requests.Session,
         base_url: str,
         log,
-        timeout: int,
+        config: AuthConfig,
     ) -> AuthResult:
         """Verify credentials work by making a test request.
 
@@ -86,11 +86,20 @@ class BasicHttpAuthStrategy(AuthStrategy):
         fetch the actual data page with the auth header.
         """
         try:
-            response = session.get(base_url, timeout=timeout)
+            response = session.get(base_url, timeout=config.timeout)
 
             if response.status_code == 200:
                 log("Basic auth verified successfully")
                 return AuthResult.ok()  # No HTML - scraper fetches data page
+
+            if response.status_code == 401 and getattr(config, "challenge_cookie", False):
+                # Modem requires session cookie from 401 challenge response.
+                # Session jar already stored it; retry sends auth + cookie.
+                log("Challenge cookie configured - retrying with session cookies")
+                response = session.get(base_url, timeout=config.timeout)
+                if response.status_code == 200:
+                    log("Basic auth verified successfully (after cookie handshake)")
+                    return AuthResult.ok()
 
             if response.status_code == 401:
                 _LOGGER.warning("Basic auth failed - invalid credentials (401)")
