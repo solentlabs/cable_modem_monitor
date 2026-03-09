@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 381
+**Total Tests:** 387
 
 ## Test Files
 
@@ -18,7 +18,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 102 | Tests for DataOrchestrator. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 108 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -490,7 +490,7 @@ as the architecture evolves toward declarative modem configs.
 - `test_skips_pre_auth_when_no_strategy`: Test that pre-auth is skipped when no auth strategy configured.
 - `test_url_token_uses_reactive_auth_flow`: Test that url_token_session uses reactive auth flow in get_modem_data.
 
-**TestSessionReuse** (5 tests)
+**TestSessionReuse** (11 tests)
 : Tests for session reuse logic (_has_valid_session, pre-auth skip, stale retry).
 
 - `test_has_valid_session`: Table-driven test for _has_valid_session().
@@ -498,6 +498,12 @@ as the architecture evolves toward declarative modem configs.
 - `test_subsequent_poll_reuses_session_instead_of_relogin`: Subsequent polls reuse existing session instead of re-authenticating.
 - `test_stale_session_no_retry`: Table-driven test for stale session no-retry conditions.
 - `test_stale_session_retry_clears_cache_and_retries`: Reused session with zero channels triggers cache clear + fresh login + re-fetch.
+- `test_login_lockout_sets_backoff`: LoginLockoutError in _login() sets backoff to suppress future attempts.
+- `test_stale_session_retry_suppressed_after_lockout`: Stale session retry is suppressed when backoff was set by a prior lockout.
+- `test_stale_session_retry_suppressed_during_backoff`: Stale session retry is suppressed when login backoff is active.
+- `test_login_backoff_decrements_each_poll`: Backoff counter decrements each poll until it reaches zero.
+- `test_failed_stale_retry_sets_backoff`: Failed login during stale session retry activates backoff.
+- `test_pre_authenticate_suppressed_during_backoff`: _pre_authenticate returns failure when login backoff is active.
 
 ### test_diagnostics.py
 

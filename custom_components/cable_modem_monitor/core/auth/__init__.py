@@ -55,7 +55,7 @@ from .strategies import (
     RedirectFormAuthStrategy,
     UrlTokenSessionStrategy,
 )
-from .types import AuthErrorType, AuthStrategyType
+from .types import AuthErrorType, AuthStrategyType, LoginLockoutError
 from .workflow import AUTH_TYPE_LABELS, AuthWorkflow, AuthWorkflowResult
 
 __all__ = [
@@ -76,9 +76,10 @@ __all__ = [
     "AuthDiscovery",
     "DiscoveredFormConfig",
     "DiscoveryResult",
-    # Enums
+    # Enums and Exceptions
     "AuthErrorType",
     "AuthStrategyType",
+    "LoginLockoutError",
     # Factory
     "AuthFactory",
     # Handler

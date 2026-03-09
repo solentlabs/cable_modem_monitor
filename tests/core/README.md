@@ -4,7 +4,7 @@
 
 Unit tests for core functionality including signal analysis, health monitoring, HNAP builders, authentication, and discovery helpers.
 
-**Total Tests:** 396
+**Total Tests:** 399
 
 ## Test Files
 
@@ -21,7 +21,7 @@ Unit tests for core functionality including signal analysis, health monitoring, 
 | [test_form_nonce_auth.py](test_form_nonce_auth.py) | 8 | Tests for FormNonceAuthStrategy. |
 | [test_health_monitor.py](test_health_monitor.py) | 27 | Tests for Modem Health Monitor. |
 | [test_hnap_builder.py](test_hnap_builder.py) | 25 | Tests for HNAP Request Builder. |
-| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 50 | Tests for JSON-based HNAP Request Builder with challenge-... |
+| [test_hnap_json_builder.py](test_hnap_json_builder.py) | 53 | Tests for JSON-based HNAP Request Builder with challenge-... |
 | [test_log_buffer.py](test_log_buffer.py) | 6 | Tests for the log buffer module. |
 | [test_network.py](test_network.py) | 0 | Tests for core/network.py. |
 | [test_parser_utils.py](test_parser_utils.py) | 13 | Tests for core/parser_utils.py. |
@@ -874,6 +874,13 @@ Tests for JSON-based HNAP Request Builder with challenge-response authentication
 - `test_clear_auth_cache_clears_private_key`: Test that clear_auth_cache clears the stored private key.
 - `test_clear_auth_cache_when_already_none`: Test clear_auth_cache is safe when private key is already None.
 - `test_reauth_after_cache_clear`: Test that login works correctly after cache is cleared.
+
+**TestLoginLockout** (3 tests)
+: Test firmware anti-brute-force lockout raises LoginLockoutError.
+
+- `test_lockout_raises_exception`: Lockout LoginResults raise LoginLockoutError.
+- `test_normal_failure_does_not_raise`: Normal login failure returns (False, _) without exception.
+- `test_lockout_exception_contains_response_text`: LoginLockoutError carries the response text for diagnostics.
 
 **TestAuthAttemptTracking** (5 tests)
 : Test that auth attempts are tracked for diagnostics.

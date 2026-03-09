@@ -90,19 +90,12 @@ The integration uses a **fallback parser** system that allows installation even 
 
 ## HNAP/SOAP Authentication Guidance
 
-**IMPORTANT:** HNAP has proven unreliable. **Prefer HTML-based parsing.**
+HNAP is a SOAP-based protocol with session management (HMAC auth + uid cookie). HAR evidence from 3 captured HNAP modems (Arris S33, Motorola MB8600, MB8611) shows **zero variation** in the protocol — identical auth flow, identical session mechanics, only SOAPAction names differ. This makes HNAP the most uniform paradigm.
 
-**Challenges:**
-- SOAP-based protocol with session management
-- SSL certificate issues with self-signed certs
-- Users struggle to capture SOAP requests
-- More failure points than Basic Auth
-
-**When encountering HNAP indicators:**
-
-1. **First, try static HTML** - Ask user to save page manually, check for embedded data
-2. **Check alternative URLs** - Many modems have both HNAP and static pages
-3. **Only implement HNAP if necessary** - And only with working test fixtures
+**Key points:**
+- Protocol complexity is real (HMAC signing, nonce exchange) but it's a one-time implementation — the strategy handles all HNAP modems
+- Self-signed SSL certs require cert verification bypass
+- Two HMAC variants exist: MD5 (S33, MB8600, MB8611) and SHA256 (S34, confirmed by contributor report, not HAR-captured)
 
 **Reference Implementation:** `modems/motorola/mb8611/parser.py` (synced to `custom_components/modems/motorola/mb8611/parser.py`)
 

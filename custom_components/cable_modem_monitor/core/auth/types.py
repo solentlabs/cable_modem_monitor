@@ -20,6 +20,24 @@ class HMACAlgorithm(StrEnum):
     """HMAC-SHA256: Used by newer firmware variants."""
 
 
+class LoginLockoutError(Exception):
+    """Raised when firmware anti-brute-force protection is triggered.
+
+    Protocol layers raise this to signal that the modem has rejected login
+    attempts due to rate limiting.  The orchestration layer catches it and
+    applies backoff policy — the protocol layer never decides retry behaviour.
+
+    Attributes:
+        login_result: The raw LoginResult string from the modem (e.g. "LOCKUP", "REBOOT").
+        response_text: The full response body for diagnostics.
+    """
+
+    def __init__(self, login_result: str, response_text: str) -> None:
+        self.login_result = login_result
+        self.response_text = response_text
+        super().__init__(f"Firmware anti-brute-force triggered: LoginResult={login_result}")
+
+
 class AuthErrorType(Enum):
     """Classification of authentication errors.
 

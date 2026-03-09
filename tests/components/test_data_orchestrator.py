@@ -2291,3 +2291,175 @@ class TestSessionReuse:
         mock_login.assert_called_once()
         assert result["cable_modem_connection_status"] == "online"
         assert len(result["cable_modem_downstream"]) == 1
+
+    # =========================================================================
+    # Lockout via exception — _login() catches LoginLockoutError and sets backoff
+    # =========================================================================
+
+    def test_login_lockout_sets_backoff(self, mocker):
+        """LoginLockoutError in _login() sets backoff to suppress future attempts."""
+        from custom_components.cable_modem_monitor.core.auth.types import LoginLockoutError
+
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+
+        mock_auth_handler = mocker.Mock()
+        mock_auth_handler.strategy.value = "hnap_session"
+        mock_auth_handler.authenticate.side_effect = LoginLockoutError("LOCKUP", '{"LoginResult":"LOCKUP"}')
+        orchestrator._auth_handler = mock_auth_handler
+
+        success, html = orchestrator._login()
+
+        assert success is False
+        assert orchestrator._login_backoff_remaining == 3
+
+    def test_stale_session_retry_suppressed_after_lockout(self, mocker):
+        """Stale session retry is suppressed when backoff was set by a prior lockout."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+
+        # Simulate backoff set by a prior LoginLockoutError
+        orchestrator._login_backoff_remaining = 3
+
+        def fake_pre_auth():
+            orchestrator._session_reused = True
+            # Decrement happens at start of get_modem_data, so backoff is now 2
+            return (True, None, True)
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", side_effect=fake_pre_auth)
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=("<html>data</html>", "http://192.168.100.1", None),
+        )
+        mocker.patch.object(
+            orchestrator,
+            "_parse_data",
+            return_value={"downstream": [], "upstream": [], "system_info": {}},
+        )
+
+        mock_clear = mocker.patch.object(orchestrator, "clear_auth_cache")
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        result = orchestrator.get_modem_data()
+
+        mock_clear.assert_not_called()
+        mock_login.assert_not_called()
+        assert result["cable_modem_connection_status"] == "parser_issue"
+
+    # =========================================================================
+    # Login backoff — stale session retry suppressed during backoff
+    # =========================================================================
+
+    def test_stale_session_retry_suppressed_during_backoff(self, mocker):
+        """Stale session retry is suppressed when login backoff is active."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+        orchestrator._login_backoff_remaining = 2
+
+        def fake_pre_auth():
+            orchestrator._session_reused = True
+            return (True, None, True)
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", side_effect=fake_pre_auth)
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=("<html>data</html>", "http://192.168.100.1", None),
+        )
+        mocker.patch.object(
+            orchestrator,
+            "_parse_data",
+            return_value={"downstream": [], "upstream": [], "system_info": {}},
+        )
+
+        mock_clear = mocker.patch.object(orchestrator, "clear_auth_cache")
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        result = orchestrator.get_modem_data()
+
+        mock_clear.assert_not_called()
+        mock_login.assert_not_called()
+        assert result["cable_modem_connection_status"] == "parser_issue"
+
+    def test_login_backoff_decrements_each_poll(self, mocker):
+        """Backoff counter decrements each poll until it reaches zero."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+        orchestrator._login_backoff_remaining = 3
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", return_value=(False, None, True))
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+
+        # Each call to get_modem_data should decrement the counter
+        orchestrator.get_modem_data()
+        assert orchestrator._login_backoff_remaining == 2
+
+        orchestrator.get_modem_data()
+        assert orchestrator._login_backoff_remaining == 1
+
+        orchestrator.get_modem_data()
+        assert orchestrator._login_backoff_remaining == 0
+
+    def test_failed_stale_retry_sets_backoff(self, mocker):
+        """Failed login during stale session retry activates backoff."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        mock_parser = mocker.Mock()
+        mock_parser.name = "Test"
+        mock_parser.logout_endpoint = None
+        orchestrator.parser = mock_parser
+
+        def fake_pre_auth():
+            orchestrator._session_reused = True
+            return (True, None, True)
+
+        mocker.patch.object(orchestrator, "_pre_authenticate", side_effect=fake_pre_auth)
+        mocker.patch.object(orchestrator, "_try_instant_detection")
+        mocker.patch.object(orchestrator, "_ensure_parser", return_value=True)
+        mocker.patch.object(
+            orchestrator,
+            "_fetch_data",
+            return_value=("<html>data</html>", "http://192.168.100.1", None),
+        )
+        mocker.patch.object(
+            orchestrator,
+            "_parse_data",
+            return_value={"downstream": [], "upstream": [], "system_info": {}},
+        )
+
+        mocker.patch.object(orchestrator, "clear_auth_cache")
+        mocker.patch.object(orchestrator, "_login", return_value=(False, None))
+
+        orchestrator.get_modem_data()
+
+        assert orchestrator._login_backoff_remaining == 3
+
+    # =========================================================================
+    # Pre-auth backoff suppression
+    # =========================================================================
+
+    def test_pre_authenticate_suppressed_during_backoff(self, mocker):
+        """_pre_authenticate returns failure when login backoff is active."""
+        orchestrator = self._make_orchestrator(auth_strategy="hnap_session")
+        orchestrator._login_backoff_remaining = 2
+
+        mock_login = mocker.patch.object(orchestrator, "_login")
+
+        success, html, auth_performed = orchestrator._pre_authenticate()
+
+        assert success is False
+        assert auth_performed is True
+        mock_login.assert_not_called()

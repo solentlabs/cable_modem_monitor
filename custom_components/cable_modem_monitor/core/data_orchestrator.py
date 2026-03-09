@@ -39,6 +39,7 @@ from bs4 import BeautifulSoup
 from ..modem_config.adapter import get_auth_adapter_for_parser, get_url_patterns_for_parser
 from .actions import ActionFactory, ActionType
 from .auth.handler import AuthHandler
+from .auth.types import LoginLockoutError
 from .base_parser import ModemParser
 from .discovery_helpers import (
     DiscoveryCircuitBreaker,
@@ -268,6 +269,10 @@ class DataOrchestrator:
 
         # Flag to skip _login() when session was pre-authenticated by auth discovery
         self._session_pre_authenticated = session_pre_authenticated
+
+        # Login backoff: number of polls to skip login after a failure.
+        # Prevents rapid re-login from hitting firmware anti-brute-force protection.
+        self._login_backoff_remaining: int = 0
 
         _LOGGER.debug(
             "Scraper initialized with auth strategy: %s, pre-fetched HTML: %s",
@@ -665,7 +670,16 @@ class DataOrchestrator:
                 "Using auth handler with strategy: %s",
                 self._auth_handler.strategy.value,
             )
-            auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
+            try:
+                auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
+            except LoginLockoutError as exc:
+                _LOGGER.error(
+                    "Firmware anti-brute-force triggered: %s. " "Login attempts will be suppressed for %d polls.",
+                    exc.login_result,
+                    3,
+                )
+                self._login_backoff_remaining = 3
+                return (False, None)
             return auth_result.success, auth_result.response_html
 
         # No auth strategy stored - assume no authentication required
@@ -1313,6 +1327,16 @@ class DataOrchestrator:
             self._session_reused = True
             return (True, None, True)
 
+        # Suppress login when backoff is active.
+        # Backoff is set after LoginLockoutError or repeated login failures
+        # to avoid triggering firmware anti-brute-force escalation.
+        if self._login_backoff_remaining > 0:
+            _LOGGER.warning(
+                "Login suppressed — backoff active (%d polls remaining)",
+                self._login_backoff_remaining,
+            )
+            return (False, None, True)
+
         _LOGGER.debug(
             "Pre-authenticating with strategy %s before data fetch",
             self._auth_strategy,
@@ -1334,6 +1358,10 @@ class DataOrchestrator:
         self._failed_urls = []
         self._capture_enabled = capture_raw
         self._session_reused = False
+
+        # Decrement login backoff counter each poll
+        if self._login_backoff_remaining > 0:
+            self._login_backoff_remaining -= 1
 
         # Replace session with capturing session if capture is enabled
         original_session = None
@@ -1402,24 +1430,42 @@ class DataOrchestrator:
             # Stale session retry: if we reused a session (skipped login) and got
             # zero channels, the session may have expired. Clear cache and retry
             # once with a fresh login. One retry only — no loops.
+            #
+            # Guarded by backoff to avoid triggering firmware anti-brute-force
+            # protection (which escalates to modem reboot).  If _login() hits
+            # a lockout, LoginLockoutError is caught there and backoff is set
+            # automatically — no separate lockout check needed here.
             status = response.get("cable_modem_connection_status")
             if self._session_reused and not capture_raw and status == "parser_issue":
-                _LOGGER.warning(
-                    "Zero channels with reused session — session may be stale. "
-                    "Clearing auth cache and retrying with fresh login."
-                )
-                self.clear_auth_cache()
-                success, _login_html = self._login()
-                if success:
-                    fetched_data = self._fetch_data(capture_raw=False)
-                    if fetched_data:
-                        html, successful_url, _ = fetched_data
-                        data = self._parse_data(html)
-                        response = self._build_response(data)
-                    else:
-                        _LOGGER.debug("Stale session retry: re-fetch returned no data")
+                if self._login_backoff_remaining > 0:
+                    _LOGGER.warning(
+                        "Zero channels with reused session, but login backoff active "
+                        "(%d polls remaining) — suppressing retry.",
+                        self._login_backoff_remaining,
+                    )
                 else:
-                    _LOGGER.debug("Stale session retry: fresh login failed")
+                    _LOGGER.warning(
+                        "Zero channels with reused session — session may be stale. "
+                        "Clearing auth cache and retrying with fresh login."
+                    )
+                    self.clear_auth_cache()
+                    success, _login_html = self._login()
+                    if success:
+                        self._login_backoff_remaining = 0
+                        fetched_data = self._fetch_data(capture_raw=False)
+                        if fetched_data:
+                            html, successful_url, _ = fetched_data
+                            data = self._parse_data(html)
+                            response = self._build_response(data)
+                        else:
+                            _LOGGER.debug("Stale session retry: re-fetch returned no data")
+                    elif self._login_backoff_remaining == 0:
+                        # Login failed without triggering lockout — set backoff
+                        self._login_backoff_remaining = 3
+                        _LOGGER.warning(
+                            "Stale session retry: fresh login failed — " "backing off for %d polls.",
+                            self._login_backoff_remaining,
+                        )
 
             # Capture additional pages if in capture mode
             if capture_raw and self._captured_urls:
