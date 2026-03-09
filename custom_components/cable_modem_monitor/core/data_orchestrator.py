@@ -162,6 +162,7 @@ class DataOrchestrator:
         session_pre_authenticated: bool = False,
         timeout: int | None = None,
         protocol: str | None = None,
+        challenge_cookie: bool = False,
     ):
         """
         Initialize the polling orchestrator.
@@ -258,6 +259,7 @@ class DataOrchestrator:
             hnap_config=auth_hnap_config,
             url_token_config=auth_url_token_config,
             timeout=timeout,
+            challenge_cookie=challenge_cookie,
         )
         self._auth_strategy = auth_strategy
 

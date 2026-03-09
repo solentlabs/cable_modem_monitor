@@ -1056,6 +1056,24 @@ class TestDataOrchestratorInitialization:
         assert orchestrator.legacy_ssl is True
         assert orchestrator.base_url == "http://192.168.100.1"
 
+    def test_challenge_cookie_passed_to_auth_handler(self):
+        """challenge_cookie param must reach AuthHandler for CM1200 Basic Auth."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            auth_strategy="basic_http",
+            timeout=TEST_TIMEOUT,
+            challenge_cookie=True,
+        )
+        assert orchestrator._auth_handler.challenge_cookie is True
+
+    def test_challenge_cookie_defaults_false(self):
+        """challenge_cookie defaults to False (no behavior change for other modems)."""
+        orchestrator = DataOrchestrator(
+            "192.168.100.1",
+            timeout=TEST_TIMEOUT,
+        )
+        assert orchestrator._auth_handler.challenge_cookie is False
+
 
 class TestCapturingSession:
     """Tests for the CapturingSession class."""

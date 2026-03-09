@@ -41,6 +41,7 @@ from .const import (
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
+    CONF_AUTH_TYPE,
     CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DOCSIS_VERSION,
     CONF_ENTITY_PREFIX,
@@ -243,6 +244,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         modem_adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, parser_name)
         assert modem_adapter is not None  # Known modems always have modem.yaml
         orchestrator_args["timeout"] = modem_adapter.get_timeout()
+        auth_type = entry.data.get(CONF_AUTH_TYPE)
+        static_auth_config = modem_adapter.get_static_auth_config(auth_type)
+        orchestrator_args["challenge_cookie"] = static_auth_config.get("challenge_cookie", False)
         _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
         modem_client = DataOrchestrator(**orchestrator_args)
 

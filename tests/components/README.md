@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 379
+**Total Tests:** 381
 
 ## Test Files
 
@@ -18,7 +18,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 100 | Tests for DataOrchestrator. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 102 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
@@ -372,7 +372,7 @@ as the architecture evolves toward declarative modem configs.
 - `test_perform_logout_with_https_url`: Test that _perform_logout works with HTTPS base URL.
 - `test_perform_logout_with_different_endpoint_formats`: Test that _perform_logout works with various endpoint formats.
 
-**TestDataOrchestratorInitialization** (12 tests)
+**TestDataOrchestratorInitialization** (14 tests)
 : Tests for DataOrchestrator initialization and configuration.
 
 - `test_init_with_plain_ip_uses_https_default`: Test that plain IP defaults to HTTPS.
@@ -387,6 +387,8 @@ as the architecture evolves toward declarative modem configs.
 - `test_init_with_verify_ssl_false`: Test initialization with SSL verification disabled.
 - `test_init_with_legacy_ssl_mounts_adapter`: Test that legacy SSL mode mounts the LegacySSLAdapter.
 - `test_init_legacy_ssl_not_mounted_for_http`: Test that legacy SSL adapter is NOT mounted for HTTP URLs.
+- `test_challenge_cookie_passed_to_auth_handler`: challenge_cookie param must reach AuthHandler for CM1200 Basic Auth.
+- `test_challenge_cookie_defaults_false`: challenge_cookie defaults to False (no behavior change for other modems).
 
 **TestCapturingSession** (4 tests)
 : Tests for the CapturingSession class.
