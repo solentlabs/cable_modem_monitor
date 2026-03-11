@@ -195,6 +195,8 @@ class ModemConfigAuthAdapter:
             "data_page": config.data_page or config.login_page,
             "login_prefix": config.login_prefix,
             "token_prefix": config.token_prefix,
+            "ajax_login": config.ajax_login,
+            "auth_header_data": config.auth_header_data,
         }
         if config.session_cookie:
             result["session_cookie_name"] = config.session_cookie

@@ -504,6 +504,8 @@ class AuthHandler:
                 token_prefix=merged.get("token_prefix", "ct_"),
                 session_cookie_name=merged.get("session_cookie_name", "credential"),
                 success_indicator=merged.get("success_indicator", "Downstream"),
+                ajax_login=merged.get("ajax_login", False),
+                auth_header_data=merged.get("auth_header_data", True),
             )
 
         # Default: return NoAuthConfig for unknown strategies
