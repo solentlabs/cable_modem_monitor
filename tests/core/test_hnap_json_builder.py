@@ -9,7 +9,7 @@ import pytest
 import requests
 
 from custom_components.cable_modem_monitor.core.auth import HNAPJsonRequestBuilder
-from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
+from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm, LoginLockoutError
 
 # Test timeout constant - matches DEFAULT_TIMEOUT from schema
 TEST_TIMEOUT = 10
@@ -862,6 +862,74 @@ class TestClearAuthCache:
         assert success is True
         assert builder._private_key is not None
         assert builder._private_key != first_key  # Different challenge = different key
+
+
+class TestLoginLockout:
+    """Test firmware anti-brute-force lockout raises LoginLockoutError."""
+
+    # ┌─────────────┬────────────────────┬──────────────────────────────────────┐
+    # │ LoginResult │ expected behavior   │ description                          │
+    # ├─────────────┼────────────────────┼──────────────────────────────────────┤
+    # │ "LOCKUP"    │ raises exception   │ temporary lockout                    │
+    # │ "REBOOT"    │ raises exception   │ forced reboot escalation             │
+    # │ "FAILED"    │ returns (False, _) │ normal failure, no exception         │
+    # └─────────────┴────────────────────┴──────────────────────────────────────┘
+
+    @pytest.fixture
+    def _challenge_and_login(self, builder, mock_session):
+        """Set up challenge response and return a login helper."""
+        challenge_response = MagicMock()
+        challenge_response.status_code = 200
+        challenge_response.text = json.dumps(
+            {
+                "LoginResponse": {
+                    "Challenge": "TEST",
+                    "Cookie": "cookie",
+                    "PublicKey": "key",
+                }
+            }
+        )
+
+        def do_login(login_result: str) -> tuple[bool, str]:
+            login_response = MagicMock()
+            login_response.status_code = 200
+            login_response.text = json.dumps({"LoginResponse": {"LoginResult": login_result}})
+            mock_session.post.side_effect = [challenge_response, login_response]
+            result: tuple[bool, str] = builder.login(mock_session, "http://192.168.100.1", "admin", "password")
+            return result
+
+        return do_login
+
+    # fmt: off
+    LOCKOUT_RESULTS: list[tuple[str, str]] = [
+        # (login_result, description)
+        ("LOCKUP",       "temporary lockout"),
+        ("REBOOT",       "forced reboot escalation"),
+    ]
+    # fmt: on
+
+    @pytest.mark.parametrize(
+        "login_result,desc",
+        LOCKOUT_RESULTS,
+        ids=[c[-1] for c in LOCKOUT_RESULTS],
+    )
+    def test_lockout_raises_exception(self, builder, _challenge_and_login, login_result, desc):
+        """Lockout LoginResults raise LoginLockoutError."""
+        with pytest.raises(LoginLockoutError) as exc_info:
+            _challenge_and_login(login_result)
+        assert exc_info.value.login_result == login_result
+        assert builder._private_key is None
+
+    def test_normal_failure_does_not_raise(self, builder, _challenge_and_login):
+        """Normal login failure returns (False, _) without exception."""
+        success, _ = _challenge_and_login("FAILED")
+        assert success is False
+
+    def test_lockout_exception_contains_response_text(self, builder, _challenge_and_login):
+        """LoginLockoutError carries the response text for diagnostics."""
+        with pytest.raises(LoginLockoutError) as exc_info:
+            _challenge_and_login("LOCKUP")
+        assert "LOCKUP" in exc_info.value.response_text
 
 
 class TestAuthAttemptTracking:

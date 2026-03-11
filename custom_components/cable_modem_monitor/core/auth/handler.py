@@ -80,6 +80,7 @@ class AuthHandler:
         url_token_config: dict[str, Any] | None = None,
         fallback_strategies: list[dict[str, Any]] | None = None,
         timeout: int | None = None,
+        challenge_cookie: bool = False,
     ):
         """Initialize auth handler.
 
@@ -123,6 +124,7 @@ class AuthHandler:
         if timeout is None:
             raise ValueError("timeout is required but was None. Schema defines default in const.py.")
         self.timeout = timeout
+        self.challenge_cookie = challenge_cookie
 
         # Fallback strategies for try-until-success
         self._fallback_strategies = fallback_strategies or []
@@ -176,6 +178,7 @@ class AuthHandler:
             hnap_config=static_config.get("auth_hnap_config"),
             url_token_config=static_config.get("auth_url_token_config"),
             timeout=timeout,
+            challenge_cookie=static_config.get("challenge_cookie", False),
         )
 
     @staticmethod
@@ -415,7 +418,7 @@ class AuthHandler:
             return NoAuthConfig(timeout=timeout)
 
         if strategy == AuthStrategyType.BASIC_HTTP:
-            return BasicAuthConfig(timeout=timeout)
+            return BasicAuthConfig(timeout=timeout, challenge_cookie=self.challenge_cookie)
 
         if strategy == AuthStrategyType.FORM_PLAIN:
             return FormAuthConfig(
@@ -501,6 +504,8 @@ class AuthHandler:
                 token_prefix=merged.get("token_prefix", "ct_"),
                 session_cookie_name=merged.get("session_cookie_name", "credential"),
                 success_indicator=merged.get("success_indicator", "Downstream"),
+                ajax_login=merged.get("ajax_login", False),
+                auth_header_data=merged.get("auth_header_data", True),
             )
 
         # Default: return NoAuthConfig for unknown strategies

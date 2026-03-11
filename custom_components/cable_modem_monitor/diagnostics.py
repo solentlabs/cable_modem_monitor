@@ -657,7 +657,8 @@ def _build_diagnostics_dict(hass: HomeAssistant, coordinator, entry: ConfigEntry
             "model": entry.data.get("detected_modem", "Unknown"),
             "docsis_version": entry.data.get("docsis_version", "Unknown"),
             "working_url": entry.data.get("working_url") or "Unknown",
-            "protocol": "https" if (entry.data.get("working_url") or "").startswith("https") else "http",
+            "protocol": entry.data.get("protocol")
+            or ("https" if (entry.data.get("working_url") or "").startswith("https") else "http"),
             "auth_method": _get_auth_method_from_coordinator(coordinator),
             "legacy_ssl": entry.data.get("legacy_ssl", False),
             "parser_selected_at": entry.data.get("parser_selected_at", "Never"),

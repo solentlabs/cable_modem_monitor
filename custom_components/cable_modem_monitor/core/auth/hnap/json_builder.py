@@ -28,7 +28,10 @@ from typing import cast
 
 import requests
 
-from custom_components.cable_modem_monitor.core.auth.types import HMACAlgorithm
+from custom_components.cable_modem_monitor.core.auth.types import (
+    HMACAlgorithm,
+    LoginLockoutError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -445,6 +448,10 @@ class HNAPJsonRequestBuilder:
                         login_result,
                     )
                     return (True, response.text)
+                elif login_result in ("LOCKUP", "REBOOT"):
+                    self._last_auth_attempt["error"] = f"LoginResult={login_result}"
+                    self._private_key = None
+                    raise LoginLockoutError(login_result, response.text)
                 else:
                     self._last_auth_attempt["error"] = f"LoginResult={login_result}"
                     _LOGGER.warning(
@@ -475,6 +482,8 @@ class HNAPJsonRequestBuilder:
             if self._last_auth_attempt:
                 self._last_auth_attempt["error"] = f"ConnectionError: {e}"
             return (False, "")
+        except LoginLockoutError:
+            raise
         except Exception as e:
             _LOGGER.error("JSON HNAP login exception: %s", str(e), exc_info=True)
             self._private_key = None

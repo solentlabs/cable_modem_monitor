@@ -41,6 +41,7 @@ from .const import (
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
+    CONF_AUTH_TYPE,
     CONF_AUTH_URL_TOKEN_CONFIG,
     CONF_DOCSIS_VERSION,
     CONF_ENTITY_PREFIX,
@@ -48,6 +49,7 @@ from .const import (
     CONF_LEGACY_SSL,
     CONF_MODEM_CHOICE,
     CONF_PASSWORD,
+    CONF_PROTOCOL,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
@@ -159,6 +161,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # Extract configuration
     host = entry.data[CONF_HOST]
+    protocol: str | None = entry.data.get(CONF_PROTOCOL)
+
+    # Backward compat: old entries may have protocol baked into CONF_HOST
+    if protocol is None and host.startswith(("http://", "https://")):
+        protocol = "https" if host.startswith("https://") else "http"
+        host = host.split("://", 1)[1].rstrip("/")
+
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
@@ -210,6 +219,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # Base args shared by both orchestrators
     orchestrator_args: dict[str, Any] = {
         "host": host,
+        "protocol": protocol,
         "username": username,
         "password": password,
         "parser": selected_parser,
@@ -234,6 +244,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         modem_adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, parser_name)
         assert modem_adapter is not None  # Known modems always have modem.yaml
         orchestrator_args["timeout"] = modem_adapter.get_timeout()
+        auth_type = entry.data.get(CONF_AUTH_TYPE)
+        static_auth_config = modem_adapter.get_static_auth_config(auth_type)
+        orchestrator_args["challenge_cookie"] = static_auth_config.get("challenge_cookie", False)
         _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
         modem_client = DataOrchestrator(**orchestrator_args)
 
@@ -245,7 +258,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     supports_head = entry.data.get(CONF_SUPPORTS_HEAD, False)
 
     # Create coordinator
-    async_update_data = create_update_function(hass, modem_client, health_monitor, host, supports_icmp, supports_head)
+    async_update_data = create_update_function(
+        hass, modem_client, health_monitor, host, supports_icmp, supports_head, protocol=protocol
+    )
     coordinator = DataUpdateCoordinator[dict[str, Any]](
         hass,
         _LOGGER,

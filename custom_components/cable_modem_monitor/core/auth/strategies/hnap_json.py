@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import requests
 
 from ..base import AuthResult, AuthStrategy
-from ..types import AuthErrorType
+from ..types import AuthErrorType, LoginLockoutError
 
 if TYPE_CHECKING:
     from ..configs import AuthConfig
@@ -160,6 +160,9 @@ class HNAPJsonAuthStrategy(AuthStrategy):
                 AuthErrorType.CONNECTION_FAILED,
                 f"HNAP connection error: {e}",
             )
+        except LoginLockoutError:
+            self._builder = None
+            raise
         except Exception as e:
             _LOGGER.warning("HNAP JSON auth failed with exception: %s", e)
             self._builder = None

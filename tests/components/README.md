@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 331
+**Total Tests:** 387
 
 ## Test Files
 
@@ -13,14 +13,16 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_auth.py](test_auth.py) | 3 |  |
 | [test_button.py](test_button.py) | 0 | Tests for Cable Modem Monitor button platform. |
 | [test_channel_utils.py](test_channel_utils.py) | 29 | Tests for channel_utils helper functions. |
+| [test_config_entry_migration.py](test_config_entry_migration.py) | 11 | Tests for CONF_PROTOCOL backward compatibility. |
 | [test_config_flow.py](test_config_flow.py) | 32 | Tests for Cable Modem Monitor config flow. |
 | [test_config_flow_helpers.py](test_config_flow_helpers.py) | 1 | Tests for config_flow_helpers.py. |
 | [test_coordinator.py](test_coordinator.py) | 18 | Tests for Cable Modem Monitor coordinator functionality. |
 | [test_coordinator_improvements.py](test_coordinator_improvements.py) | 5 | Tests for Cable Modem Monitor coordinator improvements. |
-| [test_data_orchestrator.py](test_data_orchestrator.py) | 95 | Tests for DataOrchestrator. |
+| [test_data_orchestrator.py](test_data_orchestrator.py) | 108 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
+| [test_protocol_lock.py](test_protocol_lock.py) | 32 | Stress tests for the protocol lock fix. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
 | [test_services.py](test_services.py) | 8 | Tests for Cable Modem Monitor services. |
 | [test_version_and_startup.py](test_version_and_startup.py) | 2 | Tests for version logging and startup optimizations. |
@@ -84,6 +86,41 @@ Tests for channel_utils helper functions.
 - `test_upstream_ofdma_channels`: Test upstream OFDMA channel normalization (G54-style).
 - `test_channels_sorted_by_frequency`: Channels within a type are sorted by frequency.
 - `test_empty_channels`: Empty channel list returns empty dict.
+
+### test_config_entry_migration.py
+
+Tests for CONF_PROTOCOL backward compatibility.
+
+Old config entries (pre-v3.13.2) don't have CONF_PROTOCOL stored.
+New entries have CONF_PROTOCOL decomposed from user input.
+Runtime must handle both transparently.
+
+**TestOldEntryBackwardCompat** (1 tests)
+: Old entries (no CONF_PROTOCOL) work identically to before.
+
+- `test_old_entry_orchestrator`
+
+**TestNewEntryWithProtocol** (1 tests)
+: New entries pass protocol= explicitly to orchestrator.
+
+- `test_new_entry_orchestrator`
+
+**TestConfigFlowDecomposition** (5 tests)
+: Verify parse_host_input produces correct entry data for config flow.
+
+- `test_user_types_bare_ip`: Bare IP → host preserved, no protocol.
+- `test_user_types_https`: User types https://... → host stripped, protocol stored.
+- `test_user_types_http`: User types http://... → host stripped, protocol stored.
+- `test_round_trip_explicit_https`: User types https → stored → build_url recovers original intent.
+- `test_round_trip_bare_ip`: Bare IP → stored → build_url defaults to http.
+
+**TestRuntimeBackwardCompat** (4 tests)
+: Simulate the backward-compat logic from __init__.py async_setup_entry.
+
+- `test_old_entry_bare_ip`
+- `test_old_entry_baked_https`
+- `test_old_entry_baked_http`
+- `test_new_entry_explicit_protocol`: New entries already have bare host + protocol, no transformation needed.
 
 ### test_config_flow.py
 
@@ -335,7 +372,7 @@ as the architecture evolves toward declarative modem configs.
 - `test_perform_logout_with_https_url`: Test that _perform_logout works with HTTPS base URL.
 - `test_perform_logout_with_different_endpoint_formats`: Test that _perform_logout works with various endpoint formats.
 
-**TestDataOrchestratorInitialization** (12 tests)
+**TestDataOrchestratorInitialization** (14 tests)
 : Tests for DataOrchestrator initialization and configuration.
 
 - `test_init_with_plain_ip_uses_https_default`: Test that plain IP defaults to HTTPS.
@@ -350,6 +387,8 @@ as the architecture evolves toward declarative modem configs.
 - `test_init_with_verify_ssl_false`: Test initialization with SSL verification disabled.
 - `test_init_with_legacy_ssl_mounts_adapter`: Test that legacy SSL mode mounts the LegacySSLAdapter.
 - `test_init_legacy_ssl_not_mounted_for_http`: Test that legacy SSL adapter is NOT mounted for HTTP URLs.
+- `test_challenge_cookie_passed_to_auth_handler`: challenge_cookie param must reach AuthHandler for CM1200 Basic Auth.
+- `test_challenge_cookie_defaults_false`: challenge_cookie defaults to False (no behavior change for other modems).
 
 **TestCapturingSession** (4 tests)
 : Tests for the CapturingSession class.
@@ -450,6 +489,21 @@ as the architecture evolves toward declarative modem configs.
 - `test_skips_pre_auth_when_no_credentials`: Test that pre-auth is skipped when no credentials provided.
 - `test_skips_pre_auth_when_no_strategy`: Test that pre-auth is skipped when no auth strategy configured.
 - `test_url_token_uses_reactive_auth_flow`: Test that url_token_session uses reactive auth flow in get_modem_data.
+
+**TestSessionReuse** (11 tests)
+: Tests for session reuse logic (_has_valid_session, pre-auth skip, stale retry).
+
+- `test_has_valid_session`: Table-driven test for _has_valid_session().
+- `test_pre_auth_session_skip`: Table-driven test for _pre_authenticate() session reuse logic.
+- `test_subsequent_poll_reuses_session_instead_of_relogin`: Subsequent polls reuse existing session instead of re-authenticating.
+- `test_stale_session_no_retry`: Table-driven test for stale session no-retry conditions.
+- `test_stale_session_retry_clears_cache_and_retries`: Reused session with zero channels triggers cache clear + fresh login + re-fetch.
+- `test_login_lockout_sets_backoff`: LoginLockoutError in _login() sets backoff to suppress future attempts.
+- `test_stale_session_retry_suppressed_after_lockout`: Stale session retry is suppressed when backoff was set by a prior lockout.
+- `test_stale_session_retry_suppressed_during_backoff`: Stale session retry is suppressed when login backoff is active.
+- `test_login_backoff_decrements_each_poll`: Backoff counter decrements each poll until it reaches zero.
+- `test_failed_stale_retry_sets_backoff`: Failed login during stale session retry activates backoff.
+- `test_pre_authenticate_suppressed_during_backoff`: _pre_authenticate returns failure when login backoff is active.
 
 ### test_diagnostics.py
 
@@ -588,6 +642,98 @@ Tests for protocol caching optimization.
 - `test_false_by_default`: Test that SSL verification is disabled by default.
 - `test_can_be_enabled`: Test that SSL verification can be enabled.
 - `test_passed_through_requests`: Test that verify parameter is passed to requests.
+
+### test_protocol_lock.py
+
+Stress tests for the protocol lock fix.
+
+When a user explicitly specifies http:// or https:// in the host field,
+that protocol is a hard override — no runtime fallback to the other protocol.
+When no protocol is specified, existing HTTPS→HTTP fallback behavior is preserved.
+
+Tests are organized by scenario:
+1. Protocol lock initialization (flag set correctly)
+2. _fetch_data respects/ignores protocol lock
+3. Interactions with base_url mutations, restart, capture mode
+4. Edge cases (uppercase, trailing slash, ports, cached_url)
+5. Existing fallback behavior preserved (regression)
+6. CM1200-specific scenario (issue #121)
+
+**TestProtocolLockInit** (1 tests)
+: Verify _explicit_protocol is set correctly at init.
+
+- `test_protocol_lock_flag`
+
+**TestFetchDataProtocolLock** (6 tests)
+: Verify _fetch_data only tries the locked protocol when locked.
+
+- `test_locked_https_only_tries_https`: Locked to HTTPS → only HTTPS URLs attempted, no HTTP fallback.
+- `test_locked_http_only_tries_http`: Locked to HTTP → only HTTP URLs attempted, no HTTPS fallback.
+- `test_locked_https_succeeds_on_https`: Locked to HTTPS, HTTPS works → returns data normally.
+- `test_locked_https_fails_returns_none`: Locked to HTTPS, HTTPS fails → returns None (no HTTP fallback).
+- `test_locked_http_401_no_fallback`: Locked to HTTP, gets 401 → returns None, does NOT try HTTPS.
+- `test_locked_https_401_no_fallback`: Locked to HTTPS, gets 401 → returns None, does NOT try HTTP.
+
+**TestUnlockedFallbackPreserved** (3 tests)
+: Verify unlocked hosts still get HTTPS→HTTP fallback.
+
+- `test_unlocked_https_default_falls_back_to_http`: Bare IP → defaults to HTTPS → HTTPS fails → falls back to HTTP → success.
+- `test_unlocked_https_default_succeeds_on_https`: Bare IP → defaults to HTTPS → HTTPS works → stays HTTPS.
+- `test_unlocked_http_cached_no_https_fallback`: Bare IP + HTTP cached → starts at HTTP → HTTP fails → no HTTPS fallback.
+
+**TestBaseUrlMutationWithLock** (3 tests)
+: Verify base_url mutations respect protocol lock.
+
+- `test_fetch_data_success_does_not_change_locked_protocol`: When locked to HTTPS and fetch succeeds, base_url stays HTTPS.
+- `test_update_base_url_from_successful_url_preserves_lock_protocol`: _update_base_url_from_successful_url uses scheme from URL.
+- `test_multiple_get_modem_data_calls_respect_lock`: Protocol lock survives across multiple polling cycles.
+
+**TestRestartModemProtocolLock** (1 tests)
+: Verify restart_modem respects protocol lock.
+
+- `test_restart_locked_https_only_tries_https`: restart_modem with locked HTTPS should not fall back to HTTP.
+
+**TestProtocolLockEdgeCases** (8 tests)
+: Edge cases that could trip up the protocol lock.
+
+- `test_uppercase_protocol_not_locked`: Uppercase 'HTTP://' is not detected as explicit protocol.
+- `test_trailing_slash_still_locked`: Trailing slash in host is stripped but lock is still set.
+- `test_port_number_preserved_with_lock`: Protocol lock works with port numbers in host.
+- `test_host_with_path_stripped_and_locked`: If host includes a path, trailing slash is stripped.
+- `test_ipv6_with_explicit_protocol`: Protocol lock works with IPv6 addresses.
+- `test_hostname_with_explicit_protocol`: Protocol lock works with DNS hostnames.
+- `test_empty_cached_url_with_locked_host`: Explicit protocol ignores empty string cached_url.
+- `test_explicit_protocol_is_immutable_after_init`: _explicit_protocol should never change after __init__.
+
+**TestFallbackOrchestratorInheritsLock** (2 tests)
+: FallbackOrchestrator extends DataOrchestrator — verify lock propagates.
+
+- `test_fallback_orchestrator_has_explicit_protocol`: FallbackOrchestrator should inherit _explicit_protocol from parent.
+- `test_fallback_orchestrator_unlocked_with_bare_ip`: FallbackOrchestrator with bare IP should not be locked.
+
+**TestProtocolFallbackLogging** (1 tests)
+: When unlocked fallback switches protocol, a warning should be logged.
+
+- `test_unlocked_fallback_logs_warning`: Switching from HTTPS to HTTP should produce a warning log.
+
+**TestCM1200Scenario** (4 tests)
+: Reproduce the exact CM1200 issue #121 scenario.
+
+- `test_explicit_https_gets_data`: User enters https://192.168.100.1 → locked → HTTPS only → 200 → data.
+- `test_explicit_http_gets_401_no_fallback`: User enters http://192.168.100.1 → locked → HTTP only → 401 → None.
+- `test_bare_ip_existing_behavior_documented`: User enters 192.168.100.1 → unlocked → tries HTTPS first → 200.
+- `test_bare_ip_with_http_cache_gets_401`: User enters 192.168.100.1 + HTTP cached → HTTP → 401.
+
+**TestCaptureModeWithLock** (1 tests)
+: Verify capture mode doesn't bypass protocol lock.
+
+- `test_capture_mode_respects_lock`: capture_raw=True with locked protocol should not fallback.
+
+**TestLegacySSLWithLock** (2 tests)
+: Legacy SSL adapter should work correctly with protocol lock.
+
+- `test_locked_https_with_legacy_ssl`: Locked to HTTPS + legacy_ssl → LegacySSLAdapter mounted.
+- `test_locked_http_with_legacy_ssl`: Locked to HTTP + legacy_ssl → no LegacySSLAdapter needed.
 
 ### test_sensor.py
 

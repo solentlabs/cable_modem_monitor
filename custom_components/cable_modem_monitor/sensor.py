@@ -42,12 +42,14 @@ from .const import (
     CONF_DETECTED_MODEM,
     CONF_ENTITY_PREFIX,
     CONF_HOST,
+    CONF_PROTOCOL,
     DOMAIN,
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
 )
 from .core.base_parser import ModemCapability
+from .lib.host_validation import build_url
 from .lib.utils import parse_uptime_to_seconds
 
 _LOGGER = logging.getLogger(__name__)
@@ -192,6 +194,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
         actual_model = entry.data.get(CONF_ACTUAL_MODEL)
         detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
         host = entry.data.get(CONF_HOST, "")
+        protocol = entry.data.get(CONF_PROTOCOL)
 
         # Use actual_model if available, otherwise fall back to detected_modem
         # Strip manufacturer prefix to avoid redundancy (e.g., "Motorola MB7621" -> "MB7621")
@@ -215,7 +218,7 @@ class ModemSensorBase(CoordinatorEntity, SensorEntity):
             "name": device_name,
             "manufacturer": manufacturer,
             "model": model,
-            "configuration_url": f"http://{host}",
+            "configuration_url": build_url(host, protocol),
         }
 
     @property

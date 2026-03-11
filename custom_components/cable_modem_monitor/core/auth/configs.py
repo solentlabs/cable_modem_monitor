@@ -44,6 +44,7 @@ class BasicAuthConfig(AuthConfig):
     """HTTP Basic Authentication configuration."""
 
     strategy: AuthStrategyType = AuthStrategyType.BASIC_HTTP
+    challenge_cookie: bool = False
 
 
 @dataclass(kw_only=True)

@@ -313,6 +313,11 @@ async def _build_static_config_for_auth_type(
     # Map user-facing auth type to internal strategy string
     strategy = AUTH_TYPE_TO_STRATEGY.get(auth_type, "no_auth")
 
+    # Extract challenge_cookie for basic auth
+    challenge_cookie = (
+        type_config.get("challenge_cookie", False) if auth_type == "basic" and isinstance(type_config, dict) else False
+    )
+
     # Build static config in the format expected by discovery pipeline
     static_config: dict[str, Any] = {
         "auth_strategy": strategy,
@@ -320,6 +325,7 @@ async def _build_static_config_for_auth_type(
         "auth_form_ajax_config": type_config if auth_type == "form_ajax" else None,
         "auth_hnap_config": type_config if auth_type == "hnap" else None,
         "auth_url_token_config": type_config if auth_type == "url_token" else None,
+        "challenge_cookie": challenge_cookie,
         "timeout": adapter.get_timeout(),
     }
 

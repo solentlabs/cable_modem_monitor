@@ -113,7 +113,7 @@ class TestVersionLogging:
         Use: python scripts/release.py <version>
         The script updates const.py, manifest.json, and this file.
         """
-        assert VERSION == "3.13.1"
+        assert VERSION == "3.13.2"
 
 
 class TestProtocolOptimizationIntegration:
