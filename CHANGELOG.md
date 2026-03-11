@@ -13,11 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **HNAP Session Reuse** - Reuse existing HNAP sessions (uid cookie + private key) across poll cycles instead of re-authenticating every 60 seconds. Prevents anti-brute-force reboots on Arris S33/S33v2 modems (~1440 logins/day reduced to 1). Includes stale session detection with automatic retry on expired sessions. (#117)
 - **S33v2 Model Aliases** - Added S33v2, CommScope S33v2, and ARRIS S33v2 to S33 detection aliases for hardware revision compatibility. (#117)
+- **CM1200 Challenge Cookie Support** - Basic Auth now forwards the challenge cookie required by CM1200 HTTPS endpoints. (#121)
+- **Protocol Auto-Detection** - Protocol (HTTP/HTTPS) is now decomposed from the host at config entry time, enabling correct scheme selection for modems like the CM1200 that use HTTPS. (#121)
 
 ### Fixed
 
 - **Modem-specific timeout not applied** - All `_fetch_data` HTTP requests now use the modem's configured `timeout` instead of the hardcoded 10-second default. This fixes CM1200 read timeouts over HTTPS. (#121)
 - **CM1200 request timeout** - Increased default timeout from 10s to 20s for CM1200 modems, which respond slowly over HTTPS. (#121)
+- **HNAP login lockout detection** - HNAP auth now detects firmware-level login lockout responses (`LOCKUP`/`REBOOT`) and stops retrying to prevent modem reboot. (#117)
+- **SB8200 url_token auth** - `ajax_login` and `auth_header_data` config values are now correctly propagated to the url_token auth strategy. (#126)
+- **S33/S34 invalid URL** - Removed nonexistent lowercase `cmconnectionstatus.html` fallback URL from S33 and S34 modem configs.
+- **CM1200 auth type corrected** - Changed CM1200 auth type from `basic` to `none` to match actual modem behavior. (#121)
 
 ## [3.13.1] - 2026-02-27
 
