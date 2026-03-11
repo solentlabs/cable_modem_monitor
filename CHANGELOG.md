@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.13.2] - 2026-03-11
+
 ### Added
 
 - **HNAP Session Reuse** - Reuse existing HNAP sessions (uid cookie + private key) across poll cycles instead of re-authenticating every 60 seconds. Prevents anti-brute-force reboots on Arris S33/S33v2 modems (~1440 logins/day reduced to 1). Includes stale session detection with automatic retry on expired sessions. (#117)
