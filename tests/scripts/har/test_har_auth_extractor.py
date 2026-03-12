@@ -913,7 +913,7 @@ CORPUS_CASES = [
     ("motorola-mb8600",          "hnap_session",     False,     ["Secure", "uid", "PrivateKey"],   "high"),
     ("motorola-mb8611",          "hnap_session",     False,     ["Secure", "uid", "PrivateKey"],   "high"),
     ("netgear-c7000v2",          "unknown",       True,  ["XSRF_TOKEN"], "insufficient_evidence"),
-    ("netgear-cm100",            "form_plain",    False, ["Secure"],     "high"),
+    ("netgear-cm1100",           "form_plain",    False, ["Secure"],     "high"),
     ("netgear-cm1200-https",     "unknown",       False, ["XSRF_TOKEN"], "high"),
     ("netgear-cm1200",           "unknown",          False,     [],                                "low"),
     ("netgear-cm2050v",          "form_plain",       False,     [],                                "high"),
