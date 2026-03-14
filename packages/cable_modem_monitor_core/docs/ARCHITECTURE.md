@@ -1,0 +1,941 @@
+# Architecture
+
+A Home Assistant integration that polls cable modems over their local web
+interface and exposes DOCSIS signal data as sensors.
+
+The core challenge: every modem manufacturer implements their web UI differently.
+Different auth mechanisms, different page structures, different data formats.
+The architecture absorbs this variety through a paradigm-driven strategy pattern
+where modem behavior is driven by config, not code.
+
+**Evidence base:** 31 HAR captures (23 real, 8 synthetic) across
+7 manufacturers.
+
+---
+
+## Packages
+
+Two pip packages and an HA integration in a monorepo with strict dependency
+direction. Each pip package has its own `pyproject.toml` and enforces boundaries
+through real Python packaging — import violations are missing module errors, not
+lint warnings. The HA integration is distributed via HACS.
+
+**Naming convention:** `cable_modem_monitor_` prefix for all packages in the
+`solentlabs` namespace. The HA integration name (`cable_modem_monitor`) is
+locked to the HACS store.
+
+```mermaid
+graph TD
+    HA["<b>HA Integration</b><hr/>cable-modem-monitor"] --> Core["<b>pip package</b><hr/>solentlabs-cable-modem-monitor-core"]
+    HA --> Catalog["<b>pip package</b><hr/>solentlabs-cable-modem-monitor-catalog"]
+    Catalog --> Core
+```
+
+**Import paths:**
+- `from solentlabs.cable_modem_monitor_core import ...`
+- `from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH`
+
+**Repository layout:**
+```
+packages/
+├── cable_modem_monitor_core/
+│   ├── pyproject.toml              # name = "solentlabs-cable-modem-monitor-core"
+│   └── solentlabs/cable_modem_monitor_core/
+└── cable_modem_monitor_catalog/
+    ├── pyproject.toml              # name = "solentlabs-cable-modem-monitor-catalog"
+    └── solentlabs/cable_modem_monitor_catalog/
+custom_components/
+└── cable_modem_monitor/            # HA integration
+```
+
+### Core — `solentlabs-cable-modem-monitor-core`
+
+The complete engine. Given a path to modem files and user credentials, Core
+does everything: loads config, authenticates, fetches data, parses responses,
+coordinates the poll cycle, and recovers from errors. The orchestrator is a
+scheduler and policy engine that delegates to specialized components
+(DataPipeline, HealthMonitor, RestartMonitor) — each independently testable
+with a clear input→output contract. Platform-agnostic — no `homeassistant.*`
+imports, no catalog imports.
+
+Core is bounded by interfaces and abstract base classes. Concrete
+implementations live here too (auth strategies, resource loaders, actions),
+but modem-specific behavior comes from config, not from Core code.
+
+| Responsibility | What |
+|----------------|------|
+| Data models | `ModemData`, `ChannelData`, `SystemInfo`, `HealthInfo` |
+| Config schemas | `ModemConfig` (Pydantic), `AuthConfig`, `PageConfig`, `ParserConfig` |
+| ABCs | `BaseParser`, `BaseAuthStrategy`, `BaseAction` |
+| Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `hnap`, `url_token` |
+| Resource loaders | HTML → `BeautifulSoup`, REST → `dict`, HNAP → JSON |
+| Orchestrator | Scheduler + policy: timing, signal→policy dispatch, serialized access |
+| DataPipeline | Single poll cycle: auth → load → parse → `ModemData` or signal |
+| HealthMonitor | Health probes on independent cadence → `HealthInfo` |
+| RestartMonitor | Two-phase restart recovery: wait for response → wait for channel sync |
+| Auth Manager | Strategy dispatch, session reuse, backoff |
+| Modem loader | `load_modem_config(path, mfr, model, variant)` — knows the directory convention |
+| Discovery API | `search_modems(path, query)`, `list_variants(path, mfr, model)` — searches across `manufacturer`, `model`, `model_aliases`, `brands` fields |
+| Connectivity | Protocol detection, legacy SSL, health probes |
+| Exceptions | `LoginLockoutError`, `AuthFailedError`, `ParseError` |
+| Test harness | Schema validators, HAR replay framework, parser output assertions |
+
+The test harness lives in Core so that Catalog contributors cannot
+accidentally modify test assertions or loader logic. Catalog's CI installs
+Core and runs Core's test suite pointed at the catalog files.
+
+Core could power any platform — Home Assistant, a Windows service, a CLI
+tool, a Prometheus exporter. The platform tells Core where the modem files
+are and provides credentials; Core does the rest.
+
+### Catalog — `solentlabs-cable-modem-monitor-catalog`
+
+A content package. No business logic — just modem config files, parser
+overrides, and HAR evidence. Depends on Core only (parser.py files extend
+Core's `BaseParser`).
+
+| Content | What |
+|---------|------|
+| `modem.yaml` / `modem-{variant}.yaml` | Identity, auth config, pages, metadata |
+| `parser.yaml` | Declarative extraction mappings |
+| `parser.py` | Code overrides extending `BaseParser` |
+| `tests/` | HAR captures and expected output golden files |
+
+```
+solentlabs/cable_modem_monitor_catalog/
+├── __init__.py              # exposes CATALOG_PATH
+└── modems/
+    └── {mfr}/{model}/
+        ├── modem.yaml
+        ├── parser.yaml
+        ├── parser.py
+        └── tests/
+```
+
+No loader, no discovery, no test code. Adding a modem means adding a
+directory — no registration, no changes to Catalog package code.
+
+### HA Integration — `cable-modem-monitor`
+
+Thin platform adapter. Translates between Home Assistant's lifecycle and
+Core's engine. Depends on both Core and Catalog.
+
+| Responsibility | What |
+|----------------|------|
+| Config flow | Calls Core's discovery API with Catalog's path |
+| Coordinator | Wraps Core's `Orchestrator` in HA's `DataUpdateCoordinator` |
+| Entities | Maps Core's `ModemData` / `HealthInfo` → HA sensors |
+| Restart button | Maps HA button press → Core's action API |
+| Update button | Triggers an immediate poll via the coordinator |
+| Reset entities button | Removes all entities from HA registry and reloads the integration |
+| Capture button | Triggers diagnostic poll cycle, PII-scrubs raw data via `har-capture` redaction, exposes via HA diagnostics download |
+| Diagnostics | Passes Core's diagnostic data to HA's diagnostics platform |
+
+No parsing, no auth, no modem-specific knowledge. If Core and Catalog were
+wired to a different platform, none of this code would be needed.
+
+**Startup example:**
+```python
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core import Orchestrator, load_modem_config
+
+config = load_modem_config(CATALOG_PATH, "arris", "sb8200", "url-token")
+orchestrator = Orchestrator(config, host="192.168.100.1", credentials=...)
+```
+
+---
+
+## The Paradigm
+
+The `paradigm` field in modem.yaml is the **master architectural constraint**.
+Each level in the hierarchy constrains what's valid at the next level down.
+All paths produce the same `ModemData` output.
+
+```mermaid
+graph TD
+    P[paradigm] --> HNAP[hnap]
+    P --> REST[rest_api]
+    P --> HTML[html]
+
+    HNAP --> HA["<b>AUTH</b><hr/>• HMAC challenge-response"]
+    HA --> HS["<b>SESSION</b><hr/>• uid cookie + HNAP_AUTH header"]
+    HS --> HP["<b>PARSE</b><hr/>• JSON + delimiters"]
+
+    REST --> RA["<b>AUTH</b><hr/>• none<br/>• form + CSRF<br/>• form_pbkdf2"]
+    RA --> RS["<b>SESSION</b><hr/>• stateless<br/>• PHPSESSID cookie + CSRF"]
+    RS --> RP["<b>PARSE</b><hr/>• JSON field paths"]
+
+    HTML --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token"]
+    HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF token<br/>• nonce<br/>• url_token"]
+    HTS --> HTP["<b>PARSE</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• html_fields"]
+```
+
+### HNAP — Fully Constrained
+
+- The paradigm IS the implementation
+- Auth, session, transport, data format are all protocol-defined
+- Only two values vary per modem: HMAC algorithm and action names
+- One strategy handles all HNAP modems
+
+### REST API — Mostly Constrained
+
+- Data format is fixed (JSON)
+- Auth is `none`, `form`, or `form_pbkdf2`
+- Only endpoint URLs, field paths, and auth config vary per modem
+
+### HTML — Independent Axes
+
+- Auth, session, and parsing are completely independent
+- Any combination is valid
+- This is where all the complexity lives
+
+### Constraint Summary
+
+| Paradigm | Valid Auth | Valid Parsing | Config Surface |
+|----------|-----------|--------------|----------------|
+| `hnap` | `hnap` only | `hnap` only | 2 values (HMAC algo, action list) |
+| `rest_api` | `none`, `form`, `form_pbkdf2` | `json` only | Endpoints + field paths + auth |
+| `html` | `none`, `basic`, `form`, `form_nonce`, `url_token` | `table`, `table_transposed`, `javascript`, `html_fields` | Everything varies |
+
+The core validates these constraints at load time. A misconfigured modem.yaml
+is rejected with a clear error, not at runtime with mysterious parsing failures.
+
+---
+
+## Core Components
+
+Everything below lives in `solentlabs-cable-modem-monitor-core`. These are
+generic — no modem-specific knowledge, no HA imports.
+
+### Auth Manager
+
+Handles authentication for all paradigms through configuration, not code.
+Each auth strategy is a single audited implementation that reads its parameters
+from modem.yaml:
+
+| Strategy | Paradigm | Stateless? | Config Flags |
+|----------|----------|:----------:|-------------|
+| `none` | HTML, REST | Yes | — |
+| `basic` | HTML | Yes | challenge_cookie (retry with server-set cookie on 401) |
+| `form` | HTML, REST | No | encoding (plain/base64), CSRF (field/header), session cookie name, hidden fields |
+| `form_nonce` | HTML | No | nonce field, credential format, success/error prefixes |
+| `hnap` | HNAP | No | HMAC algorithm (MD5/SHA256) |
+| `form_pbkdf2` | REST | No | salt_endpoint, pbkdf2_iterations, pbkdf2_key_length, double_hash (salt + saltwebui), CSRF header, session cookie name |
+| `url_token` | HTML | No | login_prefix, token_prefix, session_cookie, ajax_login, auth_header_data |
+
+**Key points:**
+- `form` and `form_nonce` are separate strategies because they have different
+  response handling — `form` evaluates redirects and cookies, `form_nonce`
+  parses text prefixes (`Url:` / `Error:`)
+- `form_pbkdf2` is separate from `form` because it requires a multi-round-trip
+  challenge-response: POST to get server-provided salts, client-side PBKDF2
+  key derivation, then POST the derived hash. This is structurally closer to
+  HNAP's challenge-response than to a simple form POST with encoding flags
+- All other form differences (encoding, CSRF, field names, session cookies)
+  are config flags on `form`
+- Auth strategy **selection** is purely config-driven — no runtime inspection
+  of login pages to determine which strategy to use.
+  Auth **execution** routinely interacts with login
+  pages: `form` fetches the page to extract hidden fields, `form_nonce` extracts
+  a server-generated nonce, `form_pbkdf2` fetches salts before computing the
+  password hash. The distinction: config decides *what* to do, runtime
+  interaction is *how* the configured strategy executes.
+- Multi-variant modems use separate `modem-{variant}.yaml` files — one per
+  firmware variant, each with a single `auth` block. The config flow presents
+  variants as user choices during setup. Protocol (HTTP vs HTTPS) is detected
+  automatically and is independent of firmware variant — the user selects based
+  on their network, not their protocol. See `CONFIG_FLOW_SPEC.md` for the
+  full setup flow.
+
+#### `url_token` Strategy — Config Reference
+
+URL token auth appends base64-encoded credentials to the URL query string
+instead of using an Authorization header or form POST. The response sets a
+session cookie; subsequent requests use a server-issued token in the query
+string.
+
+Evidence base: Arris SB8200 HTTPS variants (#81, #124). Two firmware builds
+use different token formats — one prefixes `login_` before the base64 token,
+the other sends bare base64. Both produce the same session mechanism.
+
+**Auth flow:**
+```
+1. Encode credentials: base64("username:password")
+2. Login request:
+   GET /cmconnectionstatus.html?{login_prefix}{base64_token}
+   Headers: Authorization: Basic {base64_token}  (if auth_header_data)
+            X-Requested-With: XMLHttpRequest      (if ajax_login)
+3. Response sets session cookie ({session_cookie})
+4. Subsequent data requests:
+   GET /cmswinfo.html?{token_prefix}{session_token}
+```
+
+**Config fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_page` | string | required | Page URL that accepts the token login (e.g., `/cmconnectionstatus.html`) |
+| `login_prefix` | string | `""` | Prefix before base64 token in login URL. Some firmware uses `login_`, others use bare base64. If empty, no prefix is added. |
+| `token_prefix` | string | `""` | Prefix before session token in subsequent requests (e.g., `ct_`). The session token is extracted from the login response cookie. |
+| `session_cookie` | string | required | Cookie name set by the modem after successful login (e.g., `sessionId`) |
+| `success_indicator` | string | `""` | String to match in login response body to confirm success (e.g., `Downstream Bonded Channels`) |
+| `ajax_login` | bool | `false` | If true, login request includes `X-Requested-With: XMLHttpRequest` header (matches browser jQuery behavior observed in HAR) |
+| `auth_header_data` | bool | `false` | If true, include `Authorization: Basic {token}` header on data requests (not just login). Most firmware only needs the session cookie. |
+
+**Example (SB8200 AB01 firmware):**
+```yaml
+auth:
+  strategy: url_token
+  login_page: "/cmconnectionstatus.html"
+  login_prefix: "login_"       # Some AB01 builds use "", others use "login_"
+  token_prefix: "ct_"
+  session_cookie: "sessionId"
+  success_indicator: "Downstream Bonded Channels"
+  ajax_login: true
+  auth_header_data: false
+```
+
+**Handling `login_prefix` variance:** When `login_prefix` is configured, the
+strategy uses it. If a modem family has firmware builds that differ only in
+prefix (like SB8200's `login_` vs bare), the strategy can be configured to
+try both — first with the prefix, then without on failure. This avoids
+needing separate modem configs for what is otherwise identical behavior.
+
+#### `form_pbkdf2` Strategy — Config Reference
+
+PBKDF2 (Password-Based Key Derivation Function 2, RFC 8018) auth uses
+server-provided salts and client-side key derivation to authenticate without
+sending plaintext passwords over the wire. The multi-round-trip flow resembles
+HNAP's challenge-response more than a standard form POST.
+
+Evidence base: Technicolor CGA4236 (#115) and CGA6444VF (#120). Both use the
+same Technicolor REST API platform with PHPSESSID sessions, CSRF tokens, and
+a JavaScript login flow that performs double PBKDF2 hashing.
+
+**Auth flow:**
+```
+1. POST /api/v1/session/login  { password: "seeksalthash" }
+   → Response: { salt: "<salt>", saltwebui: "<saltwebui>" }
+2. Client computes: hash1 = PBKDF2(password, salt, iterations, keylen)
+3. Client computes: hash2 = PBKDF2(hash1, saltwebui, iterations, keylen)
+4. POST /api/v1/session/login  { password: "<hash2>" }
+   → Response: sets PHPSESSID cookie, returns CSRF token
+5. Subsequent requests include PHPSESSID cookie + X-CSRF-TOKEN header
+```
+
+**Config fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_endpoint` | string | required | URL that accepts both salt request and login POST (e.g., `/api/v1/session/login`) |
+| `salt_trigger` | string | `"seeksalthash"` | Password value that triggers the server to return salts instead of authenticating. Observed in Technicolor login.js. |
+| `pbkdf2_iterations` | int | required | PBKDF2 iteration count (e.g., 1000). From login.js `doPbkdf2NotCoded()` parameters. |
+| `pbkdf2_key_length` | int | required | Derived key length in bits (e.g., 128). From login.js parameters. |
+| `double_hash` | bool | `true` | If true, hash twice: first with `salt`, then with `saltwebui`. All known Technicolor modems use double hashing. |
+| `csrf_header` | string | `"X-CSRF-TOKEN"` | Header name for CSRF token on subsequent requests |
+| `csrf_init_endpoint` | string | `""` | Optional endpoint to fetch initial CSRF token (e.g., `/api/v1/session/init_page`). If empty, CSRF token is extracted from login response. |
+| `session_cookie` | string | `"PHPSESSID"` | Cookie name set after successful login |
+| `logout_endpoint` | string | `""` | Optional logout URL (e.g., `/api/v1/session/logout`) |
+
+**Example (Technicolor CGA4236):**
+```yaml
+auth:
+  strategy: form_pbkdf2
+  login_endpoint: "/api/v1/session/login"
+  salt_trigger: "seeksalthash"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  double_hash: true
+  csrf_header: "X-CSRF-TOKEN"
+  csrf_init_endpoint: "/api/v1/session/init_page"
+  session_cookie: "PHPSESSID"
+  logout_endpoint: "/api/v1/session/logout"
+```
+
+**Evidence gaps:** The full auth flow is derived from login.js source code
+captured in HAR entries, not from observing all HTTP transactions. Only the
+first POST (salt request) was captured in both CGA4236 and CGA6444VF HARs.
+The second POST (hashed password) was executed by JavaScript but not recorded
+in the HAR entries. The PBKDF2 function parameters are partially redacted in
+the CGA4236 HAR (`***REDACTED***`) but visible in CGA6444VF's login.js
+(SJCL PBKDF2, 1000 iterations, 128-bit key). Config values should be verified
+against real login traffic when these modems are implemented.
+
+**Salt fallback:** Both CGA4236 and CGA6444VF login.js contain a
+`salt == "none"` branch that skips PBKDF2 and sends the plaintext password.
+This triggers when no password has been configured (first-time setup,
+factory reset, ISP default credentials). The `form_pbkdf2` strategy handles
+this inline: if the salt response is `"none"`, POST the plaintext password
+instead of performing key derivation. This is a branch within the strategy,
+not a fallback to a different strategy.
+
+### Session Management
+
+Maintains authenticated state between requests. For HTML and REST paradigms,
+session is independent from auth — the same auth strategy can use different
+session mechanisms across modems. For HNAP, session is locked to the paradigm.
+
+| Mechanism | Paradigm | Config |
+|-----------|----------|--------|
+| Stateless | HTML, REST | — |
+| Cookie | HTML, REST | `session.cookie_name` |
+| CSRF token | HTML, REST | `session.csrf_header` or `session.csrf_field` |
+| Nonce | HTML | Server-side tracking, no client config |
+| URL token | HTML | `session.token_prefix` |
+| HNAP session | HNAP | Implicit — `uid` cookie + `HNAP_AUTH` header |
+
+**Key points:**
+- Session config is independent from auth config in modem.yaml — different
+  modems using the same auth strategy often have different session mechanisms
+- Cookie names are vendor-specific (e.g., `PHPSESSID`, `SessionID`, `DUKSID`,
+  `sysauth`) — all handled by one config field
+- Logout endpoint (`session.logout_url`) and concurrency limit
+  (`session.max_concurrent`) are optional session config
+
+### Resource Loaders
+
+Fetch the resources declared in parser.yaml and return them as a keyed dict
+for the parser. The paradigm selects the transport and value type:
+HTML → `BeautifulSoup`, REST → `dict`, HNAP → JSON. Auth and session state
+are already established upstream — the loader attaches credentials to
+requests but doesn't manage them.
+
+See `RESOURCE_LOADING_SPEC.md` for the full resource dict contract, loader
+behavior per paradigm, URL construction, path deduplication, and HNAP
+batching details.
+
+### Parsing: parser.yaml + parser.py
+
+Parsers extract channel data from the pre-fetched resource dict. No
+network calls, no auth awareness — pure data extraction.
+
+Six extraction formats in two tiers. Five general-purpose formats
+(`table`, `table_transposed`, `javascript`, `hnap`, `json`) are valid
+for any section. One section-level format (`html_fields`) is valid only
+for `system_info` sources. Format selection is per-section — a modem's
+`downstream` can use `table_transposed` while its `system_info` uses
+`html_fields` or `javascript`. `parser.yaml` declares the format and
+field mappings per section. `parser.py` overrides for modem-specific
+quirks. Capabilities are implicit — the presence of a mapping IS the
+capability declaration.
+
+See `PARSING_SPEC.md` for the full specification: per-section format
+selection, parser.yaml schema per format, parser.py override contract,
+resource dict contract, and output format.
+
+### Data Models
+
+Two core models with independent lifecycles:
+
+- **`ModemData`** — parsed modem data, updated on the data polling cadence
+  - `downstream`, `upstream` — lists of `ChannelData`
+  - `system_info` — `SystemInfo` fields
+  - `docsis_lock_state` — derived from channel lock status during parsing
+- **`HealthInfo`** — operational health, updated on the health check cadence
+  - `ping_latency` — ICMP round-trip time
+  - `http_latency` — HTTP response time (captured during resource loading)
+  - `status` — derived composite state (see below)
+
+**Why two models?** Ping is lightweight. Parsing is heavy. A flaky modem
+may need fast heartbeats (ping every 30s) without hammering the web
+interface (data poll every 10 minutes). Each model has its own cadence and
+lifecycle.
+
+**`ChannelData`** — per-channel metrics for downstream and upstream:
+  - Fixed fields: channel ID, frequency, power, SNR, lock status,
+    modulation, channel type, corrected and uncorrected codewords
+  - Upstream adds `symbol_rate`, omits SNR and codewords
+
+**`SystemInfo`** — mix of structured and dynamic fields:
+  - Structured: `system_uptime`, `last_boot_time`, `software_version`,
+    `hardware_version`, `model_name`
+  - Dynamic: modem-specific fields (e.g., `connectivity_state`,
+    `boot_status`) pass through without core needing to understand them
+  - Core derives `last_boot_time` from `system_uptime` when the modem
+    doesn't provide it natively — consumers see the same field regardless
+    of source
+
+**Status** is derived in `HealthInfo` from health check results and the
+last known `ModemData`:
+
+```
+Unresponsive → Degraded → Parser Error → No Signal →
+Not Locked → Partial Lock → ICMP Blocked → Operational
+```
+
+**Capabilities are implicit.** A field mapping in parser.yaml or an
+override in parser.py declares the capability. If downstream channels
+are mapped, the modem has downstream channel sensors. If `system_uptime`
+is mapped, the modem has an uptime sensor. No separate capabilities list
+in modem.yaml — the parser output IS the capability declaration.
+
+The one exception is restart: `actions.restart` in modem.yaml declares
+the restart capability, since restart is a modem command, not parsed data.
+
+**Absent capability = absent entity.** If the parser doesn't extract a
+field, the corresponding HA entity is never created — no greyed-out
+buttons, no disabled switches, no "not supported" placeholders. The UI
+only shows what the modem can actually do.
+
+This is deliberate. A disabled button invites questions ("why can't I click
+this?") and support requests. A missing button is invisible — users don't
+miss what was never there. It also avoids false promises: some modems had
+reboot disabled in firmware after the 2015–2016 ARRIS CSRF vulnerability
+that affected 135 million devices. The modem literally has no restart
+endpoint, so showing a greyed-out reboot button would be misleading.
+
+### Config Schema
+
+Pydantic schema that defines and validates modem.yaml. The paradigm
+constraints from the hierarchy above are enforced here — an HTML modem
+declaring HNAP auth is rejected at load time, not at runtime with
+mysterious failures.
+
+modem.yaml serves two purposes based on `status`:
+- **Working modems** (`verified`, `awaiting_verification`, `in_progress`) —
+  full config including auth, session, actions, hardware
+- **Database entries** (`unsupported`) — identity and hardware info only,
+  documents modems awaiting data or locked down
+
+---
+
+## Runtime Polling Loop
+
+After setup, the integration polls the modem on a user-configured cadence
+(default 10 minutes). The orchestrator is a scheduler and policy engine
+that delegates execution to three specialized components:
+
+```
+Orchestrator (scheduler + policy)
+ ├─ DataPipeline  — one poll cycle → ModemData | signal
+ ├─ HealthMonitor — probe cycle → HealthInfo
+ └─ RestartMonitor — recovery cycle → complete | timeout
+```
+
+**Orchestrator** — decides *when* to run things, *what to do* with results,
+and serializes access (one operation at a time). Owns all policy: retry,
+backoff, error recovery, state transitions. Does not contain pipeline
+mechanics.
+
+**DataPipeline** — executes a single poll cycle: auth manager → resource
+loader → parser. Returns `ModemData` on success or a signal (auth failure,
+parse error, connectivity error) on failure. Stateless per invocation —
+the auth manager handles session reuse across calls.
+
+**HealthMonitor** — runs health probes (ICMP → HEAD → data poll fallback)
+on its own cadence, independent of data polling. Returns `HealthInfo`.
+Lightweight — never triggers full auth or parsing.
+
+**RestartMonitor** — manages two-phase restart recovery after a planned
+restart (user button press) or unplanned restart (ISP/power). Phase 1:
+wait for modem to respond. Phase 2: wait for channel counts to stabilize.
+Used by both planned restarts (orchestrator dispatches restart action,
+then hands off to RestartMonitor) and unplanned restarts (orchestrator
+detects `unreachable → online` transition, hands off for phase 2).
+
+Protocol layers signal conditions (exceptions, return values); the
+orchestrator owns all policy (retry, backoff, error reporting). This
+separation ensures no hidden policy in protocol layers.
+
+See `RUNTIME_POLLING_SPEC.md` for the full specification: poll cycle
+sequence, signal and policy separation, session lifecycle (reuse, stale
+retry, backoff, single-session logout), health pipeline, modem restart
+(planned and unplanned), and per-poll metrics.
+
+---
+
+## Modem Contract
+
+What a modem must provide to plug into the system:
+
+### Required
+
+- **`modem.yaml`** (or `modem-{variant}.yaml`) — everything about the modem
+  except parsing: identity (manufacturer, model, model_aliases, brands,
+  paradigm), auth strategy config, pages (public/protected/data URLs),
+  hardware, session config, metadata (status, attribution, ISPs).
+
+  Single-variant modems use `modem.yaml`. Multi-variant modems use
+  `modem-{variant}.yaml` files — one per firmware variant. All variants in a
+  directory must declare the same `model` value.
+
+  See `MODEM_DIRECTORY_SPEC.md` for the multi-variant merge contract.
+
+- **`tests/`** — test fixtures directory. Contains HAR captures (pipeline
+  input) and expected output golden files (pipeline assertions). No test
+  code — the test harness lives in Core.
+
+- **`tests/modem.har`** — PII-scrubbed HAR capture. Source of truth for
+  analysis, testing, and validation. Required for working modems
+  (`verified`, `awaiting_verification`, `in_progress`). Not required for
+  `unsupported` modems.
+
+  **Completeness criteria** — a HAR must demonstrate:
+  - Pre-auth flow visible (first request returns 401 or login page, not
+    cached/authenticated session data)
+  - Auth mechanism identifiable from response headers or login sequence
+  - All data endpoints exercised with actual response content
+  - One capture per firmware variant (should match variant yaml names)
+  - Captured with har-capture v0.4.4+ (includes HTTP probe and cookie
+    snapshots) when possible
+
+- **`tests/modem.expected.json`** — golden file containing the expected
+  `ModemData` output (downstream channels, upstream channels, system_info)
+  when the paired HAR is replayed through the full pipeline. Generated by
+  running the pipeline against a HAR mock server, then reviewed and
+  committed. All future runs are regression tests against this file.
+
+  **Naming convention:** `{name}.har` pairs with `{name}.expected.json`.
+  For variants: `modem-{variant}.har` → `modem-{variant}.expected.json`.
+
+### Parsing (at least one required)
+
+- **`parser.yaml`** — declarative extraction config. Defines field mappings,
+  table selectors, column indices, delimiters, and JSON paths that the
+  strategy base class consumes. The presence of a mapping declares the
+  capability — no separate capabilities list needed.
+
+- **`parser.py`** — code override hooks. Extends the strategy base class
+  for modem-specific quirks that can't be expressed declaratively. Overrides
+  leaf methods (`parse_downstream`, `parse_system_info`), never the pipeline.
+
+A modem needs at least one. They can be mixed — parser.yaml handles
+standard pages, parser.py overrides for non-standard ones. The implementer
+decides where to draw the line.
+
+**parser.yaml and parser.py never contain auth, pages, or metadata.
+modem.yaml never contains extraction logic.**
+
+### What the modem gets back
+
+Its data parsed into the standard `ModemData` shape — channels with frequency,
+power, SNR, and error counts. The modem doesn't need to know about HA sensors,
+coordinators, or any upstream concerns.
+
+---
+
+## Firmware Variants and Modem Families
+
+Some modem models ship with multiple firmware families that differ in
+protocol, auth mechanism, or data format. These aren't minor config
+differences — they can require different parsing strategies, making them
+functionally distinct modems that share a model name.
+
+### parser.yaml + modem-{variant}.yaml (Decided)
+
+Extraction config is per-modem and shared. Auth config and metadata
+(contributors, verification status, ISPs) are per-variant.
+
+**`parser.yaml`** (and/or `parser.py`) defines how to extract data from
+resources — field mappings, table selectors, delimiters. Capabilities are
+implicit from the mappings. Shared across all firmware variants.
+
+**`modem.yaml`** (or `modem-{variant}.yaml`) defines everything else —
+identity, paradigm, auth, pages, hardware, metadata. Each
+variant file has one auth strategy. Per-variant verification and
+attribution are natural — they live in the variant file, not a shared blob.
+
+Single-variant modems: `modem.yaml` + `parser.yaml` (and/or `parser.py`)
+Multi-variant modems: `modem-{variant}.yaml` files + shared `parser.*`
+
+See `MODEM_DIRECTORY_SPEC.md` for the full assembly contract and examples.
+
+### Same paradigm = same directory
+
+If firmware variants share a paradigm (same parsing, same endpoints), they
+belong in one directory with shared `parser.*`. Each variant gets its
+own `modem-{variant}.yaml` with a single auth strategy.
+
+```
+modems/netgear/cm1200/
+├── parser.py               # JSEmbedded extraction
+├── modem-noauth.yaml       # auth: none
+├── modem-basic.yaml        # auth: basic (challenge_cookie)
+└── tests/
+    ├── modem.har
+    ├── modem.expected.json
+    ├── modem-basic.har
+    └── modem-basic.expected.json
+```
+
+### Different paradigm = different directory
+
+If variants require a different **paradigm** (e.g., `html` vs `hnap`), they
+need separate modem directories. A paradigm change means different parser,
+different auth strategy, different endpoints — it's a different modem that
+happens to share a model number.
+
+**The determinant is usually ISP-provisioned firmware, not hardware revision.**
+Cable modems receive firmware via DOCSIS provisioning. The same hardware
+revision can run different firmware depending on the ISP. Users cannot
+determine their firmware family during setup — they can only answer behavioral
+questions like "does your modem require login?"
+
+### Modem families (shared UI across models)
+
+Some manufacturers use the same web interface across multiple model numbers.
+The Technicolor XB6, XB7, and XB8 share identical page structure, auth,
+and endpoints — only the model name and metadata differ.
+
+With the parser.yaml + modem-{variant}.yaml split, families share one
+`parser.yaml` (extraction mappings) and each model gets its own variant
+yaml with per-model metadata. `model_aliases` and `brands` in `modem.yaml`
+provide alternative names for config flow search.
+
+### Evidence: Arris SB8200
+
+The SB8200 has three firmware families producing four variants. All three
+HTML variants use the same HTML table structure and share one parser
+(`ArrisSB8200Parser`), but have fundamentally different auth flows.
+
+| Firmware family | Auth | Post-login session | Variant file |
+|-----------------|------|--------------------|--------------|
+| `SB8200.0200` | `none` | N/A | `modem-noauth.yaml` |
+| `AB01` (May 2021) | `url_token` (`login_` prefix) | Token in URL (`?ct_<token>`) | `modem-url-token.yaml` |
+| `AB01` (Aug 2020) | `url_token` (bare base64) | Cookie only (no token in URL) | `modem-cookie.yaml` |
+| `AC01` (SB8200v3) | HNAP (HMAC-MD5) | `sessionToken` cookie | Separate dir: `sb8200v3/` |
+
+The two AB01 variants differ in more than just `login_prefix`. Their entire
+post-login session mechanisms are different: one extracts a token from
+the login response body and appends it to subsequent URLs (`?ct_<token>`),
+the other gets an empty response body and relies on cookies only.
+Each needs its own complete `url_token` config — its own variant yaml.
+
+```
+modems/arris/sb8200/
+├── parser.yaml             # table selectors, column mappings (shared)
+├── modem-noauth.yaml       # auth: none (Spectrum LA firmware)
+├── modem-url-token.yaml    # auth: url_token (login_ prefix)
+├── modem-cookie.yaml       # auth: url_token (cookie-only session)
+├── parser.py
+└── tests/
+    ├── modem.har
+    ├── modem.expected.json
+    ├── modem-url-token.har
+    ├── modem-url-token.expected.json
+    ├── modem-cookie.har
+    └── modem-cookie.expected.json
+```
+
+SB8200v3 (HNAP) is a separate directory — different paradigm, different
+parsing config, will need its own parser.
+
+Hardware version does not determine the variant: HW 6 and HW 7 both run
+AB01 firmware with identical behavior. HW 7 also appears on a different
+AB01 build with a different token format. The firmware is ISP-provisioned.
+
+---
+
+## Hooks and Configuration Boundaries
+
+Only parsing exposes override hooks (`parser.py`). Auth and session are
+fully handled in core through configuration (`modem.yaml`).
+
+### Why parsing has two expression modes
+
+Parsing has genuine structural variety — HTML tables, JavaScript variables,
+transposed layouts, HNAP delimiters. `parser.yaml` handles the common
+patterns declaratively. `parser.py` handles the rest via code. Both
+produce the same output through the same strategy base class.
+
+See "Parsing: parser.yaml + parser.py" in Core Components for details.
+
+### Why auth and session have no hooks
+
+The auth and session variety across 31 modems is wide but shallow — different
+values, not different behaviors. Every variation maps to a config field:
+
+| Variation | Config |
+|-----------|--------|
+| Form POST URL | `auth.form.action` |
+| Password field name | `auth.form.password_field` |
+| Password encoding | `auth.form.password_encoding` |
+| HMAC algorithm | `auth.hnap.hmac_algorithm` |
+| CSRF token header | `auth.form.csrf.header` |
+| Session cookie name | `session.cookie_name` |
+| Logout endpoint | `session.logout_url` |
+| Concurrency limit | `session.max_concurrent` |
+| CSRF on every request | `session.csrf_header` |
+
+No auth hooks means:
+- **Smaller security surface.** Auth touches credentials. One audited
+  implementation per strategy, not per-modem overrides that could mishandle
+  passwords or leak tokens.
+- **New patterns belong in core.** If a modem needs a genuinely new auth flow
+  (OAuth, digest, etc.), that's a new core strategy — not a per-modem hook.
+  It applies to any future modem using the same protocol.
+
+### Summary
+
+| Layer | Config | Code Hooks | Rationale |
+|-------|--------|------------|-----------|
+| Parsing | `parser.yaml` | `parser.py` | Structural variety; declarative where possible, code where needed |
+| Auth | `modem.yaml` | None | Variation is values, not behavior; smaller security surface |
+| Session | `modem.yaml` | None | Cookie names, URLs, headers are config |
+
+---
+
+## Testing
+
+Testing is organized by package boundary. Each package has its own test
+concerns, fixtures, and assertion style. Detailed test specifications
+will live in per-package docs; this section defines the architectural
+decisions that affect directory structure and package boundaries.
+
+### Three test scopes
+
+**1. Core — isolated unit tests**
+
+Strategy extraction logic, auth strategies, config schema validation,
+data model invariants. Tests use synthetic inputs (hand-crafted HTML
+snippets, JSON structures, delimiter strings) designed to exercise
+specific code paths. No real modem data, no HAR files, no network.
+
+Core also owns the **test harness** — shared infrastructure for HAR
+replay, golden file comparison, and structural assertions. The harness
+lives in Core so that Catalog contributors cannot modify test assertions
+or loader logic. Catalog's CI installs Core and uses Core's test harness.
+
+**2. Catalog — HAR replay integration tests**
+
+Each modem's `tests/` directory contains HAR captures (input) and
+expected output golden files (assertions). The test harness in Core
+discovers these fixtures, replays each HAR through a mock server, runs
+the full pipeline (auth → load → parse), and compares the output
+against the golden file.
+
+```
+modems/{mfr}/{model}/tests/
+├── modem.har                  # HAR capture (pipeline input)
+├── modem.expected.json        # golden file (expected ModemData output)
+├── modem-{variant}.har        # variant HAR
+└── modem-{variant}.expected.json  # variant golden file
+```
+
+**Naming convention:** `{name}.har` pairs with `{name}.expected.json`.
+The test harness discovers HAR files, finds the matching expected
+output, and resolves which `modem*.yaml` applies (base or variant).
+
+**Golden file lifecycle:**
+1. Contributor submits HAR capture via `har-capture`
+2. Skill/MCP generates modem.yaml, parser.yaml, and parser.py if needed
+3. First run against HAR mock server produces `ModemData` output
+4. Developer reviews output against the raw HAR responses
+5. Reviewed output is committed as `{name}.expected.json`
+6. All future runs are regression tests against the golden file
+
+Golden files contain the full `ModemData` output — downstream channels,
+upstream channels, and system_info dict. If anything changes, the diff
+shows exactly what shifted.
+
+**Structural assertions** are also derived from parser.yaml at test
+time — field presence, field types, frequency normalization, canonical
+channel_type values, filter rules applied. These catch a class of bugs
+that golden file comparison alone might miss (e.g., a field present
+with the wrong type that happens to serialize identically).
+
+**Regression firewall:** Strategy tests run against **all modems that
+use that strategy**, not just the modem being worked on. Enhancing
+HTMLTableStrategy triggers every Catalog modem test that uses
+`format: table`.
+
+**3. HA Integration — adapter tests**
+
+Config flow, coordinator, entity model, device registry. Tests mock
+Core's engine interface — they verify HA-specific behavior (entity
+creation, state updates, availability) without running the real
+pipeline. Scope and details TBD in a dedicated HA test spec.
+
+### No test code in Catalog
+
+The `tests/` directory in each modem contains only data files — HAR
+captures and golden files. No pytest files, no conftest, no helpers.
+The test harness in Core consumes these fixtures. This means:
+
+- Adding a modem never requires writing test code — provide a HAR and
+  a reviewed golden file
+- Strategy changes are validated across all modems automatically
+- Contributors cannot accidentally weaken assertions
+
+---
+
+## Key Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| `parser.yaml` + `parser.py` for parsing, `modem.yaml` for everything else | Clean separation: parser.* is ONLY responsible for parsing. modem.yaml owns identity, auth, pages, metadata. Implementer decides where to draw the declarative/code line per modem. |
+| Capabilities are implicit from parser.yaml/parser.py | Presence of a mapping IS the capability declaration. No separate capabilities list to maintain. No mapping = no entity. |
+| `modem-{variant}.yaml` for firmware variants | Each file represents one firmware variant with its own auth, session, and ISP config. Multi-variant modems get one file per variant. Implicit merge — no explicit references between variant files. |
+| Monorepo with two pip packages + HA integration | Single repo for cross-cutting changes; real package boundaries for AI safety; HA integration distributed via HACS |
+| `solentlabs` namespace, `cable_modem_monitor_` prefix | PyPI uniqueness, consistent branding, ties packages to the HA integration name |
+| Core is the complete engine | Platform-agnostic — could power HA, a Windows service, a CLI tool. All business logic, ABCs, strategies, loaders, orchestration, test harness. No HA imports, no catalog imports |
+| Catalog is content only | No business logic — just YAML configs, parser overrides, HAR files. Core owns the loader that reads them. Test harness lives in Core so catalog contributors can't modify assertions |
+| HA Integration is a thin adapter | Config flow, coordinator, entities, diagnostics. Swappable for any platform adapter |
+| Base64 encoding is `encoding: base64` on `form`, not a separate strategy | Simpler, already works for MB7621 |
+| `basic` auth not valid for REST paradigm (yet) | Zero evidence in HAR data |
+| REST auth requires explicit config | Both captured REST modems need form + CSRF |
+| `form_pbkdf2` is a separate strategy, not a flag on `form` | Multi-round-trip challenge-response with server-provided salts and client-side key derivation. Structurally different from form POST with encoding. Affects Technicolor REST API family (CGA4236, CGA6444VF, likely CGM4140COM, CGM4981COM). |
+| G54 stays `html` despite heavy JSON content | LuCI serves JSON from CGI endpoints, not a REST API |
+| JS-driven auth (CODA56) handled as `form` variant | Not distinct enough for a separate type |
+| HAR captures via `har-capture` utility | Launches fresh browser context — no stale cookies or cached sessions |
+| `HealthInfo` separate from `ModemData` | Different cadences — ping is lightweight, parsing is heavy. Each has its own lifecycle |
+| Health probe: ICMP → HEAD → data poll | Use lightest available probe; never hammer modem web server unnecessarily |
+| No auth discovery | Strategy *selection* is config-driven only. No runtime login page inspection to *determine* auth type — too fragile. Strategies may interact with login pages during *execution* (extracting hidden fields, nonces, salts). |
+| No fallback/auto-detection | If no modem.yaml exists, we can't help. User submits HAR, we add support |
+| `last_boot_time` derived in core | Transparent to consumers — same field whether modem provides it or core calculates from uptime |
+| Dynamic `SystemInfo` fields | Modem-specific fields pass through without core changes. Core only understands structured fields |
+
+---
+
+## Invariants
+
+1. **A strategy never imports from a modem directory.** Modem-specific behavior
+   comes from parser.yaml config or parser.py overrides.
+
+2. **Same config + same responses = same output.** Parsing is deterministic.
+
+3. **Adding a modem cannot break another modem.** Isolated by config, no shared
+   mutable state.
+
+4. **Enhancing a strategy runs all modem tests for that strategy.** The
+   regression firewall.
+
+5. **Core and Catalog have no HA dependencies.** No `homeassistant.*` imports
+   in either package. CI enforces this — import boundary violations fail the
+   build.
+
+6. **parser.py overrides cannot make network calls.** Base class only passes
+   pre-fetched resources — no session, no HTTP client.
+
+7. **Auth and session have no per-modem hooks.** All variation is modem.yaml
+   config fields, not code.
+
+8. **`ModemData` and `HealthInfo` are independent.** Neither model depends
+   on the other's cadence.
+
+9. **parser.* is ONLY responsible for parsing.** parser.yaml and parser.py
+   never contain auth, pages, or metadata. modem.yaml never
+   contains extraction logic.
+
+10. **Capabilities are implicit.** A mapping in parser.yaml or an override
+    in parser.py declares the capability. No separate capabilities list.
+
+11. **Protocol layers signal, orchestrator decides.** Auth, loading, and
+    parsing never own retry, backoff, or fallback policy. They raise
+    exceptions or return results; the orchestrator decides what to do next.
+
+---
+
+## References
+
+| Document | Purpose |
+|----------|---------|
+| `RAW_DATA/har_summary.json` | 31 HAR captures — evidence base |
+| `RAW_DATA/HAR_LANDSCAPE.md` | Per-modem auth and endpoint analysis |
+| `MODEM_DIRECTORY_SPEC.md` | Catalog package structure |
+| `MODEM_YAML_SPEC.md` | modem.yaml schema |
+| `PARSING_SPEC.md` | Strategy selection, parser.yaml schema, parser.py contract, output format |
+| `RESOURCE_LOADING_SPEC.md` | Resource dict contract, loader behavior per paradigm |
+| `RUNTIME_POLLING_SPEC.md` | Poll cycle, session lifecycle, health pipeline, restart recovery |
+| `../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md` | Setup wizard step sequence |
+| `VERIFICATION_STATUS.md` | Parser status lifecycle |

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "solentlabs-cable-modem-monitor-catalog"
+version = "0.1.0"
+description = "Cable Modem Monitor Catalog — modem config files and parser overrides"
+requires-python = ">=3.12"
+dependencies = [
+    "solentlabs-cable-modem-monitor-core",
+]
+license = "MIT"
+authors = [
+    { name = "Solent Labs" },
+]
+
+[dependency-groups]
+dev = ["pydantic>=2.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["solentlabs"]
