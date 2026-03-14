@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "solentlabs-cable-modem-monitor-core"
+version = "0.1.0"
+description = "Cable Modem Monitor Core — platform-agnostic DOCSIS monitoring engine"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.12",
+    "pyyaml>=6.0",
+    "defusedxml>=0.7.1",
+    "requests>=2.31",
+]
+license = "MIT"
+authors = [
+    { name = "Solent Labs" },
+]
+
+[dependency-groups]
+dev = ["pydantic>=2.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["solentlabs"]

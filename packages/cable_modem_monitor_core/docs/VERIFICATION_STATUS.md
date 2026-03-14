@@ -25,7 +25,7 @@ class ParserStatus(StrEnum):
 
 ### Using Status in Parsers
 
-Status is declared in each modem's `modem.yaml` under `status_info.status`.
+Status is declared in each modem's `modem.yaml` under `status`.
 The `list-supported-modems.py` script reads these values to generate the
 modem database.
 
