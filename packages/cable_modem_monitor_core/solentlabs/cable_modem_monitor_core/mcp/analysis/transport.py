@@ -1,10 +1,10 @@
-"""Phase 1: Transport detection.
+"""Phase 1 - Transport detection.
 
 Scans HAR entries for HNAP protocol markers. If any HNAP marker is found,
 transport is ``hnap``; otherwise ``http``. Confidence is always ``high``
 because HNAP markers have no false positives.
 
-Per ONBOARDING_SPEC.md Phase 1.
+Per docs/ONBOARDING_SPEC.md Phase 1.
 """
 
 from __future__ import annotations

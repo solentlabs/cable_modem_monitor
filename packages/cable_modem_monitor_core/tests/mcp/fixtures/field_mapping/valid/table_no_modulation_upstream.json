@@ -1,0 +1,20 @@
+{
+  "_description": "Upstream table without modulation column - gets fixed atdma channel type",
+  "_format": "table",
+  "_direction": "upstream",
+  "_table": {
+    "table_id": "",
+    "css_class": "",
+    "headers": ["Channel ID", "Frequency", "Power"],
+    "rows": [["1", "37700000", "45.0"]],
+    "preceding_text": "",
+    "title_row_text": "",
+    "table_index": 0
+  },
+  "_expected_fields": {
+    "channel_id": {"type": "integer", "tier": 1, "index": 0},
+    "frequency": {"type": "frequency", "tier": 1, "index": 1},
+    "power": {"type": "float", "tier": 1, "index": 2}
+  },
+  "_expected_channel_type": {"fixed": "atdma"}
+}

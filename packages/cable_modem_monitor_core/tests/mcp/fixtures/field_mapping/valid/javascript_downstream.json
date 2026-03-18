@@ -1,0 +1,16 @@
+{
+  "_description": "JavaScript-embedded downstream channel data with pipe delimiter",
+  "_format": "javascript",
+  "_direction": "downstream",
+  "_js_function": {
+    "name": "InitDsTableTagValue",
+    "body": "var tagValueList = '2|Locked|QAM256|1|507000000|3.2|38.5|100|0|Locked|QAM256|2|513000000|3.1|37.8|150|1';",
+    "delimiter": "|",
+    "values": ["2", "Locked", "QAM256", "1", "507000000", "3.2", "38.5", "100", "0", "Locked", "QAM256", "2", "513000000", "3.1", "37.8", "150", "1"]
+  },
+  "_expected_fields": ["lock_status", "modulation", "frequency"],
+  "_expected_channel_count": 2,
+  "_expected_function_name": "InitDsTableTagValue",
+  "_expected_delimiter": "|",
+  "_expected_fields_per_record": 8
+}

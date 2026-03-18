@@ -1,0 +1,28 @@
+{
+  "_description": "Table with unit suffixes on frequency, power, and SNR values",
+  "_table": {
+    "table_id": "",
+    "css_class": "",
+    "headers": ["Channel ID", "Lock Status", "Modulation", "Frequency", "Power", "SNR", "Corrected", "Uncorrected"],
+    "rows": [
+      ["1", "Locked", "QAM256", "507000000 Hz", "3.2 dBmV", "38.5 dB", "100", "0"],
+      ["2", "Locked", "QAM256", "513000000 Hz", "3.1 dBmV", "37.8 dB", "150", "1"]
+    ],
+    "preceding_text": "Downstream Bonded Channels",
+    "title_row_text": "",
+    "table_index": 0
+  },
+  "_format": "table",
+  "_direction": "downstream",
+  "_expected_fields": {
+    "channel_id": {"type": "integer", "tier": 1, "index": 0},
+    "lock_status": {"type": "string", "tier": 1, "index": 1},
+    "modulation": {"type": "string", "tier": 1, "index": 2},
+    "frequency": {"type": "frequency", "tier": 1, "index": 3},
+    "power": {"type": "float", "tier": 1, "index": 4},
+    "snr": {"type": "float", "tier": 1, "index": 5},
+    "corrected": {"type": "integer", "tier": 1, "index": 6},
+    "uncorrected": {"type": "integer", "tier": 1, "index": 7}
+  },
+  "_expected_channel_type": {"field": "modulation", "map": {"QAM256": "qam"}}
+}

@@ -1,0 +1,15 @@
+{
+  "_description": "HTML page with label-value pairs for system info",
+  "_page": {
+    "resource": "/info.html",
+    "content_type": "text/html",
+    "label_pairs": [
+      {"label": "System Up Time", "value": "3 days 2h 15m", "selector_type": "label", "selector_value": "System Up Time", "element_id": ""},
+      {"label": "Software Version", "value": "1.0.4.2", "selector_type": "label", "selector_value": "Software Version", "element_id": ""},
+      {"label": "Hardware Version", "value": "T100 Rev 2", "selector_type": "label", "selector_value": "Hardware Version", "element_id": ""},
+      {"label": "Cable Modem Status", "value": "Online", "selector_type": "label", "selector_value": "Cable Modem Status", "element_id": ""}
+    ]
+  },
+  "_expected_fields": ["system_uptime", "software_version", "hardware_version", "network_access"],
+  "_expected_format": "html_fields"
+}

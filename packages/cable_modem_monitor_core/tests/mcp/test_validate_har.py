@@ -12,7 +12,7 @@ Invalid fixtures have `_har` (the bad HAR dict) and `_expected_error`
 Two tests remain inline: missing file and invalid JSON — these test
 file-level errors that can't be expressed as fixture content.
 
-Integration tests against real modem HARs belong in Catalog (Step 8).
+Integration tests against real modem HARs belong in the catalog test suite.
 """
 
 from __future__ import annotations

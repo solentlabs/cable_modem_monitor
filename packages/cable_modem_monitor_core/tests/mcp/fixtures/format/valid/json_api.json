@@ -1,0 +1,20 @@
+{
+  "_description": "JSON API response with channel data array",
+  "_entry": {
+    "request": {
+      "method": "GET",
+      "url": "http://192.168.100.1/api/downstream",
+      "headers": []
+    },
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "content": {
+        "size": 200,
+        "mimeType": "application/json",
+        "text": "{\"downstream\": {\"channels\": [{\"channelId\": 1, \"frequency\": 507000000, \"power\": 3.2, \"snr\": 38.5, \"modulation\": \"QAM256\", \"lockStatus\": true, \"correctedErrors\": 100, \"uncorrectedErrors\": 0, \"channelType\": \"sc-qam\"}, {\"channelId\": 2, \"frequency\": 513000000, \"power\": 3.1, \"snr\": 37.8, \"modulation\": \"QAM256\", \"lockStatus\": true, \"correctedErrors\": 150, \"uncorrectedErrors\": 1, \"channelType\": \"sc-qam\"}]}}"
+      }
+    }
+  },
+  "_expected_format": "json"
+}

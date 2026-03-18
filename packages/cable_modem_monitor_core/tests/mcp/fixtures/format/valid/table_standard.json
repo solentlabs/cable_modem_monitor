@@ -1,0 +1,22 @@
+{
+  "_description": "Standard HTML table with downstream channel data",
+  "_entry": {
+    "request": {
+      "method": "GET",
+      "url": "http://192.168.100.1/status.html",
+      "headers": []
+    },
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 500,
+        "mimeType": "text/html",
+        "text": "<html><body><h4>Downstream Bonded Channels</h4><table><tr><td>Channel ID</td><td>Lock Status</td><td>Modulation</td><td>Frequency</td><td>Power</td><td>SNR</td><td>Corrected</td><td>Uncorrected</td></tr><tr><td>1</td><td>Locked</td><td>QAM256</td><td>507000000 Hz</td><td>3.2 dBmV</td><td>38.5 dB</td><td>100</td><td>0</td></tr><tr><td>2</td><td>Locked</td><td>QAM256</td><td>513000000 Hz</td><td>3.1 dBmV</td><td>37.8 dB</td><td>150</td><td>1</td></tr></table><h4>Upstream Bonded Channels</h4><table><tr><td>Channel ID</td><td>Lock Status</td><td>Frequency</td><td>Power</td></tr><tr><td>1</td><td>Locked</td><td>37700000 Hz</td><td>45.0 dBmV</td></tr></table></body></html>"
+      }
+    }
+  },
+  "_expected_format": "table",
+  "_expected_tables": 2,
+  "_expected_directions": ["downstream", "upstream"]
+}

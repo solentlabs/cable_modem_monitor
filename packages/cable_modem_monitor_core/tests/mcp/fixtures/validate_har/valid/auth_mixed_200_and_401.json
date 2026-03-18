@@ -1,0 +1,20 @@
+{
+  "_description": "First request carries Authorization (cached creds) but later 401 means not purely post-auth. Covers _has_authorization_on_first_request early exit when not all entries are 200.",
+  "_expected_auth": true,
+  "_expected_hints": ["http", "auth:basic"],
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": [{"name": "Authorization", "value": "Basic SSBrbm93IHdoYXQgeW91IGRpZCBsYXN0IHN1bW1lcg=="}]},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 5000, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "cookies": [], "headers": []},
+          "response": {"status": 401, "cookies": [], "headers": [{"name": "WWW-Authenticate", "value": "Basic"}], "content": {"size": 0, "text": ""}}
+        }
+      ]
+    }
+  }
+}

@@ -3,7 +3,7 @@
 Scans HAR entries for HTTP logout and restart endpoints using URL
 pattern matching.
 
-Per ONBOARDING_SPEC.md Phase 4 (HTTP transport).
+Per docs/ONBOARDING_SPEC.md Phase 4 (HTTP transport).
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ..validation.har_utils import parse_form_params, path_from_url
-from .types import ActionDetail, ActionsDetail
+from ...validation.har_utils import parse_form_params, path_from_url
+from ..types import ActionDetail, ActionsDetail
 
 # ---------------------------------------------------------------------------
 # Endpoint patterns (domain-specific)

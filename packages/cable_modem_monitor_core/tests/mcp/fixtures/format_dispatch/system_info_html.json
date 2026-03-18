@@ -1,0 +1,23 @@
+{
+  "_description": "HTML page with label pairs produces system_info section",
+  "_transport": "http",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/info.html",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 200,
+          "mimeType": "text/html",
+          "text": "<html><body><table><tr><td>System Up Time:</td><td>3 days 2h</td></tr><tr><td>Software Version:</td><td>1.0.4</td></tr></table></body></html>"
+        }
+      }
+    }
+  ],
+  "_expected_system_info_format": "html_fields"
+}

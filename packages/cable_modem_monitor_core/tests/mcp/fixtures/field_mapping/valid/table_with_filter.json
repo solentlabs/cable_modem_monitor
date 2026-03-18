@@ -1,0 +1,19 @@
+{
+  "_description": "Table with unlocked channels requiring lock_status filter",
+  "_table": {
+    "table_id": "",
+    "css_class": "",
+    "headers": ["Channel ID", "Lock Status", "Frequency", "Power"],
+    "rows": [
+      ["1", "Locked", "507000000 Hz", "3.2 dBmV"],
+      ["2", "Locked", "513000000 Hz", "3.1 dBmV"],
+      ["3", "Not Locked", "0 Hz", "0.0 dBmV"]
+    ],
+    "preceding_text": "Downstream",
+    "title_row_text": "",
+    "table_index": 0
+  },
+  "_format": "table",
+  "_direction": "downstream",
+  "_expected_filter": {"lock_status": "Locked", "frequency": {"not": 0}}
+}

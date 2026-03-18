@@ -2,7 +2,7 @@
 
 Scans HNAP SOAP actions for logout and restart operations.
 
-Per ONBOARDING_SPEC.md Phase 4 (HNAP transport).
+Per docs/ONBOARDING_SPEC.md Phase 4 (HNAP transport).
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..validation.har_utils import lower_headers
-from .types import ActionDetail, ActionsDetail
+from ...validation.har_utils import lower_headers
+from ..types import ActionDetail, ActionsDetail
 
 
 def detect_hnap_actions(entries: list[dict[str, Any]]) -> ActionsDetail:

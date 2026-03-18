@@ -301,6 +301,9 @@ Response body analysis (Content-Type first):
   │   └── format: json
   │       Detect: array_path and field key names from JSON structure
   │
+  ├── application/xml or text/xml ?
+  │   └── format: xml — not yet supported, flag for human review
+  │
   ├── text/html ?
   │   ├── Contains <table> elements with channel data?
   │   │   ├── Rows are channels (each row = one channel)?
@@ -354,7 +357,7 @@ names/positions to canonical output fields.
 | `symbol_rate` | integer | upstream only | Symbol rate |
 | `channel_type` | string | derived | `qam`/`ofdm` (downstream), `atdma`/`ofdma` (upstream) |
 
-**System info:**
+**System info (Tier 1 canonical):**
 
 | Canonical field | Type | Common |
 |----------------|------|:------:|
@@ -362,9 +365,35 @@ names/positions to canonical output fields.
 | `software_version` | string | yes |
 | `hardware_version` | string | yes |
 | `network_access` | string | sometimes |
+
+**System info (Tier 2 registered — see FIELD_REGISTRY):**
+
+| Registered field | Type | Common |
+|-----------------|------|:------:|
 | `boot_status` | string | sometimes |
+| `docsis_version` | string | sometimes |
+| `serial_number` | string | sometimes |
 
 System info fields are open-ended — extract whatever the modem provides.
+See [Three-tier field mapping](#three-tier-field-mapping) below.
+
+#### Three-tier field mapping
+
+Field mapping follows the three-tier system defined in FIELD_REGISTRY.
+The analysis tool must map ALL detected fields, not just canonical ones:
+
+1. **Tier 1 (canonical):** Recognized source headers/labels map to
+   canonical field names. Core validates these.
+2. **Tier 2 (registered):** Recognized source headers/labels map to
+   registered field names (see FIELD_REGISTRY). Standardized across
+   3+ modems.
+3. **Tier 3 (unregistered):** Unrecognized headers/labels are converted
+   to `snake_case(source_text)` with default type `string`. These are
+   modem-specific pass-throughs that may graduate to Tier 2 when 3+
+   modems expose the same field.
+
+**Do not skip unrecognized fields.** The graduation path (Tier 3 to
+Tier 2) only works if fields are captured in the first place.
 
 #### Format-specific mapping
 
@@ -372,17 +401,18 @@ System info fields are open-ended — extract whatever the modem provides.
 the table header row. Column headers like "Frequency", "Power Level",
 "SNR/MER" map to canonical names.
 
-| Source header (common variants) | Canonical field |
-|-------------------------------|----------------|
-| "Channel ID", "Channel", "Ch" | `channel_id` |
-| "Frequency", "Freq" | `frequency` |
-| "Power", "Power Level", "Pwr" | `power` |
-| "SNR", "SNR/MER", "MER", "Signal to Noise" | `snr` |
-| "Corrected", "Correctable", "Total Correctable Codewords" | `corrected` |
-| "Uncorrected", "Uncorrectable", "Total Uncorrectable Codewords" | `uncorrected` |
-| "Modulation", "Mod" | `modulation` |
-| "Lock Status", "Status" | `lock_status` |
-| "Symbol Rate", "Symb. Rate" | `symbol_rate` |
+| Source header (common variants) | Canonical field | Tier |
+|-------------------------------|----------------|:----:|
+| "Channel ID", "Channel", "Ch" | `channel_id` | 1 |
+| "Frequency", "Freq" | `frequency` | 1 |
+| "Power", "Power Level", "Pwr" | `power` | 1 |
+| "SNR", "SNR/MER", "MER", "Signal to Noise" | `snr` | 1 |
+| "Corrected", "Correctable", "Total Correctable Codewords" | `corrected` | 1 |
+| "Uncorrected", "Uncorrectable", "Total Uncorrectable Codewords" | `uncorrected` | 1 |
+| "Modulation", "Mod" | `modulation` | 1 |
+| "Lock Status", "Status" | `lock_status` | 1 |
+| "Symbol Rate", "Symb. Rate" | `symbol_rate` | 1 |
+| Anything else | `snake_case(header_text)` | 3 |
 
 **`table_transposed` format:** Map row labels to canonical fields. Same
 label-to-field mapping as above, but rows are labels instead of columns.
@@ -405,6 +435,54 @@ label-to-field mapping as above, but rows are labels instead of columns.
 - `array_path` (dot-notation path to channel array)
 - JSON key names → canonical field names
 - `fallback_key` if the modem uses non-standard key names
+
+#### Table-to-section association
+
+For HTML table formats (`table`, `table_transposed`), the analysis must
+determine whether each detected table belongs to `downstream` or
+`upstream`. Use a three-strategy cascade — try each in order until a
+match is found:
+
+| Strategy | Where to look | Example |
+|----------|--------------|---------|
+| 1. Inside table | `<th colspan>` title row containing "Downstream" or "Upstream" | `<th colspan="8">Downstream Bonded Channels</th>` |
+| 2. Before table | Preceding heading or text element (`<h1>`-`<h6>`, `<b>`, `<td>`) containing "Downstream" or "Upstream" | `<h4>Downstream</h4>` before `<table>` |
+| 3. First cell | First `<th>` or `<td>` in the first row containing "Downstream" or "Upstream" | Transposed tables: `<th>Downstream</th>` |
+
+Secondary signal: table `id` attributes (`dsTable`, `usTable`,
+`dsOfdmTable`, `usOfdmaTable`).
+
+If no direction can be determined, flag for human review. Every modem
+in the HAR corpus uses "Downstream"/"Upstream" as full keywords.
+
+#### Row start detection
+
+The analysis must determine where data rows begin in each table. This
+becomes `skip_rows` in parser.yaml (via `generate_config`).
+
+Scan rows from the top. Count rows until the first row containing
+actual valid data — non-empty cells with numeric values, not all zeros,
+not all dashes. The row index is the `row_start` value reported in the
+analysis output.
+
+Title rows (`<th colspan>`) and header rows (cells matching known field
+labels) are counted as non-data rows.
+
+#### Table selector detection
+
+The analysis must choose a selector strategy for each detected table.
+Parser.yaml supports 4 selector types. Auto-select using this priority:
+
+| Priority | Type | When to use |
+|:--------:|------|-------------|
+| 1 | `id` | Table has an `id` attribute |
+| 2 | `header_text` | A nearby heading or title row uniquely identifies the table |
+| 3 | `css` | A CSS class uniquely identifies the table |
+| 4 | `nth` | Fallback — 0-based table index on the page (fragile) |
+
+Higher priority selectors are more robust across firmware updates.
+The selector is configurable in parser.yaml — maintainers can override
+the auto-detected choice.
 
 #### Channel type detection
 
@@ -776,9 +854,43 @@ detection, format detection, and field mapping extraction.
   },
   "actions": { "logout": { "...": "..." }, "restart": null },
   "sections": {
-    "downstream": { "format": "table", "resource": "/status.html", "mappings": [...] },
-    "upstream": { "format": "table", "resource": "/status.html", "mappings": [...] },
-    "system_info": { "sources": [...] }
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "mappings": [
+        { "index": 0, "field": "channel_id", "type": "integer" },
+        { "index": 1, "field": "frequency", "type": "frequency", "unit": "Hz" },
+        { "index": 2, "field": "power", "type": "float", "unit": "dBmV" }
+      ],
+      "selector": { "type": "header_text", "match": "Downstream Bonded Channels" },
+      "row_start": 2,
+      "channel_type": { "fixed": "qam" },
+      "filter": { "lock_status": "Locked" },
+      "channel_count": 24
+    },
+    "upstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "mappings": [
+        { "index": 0, "field": "channel_id", "type": "integer" },
+        { "index": 1, "field": "frequency", "type": "frequency" }
+      ],
+      "selector": { "type": "header_text", "match": "Upstream Bonded Channels" },
+      "row_start": 2,
+      "channel_type": { "fixed": "atdma" },
+      "channel_count": 4
+    },
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/info.html",
+          "fields": [
+            { "label": "System Up Time", "field": "system_uptime", "type": "string" }
+          ]
+        }
+      ]
+    }
   },
   "warnings": ["max_concurrent cannot be determined from HAR"],
   "hard_stops": []

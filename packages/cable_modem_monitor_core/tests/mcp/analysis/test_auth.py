@@ -13,9 +13,15 @@ from pathlib import Path
 import pytest
 from solentlabs.cable_modem_monitor_core.mcp.analysis import AuthDetail
 from solentlabs.cable_modem_monitor_core.mcp.analysis.auth import detect_auth
-from solentlabs.cable_modem_monitor_core.mcp.analysis.auth_http import (
+from solentlabs.cable_modem_monitor_core.mcp.analysis.auth.hnap import (
+    _detect_hmac_algorithm,
+)
+from solentlabs.cable_modem_monitor_core.mcp.analysis.auth.http import (
+    _extract_form_pbkdf2,
     _extract_url_token_parts,
+    _HttpAuthSignals,
     _is_login_url,
+    _parse_auth_scheme,
     classify_form_fields,
     detect_encoding,
 )
@@ -129,6 +135,36 @@ class TestAuthDetailSerialization:
         assert d["strategy"] == "form"
         assert d["fields"]["action"] == "/login"
         assert d["confidence"] == "high"
+
+
+# =====================================================================
+# Auth scheme parsing - table-driven
+# =====================================================================
+
+# fmt: off
+AUTH_SCHEME_CASES = [
+    # (www_authenticate,                                       expected, desc)
+    ('Basic realm="modem"',                                    "basic",  "basic with realm"),
+    ('Digest realm="modem", nonce="abc", qop="auth"',          "digest", "digest with params"),
+    ("Basic",                                                  "basic",  "bare basic"),
+    ("Digest",                                                 "digest", "bare digest"),
+    ("bearer token=xyz",                                       "bearer", "bearer token"),
+    ("",                                                       "",       "empty header"),
+    ("   Basic   ",                                            "basic",  "whitespace padded"),
+    ("BASIC realm=modem",                                      "basic",  "uppercase basic"),
+    ("DIGEST realm=modem",                                     "digest", "uppercase digest"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "www_authenticate,expected,desc",
+    AUTH_SCHEME_CASES,
+    ids=[c[2] for c in AUTH_SCHEME_CASES],
+)
+def test_parse_auth_scheme(www_authenticate: str, expected: str, desc: str) -> None:
+    """WWW-Authenticate header scheme parsed per RFC 7235."""
+    assert _parse_auth_scheme(www_authenticate) == expected
 
 
 # =====================================================================
@@ -274,3 +310,90 @@ class TestDetectEncoding:
     def test_missing_field(self) -> None:
         """Missing field defaults to plain."""
         assert detect_encoding({}, "password") == "plain"
+
+
+# =====================================================================
+# _HttpAuthSignals.describe() - table-driven
+# =====================================================================
+
+
+class TestHttpAuthSignalsDescribe:
+    """Tests for describe() method with various signal combinations."""
+
+    def test_digest_challenge_signal(self) -> None:
+        """Digest challenge shows in description."""
+        signals = _HttpAuthSignals(digest_challenge=True, has_any_auth_signal=True)
+        assert "WWW-Authenticate: Digest" in signals.describe()
+
+    def test_401_signal(self) -> None:
+        """401 response shows in description."""
+        signals = _HttpAuthSignals(has_401=True, has_any_auth_signal=True)
+        assert "401 response" in signals.describe()
+
+    def test_authorization_header_signal(self) -> None:
+        """Authorization header shows in description."""
+        signals = _HttpAuthSignals(has_authorization_header=True, has_any_auth_signal=True)
+        assert "Authorization header" in signals.describe()
+
+    def test_form_post_signal(self) -> None:
+        """Form POST shows endpoint path in description."""
+        signals = _HttpAuthSignals(
+            form_post_entry={
+                "request": {"url": "http://192.168.100.1/goform/login", "method": "POST"},
+                "response": {"status": 200},
+            },
+            has_any_auth_signal=True,
+        )
+        desc = signals.describe()
+        assert "POST to /goform/login" in desc
+
+    def test_set_cookie_signal(self) -> None:
+        """Set-Cookie after login shows in description."""
+        signals = _HttpAuthSignals(has_set_cookie_after_login=True, has_any_auth_signal=True)
+        assert "Set-Cookie after login" in signals.describe()
+
+    def test_no_signals_returns_ambiguous(self) -> None:
+        """No specific signals returns ambiguous message."""
+        signals = _HttpAuthSignals(has_any_auth_signal=True)
+        assert signals.describe() == "ambiguous auth artifacts"
+
+
+# =====================================================================
+# HNAP auth edge cases
+# =====================================================================
+
+
+class TestHnapAuthEdgeCases:
+    """Edge cases for HNAP auth detection."""
+
+    def test_whitespace_only_hnap_auth_header(self) -> None:
+        """Whitespace-only HNAP_AUTH header is treated as absent."""
+        entries = [
+            {
+                "request": {
+                    "url": "http://192.168.100.1/HNAP1/",
+                    "method": "POST",
+                    "headers": [{"name": "HNAP_AUTH", "value": "   "}],
+                },
+                "response": {"status": 200},
+            }
+        ]
+        result = _detect_hmac_algorithm(entries)
+        assert result is None
+
+
+# =====================================================================
+# form_pbkdf2 empty guard
+# =====================================================================
+
+
+class TestFormPbkdf2EmptyGuard:
+    """Edge case: empty pbkdf2_entries returns minimal detail."""
+
+    def test_empty_pbkdf2_entries(self) -> None:
+        """Empty pbkdf2 entries returns medium confidence without fields."""
+        signals = _HttpAuthSignals(pbkdf2_entries=[], has_any_auth_signal=True)
+        result = _extract_form_pbkdf2(signals)
+        assert result.strategy == "form_pbkdf2"
+        assert result.confidence == "medium"
+        assert not result.fields

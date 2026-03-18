@@ -1,0 +1,16 @@
+{
+  "_description": "No data pages in HAR produces warning",
+  "_transport": "http",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/style.css", "headers": []},
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/css"}],
+        "content": {"size": 50, "text": "body { }"}
+      }
+    }
+  ],
+  "_expected_sections": {},
+  "_expected_warning": "No data pages"
+}

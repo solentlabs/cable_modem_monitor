@@ -1,0 +1,21 @@
+{
+  "_description": "HTML page with label-value pairs for system info",
+  "_entry": {
+    "request": {
+      "method": "GET",
+      "url": "http://192.168.100.1/info.html",
+      "headers": []
+    },
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 300,
+        "mimeType": "text/html",
+        "text": "<html><body><table><tr><td>System Up Time:</td><td>3 days 2h 15m</td></tr><tr><td>Software Version:</td><td>1.0.4.2</td></tr><tr><td>Hardware Version:</td><td>T100 Rev 2</td></tr><tr><td>Cable Modem Status:</td><td>Online</td></tr></table></body></html>"
+      }
+    }
+  },
+  "_expected_format": "html_fields",
+  "_expected_system_info_fields": ["system_uptime", "software_version", "hardware_version", "network_access"]
+}

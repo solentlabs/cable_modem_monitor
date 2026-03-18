@@ -1,14 +1,20 @@
-"""Shared result types for HAR analysis phases.
+"""Phase 2/4 result types for auth and action detection.
 
-These types are used across transport-specific modules (auth_http,
-auth_hnap, actions_http, actions_hnap) and the phase dispatchers
-(auth, actions). They live here to avoid circular imports.
+Auth and action types used by auth.http, auth.hnap, actions.http,
+actions.hnap, and the phase dispatchers.
+
+Phase 5 types live in ``format/types.py``.
+Phase 6 types live in ``mapping/types.py``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+# -----------------------------------------------------------------------
+# Phase 2: Auth
+# -----------------------------------------------------------------------
 
 
 @dataclass
@@ -26,6 +32,11 @@ class AuthDetail:
             "fields": self.fields,
             "confidence": self.confidence,
         }
+
+
+# -----------------------------------------------------------------------
+# Phase 4: Actions
+# -----------------------------------------------------------------------
 
 
 @dataclass

@@ -1,0 +1,24 @@
+{
+  "_description": "HTTP transport with table data produces downstream section",
+  "_transport": "http",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 500,
+          "mimeType": "text/html",
+          "text": "<html><body><h4>Downstream Bonded Channels</h4><table><tr><td>Channel ID</td><td>Frequency</td><td>Power</td></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr></table></body></html>"
+        }
+      }
+    }
+  ],
+  "_expected_direction": "downstream",
+  "_expected_format": "table"
+}

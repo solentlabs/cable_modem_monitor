@@ -1,0 +1,26 @@
+{
+  "_description": "Transposed table with row labels matching canonical fields",
+  "_table": {
+    "table_id": "",
+    "css_class": "",
+    "headers": ["Downstream", "Ch 1", "Ch 2", "Ch 3"],
+    "rows": [
+      ["Channel ID", "1", "2", "3"],
+      ["Frequency", "507000000 Hz", "513000000 Hz", "519000000 Hz"],
+      ["Power Level", "3.2 dBmV", "3.1 dBmV", "3.0 dBmV"],
+      ["SNR", "38.5 dB", "37.8 dB", "38.1 dB"]
+    ],
+    "preceding_text": "",
+    "title_row_text": "",
+    "table_index": 0
+  },
+  "_format": "table_transposed",
+  "_direction": "downstream",
+  "_expected_fields": {
+    "channel_id": {"type": "integer", "tier": 1},
+    "frequency": {"type": "frequency", "tier": 1},
+    "power": {"type": "float", "tier": 1},
+    "snr": {"type": "float", "tier": 1}
+  },
+  "_expected_channel_count": 3
+}

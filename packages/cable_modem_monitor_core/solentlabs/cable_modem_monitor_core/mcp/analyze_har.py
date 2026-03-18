@@ -1,12 +1,12 @@
 """HAR Analysis Tool -- MCP tool.
 
-Orchestrates Phases 1-4 of the ONBOARDING_SPEC decision tree:
+Orchestrates Phases 1-6 of the ONBOARDING_SPEC decision tree:
 1. Transport detection (HNAP vs HTTP)
 2. Auth strategy detection and field extraction
 3. Session detection (cookies, headers, tokens)
 4. Action detection (logout, restart)
-
-Phases 5-6 (format detection, field mapping) are deferred to Step 3.
+5. Format detection (table, table_transposed, javascript, json, hnap)
+6. Field mapping extraction (header-to-field, column/offset/key mappings)
 
 Per ONBOARDING_SPEC.md ``analyze_har`` tool contract.
 """
@@ -20,16 +20,14 @@ from typing import Any
 
 from .analysis.actions import ActionsDetail, detect_actions
 from .analysis.auth import AuthDetail, detect_auth
+from .analysis.format import detect_sections
 from .analysis.session import SessionDetail, detect_session
 from .analysis.transport import TransportResult, detect_transport
 
 
 @dataclass
 class AnalysisResult:
-    """Complete result of HAR analysis (Phases 1-4).
-
-    The ``sections`` field is populated by Phases 5-6 (Step 3).
-    """
+    """Complete result of HAR analysis (Phases 1-6)."""
 
     transport: TransportResult
     auth: AuthDetail
@@ -54,17 +52,18 @@ class AnalysisResult:
 
 
 def analyze_har(har_path: str | Path) -> AnalysisResult:
-    """Run HAR analysis Phases 1-4.
+    """Run HAR analysis Phases 1-6.
 
     Loads the HAR file, then runs transport detection, auth strategy
-    detection, session detection, and action detection in sequence.
+    detection, session detection, action detection, format detection,
+    and field mapping extraction in sequence.
 
     Args:
         har_path: Path to a validated ``.har`` file.
 
     Returns:
         AnalysisResult with detected transport, auth, session, actions,
-        and any warnings or hard stops.
+        sections (format + field mappings), and any warnings or hard stops.
 
     Raises:
         FileNotFoundError: If har_path does not exist.
@@ -88,11 +87,15 @@ def analyze_har(har_path: str | Path) -> AnalysisResult:
     # Phase 4: Actions
     actions_result = detect_actions(entries, transport_result.transport)
 
+    # Phase 5-6: Format detection and field mapping
+    sections = detect_sections(entries, transport_result.transport, warnings, hard_stops)
+
     return AnalysisResult(
         transport=transport_result,
         auth=auth_result,
         session=session_result,
         actions=actions_result,
+        sections=sections if sections else None,
         warnings=warnings,
         hard_stops=hard_stops,
     )

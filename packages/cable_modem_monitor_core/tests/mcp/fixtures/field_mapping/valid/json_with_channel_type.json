@@ -1,0 +1,18 @@
+{
+  "_description": "JSON data with channelType field for type detection",
+  "_json_data": {
+    "downstream": {
+      "channels": [
+        {"channelId": 1, "frequency": 507000000, "power": 3.2, "snr": 38.5, "channelType": "sc-qam"},
+        {"channelId": 2, "frequency": 513000000, "power": 3.1, "snr": 37.8, "channelType": "sc-qam"},
+        {"channelId": 33, "frequency": 600000000, "power": 2.8, "snr": 36.0, "channelType": "ofdm"}
+      ]
+    }
+  },
+  "_format": "json",
+  "_direction": "downstream",
+  "_expected_fields": ["channel_id", "frequency", "power", "snr", "channel_type"],
+  "_expected_channel_type": {"key": "channelType", "map": {"ofdm": "ofdm", "sc-qam": "qam"}},
+  "_expected_channel_count": 3,
+  "_expected_array_path": "downstream.channels"
+}

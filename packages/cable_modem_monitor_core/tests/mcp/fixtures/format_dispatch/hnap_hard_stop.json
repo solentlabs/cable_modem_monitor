@@ -1,0 +1,20 @@
+{
+  "_description": "HNAP transport produces hard stop (not yet implemented)",
+  "_transport": "hnap",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [{"name": "SOAPAction", "value": "GetStatus"}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"size": 10, "text": "{}"}
+      }
+    }
+  ],
+  "_expected_sections": {},
+  "_expected_hard_stop": "HNAP format detection is not yet implemented"
+}

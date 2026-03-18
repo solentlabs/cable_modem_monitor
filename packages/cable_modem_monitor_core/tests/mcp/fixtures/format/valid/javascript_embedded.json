@@ -1,0 +1,21 @@
+{
+  "_description": "JavaScript-embedded channel data with Init*TagValue function",
+  "_entry": {
+    "request": {
+      "method": "GET",
+      "url": "http://192.168.100.1/data.htm",
+      "headers": []
+    },
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 300,
+        "mimeType": "text/html",
+        "text": "<html><body><script>function InitDsTableTagValue(t) {\nvar tagValueList = '2|Locked|QAM256|1|507000000 Hz|3.2 dBmV|38.5 dB|100|0|Locked|QAM256|2|513000000 Hz|3.1 dBmV|37.8 dB|150|1';\n}\n</script><script>function InitUsTableTagValue(t) {\nvar tagValueList = '1|Locked|ATDMA|1|37700000 Hz|45.0 dBmV|5360';\n}\n</script></body></html>"
+      }
+    }
+  },
+  "_expected_format": "javascript",
+  "_expected_js_functions": ["InitDsTableTagValue", "InitUsTableTagValue"]
+}

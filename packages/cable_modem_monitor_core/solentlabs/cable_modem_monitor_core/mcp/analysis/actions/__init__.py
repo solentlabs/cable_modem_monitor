@@ -1,22 +1,21 @@
-"""Phase 4: Action detection.
+"""Phase 4 - Action detection.
 
 Dispatches to transport-specific modules:
-- ``actions_http`` - URL pattern matching for logout/restart
-- ``actions_hnap`` - SOAP action scanning
+- ``http`` - URL pattern matching for logout/restart
+- ``hnap`` - SOAP action scanning
 
-Per ONBOARDING_SPEC.md Phase 4.
+Per docs/ONBOARDING_SPEC.md Phase 4.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from .actions_hnap import detect_hnap_actions
-from .actions_http import detect_http_actions
-from .types import ActionDetail, ActionsDetail
+from ..types import ActionDetail, ActionsDetail
+from .hnap import detect_hnap_actions
+from .http import detect_http_actions
 
-# Re-export for backwards compatibility with existing imports
-__all__ = ["ActionDetail", "ActionsDetail", "detect_actions"]
+__all__ = ["detect_actions"]
 
 
 def detect_actions(

@@ -1,0 +1,17 @@
+{
+  "_description": "JSON response with system info fields",
+  "_page": {
+    "resource": "/api/status",
+    "content_type": "application/json",
+    "json_data": {
+      "device": {
+        "firmwareVersion": "1.0.4.2",
+        "hardwareVersion": "T100 Rev 2",
+        "uptime": "3 days 2h 15m",
+        "serialNumber": "ABC123"
+      }
+    }
+  },
+  "_expected_fields": ["software_version", "hardware_version", "system_uptime", "serial_number"],
+  "_expected_format": "json"
+}

@@ -1,4 +1,4 @@
-"""Phase 3: Session detection.
+"""Phase 3 - Session detection.
 
 Examines post-login HAR entries for session artifacts: cookies, static
 headers (e.g., X-Requested-With), and URL token prefixes.
@@ -9,7 +9,7 @@ and is always flagged as unknown.
 HNAP transport has implicit session (``uid`` cookie + ``HNAP_AUTH``
 header) -- this phase returns an empty session for HNAP.
 
-Per ONBOARDING_SPEC.md Phase 3.
+Per docs/ONBOARDING_SPEC.md Phase 3.
 """
 
 from __future__ import annotations

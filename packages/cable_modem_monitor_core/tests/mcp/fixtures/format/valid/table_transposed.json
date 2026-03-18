@@ -1,0 +1,20 @@
+{
+  "_description": "Transposed HTML table where rows are metrics and columns are channels",
+  "_entry": {
+    "request": {
+      "method": "GET",
+      "url": "http://192.168.100.1/status.html",
+      "headers": []
+    },
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 400,
+        "mimeType": "text/html",
+        "text": "<html><body><h4>Downstream Channels</h4><table><tr><th>Downstream</th><th>Ch 1</th><th>Ch 2</th><th>Ch 3</th></tr><tr><td>Channel ID</td><td>1</td><td>2</td><td>3</td></tr><tr><td>Frequency</td><td>507000000 Hz</td><td>513000000 Hz</td><td>519000000 Hz</td></tr><tr><td>Power Level</td><td>3.2 dBmV</td><td>3.1 dBmV</td><td>3.0 dBmV</td></tr><tr><td>SNR</td><td>38.5 dB</td><td>37.8 dB</td><td>38.1 dB</td></tr></table></body></html>"
+      }
+    }
+  },
+  "_expected_format": "table_transposed"
+}

@@ -1,22 +1,21 @@
-"""Phase 2: Auth strategy detection.
+"""Phase 2 - Auth strategy detection.
 
 Dispatches to transport-specific modules:
-- ``auth_http`` - HTTP decision tree (6 strategies)
-- ``auth_hnap`` - HNAP HMAC detection
+- ``http`` - HTTP decision tree (6 strategies)
+- ``hnap`` - HNAP HMAC detection
 
-Per ONBOARDING_SPEC.md Phase 2.
+Per docs/ONBOARDING_SPEC.md Phase 2.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from .auth_hnap import detect_hnap_auth
-from .auth_http import detect_http_auth
-from .types import AuthDetail
+from ..types import AuthDetail
+from .hnap import detect_hnap_auth
+from .http import detect_http_auth
 
-# Re-export for backwards compatibility with existing imports
-__all__ = ["AuthDetail", "detect_auth"]
+__all__ = ["detect_auth"]
 
 
 def detect_auth(

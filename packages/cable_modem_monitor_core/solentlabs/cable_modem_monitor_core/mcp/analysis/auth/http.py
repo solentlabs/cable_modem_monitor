@@ -4,7 +4,7 @@ Implements the HTTP branch of the ONBOARDING_SPEC Phase 2 decision tree.
 Walks: none -> basic -> url_token -> form_pbkdf2 -> form_nonce -> form ->
 hard stop.
 
-Per ONBOARDING_SPEC.md Phase 2 (HTTP transport).
+Per docs/ONBOARDING_SPEC.md Phase 2 (HTTP transport).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..validation.har_utils import (
+from ...validation.har_utils import (
     HARD_STOP_PREFIX,
     has_content,
     has_set_cookie,
@@ -22,7 +22,7 @@ from ..validation.har_utils import (
     parse_form_params,
     path_from_url,
 )
-from .types import AuthDetail
+from ..types import AuthDetail
 
 # ---------------------------------------------------------------------------
 # Login endpoint patterns (domain-specific)
@@ -78,6 +78,15 @@ def detect_http_auth(
     if not signals.has_any_auth_signal:
         return AuthDetail(strategy="none", confidence="high")
 
+    # 401 + WWW-Authenticate: Digest -> HARD STOP (unsupported)
+    if signals.digest_challenge:
+        hard_stops.append(
+            f"{HARD_STOP_PREFIX} WWW-Authenticate: Digest detected. "
+            "Digest auth is not yet supported. "
+            "See ONBOARDING_SPEC Phase 2 for supported auth strategies."
+        )
+        return AuthDetail(strategy="digest", confidence="high")
+
     # 401 + WWW-Authenticate: Basic -> basic
     if signals.basic_challenge:
         return _extract_basic(entries, signals)
@@ -117,6 +126,7 @@ class _HttpAuthSignals:
     """Collected auth signals from HTTP HAR entries."""
 
     has_any_auth_signal: bool = False
+    digest_challenge: bool = False
     basic_challenge: bool = False
     basic_challenge_cookie: bool = False
     url_token_entry: dict[str, Any] | None = None
@@ -133,6 +143,8 @@ class _HttpAuthSignals:
     def describe(self) -> str:
         """Describe what signals were found, for hard stop messages."""
         parts: list[str] = []
+        if self.digest_challenge:
+            parts.append("WWW-Authenticate: Digest")
         if self.has_401:
             parts.append("401 response")
         if self.has_authorization_header:
@@ -178,8 +190,11 @@ def _check_entry_auth_signals(
     if status == 401:
         signals.has_401 = True
         signals.has_any_auth_signal = True
-        www_auth = resp_hdrs.get("www-authenticate", "").lower()
-        if "basic" in www_auth:
+        www_auth = resp_hdrs.get("www-authenticate", "")
+        scheme = _parse_auth_scheme(www_auth)
+        if scheme == "digest":
+            signals.digest_challenge = True
+        elif scheme == "basic":
             signals.basic_challenge = True
             signals.basic_challenge_cookie = _has_challenge_cookie_retry(all_entries, entry)
 
@@ -296,8 +311,9 @@ def _extract_form_pbkdf2(signals: _HttpAuthSignals) -> AuthDetail:
 
     # Extract CSRF header if present
     csrf_header = ""
+    req_hdrs_lower = lower_headers(req)
     for header_name in ("x-csrf-token", "csrf-token", "x-xsrf-token"):
-        if header_name in lower_headers(req):
+        if header_name in req_hdrs_lower:
             csrf_header = header_name.upper().replace("-", "_")
             # Preserve original casing - check raw headers
             for h in req.get("headers", []):
@@ -412,6 +428,16 @@ def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> A
 # ---------------------------------------------------------------------------
 # Utility functions
 # ---------------------------------------------------------------------------
+
+
+def _parse_auth_scheme(www_authenticate: str) -> str:
+    """Extract the auth scheme token from a WWW-Authenticate header.
+
+    Per RFC 7235, the scheme is the first whitespace-delimited token.
+    Returns the lowercase scheme string, or empty string if absent.
+    """
+    token = www_authenticate.strip().split(None, 1)[0] if www_authenticate.strip() else ""
+    return token.lower()
 
 
 def _is_login_url(url: str) -> bool:

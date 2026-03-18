@@ -1,0 +1,24 @@
+{
+  "_description": "JSON response produces section with json format",
+  "_transport": "http",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/api/downstream",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 200,
+          "mimeType": "application/json",
+          "text": "{\"downstream\":{\"channels\":[{\"channelId\":1,\"frequency\":507000000,\"power\":3.2},{\"channelId\":2,\"frequency\":513000000,\"power\":3.1}]}}"
+        }
+      }
+    }
+  ],
+  "_expected_direction": "downstream",
+  "_expected_format": "json"
+}

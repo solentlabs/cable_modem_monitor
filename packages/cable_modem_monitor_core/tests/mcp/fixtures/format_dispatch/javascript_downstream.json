@@ -1,0 +1,24 @@
+{
+  "_description": "JavaScript-embedded downstream page routes through JS assembly",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/data.htm",
+        "headers": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "text/html"}],
+        "content": {
+          "size": 300,
+          "mimeType": "text/html",
+          "text": "<html><body><script>function InitDsTableTagValue(t) {\nvar tagValueList = '2|Locked|QAM256|1|507000000|3.2|38.5|100|0|Locked|QAM256|2|513000000|3.1|37.8|150|1';\n}\n</script></body></html>"
+        }
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_direction": "downstream",
+  "_expected_format": "javascript"
+}

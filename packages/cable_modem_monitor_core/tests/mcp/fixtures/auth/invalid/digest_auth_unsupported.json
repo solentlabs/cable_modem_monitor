@@ -1,0 +1,28 @@
+{
+  "_description": "Digest auth detected via WWW-Authenticate: Digest - hard stop (unsupported)",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/status.html",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 401,
+        "headers": [
+          {
+            "name": "WWW-Authenticate",
+            "value": "Digest realm=\"modem\", nonce=\"abc123\", qop=\"auth\""
+          }
+        ],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "digest",
+  "_expected_confidence": "high",
+  "_expected_hard_stop": "Digest detected"
+}
