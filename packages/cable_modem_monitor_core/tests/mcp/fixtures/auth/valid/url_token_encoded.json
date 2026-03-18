@@ -1,0 +1,27 @@
+{
+  "_description": "URL token auth with percent-encoded login%5f prefix",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html?login%5fYWRtaW46cGFzcw==",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 5000, "text": "<html>Channel data</html>"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "url_token",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "login_page": "/status.html",
+    "login_prefix": "login_",
+    "ajax_login": false
+  }
+}

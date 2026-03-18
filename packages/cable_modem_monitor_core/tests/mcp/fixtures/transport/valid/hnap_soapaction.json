@@ -1,0 +1,14 @@
+{
+  "_description": "HNAP detected from SOAPAction header",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/data",
+        "headers": [{"name": "SOAPAction", "value": "Login"}]
+      },
+      "response": {"status": 200}
+    }
+  ],
+  "_expected_transport": "hnap"
+}

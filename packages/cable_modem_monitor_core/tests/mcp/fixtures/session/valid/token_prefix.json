@@ -1,0 +1,27 @@
+{
+  "_description": "URL token prefix detected from repeating query parameter across requests",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/status.html?ct=abcdef123456",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 500, "text": "<html>Channel data</html>"}}
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/info.html?ct=abcdef789012",
+        "headers": [],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 300, "text": "<html>Modem info</html>"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "url_token",
+  "_expected_cookie": "",
+  "_expected_token_prefix": "ct_"
+}

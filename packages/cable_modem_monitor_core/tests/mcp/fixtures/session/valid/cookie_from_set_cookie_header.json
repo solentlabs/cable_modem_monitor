@@ -1,0 +1,32 @@
+{
+  "_description": "Session cookie detected from Set-Cookie response header when cookies array is empty",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "username", "value": "admin"},
+            {"name": "password", "value": "pass"}
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {"name": "Location", "value": "/status.html"},
+          {"name": "Set-Cookie", "value": "PHPSESSID=abc; path=/"}
+        ],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_cookie": "PHPSESSID"
+}

@@ -1,0 +1,114 @@
+{
+  "_description": "Form auth with base64 encoding, 302 redirect on success, logout endpoint",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 2000, "text": "<html><title>Login</title><form action='/goform/login'></form></html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/goform/login",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "loginUsername", "value": "admin"},
+                {"name": "loginPassword", "value": "YWRtaW4="}
+              ]
+            }
+          },
+          "response": {
+            "status": 302,
+            "headers": [
+              {"name": "Location", "value": "/home.asp"}
+            ],
+            "cookies": [],
+            "content": {"size": 0, "text": ""}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/home.asp",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 8000, "text": "<html><body>Dashboard</body></html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 10000, "text": "<html><body>Channel data</body></html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/logout.asp",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 500, "text": "<html>Logged out</html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "action": "/goform/login",
+    "method": "POST",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "encoding": "base64",
+    "success": {"redirect": "/home.asp"}
+  },
+  "_expected_session_cookie": "",
+  "_expected_logout": {
+    "type": "http",
+    "method": "GET",
+    "endpoint": "/logout.asp"
+  },
+  "_expected_restart": null
+}

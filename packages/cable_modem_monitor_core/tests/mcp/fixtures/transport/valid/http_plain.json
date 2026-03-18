@@ -1,0 +1,10 @@
+{
+  "_description": "HTTP transport - plain GET with no HNAP markers",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+      "response": {"status": 200}
+    }
+  ],
+  "_expected_transport": "http"
+}

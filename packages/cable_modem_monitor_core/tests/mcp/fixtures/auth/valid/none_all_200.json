@@ -1,0 +1,12 @@
+{
+  "_description": "No auth signals: all 200s, no login flow, no session artifacts",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "none",
+  "_expected_confidence": "high"
+}

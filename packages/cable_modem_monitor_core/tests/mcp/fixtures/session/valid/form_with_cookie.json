@@ -1,0 +1,50 @@
+{
+  "_description": "Form auth with session cookie detected from cookies array on login response",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "username", "value": "admin"},
+            {"name": "password", "value": "pass"}
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [
+          {"name": "Location", "value": "/status.html"},
+          {"name": "Set-Cookie", "value": "sessionId=abc123; path=/"}
+        ],
+        "cookies": [
+          {"name": "sessionId", "value": "abc123"}
+        ],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/status.html",
+        "headers": [],
+        "cookies": [
+          {"name": "sessionId", "value": "abc123"}
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 5000, "text": "<html>Channel data</html>"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_cookie": "sessionId"
+}

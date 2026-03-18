@@ -1,0 +1,27 @@
+{
+  "_description": "Form auth with X-Requested-With session headers on all data requests",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/api/status",
+        "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 500, "text": "{\"downstream\": []}"}}
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/api/info",
+        "headers": [{"name": "X-Requested-With", "value": "XMLHttpRequest"}],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 300, "text": "{\"model\": \"T100\"}"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_cookie": "",
+  "_expected_headers": {"X-Requested-With": "XMLHttpRequest"}
+}

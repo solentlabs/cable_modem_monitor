@@ -1,0 +1,14 @@
+{
+  "_description": "HTTP transport - POST with Content-Type header, not HNAP",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}]
+      },
+      "response": {"status": 302}
+    }
+  ],
+  "_expected_transport": "http"
+}

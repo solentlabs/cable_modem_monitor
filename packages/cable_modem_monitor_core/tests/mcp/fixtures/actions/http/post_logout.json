@@ -1,0 +1,32 @@
+{
+  "_description": "POST logout with form params",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/logout",
+        "headers": [],
+        "postData": {
+          "params": [
+            {
+              "name": "session",
+              "value": "abc"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/logout",
+    "params": {
+      "session": "abc"
+    }
+  },
+  "_expected_restart": null
+}

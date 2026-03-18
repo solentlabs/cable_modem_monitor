@@ -1,0 +1,14 @@
+{
+  "_description": "HNAP detected from HNAP_AUTH header",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/data",
+        "headers": [{"name": "HNAP_AUTH", "value": "hash 12345"}]
+      },
+      "response": {"status": 200}
+    }
+  ],
+  "_expected_transport": "hnap"
+}

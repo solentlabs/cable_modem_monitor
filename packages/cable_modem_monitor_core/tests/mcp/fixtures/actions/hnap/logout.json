@@ -1,0 +1,27 @@
+{
+  "_description": "HNAP logout action",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {
+            "name": "SOAPAction",
+            "value": "\"http://purenetworks.com/HNAP1/Logout\""
+          }
+        ]
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "hnap",
+    "method": "POST",
+    "endpoint": "/HNAP1/",
+    "action_name": "Logout"
+  },
+  "_expected_restart": null
+}

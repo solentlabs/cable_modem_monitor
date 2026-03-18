@@ -1,0 +1,61 @@
+{
+  "_description": "URL token auth with login_ prefix and XHR header",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html?login_YWRtaW46cGFzcw==",
+            "headers": [
+              {"name": "X-Requested-With", "value": "XMLHttpRequest"}
+            ],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"},
+              {"name": "Set-Cookie", "value": "sessionId=tok123; path=/"}
+            ],
+            "cookies": [
+              {"name": "sessionId", "value": "tok123"}
+            ],
+            "content": {"size": 5000, "text": "<html>Downstream Bonded Channels</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/info.html?ct_1234567890",
+            "headers": [
+              {"name": "X-Requested-With", "value": "XMLHttpRequest"}
+            ],
+            "cookies": [
+              {"name": "sessionId", "value": "tok123"}
+            ]
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 3000, "text": "<html>Info page</html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "url_token",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "login_page": "/status.html",
+    "login_prefix": "login_",
+    "ajax_login": true
+  },
+  "_expected_session_cookie": "sessionId",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

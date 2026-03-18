@@ -1,0 +1,36 @@
+{
+  "_description": "Form auth: POST to /goform/login with base64 password, 302 redirect on success",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/goform/login",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "loginUsername", "value": "admin"},
+            {"name": "loginPassword", "value": "YWRtaW4="}
+          ]
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": [{"name": "Location", "value": "/home.asp"}],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "action": "/goform/login",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "encoding": "base64",
+    "success": {"redirect": "/home.asp"}
+  }
+}

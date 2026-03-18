@@ -1,0 +1,31 @@
+{
+  "_description": "Simple GET logout",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html",
+        "headers": []
+      },
+      "response": {
+        "status": 200
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/logout.asp",
+        "headers": []
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "http",
+    "method": "GET",
+    "endpoint": "/logout.asp"
+  },
+  "_expected_restart": null
+}

@@ -1,0 +1,52 @@
+{
+  "_description": "Basic auth modem: 401 with WWW-Authenticate: Basic, then 200 with Authorization header",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 401,
+            "headers": [
+              {"name": "WWW-Authenticate", "value": "Basic realm=\"modem\""}
+            ],
+            "cookies": [],
+            "content": {"size": 0, "text": ""}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [
+              {"name": "Authorization", "value": "Basic dXNlcjpwYXNz"}
+            ],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 5000, "text": "<html><body>Status</body></html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "basic",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "challenge_cookie": false
+  },
+  "_expected_session_cookie": "",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

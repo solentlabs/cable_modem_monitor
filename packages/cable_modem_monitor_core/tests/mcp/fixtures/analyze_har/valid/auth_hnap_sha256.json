@@ -1,0 +1,37 @@
+{
+  "_description": "HNAP auth with SHA256 HMAC algorithm (64-char hash)",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/HNAP1/",
+            "headers": [
+              {"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/Login\""},
+              {"name": "HNAP_AUTH", "value": "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890 1234567890"}
+            ],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "cookies": [],
+            "content": {"size": 200, "text": "{}"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "hnap",
+  "_expected_auth_strategy": "hnap",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "hmac_algorithm": "sha256"
+  },
+  "_expected_session_cookie": "",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

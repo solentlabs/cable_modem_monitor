@@ -1,0 +1,33 @@
+{
+  "_description": "HNAP restart with wrapped params (action name as outer key)",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {
+            "name": "SOAPAction",
+            "value": "\"http://purenetworks.com/HNAP1/SetDeviceReboot\""
+          }
+        ],
+        "postData": {
+          "text": "{\"SetDeviceReboot\":{\"RebootAction\":\"1\"}}"
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "hnap",
+    "method": "POST",
+    "endpoint": "/HNAP1/",
+    "action_name": "SetDeviceReboot",
+    "params": {
+      "RebootAction": "1"
+    }
+  }
+}

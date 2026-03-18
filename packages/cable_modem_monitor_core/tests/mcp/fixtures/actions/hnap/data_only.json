@@ -1,0 +1,22 @@
+{
+  "_description": "HNAP data request only, no logout or restart actions",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {
+            "name": "SOAPAction",
+            "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""
+          }
+        ]
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": null
+}

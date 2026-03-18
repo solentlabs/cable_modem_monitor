@@ -1,0 +1,98 @@
+{
+  "_description": "Form auth modem with both logout and restart actions",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/goform/login",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "loginUsername", "value": "admin"},
+                {"name": "loginPassword", "value": "cGFzcw=="}
+              ]
+            }
+          },
+          "response": {
+            "status": 302,
+            "headers": [
+              {"name": "Location", "value": "/home.asp"}
+            ],
+            "cookies": [],
+            "content": {"size": 0, "text": ""}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 5000, "text": "<html>Data</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/goform/DeviceSecurity",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "SecurityAction", "value": "1"}
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 100, "text": "OK"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/logout.asp",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 100, "text": "Logged out"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form",
+  "_expected_auth_confidence": "high",
+  "_expected_session_cookie": "",
+  "_expected_logout": {
+    "type": "http",
+    "method": "GET",
+    "endpoint": "/logout.asp"
+  },
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/DeviceSecurity"
+  }
+}

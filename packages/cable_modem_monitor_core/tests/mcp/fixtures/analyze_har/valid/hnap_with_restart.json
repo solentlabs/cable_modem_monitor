@@ -1,0 +1,67 @@
+{
+  "_description": "HNAP modem with restart SOAP action",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/HNAP1/",
+            "headers": [
+              {"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/Login\""},
+              {"name": "HNAP_AUTH", "value": "abcdef1234567890abcdef1234567890 1234567890"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"Login\":{\"Action\":\"request\",\"Username\":\"admin\"}}"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 200, "text": "{}"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/HNAP1/",
+            "headers": [
+              {"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/SetDeviceReboot\""},
+              {"name": "HNAP_AUTH", "value": "1234567890abcdef1234567890abcdef 1234567891"}
+            ],
+            "cookies": [
+              {"name": "uid", "value": "xyz"}
+            ],
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"SetDeviceReboot\":{\"RebootAction\":\"1\"}}"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 50, "text": "{\"SetDeviceRebootResponse\":{\"SetDeviceRebootResult\":\"OK\"}}"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "hnap",
+  "_expected_auth_strategy": "hnap",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "hmac_algorithm": "md5"
+  },
+  "_expected_session_cookie": "",
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "hnap",
+    "method": "POST",
+    "endpoint": "/HNAP1/",
+    "action_name": "SetDeviceReboot"
+  }
+}

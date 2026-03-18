@@ -1,0 +1,12 @@
+{
+  "_description": "Basic auth, no session — HTTP Basic is inherently stateless",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "basic",
+  "_expected_cookie": ""
+}

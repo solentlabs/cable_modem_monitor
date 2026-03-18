@@ -1,0 +1,21 @@
+{
+  "_description": "HNAP entry with empty HNAP_AUTH header - algorithm detection skips it, defaults to md5",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/HNAP1/",
+        "headers": [{"name": "HNAP_AUTH", "value": ""}],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 10, "text": "{}"}}
+    }
+  ],
+  "_transport": "hnap",
+  "_expected_strategy": "hnap",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "hmac_algorithm": "md5"
+  },
+  "_expected_warning": "hmac_algorithm"
+}

@@ -1,0 +1,12 @@
+{
+  "_description": "No auth, no session artifacts — completely open modem",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "none",
+  "_expected_cookie": ""
+}

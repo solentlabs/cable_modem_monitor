@@ -1,0 +1,30 @@
+{
+  "_description": "Auth signals present but no strategy matches - hard stop",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/unknown_endpoint",
+        "headers": [
+          {"name": "Authorization", "value": "CustomScheme token"},
+          {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [{"name": "action", "value": "auth"}]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Set-Cookie", "value": "session=abc"}],
+        "cookies": [{"name": "session", "value": "abc"}],
+        "content": {"size": 10, "text": "OK"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "unknown",
+  "_expected_confidence": "low",
+  "_expected_hard_stop": "Cannot determine auth mechanism"
+}

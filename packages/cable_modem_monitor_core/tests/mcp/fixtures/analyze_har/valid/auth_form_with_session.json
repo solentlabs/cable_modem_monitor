@@ -1,0 +1,113 @@
+{
+  "_description": "Form auth with cookie-based session and POST logout",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 2000, "text": "<html><form action='/login'></form></html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/login",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "username", "value": "admin"},
+                {"name": "password", "value": "plaintext"}
+              ]
+            }
+          },
+          "response": {
+            "status": 302,
+            "headers": [
+              {"name": "Location", "value": "/status.html"},
+              {"name": "Set-Cookie", "value": "sessionId=abc123; path=/"}
+            ],
+            "cookies": [
+              {"name": "sessionId", "value": "abc123"}
+            ],
+            "content": {"size": 0, "text": ""}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [],
+            "cookies": [
+              {"name": "sessionId", "value": "abc123"}
+            ]
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 10000, "text": "<html>Channel data</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/goform/logout",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [
+              {"name": "sessionId", "value": "abc123"}
+            ],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "session", "value": "abc123"}
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 100, "text": "OK"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "action": "/login",
+    "method": "POST",
+    "username_field": "username",
+    "password_field": "password",
+    "encoding": "plain",
+    "success": {"redirect": "/status.html"}
+  },
+  "_expected_session_cookie": "sessionId",
+  "_expected_logout": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/logout"
+  },
+  "_expected_restart": null
+}

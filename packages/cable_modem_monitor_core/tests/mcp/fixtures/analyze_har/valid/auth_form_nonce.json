@@ -1,0 +1,78 @@
+{
+  "_description": "Form nonce auth with Url:/Error: response prefixes",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 2000, "text": "<html>Login</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "nonce", "value": "a1b2c3d4"},
+                {"name": "credential", "value": "a1b2c3d4:pass:admin"}
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/plain"}
+            ],
+            "cookies": [],
+            "content": {"size": 30, "text": "Url:/index.html"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/index.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 5000, "text": "<html>Dashboard</html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form_nonce",
+  "_expected_auth_confidence": "high",
+  "_expected_auth_fields": {
+    "action": "/cgi-bin/adv_pwd_cgi",
+    "nonce_field": "nonce",
+    "success_prefix": "Url:",
+    "error_prefix": "Error:"
+  },
+  "_expected_session_cookie": "",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

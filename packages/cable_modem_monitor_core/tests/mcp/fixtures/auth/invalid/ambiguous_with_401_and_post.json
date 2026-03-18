@@ -1,0 +1,39 @@
+{
+  "_description": "401 + form POST to non-login URL + Set-Cookie - exercises all describe() branches",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/data.html", "headers": [], "cookies": []},
+      "response": {
+        "status": 401,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/unknown_auth",
+        "headers": [
+          {"name": "Authorization", "value": "CustomScheme xyz"},
+          {"name": "Content-Type", "value": "application/x-www-form-urlencoded"}
+        ],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [{"name": "token", "value": "abc"}]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Set-Cookie", "value": "session=xyz"}],
+        "cookies": [{"name": "session", "value": "xyz"}],
+        "content": {"size": 10, "text": "OK"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "unknown",
+  "_expected_confidence": "low",
+  "_expected_hard_stop": "Cannot determine auth mechanism"
+}

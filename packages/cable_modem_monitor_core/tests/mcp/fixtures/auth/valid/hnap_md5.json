@@ -1,0 +1,22 @@
+{
+  "_description": "HNAP auth with MD5 HMAC (32-char hash in HNAP_AUTH header)",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/HNAP1/",
+        "headers": [
+          {"name": "HNAP_AUTH", "value": "abcdef1234567890abcdef1234567890 12345"}
+        ],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 10, "text": "{}"}}
+    }
+  ],
+  "_transport": "hnap",
+  "_expected_strategy": "hnap",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "hmac_algorithm": "md5"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "_description": "Form nonce auth: POST to /cgi-bin with Url: prefix response",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/cgi-bin/adv_pwd_cgi",
+        "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/x-www-form-urlencoded",
+          "params": [
+            {"name": "nonce", "value": "a1b2c3d4"},
+            {"name": "credential", "value": "hash"}
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 20, "text": "Url:/index.html"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form_nonce",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "action": "/cgi-bin/adv_pwd_cgi",
+    "nonce_field": "nonce"
+  }
+}

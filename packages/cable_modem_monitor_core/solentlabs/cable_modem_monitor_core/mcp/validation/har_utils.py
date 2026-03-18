@@ -72,3 +72,43 @@ def is_static_resource(url: str) -> bool:
     """Check if a URL is a static resource (CSS, JS, image, font)."""
     path = url.split("?", maxsplit=1)[0].split("#", maxsplit=1)[0]
     return any(path.lower().endswith(ext) for ext in STATIC_EXTENSIONS)
+
+
+def path_from_url(url: str) -> str:
+    """Extract path from a full or relative URL.
+
+    Handles ``http://host/path``, ``/path``, and ``/path?query`` forms.
+    Query strings and fragments are stripped.
+    """
+    if "://" in url:
+        after_scheme = url.split("://", 1)[1]
+        slash_idx = after_scheme.find("/")
+        if slash_idx >= 0:
+            return after_scheme[slash_idx:].split("?", 1)[0]
+        return "/"
+    return url.split("?", 1)[0]
+
+
+def parse_form_params(post_data: dict[str, Any]) -> dict[str, str]:
+    """Parse form parameters from HAR postData.
+
+    Handles both the ``params`` array and ``text`` with URL-encoded data.
+    """
+    result: dict[str, str] = {}
+
+    # Prefer structured params
+    params = post_data.get("params", [])
+    if params:
+        for p in params:
+            result[p.get("name", "")] = p.get("value", "")
+        return result
+
+    # Fall back to parsing text
+    text = post_data.get("text", "")
+    if text and "=" in text:
+        for pair in text.split("&"):
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                result[k] = v
+
+    return result

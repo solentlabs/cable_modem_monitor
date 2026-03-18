@@ -1,0 +1,26 @@
+{
+  "_description": "PBKDF2 auth with JSON array response extracts no params",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://host/api/v1/session/login",
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "cookies": [],
+        "postData": {
+          "mimeType": "application/json",
+          "text": "{\"password\": \"seeksalthash\"}"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "cookies": [],
+        "content": {"size": 10, "text": "[1, 2, 3]"}
+      }
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "form_pbkdf2",
+  "_expected_confidence": "medium"
+}

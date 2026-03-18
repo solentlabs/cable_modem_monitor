@@ -1,0 +1,12 @@
+{
+  "_description": "HNAP transport returns empty session (HNAP manages its own session via uid cookie)",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "hnap",
+  "_auth_strategy": "hnap",
+  "_expected_cookie": ""
+}

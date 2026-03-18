@@ -1,0 +1,104 @@
+{
+  "_description": "PBKDF2 auth with salt trigger and CSRF header",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 2000, "text": "<html>SPA Login</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/api/v1/session/login",
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-CSRF-TOKEN", "value": "init-token-123"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"username\": \"admin\", \"password\": \"seeksalthash\"}"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "cookies": [],
+            "content": {"size": 100, "text": "{\"salt\": \"abc123\", \"iterations\": 1000, \"keyLength\": 128}"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/api/v1/session/login",
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "X-CSRF-TOKEN", "value": "init-token-123"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/json",
+              "text": "{\"username\": \"admin\", \"password\": \"derivedHashValue\"}"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"},
+              {"name": "Set-Cookie", "value": "PHPSESSID=sess456; path=/"}
+            ],
+            "cookies": [
+              {"name": "PHPSESSID", "value": "sess456"}
+            ],
+            "content": {"size": 50, "text": "{\"status\": \"success\"}"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/api/v1/status",
+            "headers": [
+              {"name": "X-Requested-With", "value": "XMLHttpRequest"}
+            ],
+            "cookies": [
+              {"name": "PHPSESSID", "value": "sess456"}
+            ]
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "cookies": [],
+            "content": {"size": 5000, "text": "{\"downstream\": []}"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "form_pbkdf2",
+  "_expected_auth_confidence": "medium",
+  "_expected_auth_fields": {
+    "login_endpoint": "/api/v1/session/login",
+    "csrf_header": "X-CSRF-TOKEN"
+  },
+  "_expected_session_cookie": "PHPSESSID",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

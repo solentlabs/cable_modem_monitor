@@ -1,0 +1,21 @@
+{
+  "_description": "HNAP auth with no HNAP_AUTH header - defaults to md5 with warning",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/HNAP1/",
+        "headers": [{"name": "SOAPAction", "value": "Login"}],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 10, "text": "{}"}}
+    }
+  ],
+  "_transport": "hnap",
+  "_expected_strategy": "hnap",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "hmac_algorithm": "md5"
+  },
+  "_expected_warning": "hmac_algorithm"
+}

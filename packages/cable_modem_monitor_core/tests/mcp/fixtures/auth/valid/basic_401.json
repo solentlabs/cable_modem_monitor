@@ -1,0 +1,29 @@
+{
+  "_description": "Basic auth: 401 with WWW-Authenticate: Basic, then 200 with Authorization",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {
+        "status": 401,
+        "headers": [{"name": "WWW-Authenticate", "value": "Basic realm=\"modem\""}],
+        "cookies": [],
+        "content": {"size": 0, "text": ""}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/status.html",
+        "headers": [{"name": "Authorization", "value": "Basic dXNlcjpwYXNz"}],
+        "cookies": []
+      },
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_expected_strategy": "basic",
+  "_expected_confidence": "high",
+  "_expected_fields": {
+    "challenge_cookie": false
+  }
+}

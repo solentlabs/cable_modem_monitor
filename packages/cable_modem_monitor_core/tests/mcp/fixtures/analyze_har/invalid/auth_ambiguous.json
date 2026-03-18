@@ -1,0 +1,51 @@
+{
+  "_description": "Auth signals present but no strategy matches — hard stop",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [],
+            "cookies": [],
+            "content": {"size": 2000, "text": "<html>Login</html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "url": "http://192.168.100.1/do_something",
+            "headers": [
+              {"name": "Content-Type", "value": "application/x-www-form-urlencoded"},
+              {"name": "Authorization", "value": "CustomScheme token123"}
+            ],
+            "cookies": [],
+            "postData": {
+              "mimeType": "application/x-www-form-urlencoded",
+              "params": [
+                {"name": "action", "value": "authenticate"}
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Set-Cookie", "value": "session=abc; path=/"}
+            ],
+            "cookies": [
+              {"name": "session", "value": "abc"}
+            ],
+            "content": {"size": 100, "text": "OK"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_hard_stop": "Cannot determine auth mechanism"
+}

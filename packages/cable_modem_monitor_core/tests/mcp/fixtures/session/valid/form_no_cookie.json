@@ -1,0 +1,12 @@
+{
+  "_description": "Form auth, stateless — IP-based session tracking, no cookies set",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "/status.html", "headers": [], "cookies": []},
+      "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 100, "text": "data"}}
+    }
+  ],
+  "_transport": "http",
+  "_auth_strategy": "form",
+  "_expected_cookie": ""
+}

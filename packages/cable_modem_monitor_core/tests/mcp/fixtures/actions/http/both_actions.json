@@ -1,0 +1,56 @@
+{
+  "_description": "Both logout and restart actions present",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html",
+        "headers": []
+      },
+      "response": {
+        "status": 200
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/DeviceSecurity",
+        "headers": [],
+        "postData": {
+          "params": [
+            {
+              "name": "SecurityAction",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/logout.asp",
+        "headers": []
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": {
+    "type": "http",
+    "method": "GET",
+    "endpoint": "/logout.asp"
+  },
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/DeviceSecurity",
+    "params": {
+      "SecurityAction": "1"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "HTTP transport - GET with empty headers",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/", "headers": []},
+      "response": {"status": 200}
+    }
+  ],
+  "_expected_transport": "http"
+}

@@ -1,0 +1,234 @@
+"""Integration tests for analyze_har orchestrator.
+
+Tests the full pipeline: HAR file → Phases 1-4 → AnalysisResult.
+Uses fixture-driven tests for valid analysis and hard stop detection.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from solentlabs.cable_modem_monitor_core.mcp.analyze_har import (
+    analyze_har,
+)
+
+from tests.conftest import collect_fixtures, load_fixture, write_har
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures" / "analyze_har"
+VALID_DIR = FIXTURES_DIR / "valid"
+INVALID_DIR = FIXTURES_DIR / "invalid"
+
+VALID_FIXTURES = collect_fixtures(VALID_DIR)
+INVALID_FIXTURES = collect_fixtures(INVALID_DIR)
+
+
+# =====================================================================
+# Valid fixture tests — fixture-driven
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    VALID_FIXTURES,
+    ids=[f.stem for f in VALID_FIXTURES],
+)
+def test_valid_analysis_transport(fixture_path: Path, tmp_path: Path) -> None:
+    """Correct transport detected for each valid fixture."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+    assert result.transport.transport == data["_expected_transport"]
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    VALID_FIXTURES,
+    ids=[f.stem for f in VALID_FIXTURES],
+)
+def test_valid_analysis_auth_strategy(fixture_path: Path, tmp_path: Path) -> None:
+    """Correct auth strategy detected for each valid fixture."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+    assert result.auth.strategy == data["_expected_auth_strategy"]
+    assert result.auth.confidence == data.get("_expected_auth_confidence", "high")
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    VALID_FIXTURES,
+    ids=[f.stem for f in VALID_FIXTURES],
+)
+def test_valid_analysis_session(fixture_path: Path, tmp_path: Path) -> None:
+    """Correct session cookie detected for each valid fixture."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+    assert result.session.cookie_name == data["_expected_session_cookie"]
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    VALID_FIXTURES,
+    ids=[f.stem for f in VALID_FIXTURES],
+)
+def test_valid_analysis_actions(fixture_path: Path, tmp_path: Path) -> None:
+    """Correct actions detected for each valid fixture."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+
+    expected_logout = data["_expected_logout"]
+    expected_restart = data["_expected_restart"]
+
+    if expected_logout is None:
+        assert result.actions.logout is None
+    else:
+        assert result.actions.logout is not None
+        assert result.actions.logout.type == expected_logout["type"]
+        assert result.actions.logout.method == expected_logout["method"]
+        assert result.actions.logout.endpoint == expected_logout["endpoint"]
+
+    if expected_restart is None:
+        assert result.actions.restart is None
+    else:
+        assert result.actions.restart is not None
+        assert result.actions.restart.type == expected_restart["type"]
+        assert result.actions.restart.method == expected_restart["method"]
+        assert result.actions.restart.endpoint == expected_restart["endpoint"]
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    VALID_FIXTURES,
+    ids=[f.stem for f in VALID_FIXTURES],
+)
+def test_valid_analysis_no_hard_stops(fixture_path: Path, tmp_path: Path) -> None:
+    """Valid fixtures produce no hard stops."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+    assert result.hard_stops == []
+
+
+# =====================================================================
+# Auth field extraction tests — fixture-driven
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    [f for f in VALID_FIXTURES if "_expected_auth_fields" in json.loads(f.read_text())],
+    ids=[f.stem for f in VALID_FIXTURES if "_expected_auth_fields" in json.loads(f.read_text())],
+)
+def test_valid_analysis_auth_fields(fixture_path: Path, tmp_path: Path) -> None:
+    """Auth fields extracted correctly for fixtures that specify them."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+
+    expected_fields = data["_expected_auth_fields"]
+    for key, value in expected_fields.items():
+        assert key in result.auth.fields, f"Missing auth field: {key}"
+        assert (
+            result.auth.fields[key] == value
+        ), f"Auth field {key}: expected {value!r}, got {result.auth.fields[key]!r}"
+
+
+# =====================================================================
+# Invalid fixture tests — hard stop detection
+# =====================================================================
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    INVALID_FIXTURES,
+    ids=[f.stem for f in INVALID_FIXTURES],
+)
+def test_invalid_analysis_hard_stop(fixture_path: Path, tmp_path: Path) -> None:
+    """Invalid fixtures produce the expected hard stop."""
+    data = load_fixture(fixture_path)
+    har_file = write_har(tmp_path, data["_har"])
+    result = analyze_har(har_file)
+    assert result.hard_stops, "Expected at least one hard stop"
+    expected_msg = data["_expected_hard_stop"]
+    assert any(expected_msg in hs for hs in result.hard_stops)
+
+
+# =====================================================================
+# Error handling tests — inline
+# =====================================================================
+
+
+class TestAnalyzeHarErrors:
+    """Error handling for bad inputs."""
+
+    def test_file_not_found(self, tmp_path: Path) -> None:
+        """Missing file raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            analyze_har(tmp_path / "nonexistent.har")
+
+    def test_invalid_json(self, tmp_path: Path) -> None:
+        """Invalid JSON raises ValueError."""
+        bad_file = tmp_path / "bad.har"
+        bad_file.write_text("not json")
+        with pytest.raises(ValueError, match="Invalid JSON"):
+            analyze_har(bad_file)
+
+    def test_empty_entries(self, tmp_path: Path) -> None:
+        """HAR with no entries raises ValueError."""
+        empty_har = tmp_path / "empty.har"
+        empty_har.write_text(json.dumps({"log": {"entries": []}}))
+        with pytest.raises(ValueError, match="no entries"):
+            analyze_har(empty_har)
+
+    def test_missing_log(self, tmp_path: Path) -> None:
+        """HAR without log.entries raises ValueError."""
+        no_log = tmp_path / "nolog.har"
+        no_log.write_text(json.dumps({"version": "1.0"}))
+        with pytest.raises(ValueError, match="no entries"):
+            analyze_har(no_log)
+
+
+# =====================================================================
+# Serialization test — inline
+# =====================================================================
+
+
+class TestAnalysisResultSerialization:
+    """AnalysisResult.to_dict() matches spec output contract."""
+
+    def test_to_dict_structure(self, tmp_path: Path) -> None:
+        """Serialized output has all expected top-level keys."""
+        # Use simplest fixture
+        data = load_fixture(VALID_DIR / "auth_none.json")
+        har_file = write_har(tmp_path, data["_har"])
+        result = analyze_har(har_file)
+        d = result.to_dict()
+
+        assert "transport" in d
+        assert "confidence" in d
+        assert "auth" in d
+        assert "session" in d
+        assert "actions" in d
+        assert "sections" in d
+        assert "warnings" in d
+        assert "hard_stops" in d
+
+    def test_to_dict_types(self, tmp_path: Path) -> None:
+        """Serialized values have correct types."""
+        data = load_fixture(VALID_DIR / "auth_none.json")
+        har_file = write_har(tmp_path, data["_har"])
+        result = analyze_har(har_file)
+        d = result.to_dict()
+
+        assert isinstance(d["transport"], str)
+        assert isinstance(d["confidence"], str)
+        assert isinstance(d["auth"], dict)
+        assert isinstance(d["session"], dict)
+        assert isinstance(d["actions"], dict)
+        assert d["sections"] is None  # Not yet populated (Step 3)
+        assert isinstance(d["warnings"], list)
+        assert isinstance(d["hard_stops"], list)

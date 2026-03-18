@@ -1,0 +1,10 @@
+{
+  "_description": "HNAP detected from /HNAP1/ URL path",
+  "_entries": [
+    {
+      "request": {"method": "POST", "url": "http://192.168.100.1/HNAP1/", "headers": []},
+      "response": {"status": 200}
+    }
+  ],
+  "_expected_transport": "hnap"
+}

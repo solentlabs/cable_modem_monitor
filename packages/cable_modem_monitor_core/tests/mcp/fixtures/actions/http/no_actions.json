@@ -1,0 +1,17 @@
+{
+  "_description": "Data pages only, no logout or restart actions",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html",
+        "headers": []
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": null
+}

@@ -1,0 +1,47 @@
+{
+  "_description": "No-auth modem: all 200 responses, no login flow, no session artifacts",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/status.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 5000, "text": "<html><body>Status page</body></html>"}
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "url": "http://192.168.100.1/info.html",
+            "headers": [],
+            "cookies": []
+          },
+          "response": {
+            "status": 200,
+            "headers": [
+              {"name": "Content-Type", "value": "text/html"}
+            ],
+            "cookies": [],
+            "content": {"size": 3000, "text": "<html><body>Info page</body></html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_transport": "http",
+  "_expected_auth_strategy": "none",
+  "_expected_auth_confidence": "high",
+  "_expected_session_cookie": "",
+  "_expected_logout": null,
+  "_expected_restart": null
+}

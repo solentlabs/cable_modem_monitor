@@ -1,0 +1,30 @@
+{
+  "_description": "HNAP restart with JSON array body (no extractable params)",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {
+            "name": "SOAPAction",
+            "value": "\"http://purenetworks.com/HNAP1/Reboot\""
+          }
+        ],
+        "postData": {
+          "text": "[1, 2, 3]"
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "hnap",
+    "method": "POST",
+    "endpoint": "/HNAP1/",
+    "action_name": "Reboot"
+  }
+}
