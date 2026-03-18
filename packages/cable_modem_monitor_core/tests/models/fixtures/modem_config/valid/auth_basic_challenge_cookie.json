@@ -1,0 +1,11 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T250",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {"strategy": "basic", "challenge_cookie": true},
+  "hardware": {"docsis_version": "3.1"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"]
+}

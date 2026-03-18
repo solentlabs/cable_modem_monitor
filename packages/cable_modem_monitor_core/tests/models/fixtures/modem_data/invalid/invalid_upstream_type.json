@@ -1,0 +1,7 @@
+{
+  "_expected_error": "not valid for upstream",
+  "_config": {
+    "downstream": [],
+    "upstream": [{"channel_id": 1, "channel_type": "qam"}]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "_expected_error": "at least one of: label, id, css",
+  "_config": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/status.html",
+          "fields": [
+            {"field": "uptime", "type": "string"}
+          ]
+        }
+      ]
+    }
+  }
+}

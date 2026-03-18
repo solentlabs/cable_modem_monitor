@@ -1,0 +1,7 @@
+{
+  "_expected_error": "not valid for downstream",
+  "_config": {
+    "downstream": [{"channel_id": 1, "channel_type": "atdma"}],
+    "upstream": []
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "_expected_error": "missing 'response'",
+  "_har": {"log": {"entries": [{"request": {"method": "GET", "url": "/"}}]}}
+}

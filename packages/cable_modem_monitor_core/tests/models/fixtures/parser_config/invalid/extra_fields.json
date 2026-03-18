@@ -1,0 +1,18 @@
+{
+  "_expected_error": "Extra inputs are not permitted",
+  "_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "nth", "match": 0},
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ],
+      "bogus_field": true
+    }
+  }
+}

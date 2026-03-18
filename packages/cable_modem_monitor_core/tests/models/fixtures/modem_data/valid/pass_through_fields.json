@@ -1,0 +1,6 @@
+{
+  "downstream": [
+    {"channel_id": 1, "channel_type": "ofdm", "channel_width": 192000000, "active_subcarriers": 1880}
+  ],
+  "upstream": []
+}

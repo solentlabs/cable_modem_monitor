@@ -1,0 +1,13 @@
+{
+  "system_info": {
+    "sources": [
+      {
+        "format": "hnap",
+        "response_key": "GetConnectionInfoResponse",
+        "fields": [
+          {"source": "NetworkAccess", "field": "network_access", "type": "string"}
+        ]
+      }
+    ]
+  }
+}

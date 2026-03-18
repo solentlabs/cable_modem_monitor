@@ -1,0 +1,21 @@
+{
+  "_expected_error": "not both",
+  "_config": {
+    "downstream": {
+      "format": "table_transposed",
+      "resource": "/status.html",
+      "selector": {"type": "nth", "match": 0},
+      "rows": [
+        {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+      ],
+      "tables": [
+        {
+          "selector": {"type": "nth", "match": 1},
+          "rows": [
+            {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

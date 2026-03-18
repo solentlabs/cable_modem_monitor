@@ -1,0 +1,10 @@
+{
+  "_expected_error": "Input should be 'verified', 'awaiting_verification', 'in_progress' or 'unsupported'",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "status": "banana"
+  }
+}

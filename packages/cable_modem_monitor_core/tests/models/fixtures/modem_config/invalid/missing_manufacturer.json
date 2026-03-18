@@ -1,0 +1,9 @@
+{
+  "_expected_error": "manufacturer",
+  "_config": {
+    "model": "T1",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "status": "unsupported"
+  }
+}

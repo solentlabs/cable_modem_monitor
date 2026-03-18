@@ -1,0 +1,12 @@
+{
+  "_expected_error": "requires both selector and rows",
+  "_config": {
+    "downstream": {
+      "format": "table_transposed",
+      "resource": "/data.htm",
+      "rows": [
+        {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+      ]
+    }
+  }
+}

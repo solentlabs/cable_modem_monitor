@@ -1,0 +1,15 @@
+{
+  "_expected_auth": true,
+  "_expected_hints": ["hnap", "auth:hnap"],
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "POST", "url": "http://192.168.100.1/HNAP1/", "cookies": [], "headers": [{"name": "SOAPAction", "value": "\"Login\""}], "postData": {"mimeType": "application/json", "text": "{}"}},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "application/json"}], "content": {"size": 500, "text": ""}}
+        }
+      ]
+    }
+  }
+}

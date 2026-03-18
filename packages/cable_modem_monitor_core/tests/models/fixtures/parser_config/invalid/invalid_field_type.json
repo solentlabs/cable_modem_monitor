@@ -1,0 +1,17 @@
+{
+  "_expected_error": "invalid field type",
+  "_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "nth", "match": 0},
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "bogus"}
+          ]
+        }
+      ]
+    }
+  }
+}

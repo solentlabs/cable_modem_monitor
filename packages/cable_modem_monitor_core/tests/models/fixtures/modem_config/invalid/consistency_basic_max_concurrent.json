@@ -1,0 +1,14 @@
+{
+  "_expected_error": "stateless",
+  "_config": {
+    "manufacturer": "Solent Labs", "model": "T1", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "basic"},
+    "session": {"max_concurrent": 1},
+    "actions": {"logout": {"type": "http", "method": "GET", "endpoint": "/logout"}},
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
+    "isps": ["ISP"]
+  }
+}

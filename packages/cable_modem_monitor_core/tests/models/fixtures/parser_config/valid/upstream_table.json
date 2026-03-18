@@ -1,0 +1,19 @@
+{
+  "upstream": {
+    "format": "table",
+    "resource": "/status.html",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Upstream Bonded Channels"},
+        "skip_rows": 1,
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 1, "field": "lock_status", "type": "string"},
+          {"index": 2, "field": "frequency", "type": "frequency", "unit": "Hz"},
+          {"index": 3, "field": "power", "type": "float", "unit": "dBmV"}
+        ],
+        "channel_type": {"fixed": "atdma"}
+      }
+    ]
+  }
+}

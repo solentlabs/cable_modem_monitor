@@ -1,0 +1,7 @@
+{
+  "_expected_error": "missing required field 'channel_id'",
+  "_config": {
+    "downstream": [{"channel_type": "qam"}],
+    "upstream": []
+  }
+}

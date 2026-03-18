@@ -1,0 +1,9 @@
+{
+  "_expected_error": "requires hardware config",
+  "_config": {
+    "manufacturer": "Solent Labs", "model": "T1", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "status": "in_progress"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "downstream": [
+    {"channel_id": 1, "channel_type": "qam", "frequency": 507000000, "power": 3.2, "snr": 38.5}
+  ],
+  "upstream": []
+}

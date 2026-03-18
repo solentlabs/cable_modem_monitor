@@ -1,0 +1,16 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T400",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "form_nonce",
+    "action": "/cgi-bin/adv_pwd_cgi",
+    "nonce_field": "nonce",
+    "credential_format": "{nonce}:{password}:{username}"
+  },
+  "hardware": {"docsis_version": "3.0"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"]
+}

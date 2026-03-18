@@ -1,0 +1,10 @@
+{
+  "_expected_error": "requires both selector and rows",
+  "_config": {
+    "downstream": {
+      "format": "table_transposed",
+      "resource": "/data.htm",
+      "selector": {"type": "nth", "match": 0}
+    }
+  }
+}

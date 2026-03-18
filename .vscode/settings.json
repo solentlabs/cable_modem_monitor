@@ -114,6 +114,10 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.extraPaths": [
+    "packages/cable_modem_monitor_core",
+    "packages/cable_modem_monitor_catalog"
+  ],
 
   // ========================================
   // CodeQL Configuration (Optional)

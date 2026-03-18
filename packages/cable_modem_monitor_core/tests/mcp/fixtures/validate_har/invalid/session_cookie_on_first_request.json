@@ -1,0 +1,14 @@
+{
+  "_expected_error": "session cookies",
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [{"name": "sessionId", "value": "ah-ah-ah-you-didnt-say-the-magic-word"}], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 8000, "text": ""}}
+        }
+      ]
+    }
+  }
+}

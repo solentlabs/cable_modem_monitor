@@ -1,0 +1,13 @@
+{
+  "_expected_error": "explicit session block",
+  "_config": {
+    "manufacturer": "Solent Labs", "model": "T1", "transport": "hnap",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "hnap", "hmac_algorithm": "md5"},
+    "session": {"cookie_name": "s"},
+    "hardware": {"docsis_version": "3.1"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
+    "isps": ["ISP"]
+  }
+}

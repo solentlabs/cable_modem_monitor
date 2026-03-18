@@ -1,0 +1,11 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T650",
+  "transport": "hnap",
+  "default_host": "192.168.100.1",
+  "auth": {"strategy": "hnap", "hmac_algorithm": "sha256"},
+  "hardware": {"docsis_version": "3.1"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"]
+}
