@@ -1,0 +1,29 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T300",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "form",
+    "action": "/goform/login",
+    "username_field": "loginUsername",
+    "password_field": "loginPassword",
+    "encoding": "base64"
+  },
+  "session": {
+    "cookie_name": "session",
+    "max_concurrent": 1
+  },
+  "actions": {
+    "logout": {
+      "type": "http",
+      "method": "GET",
+      "endpoint": "/logout.asp"
+    }
+  },
+  "hardware": {"docsis_version": "3.0", "chipset": "Broadcom BCM3384"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"],
+  "notes": "Single-session modem — must logout before new login."
+}

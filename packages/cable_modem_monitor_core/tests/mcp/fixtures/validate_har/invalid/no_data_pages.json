@@ -1,0 +1,14 @@
+{
+  "_expected_error": "No data page",
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/login", "cookies": [], "headers": []},
+          "response": {"status": 302, "cookies": [], "headers": [{"name": "Location", "value": "/home.html"}], "content": {"size": 0, "text": ""}}
+        }
+      ]
+    }
+  }
+}

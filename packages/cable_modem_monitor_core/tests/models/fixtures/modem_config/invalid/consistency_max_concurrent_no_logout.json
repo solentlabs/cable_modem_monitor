@@ -1,0 +1,13 @@
+{
+  "_expected_error": "requires actions.logout",
+  "_config": {
+    "manufacturer": "Solent Labs", "model": "T1", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "form", "action": "/login"},
+    "session": {"cookie_name": "s", "max_concurrent": 1},
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
+    "isps": ["ISP"]
+  }
+}

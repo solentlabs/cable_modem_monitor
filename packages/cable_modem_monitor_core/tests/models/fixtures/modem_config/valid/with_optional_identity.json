@@ -1,0 +1,17 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T1100",
+  "model_aliases": ["T1100v2"],
+  "brands": ["TestBrand"],
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {"strategy": "none"},
+  "hardware": {"docsis_version": "3.0"},
+  "timeout": 20,
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"],
+  "sources": {"auth_config": "#42"},
+  "notes": "Test notes",
+  "references": {"issues": [42, 81], "prs": [57]}
+}

@@ -1,0 +1,8 @@
+{
+  "_expected_error": "'system_info' must be a dict",
+  "_config": {
+    "downstream": [{"channel_id": 1, "channel_type": "qam"}],
+    "upstream": [],
+    "system_info": "not a dict"
+  }
+}

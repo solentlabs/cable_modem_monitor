@@ -1,0 +1,18 @@
+{
+  "_expected_error": "No data page",
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/style.css", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 5000, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/app.js", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [], "content": {"size": 10000, "text": ""}}
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "downstream": {
+    "format": "table",
+    "resource": "/status.html",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 2, "field": "modulation", "type": "string"}
+        ],
+        "channel_type": {
+          "field": "modulation",
+          "map": {"QAM256": "qam", "Other": "ofdm"}
+        }
+      }
+    ]
+  }
+}

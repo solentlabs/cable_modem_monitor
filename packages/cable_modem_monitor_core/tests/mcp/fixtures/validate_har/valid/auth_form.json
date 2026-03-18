@@ -1,0 +1,27 @@
+{
+  "_expected_auth": true,
+  "_expected_hints": ["http", "auth:form"],
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 4000, "text": ""}}
+        },
+        {
+          "request": {"method": "POST", "url": "http://192.168.100.1/goform/login", "cookies": [], "headers": [{"name": "Content-Type", "value": "application/x-www-form-urlencoded"}], "postData": {"mimeType": "application/x-www-form-urlencoded", "text": "user=admin&pass=SSdtIHNvcnJ5IERhdmUsIEkgY2Fubm90IGRvIHRoYXQ="}},
+          "response": {"status": 302, "cookies": [], "headers": [{"name": "Location", "value": "/home.html"}], "content": {"size": 0, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/home.html", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 8000, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "cookies": [], "headers": []},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 12000, "text": ""}}
+        }
+      ]
+    }
+  }
+}

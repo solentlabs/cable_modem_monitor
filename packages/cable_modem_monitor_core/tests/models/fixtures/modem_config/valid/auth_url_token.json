@@ -1,0 +1,21 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T500",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "url_token",
+    "login_page": "/status.html",
+    "login_prefix": "login_",
+    "success_indicator": "Downstream Bonded Channels",
+    "ajax_login": true
+  },
+  "session": {
+    "cookie_name": "sessionId",
+    "token_prefix": "ct_"
+  },
+  "hardware": {"docsis_version": "3.1"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"]
+}

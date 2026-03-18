@@ -1,0 +1,13 @@
+{
+  "downstream": {
+    "format": "table_transposed",
+    "resource": "/data.htm",
+    "selector": {"type": "header_text", "match": "Downstream Channels"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  }
+}

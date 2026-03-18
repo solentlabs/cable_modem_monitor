@@ -1,0 +1,20 @@
+{
+  "_expected_error": "requires either 'offset' or 'index'",
+  "_config": {
+    "downstream": {
+      "format": "javascript",
+      "resource": "/data.htm",
+      "functions": [
+        {
+          "name": "InitDsTable",
+          "channel_type": "qam",
+          "delimiter": "|",
+          "fields_per_channel": 5,
+          "channels": [
+            {"field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  }
+}

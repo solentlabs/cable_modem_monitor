@@ -1,0 +1,4 @@
+{
+  "_expected_error": "at least 'downstream' or 'upstream'",
+  "_config": {}
+}

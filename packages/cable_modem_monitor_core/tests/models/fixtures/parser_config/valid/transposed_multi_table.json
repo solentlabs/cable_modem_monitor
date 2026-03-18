@@ -1,0 +1,24 @@
+{
+  "downstream": {
+    "format": "table_transposed",
+    "resource": "/data.htm",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "rows": [
+          {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+          {"label": "Frequency", "field": "frequency", "type": "frequency"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      },
+      {
+        "selector": {"type": "header_text", "match": "Signal Stats"},
+        "merge_by": ["channel_id"],
+        "rows": [
+          {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+          {"label": "Total Correctable Codewords", "field": "corrected", "type": "integer"}
+        ]
+      }
+    ]
+  }
+}

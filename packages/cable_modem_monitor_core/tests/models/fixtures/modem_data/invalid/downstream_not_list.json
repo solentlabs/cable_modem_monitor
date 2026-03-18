@@ -1,0 +1,7 @@
+{
+  "_expected_error": "must be a list",
+  "_config": {
+    "downstream": "not a list",
+    "upstream": []
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "downstream": [
+    {"channel_id": 1, "channel_type": "qam", "frequency": 507000000, "power": 3.2, "snr": 38.5, "corrected": 100, "uncorrected": 0}
+  ],
+  "upstream": [
+    {"channel_id": 1, "channel_type": "atdma", "frequency": 36800000, "power": 44.0}
+  ],
+  "system_info": {
+    "system_uptime": "7 days",
+    "software_version": "5.7.1"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_expected_error": "Input should be 'http' or 'hnap'",
+  "_config": {
+    "manufacturer": "Solent Labs",
+    "model": "T1",
+    "transport": "ftp",
+    "default_host": "192.168.100.1",
+    "status": "unsupported"
+  }
+}

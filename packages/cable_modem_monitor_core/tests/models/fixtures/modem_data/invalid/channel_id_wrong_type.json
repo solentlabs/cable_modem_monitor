@@ -1,0 +1,7 @@
+{
+  "_expected_error": "channel_id must be int",
+  "_config": {
+    "downstream": [{"channel_id": "1", "channel_type": "qam"}],
+    "upstream": []
+  }
+}

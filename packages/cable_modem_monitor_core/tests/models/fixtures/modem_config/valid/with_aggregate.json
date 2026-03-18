@@ -1,0 +1,15 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T1000",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {"strategy": "none"},
+  "hardware": {"docsis_version": "3.0"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"],
+  "aggregate": {
+    "total_corrected": {"sum": "corrected", "channels": "downstream"},
+    "total_uncorrected": {"sum": "uncorrected", "channels": "downstream"}
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "system_info": {
+    "sources": [
+      {
+        "format": "html_fields",
+        "resource": "/home.html",
+        "fields": [
+          {"label": "System Up Time", "field": "system_uptime", "type": "string"}
+        ]
+      },
+      {
+        "format": "html_fields",
+        "resource": "/info.html",
+        "fields": [
+          {"label": "Software Version", "field": "software_version", "type": "string"},
+          {"label": "Hardware Version", "field": "hardware_version", "type": "string"}
+        ]
+      }
+    ]
+  }
+}

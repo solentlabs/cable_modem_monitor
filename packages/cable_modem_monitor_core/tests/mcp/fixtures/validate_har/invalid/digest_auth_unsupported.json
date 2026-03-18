@@ -1,0 +1,21 @@
+{
+  "_expected_error": "digest auth is not supported",
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": []},
+          "response": {
+            "status": 401,
+            "cookies": [],
+            "headers": [
+              {"name": "WWW-Authenticate", "value": "Digest realm=\"modem\", nonce=\"abc123\""}
+            ],
+            "content": {"size": 0, "text": ""}
+          }
+        }
+      ]
+    }
+  }
+}

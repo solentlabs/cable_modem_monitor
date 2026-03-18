@@ -1,0 +1,24 @@
+{
+  "downstream": {
+    "format": "table",
+    "resource": "/status.html",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Downstream QAM"},
+        "channel_type": {"fixed": "qam"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 3, "field": "frequency", "type": "frequency"}
+        ]
+      },
+      {
+        "selector": {"type": "header_text", "match": "Downstream OFDM"},
+        "channel_type": {"fixed": "ofdm"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 3, "field": "frequency", "type": "frequency"}
+        ]
+      }
+    ]
+  }
+}

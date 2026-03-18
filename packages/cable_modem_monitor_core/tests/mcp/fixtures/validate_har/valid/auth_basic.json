@@ -1,0 +1,19 @@
+{
+  "_expected_auth": true,
+  "_expected_hints": ["http", "auth:basic"],
+  "_har": {
+    "log": {
+      "version": "1.2",
+      "entries": [
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/", "cookies": [], "headers": []},
+          "response": {"status": 401, "cookies": [], "headers": [{"name": "WWW-Authenticate", "value": "Basic"}], "content": {"size": 0, "text": ""}}
+        },
+        {
+          "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "cookies": [], "headers": [{"name": "Authorization", "value": "Basic SSdtIHNvcnJ5IERhdmUsIEkgY2Fubm90IGRvIHRoYXQ="}]},
+          "response": {"status": 200, "cookies": [], "headers": [{"name": "Content-Type", "value": "text/html"}], "content": {"size": 8000, "text": ""}}
+        }
+      ]
+    }
+  }
+}

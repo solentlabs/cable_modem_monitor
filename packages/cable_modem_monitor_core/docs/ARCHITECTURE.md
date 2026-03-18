@@ -48,6 +48,26 @@ custom_components/
 └── cable_modem_monitor/            # HA integration
 ```
 
+### Optional extras
+
+Core's base dependencies are minimal — what the runtime engine needs.
+Additional functionality is available via optional extras:
+
+| Extra | Install | What it adds | Who uses it |
+|-------|---------|--------------|-------------|
+| `[mcp]` | `pip install solentlabs-cable-modem-monitor-core[mcp]` | `pydantic>=2.0` | MCP server tools (`validate_har`, `generate_config`, etc.), Catalog's build-time validation, dev-gate CI |
+
+The `[mcp]` extra provides Pydantic for config schema validation. The HA
+integration never imports the `models` module — it uses parsed dicts from
+the coordinator. Pydantic is only needed by the MCP onboarding tools and
+Catalog's dev-time validation pipeline.
+
+Catalog's dev dependencies reference the extra:
+```toml
+[dependency-groups]
+dev = ["solentlabs-cable-modem-monitor-core[mcp]"]
+```
+
 ### Core — `solentlabs-cable-modem-monitor-core`
 
 The complete engine. Given a path to modem files and user credentials, Core

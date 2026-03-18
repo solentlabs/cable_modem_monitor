@@ -18,8 +18,29 @@ authors = [
     { name = "Solent Labs" },
 ]
 
+[project.optional-dependencies]
+mcp = ["pydantic>=2.0"]
+
 [dependency-groups]
-dev = ["pydantic>=2.0"]
+dev = [
+    "solentlabs-cable-modem-monitor-core[mcp]",
+    "pytest>=8.0",
+    "ruff>=0.14",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["solentlabs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=solentlabs/cable_modem_monitor_core",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]

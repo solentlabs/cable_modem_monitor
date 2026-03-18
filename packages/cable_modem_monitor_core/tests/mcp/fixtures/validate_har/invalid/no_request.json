@@ -1,0 +1,4 @@
+{
+  "_expected_error": "missing 'request'",
+  "_har": {"log": {"entries": [{"response": {"status": 200}}]}}
+}

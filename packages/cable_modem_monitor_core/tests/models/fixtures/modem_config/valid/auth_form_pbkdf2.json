@@ -1,0 +1,30 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T700",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {
+    "strategy": "form_pbkdf2",
+    "login_endpoint": "/api/v1/session/login",
+    "pbkdf2_iterations": 1000,
+    "pbkdf2_key_length": 128,
+    "csrf_init_endpoint": "/api/v1/session/init_page",
+    "csrf_header": "X-CSRF-TOKEN"
+  },
+  "session": {
+    "cookie_name": "PHPSESSID",
+    "max_concurrent": 1,
+    "headers": {"X-Requested-With": "XMLHttpRequest"}
+  },
+  "actions": {
+    "logout": {
+      "type": "http",
+      "method": "POST",
+      "endpoint": "/api/v1/session/logout"
+    }
+  },
+  "hardware": {"docsis_version": "3.1"},
+  "status": "verified",
+  "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
+  "isps": ["Various"]
+}
