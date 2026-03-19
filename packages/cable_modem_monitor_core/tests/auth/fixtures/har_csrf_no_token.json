@@ -1,0 +1,16 @@
+{
+  "_description": "No CSRF token: no headers, plain text body",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/api/init"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "just text"}
+      }
+    }
+  ]
+}

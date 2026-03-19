@@ -1,0 +1,26 @@
+{
+  "downstream": {
+    "format": "table",
+    "resource": "/status.html",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  },
+  "upstream": {
+    "format": "table",
+    "resource": "/status.html",
+    "tables": [
+      {
+        "selector": {"type": "header_text", "match": "Upstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"}
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "_description": "URL token auth: GET login page with error response (indicator missing)",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/login.html"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Error: bad credentials"}
+      }
+    }
+  ]
+}

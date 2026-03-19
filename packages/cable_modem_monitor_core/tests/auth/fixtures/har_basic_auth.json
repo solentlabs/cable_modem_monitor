@@ -1,0 +1,23 @@
+{
+  "_description": "Basic auth: single GET page (challenge cookie flow)",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "Content-Type", "value": "text/html"}
+        ],
+        "content": {"text": "<html>Modem</html>"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "basic"
+    }
+  }
+}

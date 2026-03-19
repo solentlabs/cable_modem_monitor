@@ -1,0 +1,35 @@
+{
+  "_description": "Form auth: POST login then GET status page",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Login OK"}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/status.html"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "Content-Type", "value": "text/html"}
+        ],
+        "content": {"text": "<html>Status</html>"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/goform/login"
+    }
+  }
+}

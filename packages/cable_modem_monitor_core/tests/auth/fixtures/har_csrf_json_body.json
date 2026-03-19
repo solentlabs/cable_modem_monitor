@@ -1,0 +1,18 @@
+{
+  "_description": "CSRF token in JSON response body",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/api/v1/session/init_page"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "Content-Type", "value": "application/json"}
+        ],
+        "content": {"text": "{\"token\": \"csrf_abc123\"}"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "_description": "CSRF token in response header",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/api/init"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {"name": "X-CSRF-TOKEN", "value": "csrf_from_header"}
+        ],
+        "content": {"text": "OK"}
+      }
+    }
+  ]
+}

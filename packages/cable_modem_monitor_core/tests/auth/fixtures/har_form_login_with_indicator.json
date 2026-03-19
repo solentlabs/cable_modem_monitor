@@ -1,0 +1,22 @@
+{
+  "_description": "Form auth: login body contains success indicator text",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Welcome to the modem dashboard"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/login"
+    }
+  }
+}

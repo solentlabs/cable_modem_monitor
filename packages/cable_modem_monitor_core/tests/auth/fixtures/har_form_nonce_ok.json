@@ -1,0 +1,22 @@
+{
+  "_description": "Form nonce auth: configurable nonce length, Url: prefix response",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Url:/status"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/login"
+    }
+  }
+}

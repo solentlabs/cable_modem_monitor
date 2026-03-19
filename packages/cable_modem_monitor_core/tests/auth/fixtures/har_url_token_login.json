@@ -1,0 +1,21 @@
+{
+  "_description": "URL token auth: GET login page with Set-Cookie session token",
+  "_entries": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/login.html"
+      },
+      "response": {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Set-Cookie",
+            "value": "sessionId=tok_abc123; Path=/"
+          }
+        ],
+        "content": {"text": "Downstream Bonded Channels"}
+      }
+    }
+  ]
+}

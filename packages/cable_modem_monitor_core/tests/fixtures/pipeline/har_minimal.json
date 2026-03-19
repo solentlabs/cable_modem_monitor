@@ -1,0 +1,15 @@
+{
+  "_description": "Minimal HAR for discovery tests — content does not matter",
+  "log": {
+    "version": "1.2",
+    "entries": [
+      {
+        "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+        "response": {
+          "status": 200,
+          "content": {"text": "<html></html>", "mimeType": "text/html"}
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "_description": "Form nonce auth: login failure with Error: prefix",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/cgi-bin/adv_pwd_cgi"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Error:Invalid credentials"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/cgi-bin/adv_pwd_cgi"
+    }
+  }
+}

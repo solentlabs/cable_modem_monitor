@@ -1,0 +1,22 @@
+{
+  "_description": "Form nonce auth: plain OK response without known prefix",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "OK"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/login"
+    }
+  }
+}

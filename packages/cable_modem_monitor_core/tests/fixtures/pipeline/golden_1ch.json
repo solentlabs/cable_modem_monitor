@@ -1,0 +1,6 @@
+{
+  "downstream": [
+    {"channel_id": 1, "frequency": 507000000, "power": 2.5}
+  ],
+  "upstream": []
+}

@@ -1,0 +1,20 @@
+downstream:
+  format: table
+  resource: /status.html
+  tables:
+    - selector:
+        type: header_text
+        match: Downstream
+      skip_rows: 2
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+        - index: 1
+          field: frequency
+          type: frequency
+          unit: Hz
+        - index: 2
+          field: power
+          type: float
+          unit: dBmV
