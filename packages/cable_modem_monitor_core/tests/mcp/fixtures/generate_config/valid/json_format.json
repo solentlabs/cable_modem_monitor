@@ -1,0 +1,38 @@
+{
+  "_description": "HTTP JSON API format with array path",
+  "_expected_auth_strategy": "none",
+  "_expected_has_parser": true,
+  "_expected_format": "json",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "json",
+        "resource": "/api/downstream",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "key": "channelId"},
+          {"field": "frequency", "type": "frequency", "key": "frequency"},
+          {"field": "power", "type": "float", "key": "power"}
+        ],
+        "array_path": "data.channels",
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 16
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T500",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.1"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "JSON API capture"}]},
+    "isps": ["Various"]
+  }
+}

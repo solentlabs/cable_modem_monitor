@@ -1,0 +1,38 @@
+{
+  "_description": "HTTP transposed table format — rows are metrics, cols are channels",
+  "_expected_auth_strategy": "none",
+  "_expected_has_parser": true,
+  "_expected_format": "table_transposed",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table_transposed",
+        "resource": "/data.htm",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "label": "Channel ID"},
+          {"field": "frequency", "type": "frequency", "label": "Frequency"},
+          {"field": "power", "type": "float", "unit": "dBmV", "label": "Power Level"}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 8
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T350",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Transposed table capture"}]},
+    "isps": ["Various"]
+  }
+}

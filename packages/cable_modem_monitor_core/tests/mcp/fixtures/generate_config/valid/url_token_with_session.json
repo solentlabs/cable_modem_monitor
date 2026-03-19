@@ -1,0 +1,52 @@
+{
+  "_description": "HTTP url_token auth with session cookie and token prefix",
+  "_expected_auth_strategy": "url_token",
+  "_expected_has_parser": true,
+  "_expected_format": "table",
+  "_expected_has_session": true,
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {
+      "strategy": "url_token",
+      "fields": {
+        "login_page": "/status.html",
+        "login_prefix": "login_",
+        "success_indicator": "Downstream"
+      },
+      "confidence": "high"
+    },
+    "session": {
+      "cookie_name": "sessionId",
+      "max_concurrent": null,
+      "max_concurrent_confidence": "unknown",
+      "headers": {},
+      "token_prefix": "ct_"
+    },
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table",
+        "resource": "/status.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0},
+          {"field": "frequency", "type": "frequency", "index": 1}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "channel_type": {"field": "modulation", "map": {"QAM256": "qam", "Other": "ofdm"}},
+        "channel_count": 32
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T250",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.1"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "URL token capture"}]},
+    "isps": ["Various"]
+  }
+}

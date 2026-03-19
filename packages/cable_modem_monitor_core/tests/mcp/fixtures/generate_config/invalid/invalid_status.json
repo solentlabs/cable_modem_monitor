@@ -1,0 +1,23 @@
+{
+  "_description": "Invalid status value — modem.yaml Pydantic validation fails",
+  "_expected_error": "status",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": null,
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T100",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "bogus_status",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  }
+}

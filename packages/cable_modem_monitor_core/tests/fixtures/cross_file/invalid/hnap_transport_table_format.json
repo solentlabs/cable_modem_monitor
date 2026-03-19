@@ -1,0 +1,25 @@
+{
+  "_expected_error": "does not support format 'table'",
+  "_modem": {
+    "manufacturer": "Solent Labs", "model": "T300", "transport": "hnap",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "hnap", "hmac_algorithm": "md5"},
+    "hardware": {"docsis_version": "3.1"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  },
+  "_parser": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [{
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      }]
+    }
+  }
+}

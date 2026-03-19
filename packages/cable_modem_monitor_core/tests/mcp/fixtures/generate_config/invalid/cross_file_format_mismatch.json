@@ -1,0 +1,33 @@
+{
+  "_description": "HNAP transport but table format in sections — cross-file error",
+  "_expected_error": "does not support format",
+  "_analysis": {
+    "transport": "hnap",
+    "confidence": "high",
+    "auth": {"strategy": "hnap", "fields": {"hmac_algorithm": "md5"}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table",
+        "resource": "/status.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "channel_type": {"fixed": "qam"}
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T300",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.1"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  }
+}

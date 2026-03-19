@@ -1,0 +1,5 @@
+{
+  "_type": "modem",
+  "_expected_error": "auth strategy",
+  "_yaml": "manufacturer: Solent Labs\nmodel: T100\ntransport: hnap\ndefault_host: '192.168.100.1'\nauth:\n  strategy: form\n  action: /login\nhardware:\n  docsis_version: '3.1'\nstatus: verified\nattribution:\n  contributors:\n    - github: tester\n      contribution: Testing\nisps:\n  - Various\n"
+}

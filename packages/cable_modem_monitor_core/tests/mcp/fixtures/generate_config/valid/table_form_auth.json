@@ -1,0 +1,62 @@
+{
+  "_description": "HTTP table format, form auth with session and logout",
+  "_expected_auth_strategy": "form",
+  "_expected_has_parser": true,
+  "_expected_format": "table",
+  "_expected_has_session": true,
+  "_expected_no_cookie": false,
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {
+      "strategy": "form",
+      "fields": {
+        "action": "/goform/login",
+        "username_field": "loginUsername",
+        "password_field": "loginPassword",
+        "encoding": "base64"
+      },
+      "confidence": "high"
+    },
+    "session": {
+      "cookie_name": "session",
+      "max_concurrent": 1,
+      "max_concurrent_confidence": "unknown",
+      "headers": {},
+      "token_prefix": ""
+    },
+    "actions": {
+      "logout": {"type": "http", "method": "GET", "endpoint": "/logout.asp"},
+      "restart": null
+    },
+    "sections": {
+      "downstream": {
+        "format": "table",
+        "resource": "/data.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0},
+          {"field": "frequency", "type": "frequency", "unit": "Hz", "index": 1},
+          {"field": "power", "type": "float", "unit": "dBmV", "index": 2},
+          {"field": "snr", "type": "float", "unit": "dB", "index": 3},
+          {"field": "corrected", "type": "integer", "index": 4},
+          {"field": "uncorrected", "type": "integer", "index": 5}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "row_start": 1,
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 16
+      }
+    },
+    "warnings": ["max_concurrent cannot be determined from HAR"],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T200",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0", "chipset": "Broadcom BCM3384"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Initial capture"}]},
+    "isps": ["Various"]
+  }
+}

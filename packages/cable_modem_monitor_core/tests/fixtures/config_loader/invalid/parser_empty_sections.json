@@ -1,0 +1,5 @@
+{
+  "_type": "parser",
+  "_expected_error": "at least one section",
+  "_yaml": "{}\n"
+}

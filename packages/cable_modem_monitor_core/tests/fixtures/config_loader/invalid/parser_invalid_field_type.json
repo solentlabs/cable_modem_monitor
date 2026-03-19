@@ -1,0 +1,5 @@
+{
+  "_type": "parser",
+  "_expected_error": "invalid field type",
+  "_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: header_text\n        match: Downstream\n      columns:\n        - index: 0\n          field: channel_id\n          type: banana\n"
+}

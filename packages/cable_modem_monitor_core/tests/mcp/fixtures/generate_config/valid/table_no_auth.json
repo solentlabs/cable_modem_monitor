@@ -1,0 +1,59 @@
+{
+  "_description": "HTTP table format, no auth, no session — simplest case",
+  "_expected_auth_strategy": "none",
+  "_expected_has_parser": true,
+  "_expected_format": "table",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table",
+        "resource": "/status.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0},
+          {"field": "lock_status", "type": "string", "index": 1},
+          {"field": "frequency", "type": "frequency", "unit": "Hz", "index": 2},
+          {"field": "power", "type": "float", "unit": "dBmV", "index": 3},
+          {"field": "snr", "type": "float", "unit": "dB", "index": 4},
+          {"field": "corrected", "type": "integer", "index": 5},
+          {"field": "uncorrected", "type": "integer", "index": 6}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream Bonded Channels"},
+        "row_start": 1,
+        "channel_type": {"fixed": "qam"},
+        "filter": {"lock_status": "Locked"},
+        "channel_count": 24
+      },
+      "upstream": {
+        "format": "table",
+        "resource": "/status.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0},
+          {"field": "lock_status", "type": "string", "index": 1},
+          {"field": "frequency", "type": "frequency", "unit": "Hz", "index": 2},
+          {"field": "power", "type": "float", "unit": "dBmV", "index": 3}
+        ],
+        "selector": {"type": "header_text", "match": "Upstream Bonded Channels"},
+        "row_start": 1,
+        "channel_type": {"fixed": "atdma"},
+        "filter": {"lock_status": "Locked"},
+        "channel_count": 4
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T100",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Initial capture"}]},
+    "isps": ["Various"]
+  }
+}

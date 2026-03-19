@@ -1,0 +1,24 @@
+{
+  "_description": "Analysis with no sections — modem.yaml only, no parser.yaml",
+  "_expected_auth_strategy": "basic",
+  "_expected_has_parser": false,
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "basic", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": null,
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T50",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Basic auth capture"}]},
+    "isps": ["Various"]
+  }
+}

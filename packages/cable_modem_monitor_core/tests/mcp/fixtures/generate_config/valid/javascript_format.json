@@ -1,0 +1,40 @@
+{
+  "_description": "HTTP javascript format with JS-embedded delimited data",
+  "_expected_auth_strategy": "none",
+  "_expected_has_parser": true,
+  "_expected_format": "javascript",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {"strategy": "none", "fields": {}, "confidence": "high"},
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "javascript",
+        "resource": "/data.htm",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "offset": 3},
+          {"field": "frequency", "type": "frequency", "offset": 4},
+          {"field": "power", "type": "float", "unit": "dBmV", "offset": 5}
+        ],
+        "function_name": "InitDsTableTagValue",
+        "delimiter": "|",
+        "fields_per_record": 9,
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 16
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T400",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "JS format capture"}]},
+    "isps": ["Various"]
+  }
+}

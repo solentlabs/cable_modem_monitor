@@ -1,0 +1,38 @@
+{
+  "_expected_error": "aggregate field 'total_corrected' collides with system_info",
+  "_modem": {
+    "manufacturer": "Solent Labs", "model": "T200", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "aggregate": {
+      "total_corrected": {"sum": "corrected", "channels": "downstream"}
+    },
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  },
+  "_parser": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [{
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 1, "field": "corrected", "type": "integer"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      }]
+    },
+    "system_info": {
+      "sources": [{
+        "format": "html_fields",
+        "resource": "/info.html",
+        "fields": [
+          {"label": "Total Corrected", "field": "total_corrected", "type": "string"}
+        ]
+      }]
+    }
+  }
+}

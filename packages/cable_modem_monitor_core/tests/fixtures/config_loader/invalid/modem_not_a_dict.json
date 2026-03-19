@@ -1,0 +1,5 @@
+{
+  "_type": "modem",
+  "_expected_error": "Expected YAML dict",
+  "_yaml": "- item1\n- item2\n"
+}

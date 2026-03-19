@@ -1,0 +1,24 @@
+{
+  "_expected_error": "does not support format 'hnap'",
+  "_modem": {
+    "manufacturer": "Solent Labs", "model": "T100", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  },
+  "_parser": {
+    "downstream": {
+      "format": "hnap",
+      "response_key": "GetDownstreamResponse",
+      "data_key": "Downstream",
+      "record_delimiter": "|+|",
+      "field_delimiter": "^",
+      "channels": [
+        {"index": 0, "field": "channel_id", "type": "integer"}
+      ]
+    }
+  }
+}
