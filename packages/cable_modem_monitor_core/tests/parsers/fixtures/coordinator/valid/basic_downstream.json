@@ -1,0 +1,32 @@
+{
+  "_description": "Basic downstream-only table with 2 QAM channels via coordinator",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th colspan='4'>Downstream Channels</th></tr><tr><th>Ch</th><th>Freq</th><th>Power</th><th>SNR</th></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td><td>38.5 dB</td></tr><tr><td>2</td><td>513000000 Hz</td><td>2.8 dBmV</td><td>37.9 dB</td></tr></table></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Downstream Channels"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"index": 2, "field": "power", "type": "float", "unit": "dBmV"},
+            {"index": 3, "field": "snr", "type": "float", "unit": "dB"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "snr": 38.5, "channel_type": "qam"},
+      {"channel_id": 2, "frequency": 513000000, "power": 2.8, "snr": 37.9, "channel_type": "qam"}
+    ],
+    "upstream": []
+  }
+}

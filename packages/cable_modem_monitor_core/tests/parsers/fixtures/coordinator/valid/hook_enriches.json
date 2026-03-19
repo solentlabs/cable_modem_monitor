@@ -1,0 +1,29 @@
+{
+  "_description": "Downstream table for post-processor hook testing — hook adds custom_field",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th colspan='2'>DS</th></tr><tr><th>Ch</th><th>Freq</th></tr><tr><td>1</td><td>507000000 Hz</td></tr></table></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "DS"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+    ],
+    "upstream": []
+  }
+}

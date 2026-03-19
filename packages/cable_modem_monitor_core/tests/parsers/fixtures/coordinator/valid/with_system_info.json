@@ -1,0 +1,47 @@
+{
+  "_description": "Downstream + system_info from html_fields source",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th colspan='3'>Downstream Channels</th></tr><tr><th>Ch</th><th>Freq</th><th>Power</th></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr></table></body></html>",
+    "/info.html": "<html><body><div><span>Software Version:</span> <span id='sw_ver'>AB01.02.053</span></div><div><span>Uptime:</span> <span id='uptime'>7 days 00:00:01</span></div></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Downstream Channels"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"index": 2, "field": "power", "type": "float", "unit": "dBmV"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        }
+      ]
+    },
+    "system_info": {
+      "sources": [
+        {
+          "format": "html_fields",
+          "resource": "/info.html",
+          "fields": [
+            {"field": "software_version", "type": "string", "id": "sw_ver"},
+            {"field": "system_uptime", "type": "string", "id": "uptime"}
+          ]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "channel_type": "qam"}
+    ],
+    "upstream": [],
+    "system_info": {
+      "software_version": "AB01.02.053",
+      "system_uptime": "7 days 00:00:01"
+    }
+  }
+}

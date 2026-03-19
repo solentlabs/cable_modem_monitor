@@ -1,0 +1,49 @@
+{
+  "_description": "Both downstream and upstream tables from separate pages",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th colspan='4'>Downstream Channels</th></tr><tr><th>Ch</th><th>Freq</th><th>Power</th><th>SNR</th></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td><td>38.5 dB</td></tr></table><table><tr><th colspan='3'>Upstream Channels</th></tr><tr><th>Ch</th><th>Freq</th><th>Power</th></tr><tr><td>1</td><td>37700000 Hz</td><td>44.0 dBmV</td></tr></table></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Downstream Channels"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"index": 2, "field": "power", "type": "float", "unit": "dBmV"},
+            {"index": 3, "field": "snr", "type": "float", "unit": "dB"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        }
+      ]
+    },
+    "upstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Upstream Channels"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"index": 2, "field": "power", "type": "float", "unit": "dBmV"}
+          ],
+          "channel_type": {"fixed": "atdma"}
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "snr": 38.5, "channel_type": "qam"}
+    ],
+    "upstream": [
+      {"channel_id": 1, "frequency": 37700000, "power": 44.0, "channel_type": "atdma"}
+    ]
+  }
+}

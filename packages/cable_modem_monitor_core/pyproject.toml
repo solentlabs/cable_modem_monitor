@@ -25,6 +25,7 @@ mcp = ["pydantic>=2.0"]
 dev = [
     "solentlabs-cable-modem-monitor-core[mcp]",
     "pytest>=8.0",
+    "pytest-socket>=0.7",
     "ruff>=0.14",
 ]
 
