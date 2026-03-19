@@ -1,0 +1,23 @@
+{
+  "_description": "Minimal downstream config with one table — no HTML content (for empty resource / edge case tests)",
+  "_html": {},
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "DS"},
+          "skip_rows": 1,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [],
+    "upstream": []
+  }
+}

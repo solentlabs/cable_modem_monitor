@@ -1,0 +1,13 @@
+{
+  "_description": "HAR entries for a no-auth modem with two data pages",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+      "response": {"status": 200, "headers": [], "content": {"text": "<html>DS data</html>"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/info.html"},
+      "response": {"status": 200, "headers": [], "content": {"text": "<html>System info</html>"}}
+    }
+  ]
+}

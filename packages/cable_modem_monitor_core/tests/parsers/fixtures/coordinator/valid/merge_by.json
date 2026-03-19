@@ -1,0 +1,42 @@
+{
+  "_description": "Primary + companion table with merge_by channel_id",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th colspan='4'>Signal Levels</th></tr><tr><th>Ch</th><th>Freq</th><th>Power</th><th>SNR</th></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td><td>38.5 dB</td></tr><tr><td>2</td><td>513000000 Hz</td><td>2.8 dBmV</td><td>37.9 dB</td></tr></table><table><tr><th colspan='3'>Error Statistics</th></tr><tr><th>Ch</th><th>Corrected</th><th>Uncorrected</th></tr><tr><td>1</td><td>100</td><td>0</td></tr><tr><td>2</td><td>50</td><td>3</td></tr></table></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Signal Levels"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"index": 2, "field": "power", "type": "float", "unit": "dBmV"},
+            {"index": 3, "field": "snr", "type": "float", "unit": "dB"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        },
+        {
+          "selector": {"type": "header_text", "match": "Error Statistics"},
+          "skip_rows": 2,
+          "columns": [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "corrected", "type": "integer"},
+            {"index": 2, "field": "uncorrected", "type": "integer"}
+          ],
+          "merge_by": ["channel_id"]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "snr": 38.5, "channel_type": "qam", "corrected": 100, "uncorrected": 0},
+      {"channel_id": 2, "frequency": 513000000, "power": 2.8, "snr": 37.9, "channel_type": "qam", "corrected": 50, "uncorrected": 3}
+    ],
+    "upstream": []
+  }
+}
