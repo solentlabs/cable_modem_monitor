@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector extracts element text content",
+  "_html": "<html><body><span class=\"version\">1.2.3</span></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"css": "span.version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {"software_version": "1.2.3"}
+}

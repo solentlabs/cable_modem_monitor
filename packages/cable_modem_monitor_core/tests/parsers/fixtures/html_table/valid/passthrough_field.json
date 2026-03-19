@@ -1,0 +1,16 @@
+{
+  "_description": "Non-canonical Tier 2/3 field (channel_width) passes through to output",
+  "_html": "<table><tr><td>1</td><td>192000000</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "nth", "match": 0},
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "channel_width", "type": "integer"}
+    ],
+    "channel_type": {"fixed": "ofdm"}
+  },
+  "_expected": [
+    {"channel_id": 1, "channel_width": 192000000, "channel_type": "ofdm"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "Label in div with value in sibling div",
+  "_html": "<html><body><div>Software Version</div><div>3.5.1</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"label": "Software Version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {"software_version": "3.5.1"}
+}

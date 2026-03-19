@@ -1,0 +1,16 @@
+{
+  "_description": "CSS selector hits non-table element — walks up to parent table",
+  "_html": "<table><tr><td class=\"target\">1</td><td>507000000</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "css", "match": "td.target"},
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+  ]
+}

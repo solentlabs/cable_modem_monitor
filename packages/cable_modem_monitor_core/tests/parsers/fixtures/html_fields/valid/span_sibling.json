@@ -1,0 +1,14 @@
+{
+  "_description": "Span label with sibling span value",
+  "_html": "<html><body><div><span>System Up Time</span><span>3 days 12:30:00</span></div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "System Up Time", "field": "system_uptime", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "3 days 12:30:00"
+  }
+}

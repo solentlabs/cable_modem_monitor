@@ -1,0 +1,16 @@
+{
+  "_description": "Label in td, value in sibling td (most common pattern)",
+  "_html": "<html><body><table><tr><td>System Up Time</td><td>7 days 00:00:01</td></tr><tr><td>Cable Modem Status</td><td>Operational</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "System Up Time", "field": "system_uptime", "type": "string"},
+      {"label": "Cable Modem Status", "field": "network_access", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "7 days 00:00:01",
+    "network_access": "Operational"
+  }
+}

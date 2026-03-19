@@ -1,0 +1,21 @@
+{
+  "_description": "Filter with 'not' — exclude zero-frequency placeholders (Total row)",
+  "_html": "<html><body><table><tr><th colspan='3'>Downstream</th></tr><tr><th>ID</th><th>Frequency</th><th>Power</th></tr><tr><td>1</td><td>507000000</td><td>3.2</td></tr><tr><td>2</td><td>513000000</td><td>2.8</td></tr><tr><td>Total</td><td>0</td><td>0</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "skip_rows": 2,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"},
+      {"index": 2, "field": "power", "type": "float"}
+    ],
+    "channel_type": {"fixed": "qam"},
+    "filter": {"frequency": {"not": 0}}
+  },
+  "_expected_comment": "Total row has frequency=0, filtered out. 'Total' in channel_id becomes None (non-numeric), so that row also lacks channel_id.",
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "power": 3.2, "channel_type": "qam"},
+    {"channel_id": 2, "frequency": 513000000, "power": 2.8, "channel_type": "qam"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "HAR with no entries — error about no HTML resources",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /s.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n",
+  "_har": {
+    "log": {
+      "entries": []
+    }
+  },
+  "_expected_error_contains": "No HTML resources"
+}

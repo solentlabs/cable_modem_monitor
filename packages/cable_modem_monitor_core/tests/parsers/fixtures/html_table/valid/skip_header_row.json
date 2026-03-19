@@ -1,0 +1,17 @@
+{
+  "_description": "skip_rows=1 skips the header row",
+  "_html": "<table><tr><th>ID</th><th>Freq</th></tr><tr><td>1</td><td>507000000</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "nth", "match": 0},
+    "skip_rows": 1,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+  ]
+}

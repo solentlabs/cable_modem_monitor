@@ -1,0 +1,10 @@
+{
+  "_description": "Resource key not in resource dict — parser returns empty list",
+  "_html": null,
+  "_resource": "/missing.html",
+  "_config": {
+    "selector": {"type": "nth", "match": 0},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

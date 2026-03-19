@@ -1,0 +1,10 @@
+{
+  "_description": "Label element with for= pointing to nonexistent id and no sibling — field omitted",
+  "_html": "<html><body><form><label for=\"gone\">Software Version</label></form></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"label": "Software Version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {}
+}

@@ -1,0 +1,16 @@
+{
+  "_description": "Definition list pattern (dt label, dd value)",
+  "_html": "<html><body><dl><dt>Software Version</dt><dd>1.0.5</dd><dt>Hardware Version</dt><dd>3.2</dd></dl></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "Software Version", "field": "software_version", "type": "string"},
+      {"label": "Hardware Version", "field": "hardware_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "software_version": "1.0.5",
+    "hardware_version": "3.2"
+  }
+}

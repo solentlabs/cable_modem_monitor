@@ -1,0 +1,23 @@
+{
+  "_description": "Mixed channel types with map-based channel_type detection from modulation field",
+  "_html": "<html><body><table><tr><th colspan='4'>Signal Data</th></tr><tr><th>ID</th><th>Modulation</th><th>Frequency</th><th>Power</th></tr><tr><td>1</td><td>QAM256</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr><tr><td>33</td><td>OFDM</td><td>722000000 Hz</td><td>1.5 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Signal Data"},
+    "skip_rows": 2,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "modulation", "type": "string"},
+      {"index": 2, "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"index": 3, "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {
+      "field": "modulation",
+      "map": {"QAM256": "qam", "QAM64": "qam", "OFDM": "ofdm"}
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "modulation": "QAM256", "frequency": 507000000, "power": 3.2, "channel_type": "qam"},
+    {"channel_id": 33, "modulation": "OFDM", "frequency": 722000000, "power": 1.5, "channel_type": "ofdm"}
+  ]
+}

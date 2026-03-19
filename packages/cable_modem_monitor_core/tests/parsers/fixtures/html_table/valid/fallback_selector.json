@@ -1,0 +1,24 @@
+{
+  "_description": "Primary selector misses, fallback by attribute finds the table",
+  "_html": "<html><body><table data-section='downstream'><tr><th>ID</th><th>Frequency</th></tr><tr><td>1</td><td>507000000</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {
+      "type": "header_text",
+      "match": "Nonexistent Header",
+      "fallback": {
+        "type": "attribute",
+        "match": {"data-section": "downstream"}
+      }
+    },
+    "skip_rows": 1,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+  ]
+}

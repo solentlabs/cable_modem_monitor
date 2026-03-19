@@ -1,0 +1,10 @@
+{
+  "_description": "Attribute selector with no matching element — returns empty",
+  "_html": "<table><tr><td>1</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "attribute", "match": {"data-x": "missing"}},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

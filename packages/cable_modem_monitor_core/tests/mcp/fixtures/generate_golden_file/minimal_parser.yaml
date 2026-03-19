@@ -1,0 +1,11 @@
+downstream:
+  format: table
+  resource: /s.html
+  tables:
+    - selector:
+        type: nth
+        match: 0
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer

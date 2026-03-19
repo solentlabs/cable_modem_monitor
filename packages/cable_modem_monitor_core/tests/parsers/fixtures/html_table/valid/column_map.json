@@ -1,0 +1,19 @@
+{
+  "_description": "Column-level map for lock_status normalization",
+  "_html": "<html><body><table id='channels'><tr><th>ID</th><th>Lock</th><th>Frequency</th></tr><tr><td>1</td><td>Locked</td><td>507000000</td></tr><tr><td>2</td><td>Not Locked</td><td>513000000</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "id", "match": "channels"},
+    "skip_rows": 1,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "lock_status", "type": "string", "map": {"Locked": "locked", "Not Locked": "not_locked"}},
+      {"index": 2, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "lock_status": "locked", "frequency": 507000000, "channel_type": "qam"},
+    {"channel_id": 2, "lock_status": "not_locked", "frequency": 513000000, "channel_type": "qam"}
+  ]
+}

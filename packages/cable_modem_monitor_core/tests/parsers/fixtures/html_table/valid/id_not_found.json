@@ -1,0 +1,10 @@
+{
+  "_description": "ID selector matches no element — returns empty",
+  "_html": "<html><body><table><tr><td>1</td></tr></table></body></html>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "id", "match": "nonexistent_id"},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

@@ -1,0 +1,16 @@
+{
+  "_description": "ID selector on a non-table element — walks up to parent table",
+  "_html": "<table><tr id=\"row1\"><td>1</td><td>507000000</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "id", "match": "row1"},
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+  ]
+}

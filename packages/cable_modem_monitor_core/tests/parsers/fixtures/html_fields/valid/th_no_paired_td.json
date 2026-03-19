@@ -1,0 +1,10 @@
+{
+  "_description": "Label in th but no td in the same row — field omitted",
+  "_html": "<html><body><table><tr><th>Software Version</th></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"label": "Software Version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {}
+}

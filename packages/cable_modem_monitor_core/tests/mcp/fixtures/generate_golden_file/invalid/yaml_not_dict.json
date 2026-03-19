@@ -1,0 +1,10 @@
+{
+  "_description": "parser.yaml is valid YAML but not a mapping — error",
+  "_parser_yaml": "- just\n- a\n- list\n",
+  "_har": {
+    "log": {
+      "entries": []
+    }
+  },
+  "_expected_error_contains": "parser.yaml"
+}

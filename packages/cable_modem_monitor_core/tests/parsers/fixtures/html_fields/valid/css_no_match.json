@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector matches nothing — field omitted",
+  "_html": "<html><body><span>some text</span></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"css": "span.nonexistent", "field": "version", "type": "string"}]
+  },
+  "_expected": {}
+}

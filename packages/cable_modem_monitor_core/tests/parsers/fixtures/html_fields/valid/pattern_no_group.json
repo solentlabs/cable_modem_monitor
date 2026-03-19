@@ -1,0 +1,10 @@
+{
+  "_description": "Pattern without capture group returns full match",
+  "_html": "<html><body><div id=\"info\">Version 2.3.4</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"id": "info", "pattern": "\\d+\\.\\d+\\.\\d+", "field": "version", "type": "string"}]
+  },
+  "_expected": {"version": "2.3.4"}
+}

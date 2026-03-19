@@ -1,0 +1,10 @@
+{
+  "_description": "Pattern doesn't match — field omitted",
+  "_html": "<html><body><div id=\"info\">No version here</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"id": "info", "pattern": "Version:\\s*(\\S+)", "field": "version", "type": "string"}]
+  },
+  "_expected": {}
+}

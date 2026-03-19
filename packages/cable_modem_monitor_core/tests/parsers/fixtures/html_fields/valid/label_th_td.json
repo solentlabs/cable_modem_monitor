@@ -1,0 +1,16 @@
+{
+  "_description": "Label in th, value in paired td in same row",
+  "_html": "<html><body><table><tr><th>Software Version</th><td>AB01.02.053</td></tr><tr><th>Hardware Version</th><td>6.0</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "Software Version", "field": "software_version", "type": "string"},
+      {"label": "Hardware Version", "field": "hardware_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "software_version": "AB01.02.053",
+    "hardware_version": "6.0"
+  }
+}

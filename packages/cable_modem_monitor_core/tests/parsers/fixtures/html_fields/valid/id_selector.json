@@ -1,0 +1,16 @@
+{
+  "_description": "Extract by element id with regex pattern",
+  "_html": "<html><body><div id='SystemUpTime'>System Up Time: 7 days 00:00:01</div><div id='FirmwareVer'>Firmware: v2.3.4</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"id": "SystemUpTime", "pattern": "System Up Time:\\s*(.*)", "field": "system_uptime", "type": "string"},
+      {"id": "FirmwareVer", "pattern": "Firmware:\\s*(.*)", "field": "software_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "7 days 00:00:01",
+    "software_version": "v2.3.4"
+  }
+}

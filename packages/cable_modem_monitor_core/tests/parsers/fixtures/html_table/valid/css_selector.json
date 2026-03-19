@@ -1,0 +1,18 @@
+{
+  "_description": "Table found by CSS selector",
+  "_html": "<html><body><table class='signal-data'><tr><th>ID</th><th>Frequency</th></tr><tr><td>1</td><td>507000000</td></tr><tr><td>2</td><td>513000000</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "css", "match": "table.signal-data"},
+    "skip_rows": 1,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"},
+    {"channel_id": 2, "frequency": 513000000, "channel_type": "qam"}
+  ]
+}

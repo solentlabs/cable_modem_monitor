@@ -1,0 +1,10 @@
+{
+  "_description": "Element id not found — field omitted",
+  "_html": "<html><body><div id='other'>value</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"id": "nonexistent", "field": "test_field", "type": "string"}]
+  },
+  "_expected": {}
+}

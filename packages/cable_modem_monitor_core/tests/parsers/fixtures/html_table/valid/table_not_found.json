@@ -1,0 +1,10 @@
+{
+  "_description": "Selector matches nothing in the HTML — parser returns empty list",
+  "_html": "<html><body><p>No tables here</p></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Nonexistent"},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

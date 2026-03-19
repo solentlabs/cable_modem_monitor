@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector matches nothing in the page — returns empty",
+  "_html": "<html><body><table><tr><td>1</td></tr></table></body></html>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "css", "match": "table.nonexistent"},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

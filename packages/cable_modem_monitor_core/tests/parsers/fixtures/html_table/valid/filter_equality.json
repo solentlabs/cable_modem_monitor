@@ -1,0 +1,20 @@
+{
+  "_description": "Filter by equality — keep only locked channels",
+  "_html": "<html><body><table id='ds'><tr><th>ID</th><th>Lock Status</th><th>Frequency</th></tr><tr><td>1</td><td>Locked</td><td>507000000</td></tr><tr><td>2</td><td>Not Locked</td><td>513000000</td></tr><tr><td>3</td><td>Locked</td><td>519000000</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "id", "match": "ds"},
+    "skip_rows": 1,
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "lock_status", "type": "string"},
+      {"index": 2, "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"fixed": "qam"},
+    "filter": {"lock_status": "Locked"}
+  },
+  "_expected": [
+    {"channel_id": 1, "lock_status": "Locked", "frequency": 507000000, "channel_type": "qam"},
+    {"channel_id": 3, "lock_status": "Locked", "frequency": 519000000, "channel_type": "qam"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "Nth index beyond available tables — returns empty",
+  "_html": "<table><tr><td>1</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "nth", "match": 5},
+    "columns": [{"index": 0, "field": "channel_id", "type": "integer"}]
+  },
+  "_expected": []
+}

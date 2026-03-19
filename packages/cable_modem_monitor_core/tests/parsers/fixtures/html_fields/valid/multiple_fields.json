@@ -1,0 +1,16 @@
+{
+  "_description": "Multiple fields from same page using different HTML patterns",
+  "_html": "<html><body><table><tr><td>System Up Time</td><td>7 days 00:00:01</td></tr><tr><th>Software Version</th><td>AB01.02.053</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "System Up Time", "field": "system_uptime", "type": "string"},
+      {"label": "Software Version", "field": "software_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "7 days 00:00:01",
+    "software_version": "AB01.02.053"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "ID selector with attribute extracts the attribute value",
+  "_html": "<html><body><input id=\"fw_version\" value=\"2.0.1\" /></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"id": "fw_version", "attribute": "value", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {"software_version": "2.0.1"}
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "Label not found in HTML — field omitted",
+  "_html": "<html><body><table><tr><td>Other</td><td>value</td></tr></table></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"label": "Nonexistent Label", "field": "test_field", "type": "string"}]
+  },
+  "_expected": {}
+}

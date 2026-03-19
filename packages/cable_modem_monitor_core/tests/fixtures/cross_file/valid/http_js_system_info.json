@@ -1,0 +1,42 @@
+{
+  "_modem": {
+    "manufacturer": "Solent Labs", "model": "T300", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "aggregate": {
+      "total_corrected": {"sum": "corrected", "channels": "downstream"}
+    },
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
+    "isps": ["Various"]
+  },
+  "_parser": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [{
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": [
+          {"index": 0, "field": "channel_id", "type": "integer"},
+          {"index": 1, "field": "corrected", "type": "integer"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      }]
+    },
+    "system_info": {
+      "sources": [{
+        "format": "javascript",
+        "resource": "/status.html",
+        "functions": [{
+          "name": "InitTagValue",
+          "delimiter": "|",
+          "fields": [
+            {"offset": 0, "field": "software_version", "type": "string"},
+            {"offset": 1, "field": "system_uptime", "type": "string"}
+          ]
+        }]
+      }]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_description": "HAR with only non-200 responses — no HTML resources found",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {"url": "http://192.168.100.1/status.html", "method": "GET"},
+          "response": {
+            "status": 401,
+            "content": {"mimeType": "text/html", "text": "<html>Unauthorized</html>"}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_error_contains": "No HTML resources"
+}

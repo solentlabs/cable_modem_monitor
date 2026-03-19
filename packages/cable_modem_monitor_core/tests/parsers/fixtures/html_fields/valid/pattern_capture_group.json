@@ -1,0 +1,10 @@
+{
+  "_description": "Pattern with capture group extracts matched portion",
+  "_html": "<html><body><div id=\"info\">Version: 2.3.4-build5</div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"id": "info", "pattern": "Version:\\s*(\\S+)", "field": "version", "type": "string"}]
+  },
+  "_expected": {"version": "2.3.4-build5"}
+}

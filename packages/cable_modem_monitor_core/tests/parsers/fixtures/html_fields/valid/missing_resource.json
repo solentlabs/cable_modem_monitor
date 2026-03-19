@@ -1,0 +1,10 @@
+{
+  "_description": "Resource not in dict — returns empty",
+  "_html": null,
+  "_source": {
+    "format": "html_fields",
+    "resource": "/missing.html",
+    "fields": [{"label": "Version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {}
+}

@@ -1,0 +1,10 @@
+{
+  "_description": "Label element with for= finds associated input value",
+  "_html": "<html><body><form><label for=\"version\">Software Version</label><input id=\"version\" value=\"4.0.0\" /></form></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"label": "Software Version", "field": "software_version", "type": "string"}]
+  },
+  "_expected": {"software_version": "4.0.0"}
+}

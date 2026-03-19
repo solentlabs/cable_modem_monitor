@@ -1,0 +1,45 @@
+{
+  "_description": "Basic golden file: 2 DS channels (table), 1 US channel (table), 2 system_info fields (html_fields)",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: header_text\n        match: Downstream\n      skip_rows: 2\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n          unit: Hz\n        - index: 2\n          field: power\n          type: float\n          unit: dBmV\n      channel_type:\n        fixed: qam\nupstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: header_text\n        match: Upstream\n      skip_rows: 2\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n          unit: Hz\n        - index: 2\n          field: power\n          type: float\n          unit: dBmV\n      channel_type:\n        fixed: atdma\nsystem_info:\n  sources:\n    - format: html_fields\n      resource: /info.html\n      fields:\n        - label: Software Version\n          field: software_version\n          type: string\n        - label: System Up Time\n          field: system_uptime\n          type: string\n",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {"url": "http://192.168.100.1/status.html", "method": "GET"},
+          "response": {
+            "status": 200,
+            "content": {
+              "mimeType": "text/html",
+              "text": "<html><body><table><tr><th colspan='3'>Downstream</th></tr><tr><th>ID</th><th>Frequency</th><th>Power</th></tr><tr><td>1</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr><tr><td>2</td><td>513000000 Hz</td><td>2.8 dBmV</td></tr></table><table><tr><th colspan='3'>Upstream</th></tr><tr><th>ID</th><th>Frequency</th><th>Power</th></tr><tr><td>1</td><td>36800000 Hz</td><td>44.0 dBmV</td></tr></table></body></html>"
+            }
+          }
+        },
+        {
+          "request": {"url": "http://192.168.100.1/info.html", "method": "GET"},
+          "response": {
+            "status": 200,
+            "content": {
+              "mimeType": "text/html",
+              "text": "<html><body><table><tr><th>Software Version</th><td>AB01.02.053</td></tr><tr><th>System Up Time</th><td>7 days 00:00:01</td></tr></table></body></html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_channel_counts": {"downstream": 2, "upstream": 1},
+  "_expected_system_info_fields": ["software_version", "system_uptime"],
+  "_expected_golden_file": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "channel_type": "qam"},
+      {"channel_id": 2, "frequency": 513000000, "power": 2.8, "channel_type": "qam"}
+    ],
+    "upstream": [
+      {"channel_id": 1, "frequency": 36800000, "power": 44.0, "channel_type": "atdma"}
+    ],
+    "system_info": {
+      "software_version": "AB01.02.053",
+      "system_uptime": "7 days 00:00:01"
+    }
+  }
+}

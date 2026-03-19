@@ -1,0 +1,19 @@
+{
+  "_description": "Unmapped channel_type value — channel_type omitted from output",
+  "_html": "<table><tr><td>1</td><td>UNKNOWN_MOD</td></tr></table>",
+  "_resource": "/s.html",
+  "_config": {
+    "selector": {"type": "nth", "match": 0},
+    "columns": [
+      {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "modulation", "type": "string"}
+    ],
+    "channel_type": {
+      "field": "modulation",
+      "map": {"QAM256": "qam"}
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "modulation": "UNKNOWN_MOD"}
+  ]
+}

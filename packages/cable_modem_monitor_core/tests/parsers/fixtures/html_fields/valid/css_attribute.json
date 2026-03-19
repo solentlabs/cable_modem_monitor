@@ -1,0 +1,10 @@
+{
+  "_description": "CSS selector with attribute extracts the attribute value",
+  "_html": "<html><body><span class=\"ver\" data-value=\"1.2.3\">display text</span></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [{"css": "span.ver", "attribute": "data-value", "field": "version", "type": "string"}]
+  },
+  "_expected": {"version": "1.2.3"}
+}

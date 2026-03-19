@@ -1,0 +1,28 @@
+{
+  "_description": "HAR URL with different host matches parser.yaml resource by path",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /data.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n      channel_type:\n        fixed: qam\n",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {"url": "http://10.0.0.1/data.html", "method": "GET"},
+          "response": {
+            "status": 200,
+            "content": {
+              "mimeType": "text/html",
+              "text": "<html><body><table><tr><td>1</td><td>507000000</td></tr></table></body></html>"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "_expected_channel_counts": {"downstream": 1, "upstream": 0},
+  "_expected_system_info_fields": [],
+  "_expected_golden_file": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+    ],
+    "upstream": []
+  }
+}

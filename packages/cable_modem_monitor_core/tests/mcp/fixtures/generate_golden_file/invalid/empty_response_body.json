@@ -1,0 +1,18 @@
+{
+  "_description": "HAR entry with empty response text — skipped, no resources found",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n",
+  "_har": {
+    "log": {
+      "entries": [
+        {
+          "request": {"url": "http://192.168.100.1/status.html", "method": "GET"},
+          "response": {
+            "status": 200,
+            "content": {"mimeType": "text/html", "text": ""}
+          }
+        }
+      ]
+    }
+  },
+  "_expected_error_contains": "No HTML resources"
+}
