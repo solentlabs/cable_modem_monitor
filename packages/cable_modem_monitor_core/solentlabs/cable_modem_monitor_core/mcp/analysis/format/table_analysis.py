@@ -10,31 +10,14 @@ Per docs/ONBOARDING_SPEC.md Phase 5.
 
 from __future__ import annotations
 
+from ..mapping.registry_loader import get_channel_field_labels
 from .types import DetectedTable
 
 # -----------------------------------------------------------------------
-# Channel field labels (shared with format classification)
+# Channel field labels (derived from field_registry.json)
 # -----------------------------------------------------------------------
 
-CHANNEL_FIELD_LABELS: tuple[str, ...] = (
-    "channel id",
-    "channel",
-    "frequency",
-    "power",
-    "power level",
-    "snr",
-    "snr/mer",
-    "mer",
-    "signal to noise",
-    "modulation",
-    "lock status",
-    "status",
-    "corrected",
-    "correctable",
-    "uncorrected",
-    "uncorrectable",
-    "symbol rate",
-)
+CHANNEL_FIELD_LABELS: tuple[str, ...] = get_channel_field_labels()
 
 
 # -----------------------------------------------------------------------
@@ -134,16 +117,30 @@ def _keyword_match_id(table_id: str) -> str:
 # -----------------------------------------------------------------------
 
 
-def detect_table_selector(table: DetectedTable) -> dict[str, str]:
+def detect_table_selector(
+    table: DetectedTable,
+    all_tables: list[DetectedTable] | None = None,
+) -> dict[str, str]:
     """Choose the best selector for a table.
 
-    Priority: id > header_text > css > nth.
+    Priority: id > title_row_text > unique_column_header >
+    preceding_text > css > nth.
+
+    When ``all_tables`` is provided, a unique column header is one
+    that appears in this table but not in any other table on the page.
+    Headers from the field registry are preferred as discriminators.
     """
     if table.table_id:
         return {"type": "id", "match": table.table_id}
 
     if table.title_row_text:
         return {"type": "header_text", "match": table.title_row_text}
+
+    # Unique column header (requires knowing sibling tables)
+    if all_tables is not None:
+        unique = _find_unique_column_header(table, all_tables)
+        if unique:
+            return {"type": "header_text", "match": unique}
 
     if table.preceding_text:
         return {"type": "header_text", "match": table.preceding_text}
@@ -152,6 +149,40 @@ def detect_table_selector(table: DetectedTable) -> dict[str, str]:
         return {"type": "css", "match": f"table.{table.css_class.split()[0]}"}
 
     return {"type": "nth", "match": str(table.table_index)}
+
+
+def _find_unique_column_header(
+    table: DetectedTable,
+    all_tables: list[DetectedTable],
+) -> str:
+    """Find a column header unique to this table among all page tables.
+
+    Prefers headers that are known channel field labels (from the
+    registry) over arbitrary text. Returns empty string if no unique
+    header is found.
+    """
+    my_headers = {h.strip() for h in table.headers if h.strip()}
+    if not my_headers:
+        return ""
+
+    # Collect headers from all other tables
+    other_headers: set[str] = set()
+    for other in all_tables:
+        if other is table:
+            continue
+        other_headers.update(h.strip() for h in other.headers if h.strip())
+
+    unique = my_headers - other_headers
+    if not unique:
+        return ""
+
+    # Prefer known field labels as discriminators, sorted for determinism
+    for header in sorted(unique):
+        if header.lower() in CHANNEL_FIELD_LABELS:
+            return header
+
+    # Fall back to first unique header (deterministic via sort)
+    return sorted(unique)[0]
 
 
 # -----------------------------------------------------------------------

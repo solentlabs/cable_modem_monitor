@@ -49,35 +49,54 @@ VALID_FIXTURES = collect_fixtures(VALID_DIR)
 
 # fmt: off
 HEADER_CASES = [
-    # (header,                              expected_field,    expected_tier, desc)
-    ("Channel ID",                          "channel_id",      1,            "canonical channel_id"),
-    ("Frequency",                           "frequency",       1,            "canonical frequency"),
-    ("Power Level",                         "power",           1,            "power level variant"),
-    ("SNR/MER",                             "snr",             1,            "SNR with MER"),
-    ("Signal to Noise",                     "snr",             1,            "signal to noise"),
-    ("Total Correctable Codewords",         "corrected",       1,            "correctable codewords"),
-    ("Total Uncorrectable Codewords",       "uncorrected",     1,            "uncorrectable codewords"),
-    ("Lock Status",                         "lock_status",     1,            "lock status"),
-    ("Status",                              "lock_status",     1,            "status shorthand"),
-    ("Symbol Rate",                         "symbol_rate",     1,            "symbol rate"),
-    ("Symb. Rate",                          "symbol_rate",     1,            "abbreviated symbol rate"),
-    ("Channel Width",                       "channel_width",   2,            "tier 2 channel width"),
-    ("Custom Field Name",                   "custom_field_name", 3,          "tier 3 snake_case"),
-    ("  Frequency  ",                       "frequency",       1,            "whitespace stripped"),
+    # (header,                              expected_field,    tier, unit,  desc)
+    ("Channel ID",                          "channel_id",      1,  "",    "canonical channel_id"),
+    ("Frequency",                           "frequency",       1,  "",    "canonical frequency"),
+    ("Power Level",                         "power",           1,  "",    "power level variant"),
+    ("SNR/MER",                             "snr",             1,  "",    "SNR with MER"),
+    ("Signal to Noise",                     "snr",             1,  "",    "signal to noise"),
+    ("Total Correctable Codewords",         "corrected",       1,  "",    "correctable codewords"),
+    ("Total Uncorrectable Codewords",       "uncorrected",     1,  "",    "uncorrectable codewords"),
+    ("Lock Status",                         "lock_status",     1,  "",    "lock status"),
+    ("Status",                              "lock_status",     1,  "",    "status shorthand"),
+    ("Symbol Rate",                         "symbol_rate",     1,  "",    "symbol rate"),
+    ("Symb. Rate",                          "symbol_rate",     1,  "",    "abbreviated symbol rate"),
+    ("Channel Width",                       "channel_width",   2,  "",    "tier 2 channel width"),
+    ("Custom Field Name",                   "custom_field_name", 3, "",   "tier 3 snake_case"),
+    ("  Frequency  ",                       "frequency",       1,  "",    "whitespace stripped"),
+    # Header variants with parenthesized units (Motorola MB7621/MB8611)
+    ("Freq. (MHz)",                         "frequency",       1,  "MHz", "motorola freq with unit"),
+    ("Pwr (dBmV)",                          "power",           1,  "dBmV","motorola power with unit"),
+    ("SNR (dB)",                            "snr",             1,  "dB",  "motorola snr with unit"),
+    ("Symb. Rate (Ksym/sec)",               "symbol_rate",     1,  "Ksym/sec", "motorola symbol rate with unit"),
+    ("Tx Power(dBmV)",                      "power",           1,  "dBmV","cm3500b tx power with unit"),
+    # Direction-prefixed headers (SB8200, CGA2121)
+    ("US Channel Type",                     "channel_type",    1,  "",    "upstream-prefixed channel type"),
+    ("DCID",                                "channel_id",      1,  "",    "cm3500b downstream channel id"),
+    ("Correcteds",                          "corrected",       1,  "",    "cm3500b corrected variant"),
+    ("Uncorrectables",                      "uncorrected",     1,  "",    "cm3500b uncorrectable variant"),
+    ("Width",                               "channel_width",   2,  "",    "sb8200 width shorthand"),
 ]
 # fmt: on
 
 
 @pytest.mark.parametrize(
-    "header,expected_field,expected_tier,desc",
+    "header,expected_field,expected_tier,expected_unit,desc",
     HEADER_CASES,
-    ids=[c[3] for c in HEADER_CASES],
+    ids=[c[-1] for c in HEADER_CASES],
 )
-def test_header_to_field(header: str, expected_field: str, expected_tier: int, desc: str) -> None:
-    """Header text maps to correct canonical field and tier."""
-    field, tier = match_header_to_field(header)
+def test_header_to_field(
+    header: str,
+    expected_field: str,
+    expected_tier: int,
+    expected_unit: str,
+    desc: str,
+) -> None:
+    """Header text maps to correct canonical field, tier, and unit."""
+    field, tier, unit = match_header_to_field(header)
     assert field == expected_field
     assert tier == expected_tier
+    assert unit == expected_unit
 
 
 # =====================================================================
@@ -502,7 +521,7 @@ HEADER_EDGE_CASES = [
 )
 def test_header_edge_cases(header: str, expected_field: str, expected_tier: int, desc: str) -> None:
     """Empty and digit-only headers return no match."""
-    field, tier = match_header_to_field(header)
+    field, tier, _unit = match_header_to_field(header)
     assert field == expected_field
     assert tier == expected_tier
 
@@ -719,7 +738,7 @@ def test_channel_type_fixed(direction: str, expected: object, desc: str) -> None
 MODULATION_MAP_CASES = [
     # (values,                     expected_map,                                desc)
     ({"ATDMA"},                    {"ATDMA": "atdma"},                          "ATDMA in modulation map"),
-    ({"OFDMA"},                    {"OFDMA": "ofdm"},                           "OFDMA hits ofdm branch"),
+    ({"OFDMA"},                    {"OFDMA": "ofdma"},                          "OFDMA maps to ofdma"),
     ({"QAM256", "OFDM"},           {"OFDM": "ofdm", "QAM256": "qam"},          "mixed QAM and OFDM"),
     ({"Other"},                    {"Other": "ofdm"},                           "Other maps to ofdm"),
 ]

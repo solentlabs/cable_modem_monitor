@@ -13,11 +13,12 @@ from __future__ import annotations
 
 from ..models.modem_config import ModemConfig
 from ..models.parser_config import ParserConfig
+from ..models.parser_config.system_info import JSSystemInfoSource
 
 # Formats valid per transport (same constraint table as MODEM_YAML_SPEC)
 _VALID_FORMATS: dict[str, frozenset[str]] = {
     "hnap": frozenset({"hnap"}),
-    "http": frozenset({"table", "table_transposed", "html_fields", "javascript", "json", "xml"}),
+    "http": frozenset({"table", "table_transposed", "html_fields", "javascript", "json"}),
 }
 
 
@@ -96,14 +97,12 @@ def _collect_system_info_fields(parser: ParserConfig) -> set[str]:
         return fields
 
     for source in parser.system_info.sources:
-        if hasattr(source, "functions"):
-            # JSSystemInfoSource: functions → fields
+        if isinstance(source, JSSystemInfoSource):
             for func in source.functions:
-                for field_mapping in func.fields:
-                    fields.add(field_mapping.field)
+                for js_field in func.fields:
+                    fields.add(js_field.field)
         else:
-            # HTMLFieldsSource, HNAPSystemInfoSource, JSONSystemInfoSource
-            for field_mapping in source.fields:  # type: ignore[union-attr]
-                fields.add(field_mapping.field)
+            for mapping in source.fields:
+                fields.add(mapping.field)
 
     return fields

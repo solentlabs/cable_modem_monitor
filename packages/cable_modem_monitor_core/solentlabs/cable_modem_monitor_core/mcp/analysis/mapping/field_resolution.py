@@ -4,6 +4,8 @@ Three-tier header-to-field matching (T1: canonical, T2: registered,
 T3: snake_case fallback), JSON key mapping, and value-based type
 and unit inference.
 
+Maps are loaded from ``field_registry.json`` via ``registry_loader``.
+
 Per docs/ONBOARDING_SPEC.md Phase 6 and docs/FIELD_REGISTRY.md.
 """
 
@@ -11,78 +13,23 @@ from __future__ import annotations
 
 import re
 
+from .registry_loader import (
+    get_field_type_map,
+    get_header_field_map,
+    get_header_unit_map,
+    get_json_key_map,
+)
+
 # -----------------------------------------------------------------------
-# Header-to-field mapping table (ONBOARDING_SPEC Phase 6)
+# Module-level map caches (built once from registry JSON)
 # -----------------------------------------------------------------------
 
-# Maps lowercase header text -> (canonical_field, tier)
-HEADER_FIELD_MAP: dict[str, tuple[str, int]] = {
-    # Tier 1 canonical fields
-    "channel id": ("channel_id", 1),
-    "channel": ("channel_id", 1),
-    "ch": ("channel_id", 1),
-    "frequency": ("frequency", 1),
-    "freq": ("frequency", 1),
-    "power": ("power", 1),
-    "power level": ("power", 1),
-    "pwr": ("power", 1),
-    "snr": ("snr", 1),
-    "snr/mer": ("snr", 1),
-    "mer": ("snr", 1),
-    "signal to noise": ("snr", 1),
-    "signal to noise ratio": ("snr", 1),
-    "corrected": ("corrected", 1),
-    "correctable": ("corrected", 1),
-    "total correctable codewords": ("corrected", 1),
-    "uncorrected": ("uncorrected", 1),
-    "uncorrectable": ("uncorrected", 1),
-    "total uncorrectable codewords": ("uncorrected", 1),
-    "modulation": ("modulation", 1),
-    "mod": ("modulation", 1),
-    "lock status": ("lock_status", 1),
-    "status": ("lock_status", 1),
-    "symbol rate": ("symbol_rate", 1),
-    "symb. rate": ("symbol_rate", 1),
-    # Tier 2 registered fields
-    "channel width": ("channel_width", 2),
-    "bandwidth": ("channel_width", 2),
-    "active subcarriers": ("active_subcarriers", 2),
-    "fft size": ("fft_size", 2),
-    "profile id": ("profile_id", 2),
-    "ranging status": ("ranging_status", 2),
-}
+HEADER_FIELD_MAP: dict[str, tuple[str, int]] = get_header_field_map()
+JSON_KEY_MAP: dict[str, tuple[str, int]] = get_json_key_map()
+_HEADER_UNIT_MAP: dict[str, str] = get_header_unit_map()
+_FIELD_TYPE_MAP: dict[str, str] = get_field_type_map()
 
-# JSON key mapping -- camelCase keys common in JSON APIs
-JSON_KEY_MAP: dict[str, tuple[str, int]] = {
-    "channelid": ("channel_id", 1),
-    "channel_id": ("channel_id", 1),
-    "frequency": ("frequency", 1),
-    "freq": ("frequency", 1),
-    "power": ("power", 1),
-    "powerlevel": ("power", 1),
-    "power_level": ("power", 1),
-    "snr": ("snr", 1),
-    "rxmer": ("snr", 1),
-    "rx_mer": ("snr", 1),
-    "corrected": ("corrected", 1),
-    "correctederrors": ("corrected", 1),
-    "corrected_errors": ("corrected", 1),
-    "uncorrected": ("uncorrected", 1),
-    "uncorrectederrors": ("uncorrected", 1),
-    "uncorrected_errors": ("uncorrected", 1),
-    "modulation": ("modulation", 1),
-    "lockstatus": ("lock_status", 1),
-    "lock_status": ("lock_status", 1),
-    "symbolrate": ("symbol_rate", 1),
-    "symbol_rate": ("symbol_rate", 1),
-    "channeltype": ("channel_type", 1),
-    "channel_type": ("channel_type", 1),
-    # Tier 2
-    "channelwidth": ("channel_width", 2),
-    "channel_width": ("channel_width", 2),
-}
-
-# Unit patterns for type and unit detection
+# Unit patterns for value-based type and unit detection
 _UNIT_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     # Frequency: Hz or MHz suffix
     (re.compile(r"^-?\d[\d,]*\s*Hz$", re.IGNORECASE), "frequency", "Hz"),
@@ -95,11 +42,9 @@ _UNIT_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     (re.compile(r"^[1-9]\d{6,}$"), "frequency", ""),
 ]
 
-# Known field -> type mappings
-_KNOWN_INTEGER_FIELDS = frozenset(
-    {"channel_id", "corrected", "uncorrected", "symbol_rate", "fft_size", "active_subcarriers"}
-)
-_KNOWN_STRING_FIELDS = frozenset({"modulation", "lock_status", "channel_type", "ranging_status"})
+# Type sets derived from registry
+_KNOWN_INTEGER_FIELDS = frozenset(name for name, ftype in _FIELD_TYPE_MAP.items() if ftype == "integer")
+_KNOWN_STRING_FIELDS = frozenset(name for name, ftype in _FIELD_TYPE_MAP.items() if ftype == "string")
 
 
 # -----------------------------------------------------------------------
@@ -107,23 +52,28 @@ _KNOWN_STRING_FIELDS = frozenset({"modulation", "lock_status", "channel_type", "
 # -----------------------------------------------------------------------
 
 
-def match_header_to_field(header: str) -> tuple[str, int]:
+def match_header_to_field(header: str) -> tuple[str, int, str]:
     """Map a table header or row label to a canonical field name.
 
-    Returns (field_name, tier) or ("", 0) if no match.
-    Tier 1/2 from HEADER_FIELD_MAP; Tier 3 via snake_case fallback.
+    Returns (field_name, tier, header_unit) or ("", 0, "") if no match.
+    Tier 1/2 from registry; Tier 3 via snake_case fallback.
+
+    ``header_unit`` is non-empty only when the header itself declares
+    a unit (e.g., ``"Freq. (MHz)"`` -> unit ``"MHz"``).
     """
     normalized = header.strip().lower()
 
     # Tier 1/2 lookup
     if normalized in HEADER_FIELD_MAP:
-        return HEADER_FIELD_MAP[normalized]
+        field_name, tier = HEADER_FIELD_MAP[normalized]
+        unit = _HEADER_UNIT_MAP.get(normalized, "")
+        return field_name, tier, unit
 
     # Tier 3: snake_case fallback for non-empty headers
     if normalized and not normalized.isdigit():
-        return to_snake_case(header.strip()), 3
+        return to_snake_case(header.strip()), 3, ""
 
-    return "", 0
+    return "", 0, ""
 
 
 def match_json_key_to_field(key: str) -> tuple[str, int]:
@@ -159,33 +109,67 @@ def to_snake_case(text: str) -> str:
 # -----------------------------------------------------------------------
 
 
-def detect_field_type(field_name: str, sample_values: list[str]) -> tuple[str, str]:
+def detect_field_type(
+    field_name: str,
+    sample_values: list[str],
+    header_unit: str = "",
+) -> tuple[str, str]:
     """Infer field type and unit from field name and sample values.
 
-    Returns (type_name, unit_suffix).
+    Args:
+        field_name: Canonical field name from matching.
+        sample_values: Sample data values from the column/row.
+        header_unit: Unit declared in the header text (takes priority).
+
+    Returns:
+        Tuple of (type_name, unit_suffix).
     """
     # Known field types override value-based detection
-    result = _detect_known_field_type(field_name, sample_values)
+    result = _detect_known_field_type(field_name, sample_values, header_unit)
     if result is not None:
         return result
+
+    # Header unit provides type hint even for unknown fields
+    if header_unit:
+        inferred_type = _type_from_unit(header_unit)
+        if inferred_type:
+            return inferred_type, header_unit
 
     # Value-based inference
     return _infer_type_from_values(sample_values)
 
 
-def _detect_known_field_type(field_name: str, sample_values: list[str]) -> tuple[str, str] | None:
+def _detect_known_field_type(
+    field_name: str,
+    sample_values: list[str],
+    header_unit: str,
+) -> tuple[str, str] | None:
     """Check if field_name has a known type. Returns None if unknown."""
     if field_name == "frequency":
-        return "frequency", _detect_frequency_unit(sample_values)
+        # Header unit takes priority over value-based detection
+        unit = header_unit if header_unit else _detect_frequency_unit(sample_values)
+        return "frequency", unit
     if field_name in _KNOWN_INTEGER_FIELDS:
-        return "integer", ""
+        return "integer", header_unit
     if field_name == "power":
-        return "float", _detect_unit_suffix(sample_values, ("dBmV", "dBmv"))
+        unit = header_unit if header_unit else _detect_unit_suffix(sample_values, ("dBmV", "dBmv"))
+        return "float", unit
     if field_name == "snr":
-        return "float", _detect_unit_suffix(sample_values, ("dB", "db"))
+        unit = header_unit if header_unit else _detect_unit_suffix(sample_values, ("dB", "db"))
+        return "float", unit
     if field_name in _KNOWN_STRING_FIELDS:
         return "string", ""
     return None
+
+
+def _type_from_unit(unit: str) -> str:
+    """Infer type from a unit string."""
+    lower = unit.lower()
+    if lower in ("hz", "mhz", "khz", "ghz"):
+        return "frequency"
+    if lower in ("dbmv", "db"):
+        return "float"
+    return ""
 
 
 def _infer_type_from_values(sample_values: list[str]) -> tuple[str, str]:

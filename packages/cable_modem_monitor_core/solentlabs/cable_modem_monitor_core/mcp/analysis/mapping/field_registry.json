@@ -1,0 +1,107 @@
+{
+  "fields": {
+    "channel_id": {
+      "tier": 1,
+      "type": "integer",
+      "headers": ["channel id", "channel", "ch", "dcid", "ucid", "ds channel id", "us channel id"],
+      "json_keys": ["channelid", "channel_id"]
+    },
+    "frequency": {
+      "tier": 1,
+      "type": "frequency",
+      "headers": ["frequency", "freq", "center frequency", "ds center freq"],
+      "json_keys": ["frequency", "freq"],
+      "header_units": {
+        "freq. (mhz)": "MHz"
+      }
+    },
+    "power": {
+      "tier": 1,
+      "type": "float",
+      "headers": ["power", "power level", "pwr", "tx power", "ds power level", "us power level"],
+      "json_keys": ["power", "powerlevel", "power_level"],
+      "header_units": {
+        "pwr (dbmv)": "dBmV",
+        "tx power(dbmv)": "dBmV"
+      }
+    },
+    "snr": {
+      "tier": 1,
+      "type": "float",
+      "headers": ["snr", "snr/mer", "mer", "signal to noise", "signal to noise ratio"],
+      "json_keys": ["snr", "rxmer", "rx_mer"],
+      "header_units": {
+        "snr (db)": "dB"
+      }
+    },
+    "lock_status": {
+      "tier": 1,
+      "type": "string",
+      "headers": ["lock status", "status"],
+      "json_keys": ["lockstatus", "lock_status"]
+    },
+    "modulation": {
+      "tier": 1,
+      "type": "string",
+      "headers": ["modulation", "mod"],
+      "json_keys": ["modulation"]
+    },
+    "channel_type": {
+      "tier": 1,
+      "type": "string",
+      "headers": ["channel type", "us channel type", "ds channel type"],
+      "json_keys": ["channeltype", "channel_type"]
+    },
+    "corrected": {
+      "tier": 1,
+      "type": "integer",
+      "headers": ["corrected", "correctable", "total correctable codewords", "correcteds"],
+      "json_keys": ["corrected", "correctederrors", "corrected_errors"]
+    },
+    "uncorrected": {
+      "tier": 1,
+      "type": "integer",
+      "headers": ["uncorrected", "uncorrectable", "total uncorrectable codewords", "uncorrectables"],
+      "json_keys": ["uncorrected", "uncorrectederrors", "uncorrected_errors"]
+    },
+    "symbol_rate": {
+      "tier": 1,
+      "type": "integer",
+      "headers": ["symbol rate", "symb. rate"],
+      "json_keys": ["symbolrate", "symbol_rate"],
+      "header_units": {
+        "symb. rate (ksym/sec)": "Ksym/sec"
+      }
+    },
+    "channel_width": {
+      "tier": 2,
+      "type": "integer",
+      "headers": ["channel width", "bandwidth", "width"],
+      "json_keys": ["channelwidth", "channel_width"]
+    },
+    "active_subcarriers": {
+      "tier": 2,
+      "type": "integer",
+      "headers": ["active subcarriers"],
+      "json_keys": []
+    },
+    "fft_size": {
+      "tier": 2,
+      "type": "integer",
+      "headers": ["fft size"],
+      "json_keys": []
+    },
+    "profile_id": {
+      "tier": 2,
+      "type": "string",
+      "headers": ["profile id"],
+      "json_keys": []
+    },
+    "ranging_status": {
+      "tier": 2,
+      "type": "string",
+      "headers": ["ranging status"],
+      "json_keys": []
+    }
+  }
+}
