@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from ..analysis.auth.patterns import get_login_url_patterns
 from .har_utils import (
     HARD_STOP_PREFIX,
     has_set_cookie,
@@ -30,13 +31,8 @@ _SESSION_COOKIE_INDICATORS: frozenset[str] = frozenset(
     }
 )
 
-# Domain-specific: modem login endpoint patterns
-_LOGIN_URL_PATTERNS: tuple[str, ...] = (
-    "/goform/login",
-    "/cgi-bin/",
-    "/login",
-    "/api/v1/session",
-)
+# Login endpoint patterns (shared via auth_patterns.json)
+_LOGIN_URL_PATTERNS: tuple[str, ...] = get_login_url_patterns()
 
 
 @dataclass

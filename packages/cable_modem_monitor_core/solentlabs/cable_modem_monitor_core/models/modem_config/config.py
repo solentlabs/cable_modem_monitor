@@ -98,6 +98,8 @@ class ModemConfig(BaseModel):
         errors: list[str] = []
 
         if self.status in ("verified", "awaiting_verification"):
+            # Confirmed in the wild with successful diagnostics —
+            # full metadata required.
             if self.auth is None:
                 errors.append(f"status '{self.status}' requires auth config")
             if self.hardware is None:
@@ -107,10 +109,10 @@ class ModemConfig(BaseModel):
             if not self.isps:
                 errors.append(f"status '{self.status}' requires isps")
         elif self.status == "in_progress":
+            # Being built up — auth is known from the HAR, but hardware
+            # and attribution come later via enrich_metadata or user input.
             if self.auth is None:
                 errors.append("status 'in_progress' requires auth config")
-            if self.hardware is None:
-                errors.append("status 'in_progress' requires hardware config")
 
         # 'unsupported' has minimal requirements — identity fields only
         # (enforced by required fields on the model itself)

@@ -38,8 +38,6 @@ _UNIT_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
     (re.compile(r"^-?\d+\.?\d*\s*dBmV$", re.IGNORECASE), "float", "dBmV"),
     # SNR: dB suffix
     (re.compile(r"^-?\d+\.?\d*\s*dB$", re.IGNORECASE), "float", "dB"),
-    # Frequency: large integer without suffix (likely Hz)
-    (re.compile(r"^[1-9]\d{6,}$"), "frequency", ""),
 ]
 
 # Type sets derived from registry
