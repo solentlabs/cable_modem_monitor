@@ -79,13 +79,13 @@ def _extract_table_mappings(
     mappings: list[FieldMapping] = []
 
     for idx, header in enumerate(table.headers):
-        field_name, tier = match_header_to_field(header)
+        field_name, tier, header_unit = match_header_to_field(header)
         if not field_name:
             continue
 
-        # Detect type and unit from data values
+        # Detect type and unit from data values; header unit takes priority
         sample_values = [row[idx] for row in table.rows if idx < len(row)]
-        field_type, unit = detect_field_type(field_name, sample_values)
+        field_type, unit = detect_field_type(field_name, sample_values, header_unit)
 
         mappings.append(
             FieldMapping(
@@ -99,6 +99,9 @@ def _extract_table_mappings(
 
     if not mappings:
         return None
+
+    # Remove row counter columns (sequential 1..N matching row count)
+    mappings = _remove_row_counters(mappings, table)
 
     # Detect channel type and filter
     channel_type = detect_channel_type_table(table, mappings, direction)
@@ -134,13 +137,13 @@ def _extract_transposed_mappings(
             continue
 
         label = row[0]
-        field_name, tier = match_header_to_field(label)
+        field_name, tier, header_unit = match_header_to_field(label)
         if not field_name:
             continue
 
         # Sample values from the data columns
         sample_values = row[1:] if len(row) > 1 else []
-        field_type, unit = detect_field_type(field_name, sample_values)
+        field_type, unit = detect_field_type(field_name, sample_values, header_unit)
 
         mappings.append(
             FieldMapping(
@@ -322,6 +325,74 @@ def _find_channel_array(data: dict[str, Any], prefix: str = "") -> tuple[str, li
 def _count_data_rows(table: DetectedTable) -> int:
     """Count data rows in a table (excluding empty/dash rows)."""
     return sum(1 for row in table.rows if is_data_row(row))
+
+
+def _remove_row_counters(
+    mappings: list[FieldMapping],
+    table: DetectedTable,
+) -> list[FieldMapping]:
+    """Remove row counter columns from mappings.
+
+    A row counter column has values that are sequential integers
+    1, 2, 3, ..., N matching the data row count. Only removed when
+    another column maps to the same field name (otherwise it may be
+    the real data).
+
+    Evidence: across the modem landscape, real DOCSIS channel IDs are
+    never perfectly sequential from 1. Row counters always are.
+    """
+    # Find fields that appear more than once
+    field_counts: dict[str, int] = {}
+    for m in mappings:
+        field_counts[m.field] = field_counts.get(m.field, 0) + 1
+
+    duplicated_fields = {f for f, count in field_counts.items() if count > 1}
+    if not duplicated_fields:
+        return mappings
+
+    # Count data rows
+    data_rows = [row for row in table.rows if is_data_row(row)]
+    row_count = len(data_rows)
+    if row_count == 0:
+        return mappings
+
+    # Check each mapping in a duplicated field for row-counter pattern
+    keep: list[FieldMapping] = []
+    for m in mappings:
+        if m.field in duplicated_fields and m.index is not None and _is_row_counter(m.index, data_rows, row_count):
+            continue
+        keep.append(m)
+
+    return keep
+
+
+def _is_row_counter(
+    col_index: int,
+    data_rows: list[list[str]],
+    row_count: int,
+) -> bool:
+    """Check if a column contains sequential 1..N values.
+
+    Allows trailing non-integer rows (e.g., "Total" summary rows).
+    Returns True when all integer-parseable values form a perfect
+    1..K sequence and K covers most of the data rows.
+    """
+    sequential_count = 0
+    for row_num, row in enumerate(data_rows, start=1):
+        if col_index >= len(row):
+            return False
+        value = row[col_index].strip()
+        try:
+            if int(value) != row_num:
+                return False
+            sequential_count = row_num
+        except ValueError:
+            # Non-integer value — allow only after sequential portion
+            # (summary rows like "Total" at the bottom)
+            break
+
+    # Must have at least 2 sequential rows covering most of the data
+    return sequential_count >= 2 and sequential_count >= row_count - 1
 
 
 def _infer_field_from_value(value: str, offset: int, direction: str) -> tuple[str, int]:

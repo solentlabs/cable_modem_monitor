@@ -4,6 +4,11 @@ Reads parser.yaml config, creates BaseParser instances per section, runs
 them, chains parser.py post-processing, and assembles ModemData.
 
 See PARSING_SPEC.md ModemParserCoordinator section.
+
+Format coverage: currently dispatches HTMLTableSection (channels) and
+HTMLFieldsSource (system_info). Other formats (JSEmbedded, HNAP, JSON,
+Transposed, XML) log a warning and fall through to the post-processor
+hook. They will be wired as modems in the catalog require them.
 """
 
 from __future__ import annotations

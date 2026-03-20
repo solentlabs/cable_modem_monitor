@@ -123,7 +123,7 @@ def _assemble_table_sections(
         if direction in sections:
             continue
 
-        selector = detect_table_selector(table)
+        selector = detect_table_selector(table, all_tables=page.tables)
         row_start = detect_row_start(table)
 
         # Phase 6: Extract field mappings

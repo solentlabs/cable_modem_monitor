@@ -104,7 +104,7 @@ references:
 ## Identity
 
 | Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
+|-------|------| :--------: |-------------|
 | `manufacturer` | string | yes | Manufacturer name (e.g., "Arris", "Netgear", "Motorola") |
 | `model` | string | yes | Model identifier (e.g., "SB8200", "CM1200") |
 | `model_aliases` | list[string] | no | Alternative model names for config flow search (e.g., `["SB8200v2", "CommScope SB8200"]`) |
@@ -485,7 +485,7 @@ actions:
 ```
 
 | Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
+|-------|------| :--------: |-------------|
 | `type` | enum | yes | `http` or `hnap` |
 | `method` | string | yes | HTTP method (`GET`, `POST`, etc.). No default — must be explicit. |
 | `endpoint` | string | yes | URL path to send the request to |
@@ -513,7 +513,7 @@ actions:
 ```
 
 | Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
+|-------|------| :--------: |-------------|
 | `type` | enum | yes | `http` or `hnap` |
 | `action_name` | string | yes | HNAP SOAP action to invoke |
 | `pre_fetch_action` | string | no | Action to call first (extract current config for template vars) |
@@ -604,7 +604,7 @@ aggregate:
 ```
 
 | Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
+|-------|------| :--------: |-------------|
 | `sum` | string | yes | Channel field to sum (e.g., `corrected`, `uncorrected`) |
 | `channels` | string | yes | Scope: `downstream`, `upstream`, or type-qualified `downstream.qam`, `downstream.ofdm`, `upstream.atdma`, `upstream.ofdma` |
 
@@ -646,7 +646,7 @@ hardware:
 ```
 
 | Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
+|-------|------| :--------: |-------------|
 | `docsis_version` | string | yes | DOCSIS specification version ("3.0" or "3.1") |
 | `chipset` | string | no | Modem chipset (informational) |
 
@@ -753,12 +753,13 @@ rules below.
 
 | Transport | Valid auth strategies | Valid session | Valid formats | Valid action types |
 |-----------|---------------------|--------------|---------------|-------------------|
-| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `json`, `xml` | `http` |
+| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | `http` |
 | `hnap` | `hnap` | implicit (uid + HNAP_AUTH) | `hnap` | `hnap` |
 
 The format field in parser.yaml determines how the response is decoded.
 HTML formats produce `BeautifulSoup`, structured formats produce `dict`.
 See ARCHITECTURE.md Constraint Summary for details.
+(`xml` format is planned but not yet implemented — no XML modems exist.)
 
 Violations are rejected at both **build time** (Pydantic validation in
 Catalog's dev-gate) and **load time** (`load_modem_config()` in Core)
@@ -768,7 +769,7 @@ failures.
 ### Required fields by status
 
 | Field | `verified` / `awaiting_verification` | `in_progress` | `unsupported` |
-|-------|:------------------------------------:|:--------------:|:-------------:|
+|-------| :------------------------------------: | :--------------: | :-------------: |
 | `manufacturer` | required | required | required |
 | `model` | required | required | required |
 | `transport` | required | required | required |

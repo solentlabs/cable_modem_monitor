@@ -10,8 +10,9 @@ The parsing system absorbs this variety through three distinct roles:
 - **`BaseParser` (ABC)** — the extraction interface. Seven format-specific
   implementations (`HTMLTableParser`, `HTMLTableTransposedParser`,
   `HTMLFieldsParser`, `JSEmbeddedParser`, `HNAPParser`, and
-  `StructuredParser` (ABC) → `JSONParser`, `XMLParser`),
+  `StructuredParser` (ABC) → `JSONParser`),
   each parameterized by parser.yaml section config.
+  (`XMLParser` is planned but not yet implemented — no XML modems exist.)
 - **`ModemParserCoordinator`** — factory and orchestrator. Reads
   parser.yaml, creates `BaseParser` instances per section, runs them,
   chains parser.py post-processing, assembles `ModemData`.
@@ -69,7 +70,7 @@ transport fully constrains the format (always `hnap`).
 | Transport | Valid Formats | Why |
 |-----------|--------------|-----|
 | `hnap` | `hnap` | Protocol-defined: SOAP JSON with delimiters |
-| `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `json`, `xml` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing) |
+| `http` | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | Format determines decode step; any format supports optional `encoding` property (e.g., `base64` — decoded before format-specific parsing). `xml` is planned but not yet implemented. |
 
 See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for the full transport constraint
 table including auth strategies.
@@ -1246,11 +1247,12 @@ discovers and invokes per section.
 ### Post-Processing Contract
 
 ```python
-class ExampleModemPostProcessor:
+class PostProcessor:
     """Post-process specific sections. Sections without a hook here
     use the BaseParser extraction output as-is.
 
-    Naming convention: {Manufacturer}{Model}PostProcessor
+    Class must be named ``PostProcessor`` — the runner imports this
+    exact name from parser.py via ``getattr(module, "PostProcessor")``.
     """
 
     def parse_downstream(

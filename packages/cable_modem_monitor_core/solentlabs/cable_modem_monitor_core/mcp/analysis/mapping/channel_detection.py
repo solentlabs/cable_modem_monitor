@@ -95,12 +95,12 @@ def _build_modulation_map(values: set[str]) -> dict[str, str]:
         lower = val.lower()
         if "qam" in lower and "ofdm" not in lower:
             result[val] = "qam"
+        elif "ofdma" in lower:
+            result[val] = "ofdma"
         elif "ofdm" in lower or lower == "other":
             result[val] = "ofdm"
         elif "atdma" in lower:
             result[val] = "atdma"
-        elif "ofdma" in lower:
-            result[val] = "ofdma"
     return result
 
 

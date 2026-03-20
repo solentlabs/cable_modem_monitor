@@ -601,7 +601,7 @@ If generated, parser.py must follow the post-processing contract from
 [PARSING_SPEC.md](PARSING_SPEC.md):
 
 ```python
-class ModemPostProcessor:
+class PostProcessor:
     """Post-processor for {Manufacturer} {Model}."""
 
     def parse_downstream(
