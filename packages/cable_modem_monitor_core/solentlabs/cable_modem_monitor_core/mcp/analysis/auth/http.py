@@ -76,7 +76,8 @@ def detect_http_auth(
     # 401 + WWW-Authenticate: Digest -> HARD STOP (unsupported)
     if signals.digest_challenge:
         hard_stops.append(
-            f"{HARD_STOP_PREFIX} WWW-Authenticate: Digest detected. "
+            f"{HARD_STOP_PREFIX} WWW-Authenticate: Digest detected "
+            f"(observed: {signals.digest_www_authenticate!r}). "
             "Digest auth is not yet supported. "
             "See ONBOARDING_SPEC Phase 2 for supported auth strategies."
         )
@@ -122,6 +123,7 @@ class _HttpAuthSignals:
 
     has_any_auth_signal: bool = False
     digest_challenge: bool = False
+    digest_www_authenticate: str = ""
     basic_challenge: bool = False
     basic_challenge_cookie: bool = False
     url_token_entry: dict[str, Any] | None = None
@@ -189,6 +191,7 @@ def _check_entry_auth_signals(
         scheme = _parse_auth_scheme(www_auth)
         if scheme == "digest":
             signals.digest_challenge = True
+            signals.digest_www_authenticate = www_auth
         elif scheme == "basic":
             signals.basic_challenge = True
             signals.basic_challenge_cookie = _has_challenge_cookie_retry(all_entries, entry)

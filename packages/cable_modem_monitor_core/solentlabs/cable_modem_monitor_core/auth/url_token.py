@@ -66,7 +66,7 @@ class UrlTokenAuthManager(BaseAuthManager):
             password: Password credential.
 
         Returns:
-            AuthResult with ``url_token`` set for the loader.
+            AuthResult with ``auth_context["url_token"]`` for the loader.
         """
         config = self._config
         timeout = getattr(self, "_timeout", 10)
@@ -124,9 +124,13 @@ class UrlTokenAuthManager(BaseAuthManager):
             list(session.cookies.keys()),
         )
 
+        auth_context: dict[str, str] = {}
+        if url_token:
+            auth_context["url_token"] = url_token
+
         return AuthResult(
             success=True,
-            url_token=url_token,
+            auth_context=auth_context,
             response=response,
             response_url=response_path,
         )

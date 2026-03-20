@@ -24,5 +24,5 @@
   "_transport": "http",
   "_expected_strategy": "digest",
   "_expected_confidence": "high",
-  "_expected_hard_stop": "Digest detected"
+  "_expected_hard_stop": "Digest detected (observed:"
 }

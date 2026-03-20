@@ -110,8 +110,8 @@ def _add_identity(result: dict[str, Any], analysis: dict[str, Any], metadata: di
         result["model_aliases"] = metadata["model_aliases"]
     if metadata.get("brands"):
         result["brands"] = metadata["brands"]
-    result["transport"] = analysis.get("transport", "http")
-    result["default_host"] = metadata.get("default_host", "192.168.100.1")
+    result["transport"] = metadata.get("transport") or analysis.get("transport", "http")
+    result["default_host"] = metadata.get("default_host", "")
 
 
 def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> None:

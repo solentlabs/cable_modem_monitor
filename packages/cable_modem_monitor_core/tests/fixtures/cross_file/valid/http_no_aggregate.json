@@ -1,0 +1,22 @@
+{
+  "_modem": {
+    "manufacturer": "Solent Labs", "model": "T100", "transport": "http",
+    "default_host": "192.168.100.1",
+    "auth": {"strategy": "none"},
+    "hardware": {"docsis_version": "3.0"},
+    "status": "verified",
+    "attribution": {"contributors": [{"github": "t", "contribution": "t"}]},
+    "isps": ["ISP"]
+  },
+  "_parser": {
+    "downstream": {
+      "format": "table",
+      "resource": "/status.html",
+      "tables": [{
+        "selector": {"type": "header_text", "match": "DS"},
+        "columns": [{"index": 0, "field": "channel_id", "type": "integer"}],
+        "channel_type": {"fixed": "qam"}
+      }]
+    }
+  }
+}

@@ -139,7 +139,7 @@ class TestSuccessfulLogin:
 
         assert result.success is True
         assert result.error == ""
-        assert result.hnap_private_key != ""
+        assert result.auth_context.get("private_key", "") != ""
 
     def test_private_key_is_correct(self, hnap_server: str) -> None:
         """Derived private key matches expected HMAC computation."""
@@ -152,7 +152,7 @@ class TestSuccessfulLogin:
             _HNAPHandler.public_key + "password",
             _HNAPHandler.challenge,
         )
-        assert result.hnap_private_key == expected
+        assert result.auth_context["private_key"] == expected
 
     def test_uid_cookie_set(self, hnap_server: str) -> None:
         """Session has uid cookie after successful login."""

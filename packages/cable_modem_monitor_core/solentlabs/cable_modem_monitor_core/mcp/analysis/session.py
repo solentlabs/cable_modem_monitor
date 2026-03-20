@@ -18,20 +18,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..validation.har_utils import is_static_resource, lower_headers
+from .auth.patterns import get_session_cookie_indicators
 
-# Cookie names that indicate a session (case-insensitive substring match)
-_SESSION_COOKIE_INDICATORS: frozenset[str] = frozenset(
-    {
-        "sessionid",
-        "session",
-        "phpsessid",
-        "jsessionid",
-        "sid",
-        "uid",
-        "token",
-        "auth",
-    }
-)
+# Cookie names that indicate a session (case-insensitive substring match).
+# Loaded from auth_patterns.json — single source of truth.
+_SESSION_COOKIE_INDICATORS: frozenset[str] = get_session_cookie_indicators()
 
 
 @dataclass

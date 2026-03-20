@@ -45,11 +45,16 @@ def _check_transport_format(modem: ModemConfig, parser: ParserConfig, errors: li
 
     for section_name, fmt in section_formats:
         if fmt not in valid_formats:
-            errors.append(
-                f"transport '{modem.transport}' does not support format "
-                f"'{fmt}' in section '{section_name}' — "
-                f"valid formats: {sorted(valid_formats)}"
-            )
+            if fmt == "xml":
+                errors.append(
+                    f"XML format in section '{section_name}' is not yet " "supported — no parser implementation exists"
+                )
+            else:
+                errors.append(
+                    f"transport '{modem.transport}' does not support format "
+                    f"'{fmt}' in section '{section_name}' — "
+                    f"valid formats: {sorted(valid_formats)}"
+                )
 
 
 def _check_aggregate_collisions(modem: ModemConfig, parser: ParserConfig, errors: list[str]) -> None:

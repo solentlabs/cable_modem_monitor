@@ -11,7 +11,9 @@ matching ``_expected_error``.
 from __future__ import annotations
 
 import re
+import warnings
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
@@ -25,6 +27,7 @@ from tests.conftest import collect_fixtures, load_fixture
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "cross_file"
 VALID_DIR = FIXTURES_DIR / "valid"
 INVALID_DIR = FIXTURES_DIR / "invalid"
+WARNING_DIR = FIXTURES_DIR / "warning"
 
 
 # ---------------------------------------------------------------------------
@@ -74,66 +77,55 @@ def test_invalid_cross_file(fixture_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Behavioral tests — edge cases
+# XML format hard stop (uses MagicMock — can't be expressed as fixture)
 # ---------------------------------------------------------------------------
 
 
-class TestEdgeCases:
-    """Cross-file edge cases not covered by fixtures."""
+class TestXmlFormatHardStop:
+    """XML format produces explicit unsupported error."""
 
-    def test_no_aggregate_no_system_info(self) -> None:
-        """No aggregate and no system_info skips collision check."""
-        modem = ModemConfig(
-            manufacturer="Solent Labs",
-            model="T100",
-            transport="http",
-            default_host="192.168.100.1",
-            auth={"strategy": "none"},
-            hardware={"docsis_version": "3.0"},
-            status="verified",
-            attribution={"contributors": [{"github": "t", "contribution": "t"}]},
-            isps=["ISP"],
-        )
-        parser = ParserConfig(
-            downstream={
-                "format": "table",
-                "resource": "/status.html",
-                "tables": [
-                    {
-                        "selector": {"type": "header_text", "match": "DS"},
-                        "columns": [{"index": 0, "field": "channel_id", "type": "integer"}],
-                        "channel_type": {"fixed": "qam"},
-                    }
-                ],
-            }
-        )
-        assert validate_cross_file(modem, parser) == []
+    def test_xml_format_error_message(self) -> None:
+        """XML format produces 'not yet supported' rather than generic format error."""
+        modem = MagicMock(spec=ModemConfig)
+        modem.transport = "http"
+        modem.aggregate = {}
 
-    def test_aggregate_without_system_info(self) -> None:
-        """Aggregate with no system_info has no collision possible."""
-        modem = ModemConfig(
-            manufacturer="Solent Labs",
-            model="T100",
-            transport="http",
-            default_host="192.168.100.1",
-            auth={"strategy": "none"},
-            aggregate={"total_corrected": {"sum": "corrected", "channels": "downstream"}},
-            hardware={"docsis_version": "3.0"},
-            status="verified",
-            attribution={"contributors": [{"github": "t", "contribution": "t"}]},
-            isps=["ISP"],
-        )
-        parser = ParserConfig(
-            downstream={
-                "format": "table",
-                "resource": "/status.html",
-                "tables": [
-                    {
-                        "selector": {"type": "header_text", "match": "DS"},
-                        "columns": [{"index": 0, "field": "channel_id", "type": "integer"}],
-                        "channel_type": {"fixed": "qam"},
-                    }
-                ],
-            }
-        )
-        assert validate_cross_file(modem, parser) == []
+        parser = MagicMock(spec=ParserConfig)
+        parser.downstream = MagicMock()
+        parser.downstream.format = "xml"
+        parser.upstream = None
+        parser.system_info = None
+
+        errors = validate_cross_file(modem, parser)
+        assert len(errors) == 1
+        assert "XML format" in errors[0]
+        assert "not yet supported" in errors[0]
+
+
+# ---------------------------------------------------------------------------
+# auth:none + session.cookie_name warning — fixture-driven
+# ---------------------------------------------------------------------------
+
+WARNING_FIXTURES = sorted(WARNING_DIR.glob("*.json")) if WARNING_DIR.is_dir() else []
+
+
+@pytest.mark.parametrize(
+    "fixture_path",
+    WARNING_FIXTURES,
+    ids=[f.stem for f in WARNING_FIXTURES],
+)
+def test_auth_none_session_cookie_warning(fixture_path: Path) -> None:
+    """ModemConfig emits (or not) a warning for auth:none + session.cookie_name."""
+    fixture = load_fixture(fixture_path)
+    expected_warning = fixture.get("_expected_warning")
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        ModemConfig(**fixture["_config"])
+
+        auth_warnings = [x for x in w if "auth:none" in str(x.message)]
+        if expected_warning:
+            assert len(auth_warnings) == 1, f"Expected warning matching {expected_warning!r}"
+            assert expected_warning in str(auth_warnings[0].message)
+        else:
+            assert len(auth_warnings) == 0, f"Unexpected warnings: {auth_warnings}"

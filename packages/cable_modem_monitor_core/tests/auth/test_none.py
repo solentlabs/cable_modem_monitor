@@ -11,7 +11,7 @@ from solentlabs.cable_modem_monitor_core.auth.none import NoneAuthManager
 # +-----------------+-----------+---------------------+
 # | success         | True      | always succeeds     |
 # | error           | ""        | no error message    |
-# | url_token       | ""        | no URL token        |
+# | auth_context    | {}        | no auth context     |
 # | response        | None      | no login response   |
 # | response_url    | ""        | no response URL     |
 # +-----------------+-----------+---------------------+
@@ -20,7 +20,7 @@ from solentlabs.cable_modem_monitor_core.auth.none import NoneAuthManager
 RESULT_FIELD_CASES = [
     ("success",      True,  "always succeeds"),
     ("error",        "",    "no error message"),
-    ("url_token",    "",    "no URL token"),
+    ("auth_context", {},    "no auth context"),
     ("response",     None,  "no login response"),
     ("response_url", "",    "no response URL"),
 ]

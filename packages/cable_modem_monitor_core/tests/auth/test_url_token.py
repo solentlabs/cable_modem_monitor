@@ -52,7 +52,7 @@ class TestUrlTokenAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
-            assert result.url_token == "tok_abc123"
+            assert result.auth_context["url_token"] == "tok_abc123"
 
     def test_login_prefix_in_url(self, session: requests.Session) -> None:
         """Login prefix is prepended to base64 credential."""
@@ -132,7 +132,7 @@ class TestUrlTokenAuthManager:
             assert result.response_url == "/login.html"
 
     def test_no_cookie_name_empty_token(self, session: requests.Session) -> None:
-        """Without cookie_name, url_token is empty."""
+        """Without cookie_name, auth_context has no url_token."""
         entries, _ = load_auth_fixture("har_url_token_login.json")
         with HARMockServer(entries) as server:
             config = UrlTokenAuth(
@@ -145,4 +145,4 @@ class TestUrlTokenAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
-            assert result.url_token == ""
+            assert result.auth_context.get("url_token", "") == ""

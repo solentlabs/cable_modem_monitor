@@ -5,21 +5,34 @@ them, chains parser.py post-processing, and assembles ModemData.
 
 See PARSING_SPEC.md ModemParserCoordinator section.
 
-Format coverage: dispatches HTMLTableSection and HNAPSection (channels),
-HTMLFieldsSource and HNAPSystemInfoSource (system_info). Other formats
-(JSEmbedded, JSON, Transposed, XML) log a warning and fall through to
-the post-processor hook.
+Channel parser registry maps section config types to parser callables.
+Five types registered; three are stubs awaiting real HAR data:
+- HTMLTableTransposedSection
+- JSEmbeddedSection
+- JSONSection
+
+System info source registry maps source config types to parser callables.
+Four types registered; two are stubs awaiting implementation.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, TypeVar
 
 from ..models.parser_config.config import ParserConfig
 from ..models.parser_config.hnap import HNAPSection
-from ..models.parser_config.system_info import HNAPSystemInfoSource, HTMLFieldsSource
+from ..models.parser_config.javascript import JSEmbeddedSection
+from ..models.parser_config.json_format import JSONSection
+from ..models.parser_config.system_info import (
+    HNAPSystemInfoSource,
+    HTMLFieldsSource,
+    JSONSystemInfoSource,
+    JSSystemInfoSource,
+)
 from ..models.parser_config.table import HTMLTableSection
+from ..models.parser_config.transposed import HTMLTableTransposedSection
 from .hnap import HNAPParser
 from .hnap_fields import HNAPFieldsParser
 from .html_fields import HTMLFieldsParser
@@ -37,6 +50,122 @@ _HOOK_NAMES = {
     "upstream": "parse_upstream",
     "system_info": "parse_system_info",
 }
+
+
+# ---------------------------------------------------------------------------
+# Channel parser registry
+# ---------------------------------------------------------------------------
+
+
+def _parse_hnap_channels(
+    section: Any,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from an HNAP section."""
+    hnap_parser = HNAPParser(section)
+    channels = hnap_parser.parse(resources)
+    if not isinstance(channels, list):
+        return []
+    return channels
+
+
+def _parse_html_table_channels(
+    section: HTMLTableSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from HTML table section(s) with merge_by support."""
+    primary_channels: list[dict[str, Any]] = []
+    companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
+
+    for table_def in section.tables:
+        parser = HTMLTableParser(section.resource, table_def)
+        channels = parser.parse(resources)
+        if not isinstance(channels, list):
+            continue
+
+        if table_def.merge_by is not None:
+            companion_tables.append((channels, table_def.merge_by))
+        else:
+            primary_channels.extend(channels)
+
+    for companion_channels, merge_by in companion_tables:
+        _merge_channels(primary_channels, companion_channels, merge_by)
+
+    return primary_channels
+
+
+def _stub_transposed(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
+    """Stub — HTMLTableTransposedParser not yet implemented."""
+    raise NotImplementedError("HTMLTableTransposedParser not yet implemented")
+
+
+def _stub_js_embedded(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
+    """Stub — JSEmbeddedParser not yet implemented."""
+    raise NotImplementedError("JSEmbeddedParser not yet implemented")
+
+
+def _stub_json(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
+    """Stub — JSONParser not yet implemented."""
+    raise NotImplementedError("JSONParser not yet implemented")
+
+
+# Maps section config type → parser callable(section, resources) → list[dict]
+_CHANNEL_PARSERS: dict[type, Callable[..., list[dict[str, Any]]]] = {
+    HTMLTableSection: _parse_html_table_channels,
+    HNAPSection: _parse_hnap_channels,
+    HTMLTableTransposedSection: _stub_transposed,
+    JSEmbeddedSection: _stub_js_embedded,
+    JSONSection: _stub_json,
+}
+
+
+# ---------------------------------------------------------------------------
+# System info source registry
+# ---------------------------------------------------------------------------
+
+
+def _parse_html_fields_sysinfo(
+    source: HTMLFieldsSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from HTML label/value pairs."""
+    html_si = HTMLFieldsParser(source)
+    result = html_si.parse(resources)
+    return result if isinstance(result, dict) else {}
+
+
+def _parse_hnap_sysinfo(
+    source: HNAPSystemInfoSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from HNAP response fields."""
+    hnap_si = HNAPFieldsParser(source)
+    result = hnap_si.parse(resources)
+    return result if isinstance(result, dict) else {}
+
+
+def _stub_js_sysinfo(source: Any, resources: dict[str, Any]) -> dict[str, Any]:
+    """Stub — JSSystemInfoParser not yet implemented."""
+    raise NotImplementedError("JSSystemInfoParser not yet implemented")
+
+
+def _stub_json_sysinfo(source: Any, resources: dict[str, Any]) -> dict[str, Any]:
+    """Stub — JSONSystemInfoParser not yet implemented."""
+    raise NotImplementedError("JSONSystemInfoParser not yet implemented")
+
+
+# Maps source config type → parser callable(source, resources) → dict
+_SYSINFO_PARSERS: dict[type, Callable[..., dict[str, Any]]] = {
+    HTMLFieldsSource: _parse_html_fields_sysinfo,
+    HNAPSystemInfoSource: _parse_hnap_sysinfo,
+    JSSystemInfoSource: _stub_js_sysinfo,
+    JSONSystemInfoSource: _stub_json_sysinfo,
+}
+
+
+# ---------------------------------------------------------------------------
+# Coordinator
+# ---------------------------------------------------------------------------
 
 
 class ModemParserCoordinator:
@@ -90,46 +219,18 @@ class ModemParserCoordinator:
     ) -> list[dict[str, Any]]:
         """Extract channels for a single section.
 
-        Creates one parser per table definition, concatenates primary
-        tables, merges companion tables, and invokes the parser.py hook.
+        Dispatches to the channel parser registry by section config type.
         """
         section = getattr(self._config, section_name, None)
         if section is None:
             return self._apply_hook(section_name, [], resources)
 
-        if isinstance(section, HNAPSection):
-            hnap_parser = HNAPParser(section)
-            channels = hnap_parser.parse(resources)
-            if not isinstance(channels, list):
-                channels = []
-            return self._apply_hook(section_name, channels, resources)
+        parser_fn = _CHANNEL_PARSERS.get(type(section))
+        if parser_fn is None:
+            raise NotImplementedError(f"{type(section).__name__} has no registered channel parser")
 
-        if not isinstance(section, HTMLTableSection):
-            _logger.warning(
-                "%s: format '%s' not yet supported by coordinator",
-                section_name,
-                getattr(section, "format", "?"),
-            )
-            return self._apply_hook(section_name, [], resources)
-
-        primary_channels: list[dict[str, Any]] = []
-        companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
-
-        for table_def in section.tables:
-            parser = HTMLTableParser(section.resource, table_def)
-            channels = parser.parse(resources)
-            if not isinstance(channels, list):
-                continue
-
-            if table_def.merge_by is not None:
-                companion_tables.append((channels, table_def.merge_by))
-            else:
-                primary_channels.extend(channels)
-
-        for companion_channels, merge_by in companion_tables:
-            _merge_channels(primary_channels, companion_channels, merge_by)
-
-        return self._apply_hook(section_name, primary_channels, resources)
+        channels = parser_fn(section, resources)
+        return self._apply_hook(section_name, channels, resources)
 
     def _extract_system_info(
         self,
@@ -137,7 +238,8 @@ class ModemParserCoordinator:
     ) -> dict[str, Any]:
         """Extract system_info from all configured sources.
 
-        Creates one parser per source, merges results with last-write-wins.
+        Dispatches to the system info source registry by source config type.
+        Merges results with last-write-wins.
         """
         section = self._config.system_info
         if section is None:
@@ -145,21 +247,10 @@ class ModemParserCoordinator:
 
         merged: dict[str, Any] = {}
         for source in section.sources:
-            if isinstance(source, HTMLFieldsSource):
-                html_si = HTMLFieldsParser(source)
-                result = html_si.parse(resources)
-                if isinstance(result, dict):
-                    merged.update(result)
-            elif isinstance(source, HNAPSystemInfoSource):
-                hnap_si = HNAPFieldsParser(source)
-                result = hnap_si.parse(resources)
-                if isinstance(result, dict):
-                    merged.update(result)
-            else:
-                _logger.warning(
-                    "system_info source format '%s' not yet supported",
-                    getattr(source, "format", "?"),
-                )
+            parser_fn = _SYSINFO_PARSERS.get(type(source))
+            if parser_fn is None:
+                raise NotImplementedError(f"{type(source).__name__} has no registered system_info parser")
+            merged.update(parser_fn(source, resources))
 
         return self._apply_hook("system_info", merged, resources)
 

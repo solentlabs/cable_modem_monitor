@@ -50,4 +50,4 @@ class TestBasicAuthManager:
         manager = BasicAuthManager(config)
 
         result = manager.authenticate(session, "http://192.168.100.1", "admin", "secret")
-        assert result.url_token == ""
+        assert result.auth_context == {}

@@ -55,7 +55,7 @@ Additional functionality is available via optional extras:
 
 | Extra | Install | What it adds | Who uses it |
 |-------|---------|--------------|-------------|
-| `[mcp]` | `pip install solentlabs-cable-modem-monitor-core[mcp]` | `pydantic>=2.0` | MCP server tools (`validate_har`, `generate_config`, etc.), Catalog's build-time validation, dev-gate CI |
+| `[mcp]` | `pip install solentlabs-cable-modem-monitor-core[mcp]` | `pydantic>=2.0` | MCP server tools (`validate_har`, `analyze_har`, `enrich_metadata`, `generate_config`, `generate_golden_file`, `write_modem_package`, `run_tests`, `validate_config`), Catalog's build-time validation, dev-gate CI |
 
 The `[mcp]` extra provides Pydantic for config schema validation. The HA
 integration never imports the `models` module — it uses parsed dicts from
@@ -995,9 +995,9 @@ output, and resolves which `modem*.yaml` applies (base or variant).
 
 **Golden file lifecycle:**
 1. Contributor submits HAR capture via `har-capture`
-2. Skill/MCP generates modem.yaml, parser.yaml, and parser.py if needed
-3. First run against HAR mock server produces `ModemData` output
-4. Developer reviews output against the raw HAR responses
+2. MCP pipeline: `validate_har` → `analyze_har` → `enrich_metadata` → `generate_config` → `generate_golden_file` → `write_modem_package`
+3. `run_tests` replays HAR against mock server, compares output to golden file
+4. Developer reviews golden file against the raw HAR responses
 5. Reviewed output is committed as `{name}.expected.json`
 6. All future runs are regression tests against the golden file
 
@@ -1059,6 +1059,10 @@ The test harness in Core consumes these fixtures. This means:
 | No fallback/auto-detection | If no modem.yaml exists, we can't help. User submits HAR, we add support |
 | `last_boot_time` derived in core | Transparent to consumers — same field whether modem provides it or core calculates from uptime |
 | Dynamic `SystemInfo` fields | Modem-specific fields pass through without core changes. Core only understands structured fields |
+| `AuthResult.auth_context` is transport-agnostic | Auth strategies store downstream state in a `dict[str, str]` keyed by convention (`url_token`, `private_key`), not in transport-specific fields. Runner reads by key based on `modem_config.transport`. Adding a transport means defining a key convention, not adding a field to `AuthResult`. |
+| Coordinator parser registry | Section type → parser function dispatch via dict, not isinstance chain. Five known section types registered; unimplemented formats are stubs that raise `NotImplementedError` with the missing parser name. Adding a format is one registry entry + parser implementation. |
+| `enrich_metadata` separates inference from config assembly | `generate_config` assembles YAML from known facts. Inferring facts from HAR analysis (default_host from request URLs, DOCSIS version from channel types) is a different concern. `enrich_metadata` provides structured guidance on inferred/missing/conflicting fields — essential for self-service contributors who need to know what's missing when their PR validation fails. |
+| `write_modem_package` for file placement | Pipeline produces configs and golden files in memory. Rather than relying on the LLM to write files with correct names and directory structure, a dedicated tool writes the standard catalog structure. Guarantees file layout matches what the test harness expects. |
 
 ---
 

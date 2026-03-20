@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..analysis.auth.patterns import get_login_url_patterns
+from ..analysis.auth.patterns import get_login_url_patterns, get_session_cookie_indicators
 from .har_utils import (
     HARD_STOP_PREFIX,
     has_set_cookie,
@@ -17,19 +17,9 @@ from .har_utils import (
     lower_headers,
 )
 
-# Domain-specific: modem session cookie name indicators
-_SESSION_COOKIE_INDICATORS: frozenset[str] = frozenset(
-    {
-        "sessionid",
-        "session",
-        "phpsessid",
-        "jsessionid",
-        "sid",
-        "uid",
-        "token",
-        "auth",
-    }
-)
+# Domain-specific: modem session cookie name indicators.
+# Loaded from auth_patterns.json — single source of truth.
+_SESSION_COOKIE_INDICATORS: frozenset[str] = get_session_cookie_indicators()
 
 # Login endpoint patterns (shared via auth_patterns.json)
 _LOGIN_URL_PATTERNS: tuple[str, ...] = get_login_url_patterns()

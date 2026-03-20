@@ -13,5 +13,15 @@
   },
   "pbkdf2_salt_triggers": [
     "seeksalthash"
+  ],
+  "session_cookie_indicators": [
+    "sessionid",
+    "session",
+    "phpsessid",
+    "jsessionid",
+    "sid",
+    "uid",
+    "token",
+    "auth"
   ]
 }

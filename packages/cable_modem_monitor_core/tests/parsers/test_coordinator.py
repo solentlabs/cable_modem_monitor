@@ -18,6 +18,11 @@ from solentlabs.cable_modem_monitor_core.models.parser_config import ParserConfi
 from solentlabs.cable_modem_monitor_core.parsers.coordinator import (
     ModemParserCoordinator,
     _merge_channels,
+    _stub_js_embedded,
+    _stub_js_sysinfo,
+    _stub_json,
+    _stub_json_sysinfo,
+    _stub_transposed,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "coordinator"
@@ -264,3 +269,64 @@ class TestEdgeCases:
         assert result["downstream"] == []
         # parse_system_info hook is called with empty dict — returns custom data
         assert result["system_info"] == {"custom_key": "custom_value"}
+
+
+# ---------------------------------------------------------------------------
+# Registry stub tests — NotImplementedError for unimplemented formats
+# ---------------------------------------------------------------------------
+
+# ┌──────────────────────────┬──────────────────────────────────────┐
+# │ stub function            │ expected error fragment              │
+# ├──────────────────────────┼──────────────────────────────────────┤
+# │ _stub_transposed         │ "HTMLTableTransposedParser"          │
+# │ _stub_js_embedded        │ "JSEmbeddedParser"                  │
+# │ _stub_json               │ "JSONParser"                        │
+# │ _stub_js_sysinfo         │ "JSSystemInfoParser"                │
+# │ _stub_json_sysinfo       │ "JSONSystemInfoParser"              │
+# └──────────────────────────┴──────────────────────────────────────┘
+
+# fmt: off
+CHANNEL_STUB_CASES = [
+    ("transposed",   _stub_transposed,  "HTMLTableTransposedParser"),
+    ("js_embedded",  _stub_js_embedded, "JSEmbeddedParser"),
+    ("json",         _stub_json,        "JSONParser"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,stub_fn,expected_msg",
+    CHANNEL_STUB_CASES,
+    ids=[c[0] for c in CHANNEL_STUB_CASES],
+)
+def test_channel_stub_raises(
+    desc: str,
+    stub_fn: Any,
+    expected_msg: str,
+) -> None:
+    """Channel parser stub raises NotImplementedError with parser name."""
+    with pytest.raises(NotImplementedError, match=expected_msg):
+        stub_fn(None, {})
+
+
+# fmt: off
+SYSINFO_STUB_CASES = [
+    ("js_sysinfo",   _stub_js_sysinfo,   "JSSystemInfoParser"),
+    ("json_sysinfo", _stub_json_sysinfo,  "JSONSystemInfoParser"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,stub_fn,expected_msg",
+    SYSINFO_STUB_CASES,
+    ids=[c[0] for c in SYSINFO_STUB_CASES],
+)
+def test_sysinfo_stub_raises(
+    desc: str,
+    stub_fn: Any,
+    expected_msg: str,
+) -> None:
+    """System info parser stub raises NotImplementedError with parser name."""
+    with pytest.raises(NotImplementedError, match=expected_msg):
+        stub_fn(None, {})

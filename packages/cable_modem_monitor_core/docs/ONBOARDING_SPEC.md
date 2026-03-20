@@ -37,7 +37,7 @@ review, commit authorization).
 | [parser.py Decision](#parserpy-decision) | When code post-processing is needed vs config-only |
 | [Package Ownership](#package-ownership) | What goes in Core vs Catalog |
 | [Test Harness (Core)](#test-harness-core) | HAR replay, golden files, test discovery |
-| [MCP Tools](#mcp-tools) | Tool contracts: validate_har, analyze_har, generate_config, etc. |
+| [MCP Tools](#mcp-tools) | Tool contracts: validate_har, analyze_har, enrich_metadata, generate_config, write_modem_package, etc. |
 | [Validation and Testing](#validation-and-testing) | Static validation and end-to-end test flow |
 | [Error Handling](#error-handling) | Hard stops, warnings, confidence annotations |
 | [Workflow](#workflow) | Full 12-phase onboarding flow |
@@ -61,9 +61,11 @@ review, commit authorization).
 
 **What about hardware metadata?** Fields like `hardware.chipset`,
 `hardware.docsis_version`, `brands`, `model_aliases`, and `isps` are
-not in the HAR. The LLM fills these via web search during
-[Phase 7: Metadata Enrichment](#phase-7-metadata-enrichment) rather
-than leaving them as TODOs or asking the contributor.
+not in the HAR. The `enrich_metadata` tool infers what it can from the
+analysis (e.g., OFDM/OFDMA channels → DOCSIS 3.1, request hosts →
+default_host) and reports what's still missing. The LLM fills remaining
+gaps via web search rather than leaving them as TODOs or asking the
+contributor.
 
 ---
 
@@ -555,8 +557,11 @@ Examine the data for placeholder/invalid rows:
 ### Phase 7: Metadata Enrichment
 
 Hardware metadata, branding, and ISP information are not present in the
-HAR. The LLM fills these fields by searching the web using the
-manufacturer and model as search terms.
+HAR. The `enrich_metadata` MCP tool handles the inferrable subset:
+`default_host` from HAR request URLs, `hardware.docsis_version` from
+OFDM/OFDMA channel presence. It reports what was inferred, what's still
+missing, and any conflicts with existing config. The LLM fills remaining
+gaps by searching the web using the manufacturer and model as search terms.
 
 #### Fields to research
 
@@ -936,11 +941,52 @@ detection, format detection, and field mapping extraction.
 Returns `hard_stops` if transport or auth is ambiguous — the LLM presents
 these to the user for resolution before proceeding.
 
+### `enrich_metadata`
+
+Bridges `analyze_har` and `generate_config`. Contributors should only need
+to provide manufacturer + model — the rest is either inferrable from the
+HAR analysis or has sensible defaults. Separating enrichment from config
+assembly keeps `generate_config` doing one thing and gives contributors
+clear guidance on what's missing.
+
+**Use cases:**
+
+1. **Self-service contributor:** Runs har-capture, processes HAR through the
+   pipeline, submits a PR. Without enrichment, modem.yaml is thin — missing
+   docsis_version, default_host, or hardware metadata. `enrich_metadata`
+   tells them exactly what was inferred and what still needs filling in,
+   turning cryptic validation failures into actionable guidance.
+
+2. **Maintainer workflow:** Downloads a contributor's HAR, runs the pipeline
+   with an LLM. The LLM calls `enrich_metadata` for structured
+   `inferred` / `missing` / `warnings` output, fills gaps via web search,
+   passes complete metadata to `generate_config`.
+
+3. **Status upgrade:** Existing modem moves from `in_progress` → `verified`.
+   Tool merges new metadata (ISPs, attribution) with existing config.
+
+**Input:** Analysis result + optional existing config + optional user input
+**Output:**
+```json
+{
+  "metadata": { "...": "complete metadata dict for generate_config" },
+  "inferred": ["default_host", "hardware.docsis_version"],
+  "missing": ["hardware.chipset", "isps"],
+  "warnings": ["existing default_host 10.0.0.1 differs from HAR host 192.168.100.1"]
+}
+```
+
+**Inferences from analysis:**
+- `default_host` — most common host in HAR request URLs
+- `hardware.docsis_version` — OFDM/OFDMA channels in analysis → 3.1, else 3.0
+- `transport` — from analysis
+- `status` — defaults to `in_progress` for new, unchanged for existing
+
 ### `generate_config`
 
-Takes the analysis result (from `analyze_har`) plus metadata and
-produces modem.yaml and parser.yaml content. Runs Pydantic validation
-and cross-file consistency checks before returning.
+Takes the analysis result (from `analyze_har`) plus enriched metadata
+(from `enrich_metadata`) and produces modem.yaml and parser.yaml content.
+Runs Pydantic validation and cross-file consistency checks before returning.
 
 **Input:** Analysis result + metadata (manufacturer, model, hardware, brands, etc.)
 **Output:** `{ modem_yaml: str, parser_yaml: str, parser_py: str | null, validation: { valid: bool, errors: [] } }`
@@ -970,6 +1016,38 @@ provides a structured interface to it.
 **Input:** Modem directory path (e.g., `modems/motorola/mb7621`)
 **Output:** `{ passed: bool, failures: [{ test: str, expected: any, actual: any, diff: str }] }`
 
+### `write_modem_package`
+
+Writes pipeline output to the catalog modem directory. The pipeline
+produces configs and golden files in memory, but `run_tests` needs files
+on disk. This tool writes directly to the catalog folder — that's the
+destination anyway.
+
+**Input:** Output directory, modem.yaml string, parser.yaml string,
+golden file dict, HAR file path, optional parser.py string
+**Output:**
+```json
+{
+  "modem_dir": "modems/motorola/mb7621",
+  "files_written": ["modem.yaml", "parser.yaml", "test_data/modem.har", "test_data/modem.expected.json"],
+  "files_skipped": []
+}
+```
+
+**Creates standard catalog structure:**
+```
+{output_dir}/
+├── modem.yaml
+├── parser.yaml
+├── parser.py              (if provided)
+└── test_data/
+    ├── modem.har          (copied from har_path)
+    └── modem.expected.json
+```
+
+Existing files are not overwritten — reported in `files_skipped` so the
+LLM can decide whether to force-replace or investigate.
+
 ### `validate_config`
 
 Standalone validation — runs Pydantic schema + cross-file consistency
@@ -990,9 +1068,11 @@ edits.
 | Format detection (HNAP) | `analyze_har` | | |
 | Format detection (HTTP — ambiguous) | `analyze_har` returns candidates | Reads response bodies, picks format | |
 | Field mapping extraction | `analyze_har` | | |
-| Metadata enrichment (web search) | | Web search + synthesis | Verifies |
-| Config generation | `generate_config` | Provides metadata | |
+| Metadata inference + gap detection | `enrich_metadata` | Reviews inferred/missing | |
+| Metadata gaps (web search) | | Web search for missing fields | Verifies |
+| Config generation | `generate_config` | Provides enriched metadata | |
 | Golden file generation | `generate_golden_file` | Sanity checks counts | Reviews |
+| File placement | `write_modem_package` | | |
 | End-to-end testing | `run_tests` | Diagnoses failures | |
 | Test failure fixes | | Edits config | Approves |
 | Commit + push | | Uses existing git tools | Authorizes |
@@ -1106,20 +1186,20 @@ session:
 │     ├── hard_stops? → present to user, resolve          │
 │     └── ambiguous HTML format? → LLM reads HAR          │
 │         response bodies, picks format                   │
-│ 8.  LLM does web search for metadata (chipset,          │
-│     DOCSIS version, brands, ISPs, model aliases)        │
+│ 8.  LLM calls enrich_metadata (with analysis +          │
+│     manufacturer + model)                               │
+│     ├── reviews inferred fields                         │
+│     ├── missing fields? → LLM does web search           │
+│     │   (chipset, brands, ISPs, model aliases)          │
+│     └── warnings? → LLM resolves conflicts              │
 │ 9.  LLM calls generate_config (with analysis +          │
-│     metadata) — validates before returning              │
+│     enriched metadata) — validates before returning     │
 │     ├── validation errors? → LLM fixes, retries         │
 │     └── valid → continue                                │
 │ 10. LLM calls generate_golden_file                      │
 │     └── sanity checks channel counts with user          │
-│ 11. LLM writes all files to modem directory:            │
-│     modems/{mfr}/{model}/modem.yaml                     │
-│     modems/{mfr}/{model}/parser.yaml                    │
-│     modems/{mfr}/{model}/parser.py         (if needed)  │
-│     modems/{mfr}/{model}/test_data/modem.har                │
-│     modems/{mfr}/{model}/test_data/modem.expected.json      │
+│ 11. LLM calls write_modem_package (configs + golden     │
+│     file + HAR → catalog directory)                     │
 │ 12. LLM calls run_tests                                 │
 │     ├── failures? → LLM diagnoses, fixes config,        │
 │     │   re-runs (loop until green)                      │
@@ -1143,10 +1223,11 @@ session:
 | HAR validation | Core (MCP: `validate_har`) | Tool |
 | Transport / auth / format detection | Core (MCP: `analyze_har`) | Tool |
 | Ambiguity resolution | — | LLM → User |
-| Metadata enrichment | — | LLM (web search) |
+| Metadata inference + gap detection | Core (MCP: `enrich_metadata`) | Tool |
+| Metadata gaps (web search) | — | LLM (web search) |
 | Config generation + validation | Core (MCP: `generate_config`) | Tool |
 | Golden file generation | Core (MCP: `generate_golden_file`) | Tool |
-| File placement | — | LLM |
+| File placement | Core (MCP: `write_modem_package`) | Tool |
 | End-to-end testing | Core (harness) + MCP: `run_tests` | Tool |
 | Test failure diagnosis + fixes | — | LLM |
 | Commit + push | — | LLM → User authorization |

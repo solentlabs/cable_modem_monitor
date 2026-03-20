@@ -9,7 +9,7 @@ See MODEM_YAML_SPEC.md Auth section and RESOURCE_LOADING_SPEC.md.
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import requests
 
@@ -21,11 +21,10 @@ class AuthResult:
     Attributes:
         success: Whether authentication succeeded.
         error: Error message on failure.
-        url_token: Server-issued token for URL-token auth. Empty for
-            other strategies.
-        hnap_private_key: HMAC-derived signing key for HNAP transport.
-            Empty for non-HNAP strategies. Used by the HNAP loader to
-            sign ``GetMultipleHNAPs`` requests with ``HNAP_AUTH`` headers.
+        auth_context: Transport-specific downstream state. Each auth
+            strategy stores its credentials here; the runner reads by
+            key based on ``modem_config.transport``. See individual
+            auth managers for the keys they produce.
         response: Login response object. Used for auth response reuse
             — the loader skips re-fetching if the login response landed
             on a data page.
@@ -35,8 +34,7 @@ class AuthResult:
 
     success: bool
     error: str = ""
-    url_token: str = ""
-    hnap_private_key: str = ""
+    auth_context: dict[str, str] = field(default_factory=dict)
     response: requests.Response | None = None
     response_url: str = ""
 

@@ -26,6 +26,7 @@ class ProtocolSignals:
     hnap: bool = False
     basic: bool = False
     digest: bool = False
+    digest_www_authenticate: str = ""
     form_post: bool = False
     url_token: bool = False
 
@@ -46,7 +47,11 @@ def identify_transport_and_auth(
 
     # Digest auth — unsupported, flag per spec
     if signals.digest:
-        issues.append(f"{HARD_STOP_PREFIX} WWW-Authenticate: Digest detected — " "digest auth is not supported.")
+        issues.append(
+            f"{HARD_STOP_PREFIX} WWW-Authenticate: Digest detected "
+            f"(observed: {signals.digest_www_authenticate!r}) — "
+            "digest auth is not supported."
+        )
 
     # Auth hint (informational — full detection is in analyze_har)
     auth_hint = _derive_auth_hint(signals)
@@ -77,6 +82,8 @@ def _scan_protocol_signals(entries: list[dict[str, Any]]) -> ProtocolSignals:
             signals.basic = True
         if "digest" in www_auth:
             signals.digest = True
+            # Store original (not lowered) header value
+            signals.digest_www_authenticate = resp_hdrs.get("www-authenticate", "")
 
         if method == "POST":
             mime = req.get("postData", {}).get("mimeType", "")

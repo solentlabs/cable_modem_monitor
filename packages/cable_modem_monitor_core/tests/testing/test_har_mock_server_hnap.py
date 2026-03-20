@@ -214,7 +214,7 @@ class TestHARMockServerHnapAuth:
                 password="password",
             )
             assert result.success, f"Auth failed: {result.error}"
-            assert result.hnap_private_key
+            assert result.auth_context.get("private_key")
 
     def test_data_request_after_login(
         self,
@@ -246,7 +246,7 @@ class TestHARMockServerHnapAuth:
             loader = HNAPLoader(
                 session=session,
                 base_url=server.base_url,
-                private_key=result.hnap_private_key,
+                private_key=result.auth_context["private_key"],
                 hmac_algorithm="md5",
             )
             resources = loader.fetch(mock_config)

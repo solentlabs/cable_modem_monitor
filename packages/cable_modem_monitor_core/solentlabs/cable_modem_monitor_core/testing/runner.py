@@ -223,7 +223,7 @@ def _run_pipeline(
         # Fetch resources
         if parser_config is None:
             raise RuntimeError(
-                "parser.yaml is required for resource loading " "(parser.py-only extraction not yet supported)",
+                "Modem requires custom parser.py — " "parser.yaml alone insufficient for resource loading",
             )
 
         if modem_config.transport == "hnap":
@@ -234,7 +234,7 @@ def _run_pipeline(
             hnap_loader = HNAPLoader(
                 session=session,
                 base_url=base_url,
-                private_key=auth_result.hnap_private_key,
+                private_key=auth_result.auth_context.get("private_key", ""),
                 hmac_algorithm=hmac_algorithm,
                 timeout=modem_config.timeout,
             )
@@ -242,7 +242,7 @@ def _run_pipeline(
         else:
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config)
-            url_token = auth_result.url_token
+            url_token = auth_result.auth_context.get("url_token", "")
             token_prefix = ""
             if modem_config.session:
                 token_prefix = modem_config.session.token_prefix

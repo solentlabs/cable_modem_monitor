@@ -79,8 +79,9 @@ class HnapAuthManager(BaseAuthManager):
             password: Password credential.
 
         Returns:
-            ``AuthResult`` with ``hnap_private_key`` on success, or
-            error detail on failure (including lockout detection).
+            ``AuthResult`` with ``auth_context["private_key"]`` on
+            success, or error detail on failure (including lockout
+            detection).
         """
         url = f"{base_url.rstrip('/')}{HNAP_ENDPOINT}"
 
@@ -261,7 +262,7 @@ class HnapAuthManager(BaseAuthManager):
 
         return AuthResult(
             success=True,
-            hnap_private_key=private_key,
+            auth_context={"private_key": private_key},
         )
 
     def _hmac_hex(self, key: str, message: str) -> str:

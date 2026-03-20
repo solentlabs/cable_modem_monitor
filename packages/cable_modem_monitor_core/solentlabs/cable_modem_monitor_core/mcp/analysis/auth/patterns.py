@@ -49,3 +49,14 @@ def get_pbkdf2_salt_triggers() -> tuple[str, ...]:
     """Return PBKDF2 salt trigger patterns for POST body detection."""
     data = _load_patterns()
     return tuple(data["pbkdf2_salt_triggers"])  # type: ignore[arg-type]
+
+
+def get_session_cookie_indicators() -> frozenset[str]:
+    """Return session cookie name indicators (case-insensitive substrings).
+
+    Cookie names containing any of these substrings suggest an active
+    session. Used by Phase 2 (auth flow validation) and Phase 3
+    (session detection).
+    """
+    data = _load_patterns()
+    return frozenset(data["session_cookie_indicators"])  # type: ignore[call-overload, no-any-return]
