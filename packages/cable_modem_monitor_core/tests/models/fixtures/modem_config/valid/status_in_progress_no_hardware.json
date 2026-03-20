@@ -1,0 +1,8 @@
+{
+  "manufacturer": "Solent Labs",
+  "model": "T1",
+  "transport": "http",
+  "default_host": "192.168.100.1",
+  "auth": {"strategy": "none"},
+  "status": "in_progress"
+}

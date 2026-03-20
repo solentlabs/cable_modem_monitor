@@ -23,26 +23,21 @@ from ...validation.har_utils import (
     path_from_url,
 )
 from ..types import AuthDetail
-
-# ---------------------------------------------------------------------------
-# Login endpoint patterns (domain-specific)
-# ---------------------------------------------------------------------------
-
-_LOGIN_URL_PATTERNS: tuple[str, ...] = (
-    "/goform/login",
-    "/goform/Logon",
-    "/cgi-bin/adv_pwd_cgi",
-    "/cgi-bin/",
-    "/login",
-    "/api/v1/session",
+from .patterns import (
+    get_login_url_patterns,
+    get_nonce_error_prefix,
+    get_nonce_success_prefix,
+    get_pbkdf2_salt_triggers,
 )
 
-# Nonce-style response text prefixes (form_nonce detection)
-_NONCE_SUCCESS_PREFIX = "Url:"
-_NONCE_ERROR_PREFIX = "Error:"
+# ---------------------------------------------------------------------------
+# Auth patterns (loaded from auth_patterns.json)
+# ---------------------------------------------------------------------------
 
-# PBKDF2 salt trigger patterns in POST body
-_PBKDF2_SALT_TRIGGERS: tuple[str, ...] = ("seeksalthash",)
+_LOGIN_URL_PATTERNS: tuple[str, ...] = get_login_url_patterns()
+_NONCE_SUCCESS_PREFIX: str = get_nonce_success_prefix()
+_NONCE_ERROR_PREFIX: str = get_nonce_error_prefix()
+_PBKDF2_SALT_TRIGGERS: tuple[str, ...] = get_pbkdf2_salt_triggers()
 
 # Base64 pattern: login_<base64> or login%5f<base64> in URL
 _URL_TOKEN_PATTERN = re.compile(r"login[_\-%]", re.IGNORECASE)

@@ -24,6 +24,7 @@ from .table_analysis import (
     detect_row_start,
     detect_table_direction,
     detect_table_selector,
+    is_channel_table,
 )
 from .types import PageAnalysis
 
@@ -110,6 +111,11 @@ def _assemble_table_sections(
 ) -> None:
     """Assemble channel sections from HTML table pages."""
     for table in page.tables:
+        # Only consider tables that contain channel data — skip
+        # layout, navigation, and provisioning status tables.
+        if not is_channel_table(table):
+            continue
+
         direction = detect_table_direction(table)
         if direction == "unknown":
             warnings.append(

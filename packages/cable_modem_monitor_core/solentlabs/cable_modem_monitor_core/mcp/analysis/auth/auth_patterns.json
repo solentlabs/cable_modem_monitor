@@ -1,0 +1,17 @@
+{
+  "login_url_patterns": [
+    "/goform/login",
+    "/goform/logon",
+    "/cgi-bin/adv_pwd_cgi",
+    "/cgi-bin/",
+    "/login",
+    "/api/v1/session"
+  ],
+  "nonce_prefixes": {
+    "success": "Url:",
+    "error": "Error:"
+  },
+  "pbkdf2_salt_triggers": [
+    "seeksalthash"
+  ]
+}

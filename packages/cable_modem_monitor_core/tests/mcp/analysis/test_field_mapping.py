@@ -474,7 +474,7 @@ FIELD_TYPE_CASES = [
     ("unknown_field",    ["600.0 MHz"],        "frequency",   "MHz",        "MHz unit pattern"),
     ("unknown_field",    ["3.2 dBmV"],         "float",       "dBmV",       "dBmV unit pattern"),
     ("unknown_field",    ["38 dB"],            "float",       "dB",         "dB unit pattern"),
-    ("unknown_field",    ["10000000"],         "frequency",   "",           "large int no suffix"),
+    ("unknown_field",    ["10000000"],         "integer",     "",           "large int no suffix"),
     ("unknown_field",    ["42"],               "integer",     "",           "bare integer"),
     ("unknown_field",    ["3.14 units"],       "float",       "",           "bare float with text"),
     ("unknown_field",    ["hello"],            "string",      "",           "plain string"),

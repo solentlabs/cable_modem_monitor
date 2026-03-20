@@ -101,7 +101,14 @@ def _extract_rows(table: Tag) -> list[list[str]]:
 
         leaf_texts: list[str] = []
         for cell in cells:
-            leaf_texts.append(cell.get_text(strip=True))
+            text = cell.get_text(strip=True)
+            if not text:
+                # Fallback: i18n attributes contain semantic header labels
+                # when the visible text is injected by JavaScript at runtime.
+                i18n_key = cell.get("data-i18n", "")
+                if i18n_key:
+                    text = str(i18n_key)
+            leaf_texts.append(text)
 
         if any(t for t in leaf_texts):
             all_rows.append(leaf_texts)
@@ -124,11 +131,19 @@ def _extract_css_class(table: Tag) -> str:
 
 
 def _extract_title_row(table: Tag) -> str:
-    """Extract title row text from th with colspan."""
+    """Extract title row text from th with colspan.
+
+    Falls back to ``data-i18n`` attribute when visible text is empty
+    (common on i18n pages where JavaScript injects labels at runtime).
+    """
     for th in table.find_all("th"):
         colspan = th.get("colspan")
         if colspan:
             text = str(th.get_text(strip=True))
+            if not text:
+                i18n_key = th.get("data-i18n", "")
+                if i18n_key:
+                    text = str(i18n_key)
             if text:
                 return text
     return ""

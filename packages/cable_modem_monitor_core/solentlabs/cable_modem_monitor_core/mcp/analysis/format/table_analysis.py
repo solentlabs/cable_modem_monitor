@@ -26,13 +26,45 @@ CHANNEL_FIELD_LABELS: tuple[str, ...] = get_channel_field_labels()
 
 
 def is_channel_table(table: DetectedTable) -> bool:
-    """Check if a table contains channel data based on headers/labels."""
+    """Check if a table contains channel data based on headers/labels.
+
+    Three strategies:
+    1. Header text matches known channel field labels.
+    2. First column of data rows matches (transposed tables).
+    3. Data values contain modulation strings (i18n fallback for pages
+       where headers are injected by JavaScript at runtime).
+    """
     for header in table.headers:
         if header.lower().strip() in CHANNEL_FIELD_LABELS:
             return True
 
     # For transposed: check first column of data rows
-    return any(row and row[0].lower().strip() in CHANNEL_FIELD_LABELS for row in table.rows)
+    if any(row and row[0].lower().strip() in CHANNEL_FIELD_LABELS for row in table.rows):
+        return True
+
+    # Data-value fallback: modulation strings are distinctive to channel tables
+    return _has_modulation_values(table)
+
+
+# Modulation value patterns for data-based channel table detection.
+# These strings only appear in DOCSIS channel data — never in layout
+# or navigation tables.
+_MODULATION_TOKENS: frozenset[str] = frozenset({"qam", "ofdm", "ofdma", "atdma", "tdma", "scdma"})
+
+
+def _has_modulation_values(table: DetectedTable) -> bool:
+    """Check if data rows contain modulation strings.
+
+    Fallback for i18n pages where header text is empty and only
+    ``data-i18n`` keys are available. Modulation strings (QAM256,
+    OFDM, ATDMA, etc.) are unique to channel data tables.
+    """
+    for row in table.rows[:10]:
+        for cell in row:
+            lower = cell.lower().strip()
+            if any(token in lower for token in _MODULATION_TOKENS):
+                return True
+    return False
 
 
 def is_transposed(table: DetectedTable) -> bool:
@@ -58,10 +90,11 @@ def is_transposed(table: DetectedTable) -> bool:
 def detect_table_direction(table: DetectedTable) -> str:
     """Detect whether a table is downstream or upstream.
 
-    Three-strategy cascade:
+    Four-strategy cascade:
     1. Title row (th colspan) containing keyword
     2. Preceding heading/text containing keyword
     3. First cell in first row containing keyword
+    4. DOCSIS abbreviation prefixes in header text (``_ds_`` / ``_us_``)
 
     Returns "downstream", "upstream", or "unknown".
     """
@@ -89,6 +122,13 @@ def detect_table_direction(table: DetectedTable) -> str:
         if direction:
             return direction
 
+    # Strategy 4: DOCSIS abbreviation prefixes in any header
+    # Handles i18n keys like ``ds_link_ds_ch_id`` and ``ds_link_us_ch_id``
+    # where ``_ds_`` / ``_us_`` encode downstream/upstream.
+    direction = _keyword_match_header_prefix(table.headers)
+    if direction:
+        return direction
+
     return "unknown"
 
 
@@ -98,6 +138,36 @@ def _keyword_match(text: str) -> str:
     if "downstream" in lower:
         return "downstream"
     if "upstream" in lower:
+        return "upstream"
+    return ""
+
+
+def _keyword_match_header_prefix(headers: list[str]) -> str:
+    """Match downstream/upstream from DOCSIS abbreviation tokens.
+
+    Recognizes ``_ds_`` and ``_us_`` tokens embedded in header text —
+    standard DOCSIS abbreviations used in i18n keys
+    (e.g., ``ds_link_ds_ch_id`` vs ``ds_link_us_ch_id``).  Uses the
+    LAST occurrence of ``_ds_`` / ``_us_`` in each header to avoid
+    false positives from namespace prefixes (e.g., ``ds_link_``).
+    Requires majority consensus among headers.
+    """
+    ds_count = 0
+    us_count = 0
+    for header in headers:
+        lower = header.lower()
+        # Use rfind to match the last (most specific) token,
+        # ignoring namespace prefixes like ``ds_link_``.
+        ds_pos = lower.rfind("_ds_")
+        us_pos = lower.rfind("_us_")
+        if ds_pos > us_pos:
+            ds_count += 1
+        elif us_pos > ds_pos:
+            us_count += 1
+
+    if ds_count > us_count and ds_count > 0:
+        return "downstream"
+    if us_count > ds_count and us_count > 0:
         return "upstream"
     return ""
 
