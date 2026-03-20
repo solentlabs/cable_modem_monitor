@@ -1,7 +1,7 @@
 """Auth-aware HAR mock server for end-to-end testing.
 
 Re-exports from submodules for backwards compatibility.
-Implementation split across: routes.py, auth.py, server.py.
+Implementation split across: routes.py, auth.py, auth_hnap.py, server.py.
 
 See ONBOARDING_SPEC.md HAR Mock Server section.
 """
@@ -12,6 +12,7 @@ from .auth import (
     FormAuthHandler,
     create_auth_handler,
 )
+from .auth_hnap import HnapAuthHandler
 from .routes import RouteEntry, build_routes, normalize_path
 from .server import HARMockServer
 
@@ -20,6 +21,7 @@ __all__ = [
     "BasicAuthHandler",
     "FormAuthHandler",
     "HARMockServer",
+    "HnapAuthHandler",
     "RouteEntry",
     "build_routes",
     "create_auth_handler",

@@ -1,16 +1,43 @@
-"""Phase 5 - HNAP format detection (stub).
+"""Phase 5-6 — HNAP format detection and field mapping.
 
-This stub produces a hard stop when HNAP transport is detected.
-HNAP format detection is not yet implemented.
+Detects delimited string format, extracts response_keys, delimiters,
+and positional field mappings from HNAP SOAP JSON responses.
 
 Per docs/ONBOARDING_SPEC.md Phase 5 (HNAP transport).
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from ...validation.har_utils import HARD_STOP_PREFIX
+from ....har import merge_hnap_har_responses
+from ...validation.har_utils import WARNING_PREFIX
+
+# HNAP response keys that indicate downstream/upstream channel data.
+_DS_PATTERNS = re.compile(r"downstream|dschannel", re.IGNORECASE)
+_US_PATTERNS = re.compile(r"upstream|uschannel", re.IGNORECASE)
+
+# Common HNAP record delimiters in order of prevalence.
+_CANDIDATE_RECORD_DELIMITERS = ["|+|", "|-|", "||"]
+
+# HNAP channel type values that indicate technology types.
+_CHANNEL_TYPE_MAP_VALUES = {
+    "QAM256",
+    "QAM64",
+    "QAM16",
+    "OFDM",
+    "OFDM PLC",
+    "SC-QAM",
+    "ATDMA",
+    "OFDMA",
+}
+
+# Fields known to be numeric (for type inference from positional values).
+_FREQUENCY_PATTERN = re.compile(r"^\d{5,}$")
+_SMALL_FLOAT_PATTERN = re.compile(r"^-?\d+\.?\d*$")
+_INTEGER_PATTERN = re.compile(r"^\d+$")
+_LOCK_PATTERN = re.compile(r"^(Locked|Not Locked|Unlocked)$", re.IGNORECASE)
 
 
 def detect_hnap_sections(
@@ -18,9 +45,11 @@ def detect_hnap_sections(
     warnings: list[str],
     hard_stops: list[str],
 ) -> dict[str, Any]:
-    """Detect HNAP format and field mappings.
+    """Detect HNAP format and field mappings from HAR entries.
 
-    Currently a stub -- returns a hard stop.
+    Scans ``GetMultipleHNAPs`` response bodies for delimited string
+    data, detects record/field delimiters, infers positional field
+    mappings, and identifies system_info sources.
 
     Args:
         entries: HAR ``log.entries`` list.
@@ -28,11 +57,549 @@ def detect_hnap_sections(
         hard_stops: Mutable list to append hard stops to.
 
     Returns:
-        Empty dict (analysis cannot proceed).
+        Sections dict with downstream, upstream, and system_info keys.
     """
-    hard_stops.append(
-        f"{HARD_STOP_PREFIX} HNAP format detection is not yet implemented. "
-        "See ONBOARDING_SPEC.md Phase 5 (HNAP transport). "
-        "Phases 5-6 cannot proceed for HNAP modems."
+    hnap_responses = _collect_hnap_responses(entries)
+    if not hnap_responses:
+        warnings.append(
+            f"{WARNING_PREFIX} No GetMultipleHNAPs responses found in HAR. "
+            "Cannot detect HNAP format or field mappings.",
+        )
+        return {}
+
+    sections: dict[str, Any] = {}
+    system_info_sources: list[dict[str, Any]] = []
+
+    for response_key, response_data in hnap_responses.items():
+        if not isinstance(response_data, dict):
+            continue
+
+        # Find the data key that holds delimited channel strings
+        channel_result = _detect_channel_data(
+            response_key,
+            response_data,
+        )
+
+        if channel_result is not None:
+            direction = _direction_from_response_key(response_key)
+            if direction != "unknown" and direction not in sections:
+                sections[direction] = channel_result
+        else:
+            # No delimited data — potential system_info source
+            si_source = _detect_system_info_source(
+                response_key,
+                response_data,
+            )
+            if si_source is not None:
+                system_info_sources.append(si_source)
+
+    if system_info_sources:
+        sections["system_info"] = {
+            "sources": system_info_sources,
+        }
+
+    if not sections:
+        warnings.append(
+            f"{WARNING_PREFIX} HNAP responses found but no channel data "
+            "or system_info detected. Manual review required.",
+        )
+
+    return sections
+
+
+def _collect_hnap_responses(
+    entries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Extract all HNAP action responses from HAR entries.
+
+    Delegates to the shared ``merge_hnap_har_responses`` utility.
+    """
+    return merge_hnap_har_responses(entries)
+
+
+def _detect_channel_data(
+    response_key: str,
+    response_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Detect delimited channel data in an HNAP action response.
+
+    Looks for string values containing record delimiters. If found,
+    analyzes the delimited structure and builds a section config.
+
+    Returns section dict or None if no delimited data found.
+    """
+    for data_key, value in response_data.items():
+        if not isinstance(value, str) or len(value) < 10:
+            continue
+
+        # Detect record delimiter
+        record_delim = _detect_record_delimiter(value)
+        if record_delim is None:
+            continue
+
+        # Split into records
+        records = [r for r in value.split(record_delim) if r.strip()]
+        if len(records) < 2:
+            continue
+
+        # Detect field delimiter from first record
+        field_delim = _detect_field_delimiter(records[0])
+        if field_delim is None:
+            continue
+
+        # Parse sample records for field mapping (use all, up to 30)
+        sample_records = [r.split(field_delim) for r in records[:30]]
+
+        # Infer field mappings from positional values
+        mappings = _infer_field_mappings(sample_records)
+        if not mappings:
+            continue
+
+        section: dict[str, Any] = {
+            "format": "hnap",
+            "response_key": response_key,
+            "data_key": data_key,
+            "record_delimiter": record_delim,
+            "field_delimiter": field_delim,
+            "mappings": mappings,
+        }
+
+        # Detect channel type
+        channel_type = _detect_channel_type(sample_records, mappings)
+        if channel_type is not None:
+            section["channel_type"] = channel_type
+
+        # Detect filter (skip row counter = 0 placeholder channels)
+        filter_rule = _detect_filter(sample_records, mappings)
+        if filter_rule is not None:
+            section["filter"] = filter_rule
+
+        return section
+
+    return None
+
+
+def _detect_record_delimiter(value: str) -> str | None:
+    """Detect the record delimiter in a delimited string."""
+    for delim in _CANDIDATE_RECORD_DELIMITERS:
+        if delim in value:
+            parts = value.split(delim)
+            if len(parts) >= 2:
+                return delim
+    return None
+
+
+def _detect_field_delimiter(record: str) -> str | None:
+    """Detect the field delimiter within a single record."""
+    # Caret is the standard HNAP field delimiter
+    if "^" in record:
+        parts = record.split("^")
+        if len(parts) >= 3:
+            return "^"
+    # Comma fallback
+    if "," in record:
+        parts = record.split(",")
+        if len(parts) >= 3:
+            return ","
+    return None
+
+
+def _infer_field_mappings(
+    sample_records: list[list[str]],
+) -> list[dict[str, Any]]:
+    """Infer field names and types from sample record values.
+
+    Two-pass approach:
+    1. Identify definitive fields (row counter, lock_status, channel_type,
+       frequency/large integers). Row counters are skipped entirely.
+    2. Assign remaining numeric fields by DOCSIS convention — first
+       unassigned small integer becomes channel_id, then power/SNR by
+       value range, then corrected/uncorrected for remaining integers.
+    """
+    if not sample_records:
+        return []
+
+    field_count = len(sample_records[0])
+
+    # Collect samples per position
+    position_samples = _collect_position_samples(sample_records, field_count)
+
+    # Pass 1 + 1.5: Identify definitive fields, skip positions, resolve large ints
+    skip_indices, definitive = _run_pass1(position_samples)
+
+    # Pass 2: Assign remaining numeric fields by DOCSIS convention
+    assigned_fields = {m["field"] for m in definitive.values()}
+    pass2_state = _Pass2State(
+        channel_id_assigned="channel_id" in assigned_fields,
+        frequency_assigned="frequency" in assigned_fields,
     )
-    return {}
+
+    mappings: list[dict[str, Any]] = []
+    for idx in range(field_count):
+        if idx in skip_indices:
+            continue
+        if idx in definitive:
+            mappings.append(definitive[idx])
+            continue
+
+        samples = position_samples[idx]
+        if not samples or all(s == "" for s in samples):
+            continue
+
+        mapping = _assign_pass2_field(idx, samples, pass2_state)
+        if mapping is not None:
+            mappings.append(mapping)
+
+    return mappings
+
+
+def _collect_position_samples(
+    sample_records: list[list[str]],
+    field_count: int,
+) -> list[list[str]]:
+    """Collect non-empty stripped samples for each field position."""
+    position_samples: list[list[str]] = []
+    for idx in range(field_count):
+        samples = [r[idx].strip() for r in sample_records if idx < len(r) and r[idx].strip()]
+        position_samples.append(samples)
+    return position_samples
+
+
+def _run_pass1(
+    position_samples: list[list[str]],
+) -> tuple[set[int], dict[int, dict[str, Any]]]:
+    """Pass 1: identify definitive fields and skip positions.
+
+    Also runs pass 1.5 to resolve provisional ``_large_int`` fields.
+
+    Returns:
+        Tuple of (skip_indices, definitive_mappings).
+    """
+    skip_indices: set[int] = set()
+    definitive: dict[int, dict[str, Any]] = {}
+    pass1_fields: set[str] = set()
+
+    for idx, samples in enumerate(position_samples):
+        if not samples or all(s == "" for s in samples):
+            skip_indices.add(idx)
+            continue
+        if _is_row_counter(samples):
+            skip_indices.add(idx)
+            continue
+        result = _classify_definitive(idx, samples, pass1_fields)
+        if result is not None:
+            definitive[idx] = result
+            pass1_fields.add(result["field"])
+
+    # Pass 1.5: Resolve provisional _large_int fields
+    _resolve_large_integers(definitive)
+    return skip_indices, definitive
+
+
+class _Pass2State:
+    """Mutable state for pass 2 numeric field assignment."""
+
+    # Remaining numeric fields in standard DOCSIS order.
+    _REMAINING_FIELDS = ["power", "snr", "corrected", "uncorrected"]
+
+    def __init__(self, channel_id_assigned: bool, frequency_assigned: bool) -> None:
+        self.channel_id_assigned = channel_id_assigned
+        self.frequency_assigned = frequency_assigned
+        self.remaining_idx = 0
+
+    def next_remaining_field(self) -> tuple[str, str] | None:
+        """Return (field_name, field_type) for the next standard field, or None."""
+        if self.remaining_idx >= len(self._REMAINING_FIELDS):
+            return None
+        name = self._REMAINING_FIELDS[self.remaining_idx]
+        ftype = "float" if name in ("power", "snr") else "int"
+        return name, ftype
+
+    def advance_remaining(self, field_name: str) -> None:
+        """Advance remaining index past the assigned field."""
+        if field_name in self._REMAINING_FIELDS:
+            self.remaining_idx = self._REMAINING_FIELDS.index(field_name) + 1
+
+
+def _assign_pass2_field(
+    idx: int,
+    samples: list[str],
+    state: _Pass2State,
+) -> dict[str, Any] | None:
+    """Assign a single position in pass 2.
+
+    Returns a mapping dict or None if the position is empty.
+    Updates ``state`` when a field is assigned.
+    """
+    if not all(_SMALL_FLOAT_PATTERN.match(s) for s in samples):
+        return {"field": f"field_{idx}", "type": "string", "index": idx}
+
+    result = _classify_remaining_numeric(
+        idx,
+        samples,
+        state.channel_id_assigned,
+        state.frequency_assigned,
+        state,
+    )
+    if result is not None:
+        if result["field"] == "channel_id":
+            state.channel_id_assigned = True
+        else:
+            state.advance_remaining(result["field"])
+    return result
+
+
+def _resolve_large_integers(
+    definitive: dict[int, dict[str, Any]],
+) -> None:
+    """Resolve provisional ``_large_int`` fields to frequency or symbol_rate.
+
+    When only one large-integer position exists, it is ``frequency``.
+    When two exist, the one with larger max values is ``frequency``
+    and the smaller is ``symbol_rate`` (DOCSIS upstream convention:
+    frequencies are typically higher than symbol rates/channel widths).
+    """
+    large_int_indices = [idx for idx, m in definitive.items() if m["field"] == "_large_int"]
+
+    if len(large_int_indices) == 1:
+        definitive[large_int_indices[0]]["field"] = "frequency"
+        definitive[large_int_indices[0]].pop("_max_val", None)
+    elif len(large_int_indices) >= 2:
+        # Sort by max value — larger = frequency, smaller = symbol_rate
+        sorted_indices = sorted(
+            large_int_indices,
+            key=lambda i: definitive[i].get("_max_val", 0),
+        )
+        for idx in sorted_indices[:-1]:
+            definitive[idx]["field"] = "symbol_rate"
+            definitive[idx].pop("_max_val", None)
+        definitive[sorted_indices[-1]]["field"] = "frequency"
+        definitive[sorted_indices[-1]].pop("_max_val", None)
+
+
+def _classify_definitive(
+    index: int,
+    samples: list[str],
+    assigned_fields: set[str],
+) -> dict[str, Any] | None:
+    """Pass 1: classify fields with unambiguous signal patterns.
+
+    Returns a mapping dict for: lock_status, channel_type,
+    frequency, symbol_rate (large integers). Returns None if the
+    field cannot be definitively classified.
+
+    Uses ``assigned_fields`` to avoid duplicate assignment — e.g.,
+    if ``frequency`` is already assigned, the next large-integer
+    position becomes ``symbol_rate`` instead.
+    """
+    # Lock status
+    if all(_LOCK_PATTERN.match(s) for s in samples):
+        return {"field": "lock_status", "type": "string", "index": index}
+
+    # Channel type (non-numeric strings matching known types)
+    if any(s in _CHANNEL_TYPE_MAP_VALUES for s in samples):
+        return {"field": "channel_type", "type": "string", "index": index}
+
+    # Large integers (>= 100k): frequency or symbol_rate.
+    # Deferred to pass 1.5 (_resolve_large_integers) when multiple
+    # large-integer positions exist. Return a provisional classification.
+    if all(_FREQUENCY_PATTERN.match(s) for s in samples):
+        max_val = max(int(s) for s in samples)
+        if max_val >= 100_000:
+            # Provisional: mark as large integer for resolution later
+            return {
+                "field": "_large_int",
+                "type": "frequency",
+                "index": index,
+                "_max_val": max_val,
+            }
+
+    return None
+
+
+def _classify_remaining_numeric(
+    index: int,
+    samples: list[str],
+    channel_id_assigned: bool,
+    frequency_assigned: bool,
+    state: _Pass2State,
+) -> dict[str, Any] | None:
+    """Pass 2: classify remaining numeric fields by DOCSIS convention.
+
+    Assignment order: channel_id (first unassigned small non-sequential
+    integer), then remaining fields in standard DOCSIS order
+    (power, snr, corrected, uncorrected).
+    """
+    values = [float(s) for s in samples]
+    max_val = max(values)
+    all_int = all(_INTEGER_PATTERN.match(s) for s in samples)
+
+    # First unassigned small integer with non-zero, non-sequential → channel_id
+    if not channel_id_assigned and all_int:
+        int_vals = [int(s) for s in samples]
+        if not _is_sequential_from_one(int_vals) and max(int_vals) < 1000 and any(v > 0 for v in int_vals):
+            return {"field": "channel_id", "type": "int", "index": index}
+
+    # Float values with decimals → power
+    if any("." in s for s in samples):
+        return {"field": "power", "type": "float", "index": index}
+
+    # Large values that aren't frequency → only symbol_rate if frequency
+    # is NOT yet assigned (both are large, first = symbol_rate, second = frequency).
+    # If frequency IS assigned, large values are likely corrected codewords.
+    if max_val >= 100_000 and not frequency_assigned:
+        return {"field": "symbol_rate", "type": "frequency", "index": index}
+
+    # Assign from remaining standard field order
+    next_field = state.next_remaining_field()
+    if next_field is not None:
+        field_name, field_type = next_field
+        return {"field": field_name, "type": field_type, "index": index}
+
+    return {"field": f"field_{index}", "type": "int", "index": index}
+
+
+def _detect_channel_type(
+    sample_records: list[list[str]],
+    mappings: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Detect channel type configuration from sample data.
+
+    If a field maps to ``channel_type`` and has multiple distinct
+    values, returns a ``map`` config for channel type detection.
+    """
+    ct_mapping = None
+    for m in mappings:
+        if m["field"] == "channel_type":
+            ct_mapping = m
+            break
+
+    if ct_mapping is None:
+        return None
+
+    idx = ct_mapping["index"]
+    type_values = set()
+    for record in sample_records:
+        if idx < len(record) and record[idx].strip():
+            type_values.add(record[idx].strip())
+
+    if len(type_values) <= 1:
+        return {"fixed": list(type_values)[0] if type_values else "unknown"}
+
+    # Build map from observed values
+    type_map: dict[str, str] = {}
+    for val in sorted(type_values):
+        normalized = _normalize_channel_type(val)
+        type_map[val] = normalized
+
+    return {"source": "field", "index": idx, "map": type_map}
+
+
+def _normalize_channel_type(value: str) -> str:
+    """Normalize a channel type string to the canonical form."""
+    lower = value.lower().strip()
+    if "ofdma" in lower:
+        return "ofdma"
+    if "ofdm" in lower:
+        return "ofdm"
+    if "atdma" in lower:
+        return "atdma"
+    if lower in ("sc-qam", "qam256", "qam64", "qam16"):
+        return "qam"
+    return lower
+
+
+def _detect_filter(
+    sample_records: list[list[str]],
+    mappings: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Detect filter rules for placeholder channels.
+
+    HNAP modems sometimes include placeholder channels with
+    channel_id = 0 or frequency = 0. Detect and return a filter rule.
+    """
+    for m in mappings:
+        if m["field"] == "channel_id":
+            idx = m["index"]
+            for record in sample_records:
+                if idx < len(record) and record[idx].strip() == "0":
+                    return {"channel_id": {"not": 0}}
+            break
+    return None
+
+
+def _detect_system_info_source(
+    response_key: str,
+    response_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Detect system_info fields in an HNAP action response.
+
+    Looks for flat key-value responses with string values that
+    contain useful system information (firmware, model, uptime).
+    """
+    field_mappings: dict[str, str] = {}
+
+    for key, value in response_data.items():
+        if not isinstance(value, str) or not value:
+            continue
+
+        canonical = _map_system_info_key(key)
+        if canonical is not None:
+            field_mappings[key] = canonical
+
+    if not field_mappings:
+        return None
+
+    return {
+        "format": "hnap",
+        "response_key": response_key,
+        "fields": field_mappings,
+    }
+
+
+def _map_system_info_key(key: str) -> str | None:
+    """Map an HNAP response key to a canonical system_info field name."""
+    lower = key.lower()
+
+    if "firmwareversion" in lower or "softwareversion" in lower:
+        return "firmware_version"
+    if "modelname" in lower or "softwaremodelname" in lower:
+        return "model_name"
+    if "systemuptime" in lower or "uptime" in lower:
+        return "system_uptime"
+    if "networkaccess" in lower:
+        return "network_access"
+    if "macaddress" in lower:
+        return "mac_address"
+    if "serialnumber" in lower:
+        return "serial_number"
+    if "systemtime" in lower or "cursystemtime" in lower:
+        return "system_time"
+    if "internetconnection" in lower:
+        return "internet_connection"
+
+    return None
+
+
+def _direction_from_response_key(response_key: str) -> str:
+    """Infer downstream/upstream from the HNAP response key name."""
+    if _DS_PATTERNS.search(response_key):
+        return "downstream"
+    if _US_PATTERNS.search(response_key):
+        return "upstream"
+    return "unknown"
+
+
+def _is_row_counter(samples: list[str]) -> bool:
+    """Check if samples represent a sequential row counter (1, 2, 3, ...)."""
+    if not all(_INTEGER_PATTERN.match(s) for s in samples):
+        return False
+    values = [int(s) for s in samples]
+    return _is_sequential_from_one(values)
+
+
+def _is_sequential_from_one(values: list[int]) -> bool:
+    """Check if integer values are sequential starting from 1."""
+    if not values or values[0] != 1:
+        return False
+    return values == list(range(1, len(values) + 1))

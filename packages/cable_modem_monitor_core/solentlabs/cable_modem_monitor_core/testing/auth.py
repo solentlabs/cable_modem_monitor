@@ -2,6 +2,9 @@
 
 Validate login requests and track session state. No modem-specific
 logic — behavior is parameterized by config values.
+
+HNAP handler lives in ``auth_hnap.py`` (separate domain: HMAC crypto,
+JSON SOAP protocol, HAR response merging).
 """
 
 from __future__ import annotations
@@ -42,6 +45,21 @@ class AuthHandler:
     def set_authenticated(self) -> dict[str, str]:
         """Mark session as authenticated. Returns headers to add to response."""
         return {}
+
+    def get_route_override(
+        self,
+        method: str,
+        path: str,
+        body: bytes,
+        headers: dict[str, str],
+    ) -> RouteEntry | None:
+        """Override the route table for this request.
+
+        Returns a ``RouteEntry`` to bypass the route table, or ``None``
+        to use the standard route table lookup. Used by HNAP to serve
+        merged data responses from a single endpoint.
+        """
+        return None
 
 
 class FormAuthHandler(AuthHandler):
@@ -122,6 +140,7 @@ class BasicAuthHandler(AuthHandler):
 
 def create_auth_handler(
     modem_config: dict[str, Any] | None,
+    har_entries: list[dict[str, Any]] | None = None,
 ) -> AuthHandler:
     """Create the appropriate auth handler from modem config.
 
@@ -129,6 +148,9 @@ def create_auth_handler(
         modem_config: Modem config dict (or None for no auth). Uses
             ``auth.strategy`` to select the handler and
             ``session.cookie_name`` for session tracking.
+        har_entries: HAR ``log.entries`` list. Required for HNAP auth
+            to build the merged data response. Ignored for other
+            strategies.
 
     Returns:
         Auth handler instance.
@@ -163,6 +185,19 @@ def create_auth_handler(
             )
 
         return FormAuthHandler(login_path=login_path, cookie_name=cookie_name)
+
+    if strategy == "hnap":
+        from .auth_hnap import HnapAuthHandler
+
+        hmac_algorithm = "md5"
+        if isinstance(auth, dict):
+            hmac_algorithm = auth.get("hmac_algorithm", "md5")
+        else:
+            hmac_algorithm = getattr(auth, "hmac_algorithm", "md5")
+        return HnapAuthHandler(
+            hmac_algorithm=hmac_algorithm,
+            har_entries=har_entries or [],
+        )
 
     _logger.warning("Unsupported auth strategy '%s' in mock server, using no-auth", strategy)
     return AuthHandler()

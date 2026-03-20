@@ -1,20 +1,20 @@
 {
-  "_description": "HNAP transport produces hard stop (not yet implemented)",
+  "_description": "HNAP transport with no channel data produces warning",
   "_transport": "hnap",
   "_entries": [
     {
       "request": {
         "method": "POST",
         "url": "http://192.168.100.1/HNAP1/",
-        "headers": [{"name": "SOAPAction", "value": "GetStatus"}]
+        "headers": [{"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""}]
       },
       "response": {
         "status": 200,
         "headers": [],
-        "content": {"size": 10, "text": "{}"}
+        "content": {"size": 10, "text": "{\"GetMultipleHNAPsResponse\": {\"GetMultipleHNAPsResult\": \"OK\"}}"}
       }
     }
   ],
   "_expected_sections": {},
-  "_expected_hard_stop": "HNAP format detection is not yet implemented"
+  "_expected_warning": "No GetMultipleHNAPs responses found"
 }

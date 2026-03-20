@@ -1,0 +1,59 @@
+manufacturer: Arris
+model: S33
+model_aliases:
+  - S33v2
+brands:
+  - Surfboard
+transport: hnap
+default_host: 192.168.100.1
+
+auth:
+  strategy: hnap
+  hmac_algorithm: md5
+
+actions:
+  restart:
+    type: hnap
+    action_name: SetArrisConfigurationInfo
+    pre_fetch_action: GetArrisConfigurationInfo
+    params:
+      Action: reboot
+    response_key: SetArrisConfigurationInfoResponse
+    result_key: SetArrisConfigurationInfoResult
+    success_value: OK
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+
+status: in_progress
+sources:
+  auth_config: HAR capture (#117)
+  chipset: FCC filing
+attribution:
+  contributors:
+    - github: mmiller7
+      contribution: S33v2 HAR capture
+isps: []
+notes: |
+  S33 and S33v2 use MD5 HMAC for HNAP authentication.
+  S33v3 uses SHA256 and is a separate variant (uses S34 parser).
+  Anti-brute-force: LOCKUP (temp lock) and REBOOT (forced restart)
+  after repeated failed login attempts.
+references:
+  issues:
+    - 32
+    - 87
+    - 117

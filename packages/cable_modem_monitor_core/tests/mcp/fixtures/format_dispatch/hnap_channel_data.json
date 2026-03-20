@@ -1,0 +1,24 @@
+{
+  "_description": "HNAP transport with downstream channel data detected",
+  "_transport": "hnap",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [{"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 500,
+          "mimeType": "application/json",
+          "text": "{\"GetMultipleHNAPsResponse\": {\"GetStatusDownstreamResponse\": {\"DownstreamData\": \"1^Locked^QAM256^1^567000000^3^41^0^0^|+|2^Locked^QAM256^2^573000000^3^41^0^0^|+|3^Locked^QAM256^3^579000000^2^41^0^0^\"}, \"GetMultipleHNAPsResult\": \"OK\"}}"
+        }
+      }
+    }
+  ],
+  "_expected_direction": "downstream",
+  "_expected_format": "hnap"
+}

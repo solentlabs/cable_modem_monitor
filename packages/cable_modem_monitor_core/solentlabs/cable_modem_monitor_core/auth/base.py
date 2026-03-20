@@ -23,6 +23,9 @@ class AuthResult:
         error: Error message on failure.
         url_token: Server-issued token for URL-token auth. Empty for
             other strategies.
+        hnap_private_key: HMAC-derived signing key for HNAP transport.
+            Empty for non-HNAP strategies. Used by the HNAP loader to
+            sign ``GetMultipleHNAPs`` requests with ``HNAP_AUTH`` headers.
         response: Login response object. Used for auth response reuse
             — the loader skips re-fetching if the login response landed
             on a data page.
@@ -33,6 +36,7 @@ class AuthResult:
     success: bool
     error: str = ""
     url_token: str = ""
+    hnap_private_key: str = ""
     response: requests.Response | None = None
     response_url: str = ""
 

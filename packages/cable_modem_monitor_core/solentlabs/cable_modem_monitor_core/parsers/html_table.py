@@ -18,10 +18,10 @@ from ..models.parser_config.common import (
     ChannelTypeFixed,
     ChannelTypeMap,
     ColumnMapping,
-    FilterValue,
 )
 from ..models.parser_config.table import TableDefinition
 from .base import BaseParser
+from .filter import passes_filter
 from .table_selector import find_table
 from .type_conversion import convert_value
 
@@ -78,7 +78,7 @@ class HTMLTableParser(BaseParser):
 
             _apply_channel_type(channel, self._table.channel_type, cells)
 
-            if not _passes_filter(channel, self._table.filter):
+            if not passes_filter(channel, self._table.filter):
                 continue
 
             channels.append(channel)
@@ -151,32 +151,3 @@ def _apply_channel_type(
                 raw_value,
                 list(ct_map.map.keys()),
             )
-
-
-def _passes_filter(
-    channel: dict[str, Any],
-    filter_rules: dict[str, FilterValue],
-) -> bool:
-    """Check if a channel passes all filter rules.
-
-    Filters apply after type conversion. A channel that fails any
-    filter condition is excluded.
-
-    Rules:
-    - ``str`` value: keep if ``channel[field] == value``
-    - ``dict`` with ``"not"`` key: keep if ``channel[field] != value``
-    """
-    for field, rule in filter_rules.items():
-        actual = channel.get(field)
-
-        if isinstance(rule, dict):
-            # {"not": value} — exclude if equal
-            not_value = rule.get("not")
-            if actual == not_value:
-                return False
-        else:
-            # Equality — keep only if equal
-            if actual != rule:
-                return False
-
-    return True

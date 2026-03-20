@@ -1,0 +1,73 @@
+{
+  "_description": "HAR entries for an HNAP modem with login + data responses",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/Login\""},
+          {"name": "HNAP_AUTH", "value": "MOCK_AUTH_HASH 1234567890"},
+          {"name": "Content-Type", "value": "application/json; charset=utf-8"}
+        ],
+        "postData": {"text": "{\"Login\":{\"Action\":\"request\",\"Username\":\"admin\"}}"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json; charset=utf-8"}],
+        "content": {"text": "{\"LoginResponse\":{\"Challenge\":\"OriginalChallenge\",\"Cookie\":\"OrigCookie\",\"PublicKey\":\"OrigPublicKey\",\"LoginResult\":\"OK\"}}"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {"name": "SOAPAction", "value": "\"http://purenetworks.com/HNAP1/Login\""},
+          {"name": "HNAP_AUTH", "value": "MOCK_LOGIN_HASH 1234567891"},
+          {"name": "Content-Type", "value": "application/json; charset=utf-8"}
+        ],
+        "postData": {"text": "{\"Login\":{\"Action\":\"login\",\"Username\":\"admin\",\"LoginPassword\":\"COMPUTED\"}}"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json; charset=utf-8"}],
+        "content": {"text": "{\"LoginResponse\":{\"LoginResult\":\"OK\"}}"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""},
+          {"name": "HNAP_AUTH", "value": "MOCK_DATA_HASH 1234567892"},
+          {"name": "Content-Type", "value": "application/json; charset=utf-8"}
+        ],
+        "postData": {"text": "{\"GetMultipleHNAPs\":{\"GetStatusDownstream\":\"\",\"GetStatusUpstream\":\"\"}}"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json; charset=utf-8"}],
+        "content": {"text": "{\"GetMultipleHNAPsResponse\":{\"GetStatusDownstreamResponse\":{\"DownstreamData\":\"1^Locked^QAM256^1^567000000^3^41^0^0^\"},\"GetStatusUpstreamResponse\":{\"UpstreamData\":\"1^Locked^SC-QAM^1^6400000^38400000^47.0^\"},\"GetMultipleHNAPsResult\":\"OK\"}}"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [
+          {"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""},
+          {"name": "HNAP_AUTH", "value": "MOCK_DATA_HASH2 1234567893"},
+          {"name": "Content-Type", "value": "application/json; charset=utf-8"}
+        ],
+        "postData": {"text": "{\"GetMultipleHNAPs\":{\"GetDeviceStatus\":\"\"}}"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json; charset=utf-8"}],
+        "content": {"text": "{\"GetMultipleHNAPsResponse\":{\"GetDeviceStatusResponse\":{\"FirmwareVersion\":\"1.0.0\",\"ModelName\":\"T100\"},\"GetMultipleHNAPsResult\":\"OK\"}}"}
+      }
+    }
+  ]
+}

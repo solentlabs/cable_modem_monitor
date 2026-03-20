@@ -5,10 +5,10 @@ them, chains parser.py post-processing, and assembles ModemData.
 
 See PARSING_SPEC.md ModemParserCoordinator section.
 
-Format coverage: currently dispatches HTMLTableSection (channels) and
-HTMLFieldsSource (system_info). Other formats (JSEmbedded, HNAP, JSON,
-Transposed, XML) log a warning and fall through to the post-processor
-hook. They will be wired as modems in the catalog require them.
+Format coverage: dispatches HTMLTableSection and HNAPSection (channels),
+HTMLFieldsSource and HNAPSystemInfoSource (system_info). Other formats
+(JSEmbedded, JSON, Transposed, XML) log a warning and fall through to
+the post-processor hook.
 """
 
 from __future__ import annotations
@@ -17,8 +17,11 @@ import logging
 from typing import Any, TypeVar
 
 from ..models.parser_config.config import ParserConfig
-from ..models.parser_config.system_info import HTMLFieldsSource
+from ..models.parser_config.hnap import HNAPSection
+from ..models.parser_config.system_info import HNAPSystemInfoSource, HTMLFieldsSource
 from ..models.parser_config.table import HTMLTableSection
+from .hnap import HNAPParser
+from .hnap_fields import HNAPFieldsParser
 from .html_fields import HTMLFieldsParser
 from .html_table import HTMLTableParser
 
@@ -94,6 +97,13 @@ class ModemParserCoordinator:
         if section is None:
             return self._apply_hook(section_name, [], resources)
 
+        if isinstance(section, HNAPSection):
+            hnap_parser = HNAPParser(section)
+            channels = hnap_parser.parse(resources)
+            if not isinstance(channels, list):
+                channels = []
+            return self._apply_hook(section_name, channels, resources)
+
         if not isinstance(section, HTMLTableSection):
             _logger.warning(
                 "%s: format '%s' not yet supported by coordinator",
@@ -136,8 +146,13 @@ class ModemParserCoordinator:
         merged: dict[str, Any] = {}
         for source in section.sources:
             if isinstance(source, HTMLFieldsSource):
-                parser = HTMLFieldsParser(source)
-                result = parser.parse(resources)
+                html_si = HTMLFieldsParser(source)
+                result = html_si.parse(resources)
+                if isinstance(result, dict):
+                    merged.update(result)
+            elif isinstance(source, HNAPSystemInfoSource):
+                hnap_si = HNAPFieldsParser(source)
+                result = hnap_si.parse(resources)
                 if isinstance(result, dict):
                     merged.update(result)
             else:

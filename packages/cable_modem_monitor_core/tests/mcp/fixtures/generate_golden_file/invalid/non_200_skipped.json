@@ -14,5 +14,5 @@
       ]
     }
   },
-  "_expected_error_contains": "No HTML resources"
+  "_expected_error_contains": "No resources found in HAR"
 }

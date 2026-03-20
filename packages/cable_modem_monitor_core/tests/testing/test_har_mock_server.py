@@ -1,11 +1,10 @@
-"""Tests for HAR mock server.
+"""Tests for HAR mock server — routes, HTTP auth handlers, and server.
 
-Tests cover all three layers: route building, auth handlers, and
-HTTP server integration. No modem-specific references.
+Route builder, normalize_path, auth factory, HTTP handler behavioral
+tests, and HTTP server integration. No modem-specific references.
 
-- Route builder: fixture-driven from JSON HAR entries
-- Auth handlers: table-driven for strategy selection
-- Server integration: fixture-driven HAR + config
+HNAP auth handler and HNAP server integration tests live in
+``test_har_mock_server_hnap.py``.
 """
 
 from __future__ import annotations
@@ -21,6 +20,9 @@ from solentlabs.cable_modem_monitor_core.testing.auth import (
     BasicAuthHandler,
     FormAuthHandler,
     create_auth_handler,
+)
+from solentlabs.cable_modem_monitor_core.testing.auth_hnap import (
+    HnapAuthHandler,
 )
 from solentlabs.cable_modem_monitor_core.testing.routes import (
     build_routes,
@@ -157,6 +159,12 @@ AUTH_FACTORY_CASES = [
         FormAuthHandler,
         None,
         "form no session",
+    ),
+    (
+        {"auth": {"strategy": "hnap", "hmac_algorithm": "md5"}},
+        HnapAuthHandler,
+        None,
+        "hnap auth",
     ),
 ]
 

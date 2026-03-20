@@ -9,20 +9,12 @@ See ONBOARDING_SPEC.md generate_golden_file section.
 
 from __future__ import annotations
 
-import base64
-import json
-import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
-
-from bs4 import BeautifulSoup
 
 from ..config_loader import validate_parser_config
+from ..har import build_resource_dict
 from ..parsers.coordinator import ModemParserCoordinator
-
-_logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -79,7 +71,7 @@ def generate_golden_file(
         )
 
     if not resources:
-        errors.append("No HTML resources found in HAR")
+        errors.append("No resources found in HAR")
 
     # Extract via coordinator (single extraction path)
     coordinator = ModemParserCoordinator(parser_config)
@@ -116,65 +108,3 @@ def _load_parser_yaml(content: str) -> Any:
     if not isinstance(data, dict):
         raise ValueError("parser.yaml must be a YAML mapping")
     return validate_parser_config(data)
-
-
-def build_resource_dict(har_path: str) -> dict[str, BeautifulSoup]:
-    """Build resource dict from HAR response bodies.
-
-    Extracts HTML response bodies from the HAR, keyed by URL path.
-    For duplicate paths, last successful (200) response wins.
-
-    Args:
-        har_path: Path to the HAR file.
-
-    Returns:
-        Dict mapping URL paths to BeautifulSoup objects.
-    """
-    path = Path(har_path)
-    har_data = json.loads(path.read_text(encoding="utf-8"))
-
-    entries = har_data.get("log", {}).get("entries", [])
-    resources: dict[str, BeautifulSoup] = {}
-
-    for entry in entries:
-        request = entry.get("request", {})
-        response = entry.get("response", {})
-
-        status = response.get("status", 0)
-        if status != 200:
-            continue
-
-        url = request.get("url", "")
-        url_path = urlparse(url).path
-        if not url_path:
-            continue
-
-        content = response.get("content", {})
-        text = content.get("text", "")
-        if not text:
-            continue
-
-        # Decode base64 if needed
-        encoding = content.get("encoding", "")
-        if encoding == "base64":
-            try:
-                text = base64.b64decode(text).decode("utf-8", errors="replace")
-            except Exception:
-                _logger.debug("Failed to base64-decode response for %s", url_path)
-                continue
-
-        mime_type = content.get("mimeType", "")
-        if _is_html_content(mime_type, text):
-            resources[url_path] = BeautifulSoup(text, "html.parser")
-
-    return resources
-
-
-def _is_html_content(mime_type: str, text: str) -> bool:
-    """Check if content is HTML based on MIME type or content sniffing."""
-    mime_lower = mime_type.lower()
-    if "html" in mime_lower or "text/plain" in mime_lower:
-        return True
-    # Content sniffing fallback — look for HTML markers
-    text_start = text[:500].strip().lower()
-    return text_start.startswith(("<!doctype", "<html", "<table", "<head"))

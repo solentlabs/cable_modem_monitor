@@ -47,9 +47,18 @@ class _MockHandler(BaseHTTPRequestHandler):
 
         auth = server.auth_handler
 
-        # Login request — handle auth and serve route response
+        # Login request — handle auth and serve response
         if auth.is_login_request(method, path):
-            auth.handle_login(method, path, body, headers)
+            login_response = auth.handle_login(method, path, body, headers)
+            if login_response is not None:
+                # Auth handler provides its own response (HNAP login phases)
+                self._send_response(
+                    login_response.status,
+                    login_response.headers,
+                    login_response.body,
+                )
+                return
+            # Fall through to route table (form auth)
             route = server.routes.get((method, path))
             if route is None:
                 self._send_response(404, [], "Not Found")
@@ -64,6 +73,12 @@ class _MockHandler(BaseHTTPRequestHandler):
         # Non-login request — check auth
         if not auth.is_authenticated(headers):
             self._send_response(401, [], "Unauthorized")
+            return
+
+        # Auth handler route override (HNAP merged data response)
+        override = auth.get_route_override(method, path, body, headers)
+        if override is not None:
+            self._send_response(override.status, override.headers, override.body)
             return
 
         # Serve from route table
@@ -119,7 +134,7 @@ class HARMockServer(HTTPServer):
         modem_config: dict[str, Any] | None = None,
     ) -> None:
         self.routes = build_routes(har_entries)
-        self.auth_handler = create_auth_handler(modem_config)
+        self.auth_handler = create_auth_handler(modem_config, har_entries)
         self._thread: threading.Thread | None = None
 
         super().__init__(("127.0.0.1", 0), _MockHandler)

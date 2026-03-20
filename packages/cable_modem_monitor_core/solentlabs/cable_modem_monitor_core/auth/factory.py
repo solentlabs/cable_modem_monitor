@@ -64,7 +64,7 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
         return UrlTokenAuthManager(auth, config.session)
 
     if isinstance(auth, HnapAuth):
-        return HnapAuthManager()
+        return HnapAuthManager(auth)
 
     if isinstance(auth, FormPbkdf2Auth):
         return FormPbkdf2AuthManager(auth, config.session)

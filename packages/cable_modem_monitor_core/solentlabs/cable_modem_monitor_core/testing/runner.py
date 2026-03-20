@@ -26,6 +26,7 @@ from ..auth.base import AuthResult
 from ..auth.factory import create_auth_manager
 from ..config_loader import load_modem_config, load_parser_config
 from ..loaders.fetch_list import collect_fetch_targets
+from ..loaders.hnap import HNAPLoader
 from ..loaders.http import HTTPResourceLoader
 from ..parsers.coordinator import ModemParserCoordinator
 from .discovery import ModemTestCase
@@ -225,20 +226,35 @@ def _run_pipeline(
                 "parser.yaml is required for resource loading " "(parser.py-only extraction not yet supported)",
             )
 
-        targets = collect_fetch_targets(parser_config)
-        url_token = auth_result.url_token
-        token_prefix = ""
-        if modem_config.session:
-            token_prefix = modem_config.session.token_prefix
+        if modem_config.transport == "hnap":
+            # HNAP: batched SOAP request, no per-page fetching
+            hmac_algorithm = "md5"
+            if hasattr(modem_config.auth, "hmac_algorithm"):
+                hmac_algorithm = modem_config.auth.hmac_algorithm
+            hnap_loader = HNAPLoader(
+                session=session,
+                base_url=base_url,
+                private_key=auth_result.hnap_private_key,
+                hmac_algorithm=hmac_algorithm,
+                timeout=modem_config.timeout,
+            )
+            resources = hnap_loader.fetch(parser_config)
+        else:
+            # HTTP: per-page fetching
+            targets = collect_fetch_targets(parser_config)
+            url_token = auth_result.url_token
+            token_prefix = ""
+            if modem_config.session:
+                token_prefix = modem_config.session.token_prefix
 
-        loader = HTTPResourceLoader(
-            session=session,
-            base_url=base_url,
-            timeout=modem_config.timeout,
-            url_token=url_token,
-            token_prefix=token_prefix,
-        )
-        resources = loader.fetch(targets, auth_result)
+            loader = HTTPResourceLoader(
+                session=session,
+                base_url=base_url,
+                timeout=modem_config.timeout,
+                url_token=url_token,
+                token_prefix=token_prefix,
+            )
+            resources = loader.fetch(targets, auth_result)
 
         # Parse
         coordinator = ModemParserCoordinator(parser_config, post_processor)

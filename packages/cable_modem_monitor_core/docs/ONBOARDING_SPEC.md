@@ -288,8 +288,39 @@ Format is constrained by transport:
 
 | Transport | Format detection |
 |-----------|-----------------|
-| `hnap` | Always `hnap`. Detect `record_delimiter`, `field_delimiter`, `data_key`, and `response_key` from HNAP response structure. |
+| `hnap` | Always `hnap`. See HNAP format detection below. |
 | `http` | Inspect data page responses — see below. JSON responses use `json` format; HTML responses use `table`, `table_transposed`, `javascript`, or `html_fields`. |
+
+#### HNAP format detection
+
+HNAP format is always `hnap`, but the analysis tool must extract
+structural details from HAR response bodies:
+
+1. **Collect HNAP responses** — merge all `GetMultipleHNAPs` response
+   bodies from HAR entries (excluding Login SOAPAction entries)
+2. **Identify channel data** — for each action response, look for
+   string values containing record delimiters (`|+|`, `|-|`, `||`)
+3. **Detect delimiters** — record delimiter from the string, field
+   delimiter (typically `^`) from the first record
+4. **Infer field mappings** — two-pass positional classification:
+   - Pass 1: identify definitive fields (lock_status by text pattern,
+     channel_type by known values, frequency/symbol_rate by magnitude)
+   - Pass 1.5: resolve large-integer ambiguity (larger max values →
+     frequency, smaller → symbol_rate)
+   - Pass 2: assign remaining numeric fields by DOCSIS convention
+     (channel_id first, then power, snr, corrected, uncorrected)
+5. **Detect channel type** — if a field has multiple distinct values
+   matching known types (QAM256, OFDM PLC, SC-QAM, OFDMA), generate
+   a `channel_type.map` config
+6. **Identify system_info sources** — action responses with flat
+   key-value pairs (no delimiters) that contain firmware, model, or
+   uptime fields
+
+**Direction inference:** `response_key` names containing "Downstream"
+or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
+
+See PARSING_SPEC.md [HNAPParser](#hnapparser) for the validated
+record layout and parser.yaml example.
 
 #### HTTP format detection
 
@@ -706,9 +737,14 @@ stateully, not just serve responses by URL:
    subsequent requests
 3. **Data pages** return 401/redirect if no valid session, 200 with
    recorded content if session is valid
-4. **HNAP** validates `HNAP_AUTH` header format (not cryptographic
-   correctness — the test uses the modem.yaml config, which knows
-   the credentials)
+4. **HNAP** validates full `HNAP_AUTH` HMAC signatures on all requests
+   (login phases and data requests). The mock uses deterministic
+   challenge values, so the expected private key and login password are
+   pre-computed. This catches HMAC computation bugs (wrong key, wrong
+   message format, wrong timestamp modulo), not just header presence.
+   The mock also merges all `GetMultipleHNAPs` HAR responses into a
+   single combined response — the HNAP loader sends one batched request,
+   but HAR captures contain multiple separate calls
 
 This is necessary because the pipeline under test performs real auth
 — if the mock server ignores auth, we're not testing the auth config.
@@ -1230,12 +1266,18 @@ system_info:
 
 ### Example 2: HNAP modem
 
+Validated against S33v2 HAR (26 DS + 5 US channels).
+
 **HAR evidence:**
-- First request: GET `/` → HTML page with HNAP JavaScript
-- POST `/HNAP1/` with `HNAP_AUTH` header, JSON body
-- Response: JSON with `GetMultipleHNAPsResponse` containing
-  `Get{Prefix}DownstreamChannelInfoResponse`
-- Channel data: `"1^Locked^QAM256^33^507000000^3.2^38.5^0^0|+|..."`
+- First request: GET `/` → HTML page loading HNAP JavaScript
+  (Login.js, SOAPAction.js, hmac_md5.js)
+- POST `/HNAP1/` with `HNAP_AUTH` header, SOAPAction: Login
+- Login response: JSON with Challenge, PublicKey, Cookie
+- Data requests: POST `/HNAP1/` with SOAPAction: GetMultipleHNAPs
+- Data response: JSON with `GetMultipleHNAPsResponse` containing
+  action responses with delimiter-separated channel data
+- DS channel data: `"1^Locked^QAM256^24^567000000^3^41^0^0^|+|..."`
+- US channel data: `"1^Locked^SC-QAM^1^6400000^38400000^47.0^|+|..."`
 
 **Generated modem.yaml:**
 ```yaml
@@ -1258,31 +1300,55 @@ status: awaiting_verification
 ```yaml
 downstream:
   format: hnap
-  response_key: "Get{Prefix}DownstreamChannelInfoResponse"
-  data_key: "{Prefix}DownstreamChannel"
+  response_key: "GetCustomerStatusDownstreamChannelInfoResponse"
+  data_key: "CustomerConnDownstreamChannel"
   record_delimiter: "|+|"
   field_delimiter: "^"
   channels:
-    - index: 3
-      field: channel_id
-      type: integer
-    - index: 4
-      field: frequency
-      type: frequency
-    - index: 5
-      field: power
-      type: float
-    - index: 6
-      field: snr
-      type: float
-    # ...
+    - { index: 1, field: lock_status, type: string }
+    - { index: 2, field: channel_type, type: string }
+    - { index: 3, field: channel_id, type: integer }
+    - { index: 4, field: frequency, type: frequency }
+    - { index: 5, field: power, type: float }
+    - { index: 6, field: snr, type: float }
+    - { index: 7, field: corrected, type: integer }
+    - { index: 8, field: uncorrected, type: integer }
+  channel_type:
+    index: 2
+    map:
+      "QAM256": "qam"
+      "OFDM PLC": "ofdm"
+
+upstream:
+  format: hnap
+  response_key: "GetCustomerStatusUpstreamChannelInfoResponse"
+  data_key: "CustomerConnUpstreamChannel"
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  channels:
+    - { index: 1, field: lock_status, type: string }
+    - { index: 2, field: channel_type, type: string }
+    - { index: 3, field: channel_id, type: integer }
+    - { index: 4, field: symbol_rate, type: frequency }
+    - { index: 5, field: frequency, type: frequency }
+    - { index: 6, field: power, type: float }
   channel_type:
     index: 2
     map:
       "SC-QAM": "qam"
-      "OFDM": "ofdm"
-  filter:
-    channel_id: { not: 0 }
+      "OFDMA": "ofdma"
+
+system_info:
+  sources:
+    - format: hnap
+      response_key: "GetCustomerStatusConnectionInfoResponse"
+      fields:
+        - { source: CustomerConnSystemUpTime, field: system_uptime, type: string }
+        - { source: StatusSoftwareModelName, field: model_name, type: string }
+    - format: hnap
+      response_key: "GetArrisDeviceStatusResponse"
+      fields:
+        - { source: FirmwareVersion, field: firmware_version, type: string }
 ```
 
 ### Example 3: HTTP modem with JSON API and no auth
