@@ -1,0 +1,14 @@
+{
+  "_description": "Primary id selector misses, fallback header_text finds the table.",
+  "_html": "<html><body><table><tr><th>Channel ID</th><th>SNR (dB)</th></tr><tr><td>1</td><td>38.5</td></tr></table></body></html>",
+  "_selector": {
+    "type": "id",
+    "match": "nonexistentId",
+    "fallback": {
+      "type": "header_text",
+      "match": "SNR"
+    }
+  },
+  "_expected_tag": "table",
+  "_expected_has_text": "38.5"
+}

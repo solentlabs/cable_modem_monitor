@@ -51,7 +51,7 @@ def _build_test_dir(
 ) -> ModemTestCase:
     """Build a modem dir, discover, and return the single test case."""
     modem_dir = tmp_path / "modems" / "solentlabs" / "t100"
-    tests_dir = modem_dir / "tests"
+    tests_dir = modem_dir / "test_data"
     tests_dir.mkdir(parents=True)
 
     (modem_dir / "modem.yaml").write_text(modem_yaml)

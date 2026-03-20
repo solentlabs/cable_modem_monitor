@@ -1,0 +1,5 @@
+{
+  "_description": "Table with no tr tags. Skipped by detector.",
+  "_html": "<table>No rows here</table>",
+  "_expected_table_count": 0
+}

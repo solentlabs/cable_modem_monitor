@@ -1,0 +1,6 @@
+{
+  "_description": "Single-row title table followed by data table. Title table filtered (< 2 rows). Only data table detected.",
+  "_html": "<html><body><table class='title-only'><tr><td>Section Title</td><td></td></tr></table><table class='data'><tr><td>Channel</td><td>Frequency</td></tr><tr><td>1</td><td>507</td></tr></table></body></html>",
+  "_expected_table_count": 1,
+  "_expected_css_class": "data"
+}

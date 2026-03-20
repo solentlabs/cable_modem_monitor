@@ -52,15 +52,15 @@ def _build_modem_dir(
         modem_yaml: Content for ``modem.yaml``. Use ``None`` to skip.
         parser_yaml: Content for ``parser.yaml``. Use ``None`` to skip.
         parser_py: Content for ``parser.py``. Use ``None`` to skip.
-        hars: Map of stem -> HAR dict for ``tests/{stem}.har``.
-        goldens: Map of stem -> golden dict for ``tests/{stem}.expected.json``.
+        hars: Map of stem -> HAR dict for ``test_data/{stem}.har``.
+        goldens: Map of stem -> golden dict for ``test_data/{stem}.expected.json``.
         variant_yamls: Map of name -> content for ``modem-{name}.yaml``.
 
     Returns:
         Path to the modem directory.
     """
     modem_dir = base / mfr / model
-    tests_dir = modem_dir / "tests"
+    tests_dir = modem_dir / "test_data"
     tests_dir.mkdir(parents=True)
 
     if modem_yaml is not None:
@@ -105,8 +105,8 @@ class TestSingleModemDir:
 
         assert len(cases) == 1
         case = cases[0]
-        assert case.har_path == modem_dir / "tests" / "modem.har"
-        assert case.golden_path == modem_dir / "tests" / "modem.expected.json"
+        assert case.har_path == modem_dir / "test_data" / "modem.har"
+        assert case.golden_path == modem_dir / "test_data" / "modem.expected.json"
         assert case.modem_config_path == modem_dir / "modem.yaml"
         assert case.parser_config_path == modem_dir / "parser.yaml"
         assert case.parser_py_path is None
@@ -153,7 +153,7 @@ class TestSingleModemDir:
         assert len(cases) == 1
         case = cases[0]
         # golden_path is set but file does not exist
-        assert case.golden_path == modem_dir / "tests" / "modem.expected.json"
+        assert case.golden_path == modem_dir / "test_data" / "modem.expected.json"
         assert not case.golden_path.exists()
 
 

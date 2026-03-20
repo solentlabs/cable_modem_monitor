@@ -1,0 +1,6 @@
+{
+  "_description": "Table with th colspan title row. Verifies title_row_text extraction.",
+  "_html": "<table><tr><th colspan=\"4\">Downstream Bonded Channels</th></tr><tr><td>Channel ID</td><td>Frequency</td></tr><tr><td>1</td><td>507000000</td></tr></table>",
+  "_expected_table_count": 1,
+  "_expected_title_row_text": "Downstream Bonded Channels"
+}

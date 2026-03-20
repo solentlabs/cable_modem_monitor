@@ -1,0 +1,16 @@
+{
+  "_description": "Two tables on same page. Verifies multiple table detection.",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 200,
+        "mimeType": "text/html",
+        "text": "<html><table><tr><td>Channel ID</td></tr><tr><td>1</td></tr></table><table><tr><td>Frequency</td></tr><tr><td>507</td></tr></table></html>"
+      }
+    }
+  },
+  "_expected_table_count": 2
+}

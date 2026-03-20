@@ -1,0 +1,7 @@
+{
+  "_description": "Column headers with HTML entity padding (&nbsp;). get_text(strip=True) strips non-breaking spaces, so 'Channel' still matches.",
+  "_html": "<html><body><table><tr><td class='hdr'>&nbsp;&nbsp;&nbsp;Channel</td><td class='hdr'>Lock Status</td><td class='hdr'>Freq. (MHz)</td><td class='hdr'>Pwr (dBmV)</td></tr><tr><td>1</td><td>Locked</td><td>237.0</td><td>0.5</td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "Pwr"},
+  "_expected_tag": "table",
+  "_expected_has_text": "237.0"
+}

@@ -1,0 +1,6 @@
+{
+  "_description": "No element with the given id. Returns None.",
+  "_html": "<html><body><table><tr><th>Channel</th></tr><tr><td>1</td></tr></table></body></html>",
+  "_selector": {"type": "id", "match": "nonexistentTable"},
+  "_expected_none": true
+}

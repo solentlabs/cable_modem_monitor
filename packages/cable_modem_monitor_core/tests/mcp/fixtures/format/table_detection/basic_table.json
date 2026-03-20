@@ -1,0 +1,17 @@
+{
+  "_description": "Simple table with headers and one data row. Verifies basic table detection.",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 100,
+        "mimeType": "text/html",
+        "text": "<html><table><tr><td>Channel ID</td><td>Frequency</td></tr><tr><td>1</td><td>507000000</td></tr></table></html>"
+      }
+    }
+  },
+  "_expected_table_count": 1,
+  "_expected_headers": ["Channel ID", "Frequency"]
+}

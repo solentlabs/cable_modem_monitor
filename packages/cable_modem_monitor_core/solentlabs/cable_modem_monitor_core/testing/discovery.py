@@ -26,7 +26,7 @@ class ModemTestCase:
 
     Attributes:
         name: Human-readable test ID (e.g., ``{manufacturer}/{model}/modem``).
-        modem_dir: Path to the modem directory (parent of ``tests/``).
+        modem_dir: Path to the modem directory (parent of ``test_data/``).
         har_path: Path to the ``.har`` file.
         golden_path: Expected path to ``.expected.json``. May not exist
             on disk — the runner checks and returns a structured error.
@@ -48,8 +48,8 @@ class ModemTestCase:
 def discover_modem_tests(modems_dir: Path) -> list[ModemTestCase]:
     """Discover test cases from a modems directory tree.
 
-    Walks ``{mfr}/{model}/tests/`` directories under *modems_dir*,
-    or if *modems_dir* itself contains a ``tests/`` subdirectory,
+    Walks ``{mfr}/{model}/test_data/`` directories under *modems_dir*,
+    or if *modems_dir* itself contains a ``test_data/`` subdirectory,
     treats it as a single modem directory.
 
     Args:
@@ -61,8 +61,8 @@ def discover_modem_tests(modems_dir: Path) -> list[ModemTestCase]:
     """
     cases: list[ModemTestCase] = []
 
-    # Single modem directory: has tests/ directly
-    tests_subdir = modems_dir / "tests"
+    # Single modem directory: has test_data/ directly
+    tests_subdir = modems_dir / "test_data"
     if tests_subdir.is_dir():
         _discover_from_modem_dir(modems_dir, modems_dir.parent.parent, cases)
         return sorted(cases, key=lambda c: c.name)
@@ -88,7 +88,7 @@ def _discover_from_modem_dir(
     cases: list[ModemTestCase],
 ) -> None:
     """Discover test cases from a single modem directory."""
-    tests_dir = modem_dir / "tests"
+    tests_dir = modem_dir / "test_data"
     if not tests_dir.is_dir():
         return
 

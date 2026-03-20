@@ -1,0 +1,7 @@
+{
+  "_description": "Case-insensitive substring match. 'snr' matches 'SNR (dB)' in header.",
+  "_html": "<html><body><table><tr><th>Channel ID</th><th>SNR (dB)</th></tr><tr><td>1</td><td>38.5</td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "snr"},
+  "_expected_tag": "table",
+  "_expected_has_text": "38.5"
+}

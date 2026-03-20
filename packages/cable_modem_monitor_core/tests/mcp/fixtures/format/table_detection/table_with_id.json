@@ -1,0 +1,17 @@
+{
+  "_description": "Table with id attribute. Verifies id capture.",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/status.html", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 100,
+        "mimeType": "text/html",
+        "text": "<html><table id=\"dsTable\"><tr><td>Channel ID</td></tr><tr><td>1</td></tr></table></html>"
+      }
+    }
+  },
+  "_expected_table_count": 1,
+  "_expected_table_id": "dsTable"
+}

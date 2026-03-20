@@ -44,7 +44,7 @@ def _build_modem_dir(
 ) -> Path:
     """Build a single modem directory and return its path."""
     modem_dir = tmp_path / "modems" / "solentlabs" / "t100"
-    tests_dir = modem_dir / "tests"
+    tests_dir = modem_dir / "test_data"
     tests_dir.mkdir(parents=True)
 
     (modem_dir / "modem.yaml").write_text(_MODEM_YAML)

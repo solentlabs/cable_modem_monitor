@@ -77,8 +77,8 @@ package, following MODEM_DIRECTORY_SPEC.md.
 | Modem config | `modem.yaml` | yes |
 | Parser config | `parser.yaml` | yes |
 | Parser code | `parser.py` | only if declarative extraction is insufficient |
-| Golden file | `tests/modem.expected.json` | yes |
-| HAR copy | `tests/modem.har` | yes (sanitized copy) |
+| Golden file | `test_data/modem.expected.json` | yes |
+| HAR copy | `test_data/modem.har` | yes (sanitized copy) |
 
 ---
 
@@ -654,7 +654,7 @@ Catalog (solentlabs-cable-modem-monitor-catalog)
 ├── modems/{mfr}/{model}/modem.yaml
 ├── modems/{mfr}/{model}/parser.yaml
 ├── modems/{mfr}/{model}/parser.py          (optional)
-└── modems/{mfr}/{model}/tests/
+└── modems/{mfr}/{model}/test_data/
     ├── modem.har
     └── modem.expected.json
 ```
@@ -719,7 +719,7 @@ simply maps URL paths to responses with no session tracking.
 ### Golden File Comparison
 
 After the pipeline produces `ModemData`, the harness compares it
-against the golden file (`tests/modem.expected.json`).
+against the golden file (`test_data/modem.expected.json`).
 
 **Comparison rules:**
 - Deep equality on the full `ModemData` dict
@@ -747,7 +747,7 @@ FAIL: modems/motorola/mb7621
 The harness discovers test cases from the Catalog directory structure:
 
 ```
-For each modems/{mfr}/{model}/tests/ directory:
+For each modems/{mfr}/{model}/test_data/ directory:
   For each *.har file:
     1. Find matching *.expected.json (same stem)
     2. Find matching modem*.yaml (see config resolution below)
@@ -988,9 +988,9 @@ and retries. Invalid config is never written to disk.
 After all artifacts are placed in the modem directory, the LLM calls
 `run_tests` which invokes Core's test harness:
 
-1. Mock server built from `tests/modem.har` (auth-aware)
+1. Mock server built from `test_data/modem.har` (auth-aware)
 2. Full pipeline runs: auth → load → parse
-3. Output compared against `tests/modem.expected.json`
+3. Output compared against `test_data/modem.expected.json`
 4. Structured diff returned on failure
 
 | Failure | Root cause | Fix |
@@ -1082,8 +1082,8 @@ session:
 │     modems/{mfr}/{model}/modem.yaml                     │
 │     modems/{mfr}/{model}/parser.yaml                    │
 │     modems/{mfr}/{model}/parser.py         (if needed)  │
-│     modems/{mfr}/{model}/tests/modem.har                │
-│     modems/{mfr}/{model}/tests/modem.expected.json      │
+│     modems/{mfr}/{model}/test_data/modem.har                │
+│     modems/{mfr}/{model}/test_data/modem.expected.json      │
 │ 12. LLM calls run_tests                                 │
 │     ├── failures? → LLM diagnoses, fixes config,        │
 │     │   re-runs (loop until green)                      │

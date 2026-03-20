@@ -1,0 +1,5 @@
+{
+  "_description": "Elements with id attributes detected as label-value pairs alongside a table.",
+  "_html": "<table><tr><td>Info</td><td>Value</td></tr><tr><td>More</td><td>Data</td></tr></table><span id=\"firmwareVersion\">1.0.4</span><span id=\"systemUptime\">3 days</span>",
+  "_expected_label_ids": ["firmwareVersion", "systemUptime"]
+}

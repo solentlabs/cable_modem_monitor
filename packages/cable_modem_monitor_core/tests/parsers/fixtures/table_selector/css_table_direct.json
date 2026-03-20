@@ -1,0 +1,7 @@
+{
+  "_description": "CSS selector matching a table element directly.",
+  "_html": "<html><body><table class='other'><tr><td>ignore</td></tr></table><table class='channel-data'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>507</td></tr></table></body></html>",
+  "_selector": {"type": "css", "match": "table.channel-data"},
+  "_expected_tag": "table",
+  "_expected_has_text": "507"
+}

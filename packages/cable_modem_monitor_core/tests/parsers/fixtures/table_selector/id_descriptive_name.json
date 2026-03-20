@@ -1,0 +1,7 @@
+{
+  "_description": "Table with descriptive id (Arris SB8200 pattern: CustomerConnDownstreamChannel).",
+  "_html": "<html><body><center><table class='simpleTable' id='CustomerConnDownstreamChannel'><tr><th>Channel ID</th><th>Frequency</th><th>Power</th></tr><tr><td>10</td><td>507000000 Hz</td><td>3.2 dBmV</td></tr></table></center></body></html>",
+  "_selector": {"type": "id", "match": "CustomerConnDownstreamChannel"},
+  "_expected_tag": "table",
+  "_expected_has_text": "507000000 Hz"
+}

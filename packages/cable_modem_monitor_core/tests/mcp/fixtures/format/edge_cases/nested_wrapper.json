@@ -1,0 +1,9 @@
+{
+  "_description": "Outer wrapper table has title table and data table as nested children. Only inner data table detected. Title text found via preceding_text walk.",
+  "_html": "<html><body><table class='outer-wrapper'><tr><td><table class='title-table'><tr><td class='section-title'>Downstream Bonded Channels</td></tr></table></td></tr><tr><td><table class='data-table'><tr><td>Channel</td><td>Lock Status</td><td>Channel ID</td><td>Frequency</td><td>Power</td><td>SNR</td></tr><tr><td>1</td><td>Locked</td><td>21</td><td>237.0</td><td>0.5</td><td>41.4</td></tr><tr><td>2</td><td>Locked</td><td>22</td><td>243.0</td><td>1.5</td><td>43.0</td></tr></table></td></tr></table></body></html>",
+  "_expected_table_count": 1,
+  "_expected_css_class": "data-table",
+  "_expected_first_header": "Channel",
+  "_expected_row_count": 2,
+  "_expected_preceding_text": "Downstream Bonded Channels"
+}

@@ -10,20 +10,19 @@ See PARSING_SPEC.md HTMLTableParser section.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
 from typing import Any
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import Tag
 
 from ..models.parser_config.common import (
     ChannelTypeFixed,
     ChannelTypeMap,
     ColumnMapping,
     FilterValue,
-    TableSelector,
 )
 from ..models.parser_config.table import TableDefinition
 from .base import BaseParser
+from .table_selector import find_table
 from .type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
@@ -58,7 +57,7 @@ class HTMLTableParser(BaseParser):
             _logger.warning("Resource '%s' not found", self._resource)
             return []
 
-        table_el = _find_table(soup, self._table.selector)
+        table_el = find_table(soup, self._table.selector)
         if table_el is None:
             _logger.warning(
                 "Table not found with selector type='%s' match='%s'",
@@ -85,111 +84,6 @@ class HTMLTableParser(BaseParser):
             channels.append(channel)
 
         return channels
-
-
-def _find_table(soup: BeautifulSoup | Tag, selector: TableSelector) -> Tag | None:
-    """Find a ``<table>`` element using the configured selector.
-
-    Supports fallback chaining — if the primary selector fails and a
-    fallback is configured, tries the fallback.
-
-    Args:
-        soup: Parsed HTML document or subtree.
-        selector: Table selector configuration.
-
-    Returns:
-        The matched ``<table>`` element, or ``None``.
-    """
-    table = _find_table_by_type(soup, selector)
-    if table is not None:
-        return table
-
-    if selector.fallback is not None:
-        return _find_table(soup, selector.fallback)
-
-    return None
-
-
-def _find_table_by_type(soup: BeautifulSoup | Tag, selector: TableSelector) -> Tag | None:
-    """Dispatch to type-specific table finder."""
-    sel_type = selector.type
-    match = selector.match
-
-    if sel_type == "header_text":
-        return _find_by_header_text(soup, str(match))
-    if sel_type == "css":
-        return _find_by_css(soup, str(match))
-    if sel_type == "id":
-        return _find_by_id(soup, str(match))
-    if sel_type == "nth":
-        return _find_by_nth(soup, int(str(match)))
-    if sel_type == "attribute":
-        if isinstance(match, dict):
-            return _find_by_attribute(soup, match)
-        return None
-
-    _logger.warning("Unknown selector type: %s", sel_type)
-    return None
-
-
-def _find_by_header_text(soup: BeautifulSoup | Tag, text: str) -> Tag | None:
-    """Find table by header cell text content."""
-    for tag_name in ("th", "td"):
-        for cell in soup.find_all(tag_name):
-            cell_text = cell.get_text(strip=True)
-            if text.lower() in cell_text.lower():
-                table = cell.find_parent("table")
-                if table is not None:
-                    return table
-    return None
-
-
-def _find_by_css(soup: BeautifulSoup | Tag, css_selector: str) -> Tag | None:
-    """Find table by CSS selector."""
-    result = soup.select_one(css_selector)
-    if result is not None and isinstance(result, Tag):
-        if result.name == "table":
-            return result
-        # If the selector hit a non-table, look for parent table
-        table = result.find_parent("table")
-        if table is not None:
-            return table
-    return None
-
-
-def _find_by_id(soup: BeautifulSoup | Tag, element_id: str) -> Tag | None:
-    """Find table by element id attribute."""
-    element = soup.find(id=element_id)
-    if element is None:
-        return None
-    if isinstance(element, Tag) and element.name == "table":
-        return element
-    if isinstance(element, Tag):
-        return element.find_parent("table")
-    return None
-
-
-def _find_by_nth(soup: BeautifulSoup | Tag, index: int) -> Tag | None:
-    """Find the Nth table on the page (0-based)."""
-    tables = soup.find_all("table")
-    if 0 <= index < len(tables):
-        result = tables[index]
-        if isinstance(result, Tag):
-            return result
-    return None
-
-
-def _find_by_attribute(soup: BeautifulSoup | Tag, attrs: Mapping[str, str]) -> Tag | None:
-    """Find table by element attributes."""
-    # Search for any element with matching attributes, then find parent table
-    element = soup.find(attrs=dict(attrs))
-    if element is None:
-        return None
-    if isinstance(element, Tag) and element.name == "table":
-        return element
-    if isinstance(element, Tag):
-        return element.find_parent("table")
-    return None
 
 
 def _extract_row(

@@ -1,0 +1,6 @@
+{
+  "_description": "No cell contains the match text. Returns None.",
+  "_html": "<html><body><table><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>507</td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "Nonexistent Header"},
+  "_expected_none": true
+}

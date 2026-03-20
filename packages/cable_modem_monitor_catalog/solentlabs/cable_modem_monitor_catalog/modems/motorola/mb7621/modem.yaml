@@ -1,0 +1,68 @@
+manufacturer: Motorola
+model: MB7621
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/goform/login"
+  username_field: loginUsername
+  password_field: loginPassword
+  encoding: base64
+
+session:
+  max_concurrent: 1
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: "/logout.asp"
+  restart:
+    type: http
+    method: POST
+    pre_fetch_url: "/MotoSecurity.asp"
+    endpoint: "/goform/MotoSecurity"
+    params:
+      MotoSecurityAction: "1"
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3384"
+
+sources:
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Motorola_MB7621"
+  docsis_version: "https://www.motorola.com/us/mb7621/p"
+  isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
+  auth_config: "Maintainer hardware HAR capture"
+  restart: "v3.13 verified — params unverified in v3.14, needs HAR with restart flow"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer hardware, initial parser"
+
+isps:
+  - Comcast Xfinity
+  - Cox
+  - Spectrum
+  - CableOne
+  - RCN
+  - Suddenlink
+  - BrightHouse
+
+notes: |
+  DOCSIS 3.0 24x8 cable modem (released 2017). Broadcom BCM3384 chipset.
+  Form-based authentication with base64 password encoding.
+  IP-based session tracking (no cookies). Single concurrent session;
+  logout required after each poll to free the session for the user.
+  Supports up to 24 downstream and 8 upstream bonded channels (1 Gbps max).
+  Restart action params carried from v3.13 — MotoSecurityAction=1 triggers
+  restart via the security settings form. Other form fields removed pending
+  verification through v3.14 pipeline.

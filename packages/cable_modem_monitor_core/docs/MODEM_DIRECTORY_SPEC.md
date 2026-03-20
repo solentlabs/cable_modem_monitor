@@ -20,7 +20,7 @@ modems/
         ├── parser.py               # Code override hooks (at least one of parser.yaml/parser.py required)
         ├── modem.yaml              # REQUIRED: identity, auth, metadata (single-variant)
         ├── modem-{variant}.yaml    # OPTIONAL: per-variant identity, auth, metadata (multi-variant)
-        └── tests/                  # REQUIRED: HAR captures + expected output golden files
+        └── test_data/              # REQUIRED: HAR captures + expected output golden files
             ├── modem.har                  # Primary capture
             ├── modem.expected.json        # Expected ModemData output for primary capture
             ├── modem-{variant}.har        # OPTIONAL: variant captures
@@ -117,7 +117,7 @@ Files sharing the same `model` field group under one dropdown entry in the
 config flow. Variant selection happens on Step 2 (see
 `CONFIG_FLOW_SPEC.md`).
 
-### tests/ Directory (Required)
+### test_data/ Directory (Required)
 
 Test fixtures — HAR captures (pipeline input) and expected output golden
 files (pipeline assertions). No test code lives here — the test harness
@@ -241,7 +241,7 @@ modems/{manufacturer}/{model}/
 ├── parser.yaml           # declarative extraction config
 ├── parser.py             # post-processor for quirks
 ├── modem.yaml            # transport, auth, metadata
-└── tests/
+└── test_data/
     ├── modem.har
     └── modem.expected.json
 ```
@@ -254,7 +254,7 @@ modems/{manufacturer}/{model}/
 ├── modem.yaml            # default variant (e.g., auth: none)
 ├── modem-{variant}.yaml  # additional variant (e.g., different auth)
 ├── modem-{variant}.yaml  # another variant
-└── tests/
+└── test_data/
     ├── modem.har
     ├── modem.expected.json
     ├── modem-{variant}.har
@@ -268,7 +268,7 @@ modems/{manufacturer}/{model}/
 modems/{manufacturer}/{model}/
 ├── parser.yaml           # HNAP delimiters, field mappings
 ├── modem.yaml            # transport: hnap, auth, metadata
-└── tests/
+└── test_data/
     ├── modem.har
     ├── modem.expected.json
     ├── modem-{compat}.har          # firmware compatibility test
@@ -281,7 +281,7 @@ modems/{manufacturer}/{model}/
 ├── parser.py             # extraction too complex for declarative config
 ├── modem-{variant}.yaml  # variant 1
 ├── modem-{variant}.yaml  # variant 2
-└── tests/
+└── test_data/
     ├── modem.har
     ├── modem.expected.json
     ├── modem-{variant}.har

@@ -1,0 +1,7 @@
+{
+  "_description": "Two data tables on same page, each with unique column headers. header_text with 'Symb. Rate' finds the upstream table, not downstream.",
+  "_html": "<html><body><table><tr><td class='hdr'>Channel ID</td><td class='hdr'>Freq. (MHz)</td><td class='hdr'>Pwr (dBmV)</td><td class='hdr'>SNR (dB)</td></tr><tr><td>1</td><td>507.0</td><td>3.2</td><td>38.5</td></tr></table><table><tr><td class='hdr'>Channel ID</td><td class='hdr'>Symb. Rate (Ksym/sec)</td><td class='hdr'>Freq. (MHz)</td><td class='hdr'>Pwr (dBmV)</td></tr><tr><td>1</td><td>5120</td><td>24.0</td><td>36.2</td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "Symb. Rate"},
+  "_expected_tag": "table",
+  "_expected_has_text": "5120"
+}

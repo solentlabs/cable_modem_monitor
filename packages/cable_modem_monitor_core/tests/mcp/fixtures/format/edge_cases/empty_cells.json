@@ -1,0 +1,5 @@
+{
+  "_description": "Table with rows but no extractable cell content. Skipped.",
+  "_html": "<table><tr></tr><tr></tr></table>",
+  "_expected_table_count": 0
+}

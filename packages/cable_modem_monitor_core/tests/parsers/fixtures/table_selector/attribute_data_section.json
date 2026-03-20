@@ -1,0 +1,7 @@
+{
+  "_description": "Attribute selector matching a data-section attribute on the table.",
+  "_html": "<html><body><table data-section='upstream'><tr><td>upstream data</td></tr></table><table data-section='downstream'><tr><td>downstream data</td></tr></table></body></html>",
+  "_selector": {"type": "attribute", "match": {"data-section": "downstream"}},
+  "_expected_tag": "table",
+  "_expected_has_text": "downstream data"
+}

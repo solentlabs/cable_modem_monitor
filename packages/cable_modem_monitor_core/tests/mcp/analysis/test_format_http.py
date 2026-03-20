@@ -2,10 +2,15 @@
 
 Data page identification, format classification, table detection,
 JavaScript detection, label pair detection, and orientation detection.
+
+Fixture-driven where HTML content is involved. Table-driven for
+pure-function tests (direction, selector, row classification).
+Behavioral tests for edge cases with trivial inputs.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -29,18 +34,29 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.format.table_analysis impo
 )
 from solentlabs.cable_modem_monitor_core.mcp.analysis.format.types import DetectedTable
 
-from tests.conftest import collect_fixtures, load_fixture
+from tests.conftest import collect_fixtures, load_fixture  # type: ignore[attr-defined]
 
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "format"
 VALID_DIR = FIXTURES_DIR / "valid"
 INVALID_DIR = FIXTURES_DIR / "invalid"
+TABLE_DETECTION_DIR = FIXTURES_DIR / "table_detection"
+EDGE_CASES_DIR = FIXTURES_DIR / "edge_cases"
+JS_EDGE_CASES_DIR = FIXTURES_DIR / "js_edge_cases"
 
 VALID_FIXTURES = collect_fixtures(VALID_DIR)
 INVALID_FIXTURES = collect_fixtures(INVALID_DIR)
+TABLE_DETECTION_FIXTURES = sorted(TABLE_DETECTION_DIR.glob("*.json"))
+EDGE_CASE_FIXTURES = sorted(EDGE_CASES_DIR.glob("*.json"))
+JS_EDGE_CASE_FIXTURES = sorted(JS_EDGE_CASES_DIR.glob("*.json"))
+
+
+def _load(path: Path) -> dict[str, Any]:
+    """Load a JSON fixture."""
+    return dict(json.loads(path.read_text()))
 
 
 # =====================================================================
-# Data page identification
+# Data page identification (behavioral — trivial HTML)
 # =====================================================================
 
 
@@ -68,7 +84,6 @@ class TestIdentifyDataPages:
         entries = [
             _make_entry("/status.html", 200, "text/html", ""),
         ]
-        # has_content checks both size and text
         entries[0]["response"]["content"]["size"] = 0
         assert identify_data_pages(entries) == []
 
@@ -99,7 +114,7 @@ class TestIdentifyDataPages:
 
 
 # =====================================================================
-# Format classification - fixture-driven
+# Format classification — fixture-driven
 # =====================================================================
 
 
@@ -122,54 +137,30 @@ def test_invalid_format_classification(fixture_path: Path) -> None:
 
 
 # =====================================================================
-# Table detection
+# Table detection — fixture-driven
 # =====================================================================
 
 
-class TestTableDetection:
-    """Tests for HTML table detection and analysis."""
+@pytest.mark.parametrize(
+    "fixture_path",
+    TABLE_DETECTION_FIXTURES,
+    ids=[f.stem for f in TABLE_DETECTION_FIXTURES],
+)
+def test_table_detection(fixture_path: Path) -> None:
+    """Table detection from HAR entry fixtures."""
+    data = _load(fixture_path)
+    page = analyze_page(data["_entry"])
 
-    def test_detects_tables_from_html(self) -> None:
-        """Tables are extracted from HTML content."""
-        entry = _make_entry(
-            "/status.html",
-            200,
-            "text/html",
-            "<html><table><tr><td>Channel ID</td><td>Frequency</td></tr>"
-            "<tr><td>1</td><td>507000000</td></tr></table></html>",
-        )
-        page = analyze_page(entry)
-        assert len(page.tables) == 1
-        assert page.tables[0].headers == ["Channel ID", "Frequency"]
+    assert len(page.tables) == data["_expected_table_count"]
 
-    def test_detects_table_id(self) -> None:
-        """Table id attribute is captured."""
-        entry = _make_entry(
-            "/status.html",
-            200,
-            "text/html",
-            '<html><table id="dsTable"><tr><td>Channel ID</td></tr>' "<tr><td>1</td></tr></table></html>",
-        )
-        page = analyze_page(entry)
-        assert page.tables[0].table_id == "dsTable"
-
-    def test_detects_multiple_tables(self) -> None:
-        """Multiple tables on same page are all detected."""
-        entry = _make_entry(
-            "/status.html",
-            200,
-            "text/html",
-            "<html>"
-            "<table><tr><td>Channel ID</td></tr><tr><td>1</td></tr></table>"
-            "<table><tr><td>Frequency</td></tr><tr><td>507</td></tr></table>"
-            "</html>",
-        )
-        page = analyze_page(entry)
-        assert len(page.tables) == 2
+    if data.get("_expected_headers"):
+        assert page.tables[0].headers == data["_expected_headers"]
+    if data.get("_expected_table_id"):
+        assert page.tables[0].table_id == data["_expected_table_id"]
 
 
 # =====================================================================
-# JavaScript detection
+# JavaScript detection — fixture-driven
 # =====================================================================
 
 
@@ -192,6 +183,18 @@ class TestJsDetection:
         assert page.js_functions[0].delimiter == "|"
 
 
+@pytest.mark.parametrize(
+    "fixture_path",
+    JS_EDGE_CASE_FIXTURES,
+    ids=[f.stem for f in JS_EDGE_CASE_FIXTURES],
+)
+def test_js_edge_cases(fixture_path: Path) -> None:
+    """JS detection edge cases from fixtures."""
+    data = _load(fixture_path)
+    page = analyze_page(data["_entry"])
+    assert len(page.js_functions) == data["_expected_js_count"]
+
+
 # =====================================================================
 # Label pair detection
 # =====================================================================
@@ -210,7 +213,7 @@ class TestLabelPairDetection:
 
 
 # =====================================================================
-# Table direction detection - table-driven
+# Table direction detection — table-driven
 # =====================================================================
 
 # fmt: off
@@ -250,7 +253,7 @@ def test_table_direction(preceding: str, title: str, table_id: str, first_header
 
 
 # =====================================================================
-# Table selector detection - table-driven
+# Table selector detection — table-driven
 # =====================================================================
 
 # fmt: off
@@ -361,32 +364,45 @@ class TestTableOrientation:
 
 
 # =====================================================================
-# Helpers
+# HTML table edge cases — fixture-driven
 # =====================================================================
 
 
-def _make_entry(url: str, status: int, content_type: str, body: str) -> dict[str, Any]:
-    """Create a minimal HAR entry for testing."""
-    return {
-        "request": {
-            "method": "GET",
-            "url": f"http://192.168.100.1{url}",
-            "headers": [],
-        },
-        "response": {
-            "status": status,
-            "headers": [{"name": "Content-Type", "value": content_type}],
-            "content": {
-                "size": len(body),
-                "mimeType": content_type,
-                "text": body,
-            },
-        },
-    }
+@pytest.mark.parametrize(
+    "fixture_path",
+    EDGE_CASE_FIXTURES,
+    ids=[f.stem for f in EDGE_CASE_FIXTURES],
+)
+def test_html_edge_cases(fixture_path: Path) -> None:
+    """HTML table detection edge cases from fixtures."""
+    data = _load(fixture_path)
+    html = data["_html"]
+
+    if "_expected_label_ids" in data:
+        # Label pair test
+        pairs = detect_label_pairs(html)
+        ids = [p.element_id for p in pairs if p.element_id]
+        for expected_id in data["_expected_label_ids"]:
+            assert expected_id in ids
+        return
+
+    tables = detect_tables(html)
+    assert len(tables) == data["_expected_table_count"]
+
+    if data.get("_expected_title_row_text"):
+        assert tables[0].title_row_text == data["_expected_title_row_text"]
+    if data.get("_expected_css_class"):
+        assert tables[0].css_class == data["_expected_css_class"]
+    if data.get("_expected_first_header"):
+        assert tables[0].headers[0] == data["_expected_first_header"]
+    if data.get("_expected_row_count"):
+        assert len(tables[0].rows) == data["_expected_row_count"]
+    if data.get("_expected_preceding_text"):
+        assert tables[0].preceding_text == data["_expected_preceding_text"]
 
 
 # =====================================================================
-# is_data_row edge cases - table-driven
+# is_data_row edge cases — table-driven
 # =====================================================================
 
 # fmt: off
@@ -443,97 +459,7 @@ class TestRowStartWithNonDataRows:
 
 
 # =====================================================================
-# HTML table detection edge cases
-# =====================================================================
-
-
-class TestHtmlTableEdgeCases:
-    """Edge cases for HTML table extraction."""
-
-    def test_colspan_title_extraction(self) -> None:
-        """Tables with th colspan have title_row_text extracted."""
-        html = (
-            "<table>"
-            '<tr><th colspan="4">Downstream Bonded Channels</th></tr>'
-            "<tr><td>Channel ID</td><td>Frequency</td></tr>"
-            "<tr><td>1</td><td>507000000</td></tr>"
-            "</table>"
-        )
-        tables = detect_tables(html)
-        assert len(tables) == 1
-        assert tables[0].title_row_text == "Downstream Bonded Channels"
-
-    def test_table_with_no_rows(self) -> None:
-        """Table with no <tr> tags is skipped."""
-        html = "<table>No rows here</table>"
-        tables = detect_tables(html)
-        assert len(tables) == 0
-
-    def test_table_with_empty_cells_only(self) -> None:
-        """Table with rows but no extractable cells is skipped."""
-        html = "<table><tr></tr><tr></tr></table>"
-        tables = detect_tables(html)
-        assert len(tables) == 0
-
-    def test_id_based_label_pairs(self) -> None:
-        """Elements with id attributes detected as label pairs."""
-        html = (
-            "<table><tr><td>Info</td><td>Value</td></tr></table>"
-            '<span id="firmwareVersion">1.0.4</span>'
-            '<span id="systemUptime">3 days</span>'
-        )
-        pairs = detect_label_pairs(html)
-        ids = [p.element_id for p in pairs if p.element_id]
-        assert "firmwareVersion" in ids
-        assert "systemUptime" in ids
-
-
-# =====================================================================
-# JavaScript detection edge cases
-# =====================================================================
-
-
-class TestJsDetectionEdgeCases:
-    """Edge cases for JS function detection."""
-
-    def test_js_function_without_tag_value_list(self) -> None:
-        """JS function without tagValueList assignment is skipped."""
-        entry = _make_entry(
-            "/data.htm",
-            200,
-            "text/html",
-            "<html><script>function InitDsTableTagValue(t) {\n" "var otherVar = 'something';\n" "}\n</script></html>",
-        )
-        page = analyze_page(entry)
-        assert len(page.js_functions) == 0
-
-    def test_js_function_no_delimiter(self) -> None:
-        """JS function with tagValueList but no delimiter is skipped."""
-        entry = _make_entry(
-            "/data.htm",
-            200,
-            "text/html",
-            "<html><script>function InitDsTableTagValue(t) {\n"
-            "var tagValueList = 'singlevalue';\n"
-            "}\n</script></html>",
-        )
-        page = analyze_page(entry)
-        assert len(page.js_functions) == 0
-
-    def test_js_function_fewer_than_3_values(self) -> None:
-        """JS function with <3 delimited values is skipped."""
-        entry = _make_entry(
-            "/data.htm",
-            200,
-            "text/html",
-            "<html><script>function InitDsTableTagValue(t) {\n" "var tagValueList = 'a|b';\n" "}\n</script></html>",
-        )
-        page = analyze_page(entry)
-        assert len(page.js_functions) == 0
-
-
-# =====================================================================
-# JSON body parsing edge cases
+# JSON body parsing edge cases (behavioral — no HTML)
 # =====================================================================
 
 
@@ -556,3 +482,28 @@ class TestJsonBodyParsing:
         """Valid JSON dict is returned."""
         result = _parse_json_body('{"key": "value"}')
         assert result == {"key": "value"}
+
+
+# =====================================================================
+# Helpers
+# =====================================================================
+
+
+def _make_entry(url: str, status: int, content_type: str, body: str) -> dict[str, Any]:
+    """Create a minimal HAR entry for testing."""
+    return {
+        "request": {
+            "method": "GET",
+            "url": f"http://192.168.100.1{url}",
+            "headers": [],
+        },
+        "response": {
+            "status": status,
+            "headers": [{"name": "Content-Type", "value": content_type}],
+            "content": {
+                "size": len(body),
+                "mimeType": content_type,
+                "text": body,
+            },
+        },
+    }

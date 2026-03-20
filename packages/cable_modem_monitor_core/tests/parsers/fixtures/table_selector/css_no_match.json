@@ -1,0 +1,6 @@
+{
+  "_description": "CSS selector matches nothing. Returns None.",
+  "_html": "<html><body><table><tr><td>data</td></tr></table></body></html>",
+  "_selector": {"type": "css", "match": "#nonexistent"},
+  "_expected_none": true
+}

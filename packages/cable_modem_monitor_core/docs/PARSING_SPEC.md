@@ -476,10 +476,54 @@ upstream:
 
 | Type | Behavior | Example |
 |------|----------|---------|
-| `header_text` | Find `<th>` or `<td>` containing text, return parent `<table>` | `"Downstream Bonded Channels"` |
-| `css` | CSS selector returning a `<table>` element | `"table.moto-table-content"` |
-| `id` | Table element with matching `id` attribute | `"dsTable"` |
-| `nth` | Nth `<table>` element on the page (0-based) | `2` |
+| `header_text` | Find `<th>` or `<td>` containing text (case-insensitive substring), return parent `<table>` | `"SNR"` |
+| `css` | CSS selector; returns element if `<table>`, otherwise walks to parent `<table>` | `"table.channel-data"` |
+| `id` | Element with matching `id` attribute; returns if `<table>`, otherwise walks to parent | `"dsTable"` |
+| `nth` | Nth `<table>` on the page (0-based). Fragile — use as last resort | `2` |
+| `attribute` | Element with matching HTML attributes; returns if `<table>`, otherwise walks to parent | `{"data-section": "downstream"}` |
+
+All selectors support an optional `fallback` — another selector tried
+if the primary returns no match:
+
+```yaml
+selector:
+  type: id
+  match: "dsTable"
+  fallback:
+    type: header_text
+    match: "SNR"
+```
+
+**Choosing a selector:**
+
+Use **`id`** when the table has a unique `id` attribute. Common on
+Netgear (`dsTable`, `usTable`), Arris (`CustomerConnDownstreamChannel`),
+and Hitron (`cmdocsisdsTb`) modems. Most reliable — no ambiguity.
+
+Use **`header_text`** when the table has no `id`. Match on **column
+header text** that is unique to the target table on the page. Section
+titles (e.g., "Downstream Bonded Channels") often live outside the
+data table — in wrapper elements, preceding headings, or sibling title
+tables — and will not match. Column headers are always inside the data
+table and are the most reliable self-identifying feature across all
+known modem HTML structures.
+
+Examples of good `header_text` selectors:
+- `"SNR"` — matches `"SNR (dB)"` header, unique to downstream tables
+- `"Symb. Rate"` — matches `"Symb. Rate (Ksym/sec)"`, unique to upstream
+- `"Channel Width"` — unique to OFDM tables
+
+Use **`css`** when neither `id` nor `header_text` can disambiguate —
+e.g., when a table has a unique CSS class.
+
+Use **`nth`** only as a last resort — it depends on table position
+in the HTML, which can change across firmware versions.
+
+**Wrapper cell filtering:** The `header_text` selector skips cells
+that contain nested `<table>` elements. These are layout wrapper
+cells whose `get_text()` includes descendant text from nested tables.
+Without this filter, a wrapper `<td>` containing a data table would
+match before the actual header cells inside it.
 
 ### HTMLTableTransposedParser
 

@@ -1,0 +1,16 @@
+{
+  "_description": "JS function with tagValueList but fewer than 3 delimited values. Skipped.",
+  "_entry": {
+    "request": {"method": "GET", "url": "http://192.168.100.1/data.htm", "headers": []},
+    "response": {
+      "status": 200,
+      "headers": [{"name": "Content-Type", "value": "text/html"}],
+      "content": {
+        "size": 100,
+        "mimeType": "text/html",
+        "text": "<html><script>function InitDsTableTagValue(t) {\nvar tagValueList = 'a|b';\n}\n</script></html>"
+      }
+    }
+  },
+  "_expected_js_count": 0
+}

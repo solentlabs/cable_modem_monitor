@@ -1,0 +1,7 @@
+{
+  "_description": "Table with id attribute (Netgear pattern: dsTable). Direct match.",
+  "_html": "<html><body><table id='dsTable' class='TableStyle'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>507 MHz</td></tr></table><table id='usTable' class='TableStyle'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>24 MHz</td></tr></table></body></html>",
+  "_selector": {"type": "id", "match": "dsTable"},
+  "_expected_tag": "table",
+  "_expected_has_text": "507 MHz"
+}

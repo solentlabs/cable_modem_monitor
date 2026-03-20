@@ -1,0 +1,7 @@
+{
+  "_description": "Multiple ID-based tables on same page — QAM and OFDM variants (Netgear CM1200 pattern). Selects dsOfdmTable specifically.",
+  "_html": "<html><body><table id='dsTable'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>507 MHz</td></tr></table><table id='usTable'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>24 MHz</td></tr></table><table id='dsOfdmTable'><tr><th>Channel</th><th>Frequency</th><th>Channel Width</th></tr><tr><td>33</td><td>722 MHz</td><td>192 MHz</td></tr></table><table id='usOfdmaTable'><tr><th>Channel</th><th>Frequency</th></tr><tr><td>1</td><td>36 MHz</td></tr></table></body></html>",
+  "_selector": {"type": "id", "match": "dsOfdmTable"},
+  "_expected_tag": "table",
+  "_expected_has_text": "192 MHz"
+}

@@ -1,0 +1,8 @@
+{
+  "_description": "Section title in separate wrapper table, column headers in data table (Motorola MB7621 pattern). header_text matches column header 'SNR' inside the data table, not the title in the wrapper.",
+  "_html": "<html><body><table class='outer-wrapper'><tr><td><table class='title-table'><tr><td class='section-title'>Downstream Bonded Channels</td></tr></table></td></tr><tr><td><table class='data-table'><tr><td class='hdr'>Channel</td><td class='hdr'>Lock Status</td><td class='hdr'>Channel ID</td><td class='hdr'>Freq. (MHz)</td><td class='hdr'>Pwr (dBmV)</td><td class='hdr'>SNR (dB)</td></tr><tr><td>1</td><td>Locked</td><td>21</td><td>237.0</td><td>0.5</td><td>41.4</td></tr></table></td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "SNR"},
+  "_expected_tag": "table",
+  "_expected_attr": {"class": ["data-table"]},
+  "_expected_has_text": "237.0"
+}

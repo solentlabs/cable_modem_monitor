@@ -1,0 +1,7 @@
+{
+  "_description": "Section title as <th colspan> inside the data table (TC4400 pattern). header_text finds the <th> and returns the parent table directly.",
+  "_html": "<html><body><table border='1' cellpadding='4' cellspacing='0'><tr><th colspan='8'><b>Downstream Channel Status</b></th></tr><tr><td class='hd'>Channel Index</td><td class='hd'>Channel ID</td><td class='hd'>Frequency</td><td class='hd'>Power</td></tr><tr><td>1</td><td>10</td><td>507 MHz</td><td>3.2 dBmV</td></tr></table></body></html>",
+  "_selector": {"type": "header_text", "match": "Downstream Channel Status"},
+  "_expected_tag": "table",
+  "_expected_has_text": "507 MHz"
+}

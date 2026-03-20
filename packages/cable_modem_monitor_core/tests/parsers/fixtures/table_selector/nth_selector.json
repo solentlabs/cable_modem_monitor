@@ -1,0 +1,7 @@
+{
+  "_description": "Nth table selector (0-based). Selects the second table on the page.",
+  "_html": "<html><body><table><tr><td>first table</td></tr></table><table><tr><td>second table</td></tr></table><table><tr><td>third table</td></tr></table></body></html>",
+  "_selector": {"type": "nth", "match": 1},
+  "_expected_tag": "table",
+  "_expected_has_text": "second table"
+}
