@@ -1,0 +1,14 @@
+{
+  "_description": "Missing resource returns empty list",
+  "_json": null,
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "channels": [
+      {"key": "id", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

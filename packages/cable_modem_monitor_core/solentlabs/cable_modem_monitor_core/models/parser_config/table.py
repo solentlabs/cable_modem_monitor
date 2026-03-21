@@ -18,7 +18,7 @@ class TableDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     selector: TableSelector
-    skip_rows: int = 0
+    row_start: int = 0
     columns: list[ColumnMapping]
     channel_type: ChannelTypeConfig | None = None
     filter: dict[str, FilterValue] = Field(default_factory=dict)

@@ -1,0 +1,24 @@
+{
+  "_description": "Offset out of range — that field is skipped, others extracted",
+  "_html": "<html><body><script>function InitTagValue() {\n  var tagValueList = 'hw_v1|sw_v2'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "InitTagValue",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 0, "field": "hardware_version", "type": "string"},
+          {"offset": 1, "field": "software_version", "type": "string"},
+          {"offset": 99, "field": "system_uptime", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "hw_v1",
+    "software_version": "sw_v2"
+  }
+}

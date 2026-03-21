@@ -1,0 +1,36 @@
+manufacturer: Netgear
+model: C7000v2
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: basic
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3384"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "#61"
+
+attribution:
+  contributors:
+    - github: Anthranilic
+      contribution: "HAR capture and diagnostics"
+
+isps:
+  - Comcast
+
+notes: |
+  Nighthawk AC1900 WiFi Cable Modem Router combo. DOCSIS 3.0, 24x8 channel bonding.
+  Same page structure and JS parsing as C3700. Multi-page parsing:
+  DocsisStatus.htm for channel data, RouterStatus.htm for system info.
+  Channel data in pipe-delimited JavaScript: InitDsTableTagValue() and
+  InitUsTableTagValue(). System info from tagValueList in RouterStatus.htm
+  (needs parser.py PostProcessor).
+
+references:
+  issues:
+    - 61

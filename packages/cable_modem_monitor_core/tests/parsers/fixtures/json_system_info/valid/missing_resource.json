@@ -1,0 +1,13 @@
+{
+  "_description": "Missing resource returns empty dict",
+  "_json": null,
+  "_resource": "/api/state",
+  "_config": {
+    "format": "json",
+    "resource": "/api/state",
+    "fields": [
+      {"key": "upTime", "field": "system_uptime", "type": "string"}
+    ]
+  },
+  "_expected": {}
+}

@@ -1,0 +1,47 @@
+manufacturer: Technicolor
+model: TC4400
+transport: http
+default_host: "192.168.100.1"
+timeout: 20
+
+auth:
+  strategy: basic
+
+session:
+  cookie_name: ""
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom BCM3390"
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+status: awaiting_verification
+
+sources:
+  auth_config: "#1"
+  chipset: "FCC filing"
+
+attribution:
+  contributors:
+    - github: Mar1usW3
+      contribution: "Initial HAR capture and parser"
+
+isps:
+  - Teksavvy
+  - Comcast
+  - Spectrum
+  - Rogers
+
+notes: |
+  DOCSIS 3.1 cable modem with Broadcom BCM3390 chipset.
+  SC-QAM + OFDM downstream, SC-QAM + OFDMA upstream.
+  HTTP Basic Auth. Pages can take 12+ seconds to load.
+  During restart window, modem reports zero power/SNR values.
+
+references:
+  issues:
+    - 1
+    - 94

@@ -1,0 +1,45 @@
+manufacturer: Technicolor
+model: CGA2121
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/goform/logon"
+  method: POST
+  username_field: username_login
+  password_field: password_login
+  encoding: plain
+  success:
+    redirect: "/basicUX.html"
+
+session:
+  cookie_name: "sec"
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3384ZU"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "#75"
+  chipset: "FCC filing"
+
+attribution:
+  contributors:
+    - github: sgofferj
+      contribution: "HAR capture and initial fixture data"
+
+isps:
+  - Telia
+
+notes: |
+  DOCSIS 3.0 Wireless Gateway (combo modem/router) for Telia Finland.
+  24 downstream QAM channels, 4 upstream QAM channels.
+  No frequency or codeword data exposed in the web interface.
+  Form-based authentication to /goform/logon.
+
+references:
+  issues:
+    - 75

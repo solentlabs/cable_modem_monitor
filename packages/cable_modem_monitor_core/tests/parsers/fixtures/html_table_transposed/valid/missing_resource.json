@@ -1,0 +1,13 @@
+{
+  "_description": "Resource not in resources dict — returns empty list",
+  "_html": "<html><body></body></html>",
+  "_resource": "/missing.html",
+  "_resource_key": "/other.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

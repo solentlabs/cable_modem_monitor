@@ -1,0 +1,47 @@
+{
+  "_description": "Basic upstream extraction — 2 channels with symbol_rate",
+  "_json": {
+    "upstream": {
+      "channels": [
+        {
+          "channelId": 1,
+          "frequency": 36800000,
+          "power": 45.2,
+          "symbolRate": 5120000
+        },
+        {
+          "channelId": 2,
+          "frequency": 30400000,
+          "power": 44.8,
+          "symbolRate": 2560000
+        }
+      ]
+    }
+  },
+  "_resource": "/api/upstream",
+  "_config": {
+    "format": "json",
+    "resource": "/api/upstream",
+    "array_path": "upstream.channels",
+    "channels": [
+      {"key": "channelId", "field": "channel_id", "type": "integer"},
+      {"key": "frequency", "field": "frequency", "type": "integer"},
+      {"key": "power", "field": "power", "type": "float"},
+      {"key": "symbolRate", "field": "symbol_rate", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {
+      "channel_id": 1,
+      "frequency": 36800000,
+      "power": 45.2,
+      "symbol_rate": 5120000
+    },
+    {
+      "channel_id": 2,
+      "frequency": 30400000,
+      "power": 44.8,
+      "symbol_rate": 2560000
+    }
+  ]
+}

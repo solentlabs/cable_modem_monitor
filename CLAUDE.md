@@ -19,6 +19,19 @@
 | Release Checklist       | Pre-release verification items              |
 | PR and Issue Rules      | No auto-close keywords                      |
 | Issue Labels            | Label meanings and when to change them      |
+| Shell Commands          | Avoid permission check triggers             |
+
+## Shell Command Generation - Avoid Permission Check Triggers
+
+When generating shell commands:
+
+1. **Never embed newlines or `#` characters inside quoted strings** passed as command arguments
+2. **For multiline shell logic**, write to a `.sh` script file first, then execute the file
+3. **Prefer simple, single-line commands** with explicit arguments
+4. **For complex logic**, use a heredoc written to a temp file rather than inline quoted strings
+5. **Before executing any shell command**, verify it contains no newline characters inside quoted strings and no `#` characters that could be interpreted as hidden arguments
+
+**Why?** Claude Code's permission checker flags quoted newlines followed by `#`-prefixed lines as potential shell injection. Restructuring commands eliminates the interrupt.
 
 ## Code Review Criteria
 

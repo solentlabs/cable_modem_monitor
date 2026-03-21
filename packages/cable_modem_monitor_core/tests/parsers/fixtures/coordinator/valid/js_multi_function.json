@@ -1,0 +1,45 @@
+{
+  "_description": "Coordinator concatenates channels from multiple JS functions (QAM + OFDM)",
+  "_html": {
+    "/status.html": "<html><body><script>function InitDsTableTagValue() {\n  var tagValueList = '1|1|Locked|QAM256|10|519000000|5.0|39.0|100|2'\n}\nfunction InitDsOfdmTableTagValue() {\n  var tagValueList = '1|1|Locked|OFDM|50|600000000|3.0|37.0|200|5|0|0'\n}</script></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "javascript",
+      "resource": "/status.html",
+      "functions": [
+        {
+          "name": "InitDsTableTagValue",
+          "channel_type": "qam",
+          "delimiter": "|",
+          "fields_per_channel": 9,
+          "channels": [
+            {"offset": 3, "field": "channel_id", "type": "integer"},
+            {"offset": 4, "field": "frequency", "type": "frequency"},
+            {"offset": 5, "field": "power", "type": "float"},
+            {"offset": 6, "field": "snr", "type": "float"}
+          ]
+        },
+        {
+          "name": "InitDsOfdmTableTagValue",
+          "channel_type": "ofdm",
+          "delimiter": "|",
+          "fields_per_channel": 11,
+          "channels": [
+            {"offset": 3, "field": "channel_id", "type": "integer"},
+            {"offset": 4, "field": "frequency", "type": "frequency"},
+            {"offset": 5, "field": "power", "type": "float"},
+            {"offset": 6, "field": "snr", "type": "float"}
+          ]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "snr": 39.0, "channel_type": "qam"},
+      {"channel_id": 50, "frequency": 600000000, "power": 3.0, "snr": 37.0, "channel_type": "ofdm"}
+    ],
+    "upstream": []
+  }
+}

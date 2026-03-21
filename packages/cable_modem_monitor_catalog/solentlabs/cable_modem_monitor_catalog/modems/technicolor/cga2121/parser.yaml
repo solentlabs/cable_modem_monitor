@@ -1,0 +1,65 @@
+downstream:
+  format: table
+  resource: "/st_docsis.html"
+  tables:
+    - selector:
+        type: css
+        match: "th[data-i18n='ds_link_ds_ch_id']"
+      row_start: 1
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+        - index: 1
+          field: modulation
+          type: string
+        - index: 2
+          field: snr
+          type: float
+          unit: dB
+        - index: 3
+          field: power
+          type: float
+          unit: dBmV
+      channel_type:
+        fixed: qam
+
+upstream:
+  format: table
+  resource: "/st_docsis.html"
+  tables:
+    - selector:
+        type: css
+        match: "td[data-i18n='ds_link_us_ch_id']"
+      row_start: 1
+      columns:
+        - index: 0
+          field: channel_id
+          type: integer
+        - index: 1
+          field: modulation
+          type: string
+        - index: 2
+          field: power
+          type: float
+          unit: dBmV
+      channel_type:
+        fixed: atdma
+
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/st_gateway.html"
+      fields:
+        - css: "th[data-i18n='atg_model'] + td"
+          field: model
+          type: string
+        - css: "th[data-i18n='atg_hardware_version'] + td"
+          field: hardware_version
+          type: string
+        - css: "th[data-i18n='atg_firmware_version'] + td"
+          field: software_version
+          type: string
+        - css: "th[data-i18n='atg_system_uptime'] + td"
+          field: system_uptime
+          type: string

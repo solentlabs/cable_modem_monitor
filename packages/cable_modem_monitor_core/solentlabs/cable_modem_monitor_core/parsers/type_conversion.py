@@ -20,6 +20,14 @@ _logger = logging.getLogger(__name__)
 # The minimum Hz value (5,000,000 upstream) is well above 1M.
 _FREQUENCY_MHZ_THRESHOLD = 1_000_000
 
+# Explicit suffix → multiplier to convert to Hz.
+_SUFFIX_MULTIPLIERS: dict[str, int] = {
+    "ghz": 1_000_000_000,
+    "mhz": 1_000_000,
+    "khz": 1_000,
+    "hz": 1,
+}
+
 # Strip non-numeric characters except decimal point, minus, and plus.
 _NUMERIC_CLEANUP_RE = re.compile(r"[^\d.+\-eE]")
 
@@ -46,9 +54,10 @@ def strip_unit(raw: str, unit: str) -> str:
 def normalize_frequency(raw: str | int | float) -> int:
     """Normalize a frequency value to Hz.
 
-    Auto-detects Hz vs MHz by magnitude: values below the threshold
-    (1,000,000) are treated as MHz and multiplied by 1e6. Values at or
-    above the threshold are treated as Hz.
+    When the string contains an explicit unit suffix (GHz, MHz, kHz, Hz),
+    the suffix determines the conversion factor. When no suffix is
+    present (or the input is numeric), a magnitude heuristic is used:
+    values below 1,000,000 are treated as MHz.
 
     Args:
         raw: Frequency value as string, int, or float. String values may
@@ -62,12 +71,15 @@ def normalize_frequency(raw: str | int | float) -> int:
     """
     if isinstance(raw, int | float):
         value = float(raw)
+        suffix_found = ""
     else:
         cleaned = raw.strip()
+        suffix_found = ""
         # Strip common frequency unit suffixes (longest first to avoid
         # "hz" matching the tail of "mhz")
         for suffix in ("ghz", "mhz", "khz", "hz"):
             if cleaned.lower().endswith(suffix):
+                suffix_found = suffix
                 cleaned = cleaned[: -len(suffix)].strip()
                 break
         value = float(cleaned)
@@ -75,6 +87,12 @@ def normalize_frequency(raw: str | int | float) -> int:
     if value == 0:
         return 0
 
+    # When an explicit suffix was found, use it for conversion
+    if suffix_found:
+        multiplier = _SUFFIX_MULTIPLIERS.get(suffix_found, 1)
+        return int(round(value * multiplier))
+
+    # No suffix — fall back to magnitude heuristic
     if abs(value) < _FREQUENCY_MHZ_THRESHOLD:
         # Value is in MHz — convert to Hz
         value = value * 1_000_000

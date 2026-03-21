@@ -1,0 +1,15 @@
+{
+  "_description": "Missing resource — returns empty list",
+  "_html": null,
+  "_resource": "/status.html",
+  "_function": {
+    "name": "InitDsTableTagValue",
+    "channel_type": "qam",
+    "delimiter": "|",
+    "fields_per_channel": 9,
+    "channels": [
+      {"offset": 3, "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

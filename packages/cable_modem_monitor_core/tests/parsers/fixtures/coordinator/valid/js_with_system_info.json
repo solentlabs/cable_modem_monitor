@@ -1,0 +1,72 @@
+{
+  "_description": "Coordinator extracts JS channels and JS system_info from same page",
+  "_html": {
+    "/status.html": "<html><body><script>function InitDsTableTagValue() {\n  var tagValueList = '1|1|Locked|QAM256|10|519000000|5.0|39.0|100|2'\n}\nfunction InitUsTableTagValue() {\n  var tagValueList = '1|1|Locked|ATDMA|41|5120|17800000|54.3'\n}\nfunction InitTagValue() {\n  var tagValueList = 'val0|val1|val2|val3|val4|val5|val6|val7|val8|val9|Wed Jan 15 2025|val11|val12|val13|5 days 03:22:15'\n}</script></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "javascript",
+      "resource": "/status.html",
+      "functions": [
+        {
+          "name": "InitDsTableTagValue",
+          "channel_type": "qam",
+          "delimiter": "|",
+          "fields_per_channel": 9,
+          "channels": [
+            {"offset": 3, "field": "channel_id", "type": "integer"},
+            {"offset": 4, "field": "frequency", "type": "frequency"},
+            {"offset": 5, "field": "power", "type": "float"}
+          ]
+        }
+      ]
+    },
+    "upstream": {
+      "format": "javascript",
+      "resource": "/status.html",
+      "functions": [
+        {
+          "name": "InitUsTableTagValue",
+          "channel_type": "atdma",
+          "delimiter": "|",
+          "fields_per_channel": 7,
+          "channels": [
+            {"offset": 3, "field": "channel_id", "type": "integer"},
+            {"offset": 5, "field": "frequency", "type": "frequency"},
+            {"offset": 6, "field": "power", "type": "float"}
+          ]
+        }
+      ]
+    },
+    "system_info": {
+      "sources": [
+        {
+          "format": "javascript",
+          "resource": "/status.html",
+          "functions": [
+            {
+              "name": "InitTagValue",
+              "delimiter": "|",
+              "fields": [
+                {"offset": 10, "field": "current_time", "type": "string"},
+                {"offset": 14, "field": "system_uptime", "type": "string"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "channel_type": "qam"}
+    ],
+    "upstream": [
+      {"channel_id": 41, "frequency": 17800000, "power": 54.3, "channel_type": "atdma"}
+    ],
+    "system_info": {
+      "current_time": "Wed Jan 15 2025",
+      "system_uptime": "5 days 03:22:15"
+    }
+  }
+}

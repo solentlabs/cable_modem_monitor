@@ -1,0 +1,61 @@
+downstream:
+  format: table_transposed
+  resource: "/cmSignalData.htm"
+  tables:
+    - selector:
+        type: header_text
+        match: "Downstream"
+      rows:
+        - label: "Channel ID"
+          field: channel_id
+          type: integer
+        - label: "Frequency"
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - label: "Signal to Noise Ratio"
+          field: snr
+          type: float
+          unit: "dB"
+        - label: "Power Level"
+          field: power
+          type: float
+          unit: "dBmV"
+      channel_type:
+        fixed: qam
+
+    - selector:
+        type: header_text
+        match: "Signal Stats (Codewords)"
+      merge_by: [channel_id]
+      rows:
+        - label: "Channel ID"
+          field: channel_id
+          type: integer
+        - label: "Total Correctable Codewords"
+          field: corrected
+          type: integer
+        - label: "Total Uncorrectable Codewords"
+          field: uncorrected
+          type: integer
+
+upstream:
+  format: table_transposed
+  resource: "/cmSignalData.htm"
+  selector:
+    type: header_text
+    match: "Upstream"
+  rows:
+    - label: "Channel ID"
+      field: channel_id
+      type: integer
+    - label: "Frequency"
+      field: frequency
+      type: frequency
+      unit: "Hz"
+    - label: "Power Level"
+      field: power
+      type: float
+      unit: "dBmV"
+  channel_type:
+    fixed: atdma

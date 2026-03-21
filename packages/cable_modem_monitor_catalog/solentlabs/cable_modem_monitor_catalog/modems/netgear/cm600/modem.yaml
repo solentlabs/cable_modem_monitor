@@ -1,0 +1,45 @@
+manufacturer: Netgear
+model: CM600
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: basic
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3384"
+
+actions:
+  restart:
+    type: http
+    method: POST
+    endpoint: "/goform/RouterStatus"
+    params:
+      RsAction: "2"
+
+status: awaiting_verification
+
+sources:
+  chipset: "CM600 Datasheet"
+  auth_config: "#3"
+
+attribution:
+  contributors:
+    - github: chairstacker
+      contribution: "Initial HAR capture and parser"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+
+notes: |
+  DOCSIS 3.0 cable modem (modem-only, no router). 24x8 channel bonding.
+  Firmware limitation: System Uptime field is in HH:MM:SS format.
+  EOL year: 2023. HTTP Basic Auth (browser popup).
+  RouterStatus.asp system info is in JS tagValueList (needs parser.py).
+
+references:
+  issues:
+    - 3

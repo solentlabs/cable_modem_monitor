@@ -1,0 +1,317 @@
+{
+  "downstream": [
+    {
+      "channel_id": 3,
+      "frequency": 570000000,
+      "power": -11.2,
+      "snr": 36.61,
+      "modulation": "256QAM",
+      "corrected": 9,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 4,
+      "frequency": 578000000,
+      "power": -10.8,
+      "snr": 37.64,
+      "modulation": "256QAM",
+      "corrected": 10,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 5,
+      "frequency": 586000000,
+      "power": -11.5,
+      "snr": 36.61,
+      "modulation": "256QAM",
+      "corrected": 31,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 6,
+      "frequency": 594000000,
+      "power": -12.3,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 251,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 7,
+      "frequency": 602000000,
+      "power": -12.3,
+      "snr": 36.39,
+      "modulation": "256QAM",
+      "corrected": 116,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 8,
+      "frequency": 618000000,
+      "power": -11.8,
+      "snr": 36.61,
+      "modulation": "256QAM",
+      "corrected": 55,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 9,
+      "frequency": 626000000,
+      "power": -11.7,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 172,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 10,
+      "frequency": 634000000,
+      "power": -11.6,
+      "snr": 36.39,
+      "modulation": "256QAM",
+      "corrected": 48,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 11,
+      "frequency": 642000000,
+      "power": -12.1,
+      "snr": 36.39,
+      "modulation": "256QAM",
+      "corrected": 104,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 12,
+      "frequency": 650000000,
+      "power": -11.9,
+      "snr": 35.6,
+      "modulation": "256QAM",
+      "corrected": 530,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 13,
+      "frequency": 658000000,
+      "power": -12.9,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 484,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 14,
+      "frequency": 666000000,
+      "power": -13.6,
+      "snr": 35.08,
+      "modulation": "256QAM",
+      "corrected": 1340,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 15,
+      "frequency": 674000000,
+      "power": -13.8,
+      "snr": 35.08,
+      "modulation": "256QAM",
+      "corrected": 2473,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 16,
+      "frequency": 682000000,
+      "power": -13.6,
+      "snr": 35.08,
+      "modulation": "256QAM",
+      "corrected": 2997,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 17,
+      "frequency": 690000000,
+      "power": -13.6,
+      "snr": 35.08,
+      "modulation": "256QAM",
+      "corrected": 2390,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 1,
+      "frequency": 114000000,
+      "power": -1.4,
+      "snr": 40.37,
+      "modulation": "256QAM",
+      "corrected": 20098,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 2,
+      "frequency": 130000000,
+      "power": -1.0,
+      "snr": 40.95,
+      "modulation": "256QAM",
+      "corrected": 31798,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 18,
+      "frequency": 698000000,
+      "power": -12.8,
+      "snr": 35.6,
+      "modulation": "256QAM",
+      "corrected": 490,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 19,
+      "frequency": 706000000,
+      "power": -12.2,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 314,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 20,
+      "frequency": 714000000,
+      "power": -11.9,
+      "snr": 36.39,
+      "modulation": "256QAM",
+      "corrected": 182,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 21,
+      "frequency": 722000000,
+      "power": -11.9,
+      "snr": 36.61,
+      "modulation": "256QAM",
+      "corrected": 120,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 22,
+      "frequency": 730000000,
+      "power": -12.6,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 787,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 23,
+      "frequency": 738000000,
+      "power": -12.8,
+      "snr": 35.6,
+      "modulation": "256QAM",
+      "corrected": 1067,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 24,
+      "frequency": 746000000,
+      "power": -12.1,
+      "snr": 35.78,
+      "modulation": "256QAM",
+      "corrected": 555,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "fft_type": "4K",
+      "channel_width": 190.0,
+      "active_subcarriers": 3800,
+      "snr": 43.0,
+      "channel_type": "ofdm",
+      "channel_id": "OFDM-1",
+      "frequency": 229500000,
+      "is_ofdm": true,
+      "modulation": "OFDM"
+    },
+    {
+      "fft_type": "4K",
+      "channel_width": 110.0,
+      "active_subcarriers": 2200,
+      "snr": 29.0,
+      "channel_type": "ofdm",
+      "channel_id": "OFDM-2",
+      "frequency": 805500000,
+      "is_ofdm": true,
+      "modulation": "OFDM"
+    }
+  ],
+  "upstream": [
+    {
+      "channel_id": 10,
+      "frequency": 37200000,
+      "power": 45.25,
+      "symbol_rate": 5120,
+      "modulation": "16QAM",
+      "channel_type": "atdma"
+    },
+    {
+      "channel_id": 12,
+      "frequency": 51000000,
+      "power": 43.75,
+      "symbol_rate": 5120,
+      "modulation": "64QAM",
+      "channel_type": "atdma"
+    },
+    {
+      "channel_id": 11,
+      "frequency": 44600000,
+      "power": 44.0,
+      "symbol_rate": 5120,
+      "modulation": "64QAM",
+      "channel_type": "atdma"
+    },
+    {
+      "channel_id": 9,
+      "frequency": 30800000,
+      "power": 46.0,
+      "symbol_rate": 5120,
+      "modulation": "64QAM",
+      "channel_type": "atdma"
+    },
+    {
+      "fft_type": "2K",
+      "channel_width": 32.0,
+      "active_subcarriers": 640,
+      "power": 45.0,
+      "channel_type": "ofdma",
+      "channel_id": "OFDMA-0",
+      "frequency": 47300000,
+      "is_ofdm": true,
+      "modulation": "OFDMA"
+    }
+  ],
+  "system_info": {
+    "system_uptime": "0 d:  7 h: 40 m",
+    "cm_status": "OPERATIONAL",
+    "current_time": "Fri 2025-12-19 02:01:25",
+    "hardware_version": "CM3500B"
+  }
+}

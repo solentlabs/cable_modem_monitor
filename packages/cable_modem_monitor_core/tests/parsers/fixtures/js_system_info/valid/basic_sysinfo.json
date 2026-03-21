@@ -1,0 +1,23 @@
+{
+  "_description": "Basic system_info extraction — uptime and time from a JS function",
+  "_html": "<html><body><script>function InitTagValue() {\n  var tagValueList = 'val0|val1|val2|val3|val4|val5|val6|val7|val8|val9|Wed Jan 15 2025 14:30:00|val11|val12|val13|5 days 03:22:15'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "InitTagValue",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 10, "field": "current_time", "type": "string"},
+          {"offset": 14, "field": "system_uptime", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {
+    "current_time": "Wed Jan 15 2025 14:30:00",
+    "system_uptime": "5 days 03:22:15"
+  }
+}

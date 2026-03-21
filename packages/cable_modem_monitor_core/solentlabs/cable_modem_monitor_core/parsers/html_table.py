@@ -67,7 +67,7 @@ class HTMLTableParser(BaseParser):
             return []
 
         rows = table_el.find_all("tr")
-        data_rows = rows[self._table.skip_rows :]
+        data_rows = rows[self._table.row_start :]
 
         channels: list[dict[str, Any]] = []
         for row in data_rows:

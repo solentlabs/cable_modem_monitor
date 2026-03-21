@@ -1,0 +1,51 @@
+manufacturer: Technicolor
+model: XB7
+model_aliases:
+  - "CGM4331COM"
+transport: http
+default_host: "10.0.0.1"
+
+auth:
+  strategy: form
+  action: "/check.jst"
+  method: POST
+  username_field: username
+  password_field: password
+  encoding: plain
+  success:
+    redirect: "/at_a_glance.jst"
+
+session:
+  cookie_name: "session"
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom BCM3390"
+
+status: verified
+
+sources:
+  auth_config: "HAR capture and diagnostics from issue #2"
+
+attribution:
+  contributors:
+    - github: esand
+      contribution: "Initial XB7 support and fixture capture"
+
+isps:
+  - Rogers
+  - Comcast
+  - Xfinity
+
+notes: |
+  DOCSIS 3.1 gateway (CGM4331COM). Transposed table format: rows are
+  metrics, columns are channels. Separate error codewords table merged
+  via merge_by. System info from readonlyLabel spans.
+  Default IP: 10.0.0.1 (router mode) or 192.168.100.1 (modem mode).
+
+references:
+  issues:
+    - 2
+    - 5
+    - 25
+    - 107

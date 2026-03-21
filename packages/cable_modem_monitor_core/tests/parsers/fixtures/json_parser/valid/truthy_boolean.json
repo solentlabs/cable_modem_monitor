@@ -1,0 +1,24 @@
+{
+  "_description": "Boolean truthy check — lockStatus compared to declared truthy value",
+  "_json": {
+    "channels": [
+      {"id": 1, "freq": 139000000, "locked": true},
+      {"id": 2, "freq": 147000000, "locked": false}
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "channels": [
+      {"key": "id", "field": "channel_id", "type": "integer"},
+      {"key": "freq", "field": "frequency", "type": "integer"},
+      {"key": "locked", "field": "lock_status", "type": "boolean", "truthy": true}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 139000000, "lock_status": true},
+    {"channel_id": 2, "frequency": 147000000, "lock_status": false}
+  ]
+}

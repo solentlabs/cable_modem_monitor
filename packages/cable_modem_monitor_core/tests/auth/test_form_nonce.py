@@ -26,7 +26,6 @@ class TestFormNonceAuthManager:
                 strategy="form_nonce",
                 action="/cgi-bin/adv_pwd_cgi",
                 nonce_field="ar_nonce",
-                credential_format="{nonce}:{password}:{username}",
             )
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {}, 10)
@@ -44,7 +43,6 @@ class TestFormNonceAuthManager:
                 strategy="form_nonce",
                 action="/cgi-bin/adv_pwd_cgi",
                 nonce_field="ar_nonce",
-                credential_format="{nonce}:{password}:{username}",
             )
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {}, 10)
@@ -63,7 +61,6 @@ class TestFormNonceAuthManager:
                 action="/login",
                 nonce_field="nonce",
                 nonce_length=16,
-                credential_format="{nonce}:{password}:{username}",
             )
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {}, 10)
@@ -80,7 +77,6 @@ class TestFormNonceAuthManager:
                 strategy="form_nonce",
                 action="/login",
                 nonce_field="nonce",
-                credential_format="{nonce}:{password}:{username}",
             )
             manager = FormNonceAuthManager(config)
             manager.configure_session(session, {}, 10)

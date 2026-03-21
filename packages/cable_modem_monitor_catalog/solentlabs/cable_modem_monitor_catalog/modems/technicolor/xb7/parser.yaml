@@ -1,0 +1,75 @@
+downstream:
+  format: table_transposed
+  resource: "/network_setup.jst"
+  tables:
+    - selector:
+        type: header_text
+        match: "Downstream"
+      rows:
+        - label: "Channel ID"
+          field: channel_id
+          type: integer
+        - label: "Lock Status"
+          field: lock_status
+          type: string
+        - label: "Frequency"
+          field: frequency
+          type: frequency
+          unit: "MHz"
+        - label: "SNR"
+          field: snr
+          type: float
+          unit: "dB"
+        - label: "Power Level"
+          field: power
+          type: float
+          unit: "dBmV"
+        - label: "Modulation"
+          field: modulation
+          type: string
+
+    - selector:
+        type: header_text
+        match: "CM Error Codewords"
+      merge_by: [channel_id]
+      rows:
+        - label: "Channel ID"
+          field: channel_id
+          type: integer
+        - label: "Correctable Codewords"
+          field: corrected
+          type: integer
+        - label: "Uncorrectable Codewords"
+          field: uncorrected
+          type: integer
+
+upstream:
+  format: table_transposed
+  resource: "/network_setup.jst"
+  selector:
+    type: header_text
+    match: "Upstream"
+  rows:
+    - label: "Channel ID"
+      field: channel_id
+      type: integer
+    - label: "Lock Status"
+      field: lock_status
+      type: string
+    - label: "Frequency"
+      field: frequency
+      type: frequency
+      unit: "MHz"
+    - label: "Power Level"
+      field: power
+      type: float
+      unit: "dBmV"
+    - label: "Modulation"
+      field: modulation
+      type: string
+    - label: "Symbol Rate"
+      field: symbol_rate
+      type: integer
+    - label: "Channel Type"
+      field: channel_type
+      type: string

@@ -1,0 +1,51 @@
+manufacturer: ARRIS
+model: SB6190
+brands:
+  - "Surfboard"
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form_nonce
+  action: "/cgi-bin/adv_pwd_cgi"
+  username_field: username
+  password_field: password
+  nonce_field: ar_nonce
+  nonce_length: 8
+  success_prefix: "Url:"
+  error_prefix: "Error:"
+
+session:
+  cookie_name: "credential"
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Intel Puma 6"
+
+sources:
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
+  auth_config: "Paul HAR (modem_20260127_201621) — form_nonce login with credential cookie"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: HenryGeorge1978
+      contribution: "Auth-variant HAR capture and testing"
+    - github: Winesnob
+      contribution: "Initial auth-variant report"
+
+isps:
+  - Comcast
+  - Spectrum
+
+notes: |
+  DOCSIS 3.0 cable modem (released 2016, EOL 2023). Intel Puma 6.
+  Auth-required variant: firmware 9.1.103+ requires form_nonce login.
+  Client generates 8-digit random nonce, POSTs username/password/nonce
+  as separate form fields. Response is text-prefixed (Url:/Error:).
+  Session maintained via "credential" cookie (path: /cgi-bin/).
+references:
+  issues:
+    - 83
+    - 93

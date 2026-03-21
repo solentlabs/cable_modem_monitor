@@ -4,7 +4,7 @@
   "_resource": "/status.html",
   "_config": {
     "selector": {"type": "header_text", "match": "Downstream Bonded Channels"},
-    "skip_rows": 2,
+    "row_start": 2,
     "columns": [
       {"index": 0, "field": "channel_id", "type": "integer"},
       {"index": 1, "field": "lock_status", "type": "string"},

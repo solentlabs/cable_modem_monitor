@@ -1,0 +1,39 @@
+{
+  "_description": "Transposed multi-table with merge_by enriches primary channels",
+  "_html": {
+    "/status.html": "<html><body><table><tr><th>Downstream</th><th colspan=2>Value</th></tr><tr><td>Channel ID</td><td>10</td><td>9</td></tr><tr><td>Frequency</td><td>519000000 Hz</td><td>513000000 Hz</td></tr><tr><td>Power Level</td><td>5 dBmV</td><td>4 dBmV</td></tr></table><table><tr><th>Signal Stats (Codewords)</th><th colspan=2>Value</th></tr><tr><td>Channel ID</td><td>10</td><td>9</td></tr><tr><td>Total Correctable Codewords</td><td>573</td><td>609</td></tr><tr><td>Total Uncorrectable Codewords</td><td>823</td><td>921</td></tr></table></body></html>"
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "table_transposed",
+      "resource": "/status.html",
+      "tables": [
+        {
+          "selector": {"type": "header_text", "match": "Downstream"},
+          "rows": [
+            {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+            {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
+            {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        },
+        {
+          "selector": {"type": "header_text", "match": "Signal Stats (Codewords)"},
+          "merge_by": ["channel_id"],
+          "rows": [
+            {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+            {"label": "Total Correctable Codewords", "field": "corrected", "type": "integer"},
+            {"label": "Total Uncorrectable Codewords", "field": "uncorrected", "type": "integer"}
+          ]
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "channel_type": "qam", "corrected": 573, "uncorrected": 823},
+      {"channel_id": 9, "frequency": 513000000, "power": 4.0, "channel_type": "qam", "corrected": 609, "uncorrected": 921}
+    ],
+    "upstream": []
+  }
+}

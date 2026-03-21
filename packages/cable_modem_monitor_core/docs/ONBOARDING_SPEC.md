@@ -203,7 +203,8 @@ Check HAR entries for login flow:
   ├── POST to /goform/*, /cgi-bin/*, or similar with form fields
   │   ├── Response is text with "Url:" / "Error:" prefixes?
   │   │   └── strategy: form_nonce
-  │   │       Extract: action, nonce_field, credential_format,
+  │   │       Extract: action, username_field, password_field,
+  │   │                nonce_field, nonce_length,
   │   │                success_prefix, error_prefix
   │   │
   │   ├── Response is redirect (302) or contains success indicator?
@@ -491,7 +492,7 @@ in the HAR corpus uses "Downstream"/"Upstream" as full keywords.
 #### Row start detection
 
 The analysis must determine where data rows begin in each table. This
-becomes `skip_rows` in parser.yaml (via `generate_config`).
+becomes `row_start` in parser.yaml (via `generate_config`).
 
 Scan rows from the top. Count rows until the first row containing
 actual valid data — non-empty cells with numeric values, not all zeros,
@@ -1328,7 +1329,7 @@ downstream:
     - selector:
         type: css
         match: "table.data-table"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 0
           field: channel_id

@@ -1,0 +1,37 @@
+manufacturer: ARRIS
+model: SB6190
+brands:
+  - "Surfboard"
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: none
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Intel Puma 6"
+
+sources:
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
+  auth_config: "sfennell HAR — no login required on older firmware"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: sfennell
+      contribution: "Initial HAR capture (no-auth variant)"
+
+isps:
+  - Comcast
+  - Spectrum
+  - Cox
+
+notes: |
+  DOCSIS 3.0 cable modem (released 2016, EOL 2023). Intel Puma 6.
+  No-auth variant: older firmware allows unauthenticated access to
+  /cgi-bin/status. See modem-form-nonce.yaml for auth-required variant.
+references:
+  issues:
+    - 83

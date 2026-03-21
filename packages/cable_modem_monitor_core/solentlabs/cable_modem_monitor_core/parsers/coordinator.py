@@ -6,13 +6,10 @@ them, chains parser.py post-processing, and assembles ModemData.
 See PARSING_SPEC.md ModemParserCoordinator section.
 
 Channel parser registry maps section config types to parser callables.
-Five types registered; three are stubs awaiting real HAR data:
-- HTMLTableTransposedSection
-- JSEmbeddedSection
-- JSONSection
+Five format types registered: HTMLTable, HNAP, Transposed, JSEmbedded, JSON.
 
 System info source registry maps source config types to parser callables.
-Four types registered; two are stubs awaiting implementation.
+Four source types registered: HTMLFields, HNAP, JavaScript, JSON.
 """
 
 from __future__ import annotations
@@ -37,6 +34,11 @@ from .hnap import HNAPParser
 from .hnap_fields import HNAPFieldsParser
 from .html_fields import HTMLFieldsParser
 from .html_table import HTMLTableParser
+from .html_table_transposed import HTMLTableTransposedParser
+from .js_embedded import JSEmbeddedParser
+from .js_system_info import JSSystemInfoParser
+from .json_parser import JSONParser
+from .json_system_info import JSONSystemInfoParser
 
 _T = TypeVar("_T")
 _logger = logging.getLogger(__name__)
@@ -94,28 +96,79 @@ def _parse_html_table_channels(
     return primary_channels
 
 
-def _stub_transposed(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
-    """Stub — HTMLTableTransposedParser not yet implemented."""
-    raise NotImplementedError("HTMLTableTransposedParser not yet implemented")
+def _parse_transposed_channels(
+    section: HTMLTableTransposedSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from transposed HTML table section(s) with merge_by support."""
+    # Normalize flat form to tables list
+    if section.tables is not None:
+        tables = section.tables
+    else:
+        from ..models.parser_config.transposed import TransposedTableDefinition
+
+        assert section.selector is not None and section.rows is not None
+        tables = [
+            TransposedTableDefinition(
+                selector=section.selector,
+                rows=section.rows,
+                channel_type=section.channel_type,
+            )
+        ]
+
+    primary_channels: list[dict[str, Any]] = []
+    companion_tables: list[tuple[list[dict[str, Any]], list[str]]] = []
+
+    for table_def in tables:
+        parser = HTMLTableTransposedParser(section.resource, table_def)
+        channels = parser.parse(resources)
+        if not isinstance(channels, list):
+            continue
+
+        if table_def.merge_by is not None:
+            companion_tables.append((channels, table_def.merge_by))
+        else:
+            primary_channels.extend(channels)
+
+    for companion_channels, merge_by in companion_tables:
+        _merge_channels(primary_channels, companion_channels, merge_by)
+
+    return primary_channels
 
 
-def _stub_js_embedded(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
-    """Stub — JSEmbeddedParser not yet implemented."""
-    raise NotImplementedError("JSEmbeddedParser not yet implemented")
+def _parse_js_embedded_channels(
+    section: JSEmbeddedSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from JS-embedded section — all functions concatenated."""
+    channels: list[dict[str, Any]] = []
+    for func in section.functions:
+        parser = JSEmbeddedParser(section.resource, func)
+        result = parser.parse(resources)
+        if isinstance(result, list):
+            channels.extend(result)
+    return channels
 
 
-def _stub_json(section: Any, resources: dict[str, Any]) -> list[dict[str, Any]]:
-    """Stub — JSONParser not yet implemented."""
-    raise NotImplementedError("JSONParser not yet implemented")
+def _parse_json_channels(
+    section: JSONSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from a JSON API section."""
+    parser = JSONParser(section)
+    channels = parser.parse(resources)
+    if not isinstance(channels, list):
+        return []
+    return channels
 
 
 # Maps section config type → parser callable(section, resources) → list[dict]
 _CHANNEL_PARSERS: dict[type, Callable[..., list[dict[str, Any]]]] = {
     HTMLTableSection: _parse_html_table_channels,
     HNAPSection: _parse_hnap_channels,
-    HTMLTableTransposedSection: _stub_transposed,
-    JSEmbeddedSection: _stub_js_embedded,
-    JSONSection: _stub_json,
+    HTMLTableTransposedSection: _parse_transposed_channels,
+    JSEmbeddedSection: _parse_js_embedded_channels,
+    JSONSection: _parse_json_channels,
 }
 
 
@@ -144,22 +197,32 @@ def _parse_hnap_sysinfo(
     return result if isinstance(result, dict) else {}
 
 
-def _stub_js_sysinfo(source: Any, resources: dict[str, Any]) -> dict[str, Any]:
-    """Stub — JSSystemInfoParser not yet implemented."""
-    raise NotImplementedError("JSSystemInfoParser not yet implemented")
+def _parse_js_sysinfo(
+    source: JSSystemInfoSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from JS-embedded tagValueList variables."""
+    js_si = JSSystemInfoParser(source)
+    result = js_si.parse(resources)
+    return result if isinstance(result, dict) else {}
 
 
-def _stub_json_sysinfo(source: Any, resources: dict[str, Any]) -> dict[str, Any]:
-    """Stub — JSONSystemInfoParser not yet implemented."""
-    raise NotImplementedError("JSONSystemInfoParser not yet implemented")
+def _parse_json_sysinfo(
+    source: JSONSystemInfoSource,
+    resources: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse system_info from a JSON API response."""
+    json_si = JSONSystemInfoParser(source)
+    result = json_si.parse(resources)
+    return result if isinstance(result, dict) else {}
 
 
 # Maps source config type → parser callable(source, resources) → dict
 _SYSINFO_PARSERS: dict[type, Callable[..., dict[str, Any]]] = {
     HTMLFieldsSource: _parse_html_fields_sysinfo,
     HNAPSystemInfoSource: _parse_hnap_sysinfo,
-    JSSystemInfoSource: _stub_js_sysinfo,
-    JSONSystemInfoSource: _stub_json_sysinfo,
+    JSSystemInfoSource: _parse_js_sysinfo,
+    JSONSystemInfoSource: _parse_json_sysinfo,
 }
 
 

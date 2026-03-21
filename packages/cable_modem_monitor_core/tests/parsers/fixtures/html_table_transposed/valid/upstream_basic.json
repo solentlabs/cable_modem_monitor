@@ -1,0 +1,18 @@
+{
+  "_description": "Transposed upstream table with subset of fields",
+  "_html": "<html><body><table border=1><tr><th>Upstream</th><th colspan=2>Bonding Channel Value</th></tr><tr><td>Channel ID</td><td>7</td><td>8</td></tr><tr><td>Frequency</td><td>30600000 Hz</td><td>37000000 Hz</td></tr><tr><td>Power Level</td><td>49 dBmV</td><td>48 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Upstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "atdma"}
+  },
+  "_expected": [
+    {"channel_id": 7, "frequency": 30600000, "power": 49.0, "channel_type": "atdma"},
+    {"channel_id": 8, "frequency": 37000000, "power": 48.0, "channel_type": "atdma"}
+  ]
+}

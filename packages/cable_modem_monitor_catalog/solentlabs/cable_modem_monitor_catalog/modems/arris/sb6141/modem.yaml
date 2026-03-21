@@ -1,0 +1,45 @@
+manufacturer: ARRIS
+model: SB6141
+model_aliases:
+  - "Motorola SB6141"
+brands:
+  - "Surfboard"
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: none
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3380"
+
+sources:
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
+  auth_config: "Synthetic HAR — no login required"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: captain-coredump
+      contribution: "Initial fixture and parser"
+    - github: vreihen
+      contribution: "Verification testing (Oct 2025)"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - TWC
+  - Mediacom
+
+notes: |
+  DOCSIS 3.0 8x4 cable modem (released 2011, EOL 2019). Broadcom BCM3380.
+  No authentication required — status page is publicly accessible.
+  Transposed table layout (rows = metrics, columns = channels).
+  Companion "Signal Stats (Codewords)" table provides error counts.
+  No system_info available (no uptime or version endpoints exposed).
+references:
+  prs:
+    - 57

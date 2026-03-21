@@ -1,0 +1,19 @@
+{
+  "_description": "No matching function — returns empty dict",
+  "_html": "<html><body><script>function OtherFunc() {\n  var tagValueList = 'data'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "InitTagValue",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 0, "field": "current_time", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {}
+}

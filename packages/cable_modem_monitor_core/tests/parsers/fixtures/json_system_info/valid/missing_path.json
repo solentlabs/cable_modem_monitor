@@ -1,0 +1,21 @@
+{
+  "_description": "Path does not exist in response — field skipped",
+  "_json": {
+    "other": {
+      "data": "value"
+    },
+    "firmware": "v2.0"
+  },
+  "_resource": "/api/state",
+  "_config": {
+    "format": "json",
+    "resource": "/api/state",
+    "fields": [
+      {"key": "upTime", "field": "system_uptime", "type": "string", "path": "device"},
+      {"key": "firmware", "field": "software_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "software_version": "v2.0"
+  }
+}

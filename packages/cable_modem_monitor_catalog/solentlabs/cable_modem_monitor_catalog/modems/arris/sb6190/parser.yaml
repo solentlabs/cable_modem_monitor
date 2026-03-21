@@ -1,0 +1,68 @@
+downstream:
+  format: table
+  resource: "/cgi-bin/status"
+  tables:
+    - selector:
+        type: header_text
+        match: "Downstream Bonded Channels"
+      row_start: 2
+      columns:
+        - index: 1
+          field: lock_status
+          type: string
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 5
+          field: power
+          type: float
+          unit: dBmV
+        - index: 6
+          field: snr
+          type: float
+          unit: dB
+        - index: 7
+          field: corrected
+          type: integer
+        - index: 8
+          field: uncorrected
+          type: integer
+      channel_type:
+        fixed: qam
+      filter:
+        lock_status: "Locked"
+
+upstream:
+  format: table
+  resource: "/cgi-bin/status"
+  tables:
+    - selector:
+        type: header_text
+        match: "Upstream Bonded Channels"
+      row_start: 2
+      columns:
+        - index: 1
+          field: lock_status
+          type: string
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 5
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 6
+          field: power
+          type: float
+          unit: dBmV
+      channel_type:
+        index: 2
+        map:
+          "ATDMA": "atdma"
+          "TDMA": "tdma"
+      filter:
+        lock_status: "Locked"

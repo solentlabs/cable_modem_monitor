@@ -10,7 +10,7 @@
       "tables": [
         {
           "selector": {"type": "header_text", "match": "Signal Levels"},
-          "skip_rows": 2,
+          "row_start": 2,
           "columns": [
             {"index": 0, "field": "channel_id", "type": "integer"},
             {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"},
@@ -21,7 +21,7 @@
         },
         {
           "selector": {"type": "header_text", "match": "Error Statistics"},
-          "skip_rows": 2,
+          "row_start": 2,
           "columns": [
             {"index": 0, "field": "channel_id", "type": "integer"},
             {"index": 1, "field": "corrected", "type": "integer"},

@@ -1,0 +1,29 @@
+{
+  "_description": "Fallback key used when primary key is missing",
+  "_json": {
+    "data": [
+      {
+        "id": 1,
+        "rxMer": 38.5
+      },
+      {
+        "id": 2,
+        "snr": 40.0
+      }
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "data",
+    "channels": [
+      {"key": "id", "field": "channel_id", "type": "integer"},
+      {"key": "snr", "field": "snr", "type": "float", "fallback_key": "rxMer"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "snr": 38.5},
+    {"channel_id": 2, "snr": 40.0}
+  ]
+}

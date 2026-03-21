@@ -1,0 +1,26 @@
+{
+  "_description": "Filter — only keep channels where lock_status == Locked",
+  "_html": "<html><body><script>function InitDsTableTagValue() {\n  var tagValueList = '3|1|Locked|QAM256|10|519000000|5.0|39.0|100|2|2|Not Locked|QAM256|0|0|0|0|0|0|3|Locked|QAM256|11|525000000|3.0|37.0|80|1'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_function": {
+    "name": "InitDsTableTagValue",
+    "channel_type": "qam",
+    "delimiter": "|",
+    "fields_per_channel": 9,
+    "channels": [
+      {"offset": 1, "field": "lock_status", "type": "string"},
+      {"offset": 2, "field": "modulation", "type": "string"},
+      {"offset": 3, "field": "channel_id", "type": "integer"},
+      {"offset": 4, "field": "frequency", "type": "frequency"},
+      {"offset": 5, "field": "power", "type": "float"},
+      {"offset": 6, "field": "snr", "type": "float"},
+      {"offset": 7, "field": "corrected", "type": "integer"},
+      {"offset": 8, "field": "uncorrected", "type": "integer"}
+    ],
+    "filter": {"lock_status": "Locked"}
+  },
+  "_expected": [
+    {"lock_status": "Locked", "modulation": "QAM256", "channel_id": 10, "frequency": 519000000, "power": 5.0, "snr": 39.0, "corrected": 100, "uncorrected": 2, "channel_type": "qam"},
+    {"lock_status": "Locked", "modulation": "QAM256", "channel_id": 11, "frequency": 525000000, "power": 3.0, "snr": 37.0, "corrected": 80, "uncorrected": 1, "channel_type": "qam"}
+  ]
+}

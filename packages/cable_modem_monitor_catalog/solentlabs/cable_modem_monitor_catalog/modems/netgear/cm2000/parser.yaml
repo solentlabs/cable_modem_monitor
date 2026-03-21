@@ -1,0 +1,163 @@
+downstream:
+  format: javascript
+  resource: "/DocsisStatus.htm"
+  functions:
+    # DOCSIS 3.0 QAM: 32 channels, 9 fields per channel
+    # Layout: channel_num | lock_status | modulation | channel_id |
+    #         frequency | power | snr | corrected | uncorrected
+    - name: "InitDsTableTagValue"
+      channel_type: "qam"
+      delimiter: "|"
+      fields_per_channel: 9
+      channels:
+        - offset: 1
+          field: lock_status
+          type: string
+        - offset: 2
+          field: modulation
+          type: string
+        - offset: 3
+          field: channel_id
+          type: integer
+        - offset: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - offset: 5
+          field: power
+          type: float
+          unit: "dBmV"
+        - offset: 6
+          field: snr
+          type: float
+          unit: "dB"
+        - offset: 7
+          field: corrected
+          type: integer
+        - offset: 8
+          field: uncorrected
+          type: integer
+      filter:
+        lock_status: "Locked"
+    # DOCSIS 3.1 OFDM: 11 fields per channel
+    # Layout: channel_num | lock_status | profile_ids | channel_id |
+    #         frequency | power | snr | active_range |
+    #         unerrored_cw | correctable_cw | uncorrectable_cw
+    - name: "InitDsOfdmTableTagValue"
+      channel_type: "ofdm"
+      delimiter: "|"
+      fields_per_channel: 11
+      channels:
+        - offset: 1
+          field: lock_status
+          type: string
+        - offset: 3
+          field: channel_id
+          type: integer
+        - offset: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - offset: 5
+          field: power
+          type: float
+          unit: "dBmV"
+        - offset: 6
+          field: snr
+          type: float
+          unit: "dB"
+      filter:
+        lock_status: "Locked"
+
+upstream:
+  format: javascript
+  resource: "/DocsisStatus.htm"
+  functions:
+    # DOCSIS 3.0 ATDMA: 7 fields per channel
+    # Layout: channel_num | lock_status | channel_type | channel_id |
+    #         symbol_rate | frequency | power
+    - name: "InitUsTableTagValue"
+      channel_type: "atdma"
+      delimiter: "|"
+      fields_per_channel: 7
+      channels:
+        - offset: 1
+          field: lock_status
+          type: string
+        - offset: 2
+          field: channel_type
+          type: string
+        - offset: 3
+          field: channel_id
+          type: integer
+        - offset: 4
+          field: symbol_rate
+          type: integer
+          unit: "Ksym/sec"
+        - offset: 5
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - offset: 6
+          field: power
+          type: float
+          unit: "dBmV"
+      filter:
+        lock_status: "Locked"
+    # DOCSIS 3.1 OFDMA: 6 fields per channel
+    # Layout: channel_num | lock_status | channel_id | ?? |
+    #         frequency | power
+    - name: "InitUsOfdmaTableTagValue"
+      channel_type: "ofdma"
+      delimiter: "|"
+      fields_per_channel: 6
+      channels:
+        - offset: 1
+          field: lock_status
+          type: string
+        - offset: 3
+          field: channel_id
+          type: integer
+        - offset: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - offset: 5
+          field: power
+          type: float
+          unit: "dBmV"
+      filter:
+        lock_status: "Locked"
+
+system_info:
+  sources:
+    - format: javascript
+      resource: "/DocsisStatus.htm"
+      functions:
+        - name: "InitTagValue"
+          delimiter: "|"
+          fields:
+            - offset: 10
+              field: current_time
+              type: string
+            - offset: 14
+              field: system_uptime
+              type: string
+    - format: javascript
+      resource: "/index.htm"
+      functions:
+        - name: "InitTagValue"
+          delimiter: "|"
+          fields:
+            - offset: 0
+              field: software_version
+              type: string
+    - format: javascript
+      resource: "/RouterStatus.htm"
+      functions:
+        - name: "InitTagValue"
+          delimiter: "|"
+          fields:
+            - offset: 0
+              field: hardware_version
+              type: string
