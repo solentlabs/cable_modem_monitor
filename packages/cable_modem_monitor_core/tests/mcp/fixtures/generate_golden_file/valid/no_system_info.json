@@ -1,6 +1,6 @@
 {
   "_description": "Golden file with channels only, no system_info section",
-  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      skip_rows: 1\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n      channel_type:\n        fixed: qam\n",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      row_start: 1\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n      channel_type:\n        fixed: qam\n",
   "_har": {
     "log": {
       "entries": [

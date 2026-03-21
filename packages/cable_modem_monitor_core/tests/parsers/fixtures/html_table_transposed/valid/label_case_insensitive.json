@@ -1,0 +1,17 @@
+{
+  "_description": "Row label matching is case-insensitive substring",
+  "_html": "<html><body><table><tr><th>Downstream</th><th colspan=2>Value</th></tr><tr><td>CHANNEL ID</td><td>1</td><td>2</td></tr><tr><td>POWER LEVEL (dBmV)</td><td>5 dBmV</td><td>4 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 1, "power": 5.0, "channel_type": "qam"},
+    {"channel_id": 2, "power": 4.0, "channel_type": "qam"}
+  ]
+}

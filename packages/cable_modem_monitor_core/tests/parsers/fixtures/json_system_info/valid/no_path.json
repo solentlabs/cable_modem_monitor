@@ -1,0 +1,23 @@
+{
+  "_description": "System_info extraction without path — keys at root level",
+  "_json": {
+    "firmware": "v1.2.3",
+    "model": "T100",
+    "uptime": 3600
+  },
+  "_resource": "/api/info",
+  "_config": {
+    "format": "json",
+    "resource": "/api/info",
+    "fields": [
+      {"key": "firmware", "field": "software_version", "type": "string"},
+      {"key": "model", "field": "model_name", "type": "string"},
+      {"key": "uptime", "field": "system_uptime", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "software_version": "v1.2.3",
+    "model_name": "T100",
+    "system_uptime": "3600"
+  }
+}

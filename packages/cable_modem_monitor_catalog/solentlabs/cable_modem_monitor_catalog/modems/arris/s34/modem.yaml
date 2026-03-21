@@ -1,0 +1,57 @@
+manufacturer: Arris
+model: S34
+brands:
+  - Surfboard
+transport: hnap
+default_host: 192.168.100.1
+
+auth:
+  strategy: hnap
+  hmac_algorithm: sha256
+
+actions:
+  restart:
+    type: hnap
+    action_name: SetArrisConfigurationInfo
+    pre_fetch_action: GetArrisConfigurationInfo
+    params:
+      Action: reboot
+    response_key: SetArrisConfigurationInfoResponse
+    result_key: SetArrisConfigurationInfoResult
+    success_value: OK
+
+behaviors:
+  restart:
+    window_seconds: 300
+
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream
+
+hardware:
+  docsis_version: "3.1"
+  chipset: Broadcom BCM3390
+
+status: in_progress
+sources:
+  auth_config: HAR capture (PR #90)
+  chipset: Same platform as S33
+attribution:
+  contributors:
+    - github: rplancha
+      contribution: HAR capture and testing (PR #90)
+isps: []
+notes: |
+  S34 uses SHA256 HMAC for HNAP authentication (vs S33's MD5).
+  GetCustomer* action names (same as S33).
+  Firmware pattern: AT01.01.* (vs S33's TB01.03.*).
+  S34 blocks ICMP ping — HTTP-only health checks required.
+references:
+  issues:
+    - 108
+  prs:
+    - 90

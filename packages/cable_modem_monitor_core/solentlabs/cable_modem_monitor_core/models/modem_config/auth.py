@@ -56,9 +56,10 @@ class FormNonceAuth(BaseModel):
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["form_nonce"]
     action: str
+    username_field: str = "username"
+    password_field: str = "password"
     nonce_field: str
     nonce_length: int = 8
-    credential_format: str
     success_prefix: str = "Url:"
     error_prefix: str = "Error:"
 

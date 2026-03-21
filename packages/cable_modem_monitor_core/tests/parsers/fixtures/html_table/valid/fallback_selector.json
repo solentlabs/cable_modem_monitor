@@ -11,7 +11,7 @@
         "match": {"data-section": "downstream"}
       }
     },
-    "skip_rows": 1,
+    "row_start": 1,
     "columns": [
       {"index": 0, "field": "channel_id", "type": "integer"},
       {"index": 1, "field": "frequency", "type": "frequency"}

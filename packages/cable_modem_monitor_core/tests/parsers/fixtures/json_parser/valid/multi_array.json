@@ -1,0 +1,43 @@
+{
+  "_description": "Multi-array form — two arrays from same response concatenated",
+  "_json": {
+    "docsis": {
+      "qam_channels": [
+        {"id": 1, "freq": 735000000, "pwr": -6.5, "mod": "QAM256"}
+      ],
+      "ofdm_channels": [
+        {"id": 0, "pwr": -7.4, "mod": "QAM4096"}
+      ]
+    }
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "arrays": [
+      {
+        "array_path": "docsis.qam_channels",
+        "channels": [
+          {"key": "id", "field": "channel_id", "type": "integer"},
+          {"key": "freq", "field": "frequency", "type": "integer"},
+          {"key": "pwr", "field": "power", "type": "float"},
+          {"key": "mod", "field": "modulation", "type": "string"}
+        ],
+        "channel_type": {"fixed": "qam"}
+      },
+      {
+        "array_path": "docsis.ofdm_channels",
+        "channels": [
+          {"key": "id", "field": "channel_id", "type": "integer"},
+          {"key": "pwr", "field": "power", "type": "float"},
+          {"key": "mod", "field": "modulation", "type": "string"}
+        ],
+        "channel_type": {"fixed": "ofdm"}
+      }
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 735000000, "power": -6.5, "modulation": "QAM256", "channel_type": "qam"},
+    {"channel_id": 0, "power": -7.4, "modulation": "QAM4096", "channel_type": "ofdm"}
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "_description": "Basic downstream extraction — 2 channels from JSON API",
+  "_json": {
+    "downstream": {
+      "channels": [
+        {
+          "channelId": 1,
+          "frequency": 139000000,
+          "power": 8.5,
+          "snr": 41.0,
+          "correctedErrors": 84,
+          "uncorrectedErrors": 0,
+          "lockStatus": true
+        },
+        {
+          "channelId": 2,
+          "frequency": 147000000,
+          "power": 8.3,
+          "snr": 40.5,
+          "correctedErrors": 74,
+          "uncorrectedErrors": 0,
+          "lockStatus": true
+        }
+      ]
+    }
+  },
+  "_resource": "/api/downstream",
+  "_config": {
+    "format": "json",
+    "resource": "/api/downstream",
+    "array_path": "downstream.channels",
+    "channels": [
+      {"key": "channelId", "field": "channel_id", "type": "integer"},
+      {"key": "frequency", "field": "frequency", "type": "integer"},
+      {"key": "power", "field": "power", "type": "float"},
+      {"key": "snr", "field": "snr", "type": "float"},
+      {"key": "correctedErrors", "field": "corrected", "type": "integer"},
+      {"key": "uncorrectedErrors", "field": "uncorrected", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {
+      "channel_id": 1,
+      "frequency": 139000000,
+      "power": 8.5,
+      "snr": 41.0,
+      "corrected": 84,
+      "uncorrected": 0
+    },
+    {
+      "channel_id": 2,
+      "frequency": 147000000,
+      "power": 8.3,
+      "snr": 40.5,
+      "corrected": 74,
+      "uncorrected": 0
+    }
+  ]
+}

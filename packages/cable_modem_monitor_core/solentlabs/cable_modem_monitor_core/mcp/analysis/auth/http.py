@@ -354,27 +354,37 @@ def _extract_form_nonce(signals: _HttpAuthSignals) -> AuthDetail:
     # Extract form params
     params = parse_form_params(post_data)
 
-    # Identify nonce field (non-credential field in the POST)
+    # Identify field names from POST params
     nonce_field = ""
-    credential_format = ""
+    username_field = "username"
+    password_field = "password"
     for name in params:
-        if name.lower() not in ("username", "password", "user", "pass"):
+        lower = name.lower()
+        if lower in ("username", "user"):
+            username_field = name
+        elif lower in ("password", "pass"):
+            password_field = name
+        else:
             nonce_field = name
-            break
 
     # Detect success/error prefixes from response
     success_prefix = _NONCE_SUCCESS_PREFIX
     error_prefix = _NONCE_ERROR_PREFIX
 
+    fields: dict[str, Any] = {
+        "action": path_from_url(url),
+        "nonce_field": nonce_field,
+        "success_prefix": success_prefix,
+        "error_prefix": error_prefix,
+    }
+    if username_field != "username":
+        fields["username_field"] = username_field
+    if password_field != "password":
+        fields["password_field"] = password_field
+
     return AuthDetail(
         strategy="form_nonce",
-        fields={
-            "action": path_from_url(url),
-            "nonce_field": nonce_field,
-            "credential_format": credential_format,
-            "success_prefix": success_prefix,
-            "error_prefix": error_prefix,
-        },
+        fields=fields,
         confidence="high",
     )
 

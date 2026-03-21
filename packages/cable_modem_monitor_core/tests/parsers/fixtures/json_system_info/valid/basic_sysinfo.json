@@ -1,0 +1,25 @@
+{
+  "_description": "Basic system_info extraction from JSON with path navigation",
+  "_json": {
+    "device": {
+      "upTime": 50221,
+      "docsisVersion": "3.1",
+      "status": "Online"
+    }
+  },
+  "_resource": "/api/state",
+  "_config": {
+    "format": "json",
+    "resource": "/api/state",
+    "fields": [
+      {"key": "upTime", "field": "system_uptime", "type": "string", "path": "device"},
+      {"key": "docsisVersion", "field": "docsis_version", "type": "string", "path": "device"},
+      {"key": "status", "field": "network_access", "type": "string", "path": "device"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "50221",
+    "docsis_version": "3.1",
+    "network_access": "Online"
+  }
+}

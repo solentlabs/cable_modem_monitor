@@ -1,10 +1,10 @@
 {
-  "_description": "skip_rows=0 processes all rows including the first",
+  "_description": "row_start=0 processes all rows including the first",
   "_html": "<table><tr><td>1</td><td>507000000</td></tr></table>",
   "_resource": "/s.html",
   "_config": {
     "selector": {"type": "nth", "match": 0},
-    "skip_rows": 0,
+    "row_start": 0,
     "columns": [
       {"index": 0, "field": "channel_id", "type": "integer"},
       {"index": 1, "field": "frequency", "type": "frequency"}

@@ -1,0 +1,40 @@
+{
+  "_description": "Filter excludes channels where lock_status is not Locked",
+  "_json": {
+    "channels": [
+      {
+        "id": 1,
+        "freq": 139000000,
+        "status": "Locked"
+      },
+      {
+        "id": 2,
+        "freq": 147000000,
+        "status": "Not Locked"
+      },
+      {
+        "id": 3,
+        "freq": 155000000,
+        "status": "Locked"
+      }
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "channels": [
+      {"key": "id", "field": "channel_id", "type": "integer"},
+      {"key": "freq", "field": "frequency", "type": "integer"},
+      {"key": "status", "field": "lock_status", "type": "string"}
+    ],
+    "filter": {
+      "lock_status": "Locked"
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 139000000, "lock_status": "Locked"},
+    {"channel_id": 3, "frequency": 155000000, "lock_status": "Locked"}
+  ]
+}

@@ -1,0 +1,88 @@
+downstream:
+  format: hnap
+  response_key: GetMotoStatusDownstreamChannelInfoResponse
+  data_key: MotoConnDownstreamChannel
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  channels:
+    - field: lock_status
+      type: string
+      index: 1
+    - field: channel_type
+      type: string
+      index: 2
+    - field: channel_id
+      type: integer
+      index: 3
+    - field: frequency
+      type: frequency
+      index: 4
+    - field: power
+      type: float
+      index: 5
+    - field: snr
+      type: float
+      index: 6
+    - field: corrected
+      type: integer
+      index: 7
+    - field: uncorrected
+      type: integer
+      index: 8
+  channel_type:
+    index: 2
+    map:
+      QAM256: qam
+      OFDM PLC: ofdm
+
+upstream:
+  format: hnap
+  response_key: GetMotoStatusUpstreamChannelInfoResponse
+  data_key: MotoConnUpstreamChannel
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  channels:
+    - field: lock_status
+      type: string
+      index: 1
+    - field: channel_type
+      type: string
+      index: 2
+    - field: channel_id
+      type: integer
+      index: 3
+    - field: symbol_rate
+      type: integer
+      index: 4
+    - field: frequency
+      type: frequency
+      index: 5
+    - field: power
+      type: float
+      index: 6
+  channel_type:
+    index: 2
+    map:
+      SC-QAM: qam
+      OFDMA: ofdma
+
+system_info:
+  sources:
+    - format: hnap
+      response_key: GetMotoStatusConnectionInfoResponse
+      fields:
+        - source: MotoConnSystemUpTime
+          field: system_uptime
+          type: string
+        - source: MotoConnNetworkAccess
+          field: network_access
+          type: string
+    - format: hnap
+      response_key: GetMotoStatusSoftwareResponse
+      fields:
+        - source: StatusSoftwareSfVer
+          field: software_version
+          type: string
+        - source: StatusSoftwareHdVer
+          field: hardware_version
+          type: string

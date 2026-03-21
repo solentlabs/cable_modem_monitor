@@ -8,7 +8,7 @@
       "tables": [
         {
           "selector": {"type": "header_text", "match": "DS"},
-          "skip_rows": 1,
+          "row_start": 1,
           "columns": [
             {"index": 0, "field": "channel_id", "type": "integer"}
           ]

@@ -307,7 +307,7 @@ downstream:
     - selector:
         type: header_text
         match: "Downstream Bonded Channels"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 0
           field: channel_id
@@ -361,7 +361,7 @@ downstream:
         match: "Downstream QAM"
       channel_type:
         fixed: "qam"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 0
           field: channel_id
@@ -387,7 +387,7 @@ downstream:
         match: "Downstream OFDM"
       channel_type:
         fixed: "ofdm"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 0
           field: channel_id
@@ -427,7 +427,7 @@ upstream:
     - selector:
         type: header_text
         match: "Upstream Bonded Channels"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 0
           field: channel_id
@@ -463,7 +463,7 @@ upstream:
 | `tables[].selector` | object | yes | How to find the table in the page |
 | `tables[].selector.type` | string | yes | `header_text`, `css`, `id`, `nth` |
 | `tables[].selector.match` | string | yes | Search value (text, CSS selector, ID, or index) |
-| `tables[].skip_rows` | integer | no | Number of header rows to skip (default 0) |
+| `tables[].row_start` | integer | no | 0-based index of the first data row (default 0) |
 | `tables[].columns` | list | yes | Ordered column→field mappings |
 | `tables[].columns[].index` | integer | yes | Column position (0-based) |
 | `tables[].columns[].field` | string | yes | Canonical output field name |
@@ -1023,21 +1023,54 @@ upstream:
       type: integer
 ```
 
-**Config fields:**
+**Config fields (flat form):**
 
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `format` | string | yes | `json` — selects `JSONParser` |
 | `resource` | string | yes | URL path key in the resource dict |
-| `array_path` | string | yes | Dot-notation path to the channel array |
-| `channels` | list | yes | Key→field mappings within each JSON object |
+| `array_path` | string | yes* | Dot-notation path to the channel array |
+| `channels` | list | yes* | Key→field mappings within each JSON object |
 | `channels[].key` | string | yes | JSON key name in the source object |
 | `channels[].fallback_key` | string | no | Alternative key if primary is missing |
+| `arrays` | list | yes* | Multi-array form (alternative to array_path/channels) |
+
+\* Mutually exclusive: use either flat form (`array_path` + `channels`)
+or multi-array form (`arrays`).
+
+**Multi-array form** — for modems with multiple channel arrays in one
+response (e.g., QAM + OFDM in separate JSON arrays):
+
+```yaml
+downstream:
+  format: json
+  resource: "/api/status"
+  arrays:
+    - array_path: "docsis.qam_channels"
+      channels:
+        - key: "channelID"
+          field: channel_id
+          type: integer
+      channel_type:
+        fixed: "qam"
+
+    - array_path: "docsis.ofdm_channels"
+      channels:
+        - key: "ofdmID"
+          field: channel_id
+          type: integer
+      channel_type:
+        fixed: "ofdm"
+```
+
+Each array entry has its own `array_path`, `channels`, `channel_type`,
+and `filter`. Results from all arrays are concatenated.
 
 **Extraction algorithm:**
 1. Get resource dict entry by path
-2. Navigate to array using dot-notation path
-3. For each object in the array, map keys to canonical fields
+2. Navigate to array(s) using dot-notation path
+3. For each object in each array, map keys to canonical fields
+4. Concatenate results from all arrays
 
 ---
 

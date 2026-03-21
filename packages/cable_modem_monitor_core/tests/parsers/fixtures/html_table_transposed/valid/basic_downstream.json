@@ -1,0 +1,20 @@
+{
+  "_description": "Basic transposed table — rows are metrics, columns are channels",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th><th colspan=3>Bonding Channel Value</th></tr><tr><td>Channel ID</td><td>10</td><td>9</td><td>11</td></tr><tr><td>Frequency</td><td>519000000 Hz</td><td>513000000 Hz</td><td>525000000 Hz</td></tr><tr><td>Signal to Noise Ratio</td><td>39 dB</td><td>38 dB</td><td>37 dB</td></tr><tr><td>Power Level</td><td>5 dBmV</td><td>4 dBmV</td><td>3 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"label": "Signal to Noise Ratio", "field": "snr", "type": "float", "unit": "dB"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {"fixed": "qam"}
+  },
+  "_expected": [
+    {"channel_id": 10, "frequency": 519000000, "snr": 39.0, "power": 5.0, "channel_type": "qam"},
+    {"channel_id": 9, "frequency": 513000000, "snr": 38.0, "power": 4.0, "channel_type": "qam"},
+    {"channel_id": 11, "frequency": 525000000, "snr": 37.0, "power": 3.0, "channel_type": "qam"}
+  ]
+}

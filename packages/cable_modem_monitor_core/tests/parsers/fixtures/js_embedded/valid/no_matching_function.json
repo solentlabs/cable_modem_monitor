@@ -1,0 +1,15 @@
+{
+  "_description": "No matching function in page — returns empty list",
+  "_html": "<html><body><script>function SomeOtherFunction() {\n  var tagValueList = '1|data'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_function": {
+    "name": "InitDsTableTagValue",
+    "channel_type": "qam",
+    "delimiter": "|",
+    "fields_per_channel": 9,
+    "channels": [
+      {"offset": 3, "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

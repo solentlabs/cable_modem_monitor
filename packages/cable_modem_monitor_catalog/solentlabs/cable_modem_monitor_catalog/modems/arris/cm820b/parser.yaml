@@ -1,0 +1,75 @@
+downstream:
+  format: table
+  resource: "/cgi-bin/status_cgi"
+  tables:
+    - selector:
+        type: header_text
+        match: "DCID"
+      row_start: 1
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 3
+          field: power
+          type: float
+          unit: dBmV
+        - index: 4
+          field: snr
+          type: float
+          unit: dB
+        - index: 5
+          field: modulation
+          type: string
+        - index: 7
+          field: corrected
+          type: integer
+        - index: 8
+          field: uncorrected
+          type: integer
+      channel_type:
+        fixed: qam
+
+upstream:
+  format: table
+  resource: "/cgi-bin/status_cgi"
+  tables:
+    - selector:
+        type: header_text
+        match: "UCID"
+      row_start: 2
+      columns:
+        - index: 1
+          field: channel_id
+          type: integer
+        - index: 2
+          field: frequency
+          type: frequency
+          unit: MHz
+        - index: 3
+          field: power
+          type: float
+          unit: dBmV
+        - index: 5
+          field: symbol_rate
+          type: integer
+          unit: "kSym/s"
+      channel_type:
+        fixed: atdma
+
+# system_info is extracted by parser.py PostProcessor.
+# This source declaration exists solely to trigger fetching vers_cgi.
+# The html_fields parser's label matching hits wrapper divs before the
+# correct td cells on this page, so actual extraction is in parser.py.
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/cgi-bin/vers_cgi"
+      fields:
+        - label: "Firmware Name"
+          field: firmware_name
+          type: string

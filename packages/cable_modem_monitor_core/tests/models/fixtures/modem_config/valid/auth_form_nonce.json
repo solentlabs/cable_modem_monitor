@@ -7,7 +7,7 @@
     "strategy": "form_nonce",
     "action": "/cgi-bin/adv_pwd_cgi",
     "nonce_field": "nonce",
-    "credential_format": "{nonce}:{password}:{username}"
+    "nonce_length": 8
   },
   "hardware": {"docsis_version": "3.0"},
   "status": "verified",

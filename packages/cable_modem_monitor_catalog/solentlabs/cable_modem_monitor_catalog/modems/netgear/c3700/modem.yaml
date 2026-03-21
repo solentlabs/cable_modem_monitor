@@ -1,0 +1,45 @@
+manufacturer: Netgear
+model: C3700
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: basic
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom BCM3383"
+
+actions:
+  restart:
+    type: http
+    method: POST
+    endpoint: "/goform/RouterStatus"
+    params:
+      buttonSelect: "2"
+
+status: awaiting_verification
+
+sources:
+  chipset: "BCM3383 Datasheet"
+  auth_config: "Maintainer verified"
+
+attribution:
+  contributors:
+    - github: kwschulz
+      contribution: "Maintainer verified"
+
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+
+notes: |
+  Combo modem/router device with 24x8 channel bonding (DOCSIS 3.0).
+  Multi-page parsing: DocsisStatus.htm for channel data, RouterStatus.htm
+  for system info. Channel data in pipe-delimited JavaScript:
+  InitDsTableTagValue() and InitUsTableTagValue().
+  Page extensions are .htm (not .asp like the CM600).
+
+references:
+  issues: []

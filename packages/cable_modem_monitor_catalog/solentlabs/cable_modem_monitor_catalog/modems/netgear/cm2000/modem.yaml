@@ -1,0 +1,34 @@
+manufacturer: Netgear
+model: CM2000
+transport: http
+default_host: "192.168.100.1"
+auth:
+  strategy: form
+  action: "/goform/Login"
+  login_page: "/"
+  username_field: loginName
+  password_field: loginPassword
+  encoding: plain
+  success:
+    redirect: "/DocsisStatus.htm"
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom BCM3390"
+status: awaiting_verification
+sources:
+  auth_config: "#38"
+attribution:
+  contributors:
+    - github: m4dh4tt3r-88
+      contribution: "Diagnostics and testing"
+isps:
+  - Comcast
+  - Cox
+  - Spectrum
+  - Xfinity
+notes: |
+  Nighthawk DOCSIS 3.1 modem. 32 SC-QAM + OFDM downstream,
+  ATDMA + OFDMA upstream. System info from DocsisStatus.htm InitTagValue.
+references:
+  issues:
+    - 38

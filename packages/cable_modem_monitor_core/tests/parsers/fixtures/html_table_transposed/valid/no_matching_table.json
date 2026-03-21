@@ -1,0 +1,12 @@
+{
+  "_description": "Table selector matches nothing — returns empty list",
+  "_html": "<html><body><table><tr><td>Unrelated</td><td>Data</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

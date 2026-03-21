@@ -213,17 +213,67 @@ style endpoints are common.
 
 ### `form_nonce`
 
-Form POST with a client-generated nonce. Structurally different from
-`form` because the response is evaluated by parsing text prefixes
-(`Url:` / `Error:`), not by redirect or cookie presence.
+Form POST with a **client-generated nonce** — a random value
+created fresh for each login request and sent alongside credentials
+as a separate form field.
+
+#### What is a nonce?
+
+A **nonce** ("**n**umber used **once**") is a random value included
+in a request to prevent replay attacks. If an attacker intercepts a
+login POST, they cannot resubmit it later because the server
+expects each request to carry a fresh, unique nonce. The concept
+originates from cryptographic protocols and is formalized in
+standards including:
+
+- **RFC 7616** (HTTP Digest Authentication) — server-generated
+  nonces in `WWW-Authenticate` challenges
+- **RFC 6749 / RFC 9207** (OAuth 2.0) — `state` parameter as a
+  CSRF/replay nonce
+- **OWASP CSRF Prevention** — synchronizer tokens and
+  double-submit cookies
+
+Cable modem `form_nonce` auth is a simplified variant: the client
+generates a random numeric string (like OAuth 1.0's `oauth_nonce`)
+and includes it in the login POST. No server challenge is needed —
+the nonce is purely client-originated.
+
+#### Core pattern
+
+Two properties distinguish `form_nonce` from `form`:
+
+1. **Client-generated nonce** — a random value created by JavaScript
+   before submission (not extracted from the server or a page).
+   Contrast with server-generated tokens like CSRF `webToken` fields,
+   which belong to the `form` strategy with `login_page` pre-fetch.
+2. **Text-prefix response** — the server returns a plain-text body
+   starting with `Url:` (success, followed by redirect path) or
+   `Error:` (failure, followed by message). No HTTP redirect, no
+   Set-Cookie on the login response itself.
+
+These two properties are the **invariants** of the strategy. The
+variable parts (field names, nonce length, credential encoding)
+are configurable per modem. When a new modem matches both
+invariants, it should use `form_nonce` with its own field names —
+not a new strategy.
+
+#### Distinguishing from similar patterns
+
+| Pattern | Nonce source | Response evaluation | Strategy |
+|---------|-------------|-------------------|----------|
+| Plain form login | None | Redirect or cookie | `form` |
+| Form with server token | Server (hidden field in login page) | Redirect or cookie | `form` with `login_page` |
+| Form with client nonce | Client (JavaScript random) | Text prefix (`Url:` / `Error:`) | `form_nonce` |
+| AJAX with client nonce + base64 | Client (JavaScript random) | Text prefix | `form_nonce` (same endpoint, different encoding) |
 
 ```yaml
 auth:
   strategy: form_nonce
   action: "/cgi-bin/adv_pwd_cgi"
-  nonce_field: "nonce"
+  username_field: "username"
+  password_field: "password"
+  nonce_field: "ar_nonce"
   nonce_length: 8
-  credential_format: "{nonce}:{password}:{username}"
   success_prefix: "Url:"
   error_prefix: "Error:"
 ```
@@ -231,15 +281,19 @@ auth:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `action` | string | required | Form POST URL |
+| `username_field` | string | `"username"` | Form field name for the username credential |
+| `password_field` | string | `"password"` | Form field name for the password credential |
 | `nonce_field` | string | required | Form field name for the client-generated nonce |
-| `nonce_length` | int | `8` | Length of the random nonce string |
-| `credential_format` | string | required | Template for the credential string (variables: `{nonce}`, `{password}`, `{username}`) |
+| `nonce_length` | int | `8` | Length of the random nonce string (digits only) |
 | `success_prefix` | string | `"Url:"` | Response body prefix indicating successful login |
 | `error_prefix` | string | `"Error:"` | Response body prefix indicating failed login |
 
-Evidence: modems where firmware generates a client-side nonce and
-evaluates login success via text prefix responses rather than
-redirects or cookies.
+Evidence: observed in modem firmware where the login page JavaScript
+generates a random numeric nonce client-side, serializes credentials
+as plain form fields alongside the nonce, and evaluates the response
+by text prefix. The CGI endpoint may also accept base64-encoded
+credentials via an AJAX code path, but the plain form field format
+is the canonical implementation.
 
 ### `url_token`
 

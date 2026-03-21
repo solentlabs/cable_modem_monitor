@@ -1,0 +1,102 @@
+downstream:
+  format: json
+  resource: "/rest/v1/cablemodem/downstream"
+  array_path: "downstream.channels"
+  channels:
+    - key: "channelId"
+      field: channel_id
+      type: integer
+    - key: "lockStatus"
+      field: lock_status
+      type: boolean
+      truthy: true
+    - key: "modulation"
+      field: modulation
+      type: string
+    - key: "frequency"
+      field: frequency
+      type: integer
+    - key: "power"
+      field: power
+      type: float
+    - key: "snr"
+      field: snr
+      type: float
+      fallback_key: "rxMer"
+    - key: "correctedErrors"
+      field: corrected
+      type: integer
+    - key: "uncorrectedErrors"
+      field: uncorrected
+      type: integer
+    - key: "channelWidth"
+      field: channel_width
+      type: integer
+    - key: "fftType"
+      field: fft_type
+      type: string
+    - key: "numberOfActiveSubCarriers"
+      field: active_subcarriers
+      type: integer
+  channel_type:
+    key: "channelType"
+    map:
+      "sc_qam": "qam"
+      "ofdm": "ofdm"
+
+upstream:
+  format: json
+  resource: "/rest/v1/cablemodem/upstream"
+  array_path: "upstream.channels"
+  channels:
+    - key: "channelId"
+      field: channel_id
+      type: integer
+    - key: "lockStatus"
+      field: lock_status
+      type: boolean
+      truthy: true
+    - key: "modulation"
+      field: modulation
+      type: string
+    - key: "frequency"
+      field: frequency
+      type: integer
+    - key: "power"
+      field: power
+      type: float
+    - key: "symbolRate"
+      field: symbol_rate
+      type: integer
+    - key: "channelWidth"
+      field: channel_width
+      type: integer
+    - key: "fftType"
+      field: fft_type
+      type: string
+    - key: "numberOfActiveSubCarriers"
+      field: active_subcarriers
+      type: integer
+  channel_type:
+    key: "channelType"
+    map:
+      "atdma": "atdma"
+      "ofdma": "ofdma"
+
+system_info:
+  sources:
+    - format: json
+      resource: "/rest/v1/cablemodem/state_"
+      fields:
+        - key: "upTime"
+          field: system_uptime
+          type: string
+          path: "cablemodem"
+        - key: "docsisVersion"
+          field: docsis_version
+          type: string
+          path: "cablemodem"
+        - key: "status"
+          field: network_access
+          type: string
+          path: "cablemodem"

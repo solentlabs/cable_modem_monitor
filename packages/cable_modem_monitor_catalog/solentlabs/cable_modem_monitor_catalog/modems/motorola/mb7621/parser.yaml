@@ -5,7 +5,7 @@ downstream:
     - selector:
         type: header_text
         match: "SNR"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 1
           field: lock_status
@@ -46,7 +46,7 @@ upstream:
     - selector:
         type: header_text
         match: "Symb. Rate"
-      skip_rows: 1
+      row_start: 1
       columns:
         - index: 1
           field: lock_status

@@ -1,0 +1,42 @@
+manufacturer: ARRIS
+model: CM3500B
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/cgi-bin/login_cgi"
+  method: POST
+  username_field: username
+  password_field: password
+
+session:
+  cookie_name: "credential"
+
+hardware:
+  docsis_version: "3.1"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "#73"
+
+attribution:
+  contributors:
+    - github: ChBi89
+      contribution: "HAR capture and initial fixture data"
+
+isps:
+  - Vodafone
+
+notes: |
+  EuroDOCSIS 3.1 cable modem. HTTPS with self-signed certificate.
+  4 table sections: DS QAM (24ch), DS OFDM (2ch), US QAM (4ch), US OFDMA (1ch).
+  DS OFDM table has a sub-header row (Pilot/PLC/Data MER columns).
+  US OFDMA has a firmware quirk: 9 data cells vs 7 header columns —
+  extra cells are subcarrier indices not present in the header.
+  parser.py computes center frequency from first/last subcarrier frequencies.
+
+references:
+  issues:
+    - 73

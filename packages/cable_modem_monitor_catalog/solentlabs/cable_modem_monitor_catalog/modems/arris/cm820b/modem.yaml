@@ -1,0 +1,38 @@
+manufacturer: ARRIS
+model: CM820B
+model_aliases:
+  - "Zoom 5370"
+  - "Thomson TCM420"
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: none
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Intel Puma 5"
+
+sources:
+  chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"
+  auth_config: "Synthetic HAR — no login required"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: dimkalinux
+      contribution: "Initial fixture and parser"
+
+isps:
+  - Various
+
+notes: |
+  EuroDOCSIS 3.0 cable modem (released 2011). Intel Puma 5 chipset.
+  No authentication required — CGI endpoints are publicly accessible.
+  Two resources: /cgi-bin/status_cgi (channels + uptime) and
+  /cgi-bin/vers_cgi (firmware/hardware version). Version info requires
+  parser.py post-processor to parse the "System:" blob.
+references:
+  prs:
+    - 57

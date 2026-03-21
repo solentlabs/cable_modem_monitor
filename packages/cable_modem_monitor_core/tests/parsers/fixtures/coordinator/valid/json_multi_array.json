@@ -1,0 +1,49 @@
+{
+  "_description": "Coordinator routes multi-array json section — two arrays concatenated",
+  "_json": {
+    "/api/data": {
+      "primary": {
+        "channels": [
+          {"id": 1, "freq": 735000000, "pwr": -6.5}
+        ]
+      },
+      "secondary": {
+        "channels": [
+          {"id": 0, "pwr": -7.4}
+        ]
+      }
+    }
+  },
+  "_parser_config": {
+    "downstream": {
+      "format": "json",
+      "resource": "/api/data",
+      "arrays": [
+        {
+          "array_path": "primary.channels",
+          "channels": [
+            {"key": "id", "field": "channel_id", "type": "integer"},
+            {"key": "freq", "field": "frequency", "type": "integer"},
+            {"key": "pwr", "field": "power", "type": "float"}
+          ],
+          "channel_type": {"fixed": "qam"}
+        },
+        {
+          "array_path": "secondary.channels",
+          "channels": [
+            {"key": "id", "field": "channel_id", "type": "integer"},
+            {"key": "pwr", "field": "power", "type": "float"}
+          ],
+          "channel_type": {"fixed": "ofdm"}
+        }
+      ]
+    }
+  },
+  "_expected": {
+    "downstream": [
+      {"channel_id": 1, "frequency": 735000000, "power": -6.5, "channel_type": "qam"},
+      {"channel_id": 0, "power": -7.4, "channel_type": "ofdm"}
+    ],
+    "upstream": []
+  }
+}

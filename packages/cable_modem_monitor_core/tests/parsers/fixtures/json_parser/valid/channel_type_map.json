@@ -1,0 +1,38 @@
+{
+  "_description": "Channel type detection via key→map lookup",
+  "_json": {
+    "channels": [
+      {
+        "id": 1,
+        "freq": 139000000,
+        "type": "sc_qam"
+      },
+      {
+        "id": 2,
+        "freq": 300000000,
+        "type": "ofdm"
+      }
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "channels": [
+      {"key": "id", "field": "channel_id", "type": "integer"},
+      {"key": "freq", "field": "frequency", "type": "integer"}
+    ],
+    "channel_type": {
+      "key": "type",
+      "map": {
+        "sc_qam": "qam",
+        "ofdm": "ofdm"
+      }
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 139000000, "channel_type": "qam"},
+    {"channel_id": 2, "frequency": 300000000, "channel_type": "ofdm"}
+  ]
+}

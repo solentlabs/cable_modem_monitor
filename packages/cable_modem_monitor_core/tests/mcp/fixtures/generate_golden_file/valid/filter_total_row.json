@@ -1,6 +1,6 @@
 {
   "_description": "Total row filtered by frequency not-zero",
-  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      skip_rows: 1\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n        - index: 2\n          field: power\n          type: float\n      channel_type:\n        fixed: qam\n      filter:\n        frequency:\n          not: 0\n",
+  "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      row_start: 1\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n        - index: 2\n          field: power\n          type: float\n      channel_type:\n        fixed: qam\n      filter:\n        frequency:\n          not: 0\n",
   "_har": {
     "log": {
       "entries": [

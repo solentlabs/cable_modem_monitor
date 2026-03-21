@@ -1,0 +1,159 @@
+downstream:
+  format: json
+  resource: "/cgi-bin/luci/admin/gateway/wan_status"
+  arrays:
+    - array_path: "docsis.dschannel.dschannel"
+      channels:
+        - key: "channelID"
+          field: channel_id
+          type: integer
+        - key: "lockStatus"
+          field: lock_status
+          type: string
+        - key: "modulation"
+          field: modulation
+          type: string
+        - key: "frequency"
+          field: frequency
+          type: integer
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "SNRLevel"
+          field: snr
+          type: float
+        - key: "correctableCodewords"
+          field: corrected
+          type: integer
+        - key: "uncorrectableCodewords"
+          field: uncorrected
+          type: integer
+      channel_type:
+        fixed: "qam"
+      filter:
+        lock_status: "Locked"
+
+    - array_path: "docsis.ofdmchannel.ofdmchannel"
+      channels:
+        - key: "ofdmID"
+          field: channel_id
+          type: integer
+        - key: "modulation"
+          field: modulation
+          type: string
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "DataSubcarriersAverageRxMER"
+          field: snr
+          type: float
+        - key: "activeSubcarrierNumber"
+          field: active_subcarriers
+          type: integer
+        - key: "channelBandwidth"
+          field: channel_width
+          type: string
+        - key: "fftType"
+          field: fft_type
+          type: string
+        - key: "PLCLocked"
+          field: lock_status
+          type: string
+        - key: "status"
+          field: status
+          type: string
+      channel_type:
+        fixed: "ofdm"
+      filter:
+        status: "1"
+
+upstream:
+  format: json
+  resource: "/cgi-bin/luci/admin/gateway/wan_status"
+  arrays:
+    - array_path: "docsis.uschannel.uschannel"
+      channels:
+        - key: "channelID"
+          field: channel_id
+          type: integer
+        - key: "lockStatus"
+          field: lock_status
+          type: string
+        - key: "frequency"
+          field: frequency
+          type: integer
+        - key: "powerLevel"
+          field: power
+          type: float
+        - key: "symbolRate"
+          field: symbol_rate
+          type: integer
+          unit: "KSym/sec"
+        - key: "modulation"
+          field: modulation
+          type: string
+      channel_type:
+        key: "channelType"
+        map:
+          "us_type_atdma": "atdma"
+          "unsupported": "unsupported"
+      filter:
+        channel_type:
+          not: "unsupported"
+
+    - array_path: "docsis.ofdmachannel.ofdmachannel"
+      channels:
+        - key: "ofdmaID"
+          field: channel_id
+          type: integer
+        - key: "modulation"
+          field: modulation
+          type: string
+        - key: "reportPower"
+          field: power
+          type: float
+        - key: "activeSubcarrierNumber"
+          field: active_subcarriers
+          type: integer
+        - key: "fftSize"
+          field: fft_type
+          type: string
+        - key: "channelBandwidth"
+          field: channel_width
+          type: string
+        - key: "power"
+          field: power_state
+          type: string
+        - key: "status"
+          field: status
+          type: string
+      channel_type:
+        fixed: "ofdma"
+      filter:
+        status: "1"
+        power_state: "ON"
+
+system_info:
+  sources:
+    - format: json
+      resource: "/cgi-bin/luci/admin/gateway/wan_status"
+      fields:
+        - key: "uptime"
+          field: system_uptime
+          type: string
+        - key: "version"
+          field: software_version
+          type: string
+          path: "release"
+        - key: "model"
+          field: model_name
+          type: string
+          path: "release"
+        - key: "hwversion"
+          field: hardware_version
+          type: string
+          path: "release"
+        - key: "docsis_operating_mode"
+          field: docsis_version
+          type: string
+          path: "release"

@@ -1,0 +1,19 @@
+{
+  "_description": "Missing resource — returns empty dict",
+  "_html": null,
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "InitTagValue",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 0, "field": "current_time", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {}
+}

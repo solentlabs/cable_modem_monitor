@@ -265,7 +265,7 @@ def _transform_table(section: dict[str, Any]) -> dict[str, Any]:
     if section.get("selector"):
         table_def["selector"] = section["selector"]
     if section.get("row_start"):
-        table_def["skip_rows"] = section["row_start"]
+        table_def["row_start"] = section["row_start"]
     table_def["columns"] = columns
     if section.get("channel_type"):
         table_def["channel_type"] = section["channel_type"]
