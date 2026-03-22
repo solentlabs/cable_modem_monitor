@@ -9,7 +9,7 @@ downstream:
       columns:
         - index: 1
           field: lock_status
-          type: string
+          type: lock_status
         - index: 3
           field: channel_id
           type: integer
@@ -34,7 +34,7 @@ downstream:
       channel_type:
         fixed: qam
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
 upstream:
   format: table
@@ -47,7 +47,13 @@ upstream:
       columns:
         - index: 1
           field: lock_status
+          type: lock_status
+        - index: 2
+          field: channel_type
           type: string
+          map:
+            "ATDMA": "atdma"
+            "TDMA": "tdma"
         - index: 3
           field: channel_id
           type: integer
@@ -59,10 +65,5 @@ upstream:
           field: power
           type: float
           unit: dBmV
-      channel_type:
-        index: 2
-        map:
-          "ATDMA": "atdma"
-          "TDMA": "tdma"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"

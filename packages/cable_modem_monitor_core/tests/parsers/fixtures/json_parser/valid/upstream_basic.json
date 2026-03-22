@@ -1,5 +1,5 @@
 {
-  "_description": "Basic upstream extraction — 2 channels with symbol_rate",
+  "_description": "Basic upstream extraction \u2014 2 channels with symbol_rate",
   "_json": {
     "upstream": {
       "channels": [
@@ -23,11 +23,27 @@
     "format": "json",
     "resource": "/api/upstream",
     "array_path": "upstream.channels",
-    "channels": [
-      {"key": "channelId", "field": "channel_id", "type": "integer"},
-      {"key": "frequency", "field": "frequency", "type": "integer"},
-      {"key": "power", "field": "power", "type": "float"},
-      {"key": "symbolRate", "field": "symbol_rate", "type": "integer"}
+    "fields": [
+      {
+        "key": "channelId",
+        "field": "channel_id",
+        "type": "integer"
+      },
+      {
+        "key": "frequency",
+        "field": "frequency",
+        "type": "integer"
+      },
+      {
+        "key": "power",
+        "field": "power",
+        "type": "float"
+      },
+      {
+        "key": "symbolRate",
+        "field": "symbol_rate",
+        "type": "integer"
+      }
     ]
   },
   "_expected": [

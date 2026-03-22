@@ -1,0 +1,18 @@
+{
+  "_description": "Row-level map — normalize channel_type values at extraction time",
+  "_html": "<html><body><table border=1><tr><th>Upstream</th><th colspan=3>Bonding Channel Value</th></tr><tr><td>Channel ID</td><td>1</td><td>2</td><td>3</td></tr><tr><td>Frequency</td><td>22800000 Hz</td><td>29200000 Hz</td><td>16300000 Hz</td></tr><tr><td>Channel Type</td><td>ATDMA</td><td>TDMA_AND_ATDMA</td><td>TDMA</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Upstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
+      {"label": "Channel Type", "field": "channel_type", "type": "string", "map": {"ATDMA": "atdma", "TDMA": "atdma", "TDMA_AND_ATDMA": "atdma"}}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 22800000, "channel_type": "atdma"},
+    {"channel_id": 2, "frequency": 29200000, "channel_type": "atdma"},
+    {"channel_id": 3, "frequency": 16300000, "channel_type": "atdma"}
+  ]
+}

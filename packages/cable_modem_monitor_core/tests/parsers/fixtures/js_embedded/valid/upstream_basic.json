@@ -1,5 +1,5 @@
 {
-  "_description": "Basic upstream extraction — 1 ATDMA channel, 7 fields per channel",
+  "_description": "Basic upstream extraction \u2014 1 ATDMA channel, 7 fields per channel",
   "_html": "<html><body><script>function InitUsTableTagValue() {\n  var tagValueList = '1|1|Locked|ATDMA|41|5120|17800000 Hz|54.3 dBmV'\n}</script></body></html>",
   "_resource": "/status.html",
   "_function": {
@@ -7,14 +7,38 @@
     "channel_type": "atdma",
     "delimiter": "|",
     "fields_per_channel": 7,
-    "channels": [
-      {"offset": 3, "field": "channel_id", "type": "integer"},
-      {"offset": 4, "field": "symbol_rate", "type": "integer"},
-      {"offset": 5, "field": "frequency", "type": "frequency", "unit": "Hz"},
-      {"offset": 6, "field": "power", "type": "float", "unit": "dBmV"}
+    "fields": [
+      {
+        "offset": 3,
+        "field": "channel_id",
+        "type": "integer"
+      },
+      {
+        "offset": 4,
+        "field": "symbol_rate",
+        "type": "integer"
+      },
+      {
+        "offset": 5,
+        "field": "frequency",
+        "type": "frequency",
+        "unit": "Hz"
+      },
+      {
+        "offset": 6,
+        "field": "power",
+        "type": "float",
+        "unit": "dBmV"
+      }
     ]
   },
   "_expected": [
-    {"channel_id": 41, "symbol_rate": 5120, "frequency": 17800000, "power": 54.3, "channel_type": "atdma"}
+    {
+      "channel_id": 41,
+      "symbol_rate": 5120,
+      "frequency": 17800000,
+      "power": 54.3,
+      "channel_type": "atdma"
+    }
   ]
 }

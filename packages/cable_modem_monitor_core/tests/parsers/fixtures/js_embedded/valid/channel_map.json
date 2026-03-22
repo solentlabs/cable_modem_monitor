@@ -1,0 +1,53 @@
+{
+  "_description": "Channel-level map \u2014 normalize values at extraction time",
+  "_html": "<html><body><script>function InitUsTableTagValue() {\n  var tagValueList = '2|1|ATDMA|22800000|37.5|2|TDMA_AND_ATDMA|29200000|38.0'\n}</script></body></html>",
+  "_resource": "/status.html",
+  "_function": {
+    "name": "InitUsTableTagValue",
+    "channel_type": "atdma",
+    "delimiter": "|",
+    "fields_per_channel": 4,
+    "fields": [
+      {
+        "offset": 0,
+        "field": "channel_id",
+        "type": "integer"
+      },
+      {
+        "offset": 1,
+        "field": "raw_type",
+        "type": "string",
+        "map": {
+          "ATDMA": "atdma",
+          "TDMA_AND_ATDMA": "atdma"
+        }
+      },
+      {
+        "offset": 2,
+        "field": "frequency",
+        "type": "frequency"
+      },
+      {
+        "offset": 3,
+        "field": "power",
+        "type": "float"
+      }
+    ]
+  },
+  "_expected": [
+    {
+      "channel_id": 1,
+      "raw_type": "atdma",
+      "frequency": 22800000,
+      "power": 37.5,
+      "channel_type": "atdma"
+    },
+    {
+      "channel_id": 2,
+      "raw_type": "atdma",
+      "frequency": 29200000,
+      "power": 38.0,
+      "channel_type": "atdma"
+    }
+  ]
+}

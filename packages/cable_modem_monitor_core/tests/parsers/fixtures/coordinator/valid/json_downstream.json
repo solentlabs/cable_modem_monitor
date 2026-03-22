@@ -21,13 +21,37 @@
       "format": "json",
       "resource": "/api/downstream",
       "array_path": "downstream.channels",
-      "channels": [
-        {"key": "channelId", "field": "channel_id", "type": "integer"},
-        {"key": "frequency", "field": "frequency", "type": "integer"},
-        {"key": "power", "field": "power", "type": "float"},
-        {"key": "snr", "field": "snr", "type": "float"},
-        {"key": "correctedErrors", "field": "corrected", "type": "integer"},
-        {"key": "uncorrectedErrors", "field": "uncorrected", "type": "integer"}
+      "fields": [
+        {
+          "key": "channelId",
+          "field": "channel_id",
+          "type": "integer"
+        },
+        {
+          "key": "frequency",
+          "field": "frequency",
+          "type": "integer"
+        },
+        {
+          "key": "power",
+          "field": "power",
+          "type": "float"
+        },
+        {
+          "key": "snr",
+          "field": "snr",
+          "type": "float"
+        },
+        {
+          "key": "correctedErrors",
+          "field": "corrected",
+          "type": "integer"
+        },
+        {
+          "key": "uncorrectedErrors",
+          "field": "uncorrected",
+          "type": "integer"
+        }
       ]
     }
   },

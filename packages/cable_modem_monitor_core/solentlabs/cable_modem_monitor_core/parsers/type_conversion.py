@@ -1,7 +1,7 @@
 """Type conversion for parser field values.
 
-Handles field type conversion (integer, float, string, frequency, boolean),
-unit suffix stripping, value mapping, and frequency normalization.
+Handles field type conversion (integer, float, string, frequency, boolean,
+lock_status), unit suffix stripping, value mapping, and frequency normalization.
 
 See PARSING_SPEC.md Field Types for the authoritative type definitions.
 """
@@ -155,6 +155,9 @@ def convert_value(
     if field_type == "boolean":
         return _to_boolean(value)
 
+    if field_type == "lock_status":
+        return _to_lock_status(value)
+
     # Unknown type — pass through as string
     _logger.warning("Unknown field type '%s', returning as string", field_type)
     return value
@@ -206,3 +209,15 @@ def _to_boolean(value: str) -> bool:
     Everything else is falsy.
     """
     return value.lower() in {"true", "1", "yes", "on", "locked", "active"}
+
+
+_LOCKED_VALUES = {"locked", "yes", "active", "true", "1", "on"}
+
+
+def _to_lock_status(value: str) -> str:
+    """Normalize lock status to canonical ``"locked"`` or ``"not_locked"``.
+
+    Handles common modem representations: ``"Locked"``, ``"Not Locked"``,
+    ``"YES"``, ``"True"``, ``"Active"``, etc.
+    """
+    return "locked" if value.lower() in _LOCKED_VALUES else "not_locked"

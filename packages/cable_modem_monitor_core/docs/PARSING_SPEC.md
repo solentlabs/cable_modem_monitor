@@ -469,6 +469,7 @@ upstream:
 | `tables[].columns[].field` | string | yes | Canonical output field name |
 | `tables[].columns[].type` | string | yes | Field type (see table above) |
 | `tables[].columns[].unit` | string | no | Unit suffix to strip |
+| `tables[].columns[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 | `tables[].channel_type` | object | no | Channel type: `fixed`, `map`, or explicit field |
 | `tables[].filter` | object | no | Row filter rules |
 | `tables[].merge_by` | list[string] | no | Merge into primary channels by these key fields instead of concatenating. See [Companion Tables](#companion-tables-merge_by). |
@@ -635,6 +636,7 @@ downstream:
 | `rows[].field` | string | yes | Canonical output field name |
 | `rows[].type` | string | yes | Field type (see Common Concepts) |
 | `rows[].unit` | string | no | Unit suffix to strip |
+| `rows[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 | `channel_type` | object | no | Channel type detection rules (flat form) |
 | `tables` | list | conditional | One or more table definitions (multi-table form — mutually exclusive with `selector`/`rows`) |
 | `tables[].selector` | object | yes | How to find the table (same types as HTMLTableParser) |
@@ -666,7 +668,7 @@ downstream:
       channel_type: "qam"
       delimiter: "|"
       fields_per_channel: 9
-      channels:
+      fields:
         - offset: 1
           field: lock_status
           type: string
@@ -700,7 +702,7 @@ downstream:
       channel_type: "ofdm"
       delimiter: "|"
       fields_per_channel: 11
-      channels:
+      fields:
         - offset: 3
           field: channel_id
           type: integer
@@ -731,7 +733,7 @@ upstream:
       channel_type: "atdma"
       delimiter: "|"
       fields_per_channel: 7
-      channels:
+      fields:
         - offset: 3
           field: channel_id
           type: integer
@@ -759,8 +761,12 @@ upstream:
 | `functions[].channel_type` | string | yes | Channel type for all records from this function |
 | `functions[].delimiter` | string | yes | Value separator (typically `\|`) |
 | `functions[].fields_per_channel` | integer | yes | Number of values per channel record |
-| `functions[].channels` | list | yes | Offset→field mappings within each record |
-| `functions[].channels[].offset` | integer | yes | Position within the channel record (0-based) |
+| `functions[].fields` | list | yes | Offset→field mappings within each record |
+| `functions[].fields[].offset` | integer | yes | Position within the channel record (0-based) |
+| `functions[].fields[].field` | string | yes | Canonical output field name |
+| `functions[].fields[].type` | string | yes | Field type (see Common Concepts) |
+| `functions[].fields[].unit` | string | no | Unit suffix to strip |
+| `functions[].fields[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 
 **Extraction algorithm:**
 1. Find `<script>` tag containing the function name
@@ -833,13 +839,16 @@ downstream:
   data_key: "CustomerConnDownstreamChannel"
   record_delimiter: "|+|"
   field_delimiter: "^"
-  channels:
+  fields:
     - index: 1
       field: lock_status
       type: string
     - index: 2
       field: channel_type
       type: string
+      map:
+        "QAM256": "qam"
+        "OFDM PLC": "ofdm"
     - index: 3
       field: channel_id
       type: integer
@@ -858,11 +867,6 @@ downstream:
     - index: 8
       field: uncorrected
       type: integer
-  channel_type:
-    index: 2
-    map:
-      "QAM256": "qam"
-      "OFDM PLC": "ofdm"
 
 upstream:
   format: hnap
@@ -870,13 +874,16 @@ upstream:
   data_key: "CustomerConnUpstreamChannel"
   record_delimiter: "|+|"
   field_delimiter: "^"
-  channels:
+  fields:
     - index: 1
       field: lock_status
       type: string
     - index: 2
       field: channel_type
       type: string
+      map:
+        "SC-QAM": "qam"
+        "OFDMA": "ofdma"
     - index: 3
       field: channel_id
       type: integer
@@ -889,11 +896,6 @@ upstream:
     - index: 6
       field: power
       type: float
-  channel_type:
-    index: 2
-    map:
-      "SC-QAM": "qam"
-      "OFDMA": "ofdma"
 
 system_info:
   sources:
@@ -928,7 +930,12 @@ S33v2 has no zero-ID placeholders.
 | `data_key` | string | yes | Field within the action response containing delimited data |
 | `record_delimiter` | string | yes | Separator between channel records (typically `\|+\|`) |
 | `field_delimiter` | string | yes | Separator between fields within a record (typically `^`) |
-| `channels` | list | yes | Index→field mappings within each record |
+| `fields` | list | yes | Index→field mappings within each record |
+| `fields[].index` | integer | yes | Position within the channel record (0-based) |
+| `fields[].field` | string | yes | Canonical output field name |
+| `fields[].type` | string | yes | Field type (see Common Concepts) |
+| `fields[].unit` | string | no | Unit suffix to strip |
+| `fields[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 | `channel_type` | object | no | Channel type detection config (see [Channel Type Detection](#channel-type-detection)) |
 | `filter` | object | no | Row filter rules (see [Filtering](#filtering)) |
 
@@ -939,7 +946,7 @@ S33v2 has no zero-ID placeholders.
 2. Split by `record_delimiter` to get channel records
 3. For each record, split by `field_delimiter` to get fields
 4. Apply `channel_type` map if configured
-5. Apply type conversion per `channels[].type`
+5. Apply type conversion per `fields[].type`
 6. Apply `filter` rules, drop non-matching records
 7. Map fields by index to output dict
 
@@ -971,7 +978,7 @@ downstream:
   format: json
   resource: "/rest/v1/cablemodem/downstream"
   array_path: "downstream.channels"
-  channels:
+  fields:
     - key: "channelId"
       field: channel_id
       type: integer
@@ -998,17 +1005,18 @@ downstream:
     - key: "uncorrectedErrors"
       field: uncorrected
       type: integer
-  channel_type:
-    key: "channelType"
-    map:
-      "sc-qam": "qam"
-      "ofdm": "ofdm"
+    - key: "channelType"
+      field: channel_type
+      type: string
+      map:
+        "sc-qam": "qam"
+        "ofdm": "ofdm"
 
 upstream:
   format: json
   resource: "/rest/v1/cablemodem/upstream"
   array_path: "upstream.channels"
-  channels:
+  fields:
     - key: "channelId"
       field: channel_id
       type: integer
@@ -1030,12 +1038,12 @@ upstream:
 | `format` | string | yes | `json` — selects `JSONParser` |
 | `resource` | string | yes | URL path key in the resource dict |
 | `array_path` | string | yes* | Dot-notation path to the channel array |
-| `channels` | list | yes* | Key→field mappings within each JSON object |
-| `channels[].key` | string | yes | JSON key name in the source object |
-| `channels[].fallback_key` | string | no | Alternative key if primary is missing |
-| `arrays` | list | yes* | Multi-array form (alternative to array_path/channels) |
+| `fields` | list | yes* | Key→field mappings within each JSON object |
+| `fields[].key` | string | yes | JSON key name in the source object |
+| `fields[].fallback_key` | string | no | Alternative key if primary is missing |
+| `arrays` | list | yes* | Multi-array form (alternative to array_path/fields) |
 
-\* Mutually exclusive: use either flat form (`array_path` + `channels`)
+\* Mutually exclusive: use either flat form (`array_path` + `fields`)
 or multi-array form (`arrays`).
 
 **Multi-array form** — for modems with multiple channel arrays in one
@@ -1047,7 +1055,7 @@ downstream:
   resource: "/api/status"
   arrays:
     - array_path: "docsis.qam_channels"
-      channels:
+      fields:
         - key: "channelID"
           field: channel_id
           type: integer
@@ -1055,7 +1063,7 @@ downstream:
         fixed: "qam"
 
     - array_path: "docsis.ofdm_channels"
-      channels:
+      fields:
         - key: "ofdmID"
           field: channel_id
           type: integer
@@ -1063,7 +1071,7 @@ downstream:
         fixed: "ofdm"
 ```
 
-Each array entry has its own `array_path`, `channels`, `channel_type`,
+Each array entry has its own `array_path`, `fields`, `channel_type`,
 and `filter`. Results from all arrays are concatenated.
 
 **Extraction algorithm:**
@@ -1641,48 +1649,44 @@ channel_type:
   fixed: "qam"
 ```
 
-### Map
+### Map (cross-field derivation)
 
-A source field's value is mapped to canonical types. Every expected
-value from the modem firmware must have an explicit entry. Unrecognized
-values are not silently absorbed — they produce a warning, allowing
-new channel types (e.g., future DOCSIS versions) to surface rather
-than be misclassified.
+Derives channel type from another already-extracted field's value.
+Use this when no dedicated channel type column exists and the type
+must be inferred from a related field (e.g., modulation). Only the
+``field`` accessor is supported — it references a field already in
+the channel dict.
 
-The accessor varies by parser format — `field` for HTML table column
-names, `index` for positional formats (HNAP, JSEmbedded), `key` for
-JSON object keys:
+Every expected value from the modem firmware must have an explicit
+entry. Unrecognized values produce a warning, allowing new channel
+types to surface rather than be misclassified.
 
 ```yaml
-# HTML table — map by column value
+# Derive channel_type from modulation column
 channel_type:
   field: modulation
   map:
     "QAM256": "qam"
     "QAM64": "qam"
     "Other": "ofdm"
-
-# HNAP — map by positional index
-channel_type:
-  index: 2
-  map:
-    "SC-QAM": "qam"
-    "OFDM": "ofdm"
-
-# JSON — map by object key
-channel_type:
-  key: "channelType"
-  map:
-    "sc-qam": "qam"
-    "ofdm": "ofdm"
 ```
+
+For same-field mapping (where the source data has a dedicated channel
+type column/row/field), use the inline ``map:`` on the field mapping
+instead. See [Explicit Field](#explicit-field) below.
 
 ### Explicit Field
 
 The source data has a channel type field that is extracted directly
-as a column/field mapping. The strategy normalizes the raw value to
-a canonical type using the same map rules. Use this when the modem
-provides a dedicated channel type column:
+as a field mapping with a ``map`` attribute. The map normalizes the
+raw value to a canonical type at extraction time. Use this when the
+modem provides a dedicated channel type column/row/field.
+
+All mapping types support ``map``: ``ColumnMapping`` (table),
+``RowMapping`` (transposed), ``ChannelMapping`` (HNAP, JS), and
+``JsonChannelMapping`` (JSON).
+
+**HTML table** (column mapping):
 
 ```yaml
 columns:
@@ -1692,6 +1696,31 @@ columns:
     map:
       "SC-QAM": "qam"
       "OFDM": "ofdm"
+```
+
+**Transposed table** (row mapping):
+
+```yaml
+rows:
+  - label: "Channel Type"
+    field: channel_type
+    type: string
+    map:
+      "ATDMA": "atdma"
+      "TDMA": "atdma"
+      "TDMA_AND_ATDMA": "atdma"
+```
+
+**HNAP** (channel mapping):
+
+```yaml
+channels:
+  - index: 2
+    field: channel_type
+    type: string
+    map:
+      "SC-QAM": "qam"
+      "OFDM PLC": "ofdm"
 ```
 
 ---

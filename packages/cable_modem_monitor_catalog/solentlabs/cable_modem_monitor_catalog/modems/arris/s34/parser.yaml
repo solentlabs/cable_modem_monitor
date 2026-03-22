@@ -4,13 +4,16 @@ downstream:
   data_key: CustomerConnDownstreamChannel
   record_delimiter: "|+|"
   field_delimiter: "^"
-  channels:
+  fields:
     - field: lock_status
-      type: string
+      type: lock_status
       index: 1
     - field: channel_type
       type: string
       index: 2
+      map:
+        "256QAM": "qam"
+        "OFDM PLC": "ofdm"
     - field: channel_id
       type: integer
       index: 3
@@ -29,11 +32,6 @@ downstream:
     - field: uncorrected
       type: integer
       index: 8
-  channel_type:
-    index: 2
-    map:
-      256QAM: qam
-      OFDM PLC: ofdm
   filter:
     channel_id:
       not: 0
@@ -44,13 +42,16 @@ upstream:
   data_key: CustomerConnUpstreamChannel
   record_delimiter: "|+|"
   field_delimiter: "^"
-  channels:
+  fields:
     - field: lock_status
-      type: string
+      type: lock_status
       index: 1
     - field: channel_type
       type: string
       index: 2
+      map:
+        "SC-QAM": "qam"
+        "OFDMA": "ofdma"
     - field: channel_id
       type: integer
       index: 3
@@ -63,11 +64,6 @@ upstream:
     - field: power
       type: float
       index: 6
-  channel_type:
-    index: 2
-    map:
-      SC-QAM: qam
-      OFDMA: ofdma
   filter:
     channel_id:
       not: 0

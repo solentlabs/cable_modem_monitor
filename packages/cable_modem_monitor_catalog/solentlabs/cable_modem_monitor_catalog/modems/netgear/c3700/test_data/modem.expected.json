@@ -1,7 +1,7 @@
 {
   "downstream": [
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 1,
       "frequency": 345000000,
@@ -12,7 +12,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 2,
       "frequency": 351000000,
@@ -23,7 +23,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 3,
       "frequency": 357000000,
@@ -34,7 +34,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 4,
       "frequency": 363000000,
@@ -45,7 +45,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 5,
       "frequency": 369000000,
@@ -56,7 +56,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 6,
       "frequency": 375000000,
@@ -67,7 +67,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 7,
       "frequency": 381000000,
@@ -78,7 +78,7 @@
       "channel_type": "qam"
     },
     {
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "modulation": "QAM256",
       "channel_id": 10,
       "frequency": 399000000,
@@ -91,8 +91,8 @@
   ],
   "upstream": [
     {
-      "lock_status": "Locked",
-      "channel_type": "ATDMA",
+      "lock_status": "locked",
+      "channel_type": "atdma",
       "channel_id": 41,
       "symbol_rate": 5120,
       "frequency": 17800000,

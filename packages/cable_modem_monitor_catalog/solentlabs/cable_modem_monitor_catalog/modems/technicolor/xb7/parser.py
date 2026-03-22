@@ -14,7 +14,7 @@ from bs4 import Tag
 
 
 class PostProcessor:
-    """Extract system_info from readonlyLabel span pairs."""
+    """Extract system_info from readonlyLabel/value span pairs."""
 
     def parse_system_info(
         self,

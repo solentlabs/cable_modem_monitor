@@ -87,7 +87,7 @@ class HTMLTableTransposedParser(BaseParser):
             if channel is None:
                 continue
 
-            _apply_channel_type(channel, self._table.channel_type, col_idx, label_map)
+            _apply_channel_type(channel, self._table.channel_type)
             channels.append(channel)
 
         return channels
@@ -169,6 +169,7 @@ def _extract_channel(
             raw_text,
             row_def.type,
             unit=row_def.unit,
+            map_config=row_def.map,
         )
 
         if value is not None:
@@ -180,12 +181,10 @@ def _extract_channel(
 def _apply_channel_type(
     channel: dict[str, Any],
     channel_type_config: ChannelTypeConfig | None,
-    col_idx: int,
-    label_map: dict[str, list[Tag]],
 ) -> None:
     """Apply channel_type to a channel dict.
 
-    Fixed: sets a static value. Map: looks up a field value in the map.
+    Fixed: sets a static value. Map: derives from another field's value.
     Does not overwrite if ``channel_type`` already exists in the channel.
     """
     if channel_type_config is None or "channel_type" in channel:
@@ -197,17 +196,7 @@ def _apply_channel_type(
 
     if isinstance(channel_type_config, ChannelTypeMap):
         ct_map = channel_type_config
-        raw_value: str | None = None
-
-        if ct_map.field is not None:
-            raw_value = str(channel.get(ct_map.field, ""))
-        elif ct_map.index is not None:
-            # For transposed tables, index refers to a row label by position
-            row_labels = list(label_map.keys())
-            if ct_map.index < len(row_labels):
-                cells = label_map[row_labels[ct_map.index]]
-                if col_idx < len(cells):
-                    raw_value = cells[col_idx].get_text(strip=True)
+        raw_value = str(channel.get(ct_map.field, ""))
 
         if raw_value and raw_value in ct_map.map:
             channel["channel_type"] = ct_map.map[raw_value]

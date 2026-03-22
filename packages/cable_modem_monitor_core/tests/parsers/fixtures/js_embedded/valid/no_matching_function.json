@@ -1,5 +1,5 @@
 {
-  "_description": "No matching function in page — returns empty list",
+  "_description": "No matching function in page \u2014 returns empty list",
   "_html": "<html><body><script>function SomeOtherFunction() {\n  var tagValueList = '1|data'\n}</script></body></html>",
   "_resource": "/status.html",
   "_function": {
@@ -7,8 +7,12 @@
     "channel_type": "qam",
     "delimiter": "|",
     "fields_per_channel": 9,
-    "channels": [
-      {"offset": 3, "field": "channel_id", "type": "integer"}
+    "fields": [
+      {
+        "offset": 3,
+        "field": "channel_id",
+        "type": "integer"
+      }
     ]
   },
   "_expected": []

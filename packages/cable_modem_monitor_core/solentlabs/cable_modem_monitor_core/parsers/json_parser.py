@@ -21,6 +21,8 @@ from typing import Any
 
 from ..models.parser_config.common import (
     ChannelTypeConfig,
+    ChannelTypeFixed,
+    ChannelTypeMap,
     FilterValue,
     JsonChannelMapping,
 )
@@ -96,7 +98,7 @@ class JSONParser(BaseParser):
         return _extract_from_array(
             data,
             self._config.array_path,
-            self._config.channels or [],
+            self._config.fields or [],
             self._config.channel_type,
             self._config.filter,
         )
@@ -109,7 +111,7 @@ class JSONParser(BaseParser):
                 _extract_from_array(
                     data,
                     array_def.array_path,
-                    array_def.channels,
+                    array_def.fields,
                     array_def.channel_type,
                     array_def.filter,
                 )
@@ -150,7 +152,7 @@ def _extract_from_array(
         if channel is None:
             continue
 
-        _apply_channel_type(channel, item, channel_type)
+        _apply_channel_type(channel, channel_type)
 
         if not passes_filter(channel, filter_rules):
             continue
@@ -201,21 +203,26 @@ def _extract_channel(
 
 def _apply_channel_type(
     channel: dict[str, Any],
-    item: dict[str, Any],
     channel_type: ChannelTypeConfig | None,
 ) -> None:
-    """Apply channel_type from config (fixed or key→map lookup)."""
+    """Apply channel_type from config (fixed or field→map derivation)."""
     if "channel_type" in channel:
         return
 
     if channel_type is None:
         return
 
-    if hasattr(channel_type, "fixed"):
+    if isinstance(channel_type, ChannelTypeFixed):
         channel["channel_type"] = channel_type.fixed
         return
 
-    if hasattr(channel_type, "key") and channel_type.key:
-        raw = item.get(channel_type.key, "")
-        mapped = channel_type.map.get(str(raw).lower(), str(raw).lower())
-        channel["channel_type"] = mapped
+    if isinstance(channel_type, ChannelTypeMap):
+        raw_value = str(channel.get(channel_type.field, ""))
+        if raw_value and raw_value in channel_type.map:
+            channel["channel_type"] = channel_type.map[raw_value]
+        elif raw_value:
+            _logger.warning(
+                "Unmapped channel_type value: '%s' (known: %s)",
+                raw_value,
+                list(channel_type.map.keys()),
+            )

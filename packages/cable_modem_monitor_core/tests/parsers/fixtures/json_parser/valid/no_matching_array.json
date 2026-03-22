@@ -1,5 +1,5 @@
 {
-  "_description": "Array path does not exist in response — returns empty list",
+  "_description": "Array path does not exist in response \u2014 returns empty list",
   "_json": {
     "other": {
       "data": []
@@ -10,8 +10,12 @@
     "format": "json",
     "resource": "/api/data",
     "array_path": "downstream.channels",
-    "channels": [
-      {"key": "id", "field": "channel_id", "type": "integer"}
+    "fields": [
+      {
+        "key": "id",
+        "field": "channel_id",
+        "type": "integer"
+      }
     ]
   },
   "_expected": []

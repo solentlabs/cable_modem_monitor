@@ -95,11 +95,7 @@ class HNAPParser(BaseParser):
             if channel is None:
                 continue
 
-            _apply_channel_type(
-                channel,
-                self._config.channel_type,
-                fields,
-            )
+            _apply_channel_type(channel, self._config.channel_type)
 
             if not passes_filter(channel, self._config.filter):
                 continue
@@ -119,7 +115,7 @@ class HNAPParser(BaseParser):
         """
         channel: dict[str, Any] = {}
 
-        for mapping in self._config.channels:
+        for mapping in self._config.fields:
             idx = mapping.index if mapping.index is not None else mapping.offset
             if idx is None or idx >= len(fields):
                 _logger.debug(
@@ -134,6 +130,7 @@ class HNAPParser(BaseParser):
                 raw_value,
                 mapping.type,
                 unit=mapping.unit,
+                map_config=mapping.map,
             )
 
             if value is not None:
@@ -145,13 +142,11 @@ class HNAPParser(BaseParser):
 def _apply_channel_type(
     channel: dict[str, Any],
     channel_type_config: Any | None,
-    fields: list[str],
 ) -> None:
-    """Apply channel_type to a channel dict from HNAP record fields.
+    """Apply channel_type to a channel dict.
 
-    Fixed: sets a static value. Map: looks up a positional field
-    value by index in the map. Does not overwrite if ``channel_type``
-    already exists in the channel.
+    Fixed: sets a static value. Map: derives from another field's value.
+    Does not overwrite if ``channel_type`` already exists in the channel.
     """
     if channel_type_config is None or "channel_type" in channel:
         return
@@ -162,12 +157,7 @@ def _apply_channel_type(
 
     if isinstance(channel_type_config, ChannelTypeMap):
         ct_map = channel_type_config
-        raw_value: str | None = None
-
-        if ct_map.index is not None and ct_map.index < len(fields):
-            raw_value = fields[ct_map.index].strip()
-        elif ct_map.field is not None:
-            raw_value = str(channel.get(ct_map.field, ""))
+        raw_value = str(channel.get(ct_map.field, ""))
 
         if raw_value and raw_value in ct_map.map:
             channel["channel_type"] = ct_map.map[raw_value]

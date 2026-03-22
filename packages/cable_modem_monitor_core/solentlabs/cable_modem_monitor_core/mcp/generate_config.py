@@ -261,14 +261,27 @@ def _transform_table(section: dict[str, Any]) -> dict[str, Any]:
     """Transform table format from analysis to parser.yaml structure."""
     columns = [_mapping_to_column(m) for m in section.get("mappings", [])]
 
+    ct = section.get("channel_type")
+    if ct and "index" in ct:
+        # Inline the channel_type mapping on the columns list
+        columns.append(
+            {
+                "index": ct["index"],
+                "field": "channel_type",
+                "type": "string",
+                "map": ct["map"],
+            }
+        )
+        ct = None
+
     table_def: dict[str, Any] = {}
     if section.get("selector"):
         table_def["selector"] = section["selector"]
     if section.get("row_start"):
         table_def["row_start"] = section["row_start"]
     table_def["columns"] = columns
-    if section.get("channel_type"):
-        table_def["channel_type"] = section["channel_type"]
+    if ct:
+        table_def["channel_type"] = ct
     if section.get("filter"):
         table_def["filter"] = section["filter"]
 
@@ -299,7 +312,7 @@ def _transform_transposed(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_javascript(section: dict[str, Any]) -> dict[str, Any]:
     """Transform JS format from analysis to parser.yaml structure."""
-    channels = [_mapping_to_channel(m) for m in section.get("mappings", [])]
+    fields = [_mapping_to_channel(m) for m in section.get("mappings", [])]
     channel_type = section.get("channel_type", {})
 
     func_def: dict[str, Any] = {
@@ -307,7 +320,7 @@ def _transform_javascript(section: dict[str, Any]) -> dict[str, Any]:
         "channel_type": channel_type.get("fixed", "qam") if channel_type else "qam",
         "delimiter": section.get("delimiter", "|"),
         "fields_per_channel": section.get("fields_per_record", 0),
-        "channels": channels,
+        "fields": fields,
     }
     if section.get("filter"):
         func_def["filter"] = section["filter"]
@@ -321,7 +334,20 @@ def _transform_javascript(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
     """Transform HNAP format from analysis to parser.yaml structure."""
-    channels = [_mapping_to_channel(m) for m in section.get("mappings", [])]
+    fields = [_mapping_to_channel(m) for m in section.get("mappings", [])]
+
+    ct = section.get("channel_type")
+    if ct and "index" in ct:
+        # Inline the channel_type mapping on the fields list
+        fields.append(
+            {
+                "index": ct["index"],
+                "field": "channel_type",
+                "type": "string",
+                "map": ct["map"],
+            }
+        )
+        ct = None
 
     result: dict[str, Any] = {
         "format": "hnap",
@@ -329,10 +355,10 @@ def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
         "data_key": section.get("data_key", ""),
         "record_delimiter": section.get("record_delimiter", "|+|"),
         "field_delimiter": section.get("field_delimiter", "^"),
-        "channels": channels,
+        "fields": fields,
     }
-    if section.get("channel_type"):
-        result["channel_type"] = section["channel_type"]
+    if ct:
+        result["channel_type"] = ct
     if section.get("filter"):
         result["filter"] = section["filter"]
 
@@ -341,16 +367,29 @@ def _transform_hnap(section: dict[str, Any]) -> dict[str, Any]:
 
 def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
     """Transform JSON format from analysis to parser.yaml structure."""
-    channels = [_mapping_to_json_channel(m) for m in section.get("mappings", [])]
+    fields = [_mapping_to_json_channel(m) for m in section.get("mappings", [])]
+
+    ct = section.get("channel_type")
+    if ct and "key" in ct:
+        # Inline the channel_type mapping on the fields list
+        fields.append(
+            {
+                "key": ct["key"],
+                "field": "channel_type",
+                "type": "string",
+                "map": ct["map"],
+            }
+        )
+        ct = None  # Don't also set section-level
 
     result: dict[str, Any] = {
         "format": "json",
         "resource": section.get("resource", ""),
         "array_path": section.get("array_path", ""),
-        "channels": channels,
+        "fields": fields,
     }
-    if section.get("channel_type"):
-        result["channel_type"] = section["channel_type"]
+    if ct:
+        result["channel_type"] = ct
     if section.get("filter"):
         result["filter"] = section["filter"]
 
@@ -371,6 +410,8 @@ def _mapping_to_column(mapping: dict[str, Any]) -> dict[str, Any]:
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
+    if mapping.get("map"):
+        result["map"] = mapping["map"]
     return result
 
 
@@ -383,6 +424,8 @@ def _mapping_to_row(mapping: dict[str, Any]) -> dict[str, Any]:
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
+    if mapping.get("map"):
+        result["map"] = mapping["map"]
     return result
 
 
@@ -395,6 +438,8 @@ def _mapping_to_channel(mapping: dict[str, Any]) -> dict[str, Any]:
         result["index"] = mapping["index"]
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
+    if mapping.get("map"):
+        result["map"] = mapping["map"]
     return result
 
 
@@ -407,6 +452,8 @@ def _mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
+    if mapping.get("map"):
+        result["map"] = mapping["map"]
     return result
 
 

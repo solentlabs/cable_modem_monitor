@@ -47,6 +47,7 @@ class RowMapping(BaseModel):
     field: str
     type: str
     unit: str = ""
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_field_type(self) -> RowMapping:
@@ -65,6 +66,7 @@ class ChannelMapping(BaseModel):
     type: str
     unit: str = ""
     fallback_key: str = ""
+    map: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def validate_has_position(self) -> ChannelMapping:
@@ -116,12 +118,15 @@ class ChannelTypeFixed(BaseModel):
 
 
 class ChannelTypeMap(BaseModel):
-    """Map source field values to canonical types."""
+    """Derive channel type from another field's value via map lookup.
+
+    Used for cross-field derivation (e.g., deriving channel_type from
+    a modulation field). For same-field mapping, use inline ``map:``
+    on the column/row/field mapping instead.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    field: str | None = None
-    index: int | None = None
-    key: str | None = None
+    field: str
     map: dict[str, str]
 
 

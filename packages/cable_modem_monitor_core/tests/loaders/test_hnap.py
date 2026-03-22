@@ -38,7 +38,7 @@ def _make_parser_config(**overrides: Any) -> ParserConfig:
         data_key="DownstreamChannel",
         record_delimiter="|+|",
         field_delimiter="^",
-        channels=[{"index": 0, "field": "channel_id", "type": "integer"}],
+        fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
     )
     us_section = HNAPSection(
         format="hnap",
@@ -46,7 +46,7 @@ def _make_parser_config(**overrides: Any) -> ParserConfig:
         data_key="UpstreamChannel",
         record_delimiter="|+|",
         field_delimiter="^",
-        channels=[{"index": 0, "field": "channel_id", "type": "integer"}],
+        fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
     )
     defaults: dict[str, Any] = {
         "downstream": ds_section,
@@ -181,7 +181,7 @@ class TestActionCollection:
             data_key="Channel",
             record_delimiter="|+|",
             field_delimiter="^",
-            channels=[{"index": 0, "field": "channel_id", "type": "integer"}],
+            fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
         )
         config = _make_parser_config(
             downstream=same_section,

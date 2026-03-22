@@ -2,7 +2,7 @@
   "downstream": [
     {
       "channel_id": 1,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 489000000,
       "width": 6000000,
@@ -16,7 +16,7 @@
     },
     {
       "channel_id": 2,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 483000000,
       "width": 6000000,
@@ -30,7 +30,7 @@
     },
     {
       "channel_id": 3,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 477000000,
       "width": 6000000,
@@ -44,7 +44,7 @@
     },
     {
       "channel_id": 4,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 471000000,
       "width": 6000000,
@@ -58,7 +58,7 @@
     },
     {
       "channel_id": 5,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 465000000,
       "width": 6000000,
@@ -72,7 +72,7 @@
     },
     {
       "channel_id": 6,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 459000000,
       "width": 6000000,
@@ -86,7 +86,7 @@
     },
     {
       "channel_id": 7,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 453000000,
       "width": 6000000,
@@ -100,7 +100,7 @@
     },
     {
       "channel_id": 13,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 417000000,
       "width": 6000000,
@@ -114,7 +114,7 @@
     },
     {
       "channel_id": 14,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 411000000,
       "width": 6000000,
@@ -128,7 +128,7 @@
     },
     {
       "channel_id": 15,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 405000000,
       "width": 6000000,
@@ -142,7 +142,7 @@
     },
     {
       "channel_id": 16,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 399000000,
       "width": 6000000,
@@ -156,7 +156,7 @@
     },
     {
       "channel_id": 17,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 393000000,
       "width": 6000000,
@@ -170,7 +170,7 @@
     },
     {
       "channel_id": 18,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 387000000,
       "width": 6000000,
@@ -184,7 +184,7 @@
     },
     {
       "channel_id": 19,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 381000000,
       "width": 6000000,
@@ -198,7 +198,7 @@
     },
     {
       "channel_id": 20,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 375000000,
       "width": 6000000,
@@ -212,7 +212,7 @@
     },
     {
       "channel_id": 21,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 369000000,
       "width": 6000000,
@@ -226,7 +226,7 @@
     },
     {
       "channel_id": 22,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 363000000,
       "width": 6000000,
@@ -240,7 +240,7 @@
     },
     {
       "channel_id": 23,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 357000000,
       "width": 6000000,
@@ -254,7 +254,7 @@
     },
     {
       "channel_id": 24,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 351000000,
       "width": 6000000,
@@ -268,7 +268,7 @@
     },
     {
       "channel_id": 25,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 345000000,
       "width": 6000000,
@@ -282,7 +282,7 @@
     },
     {
       "channel_id": 26,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 339000000,
       "width": 6000000,
@@ -296,7 +296,7 @@
     },
     {
       "channel_id": 27,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 333000000,
       "width": 6000000,
@@ -310,7 +310,7 @@
     },
     {
       "channel_id": 28,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 327000000,
       "width": 6000000,
@@ -324,7 +324,7 @@
     },
     {
       "channel_id": 29,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 321000000,
       "width": 6000000,
@@ -338,7 +338,7 @@
     },
     {
       "channel_id": 30,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 315000000,
       "width": 6000000,
@@ -352,7 +352,7 @@
     },
     {
       "channel_id": 31,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 309000000,
       "width": 6000000,
@@ -366,7 +366,7 @@
     },
     {
       "channel_id": 32,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 303000000,
       "width": 6000000,
@@ -380,7 +380,7 @@
     },
     {
       "channel_id": 33,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Partial Service",
       "frequency": 812000000,
       "width": 190000000,
@@ -394,7 +394,7 @@
     },
     {
       "channel_id": 46,
-      "lock_status": "Not Locked",
+      "lock_status": "not_locked",
       "bonding_status": "Bonded",
       "frequency": 0,
       "width": 0,
@@ -408,7 +408,7 @@
     },
     {
       "channel_id": 47,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 723000000,
       "width": 6000000,
@@ -422,7 +422,7 @@
     },
     {
       "channel_id": 48,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 729000000,
       "width": 6000000,
@@ -436,7 +436,7 @@
     },
     {
       "channel_id": 49,
-      "lock_status": "Not Locked",
+      "lock_status": "not_locked",
       "bonding_status": "Partial Service",
       "frequency": 735000000,
       "width": 6000000,
@@ -452,7 +452,7 @@
   "upstream": [
     {
       "channel_id": 1,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 16700000,
       "width": 6400000,
@@ -462,7 +462,7 @@
     },
     {
       "channel_id": 2,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 23400000,
       "width": 6400000,
@@ -472,7 +472,7 @@
     },
     {
       "channel_id": 3,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 51525000,
       "width": 27800000,
@@ -482,7 +482,7 @@
     },
     {
       "channel_id": 7,
-      "lock_status": "Locked",
+      "lock_status": "locked",
       "bonding_status": "Bonded",
       "frequency": 23925000,
       "width": 27600000,

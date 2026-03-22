@@ -1,12 +1,28 @@
 {
   "_modem": {
-    "manufacturer": "Solent Labs", "model": "T300", "transport": "hnap",
+    "manufacturer": "Solent Labs",
+    "model": "T300",
+    "transport": "hnap",
     "default_host": "192.168.100.1",
-    "auth": {"strategy": "hnap", "hmac_algorithm": "md5"},
-    "hardware": {"docsis_version": "3.1"},
+    "auth": {
+      "strategy": "hnap",
+      "hmac_algorithm": "md5"
+    },
+    "hardware": {
+      "docsis_version": "3.1"
+    },
     "status": "verified",
-    "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
-    "isps": ["Various"]
+    "attribution": {
+      "contributors": [
+        {
+          "github": "tester",
+          "contribution": "Test"
+        }
+      ]
+    },
+    "isps": [
+      "Various"
+    ]
   },
   "_parser": {
     "downstream": {
@@ -15,9 +31,17 @@
       "data_key": "Downstream",
       "record_delimiter": "|+|",
       "field_delimiter": "^",
-      "channels": [
-        {"index": 0, "field": "channel_id", "type": "integer"},
-        {"index": 1, "field": "frequency", "type": "frequency"}
+      "fields": [
+        {
+          "index": 0,
+          "field": "channel_id",
+          "type": "integer"
+        },
+        {
+          "index": 1,
+          "field": "frequency",
+          "type": "frequency"
+        }
       ]
     }
   }

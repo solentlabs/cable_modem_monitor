@@ -3,13 +3,13 @@ downstream:
   resource: "/cgi-bin/luci/admin/gateway/wan_status"
   arrays:
     - array_path: "docsis.dschannel.dschannel"
-      channels:
+      fields:
         - key: "channelID"
           field: channel_id
           type: integer
         - key: "lockStatus"
           field: lock_status
-          type: string
+          type: lock_status
         - key: "modulation"
           field: modulation
           type: string
@@ -31,10 +31,10 @@ downstream:
       channel_type:
         fixed: "qam"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
     - array_path: "docsis.ofdmchannel.ofdmchannel"
-      channels:
+      fields:
         - key: "ofdmID"
           field: channel_id
           type: integer
@@ -58,7 +58,7 @@ downstream:
           type: string
         - key: "PLCLocked"
           field: lock_status
-          type: string
+          type: lock_status
         - key: "status"
           field: status
           type: string
@@ -72,13 +72,18 @@ upstream:
   resource: "/cgi-bin/luci/admin/gateway/wan_status"
   arrays:
     - array_path: "docsis.uschannel.uschannel"
-      channels:
+      fields:
         - key: "channelID"
           field: channel_id
           type: integer
         - key: "lockStatus"
           field: lock_status
+          type: lock_status
+        - key: "channelType"
+          field: channel_type
           type: string
+          map:
+            "US_TYPE_ATDMA": "atdma"
         - key: "frequency"
           field: frequency
           type: integer
@@ -92,17 +97,12 @@ upstream:
         - key: "modulation"
           field: modulation
           type: string
-      channel_type:
-        key: "channelType"
-        map:
-          "us_type_atdma": "atdma"
-          "unsupported": "unsupported"
       filter:
         channel_type:
-          not: "unsupported"
+          not: "UNSUPPORTED"
 
     - array_path: "docsis.ofdmachannel.ofdmachannel"
-      channels:
+      fields:
         - key: "ofdmaID"
           field: channel_id
           type: integer

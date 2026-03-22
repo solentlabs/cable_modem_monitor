@@ -17,7 +17,7 @@ def _make_config(**overrides: Any) -> HNAPSection:
         "data_key": "DownstreamChannel",
         "record_delimiter": "|+|",
         "field_delimiter": "^",
-        "channels": [
+        "fields": [
             {"index": 3, "field": "channel_id", "type": "integer"},
             {"index": 4, "field": "frequency", "type": "frequency"},
             {"index": 5, "field": "power", "type": "float"},
@@ -134,13 +134,18 @@ def test_frequency_conversion(freq_input: str, expected_hz: int, desc: str) -> N
 class TestChannelTypeMap:
     """Test map-based channel_type detection."""
 
-    def test_channel_type_from_index(self) -> None:
-        """Channel type derived from positional index + map."""
+    def test_channel_type_from_inline_map(self) -> None:
+        """Channel type derived from inline map on channel mapping."""
         config = _make_config(
-            channel_type={
-                "index": 2,
-                "map": {"QAM256": "qam", "OFDM PLC": "ofdm"},
-            },
+            fields=[
+                {"index": 2, "field": "channel_type", "type": "string", "map": {"QAM256": "qam", "OFDM PLC": "ofdm"}},
+                {"index": 3, "field": "channel_id", "type": "integer"},
+                {"index": 4, "field": "frequency", "type": "frequency"},
+                {"index": 5, "field": "power", "type": "float"},
+                {"index": 6, "field": "snr", "type": "float"},
+                {"index": 7, "field": "corrected", "type": "integer"},
+                {"index": 8, "field": "uncorrected", "type": "integer"},
+            ],
         )
         parser = HNAPParser(config)
         resources = _make_resources(
@@ -162,10 +167,18 @@ class TestChannelTypeMap:
         channels = parser.parse(resources)
         assert channels[0]["channel_type"] == "atdma"
 
-    def test_unmapped_value_no_crash(self) -> None:
-        """Unmapped channel_type value doesn't set the field."""
+    def test_unmapped_value_passes_through(self) -> None:
+        """Unmapped channel_type value passes through as raw string."""
         config = _make_config(
-            channel_type={"index": 2, "map": {"QAM256": "qam"}},
+            fields=[
+                {"index": 2, "field": "channel_type", "type": "string", "map": {"QAM256": "qam"}},
+                {"index": 3, "field": "channel_id", "type": "integer"},
+                {"index": 4, "field": "frequency", "type": "frequency"},
+                {"index": 5, "field": "power", "type": "float"},
+                {"index": 6, "field": "snr", "type": "float"},
+                {"index": 7, "field": "corrected", "type": "integer"},
+                {"index": 8, "field": "uncorrected", "type": "integer"},
+            ],
         )
         parser = HNAPParser(config)
         resources = _make_resources("1^Locked^UNKNOWN^24^567000000^3^41^0^0")
@@ -173,7 +186,7 @@ class TestChannelTypeMap:
         channels = parser.parse(resources)
 
         assert len(channels) == 1
-        assert "channel_type" not in channels[0]
+        assert channels[0]["channel_type"] == "UNKNOWN"
 
 
 class TestFilter:
@@ -234,16 +247,13 @@ class TestUpstreamSection:
         config = _make_config(
             response_key="GetStatusUpstreamResponse",
             data_key="UpstreamChannel",
-            channels=[
+            fields=[
+                {"index": 2, "field": "channel_type", "type": "string", "map": {"SC-QAM": "atdma", "OFDMA": "ofdma"}},
                 {"index": 3, "field": "channel_id", "type": "integer"},
                 {"index": 4, "field": "symbol_rate", "type": "integer"},
                 {"index": 5, "field": "frequency", "type": "frequency"},
                 {"index": 6, "field": "power", "type": "float"},
             ],
-            channel_type={
-                "index": 2,
-                "map": {"SC-QAM": "atdma", "OFDMA": "ofdma"},
-            },
         )
         parser = HNAPParser(config)
         resources = _make_resources(
@@ -261,3 +271,43 @@ class TestUpstreamSection:
         assert channels[0]["frequency"] == 38400000
         assert channels[0]["power"] == 47.0
         assert channels[1]["channel_type"] == "ofdma"
+
+
+# ┌─────────────────┬──────────────────────────────────┬──────────┬───────────────────────────┐
+# │ raw_value       │ map_config                       │ expected │ description               │
+# ├─────────────────┼──────────────────────────────────┼──────────┼───────────────────────────┤
+# │ "SC-QAM"        │ {"SC-QAM": "qam", "OFDM": ...}   │ "qam"    │ mapped value              │
+# │ "OFDM"          │ {"SC-QAM": "qam", "OFDM": ...}   │ "ofdm"   │ second map entry          │
+# │ "UNKNOWN"       │ {"SC-QAM": "qam"}                │ "UNKNOWN"│ unmatched passes through  │
+# └─────────────────┴──────────────────────────────────┴──────────┴───────────────────────────┘
+#
+# fmt: off
+FIELD_LEVEL_MAP_CASES = [
+    # (raw_value,  map_config,                              expected,  description)
+    ("SC-QAM",     {"SC-QAM": "qam", "OFDM": "ofdm"},      "qam",     "mapped value"),
+    ("OFDM",       {"SC-QAM": "qam", "OFDM": "ofdm"},      "ofdm",    "second map entry"),
+    ("UNKNOWN",    {"SC-QAM": "qam"},                        "UNKNOWN", "unmatched passes through"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "raw_value,map_config,expected,desc",
+    FIELD_LEVEL_MAP_CASES,
+    ids=[c[3] for c in FIELD_LEVEL_MAP_CASES],
+)
+def test_field_level_map(raw_value: str, map_config: dict, expected: str, desc: str) -> None:
+    """Test map attribute on ChannelMapping normalizes extracted values."""
+    config = _make_config(
+        fields=[
+            {"index": 3, "field": "channel_id", "type": "integer"},
+            {"index": 2, "field": "channel_type", "type": "string", "map": map_config},
+        ],
+    )
+    parser = HNAPParser(config)
+    resources = _make_resources(f"1^Locked^{raw_value}^24^567000000^3^41^0^0")
+
+    channels = parser.parse(resources)
+
+    assert len(channels) == 1
+    assert channels[0]["channel_type"] == expected

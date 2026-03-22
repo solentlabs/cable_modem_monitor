@@ -13,13 +13,37 @@
           "channel_type": "qam",
           "delimiter": "|",
           "fields_per_channel": 9,
-          "channels": [
-            {"offset": 3, "field": "channel_id", "type": "integer"},
-            {"offset": 4, "field": "frequency", "type": "frequency"},
-            {"offset": 5, "field": "power", "type": "float"},
-            {"offset": 6, "field": "snr", "type": "float"},
-            {"offset": 7, "field": "corrected", "type": "integer"},
-            {"offset": 8, "field": "uncorrected", "type": "integer"}
+          "fields": [
+            {
+              "offset": 3,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "offset": 4,
+              "field": "frequency",
+              "type": "frequency"
+            },
+            {
+              "offset": 5,
+              "field": "power",
+              "type": "float"
+            },
+            {
+              "offset": 6,
+              "field": "snr",
+              "type": "float"
+            },
+            {
+              "offset": 7,
+              "field": "corrected",
+              "type": "integer"
+            },
+            {
+              "offset": 8,
+              "field": "uncorrected",
+              "type": "integer"
+            }
           ]
         }
       ]
@@ -27,8 +51,24 @@
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "snr": 39.0, "corrected": 100, "uncorrected": 2, "channel_type": "qam"},
-      {"channel_id": 9, "frequency": 513000000, "power": 4.0, "snr": 38.0, "corrected": 80, "uncorrected": 1, "channel_type": "qam"}
+      {
+        "channel_id": 10,
+        "frequency": 519000000,
+        "power": 5.0,
+        "snr": 39.0,
+        "corrected": 100,
+        "uncorrected": 2,
+        "channel_type": "qam"
+      },
+      {
+        "channel_id": 9,
+        "frequency": 513000000,
+        "power": 4.0,
+        "snr": 38.0,
+        "corrected": 80,
+        "uncorrected": 1,
+        "channel_type": "qam"
+      }
     ],
     "upstream": []
   }

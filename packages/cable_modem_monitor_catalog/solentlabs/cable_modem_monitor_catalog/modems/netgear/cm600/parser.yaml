@@ -6,10 +6,12 @@ downstream:
         type: id
         match: "dsTable"
       row_start: 1
+      channel_type:
+        fixed: "qam"
       columns:
         - index: 1
           field: lock_status
-          type: string
+          type: lock_status
         - index: 2
           field: modulation
           type: string
@@ -45,10 +47,12 @@ upstream:
       columns:
         - index: 1
           field: lock_status
-          type: string
+          type: lock_status
         - index: 2
           field: channel_type
           type: string
+          map:
+            "ATDMA": "atdma"
         - index: 3
           field: channel_id
           type: integer

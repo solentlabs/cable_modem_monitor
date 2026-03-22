@@ -1,5 +1,5 @@
 {
-  "_description": "Missing resource — returns empty list",
+  "_description": "Missing resource \u2014 returns empty list",
   "_html": null,
   "_resource": "/status.html",
   "_function": {
@@ -7,8 +7,12 @@
     "channel_type": "qam",
     "delimiter": "|",
     "fields_per_channel": 9,
-    "channels": [
-      {"offset": 3, "field": "channel_id", "type": "integer"}
+    "fields": [
+      {
+        "offset": 3,
+        "field": "channel_id",
+        "type": "integer"
+      }
     ]
   },
   "_expected": []

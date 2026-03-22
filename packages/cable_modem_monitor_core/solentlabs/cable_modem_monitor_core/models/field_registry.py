@@ -77,5 +77,6 @@ FIELD_TYPES: frozenset[str] = frozenset(
         "string",
         "frequency",
         "boolean",
+        "lock_status",
     }
 )

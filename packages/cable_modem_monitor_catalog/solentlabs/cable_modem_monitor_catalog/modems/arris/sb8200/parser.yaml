@@ -12,10 +12,17 @@ downstream:
           type: integer
         - index: 1
           field: lock_status
-          type: string
+          type: lock_status
         - index: 2
           field: modulation
           type: string
+        - index: 2
+          field: channel_type
+          type: string
+          map:
+            "QAM256": "qam"
+            "QAM64": "qam"
+            "Other": "ofdm"
         - index: 3
           field: frequency
           type: frequency
@@ -33,14 +40,6 @@ downstream:
         - index: 7
           field: uncorrected
           type: integer
-      # SB8200 firmware labels OFDM modulation as "Other" in this column.
-      # No separate channel type column exists in the DS table.
-      channel_type:
-        index: 2
-        map:
-          "QAM256": "qam"
-          "QAM64": "qam"
-          "Other": "ofdm"
 
 upstream:
   format: table
@@ -56,7 +55,13 @@ upstream:
           type: integer
         - index: 2
           field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_type
           type: string
+          map:
+            "SC-QAM Upstream": "qam"
+            "OFDM Upstream": "ofdma"
         - index: 4
           field: frequency
           type: frequency
@@ -67,11 +72,6 @@ upstream:
           field: power
           type: float
           unit: dBmV
-      channel_type:
-        index: 3
-        map:
-          "SC-QAM Upstream": "qam"
-          "OFDM Upstream": "ofdma"
 
 system_info:
   sources:

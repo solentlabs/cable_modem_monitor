@@ -6,8 +6,12 @@
     "format": "json",
     "resource": "/api/data",
     "array_path": "channels",
-    "channels": [
-      {"key": "id", "field": "channel_id", "type": "integer"}
+    "fields": [
+      {
+        "key": "id",
+        "field": "channel_id",
+        "type": "integer"
+      }
     ]
   },
   "_expected": []

@@ -22,6 +22,6 @@ class HNAPSection(BaseModel):
     data_key: str
     record_delimiter: str
     field_delimiter: str
-    channels: list[ChannelMapping]
+    fields: list[ChannelMapping]
     channel_type: ChannelTypeConfig | None = None
     filter: dict[str, FilterValue] = Field(default_factory=dict)

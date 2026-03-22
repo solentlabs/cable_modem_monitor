@@ -1,5 +1,5 @@
 {
-  "_description": "Block comment with old tagValueList is ignored — real value extracted",
+  "_description": "Block comment with old tagValueList is ignored \u2014 real value extracted",
   "_html": "<html><body><script>function InitDsTableTagValue() {\n  /* var tagValueList = '99|old|data' */\n  var tagValueList = '1|1|Locked|QAM256|5|500000000|2.0|40.0|50|0'\n}</script></body></html>",
   "_resource": "/status.html",
   "_function": {
@@ -7,15 +7,42 @@
     "channel_type": "qam",
     "delimiter": "|",
     "fields_per_channel": 9,
-    "channels": [
-      {"offset": 1, "field": "lock_status", "type": "string"},
-      {"offset": 3, "field": "channel_id", "type": "integer"},
-      {"offset": 4, "field": "frequency", "type": "frequency"},
-      {"offset": 5, "field": "power", "type": "float"},
-      {"offset": 6, "field": "snr", "type": "float"}
+    "fields": [
+      {
+        "offset": 1,
+        "field": "lock_status",
+        "type": "string"
+      },
+      {
+        "offset": 3,
+        "field": "channel_id",
+        "type": "integer"
+      },
+      {
+        "offset": 4,
+        "field": "frequency",
+        "type": "frequency"
+      },
+      {
+        "offset": 5,
+        "field": "power",
+        "type": "float"
+      },
+      {
+        "offset": 6,
+        "field": "snr",
+        "type": "float"
+      }
     ]
   },
   "_expected": [
-    {"lock_status": "Locked", "channel_id": 5, "frequency": 500000000, "power": 2.0, "snr": 40.0, "channel_type": "qam"}
+    {
+      "lock_status": "Locked",
+      "channel_id": 5,
+      "frequency": 500000000,
+      "power": 2.0,
+      "snr": 40.0,
+      "channel_type": "qam"
+    }
   ]
 }
