@@ -15,9 +15,17 @@ if [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 
-# Run tests with minimal output
-echo "Running tests..."
+# Run HA integration tests
+echo "Running HA integration tests..."
 pytest tests/ -q
 
+# Run Core package tests
+echo "Running Core package tests..."
+(cd packages/cable_modem_monitor_core && pytest tests/ -q)
+
+# Run Catalog package tests
+echo "Running Catalog package tests..."
+(cd packages/cable_modem_monitor_catalog && pytest tests/ -q)
+
 echo ""
-echo "✓ Tests passed!"
+echo "✓ All tests passed!"

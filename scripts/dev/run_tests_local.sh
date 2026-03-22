@@ -55,7 +55,7 @@ echo ""
 
 # Run linting
 echo -e "${YELLOW}Running code quality checks (ruff)...${NC}"
-if ruff check custom_components/cable_modem_monitor/ --select E,F,W,C90; then
+if ruff check custom_components/cable_modem_monitor/ --select E,F,W,C90 && ruff check packages/; then
     echo -e "${GREEN}✓ Code quality checks passed${NC}"
 else
     echo -e "${RED}✗ Code quality checks failed${NC}"
@@ -63,18 +63,35 @@ else
 fi
 echo ""
 
-# Run tests with coverage (single run)
-echo -e "${YELLOW}Running tests with coverage...${NC}"
+# Run HA integration tests
+echo -e "${YELLOW}Running HA integration tests...${NC}"
 if pytest tests/ -v --tb=short --cov=custom_components/cable_modem_monitor --cov-report=term --cov-report=html; then
-    echo ""
-    echo -e "${GREEN}✓ All tests passed!${NC}"
+    echo -e "${GREEN}✓ HA integration tests passed!${NC}"
     TEST_PASSED=true
 else
-    echo ""
-    echo -e "${RED}✗ Tests failed${NC}"
+    echo -e "${RED}✗ HA integration tests failed${NC}"
     TEST_PASSED=false
 fi
-echo -e "${GREEN}✓ Coverage report generated (see htmlcov/index.html)${NC}"
+echo ""
+
+# Run Core package tests
+echo -e "${YELLOW}Running Core package tests...${NC}"
+if (cd packages/cable_modem_monitor_core && pytest tests/ -v --tb=short); then
+    echo -e "${GREEN}✓ Core package tests passed!${NC}"
+else
+    echo -e "${RED}✗ Core package tests failed${NC}"
+    TEST_PASSED=false
+fi
+echo ""
+
+# Run Catalog package tests
+echo -e "${YELLOW}Running Catalog package tests...${NC}"
+if (cd packages/cable_modem_monitor_catalog && pytest tests/ -v --tb=short); then
+    echo -e "${GREEN}✓ Catalog package tests passed!${NC}"
+else
+    echo -e "${RED}✗ Catalog package tests failed${NC}"
+    TEST_PASSED=false
+fi
 echo ""
 
 # Summary

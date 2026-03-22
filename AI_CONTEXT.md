@@ -73,6 +73,20 @@ The integration uses a **fallback parser** system that allows installation even 
 **Note:** Run `make sync` to copy modem.yaml and parser.py from `modems/` to `custom_components/modems/`.
 *`...` = `cable_modem_monitor`*
 
+### v3.14 Architecture: Core and Catalog Packages
+
+v3.14 introduces a modular architecture in `packages/`:
+
+| Package | Path | Purpose |
+|---------|------|---------|
+| **Core** | `packages/cable_modem_monitor_core/` | Platform-agnostic engine: auth, loading, parsing, testing, MCP tools |
+| **Catalog** | `packages/cable_modem_monitor_catalog/` | Modem configs, parsers, HAR test data, golden files |
+| **HA Integration** | `custom_components/cable_modem_monitor/` | Thin adapter wiring Core to Home Assistant |
+
+**Core specs:** `packages/cable_modem_monitor_core/docs/` (ARCHITECTURE.md, MODEM_YAML_SPEC.md, PARSING_SPEC.md, ONBOARDING_SPEC.md)
+
+**MCP onboarding pipeline:** `validate_har` → `analyze_har` → `enrich_metadata` → `generate_config` → `run_tests` → `write_modem_package`
+
 ### Authentication Methods
 
 | Type | Examples | Notes |
@@ -130,13 +144,14 @@ ssh <host> "cd /tmp && tar xzf cmm.tar.gz && sudo cp -rf cable_modem_monitor/* /
 
 | Topic | Location |
 |-------|----------|
-| **Architecture** | `docs/reference/ARCHITECTURE.md` |
-| **modem.yaml Schema** | `docs/specs/MODEM_YAML_SPEC.md` |
+| **Core Architecture (v3.14)** | `packages/cable_modem_monitor_core/docs/ARCHITECTURE.md` |
+| **modem.yaml Spec (v3.14)** | `packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md` |
+| **Parsing Spec (v3.14)** | `packages/cable_modem_monitor_core/docs/PARSING_SPEC.md` |
+| **Onboarding Spec (v3.14)** | `packages/cable_modem_monitor_core/docs/ONBOARDING_SPEC.md` |
+| HA Architecture (v3.13) | `docs/reference/ARCHITECTURE.md` |
 | Development setup | `docs/setup/GETTING_STARTED.md` |
 | Contributing guide | `CONTRIBUTING.md` |
 | Release history | `CHANGELOG.md` |
-| Parser development | `CONTRIBUTING.md` lines 218-382 |
-| Fixture library | `tests/parsers/FIXTURES.md` |
 | Parser guide (with schema) | `docs/reference/PARSER_GUIDE.md` |
 
 ## Standards References

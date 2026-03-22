@@ -153,6 +153,8 @@ auth:
 No additional fields. This is the simplest case — modems that expose
 their status pages without any login.
 
+**Success detection:** Always succeeds — no login is attempted.
+
 Evidence: modems with publicly accessible status pages (no login
 required). Common on older DOCSIS 3.0 modems and some ISP-branded
 devices that expose read-only status endpoints.
@@ -171,6 +173,11 @@ auth:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `challenge_cookie` | bool | `false` | If `true`, retry with server-set cookie on initial 401. Some modems (CM1200 HTTPS) return a challenge cookie that must be included in the retry. |
+
+**Success detection:** Always succeeds. Basic auth is per-request
+(credentials sent on every request), so there is no login response
+to evaluate. If `challenge_cookie` is enabled and the initial request
+fails with a network error, that is reported as a failure.
 
 Evidence: modems that return a `WWW-Authenticate: Basic` header on
 401 responses. Some modems also require a challenge cookie on retry.
@@ -206,6 +213,11 @@ auth:
 | `form_selector` | string | `""` | CSS selector to find the login form on `login_page` (for extracting action URL and hidden fields dynamically) |
 | `success.redirect` | string | `""` | Expected redirect URL after successful login |
 | `success.indicator` | string | `""` | String to match in response body to confirm success |
+
+**Success detection:** If `success` is provided, checks `redirect`
+(path substring match) and/or `indicator` (body substring match).
+Both are optional; if both present, both must pass. If `success` is
+omitted, any response that is not HTTP 401 is treated as success.
 
 Evidence: modems with HTML login forms. Encoding, field names, and
 success indicators vary by manufacturer. Both `goform` and `cgi-bin`
@@ -288,6 +300,14 @@ auth:
 | `success_prefix` | string | `"Url:"` | Response body prefix indicating successful login |
 | `error_prefix` | string | `"Error:"` | Response body prefix indicating failed login |
 
+**Success detection:** Matches the response body text against
+`success_prefix` (default `"Url:"`) and `error_prefix` (default
+`"Error:"`). If the body starts with `error_prefix`, the login
+failed and the text after the prefix is the error message. If it
+starts with `success_prefix`, the login succeeded and the text
+after the prefix is the redirect path. Both are configurable per
+modem.
+
 Evidence: observed in modem firmware where the login page JavaScript
 generates a random numeric nonce client-side, serializes credentials
 as plain form fields alongside the nonce, and evaluates the response
@@ -326,6 +346,12 @@ session:
 Session cookie and token prefix for subsequent requests are declared in
 the `session` section — see [Session](#session).
 
+**Success detection:** If `success_indicator` is provided, the
+login response body must contain that string. Otherwise, any
+successful HTTP response is treated as success. The session token
+is extracted from cookies by the runner using `session.cookie_name`
+— the auth manager does not read session config.
+
 Evidence: modems that encode credentials in URL query strings and
 issue session tokens for subsequent requests. Firmware variants of
 the same model may use different login prefix values.
@@ -349,6 +375,13 @@ auth:
 HNAP auth is fully constrained by the transport. The endpoint (`/HNAP1/`),
 session mechanism (`uid` cookie + `HNAP_AUTH` header), and protocol are
 all fixed. Only the HMAC algorithm varies across modems.
+
+**Success detection:** The HNAP login response is a JSON object with
+a `LoginResult` field. Accepted values: `"OK"` or `"OK_CHANGED"`
+(success). `"FAILED"` means wrong credentials. `"LOCKUP"` or
+`"REBOOT"` mean the firmware's anti-brute-force mechanism has
+triggered (temporary lockout or forced device restart). These are
+protocol-fixed — not configurable per modem.
 
 Evidence: modems using the HNAP protocol with HMAC challenge-response.
 The HMAC algorithm (MD5 or SHA256) varies across models and hardware
@@ -398,6 +431,12 @@ actions:
 Session cookie, CSRF header, and session-wide headers are declared
 in the `session` section. Logout is declared in `actions.logout`.
 See [Session](#session) and [Actions](#actions).
+
+**Success detection:** The login response JSON is checked for an
+`error` key — if present and truthy, login failed (the `message`
+key provides the error detail). HTTP 401 is also treated as failure.
+Any other response is treated as success. These checks are
+hardcoded — not configurable per modem.
 
 Evidence: modems with JavaScript SPA interfaces that use PBKDF2
 key derivation for login. Parameters are typically derived from the
