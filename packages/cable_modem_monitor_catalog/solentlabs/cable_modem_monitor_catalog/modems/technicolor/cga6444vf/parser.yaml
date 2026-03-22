@@ -1,0 +1,114 @@
+downstream:
+  format: json
+  resource: "/api/v1/sta_docsis_status"
+  arrays:
+    # SC-QAM downstream channels
+    - array_path: "data.downstream"
+      fields:
+        - key: channelid
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+        - key: power
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: SNR
+          field: snr
+          type: float
+          unit: "dB"
+        - key: FFT
+          field: modulation
+          type: string
+        - key: locked
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: qam
+      filter:
+        lock_status: "locked"
+    # OFDM downstream channels
+    - array_path: "data.ofdm_downstream"
+      fields:
+        - key: channelid_ofdm
+          field: channel_id
+          type: integer
+        - key: CentralFrequency_ofdm
+          field: frequency
+          type: frequency
+        - key: power_ofdm
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: SNR_ofdm
+          field: snr
+          type: float
+          unit: "dB"
+        - key: locked_ofdm
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: ofdm
+      filter:
+        lock_status: "locked"
+
+upstream:
+  format: json
+  resource: "/api/v1/sta_docsis_status"
+  arrays:
+    # SC-QAM upstream channels
+    - array_path: "data.upstream"
+      fields:
+        - key: channelidup
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+        - key: power
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: FFT
+          field: modulation
+          type: string
+      channel_type:
+        fixed: atdma
+    # OFDMA upstream channels
+    - array_path: "data.ofdma_upstream"
+      fields:
+        - key: channelidup
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+        - key: power
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: FFT
+          field: modulation
+          type: string
+      channel_type:
+        fixed: ofdma
+
+system_info:
+  sources:
+    - format: json
+      resource: "/api/v1/sta_status"
+      fields:
+        - key: firmwareversion
+          field: software_version
+          type: string
+          path: "data"
+        - key: hardwaretype
+          field: hardware_version
+          type: string
+          path: "data"
+        - key: uptime
+          field: system_uptime
+          type: string
+          path: "data"

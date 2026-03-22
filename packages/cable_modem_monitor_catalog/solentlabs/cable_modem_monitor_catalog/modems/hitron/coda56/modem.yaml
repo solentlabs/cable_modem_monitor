@@ -1,0 +1,44 @@
+manufacturer: Hitron
+model: CODA56
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/goform/home"
+  login_page: "/home.html"
+  username_field: user
+  password_field: pws
+  encoding: plain
+
+session:
+  cookie_name: "userid"
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "HAR capture (#89) — guest mode (user=nologin/pws=nologin)"
+
+attribution:
+  contributors:
+    - github: unknown
+      contribution: "HAR capture (Issue #89)"
+
+isps:
+  - Comcast
+  - Xfinity
+
+notes: |
+  DOCSIS 3.0 cable modem. GoAhead-Webs server with HTTPS + HSTS.
+  JSON API via /data/*.asp endpoints (Content-Type: text/html but JSON body).
+  HAR captured in guest mode (user=nologin, pws=nologin) — read-only access.
+  Authenticated mode untested. OFDM/OFDMA channels on separate endpoints;
+  SC-QAM channels parsed from dsinfo.asp and usinfo.asp.
+
+references:
+  issues:
+    - 89

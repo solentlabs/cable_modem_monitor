@@ -1,0 +1,35 @@
+manufacturer: ARRIS
+model: TM1602A
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: none
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Broadcom"
+
+sources:
+  auth_config: "HAR capture — no login required"
+
+status: awaiting_verification
+
+attribution:
+  contributors:
+    - github: unknown
+      contribution: "HAR capture (Issue #112)"
+
+isps:
+  - Spectrum
+
+notes: |
+  DOCSIS 3.0 / PacketCable 2.0 Telephony Modem (released ~2016).
+  No authentication required — CGI endpoints are publicly accessible.
+  Same CGI structure as CM820B: /cgi-bin/status_cgi (channels + uptime)
+  and /cgi-bin/vers_cgi (firmware/hardware version). Version info
+  requires parser.py post-processor to parse the "System:" blob.
+
+references:
+  issues:
+    - 112

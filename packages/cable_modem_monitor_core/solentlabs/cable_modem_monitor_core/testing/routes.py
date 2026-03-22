@@ -48,15 +48,22 @@ def build_routes(
 
         method = request.get("method", "GET").upper()
         url = request.get("url", "")
-        path = normalize_path(urlparse(url).path)
+        parsed = urlparse(url)
+        path = normalize_path(parsed.path)
         if not path:
             continue
+
+        # Include query string in route key when present, so
+        # endpoints like /setup.cgi?todo=X resolve independently.
+        route_path = path
+        if parsed.query:
+            route_path = f"{path}?{parsed.query}"
 
         status = response.get("status", 0)
         headers = _extract_headers(response)
         body = _extract_body(response)
 
-        key = (method, path)
+        key = (method, route_path)
         existing = routes.get(key)
 
         # Prefer 200 responses; for non-200, only store if no entry yet
@@ -79,12 +86,16 @@ def normalize_path(path: str) -> str:
 
 
 def _extract_headers(response: dict[str, Any]) -> list[tuple[str, str]]:
-    """Extract response headers from a HAR response dict."""
+    """Extract response headers from a HAR response dict.
+
+    Strips Content-Length headers because HAR redaction may change
+    body length without updating the header value.
+    """
     headers: list[tuple[str, str]] = []
     for h in response.get("headers", []):
         name = h.get("name", "")
         value = h.get("value", "")
-        if name:
+        if name and name.lower() != "content-length":
             headers.append((name, value))
     return headers
 

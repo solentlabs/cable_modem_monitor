@@ -3,6 +3,7 @@
     {
       "channel_id": 1,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 489000000,
       "width": 6000000,
@@ -11,12 +12,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2865773680,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 2,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 483000000,
       "width": 6000000,
@@ -25,12 +26,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864699372,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 3,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 477000000,
       "width": 6000000,
@@ -39,12 +40,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864692026,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 4,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 471000000,
       "width": 6000000,
@@ -53,12 +54,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864703899,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 5,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 465000000,
       "width": 6000000,
@@ -67,12 +68,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864700666,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 6,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 459000000,
       "width": 6000000,
@@ -81,12 +82,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864709145,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 7,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 453000000,
       "width": 6000000,
@@ -95,12 +96,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864715844,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 13,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 417000000,
       "width": 6000000,
@@ -109,12 +110,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864711699,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 14,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 411000000,
       "width": 6000000,
@@ -123,12 +124,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864720301,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 15,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 405000000,
       "width": 6000000,
@@ -137,12 +138,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864717328,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 16,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 399000000,
       "width": 6000000,
@@ -151,12 +152,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864715544,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 17,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 393000000,
       "width": 6000000,
@@ -165,12 +166,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864716810,
       "corrected": 1,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 18,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 387000000,
       "width": 6000000,
@@ -179,12 +180,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864722204,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 19,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 381000000,
       "width": 6000000,
@@ -193,12 +194,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864726604,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 20,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 375000000,
       "width": 6000000,
@@ -207,12 +208,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864727802,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 21,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 369000000,
       "width": 6000000,
@@ -221,12 +222,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864727277,
       "corrected": 0,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 22,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 363000000,
       "width": 6000000,
@@ -235,12 +236,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864729045,
       "corrected": 5,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 23,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 357000000,
       "width": 6000000,
@@ -249,12 +250,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864729372,
       "corrected": 5,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 24,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 351000000,
       "width": 6000000,
@@ -263,12 +264,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864734900,
       "corrected": 4,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 25,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 345000000,
       "width": 6000000,
@@ -277,12 +278,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864742333,
       "corrected": 4,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 26,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 339000000,
       "width": 6000000,
@@ -291,12 +292,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864736693,
       "corrected": 80,
-      "uncorrected": 122,
-      "channel_type": "qam"
+      "uncorrected": 122
     },
     {
       "channel_id": 27,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 333000000,
       "width": 6000000,
@@ -305,12 +306,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864741992,
       "corrected": 15,
-      "uncorrected": 33,
-      "channel_type": "qam"
+      "uncorrected": 33
     },
     {
       "channel_id": 28,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 327000000,
       "width": 6000000,
@@ -319,12 +320,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864735014,
       "corrected": 13,
-      "uncorrected": 25,
-      "channel_type": "qam"
+      "uncorrected": 25
     },
     {
       "channel_id": 29,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 321000000,
       "width": 6000000,
@@ -333,12 +334,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864739275,
       "corrected": 9,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 30,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 315000000,
       "width": 6000000,
@@ -347,12 +348,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864738477,
       "corrected": 36,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 31,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 309000000,
       "width": 6000000,
@@ -361,12 +362,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864738673,
       "corrected": 28,
-      "uncorrected": 28,
-      "channel_type": "qam"
+      "uncorrected": 28
     },
     {
       "channel_id": 32,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 303000000,
       "width": 6000000,
@@ -375,12 +376,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2864732804,
       "corrected": 26,
-      "uncorrected": 0,
-      "channel_type": "qam"
+      "uncorrected": 0
     },
     {
       "channel_id": 33,
       "lock_status": "locked",
+      "channel_type": "ofdm",
       "bonding_status": "Partial Service",
       "frequency": 812000000,
       "width": 190000000,
@@ -389,12 +390,12 @@
       "modulation": "0,1,3,4",
       "unerrored_codewords": 348315445,
       "corrected": 2546380990,
-      "uncorrected": 1792401061,
-      "channel_type": "ofdm"
+      "uncorrected": 1792401061
     },
     {
       "channel_id": 46,
       "lock_status": "not_locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 0,
       "width": 0,
@@ -403,12 +404,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 724415723,
       "corrected": 1063235177,
-      "uncorrected": 1290782670,
-      "channel_type": "qam"
+      "uncorrected": 1290782670
     },
     {
       "channel_id": 47,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 723000000,
       "width": 6000000,
@@ -417,12 +418,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2068244147,
       "corrected": 3562121,
-      "uncorrected": 3689562,
-      "channel_type": "qam"
+      "uncorrected": 3689562
     },
     {
       "channel_id": 48,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 729000000,
       "width": 6000000,
@@ -431,12 +432,12 @@
       "modulation": "QAM256",
       "unerrored_codewords": 2863823963,
       "corrected": 944655,
-      "uncorrected": 152,
-      "channel_type": "qam"
+      "uncorrected": 152
     },
     {
       "channel_id": 49,
       "lock_status": "not_locked",
+      "channel_type": "qam",
       "bonding_status": "Partial Service",
       "frequency": 735000000,
       "width": 6000000,
@@ -445,50 +446,49 @@
       "modulation": "Unknown",
       "unerrored_codewords": 761200647,
       "corrected": 43830086,
-      "uncorrected": 36881658,
-      "channel_type": "qam"
+      "uncorrected": 36881658
     }
   ],
   "upstream": [
     {
       "channel_id": 1,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 16700000,
       "width": 6400000,
       "power": 46.0,
-      "modulation": "ATDMA",
-      "channel_type": "qam"
+      "modulation": "ATDMA"
     },
     {
       "channel_id": 2,
       "lock_status": "locked",
+      "channel_type": "qam",
       "bonding_status": "Bonded",
       "frequency": 23400000,
       "width": 6400000,
       "power": 45.0,
-      "modulation": "ATDMA",
-      "channel_type": "qam"
+      "modulation": "ATDMA"
     },
     {
       "channel_id": 3,
       "lock_status": "locked",
+      "channel_type": "ofdma",
       "bonding_status": "Bonded",
       "frequency": 51525000,
       "width": 27800000,
       "power": 42.0,
-      "modulation": "3, 4, 5, 6, 9, 10, 11, 12, 13, 3, 4, 5, 6, 9, 10, 11, 12, 13",
-      "channel_type": "ofdma"
+      "modulation": "3, 4, 5, 6, 9, 10, 11, 12, 13, 3, 4, 5, 6, 9, 10, 11, 12, 13"
     },
     {
       "channel_id": 7,
       "lock_status": "locked",
+      "channel_type": "ofdma",
       "bonding_status": "Bonded",
       "frequency": 23925000,
       "width": 27600000,
       "power": 42.0,
-      "modulation": "3, 4, 5, 6, 9, 10, 11, 12, 13, 3, 4, 5, 6, 9, 10, 11, 12, 13",
-      "channel_type": "ofdma"
+      "modulation": "3, 4, 5, 6, 9, 10, 11, 12, 13, 3, 4, 5, 6, 9, 10, 11, 12, 13"
     }
   ],
   "system_info": {

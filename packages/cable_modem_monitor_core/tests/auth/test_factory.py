@@ -16,32 +16,35 @@ from solentlabs.cable_modem_monitor_core.auth import (
     UrlTokenAuthManager,
     create_auth_manager,
 )
+from solentlabs.cable_modem_monitor_core.auth.form_sjcl import FormSjclAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 
 FIXTURES_DIR = Path(__file__).parent.parent / "models" / "fixtures" / "modem_config" / "valid"
 
 
-# ┌─────────────────────┬──────────────────────────┐
-# │ Fixture             │ Expected manager type    │
-# ├─────────────────────┼──────────────────────────┤
-# │ auth_none.json      │ NoneAuthManager          │
-# │ auth_basic.json     │ BasicAuthManager         │
-# │ auth_form.json      │ FormAuthManager          │
-# │ auth_form_nonce.json│ FormNonceAuthManager     │
-# │ auth_url_token.json │ UrlTokenAuthManager      │
-# │ auth_hnap.json      │ HnapAuthManager          │
-# │ auth_form_pbkdf2.json│ FormPbkdf2AuthManager   │
-# └─────────────────────┴──────────────────────────┘
+# ┌──────────────────────┬──────────────────────────┐
+# │ Fixture              │ Expected manager type    │
+# ├──────────────────────┼──────────────────────────┤
+# │ auth_none.json       │ NoneAuthManager          │
+# │ auth_basic.json      │ BasicAuthManager         │
+# │ auth_form.json       │ FormAuthManager          │
+# │ auth_form_nonce.json │ FormNonceAuthManager     │
+# │ auth_url_token.json  │ UrlTokenAuthManager      │
+# │ auth_hnap.json       │ HnapAuthManager          │
+# │ auth_form_pbkdf2.json│ FormPbkdf2AuthManager    │
+# │ auth_form_sjcl.json  │ FormSjclAuthManager      │
+# └──────────────────────┴──────────────────────────┘
 #
 # fmt: off
 FACTORY_CASES = [
-    ("auth_none.json",       NoneAuthManager),
-    ("auth_basic.json",      BasicAuthManager),
-    ("auth_form.json",       FormAuthManager),
-    ("auth_form_nonce.json", FormNonceAuthManager),
-    ("auth_url_token.json",  UrlTokenAuthManager),
-    ("auth_hnap.json",       HnapAuthManager),
+    ("auth_none.json",        NoneAuthManager),
+    ("auth_basic.json",       BasicAuthManager),
+    ("auth_form.json",        FormAuthManager),
+    ("auth_form_nonce.json",  FormNonceAuthManager),
+    ("auth_url_token.json",   UrlTokenAuthManager),
+    ("auth_hnap.json",        HnapAuthManager),
     ("auth_form_pbkdf2.json", FormPbkdf2AuthManager),
+    ("auth_form_sjcl.json",   FormSjclAuthManager),
 ]
 # fmt: on
 

@@ -16,7 +16,10 @@ authors = [
 ]
 
 [dependency-groups]
-dev = ["pydantic>=2.0"]
+dev = [
+    "pydantic>=2.0",
+    "solentlabs-cable-modem-monitor-core[sjcl]",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["solentlabs"]

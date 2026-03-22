@@ -1,0 +1,136 @@
+downstream:
+  format: json
+  resource: "/api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl"
+  arrays:
+    # SC-QAM downstream channels
+    - array_path: "data.DSTbl"
+      fields:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: Frequency
+          field: frequency
+          type: frequency
+          unit: "MHz"
+        - key: PowerLevel
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: SNRLevel
+          field: snr
+          type: float
+          unit: "dB"
+        - key: Modulation
+          field: modulation
+          type: string
+        - key: Octets
+          field: corrected
+          type: integer
+          fallback_key: Correcteds
+        - key: Uncorrectables
+          field: uncorrected
+          type: integer
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: qam
+      filter:
+        lock_status: "locked"
+    # OFDM downstream channels
+    - array_path: "data.exDSTbl"
+      fields:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+          unit: "MHz"
+        - key: PowerLevel
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: SNRLevel
+          field: snr
+          type: float
+          unit: "dB"
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: ofdm
+      filter:
+        lock_status: "locked"
+
+upstream:
+  format: json
+  resource: "/api/v1/modem/exUSTbl,exDSTbl,USTbl,DSTbl,ErrTbl"
+  arrays:
+    # SC-QAM upstream channels
+    - array_path: "data.USTbl"
+      fields:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: Frequency
+          field: frequency
+          type: frequency
+          unit: "MHz"
+        - key: PowerLevel
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: Modulation
+          field: modulation
+          type: string
+        - key: SymbolRate
+          field: symbol_rate
+          type: integer
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: atdma
+      filter:
+        lock_status: "locked"
+    # OFDMA upstream channels
+    - array_path: "data.exUSTbl"
+      fields:
+        - key: ChannelID
+          field: channel_id
+          type: integer
+        - key: CentralFrequency
+          field: frequency
+          type: frequency
+          unit: "MHz"
+          fallback_key: StartFrequency
+        - key: PowerLevel
+          field: power
+          type: float
+          unit: "dBmV"
+        - key: LockStatus
+          field: lock_status
+          type: lock_status
+      channel_type:
+        fixed: ofdma
+      filter:
+        lock_status: "locked"
+
+system_info:
+  sources:
+    - format: json
+      resource: "/api/v1/system/CMStatus,ModelName,Manufacturer,SerialNumber,HardwareVersion,SoftwareVersion,UpTime,BootloaderVersion,CoreVersion,FirmwareName,FirmwareBuildTime,ProcessorSpeed,CMMACAddress,LocalTime,Hardware,MemTotal,MemFree,MTAMACAddress"
+      fields:
+        - key: SoftwareVersion
+          field: software_version
+          type: string
+          path: "data"
+        - key: HardwareVersion
+          field: hardware_version
+          type: string
+          path: "data"
+        - key: UpTime
+          field: system_uptime
+          type: string
+          path: "data"

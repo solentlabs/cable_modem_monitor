@@ -392,38 +392,38 @@
     {
       "channel_id": 2,
       "lock_status": "locked",
+      "channel_type": "atdma",
       "frequency": 24000000,
       "power": 45.770599,
       "symbol_rate": 5120,
-      "modulation": "64QAM",
-      "channel_type": "atdma"
+      "modulation": "64QAM"
     },
     {
       "channel_id": 4,
       "lock_status": "locked",
+      "channel_type": "atdma",
       "frequency": 36800000,
       "power": 46.020599,
       "symbol_rate": 5120,
-      "modulation": "64QAM",
-      "channel_type": "atdma"
+      "modulation": "64QAM"
     },
     {
       "channel_id": 3,
       "lock_status": "locked",
+      "channel_type": "atdma",
       "frequency": 30400000,
       "power": 46.520599,
       "symbol_rate": 5120,
-      "modulation": "64QAM",
-      "channel_type": "atdma"
+      "modulation": "64QAM"
     },
     {
       "channel_id": 1,
       "lock_status": "locked",
+      "channel_type": "atdma",
       "frequency": 17600000,
       "power": 45.520599,
       "symbol_rate": 5120,
-      "modulation": "64QAM",
-      "channel_type": "atdma"
+      "modulation": "64QAM"
     },
     {
       "channel_id": 0,

@@ -244,31 +244,31 @@
   "upstream": [
     {
       "lock_status": "locked",
+      "channel_type": "atdma",
       "channel_id": 1,
       "frequency": 16400000,
-      "power": 35.75,
-      "channel_type": "atdma"
+      "power": 35.75
     },
     {
       "lock_status": "locked",
+      "channel_type": "atdma",
       "channel_id": 4,
       "frequency": 35600000,
-      "power": 37.43,
-      "channel_type": "atdma"
+      "power": 37.43
     },
     {
       "lock_status": "locked",
+      "channel_type": "atdma",
       "channel_id": 3,
       "frequency": 29200000,
-      "power": 36.93,
-      "channel_type": "atdma"
+      "power": 36.93
     },
     {
       "lock_status": "locked",
+      "channel_type": "atdma",
       "channel_id": 2,
       "frequency": 22800000,
-      "power": 35.68,
-      "channel_type": "atdma"
+      "power": 35.68
     }
   ]
 }

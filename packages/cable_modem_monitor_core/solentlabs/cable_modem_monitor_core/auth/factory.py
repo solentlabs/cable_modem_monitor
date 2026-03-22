@@ -13,6 +13,7 @@ from .basic import BasicAuthManager
 from .form import FormAuthManager
 from .form_nonce import FormNonceAuthManager
 from .form_pbkdf2 import FormPbkdf2AuthManager
+from .form_sjcl import FormSjclAuthManager
 from .hnap import HnapAuthManager
 from .none import NoneAuthManager
 from .url_token import UrlTokenAuthManager
@@ -41,6 +42,7 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
         FormAuth,
         FormNonceAuth,
         FormPbkdf2Auth,
+        FormSjclAuth,
         HnapAuth,
         NoneAuth,
         UrlTokenAuth,
@@ -68,6 +70,9 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
 
     if isinstance(auth, FormPbkdf2Auth):
         return FormPbkdf2AuthManager(auth)
+
+    if isinstance(auth, FormSjclAuth):
+        return FormSjclAuthManager(auth)
 
     _logger.error(
         "Unknown auth strategy type: %s, falling back to NoneAuthManager",

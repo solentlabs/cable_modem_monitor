@@ -1,0 +1,75 @@
+downstream:
+  format: json
+  resource: "/setup.cgi?todo=RF_DS_param"
+  encoding: base64
+  # Response is base64-encoded root-level JSON array; loader decodes
+  # base64, then wraps non-dict result as {"_raw": [...]}
+  array_path: "nodes"
+  fields:
+    - key: DCIDD
+      field: channel_id
+      type: integer
+    - key: FreqD
+      field: frequency
+      type: frequency
+      unit: "Hz"
+    - key: PowerD
+      field: power
+      type: float
+      unit: "dBmV"
+    - key: SNRD
+      field: snr
+      type: float
+      unit: "dB"
+    - key: qamD
+      field: modulation
+      type: string
+    - key: correctedsD
+      field: corrected
+      type: integer
+    - key: uncorrectedsD
+      field: uncorrected
+      type: integer
+  channel_type:
+    fixed: qam
+
+upstream:
+  format: json
+  resource: "/setup.cgi?todo=RF_US_param"
+  encoding: base64
+  array_path: "nodes"
+  fields:
+    - key: upstream
+      field: channel_id
+      type: integer
+    - key: Freq
+      field: frequency
+      type: frequency
+      unit: "MHz"
+    - key: rep_power
+      field: power
+      type: float
+      unit: "dBmV"
+    - key: modulation
+      field: modulation
+      type: string
+    - key: channelType
+      field: channel_type
+      type: string
+      map:
+        "DOCSIS 3.0": "atdma"
+  filter:
+    modulation:
+      not: "QAM_NONE"
+
+# System info extracted by parser.py PostProcessor from Version_Info.
+# This source declaration triggers the resource fetch.
+system_info:
+  sources:
+    - format: json
+      resource: "/setup.cgi?todo=Version_Info"
+      encoding: base64
+      fields:
+        - key: _placeholder
+          field: software_version
+          type: string

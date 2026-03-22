@@ -127,6 +127,7 @@ class JSONSystemInfoSource(BaseModel):
     model_config = ConfigDict(extra="forbid")
     format: Literal["json"]
     resource: str
+    encoding: str = ""
     fields: list[JSONSystemInfoFieldMapping]
 
 

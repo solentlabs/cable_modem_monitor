@@ -1,0 +1,131 @@
+downstream:
+  format: table
+  resource: "/DocsisStatus.asp"
+  tables:
+    # SC-QAM downstream: 32 channels
+    # Columns: Channel | Lock Status | Modulation | Channel ID |
+    #          Frequency | Power | SNR/MER | Unerrored CW |
+    #          Correctable CW | Uncorrectable CW
+    - selector:
+        type: id
+        match: "dsTable"
+      row_start: 1
+      columns:
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 2
+          field: modulation
+          type: string
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - index: 5
+          field: power
+          type: float
+          unit: "dBmV"
+        - index: 6
+          field: snr
+          type: float
+          unit: "dB"
+        - index: 8
+          field: corrected
+          type: integer
+        - index: 9
+          field: uncorrected
+          type: integer
+      channel_type:
+        fixed: qam
+      filter:
+        lock_status: "locked"
+    # OFDM downstream: 2 channels
+    - selector:
+        type: id
+        match: "d31dsTable"
+      row_start: 1
+      columns:
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - index: 5
+          field: power
+          type: float
+          unit: "dBmV"
+        - index: 6
+          field: snr
+          type: float
+          unit: "dB"
+      channel_type:
+        fixed: ofdm
+      filter:
+        lock_status: "locked"
+
+upstream:
+  format: table
+  resource: "/DocsisStatus.asp"
+  tables:
+    # SC-QAM upstream: 8 channels
+    # Columns: Channel | Lock Status | Modulation | Channel ID |
+    #          Frequency | Power
+    - selector:
+        type: id
+        match: "usTable"
+      row_start: 1
+      columns:
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 2
+          field: channel_type
+          type: string
+          map:
+            "ATDMA": "atdma"
+            "TDMA": "atdma"
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - index: 5
+          field: power
+          type: float
+          unit: "dBmV"
+      filter:
+        lock_status: "locked"
+    # OFDMA upstream: 2 channels
+    - selector:
+        type: id
+        match: "d31usTable"
+      row_start: 1
+      columns:
+        - index: 1
+          field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_id
+          type: integer
+        - index: 4
+          field: frequency
+          type: frequency
+          unit: "Hz"
+        - index: 5
+          field: power
+          type: float
+          unit: "dBmV"
+      channel_type:
+        fixed: ofdma
+      filter:
+        lock_status: "locked"

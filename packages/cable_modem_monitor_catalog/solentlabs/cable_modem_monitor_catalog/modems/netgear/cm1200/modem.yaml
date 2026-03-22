@@ -4,14 +4,13 @@ transport: http
 default_host: "192.168.100.1"
 timeout: 20
 auth:
-  strategy: basic
-  challenge_cookie: true
+  strategy: none
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
 status: awaiting_verification
 sources:
-  auth_config: "#121"
+  auth_config: "#63"
 attribution:
   contributors:
     - github: DeFlanko
@@ -21,9 +20,9 @@ isps:
   - Spectrum
   - Cox
 notes: |
-  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA. HTTPS requires Basic Auth
-  with challenge_cookie (401 sets XSRF_TOKEN). HTTP serves pages without auth.
-  Timeout increased to 20s for HTTPS latency.
+  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA.
+  No-auth variant: HTTP serves pages without authentication.
+  See modem-basic.yaml for HTTPS variant requiring Basic Auth.
 references:
   issues:
     - 63

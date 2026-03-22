@@ -1,6 +1,7 @@
 manufacturer: Motorola
 model: MB8611
 model_aliases:
+  - MB8600
   - MB8612
 brands: []
 transport: hnap
@@ -62,4 +63,5 @@ references:
   issues:
     - 4
     - 6
+    - 40
     - 60

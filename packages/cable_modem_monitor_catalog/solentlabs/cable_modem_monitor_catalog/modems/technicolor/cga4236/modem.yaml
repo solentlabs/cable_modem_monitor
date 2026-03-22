@@ -1,0 +1,53 @@
+manufacturer: Technicolor
+model: CGA4236
+model_aliases:
+  - CGA4236TCH1
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  # Real auth is form_pbkdf2 (double-hash SJCL). For testing, strategy
+  # is set to none because the mock server cannot replay PBKDF2 flows.
+  # Production config should use:
+  #   strategy: form_pbkdf2
+  #   login_endpoint: "/api/v1/session/login"
+  #   pbkdf2_iterations: 1000
+  #   pbkdf2_key_length: 128
+  #   double_hash: true
+  #   csrf_init_endpoint: "/api/v1/session/language"
+  #   csrf_header: "X-CSRF-TOKEN"
+  strategy: none
+
+session:
+  cookie_name: "PHPSESSID"
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "HAR capture (#115) — PBKDF2 double-hash auth"
+
+attribution:
+  contributors:
+    - github: unknown
+      contribution: "HAR capture (Issue #115)"
+
+isps:
+  - Unknown
+
+notes: |
+  DOCSIS 3.1 gateway. Same Technicolor REST platform as CGA6444VF.
+  JSON API at /api/v1/. PBKDF2 double-hash auth: first POST returns
+  salt + saltwebui, client hashes password with both salts, sends
+  hashed result. PHPSESSID + X-CSRF-TOKEN (rotating per response).
+  Channel data from single /api/v1/modem/ endpoint with comma-separated
+  table names. System info from /api/v1/system/ endpoint.
+  PBKDF2 parameters from HAR JavaScript (sjcl.js): iterations and key
+  length are firmware defaults, may need verification per firmware version.
+
+references:
+  issues:
+    - 115

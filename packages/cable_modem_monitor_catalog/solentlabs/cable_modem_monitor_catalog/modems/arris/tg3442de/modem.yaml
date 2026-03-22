@@ -1,0 +1,54 @@
+manufacturer: Arris
+model: TG3442DE
+brands: [Touchstone]
+transport: http
+default_host: "192.168.0.1"
+timeout: 10
+
+auth:
+  strategy: form_sjcl
+  login_page: "/"
+  # Misleading Arris naming — this IS the login endpoint, not password
+  # change. Confirmed: base_95x.js login() calls it with AAD
+  # "loginPassword"; changePassword() was removed from the codebase.
+  login_endpoint: "/php/ajaxSet_Password.php"
+  session_validation_endpoint: "/php/ajaxSet_Session.php"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  ccm_tag_length: 16
+  encrypt_aad: "loginPassword"
+  decrypt_aad: "nonce"
+  csrf_header: "csrfNonce"
+
+session:
+  cookie_name: "PHPSESSID"
+  max_concurrent: 1
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: "/php/logout.php"
+
+hardware:
+  docsis_version: "3.1"
+
+status: awaiting_verification
+attribution:
+  contributors:
+    - github: samuelengelking
+      contribution: "HAR capture and initial modem request"
+sources:
+  issue_86: "https://github.com/solentlabs/cable_modem_monitor/issues/86"
+isps: [Vodafone DE]
+notes: |
+  Arris Touchstone TG3442DE gateway (Vodafone Germany).
+  Firmware: 01.05.063.13.EURO.PC20.
+  Auth uses SJCL (Stanford JavaScript Crypto Library) AES-CCM
+  encryption with a PBKDF2-derived key. Server
+  provides per-session IV and salt in JS variables on the login page.
+  Login response body is encrypted — must decrypt to extract CSRF nonce.
+  Variant check: firmware has isModel6442 flag (this modem is NOT 6442).
+  Session timeout: 600s (logoutTime JS variable).

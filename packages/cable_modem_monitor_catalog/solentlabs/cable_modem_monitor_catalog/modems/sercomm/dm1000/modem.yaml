@@ -1,0 +1,39 @@
+manufacturer: Sercomm
+model: DM1000
+transport: http
+default_host: "192.168.100.1"
+
+auth:
+  strategy: form
+  action: "/setup.cgi"
+  login_page: "/login.html"
+  username_field: login_user
+  password_field: pws
+  encoding: base64
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "HAR capture (#92) — form POST with base64-encoded password"
+
+attribution:
+  contributors:
+    - github: B0ndo2
+      contribution: "HAR capture and Python parsing script (Issue #92)"
+
+isps:
+  - Koodo
+
+notes: |
+  DOCSIS 3.1 cable modem. Base64-encoded JSON API via /setup.cgi?todo= endpoints.
+  IP-based session tracking (no cookies, no auth headers after login).
+  Content-Type: applation/json (typo in firmware). Upstream frequencies in MHz
+  (not Hz). Inactive channels: modulation=QAM_NONE, rep_power=-inf.
+
+references:
+  issues:
+    - 92

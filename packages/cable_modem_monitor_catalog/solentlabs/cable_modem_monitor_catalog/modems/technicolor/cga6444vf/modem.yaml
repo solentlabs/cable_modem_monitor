@@ -1,0 +1,52 @@
+manufacturer: Technicolor
+model: CGA6444VF
+transport: http
+default_host: "192.168.0.1"
+
+auth:
+  # Real auth is form_pbkdf2 (double-hash SJCL). For testing, strategy
+  # is set to none because the mock server cannot replay PBKDF2 flows.
+  # Production config should use:
+  #   strategy: form_pbkdf2
+  #   login_endpoint: "/api/v1/session/login"
+  #   salt_trigger: "seeksalthash"
+  #   pbkdf2_iterations: 1000
+  #   pbkdf2_key_length: 128
+  #   double_hash: true
+  #   csrf_init_endpoint: "/api/v1/session/language"
+  #   csrf_header: "X-CSRF-TOKEN"
+  strategy: none
+
+session:
+  cookie_name: "PHPSESSID"
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "HAR capture (#120) — PBKDF2 double-hash auth"
+
+attribution:
+  contributors:
+    - github: PerryFabregas
+      contribution: "HAR capture (Issue #120)"
+
+isps:
+  - Vodafone
+
+notes: |
+  DOCSIS 3.1 gateway (Vodafone-branded). Same Technicolor REST platform
+  family as CGA4236 but different API structure. JSON API at /api/v1/.
+  PBKDF2 double-hash auth: first POST with "seeksalthash" returns
+  salt + saltwebui, client hashes password with both salts via SJCL,
+  sends hashed result. PHPSESSID + X-CSRF-TOKEN (rotating per response).
+  Channel data from single /api/v1/sta_docsis_status endpoint.
+  System info from /api/v1/sta_status endpoint.
+  Single-session enforcement: MSG_LOGIN_150 if another session exists.
+
+references:
+  issues:
+    - 120

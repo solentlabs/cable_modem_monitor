@@ -1,0 +1,49 @@
+manufacturer: Technicolor
+model: XB6
+model_aliases:
+  - "CGM4140COM"
+transport: http
+default_host: "10.0.0.1"
+
+auth:
+  strategy: form
+  action: "/check.jst"
+  method: POST
+  username_field: username
+  password_field: password
+  encoding: plain
+  hidden_fields:
+    locale: "false"
+  success:
+    redirect: "/at_a_glance.jst"
+
+session:
+  cookie_name: "DUKSID"
+
+hardware:
+  docsis_version: "3.1"
+  chipset: "Broadcom BCM3390"
+
+status: awaiting_verification
+
+sources:
+  auth_config: "HAR capture from issue #111"
+
+attribution:
+  contributors:
+    - github: Boby360
+      contribution: "XB6 and CGM4140COM HAR captures (Issue #111)"
+
+isps:
+  - Rogers
+
+notes: |
+  DOCSIS 3.1 gateway (CGM4140COM). Same .jst page platform as XB7/CGM4331COM.
+  Transposed table format: rows are metrics, columns are channels.
+  Session cookie: DUKSID (vs XB7's "session"). CSRF: csrfp_token (OWASP CSRFP).
+  Login form includes hidden field locale=false.
+  Default IP: 10.0.0.1 (router mode).
+
+references:
+  issues:
+    - 111

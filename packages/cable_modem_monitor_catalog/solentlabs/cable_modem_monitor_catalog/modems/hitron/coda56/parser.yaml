@@ -1,0 +1,74 @@
+downstream:
+  format: json
+  resource: "/data/dsinfo.asp"
+  # Response is root-level JSON array; loader wraps as {"_raw": [...]}
+  array_path: "_raw"
+  fields:
+    - key: channelId
+      field: channel_id
+      type: integer
+    - key: frequency
+      field: frequency
+      type: frequency
+      unit: "Hz"
+    - key: signalStrength
+      field: power
+      type: float
+      unit: "dBmV"
+    - key: snr
+      field: snr
+      type: float
+      unit: "dB"
+    - key: modulation
+      field: modulation
+      type: string
+      map:
+        "2": "256QAM"
+        "1": "64QAM"
+    - key: correcteds
+      field: corrected
+      type: integer
+    - key: uncorrect
+      field: uncorrected
+      type: integer
+  channel_type:
+    fixed: qam
+
+upstream:
+  format: json
+  resource: "/data/usinfo.asp"
+  # Response is root-level JSON array; loader wraps as {"_raw": [...]}
+  array_path: "_raw"
+  fields:
+    - key: channelId
+      field: channel_id
+      type: integer
+    - key: frequency
+      field: frequency
+      type: frequency
+      unit: "Hz"
+    - key: signalStrength
+      field: power
+      type: float
+      unit: "dBmV"
+    - key: modtype
+      field: modulation
+      type: string
+    - key: scdmaMode
+      field: channel_type
+      type: string
+      map:
+        "ATDMA": "atdma"
+        "TDMA": "atdma"
+
+# System info extracted by parser.py PostProcessor from getSysInfo.asp.
+# The JSON system_info source declaration triggers the resource fetch;
+# actual extraction from the root-level array is in parser.py.
+system_info:
+  sources:
+    - format: json
+      resource: "/data/getSysInfo.asp"
+      fields:
+        - key: _placeholder
+          field: hardware_version
+          type: string

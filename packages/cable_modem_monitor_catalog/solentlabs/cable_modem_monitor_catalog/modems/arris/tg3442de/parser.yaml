@@ -1,0 +1,33 @@
+# TG3442DE parser config.
+#
+# Data is in JSON arrays assigned to JS variables inside <script> tags
+# at /php/status_docsis_data.php.  The "javascript" format ensures the
+# resource is fetched and parsed as HTML (BeautifulSoup).  The JS
+# embedded parser finds no matching function bodies, so channels are
+# empty — parser.py PostProcessor does the actual extraction from
+# json_dsData / json_usData variables in the script block.
+
+downstream:
+  format: javascript
+  resource: "/php/status_docsis_data.php"
+  functions: []
+
+upstream:
+  format: javascript
+  resource: "/php/status_docsis_data.php"
+  functions: []
+
+# System info: firmware version from status_about_data.php.
+# The JS variable js_FWVersion is extracted by parser.py PostProcessor.
+# Placeholder field triggers the resource fetch.
+system_info:
+  sources:
+    - format: javascript
+      resource: "/php/status_about_data.php"
+      functions:
+        - name: "_unused"
+          delimiter: "|"
+          fields:
+            - offset: 0
+              field: software_version
+              type: string

@@ -442,6 +442,78 @@ Evidence: modems with JavaScript SPA interfaces that use PBKDF2
 key derivation for login. Parameters are typically derived from the
 modem's login.js source code in HAR captures.
 
+### `form_sjcl`
+
+SJCL (Stanford JavaScript Crypto Library) AES-CCM encrypted form
+auth. Some modem firmwares use the SJCL JavaScript library to
+encrypt credentials client-side with AES-CCM before POSTing. The
+server response is also encrypted — must decrypt to extract the
+CSRF nonce. Key is derived via PBKDF2 from the password and a
+per-session salt provided by the server.
+
+Requires the ``cryptography`` package. Install Core with the
+``[sjcl]`` extra: ``pip install solentlabs-cable-modem-monitor-core[sjcl]``.
+
+```yaml
+auth:
+  strategy: form_sjcl
+  login_page: "/"
+  login_endpoint: "/php/ajaxSet_Password.php"
+  session_validation_endpoint: "/php/ajaxSet_Session.php"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  ccm_tag_length: 16
+  encrypt_aad: "loginPassword"
+  decrypt_aad: "nonce"
+  csrf_header: "csrfNonce"
+
+session:
+  cookie_name: "PHPSESSID"
+  max_concurrent: 1
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: http
+    method: GET
+    endpoint: "/php/logout.php"
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_page` | string | `"/"` | Page to GET for per-session IV, salt, and session ID (parsed from JS variables `myIv`, `mySalt`, `currentSessionId`) |
+| `login_endpoint` | string | required | URL for the encrypted credential POST |
+| `session_validation_endpoint` | string | `""` | URL for the post-login session validation POST. If empty, session validation is skipped. |
+| `pbkdf2_iterations` | int | required | PBKDF2 iteration count for key derivation |
+| `pbkdf2_key_length` | int | required | Derived key length in bits (128 for AES-128) |
+| `ccm_tag_length` | int | `16` | AES-CCM authentication tag length in bytes |
+| `encrypt_aad` | string | `"loginPassword"` | AAD (Additional Authenticated Data) for encrypting the login payload |
+| `decrypt_aad` | string | `"nonce"` | AAD for decrypting the server's nonce response |
+| `csrf_header` | string | `""` | Header name for the CSRF nonce extracted from the decrypted login response. If empty, nonce decryption is skipped. |
+
+**Auth flow:**
+
+1. **GET login page** — extract `myIv`, `mySalt`, `currentSessionId`
+   from JS variable assignments in the response.
+2. **Derive key** — `PBKDF2(password, mySalt, iterations, key_length)`.
+3. **Encrypt** — AES-CCM encrypt `{"Password": "<pw>", "Nonce": "<sessionId>"}`
+   with the derived key, IV from `myIv`, and AAD from `encrypt_aad`.
+4. **POST login** — send `{"EncryptData": "<hex>", "Name": "<user>",
+   "AuthData": "<encrypt_aad>"}`. Server responds with
+   `{"p_status": "AdminMatch", "encryptData": "<hex>"}`.
+5. **Decrypt nonce** — AES-CCM decrypt the response `encryptData`
+   with AAD from `decrypt_aad` to extract the CSRF nonce.
+6. **POST session validation** — if `session_validation_endpoint` is
+   configured, POST with the `csrf_header` to finalize the session.
+
+**Success detection:** The login response JSON `p_status` field must
+be `"AdminMatch"` or `"Match"`. Any other value is treated as failure.
+
+Evidence: Arris Touchstone gateway firmwares (e.g., TG3442DE) that
+embed the SJCL library in their web interface. Constants are found
+in `base_95x.js` or similar JS files in HAR captures.
+
 ---
 
 ## Session
@@ -846,7 +918,7 @@ rules below.
 
 | Transport | Valid auth strategies | Valid session | Valid formats | Valid action types |
 |-----------|---------------------|--------------|---------------|-------------------|
-| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | `http` |
+| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | `http` |
 | `hnap` | `hnap` | implicit (uid + HNAP_AUTH) | `hnap` | `hnap` |
 
 The format field in parser.yaml determines how the response is decoded.

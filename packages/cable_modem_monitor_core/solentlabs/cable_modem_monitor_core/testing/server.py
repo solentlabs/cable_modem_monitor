@@ -40,7 +40,11 @@ class _MockHandler(BaseHTTPRequestHandler):
     def _handle_request(self, method: str) -> None:
         """Dispatch a request through auth then routes."""
         server: HARMockServer = self.server  # type: ignore[assignment]
-        path = normalize_path(urlparse(self.path).path)
+        parsed = urlparse(self.path)
+        path = normalize_path(parsed.path)
+        # Include query string for route lookup so endpoints like
+        # /setup.cgi?todo=X resolve independently.
+        route_path = f"{path}?{parsed.query}" if parsed.query else path
         headers = {k.lower(): v for k, v in self.headers.items()}
 
         body = b""
@@ -52,25 +56,7 @@ class _MockHandler(BaseHTTPRequestHandler):
 
         # Login request — handle auth and serve response
         if auth.is_login_request(method, path):
-            login_response = auth.handle_login(method, path, body, headers)
-            if login_response is not None:
-                # Auth handler provides its own response (HNAP login phases)
-                self._send_response(
-                    login_response.status,
-                    login_response.headers,
-                    login_response.body,
-                )
-                return
-            # Fall through to route table (form auth)
-            route = server.routes.get((method, path))
-            if route is None:
-                self._send_response(404, [], "Not Found")
-                return
-            extra_headers = auth.set_authenticated()
-            response_headers = list(route.headers)
-            for name, value in extra_headers.items():
-                response_headers.append((name, value))
-            self._send_response(route.status, response_headers, route.body)
+            self._handle_login(server, method, path, route_path, body, headers)
             return
 
         # Non-login request — check auth
@@ -85,12 +71,42 @@ class _MockHandler(BaseHTTPRequestHandler):
             return
 
         # Serve from route table
-        route = server.routes.get((method, path))
+        route = _find_route(server.routes, method, path, route_path)
         if route is None:
             self._send_response(404, [], "Not Found")
             return
 
         self._send_response(route.status, route.headers, route.body)
+
+    def _handle_login(
+        self,
+        server: HARMockServer,
+        method: str,
+        path: str,
+        route_path: str,
+        body: bytes,
+        headers: dict[str, str],
+    ) -> None:
+        """Handle a login request through auth then route table."""
+        auth = server.auth_handler
+        login_response = auth.handle_login(method, path, body, headers)
+        if login_response is not None:
+            self._send_response(
+                login_response.status,
+                login_response.headers,
+                login_response.body,
+            )
+            return
+        # Fall through to route table (form auth)
+        route = _find_route(server.routes, method, path, route_path)
+        if route is None:
+            self._send_response(404, [], "Not Found")
+            return
+        extra_headers = auth.set_authenticated()
+        response_headers = list(route.headers)
+        for name, value in extra_headers.items():
+            response_headers.append((name, value))
+        self._send_response(route.status, response_headers, route.body)
 
     def _send_response(
         self,
@@ -109,6 +125,45 @@ class _MockHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default stderr logging."""
         _logger.debug(format, *args)
+
+
+def _find_route(
+    routes: dict[tuple[str, str], Any],
+    method: str,
+    path: str,
+    route_path: str,
+) -> Any:
+    """Look up a route by method and path, with query-string fallback.
+
+    Three-tier lookup:
+
+    1. Exact match ``(method, route_path)`` — query string included.
+    2. Path-only ``(method, path)`` — request has query, route doesn't.
+    3. Scan for route whose path portion matches — route has query
+       (e.g. HAR captured ``?status=1``), request doesn't.
+
+    Tiers 1-2 handle query-string-specific routes (e.g.
+    ``/setup.cgi?todo=X``) and dynamic URL token suffixes.
+    Tier 3 handles HARs that captured incidental query params
+    (e.g. ``?status=1``) that aren't part of the resource path.
+    """
+    # Tier 1: exact match
+    route = routes.get((method, route_path))
+    if route is not None:
+        return route
+
+    # Tier 2: request has query, route stored without
+    if route_path != path:
+        route = routes.get((method, path))
+        if route is not None:
+            return route
+
+    # Tier 3: route has query, request doesn't — scan by path prefix
+    for (m, rp), r in routes.items():
+        if m == method and rp.split("?", 1)[0] == path:
+            return r
+
+    return None
 
 
 class HARMockServer(HTTPServer):

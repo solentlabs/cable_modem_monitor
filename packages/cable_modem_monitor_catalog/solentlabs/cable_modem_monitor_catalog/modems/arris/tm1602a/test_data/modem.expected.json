@@ -1,0 +1,268 @@
+{
+  "downstream": [
+    {
+      "channel_id": 1,
+      "frequency": 465000000,
+      "power": 8.5,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 346,
+      "uncorrected": 2508,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 2,
+      "frequency": 471000000,
+      "power": 8.2,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 4,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 3,
+      "frequency": 477000000,
+      "power": 8.2,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 6,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 4,
+      "frequency": 483000000,
+      "power": 8.0,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 5,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 5,
+      "frequency": 489000000,
+      "power": 8.8,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 7,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 6,
+      "frequency": 495000000,
+      "power": 8.7,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 20,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 7,
+      "frequency": 501000000,
+      "power": 8.2,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 19,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 8,
+      "frequency": 507000000,
+      "power": 8.6,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 15,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 10,
+      "frequency": 519000000,
+      "power": 9.0,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 29,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 11,
+      "frequency": 525000000,
+      "power": 9.0,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 33,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 12,
+      "frequency": 531000000,
+      "power": 8.7,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 26,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 13,
+      "frequency": 537000000,
+      "power": 9.3,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 19,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 15,
+      "frequency": 549000000,
+      "power": 9.1,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 20,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 22,
+      "frequency": 591000000,
+      "power": 11.3,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 28,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 23,
+      "frequency": 597000000,
+      "power": 11.0,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 28,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 24,
+      "frequency": 603000000,
+      "power": 10.6,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 26,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 25,
+      "frequency": 609000000,
+      "power": 11.6,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 26,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 26,
+      "frequency": 615000000,
+      "power": 11.2,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 32,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 27,
+      "frequency": 621000000,
+      "power": 10.6,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 29,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 28,
+      "frequency": 627000000,
+      "power": 11.1,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 27,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 29,
+      "frequency": 633000000,
+      "power": 10.6,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 18,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 30,
+      "frequency": 639000000,
+      "power": 9.1,
+      "snr": 37.36,
+      "modulation": "256QAM",
+      "corrected": 92,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 31,
+      "frequency": 645000000,
+      "power": 10.9,
+      "snr": 38.98,
+      "modulation": "256QAM",
+      "corrected": 5,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    },
+    {
+      "channel_id": 32,
+      "frequency": 651000000,
+      "power": 10.2,
+      "snr": 38.61,
+      "modulation": "256QAM",
+      "corrected": 10,
+      "uncorrected": 0,
+      "channel_type": "qam"
+    }
+  ],
+  "upstream": [
+    {
+      "channel_id": 9,
+      "frequency": 15800000,
+      "power": 42.75,
+      "symbol_rate": 5120,
+      "channel_type": "atdma"
+    },
+    {
+      "channel_id": 10,
+      "frequency": 22200000,
+      "power": 41.0,
+      "symbol_rate": 5120,
+      "channel_type": "atdma"
+    }
+  ],
+  "system_info": {
+    "firmware_name": "TS0901303U11_110823_1602.TM_PC20_TW",
+    "system_uptime": "27 d: 13 h: 39  m",
+    "hardware_version": "3",
+    "software_version": "9.1.303U11.SIP.PC20.TW",
+    "model": "TM1602A",
+    "firmware_build_time": "Wed Nov  8 07:31:40 EST 2023"
+  }
+}

@@ -516,8 +516,8 @@ def detect_encoding(params: dict[str, str], password_field: str) -> str:
 def _has_challenge_cookie_retry(entries: list[dict[str, Any]], challenge_entry: dict[str, Any]) -> bool:
     """Check if a 401 challenge is followed by a retry with Set-Cookie.
 
-    Some modems (e.g., CM1200 HTTPS) return a challenge cookie on the
-    initial 401 that must be included in the retry.
+    Some modems return a challenge cookie on the initial 401 that must
+    be included in the retry.
     """
     found_challenge = False
     for entry in entries:

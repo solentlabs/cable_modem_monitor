@@ -1,5 +1,7 @@
 manufacturer: Technicolor
 model: TC4400
+model_aliases:
+  - TC4400AM
 transport: http
 default_host: "192.168.100.1"
 timeout: 20
@@ -28,6 +30,8 @@ attribution:
   contributors:
     - github: Mar1usW3
       contribution: "Initial HAR capture and parser"
+    - github: MrHankey777x
+      contribution: "TC4400AM variant confirmation (Issue #94)"
 
 isps:
   - Teksavvy

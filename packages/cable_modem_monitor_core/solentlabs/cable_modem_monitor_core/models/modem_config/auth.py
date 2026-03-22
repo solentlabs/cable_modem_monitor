@@ -1,6 +1,6 @@
 """Auth strategy models for modem.yaml.
 
-Seven strategies as a discriminated union on the 'strategy' field.
+Eight strategies as a discriminated union on the 'strategy' field.
 Per MODEM_YAML_SPEC.md Auth section.
 """
 
@@ -98,6 +98,32 @@ class FormPbkdf2Auth(BaseModel):
     csrf_header: str = ""
 
 
+class FormSjclAuth(BaseModel):
+    """SJCL (Stanford JavaScript Crypto Library) AES-CCM encrypted form auth.
+
+    Some modem firmwares use the SJCL JavaScript library to encrypt
+    credentials client-side with AES-CCM before POSTing. The server
+    response is also encrypted — must decrypt to extract the CSRF
+    nonce for subsequent requests. Key is derived via PBKDF2 from
+    the password and a per-session salt provided by the server.
+
+    Requires the ``cryptography`` package: install Core with the
+    ``[sjcl]`` extra.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["form_sjcl"]
+    login_page: str = "/"
+    login_endpoint: str
+    session_validation_endpoint: str = ""
+    pbkdf2_iterations: int
+    pbkdf2_key_length: int
+    ccm_tag_length: int = 16
+    encrypt_aad: str = "loginPassword"
+    decrypt_aad: str = "nonce"
+    csrf_header: str = ""
+
+
 AuthConfig = Annotated[
     Annotated[NoneAuth, Tag("none")]
     | Annotated[BasicAuth, Tag("basic")]
@@ -105,7 +131,8 @@ AuthConfig = Annotated[
     | Annotated[FormNonceAuth, Tag("form_nonce")]
     | Annotated[UrlTokenAuth, Tag("url_token")]
     | Annotated[HnapAuth, Tag("hnap")]
-    | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")],
+    | Annotated[FormPbkdf2Auth, Tag("form_pbkdf2")]
+    | Annotated[FormSjclAuth, Tag("form_sjcl")],
     Discriminator("strategy"),
 ]
 
@@ -118,6 +145,7 @@ HTTP_AUTH_STRATEGIES: frozenset[str] = frozenset(
         "form_nonce",
         "url_token",
         "form_pbkdf2",
+        "form_sjcl",
     }
 )
 HNAP_AUTH_STRATEGIES: frozenset[str] = frozenset({"hnap"})
