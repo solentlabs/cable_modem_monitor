@@ -10,8 +10,11 @@
           "channel_type": "qam",
           "delimiter": "|",
           "fields_per_channel": 5,
-          "channels": [
-            {"field": "channel_id", "type": "integer"}
+          "fields": [
+            {
+              "field": "channel_id",
+              "type": "integer"
+            }
           ]
         }
       ]

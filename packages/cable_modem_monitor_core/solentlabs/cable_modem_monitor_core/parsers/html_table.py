@@ -76,7 +76,7 @@ class HTMLTableParser(BaseParser):
             if channel is None:
                 continue
 
-            _apply_channel_type(channel, self._table.channel_type, cells)
+            _apply_channel_type(channel, self._table.channel_type)
 
             if not passes_filter(channel, self._table.filter):
                 continue
@@ -118,11 +118,10 @@ def _extract_row(
 def _apply_channel_type(
     channel: dict[str, Any],
     channel_type_config: Any | None,
-    cells: list[Tag],
 ) -> None:
     """Apply channel_type to a channel dict.
 
-    Fixed: sets a static value. Map: looks up a field value in the map.
+    Fixed: sets a static value. Map: derives from another field's value.
     Does not overwrite if ``channel_type`` already exists in the channel.
     """
     if channel_type_config is None or "channel_type" in channel:
@@ -134,14 +133,7 @@ def _apply_channel_type(
 
     if isinstance(channel_type_config, ChannelTypeMap):
         ct_map = channel_type_config
-        raw_value: str | None = None
-
-        if ct_map.field is not None:
-            # Look up by field name in the already-extracted channel
-            raw_value = str(channel.get(ct_map.field, ""))
-        elif ct_map.index is not None and ct_map.index < len(cells):
-            # Look up by column index in raw cells
-            raw_value = cells[ct_map.index].get_text(strip=True)
+        raw_value = str(channel.get(ct_map.field, ""))
 
         if raw_value and raw_value in ct_map.map:
             channel["channel_type"] = ct_map.map[raw_value]

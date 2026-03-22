@@ -18,10 +18,10 @@ class JSFunction(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     name: str
-    channel_type: str
+    channel_type: str = ""
     delimiter: str
     fields_per_channel: int
-    channels: list[ChannelMapping]
+    fields: list[ChannelMapping]
     filter: dict[str, FilterValue] = Field(default_factory=dict)
 
 

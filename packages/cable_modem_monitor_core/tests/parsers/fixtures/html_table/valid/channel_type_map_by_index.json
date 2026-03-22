@@ -1,17 +1,14 @@
 {
-  "_description": "Channel type map using raw column index (not extracted field name)",
+  "_description": "Channel type via inline map on column mapping",
   "_html": "<table><tr><td>1</td><td>SC-QAM</td><td>507000000</td></tr></table>",
   "_resource": "/s.html",
   "_config": {
     "selector": {"type": "nth", "match": 0},
     "columns": [
       {"index": 0, "field": "channel_id", "type": "integer"},
+      {"index": 1, "field": "channel_type", "type": "string", "map": {"SC-QAM": "qam", "OFDM": "ofdm"}},
       {"index": 2, "field": "frequency", "type": "frequency"}
-    ],
-    "channel_type": {
-      "index": 1,
-      "map": {"SC-QAM": "qam", "OFDM": "ofdm"}
-    }
+    ]
   },
   "_expected": [
     {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}

@@ -11,7 +11,7 @@ downstream:
           type: integer
         - label: "Lock Status"
           field: lock_status
-          type: string
+          type: lock_status
         - label: "Frequency"
           field: frequency
           type: frequency
@@ -27,6 +27,11 @@ downstream:
         - label: "Modulation"
           field: modulation
           type: string
+      channel_type:
+        field: modulation
+        map:
+          "256 QAM": "qam"
+          "OFDM": "ofdm"
 
     - selector:
         type: header_text
@@ -55,7 +60,7 @@ upstream:
       type: integer
     - label: "Lock Status"
       field: lock_status
-      type: string
+      type: lock_status
     - label: "Frequency"
       field: frequency
       type: frequency
@@ -73,3 +78,7 @@ upstream:
     - label: "Channel Type"
       field: channel_type
       type: string
+      map:
+        "ATDMA": "atdma"
+        "TDMA": "atdma"
+        "TDMA_AND_ATDMA": "atdma"

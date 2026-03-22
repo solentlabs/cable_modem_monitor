@@ -147,7 +147,7 @@ class JSEmbeddedParser(BaseParser):
         """
         channel: dict[str, Any] = {}
 
-        for mapping in self._function.channels:
+        for mapping in self._function.fields:
             offset = mapping.offset if mapping.offset is not None else mapping.index
             if offset is None or offset >= len(segment):
                 _logger.debug(
@@ -162,6 +162,7 @@ class JSEmbeddedParser(BaseParser):
                 raw_value,
                 mapping.type,
                 unit=mapping.unit,
+                map_config=mapping.map,
             )
 
             if value is not None:
@@ -215,5 +216,5 @@ def _apply_channel_type(
     JSEmbeddedParser uses a fixed channel_type per function (declared
     in parser.yaml). Does not overwrite if already present.
     """
-    if "channel_type" not in channel:
+    if "channel_type" not in channel and channel_type:
         channel["channel_type"] = channel_type

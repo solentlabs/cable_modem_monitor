@@ -9,10 +9,10 @@ downstream:
       channel_type: "qam"
       delimiter: "|"
       fields_per_channel: 9
-      channels:
+      fields:
         - offset: 1
           field: lock_status
-          type: string
+          type: lock_status
         - offset: 2
           field: modulation
           type: string
@@ -38,7 +38,7 @@ downstream:
           field: uncorrected
           type: integer
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
     # DOCSIS 3.1 OFDM: 11 fields per channel
     # Layout: channel_num | lock_status | profile_ids | channel_id |
     #         frequency | power | snr | active_range |
@@ -47,10 +47,10 @@ downstream:
       channel_type: "ofdm"
       delimiter: "|"
       fields_per_channel: 11
-      channels:
+      fields:
         - offset: 1
           field: lock_status
-          type: string
+          type: lock_status
         - offset: 3
           field: channel_id
           type: integer
@@ -67,7 +67,7 @@ downstream:
           type: float
           unit: "dB"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
 upstream:
   format: javascript
@@ -78,13 +78,17 @@ upstream:
     #         symbol_rate | frequency | power
     # Note: symbol_rate (offset 4) before frequency (offset 5)
     - name: "InitUsTableTagValue"
-      channel_type: "atdma"
       delimiter: "|"
       fields_per_channel: 7
-      channels:
+      fields:
         - offset: 1
           field: lock_status
+          type: lock_status
+        - offset: 2
+          field: channel_type
           type: string
+          map:
+            "ATDMA": "atdma"
         - offset: 3
           field: channel_id
           type: integer
@@ -101,7 +105,7 @@ upstream:
           type: float
           unit: "dBmV"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
     # DOCSIS 3.1 OFDMA: 6 fields per channel
     # Layout: channel_num | lock_status | profile_ids | channel_id |
     #         frequency | power
@@ -109,10 +113,10 @@ upstream:
       channel_type: "ofdma"
       delimiter: "|"
       fields_per_channel: 6
-      channels:
+      fields:
         - offset: 1
           field: lock_status
-          type: string
+          type: lock_status
         - offset: 3
           field: channel_id
           type: integer
@@ -125,7 +129,7 @@ upstream:
           type: float
           unit: "dBmV"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
 system_info:
   sources:

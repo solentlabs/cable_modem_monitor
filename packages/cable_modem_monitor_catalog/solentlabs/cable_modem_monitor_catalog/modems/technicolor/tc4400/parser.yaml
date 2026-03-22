@@ -12,7 +12,13 @@ downstream:
           type: integer
         - index: 2
           field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_type
           type: string
+          map:
+            "SC-QAM": "qam"
+            "OFDM": "ofdm"
         - index: 4
           field: bonding_status
           type: string
@@ -42,11 +48,6 @@ downstream:
         - index: 12
           field: uncorrected
           type: integer
-      channel_type:
-        index: 3
-        map:
-          "SC-QAM": "qam"
-          "OFDM": "ofdm"
 
 upstream:
   format: table
@@ -62,7 +63,13 @@ upstream:
           type: integer
         - index: 2
           field: lock_status
+          type: lock_status
+        - index: 3
+          field: channel_type
           type: string
+          map:
+            "SC-QAM": "qam"
+            "OFDMA": "ofdma"
         - index: 4
           field: bonding_status
           type: string
@@ -79,11 +86,6 @@ upstream:
         - index: 8
           field: modulation
           type: string
-      channel_type:
-        index: 3
-        map:
-          "SC-QAM": "qam"
-          "OFDMA": "ofdma"
 
 system_info:
   sources:

@@ -13,26 +13,28 @@ from solentlabs.cable_modem_monitor_core.parsers.type_conversion import (
     strip_unit,
 )
 
-# ┌──────────────────┬────────────┬──────────┬───────────────────────────┐
-# │ raw              │ field_type │ expected │ description               │
-# ├──────────────────┼────────────┼──────────┼───────────────────────────┤
-# │ "123"            │ integer    │ 123      │ simple int                │
-# │ " 456 "          │ integer    │ 456      │ whitespace stripped       │
-# │ "3.14"           │ integer    │ 3        │ float truncated to int    │
-# │ ""               │ integer    │ None     │ empty string              │
-# │ "abc"            │ integer    │ None     │ non-numeric               │
-# │ "3.2"            │ float      │ 3.2      │ simple float              │
-# │ "-15.3"          │ float      │ -15.3    │ negative float            │
-# │ ""               │ float      │ None     │ empty float               │
-# │ "Locked"         │ string     │ "Locked" │ simple string             │
-# │ "  padded  "     │ string     │ "padded" │ whitespace stripped       │
-# │ ""               │ string     │ None     │ empty string              │
-# │ "true"           │ boolean    │ True     │ boolean true              │
-# │ "false"          │ boolean    │ False    │ boolean false             │
-# │ "1"              │ boolean    │ True     │ boolean numeric true      │
-# │ "507000000"      │ frequency  │ 507e6    │ Hz passthrough            │
-# │ "507"            │ frequency  │ 507e6    │ MHz normalized            │
-# └──────────────────┴────────────┴──────────┴───────────────────────────┘
+# ┌──────────────────┬────────────┬─────────────┬───────────────────────────┐
+# │ raw              │ field_type │ expected    │ description               │
+# ├──────────────────┼────────────┼─────────────┼───────────────────────────┤
+# │ "123"            │ integer    │ 123         │ simple int                │
+# │ " 456 "          │ integer    │ 456         │ whitespace stripped       │
+# │ "3.14"           │ integer    │ 3           │ float truncated to int    │
+# │ ""               │ integer    │ None        │ empty string              │
+# │ "abc"            │ integer    │ None        │ non-numeric               │
+# │ "3.2"            │ float      │ 3.2         │ simple float              │
+# │ "-15.3"          │ float      │ -15.3       │ negative float            │
+# │ ""               │ float      │ None        │ empty float               │
+# │ "Locked"         │ string     │ "Locked"    │ simple string             │
+# │ "  padded  "     │ string     │ "padded"    │ whitespace stripped       │
+# │ ""               │ string     │ None        │ empty string              │
+# │ "true"           │ boolean    │ True        │ boolean true              │
+# │ "false"          │ boolean    │ False       │ boolean false             │
+# │ "1"              │ boolean    │ True        │ boolean numeric true      │
+# │ "507000000"      │ frequency  │ 507e6       │ Hz passthrough            │
+# │ "507"            │ frequency  │ 507e6       │ MHz normalized            │
+# │ "Locked"         │ lock_status│ "locked"    │ lock_status Locked        │
+# │ "Not Locked"     │ lock_status│ "not_locked"│ lock_status Not Locked    │
+# └──────────────────┴────────────┴─────────────┴───────────────────────────┘
 #
 # fmt: off
 CONVERT_VALUE_CASES = [
@@ -58,6 +60,16 @@ CONVERT_VALUE_CASES = [
     ("no",              "boolean",   False,        "no is falsy"),
     ("507000000",       "frequency", 507_000_000,  "Hz passthrough"),
     ("507",             "frequency", 507_000_000,  "MHz auto-detected"),
+    ("Locked",          "lock_status", "locked",   "lock_status Locked"),
+    ("Not Locked",      "lock_status", "not_locked", "lock_status Not Locked"),
+    ("YES",             "lock_status", "locked",   "lock_status YES"),
+    ("Active",          "lock_status", "locked",   "lock_status Active"),
+    ("true",            "lock_status", "locked",   "lock_status true"),
+    ("1",               "lock_status", "locked",   "lock_status numeric 1"),
+    ("on",              "lock_status", "locked",   "lock_status on"),
+    ("Unlocked",        "lock_status", "not_locked", "lock_status Unlocked"),
+    ("0",               "lock_status", "not_locked", "lock_status numeric 0"),
+    ("no",              "lock_status", "not_locked", "lock_status no"),
 ]
 # fmt: on
 

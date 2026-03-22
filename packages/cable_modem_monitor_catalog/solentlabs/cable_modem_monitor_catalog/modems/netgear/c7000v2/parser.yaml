@@ -6,10 +6,10 @@ downstream:
       channel_type: "qam"
       delimiter: "|"
       fields_per_channel: 9
-      channels:
+      fields:
         - offset: 1
           field: lock_status
-          type: string
+          type: lock_status
         - offset: 2
           field: modulation
           type: string
@@ -35,23 +35,24 @@ downstream:
           field: uncorrected
           type: integer
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
 upstream:
   format: javascript
   resource: "/DocsisStatus.htm"
   functions:
     - name: "InitUsTableTagValue"
-      channel_type: "atdma"
       delimiter: "|"
       fields_per_channel: 7
-      channels:
+      fields:
         - offset: 1
           field: lock_status
-          type: string
+          type: lock_status
         - offset: 2
           field: channel_type
           type: string
+          map:
+            "ATDMA": "atdma"
         - offset: 3
           field: channel_id
           type: integer
@@ -67,7 +68,7 @@ upstream:
           type: float
           unit: "dBmV"
       filter:
-        lock_status: "Locked"
+        lock_status: "locked"
 
 system_info:
   sources:

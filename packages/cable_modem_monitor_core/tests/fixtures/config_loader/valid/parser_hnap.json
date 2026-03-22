@@ -1,4 +1,4 @@
 {
   "_type": "parser",
-  "_yaml": "downstream:\n  format: hnap\n  response_key: GetDownstreamChannelInfoResponse\n  data_key: DownstreamChannel\n  record_delimiter: '|+|'\n  field_delimiter: '^'\n  channels:\n    - index: 3\n      field: channel_id\n      type: integer\n    - index: 4\n      field: frequency\n      type: frequency\n    - index: 5\n      field: snr\n      type: float\n    - index: 6\n      field: power\n      type: float\n  channel_type:\n    index: 2\n    map:\n      SC-QAM: qam\n      OFDM: ofdm\n  filter:\n    channel_id:\n      not: 0\n"
+  "_yaml": "downstream:\n  format: hnap\n  response_key: GetDownstreamChannelInfoResponse\n  data_key: DownstreamChannel\n  record_delimiter: '|+|'\n  field_delimiter: '^'\n  fields:\n    - index: 2\n      field: channel_type\n      type: string\n      map:\n        SC-QAM: qam\n        OFDM: ofdm\n    - index: 3\n      field: channel_id\n      type: integer\n    - index: 4\n      field: frequency\n      type: frequency\n    - index: 5\n      field: snr\n      type: float\n    - index: 6\n      field: power\n      type: float\n  filter:\n    channel_id:\n      not: 0\n"
 }

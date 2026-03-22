@@ -8,10 +8,23 @@
         "channel_type": "qam",
         "delimiter": "|",
         "fields_per_channel": 9,
-        "channels": [
-          {"offset": 3, "field": "channel_id", "type": "integer"},
-          {"offset": 4, "field": "frequency", "type": "frequency"},
-          {"offset": 5, "field": "power", "type": "float", "unit": "dBmV"}
+        "fields": [
+          {
+            "offset": 3,
+            "field": "channel_id",
+            "type": "integer"
+          },
+          {
+            "offset": 4,
+            "field": "frequency",
+            "type": "frequency"
+          },
+          {
+            "offset": 5,
+            "field": "power",
+            "type": "float",
+            "unit": "dBmV"
+          }
         ]
       }
     ]

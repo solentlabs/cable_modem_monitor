@@ -2,14 +2,19 @@ downstream:
   format: json
   resource: "/rest/v1/cablemodem/downstream"
   array_path: "downstream.channels"
-  channels:
+  fields:
     - key: "channelId"
       field: channel_id
       type: integer
     - key: "lockStatus"
       field: lock_status
-      type: boolean
-      truthy: true
+      type: lock_status
+    - key: "channelType"
+      field: channel_type
+      type: string
+      map:
+        "sc_qam": "qam"
+        "ofdm": "ofdm"
     - key: "modulation"
       field: modulation
       type: string
@@ -38,24 +43,24 @@ downstream:
     - key: "numberOfActiveSubCarriers"
       field: active_subcarriers
       type: integer
-  channel_type:
-    key: "channelType"
-    map:
-      "sc_qam": "qam"
-      "ofdm": "ofdm"
 
 upstream:
   format: json
   resource: "/rest/v1/cablemodem/upstream"
   array_path: "upstream.channels"
-  channels:
+  fields:
     - key: "channelId"
       field: channel_id
       type: integer
     - key: "lockStatus"
       field: lock_status
-      type: boolean
-      truthy: true
+      type: lock_status
+    - key: "channelType"
+      field: channel_type
+      type: string
+      map:
+        "atdma": "atdma"
+        "ofdma": "ofdma"
     - key: "modulation"
       field: modulation
       type: string
@@ -77,11 +82,6 @@ upstream:
     - key: "numberOfActiveSubCarriers"
       field: active_subcarriers
       type: integer
-  channel_type:
-    key: "channelType"
-    map:
-      "atdma": "atdma"
-      "ofdma": "ofdma"
 
 system_info:
   sources:

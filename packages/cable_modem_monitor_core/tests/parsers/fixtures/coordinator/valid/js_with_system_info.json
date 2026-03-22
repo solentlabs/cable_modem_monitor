@@ -13,10 +13,22 @@
           "channel_type": "qam",
           "delimiter": "|",
           "fields_per_channel": 9,
-          "channels": [
-            {"offset": 3, "field": "channel_id", "type": "integer"},
-            {"offset": 4, "field": "frequency", "type": "frequency"},
-            {"offset": 5, "field": "power", "type": "float"}
+          "fields": [
+            {
+              "offset": 3,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "offset": 4,
+              "field": "frequency",
+              "type": "frequency"
+            },
+            {
+              "offset": 5,
+              "field": "power",
+              "type": "float"
+            }
           ]
         }
       ]
@@ -30,10 +42,22 @@
           "channel_type": "atdma",
           "delimiter": "|",
           "fields_per_channel": 7,
-          "channels": [
-            {"offset": 3, "field": "channel_id", "type": "integer"},
-            {"offset": 5, "field": "frequency", "type": "frequency"},
-            {"offset": 6, "field": "power", "type": "float"}
+          "fields": [
+            {
+              "offset": 3,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "offset": 5,
+              "field": "frequency",
+              "type": "frequency"
+            },
+            {
+              "offset": 6,
+              "field": "power",
+              "type": "float"
+            }
           ]
         }
       ]
@@ -48,8 +72,16 @@
               "name": "InitTagValue",
               "delimiter": "|",
               "fields": [
-                {"offset": 10, "field": "current_time", "type": "string"},
-                {"offset": 14, "field": "system_uptime", "type": "string"}
+                {
+                  "offset": 10,
+                  "field": "current_time",
+                  "type": "string"
+                },
+                {
+                  "offset": 14,
+                  "field": "system_uptime",
+                  "type": "string"
+                }
               ]
             }
           ]
@@ -59,10 +91,20 @@
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "channel_type": "qam"}
+      {
+        "channel_id": 10,
+        "frequency": 519000000,
+        "power": 5.0,
+        "channel_type": "qam"
+      }
     ],
     "upstream": [
-      {"channel_id": 41, "frequency": 17800000, "power": 54.3, "channel_type": "atdma"}
+      {
+        "channel_id": 41,
+        "frequency": 17800000,
+        "power": 54.3,
+        "channel_type": "atdma"
+      }
     ],
     "system_info": {
       "current_time": "Wed Jan 15 2025",

@@ -13,11 +13,27 @@
           "channel_type": "qam",
           "delimiter": "|",
           "fields_per_channel": 9,
-          "channels": [
-            {"offset": 3, "field": "channel_id", "type": "integer"},
-            {"offset": 4, "field": "frequency", "type": "frequency"},
-            {"offset": 5, "field": "power", "type": "float"},
-            {"offset": 6, "field": "snr", "type": "float"}
+          "fields": [
+            {
+              "offset": 3,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "offset": 4,
+              "field": "frequency",
+              "type": "frequency"
+            },
+            {
+              "offset": 5,
+              "field": "power",
+              "type": "float"
+            },
+            {
+              "offset": 6,
+              "field": "snr",
+              "type": "float"
+            }
           ]
         },
         {
@@ -25,11 +41,27 @@
           "channel_type": "ofdm",
           "delimiter": "|",
           "fields_per_channel": 11,
-          "channels": [
-            {"offset": 3, "field": "channel_id", "type": "integer"},
-            {"offset": 4, "field": "frequency", "type": "frequency"},
-            {"offset": 5, "field": "power", "type": "float"},
-            {"offset": 6, "field": "snr", "type": "float"}
+          "fields": [
+            {
+              "offset": 3,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "offset": 4,
+              "field": "frequency",
+              "type": "frequency"
+            },
+            {
+              "offset": 5,
+              "field": "power",
+              "type": "float"
+            },
+            {
+              "offset": 6,
+              "field": "snr",
+              "type": "float"
+            }
           ]
         }
       ]
@@ -37,8 +69,20 @@
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "snr": 39.0, "channel_type": "qam"},
-      {"channel_id": 50, "frequency": 600000000, "power": 3.0, "snr": 37.0, "channel_type": "ofdm"}
+      {
+        "channel_id": 10,
+        "frequency": 519000000,
+        "power": 5.0,
+        "snr": 39.0,
+        "channel_type": "qam"
+      },
+      {
+        "channel_id": 50,
+        "frequency": 600000000,
+        "power": 3.0,
+        "snr": 37.0,
+        "channel_type": "ofdm"
+      }
     ],
     "upstream": []
   }
