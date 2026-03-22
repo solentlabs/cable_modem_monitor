@@ -39,7 +39,7 @@ class TestBasicAuthManager:
         with HARMockServer(entries, modem_config=modem_config) as server:
             config = BasicAuth(strategy="basic", challenge_cookie=True)
             manager = BasicAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "secret")
             assert result.success is True
@@ -50,4 +50,5 @@ class TestBasicAuthManager:
         manager = BasicAuthManager(config)
 
         result = manager.authenticate(session, "http://192.168.100.1", "admin", "secret")
-        assert result.auth_context == {}
+        assert result.auth_context.url_token == ""
+        assert result.auth_context.private_key == ""

@@ -12,7 +12,6 @@ from urllib.parse import urlparse
 import requests
 
 from ..models.modem_config.auth import FormAuth
-from ..models.modem_config.session import SessionConfig
 from .base import AuthResult, BaseAuthManager
 
 _logger = logging.getLogger(__name__)
@@ -28,14 +27,9 @@ class FormAuthManager(BaseAuthManager):
 
     Args:
         config: Validated ``FormAuth`` config from modem.yaml.
-        session_config: Optional session config (reserved for future use).
     """
 
-    def __init__(
-        self,
-        config: FormAuth,
-        session_config: SessionConfig | None = None,
-    ) -> None:
+    def __init__(self, config: FormAuth) -> None:
         self._config = config
 
     def authenticate(
@@ -44,6 +38,8 @@ class FormAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Execute the form login flow.
 
@@ -58,12 +54,12 @@ class FormAuthManager(BaseAuthManager):
             base_url: Modem base URL.
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
             AuthResult with login response for auth response reuse.
         """
         config = self._config
-        timeout = getattr(self, "_timeout", 10)
 
         # Step 1: Pre-fetch login page if configured
         if config.login_page:
@@ -108,7 +104,7 @@ class FormAuthManager(BaseAuthManager):
             return AuthResult(success=False, error=error)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.debug(
+        _logger.info(
             "Form login succeeded: status=%d, url=%s, cookies=%s",
             response.status_code,
             response_path,

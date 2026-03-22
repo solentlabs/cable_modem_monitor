@@ -38,6 +38,8 @@ class BasicAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Set Basic auth credentials on the session.
 
@@ -46,6 +48,7 @@ class BasicAuthManager(BaseAuthManager):
             base_url: Modem base URL.
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
             AuthResult — always succeeds (auth is per-request).
@@ -54,7 +57,6 @@ class BasicAuthManager(BaseAuthManager):
 
         if self._challenge_cookie:
             try:
-                timeout = getattr(self, "_timeout", 10)
                 resp = session.get(
                     f"{base_url}/",
                     allow_redirects=False,

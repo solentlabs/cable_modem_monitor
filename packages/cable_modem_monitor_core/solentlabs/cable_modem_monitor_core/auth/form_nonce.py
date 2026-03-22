@@ -37,6 +37,8 @@ class FormNonceAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Execute the nonce-based login flow.
 
@@ -50,12 +52,12 @@ class FormNonceAuthManager(BaseAuthManager):
             base_url: Modem base URL.
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
             AuthResult with login response.
         """
         config = self._config
-        timeout = getattr(self, "_timeout", 10)
 
         # Step 1: Generate nonce (digits only, per spec)
         nonce = "".join(secrets.choice(string.digits) for _ in range(config.nonce_length))
@@ -95,7 +97,7 @@ class FormNonceAuthManager(BaseAuthManager):
         if text.startswith(config.success_prefix):
             response_url = text[len(config.success_prefix) :].strip()
 
-        _logger.debug(
+        _logger.info(
             "Nonce login succeeded: status=%d, redirect=%s",
             response.status_code,
             response_url,

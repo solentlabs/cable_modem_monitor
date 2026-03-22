@@ -34,6 +34,25 @@ def _load_entries(name: str) -> list[dict[str, Any]]:
     return list(data["_entries"])
 
 
+def _make_config(data: dict[str, Any]) -> Any:
+    """Validate a raw modem config dict into a ModemConfig instance.
+
+    Fills in required identity fields if missing so tests only need
+    to specify the auth/session fields under test.
+    """
+    from solentlabs.cable_modem_monitor_core.config_loader import validate_modem_config
+
+    defaults = {
+        "manufacturer": "Solent Labs",
+        "model": "T100",
+        "transport": "http",
+        "default_host": "192.168.100.1",
+        "status": "unsupported",
+        "auth": {"strategy": "none"},
+    }
+    return validate_modem_config({**defaults, **data})
+
+
 # ---------------------------------------------------------------------------
 # Layer 2: HNAP auth handler tests
 # ---------------------------------------------------------------------------
@@ -191,7 +210,7 @@ class TestHARMockServerHnapAuth:
         entries: list[dict[str, Any]],
     ) -> None:
         """Data request without HNAP auth returns 401."""
-        config = {"auth": {"strategy": "hnap", "hmac_algorithm": "md5"}}
+        config = _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}})
         with HARMockServer(entries, modem_config=config) as server:
             resp = requests.post(f"{server.base_url}/HNAP1/")
             assert resp.status_code == 401
@@ -201,11 +220,11 @@ class TestHARMockServerHnapAuth:
         entries: list[dict[str, Any]],
     ) -> None:
         """Full HNAP challenge-response login using real auth manager."""
-        config_dict = {"auth": {"strategy": "hnap", "hmac_algorithm": "md5"}}
+        config = _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}})
         auth_config = HnapAuth(strategy="hnap", hmac_algorithm="md5")
         auth_manager = HnapAuthManager(auth_config)
 
-        with HARMockServer(entries, modem_config=config_dict) as server:
+        with HARMockServer(entries, modem_config=config) as server:
             session = requests.Session()
             result = auth_manager.authenticate(
                 session,
@@ -214,18 +233,18 @@ class TestHARMockServerHnapAuth:
                 password="password",
             )
             assert result.success, f"Auth failed: {result.error}"
-            assert result.auth_context.get("private_key")
+            assert result.auth_context.private_key
 
     def test_data_request_after_login(
         self,
         entries: list[dict[str, Any]],
     ) -> None:
         """Authenticated data request returns merged HNAP response."""
-        config_dict = {"auth": {"strategy": "hnap", "hmac_algorithm": "md5"}}
+        config = _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}})
         auth_config = HnapAuth(strategy="hnap", hmac_algorithm="md5")
         auth_manager = HnapAuthManager(auth_config)
 
-        with HARMockServer(entries, modem_config=config_dict) as server:
+        with HARMockServer(entries, modem_config=config) as server:
             session = requests.Session()
             result = auth_manager.authenticate(
                 session,
@@ -246,7 +265,7 @@ class TestHARMockServerHnapAuth:
             loader = HNAPLoader(
                 session=session,
                 base_url=server.base_url,
-                private_key=result.auth_context["private_key"],
+                private_key=result.auth_context.private_key,
                 hmac_algorithm="md5",
             )
             resources = loader.fetch(mock_config)

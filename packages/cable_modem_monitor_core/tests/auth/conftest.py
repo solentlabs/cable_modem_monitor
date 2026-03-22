@@ -27,9 +27,19 @@ def session() -> requests.Session:
     return requests.Session()
 
 
+_MODEM_DEFAULTS: dict[str, Any] = {
+    "manufacturer": "Solent Labs",
+    "model": "T100",
+    "transport": "http",
+    "default_host": "192.168.100.1",
+    "status": "unsupported",
+    "auth": {"strategy": "none"},
+}
+
+
 def load_auth_fixture(
     name: str,
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+) -> tuple[list[dict[str, Any]], Any]:
     """Load a HAR fixture file and return entries and optional modem config.
 
     Args:
@@ -37,10 +47,22 @@ def load_auth_fixture(
 
     Returns:
         Tuple of ``(entries, modem_config)`` where ``modem_config``
-        is ``None`` when the fixture has no ``_modem_config`` key.
+        is a validated ``ModemConfig`` instance or ``None`` when the
+        fixture has no ``_modem_config`` key.
     """
+    from solentlabs.cable_modem_monitor_core.config_loader import validate_modem_config
+
     path = FIXTURES_DIR / name
     data = json.loads(path.read_text())
     entries: list[dict[str, Any]] = data["_entries"]
-    modem_config: dict[str, Any] | None = data.get("_modem_config")
-    return entries, modem_config
+    raw_config: dict[str, Any] | None = data.get("_modem_config")
+    if raw_config is None:
+        return entries, None
+    # Merge fixture auth config with defaults so minimal fixture
+    # dicts (just auth/session) pass full ModemConfig validation.
+    merged = {**_MODEM_DEFAULTS, **raw_config}
+    # HNAP strategy requires transport: hnap
+    auth = merged.get("auth", {})
+    if isinstance(auth, dict) and auth.get("strategy") == "hnap":
+        merged["transport"] = "hnap"
+    return entries, validate_modem_config(merged)

@@ -10,9 +10,12 @@ JSON SOAP protocol, HAR response merging).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .routes import RouteEntry, normalize_path
+
+if TYPE_CHECKING:
+    from ..models.modem_config import ModemConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -139,14 +142,14 @@ class BasicAuthHandler(AuthHandler):
 
 
 def create_auth_handler(
-    modem_config: dict[str, Any] | None,
+    modem_config: ModemConfig | None,
     har_entries: list[dict[str, Any]] | None = None,
 ) -> AuthHandler:
     """Create the appropriate auth handler from modem config.
 
     Args:
-        modem_config: Modem config dict (or None for no auth). Uses
-            ``auth.strategy`` to select the handler and
+        modem_config: Validated ``ModemConfig`` instance (or None for no auth).
+            Uses ``auth.strategy`` to select the handler and
             ``session.cookie_name`` for session tracking.
         har_entries: HAR ``log.entries`` list. Required for HNAP auth
             to build the merged data response. Ignored for other
@@ -155,49 +158,48 @@ def create_auth_handler(
     Returns:
         Auth handler instance.
     """
-    if modem_config is None:
+    from ..models.modem_config.auth import (
+        BasicAuth,
+        FormAuth,
+        FormNonceAuth,
+        FormPbkdf2Auth,
+        HnapAuth,
+        NoneAuth,
+        UrlTokenAuth,
+    )
+
+    if modem_config is None or modem_config.auth is None:
         return AuthHandler()
 
-    auth = modem_config.get("auth")
-    if auth is None:
+    auth = modem_config.auth
+
+    if isinstance(auth, NoneAuth):
         return AuthHandler()
 
-    strategy = auth.get("strategy", "none") if isinstance(auth, dict) else getattr(auth, "strategy", "none")
-
-    if strategy == "none":
-        return AuthHandler()
-
-    if strategy == "basic":
+    if isinstance(auth, BasicAuth):
         return BasicAuthHandler()
 
-    if strategy in ("form", "form_nonce", "form_pbkdf2"):
-        login_path = ""
-        if isinstance(auth, dict):
-            login_path = auth.get("action", "") or auth.get("login_endpoint", "")
-        else:
-            login_path = getattr(auth, "action", "") or getattr(auth, "login_endpoint", "")
-
-        session = modem_config.get("session")
+    if isinstance(auth, FormAuth | FormNonceAuth | FormPbkdf2Auth):
+        login_path = getattr(auth, "action", "") or getattr(auth, "login_endpoint", "")
         cookie_name = ""
-        if session is not None:
-            cookie_name = (
-                session.get("cookie_name", "") if isinstance(session, dict) else getattr(session, "cookie_name", "")
-            )
-
+        if modem_config.session is not None:
+            cookie_name = modem_config.session.cookie_name
         return FormAuthHandler(login_path=login_path, cookie_name=cookie_name)
 
-    if strategy == "hnap":
+    if isinstance(auth, UrlTokenAuth):
+        # URL token auth GETs the login page with credentials in the URL.
+        # The HAR route table already contains the login page response
+        # (with success indicator text and Set-Cookie header), so no
+        # auth gating is needed — all requests pass through.
+        return AuthHandler()
+
+    if isinstance(auth, HnapAuth):
         from .auth_hnap import HnapAuthHandler
 
-        hmac_algorithm = "md5"
-        if isinstance(auth, dict):
-            hmac_algorithm = auth.get("hmac_algorithm", "md5")
-        else:
-            hmac_algorithm = getattr(auth, "hmac_algorithm", "md5")
         return HnapAuthHandler(
-            hmac_algorithm=hmac_algorithm,
+            hmac_algorithm=auth.hmac_algorithm,
             har_entries=har_entries or [],
         )
 
-    _logger.warning("Unsupported auth strategy '%s' in mock server, using no-auth", strategy)
+    _logger.warning("Unsupported auth strategy '%s' in mock server, using no-auth", type(auth).__name__)
     return AuthHandler()

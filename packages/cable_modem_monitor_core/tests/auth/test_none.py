@@ -4,25 +4,26 @@ from __future__ import annotations
 
 import pytest
 import requests
+from solentlabs.cable_modem_monitor_core.auth.base import AuthContext
 from solentlabs.cable_modem_monitor_core.auth.none import NoneAuthManager
 
-# +-----------------+-----------+---------------------+
-# | field           | expected  | description         |
-# +-----------------+-----------+---------------------+
-# | success         | True      | always succeeds     |
-# | error           | ""        | no error message    |
-# | auth_context    | {}        | no auth context     |
-# | response        | None      | no login response   |
-# | response_url    | ""        | no response URL     |
-# +-----------------+-----------+---------------------+
+# +-----------------+----------------+---------------------+
+# | field           | expected       | description         |
+# +-----------------+----------------+---------------------+
+# | success         | True           | always succeeds     |
+# | error           | ""             | no error message    |
+# | auth_context    | AuthContext()  | no auth context     |
+# | response        | None           | no login response   |
+# | response_url    | ""             | no response URL     |
+# +-----------------+----------------+---------------------+
 #
 # fmt: off
 RESULT_FIELD_CASES = [
-    ("success",      True,  "always succeeds"),
-    ("error",        "",    "no error message"),
-    ("auth_context", {},    "no auth context"),
-    ("response",     None,  "no login response"),
-    ("response_url", "",    "no response URL"),
+    ("success",      True,            "always succeeds"),
+    ("error",        "",              "no error message"),
+    ("auth_context", AuthContext(),   "no auth context"),
+    ("response",     None,            "no login response"),
+    ("response_url", "",              "no response URL"),
 ]
 # fmt: on
 

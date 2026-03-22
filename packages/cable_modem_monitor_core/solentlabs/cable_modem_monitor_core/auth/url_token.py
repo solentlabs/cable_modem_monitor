@@ -12,7 +12,6 @@ from urllib.parse import urlparse
 import requests
 
 from ..models.modem_config.auth import UrlTokenAuth
-from ..models.modem_config.session import SessionConfig
 from .base import AuthResult, BaseAuthManager
 
 _logger = logging.getLogger(__name__)
@@ -25,23 +24,16 @@ class UrlTokenAuthManager(BaseAuthManager):
     The response sets a session cookie and may contain a server-issued
     token for subsequent data page requests.
 
-    For data requests, the loader appends
-    ``?{token_prefix}{session_token}`` to each URL.
+    For data requests, the runner extracts the session token from
+    cookies using ``session_config.cookie_name`` and passes it to
+    the loader.
 
     Args:
         config: Validated ``UrlTokenAuth`` config from modem.yaml.
-        session_config: Session config (for ``cookie_name``,
-            ``token_prefix``).
     """
 
-    def __init__(
-        self,
-        config: UrlTokenAuth,
-        session_config: SessionConfig | None = None,
-    ) -> None:
+    def __init__(self, config: UrlTokenAuth) -> None:
         self._config = config
-        self._cookie_name = session_config.cookie_name if session_config else ""
-        self._token_prefix = session_config.token_prefix if session_config else ""
 
     def authenticate(
         self,
@@ -49,6 +41,8 @@ class UrlTokenAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Execute the URL token login flow.
 
@@ -64,12 +58,13 @@ class UrlTokenAuthManager(BaseAuthManager):
             base_url: Modem base URL.
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
-            AuthResult with ``auth_context["url_token"]`` for the loader.
+            AuthResult with login response for the runner to extract
+            the session token from cookies.
         """
         config = self._config
-        timeout = getattr(self, "_timeout", 10)
 
         # Step 1: Encode credentials
         credential = base64.b64encode(
@@ -108,29 +103,18 @@ class UrlTokenAuthManager(BaseAuthManager):
                 error=f"Login success indicator '{config.success_indicator}' not found",
             )
 
-        # Step 4: Extract session token from cookie
-        url_token = ""
-        if self._cookie_name:
-            url_token = session.cookies.get(self._cookie_name, "") or ""
-
-        # Step 5: Set Basic auth header for data requests if configured
+        # Set Basic auth header for data requests if configured
         if config.auth_header_data:
             session.auth = (username, password)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.debug(
-            "URL token login succeeded: token=%s, cookies=%s",
-            bool(url_token),
+        _logger.info(
+            "URL token login succeeded: cookies=%s",
             list(session.cookies.keys()),
         )
 
-        auth_context: dict[str, str] = {}
-        if url_token:
-            auth_context["url_token"] = url_token
-
         return AuthResult(
             success=True,
-            auth_context=auth_context,
             response=response,
             response_url=response_path,
         )

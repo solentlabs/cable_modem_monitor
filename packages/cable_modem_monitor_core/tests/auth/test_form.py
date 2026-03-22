@@ -13,9 +13,6 @@ from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormAuth,
     FormSuccess,
 )
-from solentlabs.cable_modem_monitor_core.models.modem_config.session import (
-    SessionConfig,
-)
 from solentlabs.cable_modem_monitor_core.testing import HARMockServer
 
 from .conftest import load_auth_fixture
@@ -52,7 +49,7 @@ class TestFormAuthManager:
                 action="/goform/login",
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -69,7 +66,7 @@ class TestFormAuthManager:
                 encoding="base64",
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -85,7 +82,7 @@ class TestFormAuthManager:
                 success=FormSuccess(redirect="/login"),
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             # The mock server doesn't redirect, so the final URL
@@ -103,7 +100,7 @@ class TestFormAuthManager:
                 success=FormSuccess(indicator="Welcome"),
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -119,7 +116,7 @@ class TestFormAuthManager:
                 success=FormSuccess(indicator="Welcome"),
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is False
@@ -135,21 +132,20 @@ class TestFormAuthManager:
                 action="/goform/login",
             )
             manager = FormAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
             assert result.response_url == "/goform/login"
 
-    def test_with_session_config(self, session: requests.Session) -> None:
-        """Session config is accepted."""
+    def test_login_with_indicator(self, session: requests.Session) -> None:
+        """Login with success indicator in response body."""
         entries, modem_config = load_auth_fixture("har_form_login_with_indicator.json")
 
         with HARMockServer(entries, modem_config=modem_config) as server:
             config = FormAuth(strategy="form", action="/login")
-            session_cfg = SessionConfig(cookie_name="my_session")
-            manager = FormAuthManager(config, session_cfg)
-            manager.configure_session(session, {}, 10)
+            manager = FormAuthManager(config)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True

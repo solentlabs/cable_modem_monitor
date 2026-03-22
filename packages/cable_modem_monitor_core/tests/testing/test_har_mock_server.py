@@ -39,6 +39,25 @@ def _load_entries(name: str) -> list[dict[str, Any]]:
     return list(data["_entries"])
 
 
+def _make_config(data: dict[str, Any]) -> Any:
+    """Validate a raw modem config dict into a ModemConfig instance.
+
+    Fills in required identity fields if missing so tests only need
+    to specify the auth/session fields under test.
+    """
+    from solentlabs.cable_modem_monitor_core.config_loader import validate_modem_config
+
+    defaults = {
+        "manufacturer": "Solent Labs",
+        "model": "T100",
+        "transport": "http",
+        "default_host": "192.168.100.1",
+        "status": "unsupported",
+        "auth": {"strategy": "none"},
+    }
+    return validate_modem_config({**defaults, **data})
+
+
 # ---------------------------------------------------------------------------
 # Layer 1: Route builder tests (fixture-driven)
 # ---------------------------------------------------------------------------
@@ -145,23 +164,43 @@ def test_normalize_path(input_path: str, expected: str, desc: str) -> None:
 
 AUTH_FACTORY_CASES = [
     (None, AuthHandler, FormAuthHandler, "none config"),
-    ({"transport": "http"}, AuthHandler, FormAuthHandler, "missing auth key"),
-    ({"auth": {"strategy": "none"}}, AuthHandler, FormAuthHandler, "explicit none"),
-    ({"auth": {"strategy": "basic"}}, BasicAuthHandler, None, "basic auth"),
     (
-        {"auth": {"strategy": "form", "action": "/goform/login"}, "session": {"cookie_name": "session"}},
+        _make_config({"transport": "http"}),
+        AuthHandler,
+        FormAuthHandler,
+        "missing auth key",
+    ),
+    (
+        _make_config({"auth": {"strategy": "none"}}),
+        AuthHandler,
+        FormAuthHandler,
+        "explicit none",
+    ),
+    (
+        _make_config({"auth": {"strategy": "basic"}}),
+        BasicAuthHandler,
+        None,
+        "basic auth",
+    ),
+    (
+        _make_config(
+            {
+                "auth": {"strategy": "form", "action": "/login"},
+                "session": {"cookie_name": "s"},
+            }
+        ),
         FormAuthHandler,
         None,
         "form auth",
     ),
     (
-        {"auth": {"strategy": "form", "action": "/goform/login"}},
+        _make_config({"auth": {"strategy": "form", "action": "/login"}}),
         FormAuthHandler,
         None,
         "form no session",
     ),
     (
-        {"auth": {"strategy": "hnap", "hmac_algorithm": "md5"}},
+        _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}}),
         HnapAuthHandler,
         None,
         "hnap auth",
@@ -171,7 +210,7 @@ AUTH_FACTORY_CASES = [
 
 @pytest.mark.parametrize("config,expected_type,not_type,desc", AUTH_FACTORY_CASES)
 def test_create_auth_handler(
-    config: dict[str, Any] | None,
+    config: Any,
     expected_type: type,
     not_type: type | None,
     desc: str,
@@ -309,14 +348,14 @@ class TestHARMockServerFormAuth:
 
     def test_data_pages_require_auth(self, entries: list[dict[str, Any]]) -> None:
         """Data pages return 401 before login."""
-        config = {"auth": {"strategy": "form", "action": "/goform/login"}}
+        config = _make_config({"auth": {"strategy": "form", "action": "/goform/login"}})
         with HARMockServer(entries, modem_config=config) as server:
             resp = requests.get(f"{server.base_url}/status.html")
             assert resp.status_code == 401
 
     def test_login_then_data(self, entries: list[dict[str, Any]]) -> None:
         """Login followed by data page request succeeds."""
-        config = {"auth": {"strategy": "form", "action": "/goform/login"}}
+        config = _make_config({"auth": {"strategy": "form", "action": "/goform/login"}})
         with HARMockServer(entries, modem_config=config) as server:
             login_resp = requests.post(
                 f"{server.base_url}/goform/login",
@@ -330,10 +369,12 @@ class TestHARMockServerFormAuth:
 
     def test_cookie_session(self, entries: list[dict[str, Any]]) -> None:
         """Cookie-based session allows auth via cookie header."""
-        config = {
-            "auth": {"strategy": "form", "action": "/goform/login"},
-            "session": {"cookie_name": "session"},
-        }
+        config = _make_config(
+            {
+                "auth": {"strategy": "form", "action": "/goform/login"},
+                "session": {"cookie_name": "session"},
+            }
+        )
         with HARMockServer(entries, modem_config=config) as server:
             requests.post(
                 f"{server.base_url}/goform/login",
@@ -355,14 +396,14 @@ class TestHARMockServerBasicAuth:
 
     def test_unauthenticated_returns_401(self, entries: list[dict[str, Any]]) -> None:
         """Request without auth header returns 401."""
-        config = {"auth": {"strategy": "basic"}}
+        config = _make_config({"auth": {"strategy": "basic"}})
         with HARMockServer(entries, modem_config=config) as server:
             resp = requests.get(f"{server.base_url}/status.html")
             assert resp.status_code == 401
 
     def test_basic_auth_succeeds(self, entries: list[dict[str, Any]]) -> None:
         """Request with Basic auth header succeeds."""
-        config = {"auth": {"strategy": "basic"}}
+        config = _make_config({"auth": {"strategy": "basic"}})
         with HARMockServer(entries, modem_config=config) as server:
             resp = requests.get(
                 f"{server.base_url}/status.html",

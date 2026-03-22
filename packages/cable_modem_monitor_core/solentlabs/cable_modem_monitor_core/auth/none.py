@@ -23,6 +23,8 @@ class NoneAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,  # noqa: ARG002
     ) -> AuthResult:
         """No-op — always succeeds."""
         return AuthResult(success=True)

@@ -273,6 +273,11 @@ class ModemParserCoordinator:
         if system_info:
             result["system_info"] = system_info
 
+        _logger.info(
+            "Parse complete: %d DS, %d US channels",
+            len(result.get("downstream", [])),
+            len(result.get("upstream", [])),
+        )
         return result
 
     def _extract_channel_section(
@@ -342,6 +347,57 @@ class ModemParserCoordinator:
         _logger.debug("Invoking parser.py hook: %s", hook_name)
         result: _T = hook(data, resources)
         return result
+
+
+def filter_restart_window(
+    data: dict[str, Any],
+    restart_window: int,
+) -> dict[str, Any]:
+    """Filter zero-power channels during modem restart.
+
+    When a modem reboots, it may report zero power/SNR for all channels
+    until hardware locks onto signals. This filters those channels when
+    the system uptime is inside the restart window.
+
+    Called by the runner after ``parse()`` when the modem config declares
+    ``behaviors.zero_power_reported: true``.
+
+    Args:
+        data: Parsed ``ModemData`` dict from ``parse()``.
+        restart_window: Restart window in seconds from
+            ``behaviors.restart.window_seconds``.
+
+    Returns:
+        Filtered data dict. Channels with ``power == 0`` are removed
+        from downstream/upstream if uptime < restart_window. Returns
+        original data unmodified if uptime is not available or is
+        outside the restart window.
+    """
+    system_info = data.get("system_info", {})
+    uptime = system_info.get("system_uptime")
+    if uptime is None:
+        return data
+
+    try:
+        uptime_seconds = int(uptime)
+    except (ValueError, TypeError):
+        return data
+
+    if uptime_seconds >= restart_window:
+        return data
+
+    _logger.info(
+        "Modem uptime %ds < restart window %ds, filtering zero-power channels",
+        uptime_seconds,
+        restart_window,
+    )
+
+    for section_name in _CHANNEL_SECTIONS:
+        channels = data.get(section_name, [])
+        if channels:
+            data[section_name] = [ch for ch in channels if ch.get("power") != 0]
+
+    return data
 
 
 def _merge_channels(

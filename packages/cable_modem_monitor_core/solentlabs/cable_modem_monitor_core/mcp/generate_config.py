@@ -12,12 +12,16 @@ Per ONBOARDING_SPEC.md ``generate_config`` tool contract.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import ValidationError
 
 from ..config_loader import validate_modem_config, validate_parser_config
+
+if TYPE_CHECKING:
+    from ..models.modem_config import ModemConfig
+    from ..models.parser_config.config import ParserConfig
 from ..validation.cross_file import validate_cross_file
 
 
@@ -462,11 +466,11 @@ def _mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _validate_modem(data: dict[str, Any], errors: list[str]) -> Any:
-    """Validate modem dict, appending errors on failure.
-
-    Returns the ModemConfig on success, None on failure.
-    """
+def _validate_modem(
+    data: dict[str, Any],
+    errors: list[str],
+) -> ModemConfig | None:
+    """Validate modem dict, appending errors on failure."""
     try:
         return validate_modem_config(data)
     except ValidationError as exc:
@@ -476,11 +480,11 @@ def _validate_modem(data: dict[str, Any], errors: list[str]) -> Any:
         return None
 
 
-def _validate_parser(data: dict[str, Any], errors: list[str]) -> Any:
-    """Validate parser dict, appending errors on failure.
-
-    Returns the ParserConfig on success, None on failure.
-    """
+def _validate_parser(
+    data: dict[str, Any],
+    errors: list[str],
+) -> ParserConfig | None:
+    """Validate parser dict, appending errors on failure."""
     try:
         return validate_parser_config(data)
     except ValidationError as exc:
