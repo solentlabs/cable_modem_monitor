@@ -9,7 +9,7 @@ See MODEM_YAML_SPEC.md Auth section.
 
 from __future__ import annotations
 
-from .base import AuthResult, BaseAuthManager
+from .base import AuthContext, AuthResult, BaseAuthManager
 from .basic import BasicAuthManager
 from .factory import create_auth_manager
 from .form import FormAuthManager
@@ -20,6 +20,7 @@ from .none import NoneAuthManager
 from .url_token import UrlTokenAuthManager
 
 __all__ = [
+    "AuthContext",
     "AuthResult",
     "BaseAuthManager",
     "BasicAuthManager",

@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any
 
 import requests
-import yaml
 
 from ..auth.base import AuthResult
 from ..auth.factory import create_auth_manager
@@ -28,7 +27,7 @@ from ..config_loader import load_modem_config, load_parser_config
 from ..loaders.fetch_list import collect_fetch_targets
 from ..loaders.hnap import HNAPLoader
 from ..loaders.http import HTTPResourceLoader
-from ..parsers.coordinator import ModemParserCoordinator
+from ..parsers.coordinator import ModemParserCoordinator, filter_restart_window
 from .discovery import ModemTestCase
 from .golden_file import ComparisonResult, compare_golden_file
 from .har_mock_server import HARMockServer
@@ -142,17 +141,11 @@ def run_modem_test(test_case: ModemTestCase) -> TestResult:
                 error=f"Failed to load parser.py: {e}",
             )
 
-    # Build modem config dict for mock server auth handler
-    modem_config_dict = yaml.safe_load(
-        test_case.modem_config_path.read_text(encoding="utf-8"),
-    )
-
     # Run pipeline against mock server
     try:
         actual = _run_pipeline(
             entries=entries,
             modem_config=modem_config,
-            modem_config_dict=modem_config_dict,
             parser_config=parser_config,
             post_processor=post_processor,
         )
@@ -176,7 +169,6 @@ def _run_pipeline(
     *,
     entries: list[dict[str, Any]],
     modem_config: Any,
-    modem_config_dict: dict[str, Any],
     parser_config: Any,
     post_processor: Any,
 ) -> dict[str, Any]:
@@ -185,7 +177,6 @@ def _run_pipeline(
     Args:
         entries: HAR log entries for the mock server.
         modem_config: Validated ``ModemConfig`` instance.
-        modem_config_dict: Raw modem config dict for mock server.
         parser_config: Validated ``ParserConfig`` instance (or ``None``).
         post_processor: ``PostProcessor`` instance (or ``None``).
 
@@ -195,7 +186,7 @@ def _run_pipeline(
     Raises:
         Exception: On any pipeline failure (auth, fetch, parse).
     """
-    with HARMockServer(entries, modem_config=modem_config_dict) as server:
+    with HARMockServer(entries, modem_config=modem_config) as server:
         base_url = server.base_url
         session = requests.Session()
 
@@ -207,7 +198,6 @@ def _run_pipeline(
         auth_manager.configure_session(
             session,
             session_headers,
-            modem_config.timeout,
         )
 
         # Authenticate
@@ -216,6 +206,7 @@ def _run_pipeline(
             base_url,
             username="admin",
             password="password",
+            timeout=modem_config.timeout,
         )
         if not auth_result.success:
             raise RuntimeError(f"Auth failed: {auth_result.error}")
@@ -234,7 +225,7 @@ def _run_pipeline(
             hnap_loader = HNAPLoader(
                 session=session,
                 base_url=base_url,
-                private_key=auth_result.auth_context.get("private_key", ""),
+                private_key=auth_result.auth_context.private_key,
                 hmac_algorithm=hmac_algorithm,
                 timeout=modem_config.timeout,
             )
@@ -242,10 +233,22 @@ def _run_pipeline(
         else:
             # HTTP: per-page fetching
             targets = collect_fetch_targets(parser_config)
-            url_token = auth_result.auth_context.get("url_token", "")
+            url_token = ""
             token_prefix = ""
             if modem_config.session:
                 token_prefix = modem_config.session.token_prefix
+                # Extract URL token from session cookies only when
+                # both cookie_name and token_prefix are configured
+                # (url_token strategy).  Other strategies may set
+                # cookie_name for session tracking without URL tokens.
+                if modem_config.session.cookie_name and token_prefix:
+                    url_token = (
+                        session.cookies.get(
+                            modem_config.session.cookie_name,
+                            "",
+                        )
+                        or ""
+                    )
 
             loader = HTTPResourceLoader(
                 session=session,
@@ -258,7 +261,16 @@ def _run_pipeline(
 
         # Parse
         coordinator = ModemParserCoordinator(parser_config, post_processor)
-        return coordinator.parse(resources)
+        data = coordinator.parse(resources)
+
+        # Post-parse: filter zero-power channels during restart window
+        if modem_config.behaviors and modem_config.behaviors.zero_power_reported and modem_config.behaviors.restart:
+            data = filter_restart_window(
+                data,
+                modem_config.behaviors.restart.window_seconds,
+            )
+
+        return data
 
 
 def load_post_processor(parser_py_path: Path) -> Any:

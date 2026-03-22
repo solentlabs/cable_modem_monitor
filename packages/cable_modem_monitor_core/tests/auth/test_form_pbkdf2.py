@@ -127,7 +127,7 @@ class TestFormPbkdf2AuthManager:
         """Full PBKDF2 login flow succeeds."""
         config = self._make_config(double_hash=False)
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             salt_resp = MagicMock()
@@ -145,7 +145,7 @@ class TestFormPbkdf2AuthManager:
         """Double hash mode derives key twice."""
         config = self._make_config(double_hash=True)
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             salt_resp = MagicMock()
@@ -171,7 +171,7 @@ class TestFormPbkdf2AuthManager:
                 csrf_header="X-CSRF-TOKEN",
             )
             manager = FormPbkdf2AuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             with patch.object(session, "post") as mock_post:
                 salt_resp = MagicMock()
@@ -189,7 +189,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when salt request fails."""
         config = self._make_config()
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 1)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post", side_effect=requests.ConnectionError("refused")):
             result = manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
@@ -200,7 +200,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when salt response is not JSON."""
         config = self._make_config()
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             resp = MagicMock()
@@ -215,7 +215,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when response has no salt field."""
         config = self._make_config()
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             resp = MagicMock()
@@ -230,7 +230,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when login returns 401."""
         config = self._make_config(double_hash=False)
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             salt_resp = MagicMock()
@@ -248,7 +248,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when login JSON has error flag."""
         config = self._make_config(double_hash=False)
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             salt_resp = MagicMock()
@@ -269,7 +269,7 @@ class TestFormPbkdf2AuthManager:
         """Reports error when login POST raises exception."""
         config = self._make_config(double_hash=False)
         manager = FormPbkdf2AuthManager(config)
-        manager.configure_session(session, {}, 10)
+        manager.configure_session(session, {})
 
         with patch.object(session, "post") as mock_post:
             salt_resp = MagicMock()

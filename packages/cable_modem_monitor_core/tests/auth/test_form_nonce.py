@@ -28,7 +28,7 @@ class TestFormNonceAuthManager:
                 nonce_field="ar_nonce",
             )
             manager = FormNonceAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -45,7 +45,7 @@ class TestFormNonceAuthManager:
                 nonce_field="ar_nonce",
             )
             manager = FormNonceAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is False
@@ -63,7 +63,7 @@ class TestFormNonceAuthManager:
                 nonce_length=16,
             )
             manager = FormNonceAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "pass")
             assert result.success is True
@@ -79,7 +79,7 @@ class TestFormNonceAuthManager:
                 nonce_field="nonce",
             )
             manager = FormNonceAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "pass")
             assert result.success is True

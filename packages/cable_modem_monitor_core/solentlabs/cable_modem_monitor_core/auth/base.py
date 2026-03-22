@@ -15,16 +15,30 @@ import requests
 
 
 @dataclass
+class AuthContext:
+    """Typed downstream state from auth managers.
+
+    Each auth strategy populates the fields it produces; the runner
+    reads them by attribute based on ``modem_config.transport``.
+
+    Attributes:
+        url_token: Session token for URL query string auth (``url_token`` strategy).
+        private_key: HMAC signing key for HNAP requests (``hnap`` strategy).
+    """
+
+    url_token: str = ""
+    private_key: str = ""
+
+
+@dataclass
 class AuthResult:
     """Result of an authentication attempt.
 
     Attributes:
         success: Whether authentication succeeded.
         error: Error message on failure.
-        auth_context: Transport-specific downstream state. Each auth
-            strategy stores its credentials here; the runner reads by
-            key based on ``modem_config.transport``. See individual
-            auth managers for the keys they produce.
+        auth_context: Typed downstream state from the auth manager.
+            See :class:`AuthContext` for available fields.
         response: Login response object. Used for auth response reuse
             — the loader skips re-fetching if the login response landed
             on a data page.
@@ -34,7 +48,7 @@ class AuthResult:
 
     success: bool
     error: str = ""
-    auth_context: dict[str, str] = field(default_factory=dict)
+    auth_context: AuthContext = field(default_factory=AuthContext)
     response: requests.Response | None = None
     response_url: str = ""
 
@@ -57,6 +71,8 @@ class BaseAuthManager(abc.ABC):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Authenticate and prepare the session.
 
@@ -65,6 +81,7 @@ class BaseAuthManager(abc.ABC):
             base_url: Modem base URL (e.g., ``http://192.168.100.1``).
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds from modem.yaml.
 
         Returns:
             AuthResult with success flag and optional login response.
@@ -74,19 +91,14 @@ class BaseAuthManager(abc.ABC):
         self,
         session: requests.Session,
         session_headers: dict[str, str],
-        timeout: int,
     ) -> None:
         """Apply session-wide configuration from modem.yaml.
 
-        Sets static headers (e.g., ``X-Requested-With``) and timeout
-        on the session. Called once before ``authenticate()``.
+        Sets static headers (e.g., ``X-Requested-With``) on the
+        session. Called once before ``authenticate()``.
 
         Args:
             session: Session to configure.
             session_headers: Headers from ``session.headers`` in modem.yaml.
-            timeout: Per-request timeout in seconds from modem.yaml.
         """
         session.headers.update(session_headers)
-        # Store timeout for subclasses; requests.Session doesn't have
-        # a timeout attribute, so we attach it.
-        self._timeout = timeout  # noqa: SLF001

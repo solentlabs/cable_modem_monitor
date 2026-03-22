@@ -11,8 +11,11 @@ from __future__ import annotations
 import logging
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from ..models.modem_config import ModemConfig
 
 from .auth import create_auth_handler
 from .routes import build_routes, normalize_path
@@ -118,20 +121,20 @@ class HARMockServer(HTTPServer):
         har_data = json.loads(Path("modem.har").read_text())
         entries = har_data["log"]["entries"]
 
-        with HARMockServer(entries, modem_config=config_dict) as server:
+        with HARMockServer(entries, modem_config=modem_config) as server:
             base_url = server.base_url
             # ... run pipeline against base_url ...
 
     Args:
         har_entries: HAR ``log.entries`` list.
-        modem_config: Modem config dict for auth handler creation.
+        modem_config: Validated ``ModemConfig`` for auth handler creation.
             None for no auth.
     """
 
     def __init__(
         self,
         har_entries: list[dict[str, Any]],
-        modem_config: dict[str, Any] | None = None,
+        modem_config: ModemConfig | None = None,
     ) -> None:
         self.routes = build_routes(har_entries)
         self.auth_handler = create_auth_handler(modem_config, har_entries)

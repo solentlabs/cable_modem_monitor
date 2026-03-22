@@ -62,3 +62,4 @@ class BehaviorsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     restart: BehaviorsRestartConfig | None = None
+    zero_power_reported: bool = False

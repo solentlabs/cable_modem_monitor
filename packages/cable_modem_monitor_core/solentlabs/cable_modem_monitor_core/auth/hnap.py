@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 import requests
 
-from .base import AuthResult, BaseAuthManager
+from .base import AuthContext, AuthResult, BaseAuthManager
 
 if TYPE_CHECKING:
     from ..models.modem_config.auth import HnapAuth
@@ -69,6 +69,8 @@ class HnapAuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Execute the HNAP challenge-response login flow.
 
@@ -77,9 +79,10 @@ class HnapAuthManager(BaseAuthManager):
             base_url: Modem base URL (e.g., ``http://192.168.100.1``).
             username: Username credential (typically ``"admin"``).
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
-            ``AuthResult`` with ``auth_context["private_key"]`` on
+            ``AuthResult`` with ``auth_context.private_key`` on
             success, or error detail on failure (including lockout
             detection).
         """
@@ -90,6 +93,7 @@ class HnapAuthManager(BaseAuthManager):
             session,
             url,
             username,
+            timeout=timeout,
         )
         if challenge_result is not None:
             return challenge_result  # Error occurred
@@ -100,6 +104,7 @@ class HnapAuthManager(BaseAuthManager):
             url,
             username,
             password,
+            timeout=timeout,
         )
 
     def _request_challenge(
@@ -107,6 +112,8 @@ class HnapAuthManager(BaseAuthManager):
         session: requests.Session,
         url: str,
         username: str,
+        *,
+        timeout: int,
     ) -> AuthResult | None:
         """Send the challenge request (phase 1).
 
@@ -137,7 +144,7 @@ class HnapAuthManager(BaseAuthManager):
                 url,
                 json=body,
                 headers=headers,
-                timeout=getattr(self, "_timeout", 10),
+                timeout=timeout,
             )
         except requests.RequestException as e:
             return AuthResult(
@@ -182,6 +189,8 @@ class HnapAuthManager(BaseAuthManager):
         url: str,
         username: str,
         password: str,
+        *,
+        timeout: int,
     ) -> AuthResult:
         """Compute credentials and send the login request (phase 2)."""
         # Derive keys from challenge
@@ -221,7 +230,7 @@ class HnapAuthManager(BaseAuthManager):
                 url,
                 json=body,
                 headers=headers,
-                timeout=getattr(self, "_timeout", 10),
+                timeout=timeout,
             )
         except requests.RequestException as e:
             return AuthResult(
@@ -258,11 +267,11 @@ class HnapAuthManager(BaseAuthManager):
                 error=f"HNAP login unexpected result: {login_result!r}",
             )
 
-        _logger.debug("HNAP login succeeded (result=%s)", login_result)
+        _logger.info("HNAP login succeeded (result=%s)", login_result)
 
         return AuthResult(
             success=True,
-            auth_context={"private_key": private_key},
+            auth_context=AuthContext(private_key=private_key),
         )
 
     def _hmac_hex(self, key: str, message: str) -> str:

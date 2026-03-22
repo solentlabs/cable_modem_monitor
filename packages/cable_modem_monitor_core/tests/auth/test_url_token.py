@@ -5,9 +5,6 @@ from __future__ import annotations
 import requests
 from solentlabs.cable_modem_monitor_core.auth.url_token import UrlTokenAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import UrlTokenAuth
-from solentlabs.cable_modem_monitor_core.models.modem_config.session import (
-    SessionConfig,
-)
 from solentlabs.cable_modem_monitor_core.testing import HARMockServer
 
 from .conftest import load_auth_fixture
@@ -25,34 +22,27 @@ class TestUrlTokenAuthManager:
                 login_page="/login.html",
                 success_indicator="Downstream Bonded Channels",
             )
-            session_config = SessionConfig(
-                cookie_name="sessionId",
-                token_prefix="ct_",
-            )
-            manager = UrlTokenAuthManager(config, session_config)
-            manager.configure_session(session, {}, 10)
+            manager = UrlTokenAuthManager(config)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
 
-    def test_url_token_extracted_from_cookie(self, session: requests.Session) -> None:
-        """URL token is extracted from session cookie."""
+    def test_session_cookie_set_after_login(self, session: requests.Session) -> None:
+        """Session cookie is set after successful login for runner to extract."""
         entries, _ = load_auth_fixture("har_url_token_login.json")
         with HARMockServer(entries) as server:
             config = UrlTokenAuth(
                 strategy="url_token",
                 login_page="/login.html",
             )
-            session_config = SessionConfig(
-                cookie_name="sessionId",
-                token_prefix="ct_",
-            )
-            manager = UrlTokenAuthManager(config, session_config)
-            manager.configure_session(session, {}, 10)
+            manager = UrlTokenAuthManager(config)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
-            assert result.auth_context["url_token"] == "tok_abc123"
+            # Runner extracts URL token from session cookies, not auth_context
+            assert session.cookies.get("sessionId") == "tok_abc123"
 
     def test_login_prefix_in_url(self, session: requests.Session) -> None:
         """Login prefix is prepended to base64 credential."""
@@ -64,7 +54,7 @@ class TestUrlTokenAuthManager:
                 login_prefix="login_",
             )
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -79,7 +69,7 @@ class TestUrlTokenAuthManager:
                 success_indicator="Downstream Bonded Channels",
             )
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is False
@@ -95,7 +85,7 @@ class TestUrlTokenAuthManager:
                 ajax_login=True,
             )
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -110,7 +100,7 @@ class TestUrlTokenAuthManager:
                 auth_header_data=True,
             )
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
@@ -125,24 +115,24 @@ class TestUrlTokenAuthManager:
                 login_page="/login.html",
             )
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
             assert result.response_url == "/login.html"
 
-    def test_no_cookie_name_empty_token(self, session: requests.Session) -> None:
-        """Without cookie_name, auth_context has no url_token."""
+    def test_cookies_available_for_runner(self, session: requests.Session) -> None:
+        """Session cookies are available for runner to extract url_token."""
         entries, _ = load_auth_fixture("har_url_token_login.json")
         with HARMockServer(entries) as server:
             config = UrlTokenAuth(
                 strategy="url_token",
                 login_page="/login.html",
             )
-            # No session config -- no cookie_name
             manager = UrlTokenAuthManager(config)
-            manager.configure_session(session, {}, 10)
+            manager.configure_session(session, {})
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
-            assert result.auth_context.get("url_token", "") == ""
+            # Cookies are on the session — runner reads them via cookie_name
+            assert len(session.cookies) > 0

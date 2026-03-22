@@ -11,7 +11,6 @@ import logging
 import requests
 
 from ..models.modem_config.auth import FormPbkdf2Auth
-from ..models.modem_config.session import SessionConfig
 from .base import AuthResult, BaseAuthManager
 
 _logger = logging.getLogger(__name__)
@@ -26,15 +25,9 @@ class FormPbkdf2AuthManager(BaseAuthManager):
 
     Args:
         config: Validated ``FormPbkdf2Auth`` config from modem.yaml.
-        session_config: Session config (for ``cookie_name``,
-            ``headers``, ``csrf_header``).
     """
 
-    def __init__(
-        self,
-        config: FormPbkdf2Auth,
-        session_config: SessionConfig | None = None,
-    ) -> None:
+    def __init__(self, config: FormPbkdf2Auth) -> None:
         self._config = config
 
     def authenticate(
@@ -43,6 +36,8 @@ class FormPbkdf2AuthManager(BaseAuthManager):
         base_url: str,
         username: str,
         password: str,
+        *,
+        timeout: int = 10,
     ) -> AuthResult:
         """Execute the PBKDF2 challenge-response login flow.
 
@@ -58,12 +53,12 @@ class FormPbkdf2AuthManager(BaseAuthManager):
             base_url: Modem base URL.
             username: Username credential.
             password: Password credential.
+            timeout: Per-request timeout in seconds.
 
         Returns:
             AuthResult with login response.
         """
         config = self._config
-        timeout = getattr(self, "_timeout", 10)
         login_url = f"{base_url}{config.login_endpoint}"
 
         # Step 1: Fetch CSRF token
@@ -96,7 +91,7 @@ class FormPbkdf2AuthManager(BaseAuthManager):
             return login_result
         response = login_result
 
-        _logger.debug(
+        _logger.info(
             "PBKDF2 login succeeded: status=%d, cookies=%s",
             response.status_code,
             list(session.cookies.keys()),

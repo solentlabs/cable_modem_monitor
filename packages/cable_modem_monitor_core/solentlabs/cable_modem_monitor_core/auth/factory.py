@@ -27,8 +27,8 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
     """Create the appropriate auth manager from modem config.
 
     Uses the ``auth.strategy`` discriminator to select the manager
-    class. Session config is passed to strategies that need it
-    (form, url_token, form_pbkdf2).
+    class. Each manager receives only its own ``*Auth`` config — session
+    state (cookies, tokens) is handled by the runner after auth completes.
 
     Args:
         config: Validated ``ModemConfig`` instance.
@@ -55,22 +55,22 @@ def create_auth_manager(config: ModemConfig) -> BaseAuthManager:
         return BasicAuthManager(auth)
 
     if isinstance(auth, FormAuth):
-        return FormAuthManager(auth, config.session)
+        return FormAuthManager(auth)
 
     if isinstance(auth, FormNonceAuth):
         return FormNonceAuthManager(auth)
 
     if isinstance(auth, UrlTokenAuth):
-        return UrlTokenAuthManager(auth, config.session)
+        return UrlTokenAuthManager(auth)
 
     if isinstance(auth, HnapAuth):
         return HnapAuthManager(auth)
 
     if isinstance(auth, FormPbkdf2Auth):
-        return FormPbkdf2AuthManager(auth, config.session)
+        return FormPbkdf2AuthManager(auth)
 
-    _logger.warning(
-        "Unknown auth strategy type: %s, using NoneAuthManager",
+    _logger.error(
+        "Unknown auth strategy type: %s, falling back to NoneAuthManager",
         type(auth).__name__,
     )
     return NoneAuthManager()
