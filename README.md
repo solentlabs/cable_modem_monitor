@@ -38,6 +38,10 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 
 **📖 See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for development environment setup.
 
+**Architecture (v3.14):** Two pip packages in `packages/`:
+- **Core** (`solentlabs-cable-modem-monitor-core`) — platform-agnostic engine (auth, parsing, testing, MCP tools)
+- **Catalog** (`solentlabs-cable-modem-monitor-catalog`) — modem configs, parsers, test fixtures
+
 Quick start:
 ```bash
 git clone https://github.com/solentlabs/cable_modem_monitor.git

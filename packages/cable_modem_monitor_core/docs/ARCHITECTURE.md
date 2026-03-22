@@ -655,18 +655,19 @@ dataclass, and populates it from the YAML fields. The result is a
 typed config where invalid fields don't exist — a `FormAuthConfig`
 has no `hmac_algorithm`, an `HnapAuthConfig` has no `encoding`.
 
-**Strategies accept their config dataclass directly:**
+**Strategies accept only their own config dataclass:**
 
 ```python
-class FormStrategy(BaseAuthStrategy):
-    def __init__(self, config: FormAuthConfig, session: SessionConfig): ...
+class FormAuthManager(BaseAuthManager):
+    def __init__(self, config: FormAuth): ...
 
-class HnapStrategy(BaseAuthStrategy):
-    def __init__(self, config: HnapAuthConfig, session: SessionConfig): ...
+class HnapAuthManager(BaseAuthManager):
+    def __init__(self, config: HnapAuth): ...
 ```
 
-No dict intermediary, no generic `AuthConfig` bag of optional fields.
-The dataclass IS the runtime config — the strategy constructor accepts
+No dict intermediary, no generic `AuthConfig` bag of optional fields,
+no `SessionConfig` — session state is handled by the runner after auth
+completes. The dataclass IS the runtime config — the strategy accepts
 exactly the type the loader produces.
 
 ---
@@ -1059,10 +1060,42 @@ The test harness in Core consumes these fixtures. This means:
 | No fallback/auto-detection | If no modem.yaml exists, we can't help. User submits HAR, we add support |
 | `last_boot_time` derived in core | Transparent to consumers — same field whether modem provides it or core calculates from uptime |
 | Dynamic `SystemInfo` fields | Modem-specific fields pass through without core changes. Core only understands structured fields |
-| `AuthResult.auth_context` is transport-agnostic | Auth strategies store downstream state in a `dict[str, str]` keyed by convention (`url_token`, `private_key`), not in transport-specific fields. Runner reads by key based on `modem_config.transport`. Adding a transport means defining a key convention, not adding a field to `AuthResult`. |
+| `AuthResult.auth_context` is typed `AuthContext` | Auth strategies store downstream state in a typed `AuthContext` dataclass with `url_token` and `private_key` fields. Runner reads by attribute based on `modem_config.transport`. Adding a transport means adding a field to `AuthContext`, not a magic string key. |
 | Coordinator parser registry | Section type → parser function dispatch via dict, not isinstance chain. Five known section types registered; unimplemented formats are stubs that raise `NotImplementedError` with the missing parser name. Adding a format is one registry entry + parser implementation. |
 | `enrich_metadata` separates inference from config assembly | `generate_config` assembles YAML from known facts. Inferring facts from HAR analysis (default_host from request URLs, DOCSIS version from channel types) is a different concern. `enrich_metadata` provides structured guidance on inferred/missing/conflicting fields — essential for self-service contributors who need to know what's missing when their PR validation fails. |
 | `write_modem_package` for file placement | Pipeline produces configs and golden files in memory. Rather than relying on the LLM to write files with correct names and directory structure, a dedicated tool writes the standard catalog structure. Guarantees file layout matches what the test harness expects. |
+
+---
+
+## Logging
+
+All Core modules use Python's `logging` module with `__name__`-scoped
+loggers. Consumers (HA, CLI, test harness) configure handlers and
+levels; Core only emits log records.
+
+### Level Conventions
+
+| Level | Use | Examples |
+|-------|-----|----------|
+| `DEBUG` | Internal state, wire data, parsing details | Challenge received, record too short, pattern did not match |
+| `INFO` | Pipeline milestones | Auth succeeded, resource loaded, parse complete, restart-window filter applied |
+| `WARNING` | Recoverable issues | Resource not found, table not found, unknown strategy, unmapped channel type |
+| `ERROR` | Unrecoverable failures | Auth failed after retries, config load error, golden file mismatch |
+
+### Guidelines
+
+- **DEBUG is the default working level.** Most log calls are DEBUG.
+  A modem owner running the integration locally should see clean logs
+  at INFO; switching to DEBUG reveals the full pipeline trace.
+- **INFO marks success milestones.** One INFO per major pipeline stage
+  (auth, load, parse) — not per channel or per field.
+- **WARNING means the pipeline continued but data may be incomplete.**
+  Missing optional fields, fallback paths taken.
+- **ERROR means the pipeline stopped.** Auth rejection, malformed
+  config, assertion failure. These map to HA persistent notifications
+  or test failures.
+- **Never log secrets.** Passwords, tokens, HMAC keys, and session
+  cookies must not appear in log output at any level.
 
 ---
 

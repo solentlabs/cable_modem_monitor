@@ -184,6 +184,45 @@ def update_version_test(repo_root: Path, version: str) -> bool:
         return False
 
 
+def update_package_versions(repo_root: Path, version: str) -> bool:
+    """Update version in Core and Catalog pyproject.toml files."""
+    package_dirs = [
+        repo_root / "packages" / "cable_modem_monitor_core",
+        repo_root / "packages" / "cable_modem_monitor_catalog",
+    ]
+
+    all_ok = True
+    for pkg_dir in package_dirs:
+        pyproject_path = pkg_dir / "pyproject.toml"
+        if not pyproject_path.is_file():
+            print_warning(f"Not found: {pyproject_path}")
+            continue
+
+        try:
+            content = pyproject_path.read_text(encoding="utf-8")
+            version_match = re.search(r'^version = "([^"]+)"', content, re.MULTILINE)
+            if not version_match:
+                print_error(f"No version field in {pyproject_path}")
+                all_ok = False
+                continue
+
+            old_version = version_match.group(1)
+            new_content = re.sub(
+                r'^version = "[^"]+"',
+                f'version = "{version}"',
+                content,
+                count=1,
+                flags=re.MULTILINE,
+            )
+            pyproject_path.write_text(new_content, encoding="utf-8")
+            print_success(f"Updated {pkg_dir.name}/pyproject.toml: {old_version} → {version}")
+        except Exception as e:
+            print_error(f"Failed to update {pyproject_path}: {e}")
+            all_ok = False
+
+    return all_ok
+
+
 def update_changelog(repo_root: Path, version: str) -> bool:
     """Update CHANGELOG.md to move Unreleased to new version."""
     changelog_path = repo_root / "CHANGELOG.md"
@@ -619,6 +658,7 @@ def update_all_files(repo_root: Path, version: str, skip_changelog: bool) -> Non
     success = update_manifest(repo_root, version) and success
     success = update_const_py(repo_root, version) and success
     success = update_version_test(repo_root, version) and success
+    success = update_package_versions(repo_root, version) and success
 
     if not skip_changelog:
         success = update_changelog(repo_root, version) and success
