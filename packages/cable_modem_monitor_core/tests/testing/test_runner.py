@@ -30,9 +30,17 @@ from solentlabs.cable_modem_monitor_core.testing.runner import (
 _PIPELINE_FIXTURES = Path(__file__).parent.parent / "fixtures" / "pipeline"
 
 _MODEM_YAML = (_PIPELINE_FIXTURES / "modem.yaml").read_text()
+_MODEM_FORM_AUTH_YAML = (_PIPELINE_FIXTURES / "modem_form_auth.yaml").read_text()
+_MODEM_SESSION_HEADERS_YAML = (_PIPELINE_FIXTURES / "modem_session_headers.yaml").read_text()
+_MODEM_URL_TOKEN_YAML = (_PIPELINE_FIXTURES / "modem_url_token.yaml").read_text()
+_MODEM_RESTART_YAML = (_PIPELINE_FIXTURES / "modem_restart.yaml").read_text()
+_MODEM_HNAP_YAML = (_PIPELINE_FIXTURES / "modem_hnap.yaml").read_text()
 _PARSER_YAML = (_PIPELINE_FIXTURES / "parser.yaml").read_text()
+_PARSER_HNAP_YAML = (_PIPELINE_FIXTURES / "parser_hnap.yaml").read_text()
 _HAR_DATA: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "har_2ch.json").read_text())
+_HAR_HNAP_DATA: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "har_hnap_2ch.json").read_text())
 _GOLDEN_FILE: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "golden_2ch.json").read_text())
+_GOLDEN_HNAP_FILE: dict[str, Any] = json.loads((_PIPELINE_FIXTURES / "golden_hnap_2ch.json").read_text())
 
 
 # ---------------------------------------------------------------------------
@@ -245,3 +253,173 @@ class TestLoadPostProcessor:
 
         assert result.passed is True
         assert result.error == ""
+
+
+# ---------------------------------------------------------------------------
+# Additional error paths — table-driven
+# ---------------------------------------------------------------------------
+
+# ┌──────────────────────────┬─────────────────────────────────────────┬────────────────────────┐
+# │ scenario                 │ bad input                               │ expected error         │
+# ├──────────────────────────┼─────────────────────────────────────────┼────────────────────────┤
+# │ corrupt golden file JSON │ golden file with invalid JSON           │ "Failed to load golden"│
+# │ parser.py syntax error   │ parser_py with broken syntax            │ "Failed to load parser"│
+# │ pipeline exception       │ PostProcessor that raises               │ "Pipeline error"       │
+# │ no parser.yaml           │ parser.py only, no parser.yaml          │ "Pipeline error"       │
+# │ auth failure             │ form auth against non-login HAR         │ "Pipeline error"       │
+# └──────────────────────────┴─────────────────────────────────────────┴────────────────────────┘
+
+
+class TestCorruptGoldenFile:
+    """Golden file exists but contains invalid JSON."""
+
+    def test_corrupt_golden_json(self, tmp_path: Path) -> None:
+        """Invalid JSON in golden file produces a load error."""
+        case = _build_test_dir(tmp_path)
+        # Overwrite the golden file with invalid JSON
+        case.golden_path.write_text("not valid json {{{")
+
+        result = run_modem_test(case)
+
+        assert result.passed is False
+        assert "Failed to load golden file" in result.error
+
+
+class TestParserPyLoadError:
+    """parser.py with syntax error prevents pipeline from running."""
+
+    def test_syntax_error_in_parser_py(self, tmp_path: Path) -> None:
+        """Syntax error in parser.py is captured as a load error."""
+        pp_code = "def broken(\n"
+        case = _build_test_dir(tmp_path, parser_py=pp_code)
+
+        result = run_modem_test(case)
+
+        assert result.passed is False
+        assert "Failed to load parser.py" in result.error
+
+
+class TestPipelineError:
+    """Pipeline raises at runtime."""
+
+    def test_post_processor_raises(self, tmp_path: Path) -> None:
+        """PostProcessor that raises is captured as pipeline error."""
+        pp_code = textwrap.dedent("""\
+            class PostProcessor:
+                \"\"\"Raises during parsing.\"\"\"
+
+                def parse_downstream(self, channels, resources):
+                    raise ValueError("deliberate test error")
+        """)
+        case = _build_test_dir(tmp_path, parser_py=pp_code)
+
+        result = run_modem_test(case)
+
+        assert result.passed is False
+        assert "Pipeline error" in result.error
+
+    def test_no_parser_yaml(self, tmp_path: Path) -> None:
+        """parser.py without parser.yaml causes pipeline error."""
+        pp_code = textwrap.dedent("""\
+            class PostProcessor:
+                \"\"\"Minimal PostProcessor.\"\"\"
+                pass
+        """)
+        case = _build_test_dir(tmp_path, parser_yaml=None, parser_py=pp_code)
+
+        result = run_modem_test(case)
+
+        assert result.passed is False
+        assert "Pipeline error" in result.error
+
+
+class TestAuthFailure:
+    """Auth strategy that fails against the mock server."""
+
+    def test_form_auth_failure(self, tmp_path: Path) -> None:
+        """Form auth fails when indicator not found in response."""
+        case = _build_test_dir(tmp_path, modem_yaml=_MODEM_FORM_AUTH_YAML)
+
+        result = run_modem_test(case)
+
+        assert result.passed is False
+        assert "Pipeline error" in result.error
+        assert "Auth failed" in result.error
+
+
+# ---------------------------------------------------------------------------
+# Pipeline configuration paths — session and behaviors
+# ---------------------------------------------------------------------------
+
+
+class TestSessionHeaders:
+    """Modem config with session headers passes them to the session."""
+
+    def test_session_headers_applied(self, tmp_path: Path) -> None:
+        """Pipeline runs successfully with session headers configured."""
+        case = _build_test_dir(tmp_path, modem_yaml=_MODEM_SESSION_HEADERS_YAML)
+
+        result = run_modem_test(case)
+
+        assert result.passed is True
+        assert result.error == ""
+
+
+class TestUrlToken:
+    """Modem config with URL token session configuration."""
+
+    def test_url_token_session(self, tmp_path: Path) -> None:
+        """Pipeline runs with URL token extraction configured."""
+        case = _build_test_dir(tmp_path, modem_yaml=_MODEM_URL_TOKEN_YAML)
+
+        result = run_modem_test(case)
+
+        # Pipeline should succeed — no token cookie present means
+        # empty url_token, which is valid (no token appended to URLs)
+        assert result.passed is True
+        assert result.error == ""
+
+
+class TestRestartWindowFilter:
+    """Modem config with restart window behavior."""
+
+    def test_restart_window_filter(self, tmp_path: Path) -> None:
+        """Pipeline runs filter_restart_window when behaviors configured."""
+        case = _build_test_dir(tmp_path, modem_yaml=_MODEM_RESTART_YAML)
+
+        result = run_modem_test(case)
+
+        assert result.passed is True
+        assert result.error == ""
+
+
+class TestHnapTransport:
+    """HNAP transport path — batched SOAP request via HNAPLoader."""
+
+    def test_hnap_pipeline(self, tmp_path: Path) -> None:
+        """Full HNAP pipeline: mock server -> HNAP auth -> SOAP fetch -> parse."""
+        case = _build_test_dir(
+            tmp_path,
+            modem_yaml=_MODEM_HNAP_YAML,
+            parser_yaml=_PARSER_HNAP_YAML,
+            har_data=_HAR_HNAP_DATA,
+            golden=_GOLDEN_HNAP_FILE,
+        )
+
+        result = run_modem_test(case)
+
+        assert result.passed is True, f"HNAP pipeline failed: {result.error}"
+        assert result.error == ""
+
+
+class TestLoadPostProcessorEdge:
+    """Edge cases for PostProcessor dynamic import."""
+
+    def test_non_python_file(self, tmp_path: Path) -> None:
+        """Non-Python file returns None (spec_from_file_location returns None)."""
+        bad_file = tmp_path / "not_a_module"
+        bad_file.write_text("")
+
+        pp = load_post_processor(bad_file)
+
+        assert pp is None

@@ -47,7 +47,7 @@ class _HNAPHandler(BaseHTTPRequestHandler):
     challenge = "test_challenge_abc"
     public_key = "test_public_key_xyz"
     cookie = "test_uid_cookie"
-    password = "password"
+    password = "pw"
     login_result = "OK"
 
     def do_POST(self) -> None:  # noqa: N802
@@ -135,7 +135,7 @@ class TestSuccessfulLogin:
         manager = _make_manager()
         session = requests.Session()
 
-        result = manager.authenticate(session, hnap_server, "admin", "password")
+        result = manager.authenticate(session, hnap_server, "admin", "pw")
 
         assert result.success is True
         assert result.error == ""
@@ -146,10 +146,10 @@ class TestSuccessfulLogin:
         manager = _make_manager()
         session = requests.Session()
 
-        result = manager.authenticate(session, hnap_server, "admin", "password")
+        result = manager.authenticate(session, hnap_server, "admin", "pw")
 
         expected = _hmac_md5(
-            _HNAPHandler.public_key + "password",
+            _HNAPHandler.public_key + "pw",
             _HNAPHandler.challenge,
         )
         assert result.auth_context.private_key == expected
@@ -176,8 +176,8 @@ class TestSuccessfulLogin:
 LOGIN_FAILURE_CASES = [
     # (login_result, password,    error_substring,               description)
     ("OK",           "wrong_pwd", "incorrect username or password", "wrong password"),
-    ("LOCKUP",       "password",  "LOCKUP",                        "anti-brute-force lockup"),
-    ("REBOOT",       "password",  "REBOOT",                        "anti-brute-force reboot"),
+    ("LOCKUP",       "pw",        "LOCKUP",                        "anti-brute-force lockup"),
+    ("REBOOT",       "pw",        "REBOOT",                        "anti-brute-force reboot"),
 ]
 # fmt: on
 
@@ -210,7 +210,7 @@ def test_connection_refused() -> None:
     manager = _make_manager()
     session = requests.Session()
 
-    result = manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
+    result = manager.authenticate(session, "http://127.0.0.1:1", "admin", "pw")
 
     assert result.success is False
     assert "challenge request failed" in result.error

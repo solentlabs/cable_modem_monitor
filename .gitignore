@@ -115,5 +115,8 @@ tmpclaude-*
 *.cookies
 cookies.txt
 
+# Regression test output (generated at runtime, never committed)
+*.actual.json
+
 # Windows artifact from /dev/null writes
 nul

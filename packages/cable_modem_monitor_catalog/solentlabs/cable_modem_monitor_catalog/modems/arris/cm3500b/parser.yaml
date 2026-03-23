@@ -127,6 +127,20 @@ upstream:
           unit: dBmV
       channel_type:
         fixed: ofdma
-# system_info is extracted by parser.py PostProcessor.
-# The html_fields parser's label cascade hits wrapper div elements
-# before the correct td cells on this page.
+system_info:
+  sources:
+    - format: html_fields
+      resource: "/cgi-bin/status_cgi"
+      fields:
+        - label: "System Uptime"
+          field: system_uptime
+          type: string
+        - label: "CM Status"
+          field: cm_status
+          type: string
+        - label: "Time and Date"
+          field: current_time
+          type: string
+        - label: "Hardware Model"
+          field: hardware_version
+          type: string

@@ -1,0 +1,25 @@
+{
+  "_description": "Array contains non-dict items mixed with valid dicts — non-dicts skipped",
+  "_json": {
+    "channels": [
+      "not_a_dict",
+      {"channelId": 1, "frequency": 507000000},
+      42,
+      {"channelId": 2, "frequency": 513000000}
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "fields": [
+      {"key": "channelId", "field": "channel_id", "type": "integer"},
+      {"key": "frequency", "field": "frequency", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000},
+    {"channel_id": 2, "frequency": 513000000}
+  ]
+}

@@ -230,7 +230,7 @@ class TestHARMockServerHnapAuth:
                 session,
                 server.base_url,
                 username="admin",
-                password="password",
+                password="pw",
             )
             assert result.success, f"Auth failed: {result.error}"
             assert result.auth_context.private_key
@@ -250,7 +250,7 @@ class TestHARMockServerHnapAuth:
                 session,
                 server.base_url,
                 username="admin",
-                password="password",
+                password="pw",
             )
             assert result.success
 

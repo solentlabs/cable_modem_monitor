@@ -232,10 +232,9 @@ def _build_parser_dict(sections: dict[str, Any]) -> dict[str, Any] | None:
             if transformed:
                 result[section_name] = transformed
 
-    # system_info passes through (already matches parser.yaml structure)
     system_info = sections.get("system_info")
     if system_info:
-        result["system_info"] = system_info
+        result["system_info"] = _transform_system_info(system_info)
 
     return result if result else None
 
@@ -401,8 +400,99 @@ def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# System info transformation
+# ---------------------------------------------------------------------------
+
+
+def _transform_system_info(system_info: dict[str, Any]) -> dict[str, Any]:
+    """Transform analysis system_info into parser.yaml format.
+
+    The analysis pipeline produces system_info with format-specific
+    structures that don't match the parser config model exactly.
+    This normalizes them.
+    """
+    sources = system_info.get("sources", [])
+    transformed_sources = []
+
+    for source in sources:
+        fmt = source.get("format", "")
+        if fmt == "hnap":
+            transformed_sources.append(_transform_hnap_system_info(source))
+        elif fmt == "json":
+            transformed_sources.append(_transform_json_system_info(source))
+        else:
+            # html_fields, javascript — pass through
+            transformed_sources.append(source)
+
+    return {"sources": transformed_sources}
+
+
+def _transform_hnap_system_info(source: dict[str, Any]) -> dict[str, Any]:
+    """Transform HNAP system_info source.
+
+    Analysis produces fields as a dict ``{hnap_key: canonical_field}``.
+    Model expects a list of ``{source, field, type}`` dicts.
+    """
+    result: dict[str, Any] = {
+        "format": "hnap",
+        "response_key": source.get("response_key", ""),
+    }
+
+    fields = source.get("fields", {})
+    if isinstance(fields, dict):
+        result["fields"] = [
+            {"source": hnap_key, "field": canonical, "type": "string"} for hnap_key, canonical in fields.items()
+        ]
+    else:
+        result["fields"] = fields
+
+    return result
+
+
+def _transform_json_system_info(source: dict[str, Any]) -> dict[str, Any]:
+    """Transform JSON system_info source.
+
+    Analysis may produce field mappings with ``source`` key.
+    Model expects ``key`` instead.
+    """
+    result: dict[str, Any] = {
+        "format": "json",
+        "resource": source.get("resource", ""),
+    }
+    if source.get("encoding"):
+        result["encoding"] = source["encoding"]
+
+    fields = source.get("fields", [])
+    transformed_fields = []
+    for f in fields:
+        tf: dict[str, Any] = {
+            "key": f.get("key") or f.get("source", ""),
+            "field": f["field"],
+            "type": _normalize_type(f.get("type", "string")),
+        }
+        if f.get("path"):
+            tf["path"] = f["path"]
+        transformed_fields.append(tf)
+
+    result["fields"] = transformed_fields
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Mapping conversion helpers
 # ---------------------------------------------------------------------------
+
+
+_TYPE_ALIASES: dict[str, str] = {
+    "int": "integer",
+    "str": "string",
+    "bool": "boolean",
+}
+
+
+def _normalize_type(field_type: str) -> str:
+    """Normalize Python type names to parser config type names."""
+    return _TYPE_ALIASES.get(field_type, field_type)
 
 
 def _mapping_to_column(mapping: dict[str, Any]) -> dict[str, Any]:
@@ -410,7 +500,7 @@ def _mapping_to_column(mapping: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {
         "index": mapping.get("index", 0),
         "field": mapping["field"],
-        "type": mapping["type"],
+        "type": _normalize_type(mapping["type"]),
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
@@ -424,7 +514,7 @@ def _mapping_to_row(mapping: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {
         "label": mapping.get("label", ""),
         "field": mapping["field"],
-        "type": mapping["type"],
+        "type": _normalize_type(mapping["type"]),
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]
@@ -435,7 +525,7 @@ def _mapping_to_row(mapping: dict[str, Any]) -> dict[str, Any]:
 
 def _mapping_to_channel(mapping: dict[str, Any]) -> dict[str, Any]:
     """Convert analysis FieldMapping to HNAP/JS ChannelMapping dict."""
-    result: dict[str, Any] = {"field": mapping["field"], "type": mapping["type"]}
+    result: dict[str, Any] = {"field": mapping["field"], "type": _normalize_type(mapping["type"])}
     if mapping.get("offset") is not None:
         result["offset"] = mapping["offset"]
     elif mapping.get("index") is not None:
@@ -452,7 +542,7 @@ def _mapping_to_json_channel(mapping: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {
         "key": mapping.get("key", ""),
         "field": mapping["field"],
-        "type": mapping["type"],
+        "type": _normalize_type(mapping["type"]),
     }
     if mapping.get("unit"):
         result["unit"] = mapping["unit"]

@@ -1,0 +1,22 @@
+{
+  "_description": "Form auth: POST returns 200 at /goform/login (for redirect mismatch test)",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/login"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Login page content"}
+      }
+    }
+  ],
+  "_modem_config": {
+    "auth": {
+      "strategy": "form",
+      "action": "/goform/login"
+    }
+  }
+}

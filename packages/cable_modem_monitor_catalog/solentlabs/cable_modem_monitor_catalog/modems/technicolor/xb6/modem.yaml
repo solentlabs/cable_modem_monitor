@@ -27,7 +27,7 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture from issue #111"
+  auth_config: "[#111 XB6](https://github.com/solentlabs/cable_modem_monitor/issues/111)"
 
 attribution:
   contributors:
@@ -46,4 +46,4 @@ notes: |
 
 references:
   issues:
-    - 111
+    - "[#111 — [Modem Request] Technicolor CGM4140COM (XB6)](https://github.com/solentlabs/cable_modem_monitor/issues/111)"

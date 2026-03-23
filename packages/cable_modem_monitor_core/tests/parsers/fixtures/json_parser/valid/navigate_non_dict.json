@@ -1,0 +1,16 @@
+{
+  "_description": "Array path traverses through a non-dict intermediate — returns empty",
+  "_json": {
+    "downstream": "not_a_dict"
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "downstream.channels",
+    "fields": [
+      {"key": "id", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

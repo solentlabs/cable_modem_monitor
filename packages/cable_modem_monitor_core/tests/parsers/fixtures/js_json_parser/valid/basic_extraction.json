@@ -1,0 +1,19 @@
+{
+  "_description": "Basic js_json extraction — JSON array from JS variable with field mappings",
+  "_html": "<html><body><script>json_channels = [{\"ChannelID\": \"1\", \"Frequency\": 570, \"SNR\": 40.4, \"Modulation\": \"256QAM\"}, {\"ChannelID\": \"2\", \"Frequency\": 578, \"SNR\": 39.1, \"Modulation\": \"256QAM\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_channels",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "Frequency", "field": "frequency", "type": "frequency"},
+      {"key": "SNR", "field": "snr", "type": "float"},
+      {"key": "Modulation", "field": "modulation", "type": "string"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 570000000, "snr": 40.4, "modulation": "256QAM"},
+    {"channel_id": 2, "frequency": 578000000, "snr": 39.1, "modulation": "256QAM"}
+  ]
+}

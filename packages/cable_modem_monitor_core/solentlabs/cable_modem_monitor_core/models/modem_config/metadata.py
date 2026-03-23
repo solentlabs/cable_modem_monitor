@@ -25,6 +25,8 @@ class HardwareConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     docsis_version: Literal["3.0", "3.1"]
     chipset: str = ""
+    release_date: str = ""
+    end_of_life: str = ""
 
 
 class ContributorEntry(BaseModel):
@@ -43,8 +45,8 @@ class AttributionConfig(BaseModel):
 
 
 class ReferencesConfig(BaseModel):
-    """Issue and PR references."""
+    """Issue and PR references in markdown format."""
 
     model_config = ConfigDict(extra="forbid")
-    issues: list[int] = Field(default_factory=list)
-    prs: list[int] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+    prs: list[str] = Field(default_factory=list)

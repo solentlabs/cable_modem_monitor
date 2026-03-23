@@ -1,0 +1,21 @@
+{
+  "_description": "Channel type map where value matches — channel_type derived from field value",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th><th>Ch 1</th><th>Ch 2</th></tr><tr><td>Channel ID</td><td>10</td><td>11</td></tr><tr><td>Modulation</td><td>QAM256</td><td>OFDM</td></tr><tr><td>Power Level</td><td>5 dBmV</td><td>4 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Modulation", "field": "modulation", "type": "string"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {
+      "field": "modulation",
+      "map": {"QAM256": "qam", "OFDM": "ofdm"}
+    }
+  },
+  "_expected": [
+    {"channel_id": 10, "modulation": "QAM256", "power": 5.0, "channel_type": "qam"},
+    {"channel_id": 11, "modulation": "OFDM", "power": 4.0, "channel_type": "ofdm"}
+  ]
+}

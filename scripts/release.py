@@ -540,6 +540,9 @@ def sync_modem_configs(repo_root: Path) -> bool:
         # Generate modem index for fast parser lookups
         _generate_modem_index(repo_root)
 
+        # Regenerate catalog index (v3.14 package)
+        _generate_catalog_index(repo_root)
+
         return True
     except Exception as e:
         print_error(f"Failed to sync modem configs: {e}")
@@ -565,6 +568,28 @@ def _generate_modem_index(repo_root: Path) -> None:
             print_warning(f"Index generation warning: {result.stderr}")
     except Exception as e:
         print_warning(f"Could not generate modem index: {e}")
+
+
+def _generate_catalog_index(repo_root: Path) -> None:
+    """Regenerate the v3.14 catalog package README.md."""
+    catalog_script = repo_root / "scripts" / "generate_catalog_index.py"
+    if not catalog_script.exists():
+        return
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            [sys.executable, str(catalog_script)],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if result.returncode != 0:
+            print_warning(f"Catalog index warning: {result.stderr}")
+        elif result.stdout:
+            print_success(result.stdout.strip())
+    except Exception as e:
+        print_warning(f"Could not generate catalog index: {e}")
 
 
 def verify_translations(repo_root: Path) -> bool:

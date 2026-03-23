@@ -1,0 +1,36 @@
+{
+  "_description": "HNAP response with system_info fields but no channel data",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [{"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 300,
+          "mimeType": "application/json",
+          "text": "{\"GetMultipleHNAPsResponse\": {\"GetDeviceInfoResponse\": {\"FirmwareVersion\": \"2.0.1\", \"ModelName\": \"T100\", \"SerialNumber\": \"ABC123\", \"GetDeviceInfoResult\": \"OK\"}, \"GetMultipleHNAPsResult\": \"OK\"}}"
+        }
+      }
+    }
+  ],
+  "_expected_sections": {
+    "system_info": {
+      "sources": [
+        {
+          "format": "hnap",
+          "response_key": "GetDeviceInfoResponse",
+          "fields": {
+            "FirmwareVersion": "firmware_version",
+            "ModelName": "model_name",
+            "SerialNumber": "serial_number"
+          }
+        }
+      ]
+    }
+  }
+}

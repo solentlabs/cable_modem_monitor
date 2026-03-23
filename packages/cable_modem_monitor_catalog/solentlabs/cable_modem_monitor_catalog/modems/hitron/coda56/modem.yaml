@@ -15,17 +15,17 @@ session:
   cookie_name: "userid"
 
 hardware:
-  docsis_version: "3.0"
-  chipset: "Broadcom"
+  docsis_version: "3.1"
+  chipset: unknown
 
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture (#89) — guest mode (user=nologin/pws=nologin)"
+  auth_config: "[#89 Hitron CODA56](https://github.com/solentlabs/cable_modem_monitor/issues/89) — guest mode (user=nologin/pws=nologin)"
 
 attribution:
   contributors:
-    - github: unknown
+    - github: jeremyhuber
       contribution: "HAR capture (Issue #89)"
 
 isps:
@@ -41,4 +41,4 @@ notes: |
 
 references:
   issues:
-    - 89
+    - "[#89 — [Modem Request] Hitron CODA56](https://github.com/solentlabs/cable_modem_monitor/issues/89)"

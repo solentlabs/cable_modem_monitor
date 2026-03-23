@@ -13,5 +13,5 @@
   "isps": ["Various"],
   "sources": {"auth_config": "#42"},
   "notes": "Test notes",
-  "references": {"issues": [42, 81], "prs": [57]}
+  "references": {"issues": ["ref-1", "ref-2"], "prs": ["ref-3"]}
 }

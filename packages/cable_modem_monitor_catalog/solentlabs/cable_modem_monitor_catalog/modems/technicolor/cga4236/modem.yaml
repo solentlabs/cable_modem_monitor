@@ -23,16 +23,16 @@ session:
 
 hardware:
   docsis_version: "3.1"
-  chipset: "Broadcom"
+  chipset: unknown
 
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture (#115) — PBKDF2 double-hash auth"
+  auth_config: "[#115 Technicolor CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115) — PBKDF2 double-hash auth"
 
 attribution:
   contributors:
-    - github: unknown
+    - github: makerwolf
       contribution: "HAR capture (Issue #115)"
 
 isps:
@@ -50,4 +50,4 @@ notes: |
 
 references:
   issues:
-    - 115
+    - "[#115 — [Modem Request] Technicolor CGA4236](https://github.com/solentlabs/cable_modem_monitor/issues/115)"

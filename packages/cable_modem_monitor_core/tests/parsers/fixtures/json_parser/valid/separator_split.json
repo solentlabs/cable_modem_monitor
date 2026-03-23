@@ -1,0 +1,17 @@
+{
+  "_description": "Separator splits compound value before type conversion in JSON parser",
+  "_json": {"channels": [{"id": "1", "power": "0.3/60.3"}]},
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "fields": [
+      {"key": "id", "field": "channel_id", "type": "integer"},
+      {"key": "power", "field": "power", "type": "float", "separator": "/", "separator_index": 0}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "power": 0.3}
+  ]
+}

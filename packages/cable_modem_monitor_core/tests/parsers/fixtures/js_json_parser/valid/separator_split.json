@@ -1,0 +1,16 @@
+{
+  "_description": "Separator splits compound value before type conversion — takes first segment",
+  "_html": "<html><body><script>json_data = [{\"ChannelID\": \"1\", \"PowerLevel\": \"0.3/60.3\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_data",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "PowerLevel", "field": "power", "type": "float", "separator": "/", "separator_index": 0}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "power": 0.3}
+  ]
+}

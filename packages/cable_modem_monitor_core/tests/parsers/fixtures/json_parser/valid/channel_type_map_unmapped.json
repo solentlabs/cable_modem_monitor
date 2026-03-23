@@ -1,0 +1,26 @@
+{
+  "_description": "Channel type map with value not in map — channel_type not set, warning logged",
+  "_json": {
+    "channels": [
+      {"channelId": 1, "frequency": 507000000, "modType": "SC-QAM"}
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "fields": [
+      {"key": "channelId", "field": "channel_id", "type": "integer"},
+      {"key": "frequency", "field": "frequency", "type": "integer"},
+      {"key": "modType", "field": "modulation", "type": "string"}
+    ],
+    "channel_type": {
+      "field": "modulation",
+      "map": {"QAM256": "qam", "OFDM": "ofdm"}
+    }
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000, "modulation": "SC-QAM"}
+  ]
+}

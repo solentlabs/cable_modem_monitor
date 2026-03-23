@@ -39,7 +39,7 @@ class HnapAuthHandler(AuthHandler):
     both login and data requests. Provides merged HNAP data responses
     built from HAR entries.
 
-    The test runner uses ``password="password"`` — the handler
+    The test runner uses ``password="pw"`` — the handler
     pre-computes the expected ``PrivateKey`` and ``LoginPassword``
     from deterministic challenge values and this password.
 
@@ -53,7 +53,7 @@ class HnapAuthHandler(AuthHandler):
     _CHALLENGE = "TestHnapChallenge1234"
     _PUBLIC_KEY = "TestHnapPublicKey1234"
     _COOKIE = "TestHnapCookie"
-    _PASSWORD = "password"
+    _PASSWORD = "pw"
 
     def __init__(
         self,

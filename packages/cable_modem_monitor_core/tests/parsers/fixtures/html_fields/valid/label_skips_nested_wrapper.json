@@ -1,0 +1,14 @@
+{
+  "_description": "Multiple nested wrappers (div containing table containing div) — all skipped, leaf td matches",
+  "_html": "<html><body><div class='page'><div class='content'><table><tr><td>Hardware Version</td><td>2.0</td></tr></table></div></div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/info.html",
+    "fields": [
+      {"label": "Hardware Version", "field": "hardware_version", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "hardware_version": "2.0"
+  }
+}

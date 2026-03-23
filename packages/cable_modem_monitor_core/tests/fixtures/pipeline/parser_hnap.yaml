@@ -1,0 +1,16 @@
+downstream:
+  format: hnap
+  response_key: GetStatusDownstreamResponse
+  data_key: DownstreamData
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  fields:
+    - index: 0
+      field: channel_id
+      type: integer
+    - index: 1
+      field: frequency
+      type: frequency
+    - index: 2
+      field: power
+      type: float

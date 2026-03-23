@@ -1,0 +1,12 @@
+{
+  "_description": "Table with rows that have fewer than 2 cells — empty label map returns []",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th></tr><tr><td>Only one cell</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

@@ -81,12 +81,15 @@ system_info:
           pattern: "Current System Time:\\s*(.*)"
           field: current_time
           type: string
-    - format: html_fields
+    - format: javascript
       resource: "/RouterStatus.asp"
-      fields:
-        - id: "HardwareVersion"
-          field: hardware_version
-          type: string
-        - id: "FirmwareVersion"
-          field: software_version
-          type: string
+      functions:
+        - name: ""
+          delimiter: "|"
+          fields:
+            - offset: 0
+              field: hardware_version
+              type: string
+            - offset: 1
+              field: software_version
+              type: string

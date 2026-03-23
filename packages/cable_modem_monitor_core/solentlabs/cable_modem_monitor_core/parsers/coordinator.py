@@ -6,7 +6,7 @@ them, chains parser.py post-processing, and assembles ModemData.
 See PARSING_SPEC.md ModemParserCoordinator section.
 
 Channel parser registry maps section config types to parser callables.
-Five format types registered: HTMLTable, HNAP, Transposed, JSEmbedded, JSON.
+Six format types registered: HTMLTable, HNAP, Transposed, JSEmbedded, JSJson, JSON.
 
 System info source registry maps source config types to parser callables.
 Four source types registered: HTMLFields, HNAP, JavaScript, JSON.
@@ -21,6 +21,7 @@ from typing import Any, TypeVar
 from ..models.parser_config.config import ParserConfig
 from ..models.parser_config.hnap import HNAPSection
 from ..models.parser_config.javascript import JSEmbeddedSection
+from ..models.parser_config.js_json import JSJsonSection
 from ..models.parser_config.json_format import JSONSection
 from ..models.parser_config.system_info import (
     HNAPSystemInfoSource,
@@ -36,6 +37,7 @@ from .html_fields import HTMLFieldsParser
 from .html_table import HTMLTableParser
 from .html_table_transposed import HTMLTableTransposedParser
 from .js_embedded import JSEmbeddedParser
+from .js_json_parser import JSJsonParser
 from .js_system_info import JSSystemInfoParser
 from .json_parser import JSONParser
 from .json_system_info import JSONSystemInfoParser
@@ -162,12 +164,25 @@ def _parse_json_channels(
     return channels
 
 
+def _parse_js_json_channels(
+    section: JSJsonSection,
+    resources: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Parse channels from a js_json section — JSON arrays in JS variables."""
+    parser = JSJsonParser(section)
+    channels = parser.parse(resources)
+    if not isinstance(channels, list):
+        return []
+    return channels
+
+
 # Maps section config type → parser callable(section, resources) → list[dict]
 _CHANNEL_PARSERS: dict[type, Callable[..., list[dict[str, Any]]]] = {
     HTMLTableSection: _parse_html_table_channels,
     HNAPSection: _parse_hnap_channels,
     HTMLTableTransposedSection: _parse_transposed_channels,
     JSEmbeddedSection: _parse_js_embedded_channels,
+    JSJsonSection: _parse_js_json_channels,
     JSONSection: _parse_json_channels,
 }
 

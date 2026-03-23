@@ -34,6 +34,7 @@ actions:
 
 hardware:
   docsis_version: "3.1"
+  chipset: Intel Puma 7
 
 status: awaiting_verification
 attribution:
@@ -41,7 +42,8 @@ attribution:
     - github: samuelengelking
       contribution: "HAR capture and initial modem request"
 sources:
-  issue_86: "https://github.com/solentlabs/cable_modem_monitor/issues/86"
+  auth_config: "[#86 Arris TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"
+  chipset: "[TG3442DE Teardown](https://github.com/nox-x/TG3442DE-Teardown)"
 isps: [Vodafone DE]
 notes: |
   Arris Touchstone TG3442DE gateway (Vodafone Germany).
@@ -52,3 +54,6 @@ notes: |
   Login response body is encrypted — must decrypt to extract CSRF nonce.
   Variant check: firmware has isModel6442 flag (this modem is NOT 6442).
   Session timeout: 600s (logoutTime JS variable).
+references:
+  issues:
+    - "[#86 — [Modem Request] Arris Touchstone TG3442DE](https://github.com/solentlabs/cable_modem_monitor/issues/86)"

@@ -1,0 +1,13 @@
+{
+  "_description": "Row labels match but all cell values are empty — _extract_channel returns None",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th><th>Ch 1</th><th>Ch 2</th></tr><tr><td>Channel ID</td><td></td><td></td></tr><tr><td>Frequency</td><td></td><td></td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Frequency", "field": "frequency", "type": "frequency"}
+    ]
+  },
+  "_expected": []
+}

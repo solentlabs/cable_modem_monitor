@@ -83,7 +83,13 @@ class ChannelMapping(BaseModel):
 
 
 class JsonChannelMapping(BaseModel):
-    """JSONParser key -> field mapping."""
+    """JSONParser key -> field mapping.
+
+    Optional ``separator`` splits the raw value on a delimiter before
+    type conversion. ``separator_index`` selects which segment to use
+    (default 0 = first). Example: ``"0.3/60.3"`` with
+    ``separator: "/"`` and ``separator_index: 0`` yields ``"0.3"``.
+    """
 
     model_config = ConfigDict(extra="forbid")
     key: str
@@ -93,6 +99,8 @@ class JsonChannelMapping(BaseModel):
     fallback_key: str = ""
     truthy: Any | None = None
     map: dict[str, str] | None = None
+    separator: str = ""
+    separator_index: int = 0
 
     @model_validator(mode="after")
     def validate_field_type(self) -> JsonChannelMapping:

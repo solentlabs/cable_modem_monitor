@@ -23,7 +23,7 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture (#105)"
+  auth_config: "[#105 Netgear CM2050V](https://github.com/solentlabs/cable_modem_monitor/issues/105)"
 
 attribution:
   contributors:
@@ -42,4 +42,4 @@ notes: |
 
 references:
   issues:
-    - 105
+    - "[#105 — [Modem Request] Netgear CM2050V](https://github.com/solentlabs/cable_modem_monitor/issues/105)"

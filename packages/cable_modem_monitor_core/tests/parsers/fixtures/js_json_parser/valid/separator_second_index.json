@@ -1,0 +1,16 @@
+{
+  "_description": "Separator with separator_index=1 takes the second segment",
+  "_html": "<html><body><script>json_data = [{\"ChannelID\": \"1\", \"PowerLevel\": \"0.3/60.3\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_data",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "PowerLevel", "field": "power_dbuv", "type": "float", "separator": "/", "separator_index": 1}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "power_dbuv": 60.3}
+  ]
+}

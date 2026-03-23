@@ -407,6 +407,6 @@ class TestHARMockServerBasicAuth:
         with HARMockServer(entries, modem_config=config) as server:
             resp = requests.get(
                 f"{server.base_url}/status.html",
-                auth=("admin", "password"),
+                auth=("admin", "pw"),
             )
             assert resp.status_code == 200

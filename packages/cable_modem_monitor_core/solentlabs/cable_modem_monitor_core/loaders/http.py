@@ -23,7 +23,7 @@ from .fetch_list import ResourceTarget
 _logger = logging.getLogger(__name__)
 
 # Formats decoded as HTML (BeautifulSoup)
-_HTML_FORMATS = frozenset({"table", "table_transposed", "javascript", "html_fields"})
+_HTML_FORMATS = frozenset({"table", "table_transposed", "javascript", "javascript_json", "html_fields"})
 
 # Formats decoded as structured data (dict)
 _STRUCTURED_FORMATS = frozenset({"json", "xml"})

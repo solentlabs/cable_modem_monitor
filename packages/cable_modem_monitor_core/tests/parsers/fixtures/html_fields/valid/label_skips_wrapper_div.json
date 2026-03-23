@@ -1,0 +1,16 @@
+{
+  "_description": "Wrapper div contains label text via nested content but is skipped — the leaf td matches instead",
+  "_html": "<html><body><div><table><tr><td>System Uptime</td><td>27 d: 13 h: 39 m</td></tr><tr><td>Cable Modem Status</td><td>Operational</td></tr></table></div></body></html>",
+  "_source": {
+    "format": "html_fields",
+    "resource": "/status.html",
+    "fields": [
+      {"label": "System Uptime", "field": "system_uptime", "type": "string"},
+      {"label": "Cable Modem Status", "field": "network_access", "type": "string"}
+    ]
+  },
+  "_expected": {
+    "system_uptime": "27 d: 13 h: 39 m",
+    "network_access": "Operational"
+  }
+}

@@ -11,7 +11,7 @@ hardware:
   chipset: "Broadcom BCM3390"
 status: awaiting_verification
 sources:
-  auth_config: "#121"
+  auth_config: "[#121 CM1200 Broken in 3.13.0](https://github.com/solentlabs/cable_modem_monitor/issues/121)"
 attribution:
   contributors:
     - github: DeFlanko
@@ -27,5 +27,5 @@ notes: |
   See modem.yaml for HTTP variant requiring no auth.
 references:
   issues:
-    - 63
-    - 121
+    - "[#63 — [Modem Request] CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
+    - "[#121 — [Bug]: CM1200 Broken in 3.13.0](https://github.com/solentlabs/cable_modem_monitor/issues/121)"

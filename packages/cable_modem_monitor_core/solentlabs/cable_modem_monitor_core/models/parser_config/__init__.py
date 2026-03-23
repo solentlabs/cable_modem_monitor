@@ -1,7 +1,7 @@
 """parser.yaml configuration models.
 
-Submodules: common, table, transposed, javascript, hnap, json_format,
-system_info, config.
+Submodules: common, table, transposed, javascript, js_json, hnap,
+json_format, system_info, config.
 Public API: ParserConfig (import from here or from models/).
 """
 

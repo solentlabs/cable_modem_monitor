@@ -11,27 +11,44 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 6"
+  release_date: "2016"
+  end_of_life: "2023"
 
 sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6190"
-  auth_config: "sfennell HAR — no login required on older firmware"
+  auth_config: "[#93 SB6190 support](https://github.com/solentlabs/cable_modem_monitor/issues/93) — no login required on older firmware"
 
+  detection_hints: "[PR #22 SB6190 parser](https://github.com/solentlabs/cable_modem_monitor/pull/22)"
 status: awaiting_verification
 
 attribution:
   contributors:
     - github: sfennell
-      contribution: "Initial HAR capture (no-auth variant)"
+      contribution: "[PR #22](https://github.com/solentlabs/cable_modem_monitor/pull/22) verification"
 
 isps:
   - Comcast
-  - Spectrum
   - Cox
+  - Spectrum
+  - TWC
 
 notes: |
-  DOCSIS 3.0 cable modem (released 2016, EOL 2023). Intel Puma 6.
-  No-auth variant: older firmware allows unauthenticated access to
-  /cgi-bin/status. See modem-form-nonce.yaml for auth-required variant.
+  Two firmware variants with different auth requirements:
+  - Older firmware: No authentication required
+  - Newer firmware (9.1.103+): Form login with client-generated nonce
+
+  Auth flow (form_nonce strategy):
+  - POST to /cgi-bin/adv_pwd_cgi with username, password, ar_nonce fields
+  - No encoding - plain form fields
+  - Nonce: 8 random digits (client-generated)
+  - Response: "Url:/path" (success) or "Error:msg" (failure)
+  - Session: credential cookie
+
+  Parser based on SB6141 code; fixture provenance unknown.
+  URL format differs from SB6141: uses .html extension vs .asp
 references:
   issues:
-    - 83
+    - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"
+    - "[#93 — Arris SB6190](https://github.com/solentlabs/cable_modem_monitor/issues/93)"
+  prs:
+    - "[PR #22 — Adding support for Arris SB6190](https://github.com/solentlabs/cable_modem_monitor/pull/22)"

@@ -243,9 +243,6 @@ def _infer_field_mappings(
             continue
 
         samples = position_samples[idx]
-        if not samples or all(s == "" for s in samples):
-            continue
-
         mapping = _assign_pass2_field(idx, samples, pass2_state)
         if mapping is not None:
             mappings.append(mapping)

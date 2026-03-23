@@ -33,6 +33,7 @@ behaviors:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
+  release_date: "2017"
 
 sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Motorola_MB7621"
@@ -41,6 +42,7 @@ sources:
   auth_config: "Maintainer hardware HAR capture"
   restart: "v3.13 verified — params unverified in v3.14, needs HAR with restart flow"
 
+  detection_hints: "Maintainer verified"
 status: awaiting_verification
 
 attribution:
@@ -49,11 +51,13 @@ attribution:
       contribution: "Maintainer hardware, initial parser"
 
 isps:
-  - Comcast Xfinity
+  - Comcast
   - Cox
   - Spectrum
+  - TWC
   - CableOne
   - RCN
+  - Comcast Xfinity
   - Suddenlink
   - BrightHouse
 

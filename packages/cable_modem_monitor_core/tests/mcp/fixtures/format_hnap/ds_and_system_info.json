@@ -1,0 +1,23 @@
+{
+  "_description": "HNAP response with both downstream channel data and system_info",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [{"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 800,
+          "mimeType": "application/json",
+          "text": "{\"GetMultipleHNAPsResponse\": {\"GetStatusDownstreamResponse\": {\"DownstreamData\": \"1^Locked^QAM256^5^567000000^3.2^41.0^100^0^|+|2^Locked^QAM256^6^573000000^3.1^40.5^80^0^\"}, \"GetDeviceInfoResponse\": {\"FirmwareVersion\": \"2.0.1\", \"SystemUptime\": \"3d 12h\", \"GetDeviceInfoResult\": \"OK\"}, \"GetMultipleHNAPsResult\": \"OK\"}}"
+        }
+      }
+    }
+  ],
+  "_expected_has_downstream": true,
+  "_expected_has_system_info": true
+}

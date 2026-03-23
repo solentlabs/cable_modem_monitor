@@ -21,11 +21,11 @@ hardware:
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture"
+  auth_config: "[#104 CM1100 HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/104)"
 
 attribution:
   contributors:
-    - github: unknown
+    - github: dggrzesiak
       contribution: "HAR capture"
 
 isps:
@@ -38,4 +38,5 @@ notes: |
   password sent plaintext in captured HAR.
 
 references:
-  issues: []
+  issues:
+    - "[#104 — [Modem Request] Netgear CM1100](https://github.com/solentlabs/cable_modem_monitor/issues/104)"

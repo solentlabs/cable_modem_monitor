@@ -1,0 +1,17 @@
+{
+  "_description": "Map parameter normalizes field values before output",
+  "_html": "<html><body><script>json_ds = [{\"ChannelID\": \"1\", \"Status\": \"OPERATE\"}, {\"ChannelID\": \"2\", \"Status\": \"SUCCESS\"}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "Status", "field": "lock_status", "type": "lock_status", "map": {"OPERATE": "Locked", "SUCCESS": "Locked"}}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "lock_status": "locked"},
+    {"channel_id": 2, "lock_status": "locked"}
+  ]
+}

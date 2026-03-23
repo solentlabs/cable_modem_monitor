@@ -1,0 +1,18 @@
+{
+  "_description": "Channel type derived from field value via map lookup",
+  "_html": "<html><body><script>json_ds = [{\"ChannelID\": \"1\", \"ChannelType\": \"SC-QAM\", \"Frequency\": 570}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "ChannelType", "field": "channel_type", "type": "string"},
+      {"key": "Frequency", "field": "frequency", "type": "frequency"}
+    ],
+    "channel_type": {"field": "channel_type", "map": {"SC-QAM": "qam", "OFDM": "ofdm"}}
+  },
+  "_expected": [
+    {"channel_id": 1, "channel_type": "SC-QAM", "frequency": 570000000}
+  ]
+}

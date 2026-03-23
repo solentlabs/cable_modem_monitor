@@ -1,0 +1,15 @@
+{
+  "_description": "Row with empty label text is skipped, but valid rows still parse",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th><th>Ch 1</th></tr><tr><td></td><td>ignored</td></tr><tr><td>Channel ID</td><td>10</td></tr><tr><td>Power Level</td><td>5 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 10, "power": 5.0}
+  ]
+}

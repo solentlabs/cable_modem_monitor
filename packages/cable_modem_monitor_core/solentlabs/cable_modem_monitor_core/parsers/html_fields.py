@@ -127,6 +127,13 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
     label. This is anti-fragile — firmware updates that change HTML
     structure don't break configs because multiple patterns are tried.
 
+    Elements that contain block-level children (``table``, ``div``,
+    ``section``, ``article``, ``ul``, ``ol``, ``dl``) are skipped as
+    wrapper elements. These wrappers have ``get_text()`` that includes
+    all nested content, causing false-positive substring matches on
+    label text. If a label genuinely lives inside a wrapper element,
+    use ``css`` or ``id`` selectors instead.
+
     Cascade order:
     1. ``<td>label</td><td>value</td>`` (sibling cells)
     2. ``<th>label</th>`` paired with ``<td>`` in same row
@@ -142,6 +149,11 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
         if not isinstance(element, Tag):
             continue
 
+        # Skip wrapper elements — their get_text() includes all nested
+        # content, causing false matches on label text.
+        if element.find(_BLOCK_LEVEL_TAGS):
+            continue
+
         text = element.get_text(strip=True)
         if label_lower not in text.lower():
             continue
@@ -152,6 +164,10 @@ def _extract_by_label(soup: BeautifulSoup | Tag, label_text: str) -> str | None:
             return value
 
     return None
+
+
+# Block-level tags that indicate a wrapper element when found as children.
+_BLOCK_LEVEL_TAGS = ["table", "div", "section", "article", "ul", "ol", "dl"]
 
 
 _CascadeHandler = Callable[[Tag], str | None]

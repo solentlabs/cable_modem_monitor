@@ -1,0 +1,20 @@
+{
+  "_description": "Channel type map with value not in map — channel_type not set, warning logged",
+  "_html": "<html><body><table border=1><tr><th>Downstream</th><th>Ch 1</th></tr><tr><td>Channel ID</td><td>10</td></tr><tr><td>Modulation</td><td>SC-QAM</td></tr><tr><td>Power Level</td><td>5 dBmV</td></tr></table></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "selector": {"type": "header_text", "match": "Downstream"},
+    "rows": [
+      {"label": "Channel ID", "field": "channel_id", "type": "integer"},
+      {"label": "Modulation", "field": "modulation", "type": "string"},
+      {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+    ],
+    "channel_type": {
+      "field": "modulation",
+      "map": {"QAM256": "qam", "OFDM": "ofdm"}
+    }
+  },
+  "_expected": [
+    {"channel_id": 10, "modulation": "SC-QAM", "power": 5.0}
+  ]
+}

@@ -8,22 +8,28 @@ auth:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2019"
 status: awaiting_verification
 sources:
-  auth_config: "#63"
+  auth_config: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
+  detection_hints: "[#63 CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
 attribution:
   contributors:
     - github: DeFlanko
-      contribution: "HAR captures and testing"
+      contribution: "[Issue #63](https://github.com/solentlabs/cable_modem_monitor/issues/63) diagnostics"
 isps:
   - Comcast
   - Spectrum
   - Cox
 notes: |
-  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA.
-  No-auth variant: HTTP serves pages without authentication.
-  See modem-basic.yaml for HTTPS variant requiring Basic Auth.
+  DOCSIS 3.1 modem with SC-QAM and OFDM/OFDMA support.
+  Channel data embedded in JavaScript functions (NOT HTML tables).
+  HTTPS requires Basic Auth (WWW-Authenticate: Basic realm="Netgear").
+  HTTP serves pages without auth on some ISPs.
+  Auth clarified via har-capture v0.4.4 probe (#121).
+  Supports up to 32 SC-QAM downstream, 2 OFDM, 8 ATDMA upstream, 2 OFDMA.
+  Upstream ATDMA symbol rate appears before frequency (differs from CM2000).
 references:
   issues:
-    - 63
-    - 121
+    - "[#63 — [Modem Request] CM1200](https://github.com/solentlabs/cable_modem_monitor/issues/63)"
+    - "[#121 — [Bug]: CM1200 Broken in 3.13.0](https://github.com/solentlabs/cable_modem_monitor/issues/121)"

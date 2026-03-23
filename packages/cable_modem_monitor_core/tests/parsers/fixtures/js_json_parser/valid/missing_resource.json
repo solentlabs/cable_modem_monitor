@@ -1,0 +1,13 @@
+{
+  "_description": "Missing resource returns empty list",
+  "_html": null,
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

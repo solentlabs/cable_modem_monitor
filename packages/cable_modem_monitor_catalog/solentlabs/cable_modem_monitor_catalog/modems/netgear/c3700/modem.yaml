@@ -9,6 +9,8 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3383"
+  release_date: "2014"
+  end_of_life: "2022"
 
 actions:
   restart:
@@ -21,9 +23,10 @@ actions:
 status: awaiting_verification
 
 sources:
-  chipset: "BCM3383 Datasheet"
+  chipset: "[BCM3383 Datasheet](https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html)"
   auth_config: "Maintainer verified"
 
+  detection_hints: "Maintainer verified"
 attribution:
   contributors:
     - github: kwschulz

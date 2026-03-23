@@ -1,0 +1,23 @@
+{
+  "_description": "HNAP response where one action value is a string, not a dict",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/HNAP1/",
+        "headers": [{"name": "SOAPACTION", "value": "\"http://purenetworks.com/HNAP1/GetMultipleHNAPs\""}]
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Content-Type", "value": "application/json"}],
+        "content": {
+          "size": 100,
+          "mimeType": "application/json",
+          "text": "{\"GetMultipleHNAPsResponse\": {\"GetSomeStatusResponse\": \"NOT_SUPPORTED\"}}"
+        }
+      }
+    }
+  ],
+  "_expected_sections": {},
+  "_expected_warning": "no channel data"
+}

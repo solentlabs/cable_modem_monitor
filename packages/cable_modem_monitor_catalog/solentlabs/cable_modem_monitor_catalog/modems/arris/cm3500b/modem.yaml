@@ -15,18 +15,22 @@ session:
 
 hardware:
   docsis_version: "3.1"
+  chipset: unknown
+  release_date: "2016"
 
 status: awaiting_verification
 
 sources:
-  auth_config: "#73"
+  auth_config: "[#73 CM3500B HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/73)"
 
+  release_date: "[ARRIS CM3500 Datasheet](https://vectortechsolutions.com/wp-content/uploads/import/files/1314/231004_cm3500_datasheet.pdf)"
 attribution:
   contributors:
     - github: ChBi89
-      contribution: "HAR capture and initial fixture data"
+      contribution: "HAR capture and initial parser (Issue #73)"
 
 isps:
+  - Vodafone Germany
   - Vodafone
 
 notes: |
@@ -39,4 +43,4 @@ notes: |
 
 references:
   issues:
-    - 73
+    - "[#73 — [Modem Request] Arris CM3500B](https://github.com/solentlabs/cable_modem_monitor/issues/73)"

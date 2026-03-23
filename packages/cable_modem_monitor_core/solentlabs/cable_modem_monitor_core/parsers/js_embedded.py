@@ -172,19 +172,23 @@ class JSEmbeddedParser(BaseParser):
 
 
 def _extract_tag_value_list(soup: BeautifulSoup, func_name: str) -> str | None:
-    """Find and extract tagValueList from a named JS function.
+    """Find and extract tagValueList from a JS function or top-level scope.
 
-    Searches all ``<script>`` tags for the function name, extracts the
-    function body, strips block comments, and returns the tagValueList
-    string value.
+    When ``func_name`` is non-empty, searches for the variable inside a
+    named function body.  When ``func_name`` is empty, searches the
+    entire ``<script>`` text for a top-level variable assignment.
 
     Args:
         soup: Parsed HTML page.
-        func_name: JS function name to search for.
+        func_name: JS function name to search for.  Empty string means
+            search top-level scope.
 
     Returns:
         The tagValueList string, or ``None`` if not found.
     """
+    if not func_name:
+        return _extract_top_level_tag_value_list(soup)
+
     func_re = _get_func_body_re(func_name)
 
     for script in soup.find_all("script"):
@@ -204,6 +208,22 @@ def _extract_tag_value_list(soup: BeautifulSoup, func_name: str) -> str | None:
         if tag_match:
             return tag_match.group(1)
 
+    return None
+
+
+def _extract_top_level_tag_value_list(soup: BeautifulSoup) -> str | None:
+    """Find tagValueList as a top-level variable in any ``<script>`` tag.
+
+    Used when ``func_name`` is empty — the variable is assigned at script
+    scope rather than inside a function body.
+    """
+    for script in soup.find_all("script"):
+        text = script.string
+        if not text:
+            continue
+        tag_match = _TAG_VALUE_RE.search(text)
+        if tag_match:
+            return tag_match.group(1)
     return None
 
 

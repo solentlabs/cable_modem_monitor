@@ -1,0 +1,18 @@
+{
+  "_description": "Filter keeps only locked channels — unlocked channels are excluded",
+  "_html": "<html><body><script>json_ds = [{\"ChannelID\": \"1\", \"LockStatus\": \"Locked\", \"Frequency\": 570}, {\"ChannelID\": \"2\", \"LockStatus\": \"Unlocked\", \"Frequency\": 578}];</script></body></html>",
+  "_config": {
+    "format": "javascript_json",
+    "resource": "/status.html",
+    "variable": "json_ds",
+    "mappings": [
+      {"key": "ChannelID", "field": "channel_id", "type": "integer"},
+      {"key": "LockStatus", "field": "lock_status", "type": "lock_status"},
+      {"key": "Frequency", "field": "frequency", "type": "frequency"}
+    ],
+    "filter": {"lock_status": "locked"}
+  },
+  "_expected": [
+    {"channel_id": 1, "lock_status": "locked", "frequency": 570000000}
+  ]
+}

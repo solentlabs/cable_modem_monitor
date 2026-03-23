@@ -61,15 +61,32 @@ upstream:
       channel_type:
         fixed: atdma
 
-# system_info is extracted by parser.py PostProcessor.
-# This source declaration exists solely to trigger fetching vers_cgi.
-# The html_fields parser's label matching hits wrapper divs before the
-# correct td cells on this page, so actual extraction is in parser.py.
 system_info:
   sources:
+    - format: html_fields
+      resource: "/cgi-bin/status_cgi"
+      fields:
+        - label: "System Uptime"
+          field: system_uptime
+          type: string
     - format: html_fields
       resource: "/cgi-bin/vers_cgi"
       fields:
         - label: "Firmware Name"
           field: firmware_name
           type: string
+        - label: "Firmware Build Time"
+          field: firmware_build_time
+          type: string
+        - label: "System"
+          field: hardware_version
+          type: string
+          pattern: "HW_REV:\\s*(.+)"
+        - label: "System"
+          field: software_version
+          type: string
+          pattern: "SW_REV:\\s*(.+)"
+        - label: "System"
+          field: model
+          type: string
+          pattern: "MODEL:\\s*(.+)"

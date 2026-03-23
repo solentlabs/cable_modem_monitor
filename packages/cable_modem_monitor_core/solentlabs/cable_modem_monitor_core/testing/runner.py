@@ -156,10 +156,29 @@ def run_modem_test(test_case: ModemTestCase) -> TestResult:
             error=f"Pipeline error: {e}",
         )
 
-    # Compare against golden file
+    return _compare_and_record(test_case, actual, expected)
+
+
+def _compare_and_record(
+    test_case: ModemTestCase,
+    actual: dict[str, Any],
+    expected: dict[str, Any],
+) -> TestResult:
+    """Write actual output, compare against golden file, clean up on pass."""
+    actual_path = test_case.har_path.with_suffix(".actual.json")
+    actual_path.write_text(
+        json.dumps(actual, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
     comparison = compare_golden_file(actual, expected)
+
+    # Only keep actual file when there's drift
+    if comparison.passed and actual_path.exists():
+        actual_path.unlink()
+
     return TestResult(
-        test_name=name,
+        test_name=test_case.name,
         passed=comparison.passed,
         comparison=comparison,
     )
@@ -205,7 +224,7 @@ def _run_pipeline(
             session,
             base_url,
             username="admin",
-            password="password",
+            password="pw",
             timeout=modem_config.timeout,
         )
         if not auth_result.success:

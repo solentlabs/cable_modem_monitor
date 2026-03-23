@@ -88,10 +88,15 @@ class JSSystemInfoFieldMapping(BaseModel):
 
 
 class JSSystemInfoFunction(BaseModel):
-    """A JS function that produces system_info fields."""
+    """A JS function that produces system_info fields.
+
+    When ``name`` is empty, the variable is searched at top-level script
+    scope instead of inside a named function body. This supports modems
+    where ``tagValueList`` is a global variable assignment.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    name: str
+    name: str = ""
     delimiter: str
     fields: list[JSSystemInfoFieldMapping]
 

@@ -75,7 +75,7 @@ system_info:
     - format: javascript
       resource: "/RouterStatus.htm"
       functions:
-        - name: "InitTagValue"
+        - name: ""
           delimiter: "|"
           fields:
             - offset: 0

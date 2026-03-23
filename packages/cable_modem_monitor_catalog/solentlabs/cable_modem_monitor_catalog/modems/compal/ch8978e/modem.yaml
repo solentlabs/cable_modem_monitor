@@ -1,0 +1,41 @@
+manufacturer: Compal
+model: CH8978E
+transport: http
+default_host: "192.168.100.1"
+
+hardware:
+  docsis_version: "3.1"
+  release_date: "2023"
+
+status: unsupported
+
+attribution:
+  contributors:
+    - github: leptitchat
+      contribution: "Modem request and testing"
+
+sources:
+  auth_config: "[#79 — Compal CH8978E](https://github.com/solentlabs/cable_modem_monitor/issues/79) — auth required but mechanism unknown"
+  detection_hints: "[Pyür forum — hidden signal pages](https://www.pyforum.de/viewtopic.php?t=1345)"
+
+isps:
+  - "Pyür"
+
+notes: |
+  ISP: Pyür (Germany). Modem in bridge mode.
+  Pyür firmware hides channel info pages. On older Compal models (CH7485E, CH7467CE),
+  hidden ASP pages still work at direct URLs:
+  - https://192.168.100.1/RgConnect.asp (signal levels)
+  - https://192.168.100.1/RgEventLog.asp (event log)
+  - Default login: admin/tc
+  CH8978E does NOT use ASP pages — uses PHP embedded in index.php instead:
+  - https://192.168.100.1/internet_page/RgWanStatus.php
+  - https://192.168.100.1/gw_page/RgConnect.php (used to show channel info, no longer loads)
+  - https://192.168.100.1/voip_page/MtaStatus.php (only loads via index.php)
+  PHP pages do not load standalone — they require the index.php frame.
+  Blocked: no accessible channel data endpoint found.
+
+references:
+  issues:
+    - "[#79 — [Modem Request] Compal CH8978E as used by German Provider Pyür](https://github.com/solentlabs/cable_modem_monitor/issues/79)"
+  prs: []

@@ -1,0 +1,22 @@
+{
+  "_description": "Dict item where none of the configured keys are present — channel skipped",
+  "_json": {
+    "channels": [
+      {"unrelatedKey": "value"},
+      {"channelId": 1, "frequency": 507000000}
+    ]
+  },
+  "_resource": "/api/data",
+  "_config": {
+    "format": "json",
+    "resource": "/api/data",
+    "array_path": "channels",
+    "fields": [
+      {"key": "channelId", "field": "channel_id", "type": "integer"},
+      {"key": "frequency", "field": "frequency", "type": "integer"}
+    ]
+  },
+  "_expected": [
+    {"channel_id": 1, "frequency": 507000000}
+  ]
+}

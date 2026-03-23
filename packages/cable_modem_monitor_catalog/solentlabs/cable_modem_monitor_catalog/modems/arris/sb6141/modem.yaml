@@ -13,11 +13,14 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3380"
+  release_date: "2011"
+  end_of_life: "2019"
 
 sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_SB6141"
   auth_config: "Synthetic HAR — no login required"
 
+  detection_hints: "[HA Community thread](https://community.home-assistant.io/)"
 status: awaiting_verification
 
 attribution:
@@ -25,7 +28,7 @@ attribution:
     - github: captain-coredump
       contribution: "Initial fixture and parser"
     - github: vreihen
-      contribution: "Verification testing (Oct 2025)"
+      contribution: "HA Community verification (October 2025)"
 
 isps:
   - Comcast
@@ -42,4 +45,4 @@ notes: |
   No system_info available (no uptime or version endpoints exposed).
 references:
   prs:
-    - 57
+    - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"

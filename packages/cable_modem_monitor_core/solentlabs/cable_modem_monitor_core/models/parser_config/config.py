@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Discriminator, Tag, model_validator
 
 from .hnap import HNAPSection
 from .javascript import JSEmbeddedSection
+from .js_json import JSJsonSection
 from .json_format import JSONSection
 from .system_info import SystemInfoSection
 from .table import HTMLTableSection
@@ -28,6 +29,7 @@ ChannelSection = Annotated[
     Annotated[HTMLTableSection, Tag("table")]
     | Annotated[HTMLTableTransposedSection, Tag("table_transposed")]
     | Annotated[JSEmbeddedSection, Tag("javascript")]
+    | Annotated[JSJsonSection, Tag("javascript_json")]
     | Annotated[HNAPSection, Tag("hnap")]
     | Annotated[JSONSection, Tag("json")],
     Discriminator(_get_section_format),

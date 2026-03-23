@@ -15,6 +15,7 @@ session:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2017"
 
 behaviors:
   restart:
@@ -23,29 +24,34 @@ behaviors:
 status: awaiting_verification
 
 sources:
-  auth_config: "#1"
-  chipset: "FCC filing"
+  auth_config: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
+  chipset: "[FCC Filing](https://fccid.io/VU4-TC4400)"
 
+  detection_hints: "[#1 TC-4400 Login](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
 attribution:
   contributors:
     - github: Mar1usW3
-      contribution: "Initial HAR capture and parser"
+      contribution: "[Issue #1](https://github.com/solentlabs/cable_modem_monitor/issues/1) verification"
     - github: MrHankey777x
       contribution: "TC4400AM variant confirmation (Issue #94)"
 
 isps:
-  - Teksavvy
   - Comcast
+  - Cox
   - Spectrum
   - Rogers
+  - Shaw
+  - Videotron
+  - Vodafone Germany
+  - Unitymedia
+  - Teksavvy
 
 notes: |
-  DOCSIS 3.1 cable modem with Broadcom BCM3390 chipset.
-  SC-QAM + OFDM downstream, SC-QAM + OFDMA upstream.
-  HTTP Basic Auth. Pages can take 12+ seconds to load.
-  During restart window, modem reports zero power/SNR values.
-
+  DOCSIS 3.1 standalone cable modem. Supports SC-QAM and OFDM channel types.
+  System uptime available in cmswinfo.html.
+  Data across multiple pages: cmconnectionstatus.html (channels), cmswinfo.html (system info).
+  Restart reports zero power during reboot window (300 seconds).
 references:
   issues:
-    - 1
-    - 94
+    - "[#1 — TC-4400 Login not possible](https://github.com/solentlabs/cable_modem_monitor/issues/1)"
+    - "[#94 — [Modem Request] Technicolor TC4400AM](https://github.com/solentlabs/cable_modem_monitor/issues/94)"

@@ -88,7 +88,7 @@ but modem-specific behavior comes from config, not from Core code.
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
 | ABCs / base classes | `BaseParser`, `BaseAuthStrategy`, `BaseAction` |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
-| Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `hnap`, `url_token` |
+| Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `hnap`, `url_token` |
 | Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON |
 | Orchestrator | Scheduler + policy: timing, signal→policy dispatch, serialized access |
 | DataPipeline | Single poll cycle: auth → load → parse → `ModemData` or signal |
@@ -184,9 +184,9 @@ graph TD
     HA --> HS["<b>SESSION</b><hr/>• uid cookie + HNAP_AUTH header"]
     HS --> HF["<b>FORMAT</b><hr/>• hnap (JSON + delimiters)"]
 
-    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token 🔗<br/>• form_pbkdf2 🔗"]
+    HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token 🔗<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗"]
     HTA --> HTS["<b>SESSION</b><hr/>• stateless<br/>• cookie<br/>• CSRF 🔗<br/>• url_token 🔗"]
-    HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• html_fields<br/>• json<br/>• xml"]
+    HTS --> HTF["<b>FORMAT</b><hr/>• table<br/>• table_transposed<br/>• javascript<br/>• javascript_json<br/>• html_fields<br/>• json<br/>• xml"]
 ```
 
 *🔗 Implies specific session mechanism — see
@@ -218,12 +218,12 @@ require `form_pbkdf2` auth.
 | Transport | Loader | Valid Auth | Valid Formats | Valid Action Types |
 |-----------|--------|-----------|--------------|-------------------|
 | `hnap` | HNAPLoader → `dict` | `hnap` only | `hnap` only | `hnap` |
-| `http` | HTTPLoader → BeautifulSoup or dict | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2` | `table`, `table_transposed`, `javascript`, `html_fields`, `json`, `xml` | `http` |
+| `http` | HTTPLoader → BeautifulSoup or dict | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | `table`, `table_transposed`, `javascript`, `javascript_json`, `html_fields`, `json`, `xml` | `http` |
 
 At runtime, the format declared in parser.yaml determines how the response
 is decoded. HTML formats (`table`, `table_transposed`, `javascript`,
-`html_fields`) are parsed into `BeautifulSoup`. Structured formats (`json`,
-`xml`) are decoded into `dict`. Any format supports an optional
+`javascript_json`, `html_fields`) are parsed into `BeautifulSoup`.
+Structured formats (`json`, `xml`) are decoded into `dict`. Any format supports an optional
 `encoding` property (e.g., `encoding: base64` for modems that wrap
 JSON in base64). The encoding is a pre-step — the loader
 unwraps the encoding before the format-specific decoder runs. The
@@ -275,6 +275,7 @@ from modem.yaml:
 | `form_nonce` | HTTP | No | nonce field, credential format, success/error prefixes |
 | `hnap` | HNAP | No | HMAC algorithm (MD5/SHA256) |
 | `form_pbkdf2` | HTTP | No | login_endpoint, pbkdf2_iterations, pbkdf2_key_length, double_hash (salt + saltwebui), csrf_init_endpoint |
+| `form_sjcl` | HTTP | No | login_page, login_endpoint, pbkdf2_iterations, pbkdf2_key_length, ccm_tag_length, encrypt_aad, decrypt_aad, csrf_header |
 | `url_token` | HTTP | No | login_page, login_prefix, success_indicator, ajax_login, auth_header_data |
 
 **Key points:**
@@ -285,6 +286,13 @@ from modem.yaml:
   challenge-response: POST to get server-provided salts, client-side PBKDF2
   key derivation, then POST the derived hash. This is structurally closer to
   HNAP's challenge-response than to a simple form POST with encoding flags
+- `form_sjcl` is separate from `form_pbkdf2` because it adds client-side
+  AES-CCM encryption of credentials (via SJCL — Stanford JavaScript Crypto
+  Library) and requires decrypting the server response to extract a CSRF
+  nonce. Both use PBKDF2 key derivation, but `form_sjcl` encrypts the
+  payload and decrypts the response, while `form_pbkdf2` hashes the password
+  and sends it in plaintext JSON. Requires the `cryptography` package
+  (install Core with `[sjcl]` extra)
 - All other form differences (encoding, CSRF, field names, session cookies)
   are config flags on `form`. Specifically: base64 password encoding is
   `encoding: base64`, dynamic endpoint discovery is `login_page` +
@@ -440,6 +448,87 @@ this inline: if the salt response is `"none"`, POST the plaintext password
 instead of performing key derivation. This is a branch within the strategy,
 not a fallback to a different strategy.
 
+#### `form_sjcl` Strategy — Config Reference
+
+SJCL (Stanford JavaScript Crypto Library) AES-CCM auth encrypts credentials
+client-side before POSTing, and decrypts the server's response to extract a
+CSRF nonce. The key is derived via PBKDF2 from the password and a
+per-session salt embedded in the login page's JavaScript.
+
+Evidence base: gateway firmwares that use the SJCL library for client-side
+encryption. The login page embeds `myIv`, `mySalt`, and `currentSessionId`
+as JavaScript variables; the login script uses these to AES-CCM encrypt the
+credentials before submission.
+
+**Auth flow:**
+```
+1. GET login page (login_page)
+   → Parse JS variables: myIv (hex), mySalt, currentSessionId
+2. Derive AES key: PBKDF2(password, mySalt, iterations, key_len)
+3. Encrypt credentials:
+   plaintext = {"Password": "<pw>", "Nonce": "<sessionId>"}
+   ciphertext = AES-CCM(key, iv, plaintext, aad=encrypt_aad)
+4. POST login (login_endpoint):
+   {"EncryptData": "<hex>", "Name": "<user>", "AuthData": "<encrypt_aad>"}
+   → Response: {"p_status": "Match", "encryptData": "<hex>", ...}
+   → Sets session cookie (session.cookie_name)
+5. Decrypt response:
+   AES-CCM decrypt encryptData with aad=decrypt_aad → CSRF nonce
+   → Set csrf_header on session for subsequent requests
+6. POST session validation (session_validation_endpoint, optional):
+   Empty JSON POST with csrf_header → finalizes session
+```
+
+**Auth config fields** (login mechanics only):
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `login_page` | string | `"/"` | Page URL containing the JS variables (`myIv`, `mySalt`, `currentSessionId`) |
+| `login_endpoint` | string | required | URL that accepts the encrypted login POST |
+| `session_validation_endpoint` | string | `""` | Optional endpoint to finalize session after login. If set, a POST with the CSRF header is sent after successful decryption. |
+| `pbkdf2_iterations` | int | required | PBKDF2 iteration count (from login.js) |
+| `pbkdf2_key_length` | int | required | Derived key length in bits (from login.js) |
+| `ccm_tag_length` | int | `16` | AES-CCM authentication tag length in bytes |
+| `encrypt_aad` | string | `"loginPassword"` | AAD (Additional Authenticated Data) for encrypting the login payload |
+| `decrypt_aad` | string | `"nonce"` | AAD for decrypting the server response to extract the CSRF nonce |
+| `csrf_header` | string | `""` | Header name for the CSRF nonce on subsequent requests. If empty, no CSRF nonce is extracted. |
+
+Session cookie and logout are declared in the `session` and `actions`
+sections — see `MODEM_YAML_SPEC.md`.
+
+**Example:**
+```yaml
+auth:
+  strategy: form_sjcl
+  login_page: "/"
+  login_endpoint: "/api/login"
+  session_validation_endpoint: "/api/session"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  ccm_tag_length: 16
+  encrypt_aad: "loginPassword"
+  decrypt_aad: "nonce"
+  csrf_header: "csrfNonce"
+
+session:
+  cookie_name: "sid"
+  max_concurrent: 1
+  headers:
+    X-Requested-With: "XMLHttpRequest"
+
+actions:
+  logout:
+    type: http
+    method: POST
+    endpoint: "/api/session"
+```
+
+**Dependency:** `form_sjcl` requires the `cryptography` package for
+AES-CCM primitives. Install Core with the `[sjcl]` extra:
+`pip install solentlabs-cable-modem-monitor-core[sjcl]`. If the package is
+missing at runtime, the strategy returns `AuthResult.FAILURE` with an
+install instruction — no import error crash.
+
 ### Session Management
 
 Maintains authenticated state between requests. For the HTTP transport,
@@ -450,7 +539,7 @@ session mechanisms across modems. For HNAP, session is locked to the transport.
 |-----------|-----------|--------|
 | Stateless | HTTP | — |
 | Cookie | HTTP | `session.cookie_name` |
-| CSRF token | HTTP | `auth.csrf_header` (`form_pbkdf2` strategy-specific; other strategies may define their own CSRF fields) |
+| CSRF token | HTTP | `auth.csrf_header` (`form_pbkdf2` and `form_sjcl` strategy-specific) |
 | Nonce | HTTP | Server-side tracking, no client config |
 | URL token | HTTP | `session.token_prefix` |
 | HNAP session | HNAP | Implicit — `uid` cookie + `HNAP_AUTH` header |
@@ -484,15 +573,19 @@ batching details.
 
 Parsing has three distinct roles:
 
-**`BaseParser` (ABC)** — the extraction interface. Seven format-specific
+**`BaseParser` (ABC)** — the extraction interface. Eight format-specific
 implementations: `HTMLTableParser`, `HTMLTableTransposedParser`,
-`HTMLFieldsParser`, `JSEmbeddedParser`, `HNAPParser`, and
+`HTMLFieldsParser`, `JSEmbeddedParser`, `JSJsonParser`, `HNAPParser`, and
 `StructuredParser` (ABC) with two subclasses — `JSONParser` and
 `XMLParser`. Both structured formats receive `dict` from the loader
 (via `json.loads()` or `xmltodict.parse()`); `StructuredParser` holds
 the shared dict-path extraction pipeline, while `XMLParser` adds
 normalization for xmltodict quirks (`@attribute` keys, `#text`
-unwrapping, single-element list coercion).
+unwrapping, single-element list coercion). `JSJsonParser` extracts
+JSON arrays from JavaScript variable assignments
+(`varName = [{...}];`) inside `<script>` tags — distinct from
+`JSEmbeddedParser` which handles pipe-delimited `tagValueList` strings.
+It reuses `JSONParser`'s field extraction and channel type logic.
 Each takes section config + resources and returns extracted data
 (channel list or system_info dict). Field normalization (type
 conversion, unit stripping, frequency normalization), channel type
@@ -525,14 +618,14 @@ ModemParserCoordinator.parse(resources)
   assemble → ModemData
 ```
 
-Seven extraction formats in two tiers. Six general-purpose formats
-(`table`, `table_transposed`, `javascript`, `hnap`, `json`, `xml`) are
-valid for any section. One section-level format (`html_fields`) is valid
-only for `system_info` sources. Format selection is per-section — a modem's
-`downstream` can use `table_transposed` while its `system_info` uses
-`html_fields` or `javascript`. `parser.yaml` declares the format and
-field mappings per section. Capabilities are implicit — the presence of
-a mapping IS the capability declaration.
+Eight extraction formats in two tiers. Seven general-purpose formats
+(`table`, `table_transposed`, `javascript`, `javascript_json`, `hnap`,
+`json`, `xml`) are valid for any section. One section-level format
+(`html_fields`) is valid only for `system_info` sources. Format selection
+is per-section — a modem's `downstream` can use `table_transposed` while
+its `system_info` uses `html_fields` or `javascript`. `parser.yaml`
+declares the format and field mappings per section. Capabilities are
+implicit — the presence of a mapping IS the capability declaration.
 
 See `PARSING_SPEC.md` for the full specification: per-section format
 selection, parser.yaml schema per format, parser.py post-processing
@@ -669,6 +762,155 @@ No dict intermediary, no generic `AuthConfig` bag of optional fields,
 no `SessionConfig` — session state is handled by the runner after auth
 completes. The dataclass IS the runtime config — the strategy accepts
 exactly the type the loader produces.
+
+---
+
+## Core Extraction Pipeline
+
+The extraction pipeline is the core data path — it runs identically at
+runtime (against a real modem) and during testing (against a HAR mock
+server). The only difference is the server: real network endpoint vs
+localhost replay. Every other component — auth, loaders, coordinator,
+parsers — is the same code on the same path.
+
+```
+Auth Manager ──▶ Resource Loader ──▶ Coordinator + Parsers ──▶ Post-Parse Filters ──▶ ModemData
+     │                  │                     │                       │
+     ▼                  ▼                     ▼                       ▼
+ AuthResult         resources dict      parsed channels         filtered channels
+ (session,          {path: content}     + system_info           + system_info
+  cookies,
+  private_key)
+```
+
+### Stage 1: Authentication
+
+**Input:** modem.yaml (auth config), session, base URL, credentials
+**Output:** `AuthResult` (success/failure, session cookies, auth context)
+**Component:** `auth.factory.create_auth_manager()` → strategy-specific adapter
+
+The auth manager is created from modem.yaml's `auth` block. It configures
+the session (headers, cookies), then authenticates against the server. On
+success, the session carries auth state (cookies, tokens) for subsequent
+requests. HNAP auth also produces a `private_key` for request signing.
+
+### Stage 2: Resource Loading
+
+**Input:** parser.yaml (resource URLs), authenticated session, base URL
+**Output:** `resources` dict — `{url_path: content}`
+**Component:** `HTTPResourceLoader` or `HNAPLoader`
+
+Two transport paths, selected by `modem.yaml.transport`:
+
+**HTTP transport** (`HTTPResourceLoader`):
+- Derives fetch targets from parser.yaml via `collect_fetch_targets()`
+- Fetches each resource URL independently over HTTP
+- HTML responses → `BeautifulSoup` objects
+- JSON responses → parsed dicts
+- URL token modems append session token to query string
+
+**HNAP transport** (`HNAPLoader`):
+- Derives HNAP action names from parser.yaml response keys
+- Sends a single batched SOAP POST to `/HNAP1/`
+- Signs request with HMAC (MD5 or SHA256) using the private key from auth
+- Returns `{"hnap_response": {merged_action_responses}}`
+
+### Stage 3: Parsing
+
+**Input:** `resources` dict, parser.yaml, parser.py (optional)
+**Output:** `ModemData` dict — `{downstream: [...], upstream: [...], system_info: {...}}`
+**Component:** `ModemParserCoordinator`
+
+The coordinator iterates parser.yaml sections (downstream, upstream,
+system_info). For each section, it selects the format-specific parser
+based on the `format` field:
+
+| Format | Parser | Input Type |
+|--------|--------|------------|
+| `table` | `HTMLTableParser` | BeautifulSoup |
+| `table_transposed` | `HTMLTableTransposedParser` | BeautifulSoup |
+| `javascript` | `JSEmbeddedParser` | BeautifulSoup (script tags) |
+| `javascript_json` | `JSJsonParser` | BeautifulSoup (script tags) |
+| `json` | `JsonParser` | dict |
+| `hnap` | `HNAPParser` | dict (hnap_response) |
+| `html_fields` | `HTMLFieldsParser` | BeautifulSoup |
+
+Each parser extracts channels (list of field dicts) or system_info
+(flat field dict) from the resource content using the field mappings
+in parser.yaml.
+
+If a `parser.py` post-processor exists, its `PostProcessor.process()`
+method runs after the config-driven extraction, allowing custom logic
+that parser.yaml can't express.
+
+### Stage 4: Post-Parse Filtering
+
+**Input:** `ModemData` dict, modem.yaml behaviors config
+**Output:** filtered `ModemData` dict
+**Component:** `filter_restart_window()`
+
+Optional. If modem.yaml declares `behaviors.zero_power_reported` and
+`behaviors.restart.window_seconds`, channels with zero power during
+the restart window are filtered out.
+
+### Test Harness: Same Pipeline, Mock Server
+
+The test harness (`testing/runner.py`) exercises this exact pipeline.
+The substitution:
+
+| Runtime | Test |
+|---------|------|
+| Real modem at `192.168.100.1` | `HARMockServer` on localhost |
+| User-provided credentials | Fixed `admin`/`password` |
+| Live HTTP/HNAP responses | HAR-captured response replay |
+
+Everything else is identical — same auth factory, same loaders, same
+coordinator, same parsers. The mock server:
+
+1. Builds a route table from HAR response bodies
+2. Creates an auth handler from modem.yaml (simulates the modem's auth)
+3. Serves responses on an ephemeral localhost port
+4. The pipeline runs against this server as if it were a real modem
+
+**Golden file comparison** follows the pipeline: the output `ModemData`
+is compared field-by-field against the committed `modem.expected.json`.
+Zero diffs = pipeline produces the same output as when the golden file
+was reviewed and committed. Any diff is a regression.
+
+When a test runs, the actual pipeline output is written to
+`modem.actual.json` alongside the HAR file. On pass, the file is
+cleaned up. On failure, the file persists for inspection and
+side-by-side diffing against the golden file. These files are
+gitignored (`*.actual.json`) and never committed.
+
+**Golden file trust assumption:** The golden file is reviewed once by a
+human during the intake process and then becomes the regression baseline.
+All future test runs validate against it. If the initial HAR
+interpretation is incorrect — wrong field mapping, misidentified format,
+bad channel_type inference — the tests will reinforce the incorrect
+output indefinitely. The golden file review during intake is the critical
+correctness gate. After commit, the regression only guards against drift
+from whatever was committed, right or wrong. This is by design — the
+intake process (MCP scaffolding + LLM iteration + human review) is where
+correctness must be established.
+
+### Two Regression Scopes
+
+**Core regression** — committed configs through the extraction pipeline:
+- Uses committed modem.yaml + parser.yaml + parser.py
+- Runs HAR through mock server → auth → load → parse → golden file comparison
+- Tests: does the existing, working system still work?
+- Implemented by: catalog test suite (auto-discovered HAR/golden file pairs)
+- Pass criteria: zero golden file drift
+
+**MCP regression** — MCP-generated configs through the extraction pipeline:
+- Uses HAR → MCP intake pipeline → generated modem.yaml + parser.yaml
+- Overwrites committed configs with generated versions
+- Runs same extraction pipeline → golden file comparison
+- Tests: can the MCP pipeline reproduce working configs from a HAR alone?
+- Pass criteria: zero golden file drift (MCP output = manual curation)
+- Current state: significant drift (pipeline gaps in field mapping, type
+  normalization, channel type inference, format-specific extraction)
 
 ---
 

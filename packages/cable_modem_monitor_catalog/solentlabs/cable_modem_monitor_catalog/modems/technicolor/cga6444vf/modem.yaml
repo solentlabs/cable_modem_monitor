@@ -22,12 +22,12 @@ session:
 
 hardware:
   docsis_version: "3.1"
-  chipset: "Broadcom"
+  chipset: unknown
 
 status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture (#120) — PBKDF2 double-hash auth"
+  auth_config: "[#120 CGA6444VF](https://github.com/solentlabs/cable_modem_monitor/issues/120) — PBKDF2 double-hash auth"
 
 attribution:
   contributors:
@@ -49,4 +49,4 @@ notes: |
 
 references:
   issues:
-    - 120
+    - "[#120 — [Modem Request] Vodafone WiFi 6 Station (CGA6444VF)](https://github.com/solentlabs/cable_modem_monitor/issues/120)"

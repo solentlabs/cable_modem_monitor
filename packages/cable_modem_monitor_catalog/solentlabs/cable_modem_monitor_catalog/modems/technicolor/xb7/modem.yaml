@@ -21,16 +21,18 @@ session:
 hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
+  release_date: "2020"
 
-status: verified
+status: awaiting_verification
 
 sources:
-  auth_config: "HAR capture and diagnostics from issue #2"
+  auth_config: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
 
+  detection_hints: "[#2 Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
 attribution:
   contributors:
     - github: esand
-      contribution: "Initial XB7 support and fixture capture"
+      contribution: "[Issue #2](https://github.com/solentlabs/cable_modem_monitor/issues/2) verification"
 
 isps:
   - Rogers
@@ -38,14 +40,15 @@ isps:
   - Xfinity
 
 notes: |
-  DOCSIS 3.1 gateway (CGM4331COM). Transposed table format: rows are
-  metrics, columns are channels. Separate error codewords table merged
-  via merge_by. System info from readonlyLabel spans.
+  DOCSIS 3.1 cable modem + router gateway (CGM4331COM).
+  Transposed table format: rows are metrics, columns are channels.
   Default IP: 10.0.0.1 (router mode) or 192.168.100.1 (modem mode).
-
+  Form-based authentication to /check.jst endpoint.
+  System uptime format: "X days Xh: Xm: Xs" (note spaces around colons).
+  May have localized variants (Italian translations found in Rogers/Italian market).
 references:
   issues:
-    - 2
-    - 5
-    - 25
-    - 107
+    - "[#2 — Add support for Technicolor XB7](https://github.com/solentlabs/cable_modem_monitor/issues/2)"
+    - "[#5 — Login timeouts not handled or debug info being logged w/out debug enabled](https://github.com/solentlabs/cable_modem_monitor/issues/5)"
+    - "[#25 — [Bug]: Blocking call to load_default_certs](https://github.com/solentlabs/cable_modem_monitor/issues/25)"
+    - "[#107 — [Bug]: Parser error on XB7 with new auth code](https://github.com/solentlabs/cable_modem_monitor/issues/107)"

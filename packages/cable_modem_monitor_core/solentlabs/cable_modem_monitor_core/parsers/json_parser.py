@@ -188,6 +188,12 @@ def _extract_channel(
             channel[mapping.field] = raw_value == mapping.truthy
             continue
 
+        # Apply separator split before type conversion
+        if mapping.separator and isinstance(raw_value, str):
+            parts = raw_value.split(mapping.separator)
+            idx = mapping.separator_index
+            raw_value = parts[idx] if idx < len(parts) else raw_value
+
         value = convert_value(
             raw_value,
             mapping.type,

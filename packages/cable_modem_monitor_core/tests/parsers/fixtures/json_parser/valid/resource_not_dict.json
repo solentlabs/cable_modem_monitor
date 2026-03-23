@@ -1,0 +1,14 @@
+{
+  "_description": "Resource is a list, not a dict — returns empty list with warning",
+  "_json": [1, 2, 3],
+  "_resource": "/api/downstream",
+  "_config": {
+    "format": "json",
+    "resource": "/api/downstream",
+    "array_path": "channels",
+    "fields": [
+      {"key": "id", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

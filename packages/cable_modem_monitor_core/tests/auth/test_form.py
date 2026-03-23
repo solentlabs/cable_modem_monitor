@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+from unittest.mock import patch
 
+import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.form import (
     FormAuthManager,
@@ -149,3 +151,91 @@ class TestFormAuthManager:
 
             result = manager.authenticate(session, server.base_url, "admin", "password")
             assert result.success is True
+
+    def test_401_no_success_criteria(self, session: requests.Session) -> None:
+        """401 response with no success criteria returns auth failure."""
+        entries, modem_config = load_auth_fixture("har_form_login_401.json")
+
+        with HARMockServer(entries, modem_config=modem_config) as server:
+            config = FormAuth(strategy="form", action="/goform/login")
+            manager = FormAuthManager(config)
+            manager.configure_session(session, {})
+
+            result = manager.authenticate(session, server.base_url, "admin", "password")
+            assert result.success is False
+            assert "401" in result.error
+
+    def test_redirect_mismatch(self, session: requests.Session) -> None:
+        """Redirect mismatch returns auth failure with path details."""
+        entries, modem_config = load_auth_fixture("har_form_login_redirect.json")
+
+        with HARMockServer(entries, modem_config=modem_config) as server:
+            config = FormAuth(
+                strategy="form",
+                action="/goform/login",
+                success=FormSuccess(redirect="/dashboard"),
+            )
+            manager = FormAuthManager(config)
+            manager.configure_session(session, {})
+
+            result = manager.authenticate(session, server.base_url, "admin", "password")
+            assert result.success is False
+            assert "redirect mismatch" in result.error.lower()
+            assert "/dashboard" in result.error
+
+
+# ---------------------------------------------------------------------------
+# Network error paths — table-driven
+# ---------------------------------------------------------------------------
+
+# ┌──────────────────────────┬─────────────────────────────┬──────────────────────────┐
+# │ scenario                 │ config                      │ expected error fragment   │
+# ├──────────────────────────┼─────────────────────────────┼──────────────────────────┤
+# │ login page prefetch fail │ login_page="/login.html"    │ "pre-fetch failed"       │
+# │ login POST fail          │ no login_page               │ "POST failed"            │
+# └──────────────────────────┴─────────────────────────────┴──────────────────────────┘
+
+# fmt: off
+NETWORK_ERROR_CASES = [
+    # (description,               login_page,    mock_method, expected_error)
+    ("login_page_prefetch_fail",  "/login.html", "get",       "pre-fetch failed"),
+    ("login_post_fail",           "",            "request",   "POST failed"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "desc,login_page,mock_method,expected_error",
+    NETWORK_ERROR_CASES,
+    ids=[c[0] for c in NETWORK_ERROR_CASES],
+)
+def test_network_error(
+    session: requests.Session,
+    desc: str,
+    login_page: str,
+    mock_method: str,
+    expected_error: str,
+) -> None:
+    """Network errors during auth are captured, not raised."""
+    config = FormAuth(
+        strategy="form",
+        action="/goform/login",
+        login_page=login_page,
+    )
+    manager = FormAuthManager(config)
+    manager.configure_session(session, {})
+
+    with patch.object(
+        session,
+        mock_method,
+        side_effect=requests.ConnectionError("refused"),
+    ):
+        result = manager.authenticate(
+            session,
+            "http://192.168.100.1",
+            "admin",
+            "password",
+        )
+
+    assert result.success is False
+    assert expected_error in result.error

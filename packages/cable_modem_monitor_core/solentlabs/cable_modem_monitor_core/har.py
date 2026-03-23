@@ -172,7 +172,12 @@ def _build_http_resources(
                 continue
 
         mime_type = content.get("mimeType", "")
-        if _is_html_content(mime_type, text):
+        if _is_json_content(mime_type):
+            try:
+                resources[url_path] = json.loads(text)
+            except (ValueError, TypeError):
+                _logger.debug("Failed to parse JSON for %s", url_path)
+        elif _is_html_content(mime_type, text):
             resources[url_path] = BeautifulSoup(text, "html.parser")
 
     return resources
@@ -197,6 +202,11 @@ def _merge_action_keys(
     for key, value in hnap_resp.items():
         if key != "GetMultipleHNAPsResult":
             merged[key] = value
+
+
+def _is_json_content(mime_type: str) -> bool:
+    """Check if content is JSON based on MIME type."""
+    return "json" in mime_type.lower()
 
 
 def _is_html_content(mime_type: str, text: str) -> bool:

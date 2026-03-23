@@ -8,16 +8,17 @@ auth:
 
 hardware:
   docsis_version: "3.0"
-  chipset: "Broadcom"
+  chipset: Intel Puma 6
 
 sources:
-  auth_config: "HAR capture — no login required"
+  auth_config: "[#112 TM1602A HAR capture](https://github.com/solentlabs/cable_modem_monitor/issues/112) — no login required"
+  chipset: "[TechInfoDepot](https://techinfodepot.shoutwiki.com/wiki/Arris_TM1602A)"
 
 status: awaiting_verification
 
 attribution:
   contributors:
-    - github: unknown
+    - github: jontires
       contribution: "HAR capture (Issue #112)"
 
 isps:
@@ -32,4 +33,4 @@ notes: |
 
 references:
   issues:
-    - 112
+    - "[#112 — [Modem Request] Arris TM1602A](https://github.com/solentlabs/cable_modem_monitor/issues/112)"

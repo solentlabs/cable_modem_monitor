@@ -9,16 +9,18 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
+  release_date: "2016"
 
 status: awaiting_verification
 
 sources:
-  auth_config: "#61"
+  auth_config: "[#61 C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
 
+  detection_hints: "[#61 C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"
 attribution:
   contributors:
     - github: Anthranilic
-      contribution: "HAR capture and diagnostics"
+      contribution: "[Issue #61](https://github.com/solentlabs/cable_modem_monitor/issues/61) diagnostics"
 
 isps:
   - Comcast
@@ -33,4 +35,4 @@ notes: |
 
 references:
   issues:
-    - 61
+    - "[#61 — [Modem Request] C7000v2](https://github.com/solentlabs/cable_modem_monitor/issues/61)"

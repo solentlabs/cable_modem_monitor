@@ -12,19 +12,22 @@ auth:
 hardware:
   docsis_version: "3.0"
   chipset: "Intel Puma 5"
+  release_date: "2011"
 
 sources:
   chipset: "https://techinfodepot.shoutwiki.com/wiki/Arris_CM820A"
   auth_config: "Synthetic HAR — no login required"
 
+  detection_hints: "[PR #57 CM820B parser](https://github.com/solentlabs/cable_modem_monitor/pull/57)"
 status: awaiting_verification
 
 attribution:
   contributors:
     - github: dimkalinux
-      contribution: "Initial fixture and parser"
+      contribution: "[PR #57](https://github.com/solentlabs/cable_modem_monitor/pull/57) verification"
 
 isps:
+  - Volya
   - Various
 
 notes: |
@@ -35,4 +38,4 @@ notes: |
   parser.py post-processor to parse the "System:" blob.
 references:
   prs:
-    - 57
+    - "[PR #57 — Added support for Arris CM820B modem.](https://github.com/solentlabs/cable_modem_monitor/pull/57)"

@@ -1,33 +1,96 @@
 # TG3442DE parser config.
 #
-# Data is in JSON arrays assigned to JS variables inside <script> tags
-# at /php/status_docsis_data.php.  The "javascript" format ensures the
-# resource is fetched and parsed as HTML (BeautifulSoup).  The JS
-# embedded parser finds no matching function bodies, so channels are
-# empty — parser.py PostProcessor does the actual extraction from
-# json_dsData / json_usData variables in the script block.
+# Channel data is in JSON arrays assigned to JS variables inside <script>
+# tags at /php/status_docsis_data.php.  The js_json format extracts these
+# directly. Lock status values (OPERATE, SUCCESS, ACTIVE) are mapped to
+# Core-standard values before conversion. PowerLevel is "dBmV/dBuV" —
+# the separator takes the first value (dBmV). Channel type values
+# (SC-QAM, OFDM, OFDMA) are mapped to canonical names via field map.
+#
+# System info (js_FWVersion) is extracted by parser.py PostProcessor
+# because the variable is a simple assignment, not a tagValueList.
 
 downstream:
-  format: javascript
+  format: javascript_json
   resource: "/php/status_docsis_data.php"
-  functions: []
+  variable: "json_dsData"
+  mappings:
+    - key: ChannelID
+      field: channel_id
+      type: integer
+    - key: Frequency
+      field: frequency
+      type: frequency
+    - key: SNRLevel
+      field: snr
+      type: float
+    - key: Modulation
+      field: modulation
+      type: string
+    - key: LockStatus
+      field: lock_status
+      type: lock_status
+      map:
+        "OPERATE": "Locked"
+        "SUCCESS": "Locked"
+        "ACTIVE": "Active"
+    - key: ChannelType
+      field: channel_type
+      type: string
+      map:
+        "SC-QAM": "qam"
+        "OFDM": "ofdm"
+    - key: PowerLevel
+      field: power
+      type: float
+      separator: "/"
+      separator_index: 0
+  filter:
+    lock_status: "locked"
 
 upstream:
-  format: javascript
+  format: javascript_json
   resource: "/php/status_docsis_data.php"
-  functions: []
+  variable: "json_usData"
+  mappings:
+    - key: ChannelID
+      field: channel_id
+      type: integer
+    - key: Frequency
+      field: frequency
+      type: frequency
+    - key: Modulation
+      field: modulation
+      type: string
+    - key: LockStatus
+      field: lock_status
+      type: lock_status
+      map:
+        "OPERATE": "Locked"
+        "SUCCESS": "Locked"
+        "ACTIVE": "Active"
+    - key: ChannelType
+      field: channel_type
+      type: string
+      map:
+        "SC-QAM": "qam"
+        "OFDM": "ofdm"
+        "OFDMA": "ofdma"
+    - key: PowerLevel
+      field: power
+      type: float
+      separator: "/"
+      separator_index: 0
+  filter:
+    lock_status: "locked"
 
 # System info: firmware version from status_about_data.php.
-# The JS variable js_FWVersion is extracted by parser.py PostProcessor.
-# Placeholder field triggers the resource fetch.
+# The js_FWVersion variable is a simple 'var x = value' assignment,
+# not a tagValueList — extracted by parser.py PostProcessor.
+# This dummy source triggers the resource fetch so the PostProcessor
+# can access it.
 system_info:
   sources:
-    - format: javascript
+    - format: html_fields
       resource: "/php/status_about_data.php"
-      functions:
-        - name: "_unused"
-          delimiter: "|"
-          fields:
-            - offset: 0
-              field: software_version
-              type: string
+      fields: []

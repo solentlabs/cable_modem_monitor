@@ -1,0 +1,18 @@
+{
+  "_description": "Value at array_path is a dict, not a list — returns empty with warning",
+  "_json": {
+    "downstream": {
+      "channels": {"type": "not_a_list"}
+    }
+  },
+  "_resource": "/api/downstream",
+  "_config": {
+    "format": "json",
+    "resource": "/api/downstream",
+    "array_path": "downstream.channels",
+    "fields": [
+      {"key": "id", "field": "channel_id", "type": "integer"}
+    ]
+  },
+  "_expected": []
+}

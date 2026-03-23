@@ -1,0 +1,23 @@
+{
+  "_description": "Top-level tagValueList — no function wrapper, name is empty string",
+  "_html": "<html><body><script>var tagValueList = 'HW_V2|FW_1.0.3|SN12345|MAC00:11:22:33:44:55'</script></body></html>",
+  "_resource": "/status.html",
+  "_config": {
+    "format": "javascript",
+    "resource": "/status.html",
+    "functions": [
+      {
+        "name": "",
+        "delimiter": "|",
+        "fields": [
+          {"offset": 0, "field": "hardware_version", "type": "string"},
+          {"offset": 1, "field": "software_version", "type": "string"}
+        ]
+      }
+    ]
+  },
+  "_expected": {
+    "hardware_version": "HW_V2",
+    "software_version": "FW_1.0.3"
+  }
+}

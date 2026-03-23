@@ -1,14 +1,13 @@
-"""Post-processor for ARRIS CM3500B.
+"""Post-processor for ARRIS CM3500B — OFDM channel enrichment.
 
-Handles three things that parser.yaml cannot express:
+Handles two things that parser.yaml cannot express:
 
 1. **OFDM center frequency** — computed from first/last subcarrier
    frequencies (both in MHz, averaged and converted to Hz).
 2. **OFDM channel ID formatting** — ``OFDM-N`` / ``OFDMA-N`` from
    the label text (``"Downstream 1"`` → ``"OFDM-1"``).
-3. **System info extraction** — the html_fields parser's label cascade
-   hits wrapper ``<div>`` elements on this page before the correct
-   ``<td>`` cells. Direct BeautifulSoup search is needed.
+
+System info extraction is handled by parser.yaml (html_fields format).
 """
 
 from __future__ import annotations
@@ -16,18 +15,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from bs4 import Tag
-
 # Regex to extract channel number from OFDM label ("Downstream 1" → "1")
 _LABEL_RE = re.compile(r"(?:Downstream|Upstream)\s*(\d+)")
-
-# Label → output field name for system_info extraction.
-_SYSTEM_INFO_LABELS: dict[str, str] = {
-    "System Uptime": "system_uptime",
-    "CM Status": "cm_status",
-    "Time and Date": "current_time",
-    "Hardware Model": "hardware_version",
-}
 
 
 class PostProcessor:
@@ -54,29 +43,6 @@ class PostProcessor:
             if ch.get("channel_type") == "ofdma":
                 _enrich_ofdm_channel(ch, prefix="OFDMA")
         return channels
-
-    def parse_system_info(
-        self,
-        system_info: dict[str, Any],
-        resources: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Extract system info via direct BeautifulSoup search.
-
-        The html_fields parser hits wrapper divs on this page, so
-        system_info extraction is handled here instead.
-        """
-        soup = resources.get("/cgi-bin/status_cgi")
-        if soup is None:
-            return system_info
-
-        for label_text, field_name in _SYSTEM_INFO_LABELS.items():
-            td = soup.find("td", string=re.compile(re.escape(label_text), re.I))
-            if td and isinstance(td, Tag):
-                value_td = td.find_next_sibling("td")
-                if value_td and isinstance(value_td, Tag):
-                    system_info[field_name] = value_td.get_text(strip=True)
-
-        return system_info
 
 
 def _enrich_ofdm_channel(channel: dict[str, Any], *, prefix: str) -> None:

@@ -47,5 +47,5 @@ notes: |
   Session maintained via "credential" cookie (path: /cgi-bin/).
 references:
   issues:
-    - 83
-    - 93
+    - "[#83 — [Bug]: SB6190 parser error](https://github.com/solentlabs/cable_modem_monitor/issues/83)"
+    - "[#93 — Arris SB6190](https://github.com/solentlabs/cable_modem_monitor/issues/93)"

@@ -153,8 +153,8 @@ class TestRelationships:
         """References section contains both issues and PRs."""
         config = _load("with_optional_identity.json")
         assert config.references is not None
-        assert config.references.issues == [42, 81]
-        assert config.references.prs == [57]
+        assert config.references.issues == ["ref-1", "ref-2"]
+        assert config.references.prs == ["ref-3"]
 
     def test_sources_freeform(self):
         """Sources is a freeform string dict."""
