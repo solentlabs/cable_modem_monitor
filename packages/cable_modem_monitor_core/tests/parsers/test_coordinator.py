@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config import ParserConfig
 from solentlabs.cable_modem_monitor_core.parsers.coordinator import (
     ModemParserCoordinator,
+)
+from solentlabs.cable_modem_monitor_core.parsers.registries import (
     _merge_channels,
 )
 

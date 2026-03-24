@@ -885,7 +885,7 @@ the restart window are filtered out.
 
 ### Test Harness: Same Pipeline, Mock Server
 
-The test harness (`testing/runner.py`) exercises this exact pipeline.
+The test harness (`test_harness/runner.py`) exercises this exact pipeline.
 The substitution:
 
 | Runtime | Test |

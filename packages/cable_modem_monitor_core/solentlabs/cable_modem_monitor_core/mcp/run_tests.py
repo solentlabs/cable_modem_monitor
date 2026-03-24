@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..testing.discovery import discover_modem_tests
-from ..testing.runner import TestResult, run_modem_test
+from ..test_harness.discovery import discover_modem_tests
+from ..test_harness.runner import TestResult, run_modem_test
 
 
 @dataclass

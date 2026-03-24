@@ -45,6 +45,11 @@ class HTTPResourceLoader:
             strategies).
         token_prefix: Token prefix from ``session.token_prefix``
             (e.g., ``ct_``).
+        detect_login_pages: When True, check HTML responses for login
+            page indicators (``<input type="password">``). Raises
+            ``LoginPageDetectedError`` if detected. Enable for
+            form-based auth strategies where the modem silently serves
+            a login page at data URLs when the session expires.
     """
 
     def __init__(
@@ -54,12 +59,14 @@ class HTTPResourceLoader:
         timeout: int = 10,
         url_token: str = "",
         token_prefix: str = "",
+        detect_login_pages: bool = False,
     ) -> None:
         self._session = session
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._url_token = url_token
         self._token_prefix = token_prefix
+        self._detect_login_pages = detect_login_pages
 
     def fetch(
         self,
@@ -117,15 +124,35 @@ class HTTPResourceLoader:
                     f"Failed to fetch {target.path}: {e}",
                 ) from e
 
-            if response.status_code == 401:
+            if response.status_code in (401, 403):
                 raise ResourceLoadError(
-                    f"Auth failed fetching {target.path}: 401 Unauthorized " f"(session may have expired)",
+                    f"HTTP {response.status_code} on {target.path}" " — session likely expired",
+                    status_code=response.status_code,
+                    path=target.path,
                 )
 
             if response.status_code >= 400:
                 raise ResourceLoadError(
                     f"HTTP {response.status_code} fetching {target.path}",
+                    status_code=response.status_code,
+                    path=target.path,
                 )
+
+            # Login page detection — data pages should never contain
+            # a password input field. If one is present, the modem
+            # silently served a login page instead of data (session
+            # expired with HTTP 200).
+            if (
+                self._detect_login_pages
+                and response.status_code == 200
+                and target.format in _HTML_FORMATS
+                and _is_login_page(response.text)
+            ):
+                _logger.warning(
+                    "Data page %s appears to be a login page",
+                    target.path,
+                )
+                raise LoginPageDetectedError(target.path)
 
             decoded = _decode_response(
                 response.text,
@@ -155,7 +182,39 @@ class HTTPResourceLoader:
 
 
 class ResourceLoadError(Exception):
-    """A resource could not be fetched from the modem."""
+    """A resource could not be fetched from the modem.
+
+    Attributes:
+        status_code: HTTP status code if the error was an HTTP response.
+            None for connection/timeout errors.
+        path: Resource path that failed (e.g., "/status.html").
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        path: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.path = path
+
+
+class LoginPageDetectedError(ResourceLoadError):
+    """Data page response contains login form indicators.
+
+    The modem served a login page at a data URL -- the session has
+    expired silently (HTTP 200, but body is a login form instead of
+    data). Maps to CollectorSignal.LOAD_AUTH.
+    """
+
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            f"Data page {path} appears to be a login page",
+            status_code=200,
+            path=path,
+        )
 
 
 def _decode_response(
@@ -205,3 +264,17 @@ def _decode_response(
 
     _logger.warning("Unknown format '%s', returning as BeautifulSoup", fmt)
     return BeautifulSoup(text, "html.parser")
+
+
+def _is_login_page(text: str) -> bool:
+    """Check if an HTML response contains login form indicators.
+
+    Data pages from parser.yaml (status, connection, channel info)
+    do not contain password input fields. Login pages always do.
+    This invariant enables login page detection without
+    modem-specific configuration.
+
+    See RESOURCE_LOADING_SPEC.md Login Page Detection section.
+    """
+    lower = text.lower()
+    return 'type="password"' in lower or "type='password'" in lower

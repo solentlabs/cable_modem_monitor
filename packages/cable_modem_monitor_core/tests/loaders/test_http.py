@@ -14,7 +14,7 @@ from solentlabs.cable_modem_monitor_core.loaders.http import (
     ResourceLoadError,
     _decode_response,
 )
-from solentlabs.cable_modem_monitor_core.testing import HARMockServer
+from solentlabs.cable_modem_monitor_core.test_harness import HARMockServer
 
 
 def _build_entries(

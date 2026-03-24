@@ -17,7 +17,7 @@ import pytest
 from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import (
     JSONSystemInfoSource,
 )
-from solentlabs.cable_modem_monitor_core.parsers.json_system_info import (
+from solentlabs.cable_modem_monitor_core.parsers.formats.json_system_info import (
     JSONSystemInfoParser,
 )
 

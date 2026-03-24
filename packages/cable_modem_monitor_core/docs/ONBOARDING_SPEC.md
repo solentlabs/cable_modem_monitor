@@ -831,7 +831,7 @@ modem directories:
 
 ```python
 # packages/cable_modem_monitor_catalog/tests/conftest.py
-from solentlabs.cable_modem_monitor_core.testing import discover_modem_tests
+from solentlabs.cable_modem_monitor_core.test_harness import discover_modem_tests
 
 # Auto-discover all modem test cases from the catalog
 pytest_plugins = []
@@ -845,7 +845,7 @@ def pytest_generate_tests(metafunc):
 
 ```python
 # packages/cable_modem_monitor_catalog/tests/test_modems.py
-from solentlabs.cable_modem_monitor_core.testing import run_modem_test
+from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test
 
 def test_modem_har_replay(modem_test_case):
     """Each modem's HAR replay produces expected output."""

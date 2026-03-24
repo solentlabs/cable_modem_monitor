@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from solentlabs.cable_modem_monitor_core.models.parser_config.hnap import HNAPSection
-from solentlabs.cable_modem_monitor_core.parsers.hnap import HNAPParser
+from solentlabs.cable_modem_monitor_core.parsers.formats.hnap import HNAPParser
 
 
 def _make_config(**overrides: Any) -> HNAPSection:

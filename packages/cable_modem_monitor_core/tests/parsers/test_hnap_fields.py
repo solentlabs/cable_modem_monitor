@@ -6,7 +6,7 @@ from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import
     HNAPFieldMapping,
     HNAPSystemInfoSource,
 )
-from solentlabs.cable_modem_monitor_core.parsers.hnap_fields import HNAPFieldsParser
+from solentlabs.cable_modem_monitor_core.parsers.formats.hnap_fields import HNAPFieldsParser
 
 
 def _make_source(

@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.transposed import (
     TransposedTableDefinition,
 )
-from solentlabs.cable_modem_monitor_core.parsers.html_table_transposed import (
+from solentlabs.cable_modem_monitor_core.parsers.formats.html_table_transposed import (
     HTMLTableTransposedParser,
 )
 

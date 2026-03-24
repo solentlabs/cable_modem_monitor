@@ -1,0 +1,48 @@
+{
+  "_description": "HAR entries for a form-auth modem with login, data pages, logout, and restart",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/login",
+        "postData": {"text": "username=admin&password=secret"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [{"name": "Set-Cookie", "value": "session=abc123; Path=/"}],
+        "content": {"text": "Login successful"}
+      }
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+      "response": {"status": 200, "headers": [], "content": {"text": "<html>DS data</html>"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/info.html"},
+      "response": {"status": 200, "headers": [], "content": {"text": "<html>System info</html>"}}
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.100.1/goform/logout"
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Logged out"}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/restart",
+        "postData": {"text": "restart=1"}
+      },
+      "response": {
+        "status": 200,
+        "headers": [],
+        "content": {"text": "Restarting"}
+      }
+    }
+  ]
+}

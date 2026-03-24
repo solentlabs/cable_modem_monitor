@@ -5,7 +5,7 @@ from __future__ import annotations
 import requests
 from solentlabs.cable_modem_monitor_core.auth.basic import BasicAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import BasicAuth
-from solentlabs.cable_modem_monitor_core.testing import HARMockServer
+from solentlabs.cable_modem_monitor_core.test_harness import HARMockServer
 
 from .conftest import load_auth_fixture
 

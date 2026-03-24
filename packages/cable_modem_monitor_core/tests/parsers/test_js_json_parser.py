@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.js_json import (
     JSJsonSection,
 )
-from solentlabs.cable_modem_monitor_core.parsers.js_json_parser import JSJsonParser
+from solentlabs.cable_modem_monitor_core.parsers.formats.js_json_parser import JSJsonParser
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "js_json_parser"
 VALID_FIXTURES = sorted((FIXTURES_DIR / "valid").glob("*.json"))
