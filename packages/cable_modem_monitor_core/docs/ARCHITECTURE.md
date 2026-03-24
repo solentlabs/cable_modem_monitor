@@ -74,7 +74,7 @@ The complete engine. Given a path to modem files and user credentials, Core
 does everything: loads config, authenticates, fetches data, parses responses,
 coordinates the poll cycle, and recovers from errors. The orchestrator is a
 scheduler and policy engine that delegates to specialized components
-(DataPipeline, HealthMonitor, RestartMonitor) — each independently testable
+(ModemDataCollector, HealthMonitor, RestartMonitor) — each independently testable
 with a clear input→output contract. Platform-agnostic — no `homeassistant.*`
 imports, no catalog imports.
 
@@ -90,8 +90,8 @@ but modem-specific behavior comes from config, not from Core code.
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `hnap`, `url_token` |
 | Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON |
-| Orchestrator | Scheduler + policy: timing, signal→policy dispatch, serialized access |
-| DataPipeline | Single poll cycle: auth → load → parse → `ModemData` or signal |
+| Orchestrator | Policy engine: signal→policy dispatch, circuit breaker, status derivation |
+| ModemDataCollector | Single collection cycle: auth → load → parse → `ModemData` or signal |
 | HealthMonitor | Health probes on independent cadence → `HealthInfo` |
 | RestartMonitor | Two-phase restart recovery: wait for response → wait for channel sync |
 | Auth Manager | Strategy dispatch, session reuse, backoff |
@@ -633,21 +633,44 @@ contract, resource dict contract, and output format.
 
 ### Data Models
 
-Two core models with independent lifecycles:
+Two collection models with independent lifecycles:
 
 - **`ModemData`** — parsed modem data, updated on the data polling cadence
   - `downstream`, `upstream` — lists of `ChannelData`
   - `system_info` — `SystemInfo` fields
   - `docsis_lock_state` — derived from channel lock status during parsing
 - **`HealthInfo`** — operational health, updated on the health check cadence
-  - `ping_latency` — ICMP round-trip time
-  - `http_latency` — HTTP response time (captured during resource loading)
-  - `status` — derived composite state (see below)
+  - `icmp_latency_ms` — ICMP round-trip time
+  - `http_latency_ms` — HTTP probe response time (None when collection evidence suppresses the probe)
+  - `health_status` — derived composite state (see below)
 
 **Why two models?** Ping is lightweight. Parsing is heavy. A flaky modem
 may need fast heartbeats (ping every 30s) without hammering the web
 interface (data poll every 10 minutes). Each model has its own cadence and
 lifecycle.
+
+**`ModemSnapshot`** — return type of `get_modem_data()`, combining
+collection results with health and operational state:
+  - `modem_data` — `ModemData` from the collector (None on failure)
+  - `health_info` — latest `HealthInfo` from the health monitor (None if no monitor)
+  - `connection_status` — derived from pipeline outcome
+  - `docsis_status` — derived from channel lock states
+  - `aggregates` — computed aggregate fields (if configured)
+  - `collector_signal` — signal from the collector (OK on success)
+  - `error` — diagnostic message on failure
+
+**`OrchestratorMetrics`** — operational metrics snapshot from `metrics()`:
+  - `poll_duration` — wall-clock time of last collection in seconds
+  - `auth_failure_streak` — consecutive auth failures (0 = healthy)
+  - `circuit_breaker_open` — whether polling is stopped
+  - `session_is_valid` — current session state
+  - `resource_fetches` — list of `ResourceFetch` per resource
+  - `last_poll_timestamp` — monotonic time of last poll
+
+**`ResourceFetch`** — timing and size for a single resource fetch:
+  - `path` — resource path (e.g., "/status.html")
+  - `duration_ms` — fetch time in milliseconds
+  - `size_bytes` — response body size
 
 **`ChannelData`** — per-channel metrics for downstream and upstream:
   - Fixed fields: channel ID, frequency, power, SNR, lock status,
@@ -674,13 +697,20 @@ lifecycle.
 has (modem.yaml fields + catalog path). Consumers receive it ready-to-use
 — no derivation or URL construction needed downstream.
 
-**Status** is derived in `HealthInfo` from health check results and the
-last known `ModemData`:
+**Status** — three independent signals, each derived from different data:
 
-```
-Unresponsive → Degraded → Parser Error → No Signal →
-Not Locked → Partial Lock → ICMP Blocked → Operational
-```
+- `connection_status` (on `ModemSnapshot`) — from pipeline outcome:
+  channels present → `online`, zero channels → `no_signal`,
+  auth failure → `auth_failed`, timeout → `unreachable`
+- `docsis_status` (on `ModemSnapshot`) — from channel `lock_status`
+  fields: all locked → `operational`, some → `partial_lock`,
+  none → `not_locked`, no field → `unknown`
+- `health_status` (on `HealthInfo`) — from probe results:
+  both respond → `responsive`, ICMP only → `degraded`,
+  HTTP only → `icmp_blocked`, neither → `unresponsive`
+
+Consumers compose these into a display state. The HA integration's
+Status sensor uses a priority cascade — see `ENTITY_MODEL_SPEC.md`.
 
 **Capabilities are implicit.** A field mapping in parser.yaml or an
 override in parser.py declares the capability. If downstream channels
@@ -917,25 +947,26 @@ correctness must be established.
 ## Runtime Polling Loop
 
 After setup, the integration polls the modem on a user-configured cadence
-(default 10 minutes). The orchestrator is a scheduler and policy engine
-that delegates execution to three specialized components:
+(default 10 minutes). The orchestrator is a policy engine that delegates
+execution to three specialized components. Consumers own scheduling —
+HA uses DataUpdateCoordinator, CLI tools use a loop.
 
 ```
-Orchestrator (scheduler + policy)
- ├─ DataPipeline  — one poll cycle → ModemData | signal
- ├─ HealthMonitor — probe cycle → HealthInfo
- └─ RestartMonitor — recovery cycle → complete | timeout
+Orchestrator (policy + composition)
+ ├─ ModemDataCollector — one collection cycle → ModemData | signal
+ ├─ HealthMonitor      — probe cycle → HealthInfo
+ └─ RestartMonitor     — recovery cycle → complete | timeout
 ```
 
-**Orchestrator** — decides *when* to run things, *what to do* with results,
-and serializes access (one operation at a time). Owns all policy: retry,
-backoff, error recovery, state transitions. Does not contain pipeline
-mechanics.
+**Orchestrator** — decides *what to do* with results. Owns all policy:
+backoff, circuit breaker, error recovery, status derivation, state
+transitions. Does not own scheduling or threads. Consumers call
+`get_modem_data()` when they want data.
 
-**DataPipeline** — executes a single poll cycle: auth manager → resource
-loader → parser. Returns `ModemData` on success or a signal (auth failure,
-parse error, connectivity error) on failure. Stateless per invocation —
-the auth manager handles session reuse across calls.
+**ModemDataCollector** — executes a single collection cycle: auth manager
+→ resource loader → parser. Returns `ModemData` on success or a signal
+(auth failure, parse error, connectivity error) on failure. Stateless
+per invocation — the auth manager handles session reuse across calls.
 
 **HealthMonitor** — runs health probes (ICMP → HEAD → data poll fallback)
 on its own cadence, independent of data polling. Returns `HealthInfo`.

@@ -8,7 +8,7 @@ testable with a clear input→output contract.
 **Design principles:**
 - Protocol layers signal conditions; the orchestrator owns all policy
 - Sessions persist across polls — re-login is the exception, not the rule
-- One retry on stale session, then backoff — never cascade
+- Auth circuit breaker stops polling after persistent auth failures
 - Health monitoring runs independently from data polling
 
 ---
@@ -17,19 +17,19 @@ testable with a clear input→output contract.
 
 ```
 Orchestrator (scheduler + policy)
- ├─ DataPipeline  — one poll cycle → ModemData | signal
+ ├─ ModemDataCollector — one poll cycle → ModemData | signal
  ├─ HealthMonitor — probe cycle → HealthInfo
  └─ RestartMonitor — recovery cycle → complete | timeout
 ```
 
-**DataPipeline** executes a single poll cycle — the auth → load → parse
-sequence. It owns no scheduling or retry policy; it runs once and returns
-`ModemData` on success or a signal on failure. The orchestrator decides
-whether to retry, backoff, or report.
+**ModemDataCollector** executes a single poll cycle — the auth → load →
+parse sequence. It owns no scheduling or retry policy; it runs once and
+returns `ModemData` on success or a signal on failure. The orchestrator
+decides whether to retry, backoff, or report.
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ DataPipeline                                               │
+│ ModemDataCollector                                         │
 │                                                            │
 │  ┌──────────────┐    ┌─────────────────┐    ┌───────────┐  │
 │  │ Auth Manager │───►│ Resource Loader │───►│  Parser   │  │
@@ -51,7 +51,6 @@ whether to retry, backoff, or report.
   strategies verify `session.cookie_name` is present in the cookie jar;
   basic and none are stateless (always valid)
 - Backs off on failure (suppresses login for N polls after lockout)
-- Retries once on stale session (zero channels = session likely expired)
 - Executes `actions.logout` for single-session modems after each poll
 
 **Resource Loader** uses the authenticated session to fetch data:
@@ -70,10 +69,8 @@ loader behavior per transport, and URL construction details.
 - Instantiated once from the catalog package at startup, reused every poll
 
 **Orchestrator** owns scheduling, policy, and error recovery:
-- Invokes `DataPipeline` for each poll cycle
-- Detects stale sessions (zero channels with reused session) and
-  triggers one retry via the DataPipeline
-- Applies backoff on lockout, reports status
+- Invokes `ModemDataCollector` for each poll cycle
+- Applies backoff on lockout, circuit breaker on persistent auth failure
 - Coordinates `HealthMonitor` and `RestartMonitor` independently
 - Returns status codes: `online`, `auth_failed`, `parser_issue`,
   `unreachable`, `no_signal`
@@ -111,9 +108,8 @@ The orchestrator derives two status fields after each poll:
 | Condition | Value |
 |-----------|-------|
 | Channels present | `online` |
-| `system_info.fallback_mode` set | `limited` |
-| `system_info.no_signal` set | `no_signal` |
-| No channels + fresh session | `parser_issue` |
+| Zero channels + system_info present | `no_signal` |
+| Zero channels + no system_info | `no_signal` (with diagnostic warning) |
 | Auth failure / lockout | `auth_failed` |
 | Connection error / timeout | `unreachable` |
 
@@ -127,7 +123,7 @@ normalization):
 | All DS `lock_status == "locked"` AND upstream present | `operational` |
 | Some DS `lock_status == "locked"` | `partial_lock` |
 | No DS channels locked | `not_locked` |
-| No DS channels (fallback mode) | `operational` |
+| No DS channels | `not_locked` |
 | No `lock_status` field on channels | `unknown` |
 
 The `unknown` value prevents false "Not Locked" reports for modems
@@ -145,16 +141,18 @@ for the cascade rules.
 
 ```
 Each poll:
- 1. Orchestrator: backoff active? → suppress, return auth_failed.
- 2. Orchestrator invokes DataPipeline:
+ 1. Orchestrator: circuit breaker open? → return auth_failed.
+ 2. Orchestrator: backoff active? → suppress, return auth_failed.
+ 3. Orchestrator invokes ModemDataCollector:
     a. Auth Manager: session valid? → reuse. Expired? → login.
     b. Resource Loader: fetch all pages using authenticated session.
        Build resource dict.
     c. Parser: parse_resources(resources) → channels + system info.
     d. Auth Manager: logout if single-session modem.
- 3. Orchestrator: check DataPipeline result.
-    Zero channels + reused session? → clear session, retry once (2a→2d).
-    Otherwise → build response.
+ 4. Orchestrator: check ModemDataCollector result.
+    Success → reset auth failure streak, derive status.
+    Auth failure → increment streak, check circuit breaker threshold.
+    Other failure → apply signal policy.
 ```
 
 ---
@@ -173,7 +171,7 @@ suppress, report.
 ┌──────────────────────────────────────────────────────────┐
 │  Orchestrator                                            │
 │                                                          │
-│  Owns: retry policy, backoff, session lifecycle,         │
+│  Owns: backoff, circuit breaker, session lifecycle,      │
 │        error reporting                                   │
 │                                                          │
 │  Receives signals, decides actions                       │
@@ -225,17 +223,20 @@ login attempts. The auth manager reuses the session (cookies + HNAP
 private key) as long as it's valid. This is critical — logging in every
 poll triggers the lockout.
 
-**Stale session retry** — if the parser returns zero channels on a
-reused session, the session likely expired. The auth manager clears the
-session, authenticates fresh, and the orchestrator retries the full
-fetch→parse cycle once. Only one retry — the backoff counter prevents
-cascading failures.
-
 **Login backoff** — after a `LoginLockoutError` (firmware anti-brute-force
 triggered), the orchestrator suppresses login for 3 polls. This gives the
 modem time to clear its lockout state. The counter decrements each poll
-regardless of success. The backoff is constant (no escalation) — session
-reuse is the primary defense against lockout, backoff is the safety net.
+regardless of success. Session reuse is the primary defense against
+lockout, backoff is the safety net.
+
+**Auth circuit breaker** — persistent auth failures (wrong credentials,
+changed password, firmware changed auth mechanism) trigger an escalating
+response. The orchestrator tracks consecutive auth-related failures
+(AUTH_FAILED, AUTH_LOCKOUT, LOAD_AUTH). After 6 consecutive failures
+(~2 lockout cycles on HNAP modems), the circuit breaker opens and
+polling stops entirely. The client (HA) triggers a reauth flow — the
+user must reconfigure credentials to resume. See `ORCHESTRATION_SPEC.md`
+§ Auth Circuit Breaker for the full use-case walkthrough.
 
 **Single-session logout** — modems with `max_concurrent: 1` allow only
 one authenticated session. When `actions.logout` is declared, the auth
@@ -258,6 +259,8 @@ strategy returns `AuthResult.FAILURE`.
 | HNAP private key | Auth Manager | SOAP request signing | Until session expires |
 | Session token | Auth Manager | URL token injection | Until session expires |
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
+| Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
+| Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by client reauth |
 | Last poll status | Orchestrator | Detect status transitions (e.g., unreachable → online) | Updated each poll |
 | Parser instance | Orchestrator | Skip re-instantiation | Integration lifetime |
 | Working URL | Orchestrator | Protocol (HTTP/HTTPS) | Integration lifetime |
@@ -266,24 +269,23 @@ strategy returns `AuthResult.FAILURE`.
 
 ## Health Pipeline
 
-Monitors modem availability independently from data polling. Runs in
-parallel with the data poll — if the health check passes but data fetch
-fails, partial results are returned (health sensors stay current).
+Monitors modem availability independently from data polling. Runs on
+its own cadence (e.g., 30s) — typically faster than the data poll
+(e.g., 10m). The client (HA adapter) schedules health checks; the
+orchestrator reads the latest result during `get_modem_data()` without
+triggering a new probe.
 
-Probe selection (modem.yaml declares what's available):
+If the health check detects "unresponsive" between data polls, health
+sensors update immediately — no waiting for the next data poll. This
+gives faster outage detection, especially for unplanned reboots.
 
-1. **ICMP ping** — lightest, no web server impact
-2. **HTTP HEAD** — if modem supports it and ICMP is unavailable
-3. **Neither available** — health updates only when the data poll runs
+On successful data collection, the orchestrator notifies the health
+monitor via `update_from_collection()` so it skips redundant HTTP
+probes — critical for fragile modems (#117) where every HTTP request
+carries crash risk.
 
-`health_status` is derived from probe results:
-
-| Condition | Value |
-|-----------|-------|
-| HTTP responds | `responsive` |
-| No HTTP response, no ping response | `unresponsive` |
-| HTTP works, ping fails (and `supports_icmp`) | `icmp_blocked` |
-| Ping works, HTTP fails | `degraded` |
+See `ORCHESTRATION_SPEC.md` § HealthMonitor for the probe API, status
+derivation matrix, and collection evidence behavior.
 
 `health_status` is one of the three inputs to the Status sensor's
 priority cascade — see
@@ -339,25 +341,28 @@ Normal poll
 ... modem reboots ...
 
 Next poll
- ├─ Auth manager: session valid? → yes (stale cookies still present)
- ├─ Resource loader: fetch pages → success (modem is back)
- ├─ Parser: zero channels (stale session, modem returned login page)
- └─ Orchestrator: stale session detected
-    ├─ Clear auth cache
-    ├─ Fresh login
-    ├─ Retry fetch + parse
-    └─ status = online (if channels found)
+ ├─ Auth manager: session valid? → yes (stale cookies still in memory)
+ ├─ Resource loader: fetch pages with stale session
+ │   ├─ Case A: modem rejects → LOAD_AUTH → clear session → auth_failed
+ │   └─ Case B: modem accepts (IP-based, or ignores stale cookies) → success
+ ├─ Parser: channels found (Case B)
+ └─ Orchestrator: log transition with session state for diagnostics
 ```
 
-The orchestrator should detect the `online → unreachable → online`
-transition and apply the same recovery logic as a planned restart:
-- Clear auth cache proactively when connectivity returns (don't wait
-  for zero-channels detection)
-- Optionally switch to fast polling during the outage window
-- Wait for channel counts to stabilize before reporting `online`
-- Optionally notify the user ("Modem restarted externally")
+If the stale session is rejected (Case A), `LOAD_AUTH` signal handling
+clears the session — the next poll starts with a fresh login. No
+proactive cache clear is needed.
 
-This makes unplanned restart recovery faster and more predictable — the
+The orchestrator logs the `unreachable → online` transition with
+`session_valid` state so stale session behavior can be diagnosed from
+logs if needed.
+
+Optional recovery enhancements (may be added based on real-world data):
+- Switch to fast polling during the outage window
+- Wait for channel counts to stabilize before reporting `online`
+- Notify the user ("Modem restarted externally")
+
+These would make unplanned restart recovery more predictable — the
 same two-phase pattern (wait for response, wait for channel sync) applies
 regardless of who initiated the restart.
 
@@ -377,16 +382,15 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 | Signal | Source | Orchestrator Policy | Status |
 |--------|--------|-------------------|--------|
 | `AuthResult.SUCCESS` | Auth Manager | Proceed to loading | `online` (if parse succeeds) |
-| `AuthResult.FAILURE` | Auth Manager | Abort poll, no retry, no backoff | `auth_failed` |
-| `LoginLockoutError` | Auth Manager | Suppress login for 3 polls (constant, no escalation) | `auth_failed` |
+| `AuthResult.FAILURE` | Auth Manager | Abort poll, increment auth streak | `auth_failed` |
+| `LoginLockoutError` | Auth Manager | Suppress login for 3 polls, increment auth streak | `auth_failed` |
 | `ConnectionError` on auth | Auth Manager | Abort poll, no backoff | `unreachable` |
 | `Timeout` on auth | Auth Manager | Abort poll, no backoff | `unreachable` |
 | Any page `Timeout` / `ConnectionError` | Resource Loader | Abort poll (all-or-nothing), no backoff | `unreachable` |
-| HTTP 401/403 on data page | Resource Loader | Stale session → retry auth once | `auth_failed` (if retry fails) |
+| HTTP 401/403 on data page | Resource Loader | Clear session, increment auth streak | `auth_failed` |
 | HTTP 5xx on data page | Resource Loader | Abort poll | `unreachable` |
-| Channels found | Parser | Build response | `online` |
-| Zero channels + reused session | Parser | Clear session, retry once (auth → load → parse) | `online` or `parser_issue` |
-| Zero channels + fresh session | Parser | Abort poll, no retry — auth didn't actually work or page structure changed | `parser_issue` |
+| Channels found | Parser | Build response, reset auth streak | `online` |
+| Zero channels | Parser | Derive status from system_info | `no_signal` |
 
 ### Design Rules
 
@@ -401,16 +405,20 @@ Every signal a protocol layer can emit and the orchestrator's policy:
    modem's fault — poll at normal cadence. Backing off on `ConnectionError`
    delays recovery when the modem comes back.
 
-3. **One retry per poll.** The stale-session retry is the only within-poll
-   retry. All other failure modes wait for the next scheduled poll cycle.
-   This is inherent rate limiting — even at the minimum 30-second cadence,
-   the modem gets breathing room between attempts.
+3. **No within-poll retries.** Every failure mode waits for the next
+   scheduled poll cycle. This is inherent rate limiting — even at the
+   minimum 30-second cadence, the modem gets breathing room between
+   attempts.
 
-4. **Constant backoff on lockout.** `LoginLockoutError` triggers 3-poll
-   suppression. If lockout recurs after backoff clears, the same 3-poll
-   backoff applies — no escalation. Session reuse is the primary defense;
-   backoff is the safety net for when session reuse fails. (Evidence:
-   HNAP modem firmware has confirmed `LOCKUP`/`REBOOT` states.)
+4. **Constant backoff on lockout, circuit breaker on persistence.**
+   `LoginLockoutError` triggers 3-poll suppression (constant, no
+   escalation). If auth failures persist across multiple lockout
+   cycles, the circuit breaker opens and polling stops entirely —
+   the user must reconfigure credentials to resume. Session reuse is
+   the primary defense; backoff is the safety net; circuit breaker is
+   the last resort. (Evidence: HNAP modem firmware has confirmed
+   `LOCKUP`/`REBOOT` states — see `ORCHESTRATION_SPEC.md` § Auth
+   Circuit Breaker for full use-case walkthrough.)
 
 5. **Auth strategies must validate success.** A 200 OK response does not
    mean authentication succeeded. Each strategy validates that the
@@ -424,8 +432,8 @@ Every signal a protocol layer can emit and the orchestrator's policy:
    "transient" from "permanent" failure. If the modem responds, it's
    `online`. If it doesn't, it's `unreachable`. The only cross-poll
    state is the backoff counter and session. The `unreachable → online`
-   transition triggers proactive auth cache clear (see Modem Restart,
-   Unplanned restart).
+   transition is logged with session state for diagnostics (see Modem
+   Restart, Unplanned restart).
 
 ### Diagnostics for Remote Troubleshooting
 
@@ -451,12 +459,19 @@ log scraping required.
 
 ## Metrics
 
-Each poll cycle captures operational metrics alongside modem data:
+The orchestrator exposes operational metrics via `metrics()` →
+`OrchestratorMetrics` (see `ORCHESTRATION_SPEC.md` § Data Models):
 
-- `http_latency` — HTTP response time (captured during resource loading)
-- `poll_duration` — total time for the auth→load→parse cycle
-- `poll_success` — whether the cycle produced valid data
-- `session_reused` — whether auth was skipped via session reuse
+- `poll_duration` — wall-clock time of last `get_modem_data()` call in seconds
+- `auth_failure_streak` — consecutive auth-related failures (0 = healthy)
+- `circuit_breaker_open` — whether polling is stopped due to persistent auth failures
+- `session_is_valid` — whether the Auth Manager believes the session is usable
+- `resource_fetches` — per-resource timing and size from the last successful collection (`list[ResourceFetch]`)
+- `last_poll_timestamp` — monotonic time of last `get_modem_data()` call
+
+Health probe latencies (`icmp_latency_ms`, `http_latency_ms`) are on
+`HealthInfo`, not `OrchestratorMetrics` — different cadence, different
+model.
 
 These are available as HA sensor attributes or diagnostic data, not
 separate entities.

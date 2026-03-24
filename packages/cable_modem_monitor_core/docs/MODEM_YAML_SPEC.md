@@ -24,6 +24,7 @@ directory layout and multi-variant assembly contract.
 | [Aggregate](#aggregate) | Derived fields from channel data (e.g., error totals) |
 | [Hardware](#hardware) | DOCSIS version, chipset |
 | [Timeout](#timeout) | Per-request override |
+| [Health](#health) | Health probe configuration (fragile modems) |
 | [Metadata](#metadata) | Status, attribution, sources, ISPs, notes |
 | [Validation Rules](#validation-rules) | Transport constraints, required fields, consistency checks |
 | [Multi-Variant Modems](#multi-variant-modems) | Naming, shared files, assembly |
@@ -78,6 +79,10 @@ hardware:
 
 # Timeout (optional, default 10)
 timeout: 15
+
+# Health (optional, defaults are correct for most modems)
+health:
+  http_probe: false  # disable HTTP probes for fragile modems
 
 # Metadata
 status: verified
@@ -830,6 +835,29 @@ seconds.
 Override for slow modems — some cable modems take 12-20 seconds to
 render data pages, particularly those with older chipsets or HTTPS
 endpoints.
+
+---
+
+## Health
+
+```yaml
+health:
+  http_probe: false
+```
+
+Health check configuration. Controls how the HealthMonitor probes
+this modem.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `http_probe` | bool | `true` | Whether HTTP health probes are enabled |
+
+When `http_probe` is `false`, the HealthMonitor skips HTTP HEAD/GET
+probes entirely — only ICMP runs (if supported). Use this for fragile
+modems where every HTTP request carries crash risk (e.g., S33v2, #117).
+
+Most modems omit this section — defaults are correct. Only declare it
+when a modem is known to be fragile.
 
 ---
 

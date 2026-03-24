@@ -937,7 +937,7 @@ S33v2 has no zero-ID placeholders.
 | `fields[].unit` | string | no | Unit suffix to strip |
 | `fields[].map` | dict | no | Value mapping (exact match, applied before type conversion) |
 | `channel_type` | object | no | Channel type detection config (see [Channel Type Detection](#channel-type-detection)) |
-| `filter` | object | no | Row filter rules (see [Filtering](#filtering)) |
+| `filter` | object | no | Row filter rules (see [Filter Rules](#filter-rules)) |
 
 #### Extraction algorithm
 
