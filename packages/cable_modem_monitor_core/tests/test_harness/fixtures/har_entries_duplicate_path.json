@@ -1,0 +1,13 @@
+{
+  "_description": "HAR entries with duplicate path — 401 then 200 for same URL",
+  "_entries": [
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+      "response": {"status": 401, "content": {"text": "Unauthorized"}}
+    },
+    {
+      "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+      "response": {"status": 200, "content": {"text": "<html>data</html>"}}
+    }
+  ]
+}

@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from solentlabs.cable_modem_monitor_core.testing import discover_modem_tests
+from solentlabs.cable_modem_monitor_core.test_harness import discover_modem_tests
 
 # Catalog modems root: solentlabs/cable_modem_monitor_catalog/modems/
 CATALOG_MODEMS_PATH = Path(__file__).parent.parent / "solentlabs" / "cable_modem_monitor_catalog" / "modems"

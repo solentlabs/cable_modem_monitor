@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.table import (
     TableDefinition,
 )
-from solentlabs.cable_modem_monitor_core.parsers.html_table import HTMLTableParser
+from solentlabs.cable_modem_monitor_core.parsers.formats.html_table import HTMLTableParser
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "html_table"
 VALID_FIXTURES = sorted((FIXTURES_DIR / "valid").glob("*.json"))

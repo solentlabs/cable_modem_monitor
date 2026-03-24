@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.javascript import (
     JSFunction,
 )
-from solentlabs.cable_modem_monitor_core.parsers.js_embedded import (
+from solentlabs.cable_modem_monitor_core.parsers.formats.js_embedded import (
     JSEmbeddedParser,
 )
 

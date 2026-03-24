@@ -9,7 +9,7 @@ from solentlabs.cable_modem_monitor_core.auth.form_nonce import (
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import (
     FormNonceAuth,
 )
-from solentlabs.cable_modem_monitor_core.testing import HARMockServer
+from solentlabs.cable_modem_monitor_core.test_harness import HARMockServer
 
 from .conftest import load_auth_fixture
 

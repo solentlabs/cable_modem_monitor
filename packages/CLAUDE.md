@@ -74,7 +74,7 @@ All three must pass before staging. Run from the repo root:
 ```bash
 black --check packages/
 ruff check packages/
-mypy packages/*/solentlabs/ --config-file=mypy.ini
+mypy packages/*/solentlabs/ packages/*/tests/ --config-file=mypy.ini
 ```
 
 - `black` — formatting. Auto-fix with `black packages/`.
@@ -159,7 +159,7 @@ Verify every item before saying "done":
 - [ ] No cross-boundary imports
 - [ ] `black --check packages/` passes
 - [ ] `ruff check packages/` passes
-- [ ] `mypy packages/*/solentlabs/ --config-file=mypy.ini` passes
+- [ ] `mypy packages/*/solentlabs/ packages/*/tests/ --config-file=mypy.ini` passes
 
 **Tests**
 - [ ] Schema/validation tests use JSON fixtures (not inline dicts)

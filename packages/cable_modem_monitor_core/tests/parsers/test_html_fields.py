@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import (
     HTMLFieldsSource,
 )
-from solentlabs.cable_modem_monitor_core.parsers.html_fields import HTMLFieldsParser
+from solentlabs.cable_modem_monitor_core.parsers.formats.html_fields import HTMLFieldsParser
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "html_fields"
 VALID_FIXTURES = sorted((FIXTURES_DIR / "valid").glob("*.json"))

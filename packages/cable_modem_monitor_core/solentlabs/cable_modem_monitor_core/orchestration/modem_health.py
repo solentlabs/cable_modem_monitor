@@ -1,0 +1,349 @@
+"""HealthMonitor — lightweight probes for modem reachability.
+
+Runs ICMP ping and HTTP HEAD/GET probes independently. Collection
+evidence from ModemDataCollector suppresses redundant HTTP probes.
+
+Probe discovery determines which probes work on the target network
+during setup. HealthMonitor stores the results and uses them for all
+subsequent ping() calls.
+
+See ORCHESTRATION_SPEC.md § HealthMonitor and ORCHESTRATION_USE_CASES.md
+UC-50 through UC-57.
+"""
+
+from __future__ import annotations
+
+import logging
+import platform
+import re
+import subprocess
+import time
+
+import requests
+
+from .models import HealthInfo
+from .signals import HealthStatus
+
+_logger = logging.getLogger(__name__)
+
+# Pattern to extract round-trip time from ping output.
+# Matches "time=4.12 ms", "time=0.5ms", "time<1ms" (Windows).
+_PING_TIME_RE = re.compile(r"time[=<](\d+(?:\.\d+)?)\s*ms", re.IGNORECASE)
+
+
+class HealthMonitor:
+    """Lightweight modem health probes.
+
+    Runs ICMP and HTTP probes to detect modem reachability between data
+    collection cycles. Collection evidence from a successful data poll
+    suppresses redundant HTTP probes.
+
+    Args:
+        base_url: Modem URL for HTTP probe (e.g., "http://192.168.100.1").
+        poll_interval: Data collection cadence in seconds. Collection
+            evidence older than this is stale.
+        supports_icmp: Whether ICMP ping works on this network.
+            Discovered during setup.
+        supports_head: Whether modem handles HTTP HEAD correctly.
+            Discovered during setup. When False, GET is used instead.
+        http_probe: Whether to run HTTP health probes at all. Set to
+            False for fragile modems via modem.yaml health.http_probe.
+        timeout: Per-probe timeout in seconds.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        poll_interval: int = 600,
+        *,
+        supports_icmp: bool = True,
+        supports_head: bool = True,
+        http_probe: bool = True,
+        timeout: int = 5,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._host = self._extract_host(base_url)
+        self._poll_interval = poll_interval
+        self._supports_icmp = supports_icmp
+        self._http_probe = http_probe
+        self._http_method = "HEAD" if supports_head else "GET"
+        self._timeout = timeout
+
+        # State
+        self._latest = HealthInfo(health_status=HealthStatus.UNKNOWN)
+        self._last_collection_time: float | None = None
+
+    def ping(self) -> HealthInfo:
+        """Run health probes and return results.
+
+        ICMP runs first (if supported), then HTTP (if not suppressed by
+        collection evidence or disabled). Both probes run regardless of
+        each other's result.
+
+        Returns:
+            HealthInfo with probe results and derived status.
+        """
+        icmp_ms: float | None = None
+        http_ms: float | None = None
+        icmp_ok: bool | None = None
+        http_ok: bool | None = None
+
+        # ICMP probe
+        if self._supports_icmp:
+            icmp_ok, icmp_ms = self._probe_icmp()
+
+        # HTTP probe (suppressed by fresh collection evidence or disabled)
+        if self._http_probe and not self._is_evidence_fresh():
+            http_ok, http_ms = self._probe_http()
+
+        # Derive status
+        health_status = self._derive_status(icmp_ok, http_ok)
+
+        info = HealthInfo(
+            health_status=health_status,
+            icmp_latency_ms=icmp_ms,
+            http_latency_ms=http_ms,
+        )
+        self._latest = info
+
+        self._log_result(info, icmp_ok, http_ok)
+        return info
+
+    @property
+    def latest(self) -> HealthInfo:
+        """Most recent health probe result.
+
+        Returns default HealthInfo(UNKNOWN) if ping() has never been called.
+        """
+        return self._latest
+
+    def update_from_collection(self, timestamp: float) -> None:
+        """Report a successful data collection.
+
+        The collector's HTTP exchange proves modem is responsive. Health
+        monitor skips its own HTTP probe on next ping() call until the
+        evidence expires after one poll_interval.
+
+        Args:
+            timestamp: Monotonic time of the successful collection.
+        """
+        self._last_collection_time = timestamp
+
+    def clear_collection_evidence(self) -> None:
+        """Invalidate cached collection evidence.
+
+        Called by RestartMonitor at start of recovery so that health
+        probes are not suppressed by stale pre-restart data.
+        """
+        self._last_collection_time = None
+
+    # ------------------------------------------------------------------
+    # Internal — probes
+    # ------------------------------------------------------------------
+
+    def _probe_icmp(self) -> tuple[bool, float | None]:
+        """Run an ICMP ping probe.
+
+        Returns:
+            Tuple of (success, latency_ms). latency_ms is None on
+            failure or if output parsing fails.
+        """
+        cmd = self._build_ping_command()
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=self._timeout + 2,
+                check=False,
+            )
+            success = result.returncode == 0
+            latency_ms: float | None = None
+
+            if success:
+                latency_ms = self._parse_ping_latency(result.stdout)
+
+            return success, latency_ms
+
+        except subprocess.TimeoutExpired:
+            _logger.debug("ICMP probe: subprocess timeout (%ds)", self._timeout)
+            return False, None
+        except OSError as exc:
+            _logger.debug("ICMP probe: OS error — %s", exc)
+            return False, None
+
+    def _probe_http(self) -> tuple[bool, float | None]:
+        """Run an HTTP HEAD or GET probe.
+
+        Uses a fresh session (no auth). Only checks reachability and
+        measures response time.
+
+        Returns:
+            Tuple of (success, latency_ms). latency_ms is None on failure.
+        """
+        try:
+            if self._http_method == "HEAD":
+                response = requests.head(
+                    self._base_url,
+                    timeout=self._timeout,
+                    allow_redirects=True,
+                )
+            else:
+                response = requests.get(
+                    self._base_url,
+                    timeout=self._timeout,
+                    allow_redirects=True,
+                )
+
+            latency_ms = response.elapsed.total_seconds() * 1000
+            _logger.debug(
+                "HTTP %s probe: %d (%.1fms)",
+                self._http_method,
+                response.status_code,
+                latency_ms,
+            )
+            return True, latency_ms
+
+        except requests.RequestException as exc:
+            _logger.debug("HTTP %s probe failed: %s", self._http_method, exc)
+            return False, None
+
+    # ------------------------------------------------------------------
+    # Internal — status derivation
+    # ------------------------------------------------------------------
+
+    def _derive_status(
+        self,
+        icmp_ok: bool | None,
+        http_ok: bool | None,
+    ) -> HealthStatus:
+        """Derive health status from probe results.
+
+        None means the probe was not run (disabled, unsupported, or
+        suppressed by collection evidence).
+
+        See ORCHESTRATION_SPEC.md § Probe Configurations Matrix.
+        """
+        # Neither probe ran
+        if icmp_ok is None and http_ok is None:
+            return self._derive_no_probes()
+
+        # Both probes ran
+        if icmp_ok is not None and http_ok is not None:
+            return self._derive_both_probes(icmp_ok, http_ok)
+
+        # HTTP only (ICMP not supported)
+        if icmp_ok is None:
+            return HealthStatus.RESPONSIVE if http_ok else HealthStatus.UNRESPONSIVE
+
+        # ICMP only (HTTP suppressed by evidence or disabled)
+        return self._derive_icmp_only(icmp_ok)
+
+    def _derive_no_probes(self) -> HealthStatus:
+        """Derive status when neither probe ran."""
+        if self._is_evidence_fresh():
+            return HealthStatus.RESPONSIVE
+        return HealthStatus.UNKNOWN
+
+    @staticmethod
+    def _derive_both_probes(icmp_ok: bool, http_ok: bool) -> HealthStatus:
+        """Derive status from both probe results."""
+        if icmp_ok and http_ok:
+            return HealthStatus.RESPONSIVE
+        if icmp_ok:
+            return HealthStatus.DEGRADED
+        if http_ok:
+            return HealthStatus.ICMP_BLOCKED
+        return HealthStatus.UNRESPONSIVE
+
+    def _derive_icmp_only(self, icmp_ok: bool) -> HealthStatus:
+        """Derive status from ICMP only (HTTP suppressed or disabled)."""
+        if icmp_ok:
+            return HealthStatus.RESPONSIVE
+        # ICMP failed but HTTP is suppressed — can't determine HTTP
+        if self._is_evidence_fresh():
+            return HealthStatus.ICMP_BLOCKED
+        return HealthStatus.UNRESPONSIVE
+
+    # ------------------------------------------------------------------
+    # Internal — evidence and helpers
+    # ------------------------------------------------------------------
+
+    def _is_evidence_fresh(self) -> bool:
+        """Whether collection evidence is still valid."""
+        if self._last_collection_time is None:
+            return False
+        return (time.monotonic() - self._last_collection_time) < self._poll_interval
+
+    def _build_ping_command(self) -> list[str]:
+        """Build platform-specific ping command."""
+        system = platform.system().lower()
+        if system == "windows":
+            return ["ping", "-n", "1", "-w", str(self._timeout * 1000), self._host]
+        if system == "darwin":
+            return ["ping", "-c", "1", "-t", str(self._timeout), self._host]
+        # Linux and other POSIX
+        return ["ping", "-c", "1", "-W", str(self._timeout), self._host]
+
+    def _parse_ping_latency(self, stdout: str) -> float | None:
+        """Extract round-trip time from ping output.
+
+        Returns None if the pattern is not found (unexpected format).
+        """
+        match = _PING_TIME_RE.search(stdout)
+        if match:
+            return float(match.group(1))
+        _logger.debug("ICMP probe: could not parse latency from output")
+        return None
+
+    @staticmethod
+    def _extract_host(base_url: str) -> str:
+        """Extract hostname from a URL."""
+        # Strip scheme
+        host = base_url
+        if "://" in host:
+            host = host.split("://", 1)[1]
+        # Strip path and port
+        host = host.split("/", 1)[0]
+        host = host.split(":", 1)[0]
+        return host
+
+    # ------------------------------------------------------------------
+    # Internal — logging
+    # ------------------------------------------------------------------
+
+    def _log_result(
+        self,
+        info: HealthInfo,
+        icmp_ok: bool | None,
+        http_ok: bool | None,
+    ) -> None:
+        """Log the health check result per the logging contract."""
+        parts: list[str] = []
+
+        if icmp_ok is not None:
+            if info.icmp_latency_ms is not None:
+                parts.append(f"ICMP {info.icmp_latency_ms:.0f}ms")
+            elif icmp_ok:
+                parts.append("ICMP OK")
+            else:
+                parts.append("ICMP timeout")
+
+        if self._http_probe and not self._is_evidence_fresh():
+            if http_ok is not None:
+                if info.http_latency_ms is not None:
+                    parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.0f}ms")
+                elif http_ok:
+                    parts.append(f"HTTP {self._http_method} OK")
+                else:
+                    parts.append(f"HTTP {self._http_method} timeout")
+        elif self._http_probe:
+            parts.append("HTTP skipped — collection evidence fresh")
+
+        detail = ", ".join(parts) if parts else "no probes"
+        status = info.health_status.value
+
+        if info.health_status in (HealthStatus.DEGRADED, HealthStatus.UNRESPONSIVE):
+            _logger.warning("Health check: %s (%s)", status, detail)
+        else:
+            _logger.info("Health check: %s (%s)", status, detail)
