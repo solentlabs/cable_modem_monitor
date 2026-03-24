@@ -216,8 +216,70 @@ policy (see Signal and Policy Separation in `ARCHITECTURE.md`).
 | Request timeout | `Timeout` | Status `unreachable` |
 | HTTP 401/403 | Status code in response | Stale session → retry auth |
 | HTTP 5xx | Status code in response | Status `unreachable` |
+| Login page on data URL | `LOAD_AUTH` | Clear session, increment auth streak |
 | Empty response body | Empty parsed result | Parser handles gracefully |
 | SSL handshake failure | `SSLError` | Check `legacy_ssl` flag |
+
+---
+
+## Login Page Detection
+
+Some modems silently serve a login page at a data URL when the session
+expires — HTTP 200, but the body is a login form instead of data.
+Without detection, this reaches the parser and causes PARSE_ERROR,
+which misclassifies the root cause (auth, not parser) and prevents
+self-healing (no session clear, no auth streak increment).
+
+### Runtime behavior
+
+The Resource Loader checks each HTTP 200 HTML response for login page
+indicators before adding it to the resource dict. Detection is
+automatic for form-based auth strategies (`form`, `form_nonce`,
+`form_pbkdf2`, `form_sjcl`, `url_token`). Not applicable to `none`,
+`basic`, or `hnap`.
+
+**Detection invariant:** Data pages from parser.yaml (status,
+connection, channel info) do not contain `<input type="password">`.
+Login pages always do. If the response contains a password input
+field, it is a login page served at a data URL.
+
+When detected, the loader signals `LOAD_AUTH` instead of returning
+the response in the resource dict. The orchestrator clears the
+session and increments the auth streak — the next poll starts with
+a fresh login.
+
+**Scope:** Only applies to HTTP transport, HTML format responses.
+Structured formats (JSON, XML) and HNAP transport are not checked.
+
+### Failure modes
+
+| Failure | Impact | Likelihood | Mitigation |
+|---------|--------|------------|------------|
+| False positive (data page has `<input type="password">`) | Auth failure loop — session cleared every poll | Very low — parser.yaml only references status/data pages, not settings/admin pages | Detected during HAR regression; override via `session.login_page` (future, if needed) |
+| False negative (login page without `<input type="password">`) | Falls through to PARSE_ERROR — wrong classification but not destructive | Low — JS-only SPA login forms | Detected during MCP onboarding (see below) |
+
+If a false positive occurs in the field, the escape hatch is a
+per-modem `session.login_page` override in modem.yaml with an
+explicit indicator. This is not spec'd yet — it would be an additive
+schema change if the need arises.
+
+### MCP onboarding validation
+
+During HAR analysis, the MCP pipeline should flag potential detection
+issues:
+
+1. **Login page without password input** — If the HAR shows a login
+   page that has no `<input type="password">` in the initial HTML
+   (e.g., JS-rendered SPA login), flag it: "Login page detection may
+   not work for this modem — password field is dynamically rendered."
+
+2. **Data page with password input** — If any data page response in
+   the HAR contains `<input type="password">`, flag it: "Data page
+   {path} contains a password field — login page detection will
+   produce false positives."
+
+Both are HARD STOP flags during onboarding — they require human
+review before the modem can ship.
 
 ---
 
@@ -256,6 +318,34 @@ Auth Manager ──► Resource Loader ──► Parser
 HNAP is the most efficient — one request regardless of action count.
 HTTP scales with the number of unique data pages, but most modems
 have 2-4 data pages.
+
+### Per-Resource Timing
+
+The loader captures wall-clock time and response size for each HTTP
+request, returned alongside the resource dict as a list of
+`ResourceFetch` objects (see `ORCHESTRATION_SPEC.md` § Data Models):
+
+```python
+resource_fetches: list[ResourceFetch]
+# e.g., [ResourceFetch("/status.html", 800.0, 12480),
+#         ResourceFetch("/info.html", 1200.0, 8192)]
+# HNAP: [ResourceFetch("GetMultipleHNAPs", 1100.0, 24576)]
+```
+
+Units are milliseconds for `duration_ms` and bytes for `size_bytes`.
+The orchestrator stores these on `OrchestratorMetrics.resource_fetches`
+from the last successful collection. Consumers convert to display
+units as needed.
+
+Each fetch is logged at DEBUG with its elapsed time:
+
+```
+DEBUG "Resource loaded: /status.html (800ms, 12.2KB)"
+DEBUG "Resource loaded: /info.html (1200ms, 8.0KB)"
+```
+
+This data is diagnostic — useful for identifying slow resources,
+tracking latency trends, and troubleshooting timeout issues.
 
 Page deduplication keeps the request count at the number of unique paths,
 not the number of semantic names. A modem with 5 semantic names pointing
