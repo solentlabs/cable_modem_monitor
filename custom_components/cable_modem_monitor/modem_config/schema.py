@@ -126,6 +126,7 @@ class DataParadigm(StrEnum):
     HTML = "html"  # Traditional web pages with tables
     HNAP = "hnap"  # HNAP/SOAP protocol
     REST_API = "rest_api"  # JSON REST API
+    XML_POST = "xml_post"  # XML responses via POST (Compal modems)
 
 
 class Capability(StrEnum):
@@ -396,6 +397,42 @@ class RestApiAuthConfig(BaseModel):
     )
 
 
+class FormEncryptedTokenAuthConfig(BaseModel):
+    """Configuration for AES-encrypted token authentication.
+
+    Used by: Compal CH7465MT (Magenta/UPC/Ziggo Connect Box)
+    """
+
+    login_page: str = Field(
+        default="/common_page/login.html",
+        description="Login page URL that sets sessionToken cookie",
+    )
+    setter_endpoint: str = Field(
+        default="/xml/setter.xml",
+        description="Endpoint for login POST",
+    )
+    getter_endpoint: str = Field(
+        default="/xml/getter.xml",
+        description="Endpoint for data retrieval",
+    )
+    session_cookie_name: str = Field(
+        default="sessionToken",
+        description="Name of the session token cookie",
+    )
+    sid_cookie_name: str = Field(
+        default="SID",
+        description="Name of the SID cookie set after login",
+    )
+    username_value: str = Field(
+        default="NULL",
+        description="Username value sent in login POST",
+    )
+    login_fun: int = Field(
+        default=15,
+        description="Fun parameter for the login POST",
+    )
+
+
 class SessionConfig(BaseModel):
     """Configuration for session management."""
 
@@ -460,11 +497,12 @@ class AuthConfig(BaseModel):
         | HnapAuthConfig
         | UrlTokenAuthConfig
         | RestApiAuthConfig
+        | FormEncryptedTokenAuthConfig
         | None,
     ] = Field(
         default_factory=dict,
         description="Auth type configurations. Keys are type names "
-        "(none, form, form_dynamic, form_ajax, url_token, hnap, rest_api), "
+        "(none, form, form_dynamic, form_ajax, form_encrypted_token, url_token, hnap, rest_api), "
         "values are the config for that type (or null for 'none').",
     )
 
@@ -494,6 +532,7 @@ class AuthConfig(BaseModel):
             "hnap": HnapAuthConfig,
             "url_token": UrlTokenAuthConfig,
             "rest_api": RestApiAuthConfig,
+            "form_encrypted_token": FormEncryptedTokenAuthConfig,
         }
 
         converted: dict[str, Any] = {}

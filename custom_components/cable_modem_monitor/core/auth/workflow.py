@@ -63,6 +63,7 @@ class AuthWorkflowResult:
     hnap_config: dict[str, Any] | None = None
     hnap_builder: HNAPJsonRequestBuilder | None = None
     url_token_config: dict[str, Any] | None = None
+    encrypted_token_config: dict[str, Any] | None = None
     error: str | None = None
 
 
@@ -302,6 +303,7 @@ class AuthWorkflow:
         form_ajax_config = static_auth_config.get("auth_form_ajax_config")
         hnap_config = static_auth_config.get("auth_hnap_config")
         url_token_config = static_auth_config.get("auth_url_token_config")
+        encrypted_token_config = static_auth_config.get("auth_encrypted_token_config")
 
         # For form_ajax, use form_ajax_config as the form_config (legacy support)
         if strategy == "form_ajax" and form_ajax_config:
@@ -354,6 +356,7 @@ class AuthWorkflow:
                 form_config=form_config,
                 hnap_config=hnap_config,
                 url_token_config=url_token_config,
+                encrypted_token_config=encrypted_token_config,
                 timeout=timeout,
             )
 
@@ -406,6 +409,7 @@ class AuthWorkflow:
                 hnap_config=hnap_config,
                 hnap_builder=hnap_builder,
                 url_token_config=url_token_config,
+                encrypted_token_config=encrypted_token_config,
             )
 
         except Exception as e:

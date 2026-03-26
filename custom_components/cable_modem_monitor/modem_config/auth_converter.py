@@ -18,6 +18,7 @@ from custom_components.cable_modem_monitor.core.auth.configs import (
     BasicAuthConfig,
     FormAuthConfig,
     FormDynamicAuthConfig,
+    FormEncryptedTokenAuthConfig,
     HNAPAuthConfig,
     NoAuthConfig,
     UrlTokenSessionConfig,
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from custom_components.cable_modem_monitor.modem_config.schema import (
         FormAuthConfig as ModemFormAuthConfig,
         FormDynamicAuthConfig as ModemFormDynamicAuthConfig,
+        FormEncryptedTokenAuthConfig as ModemFormEncryptedTokenAuthConfig,
         HnapAuthConfig as ModemHnapAuthConfig,
         ModemConfig,
         UrlTokenAuthConfig as ModemUrlTokenAuthConfig,
@@ -35,7 +37,13 @@ if TYPE_CHECKING:
 
 # Type alias for return type
 AuthConfigType = (
-    FormAuthConfig | FormDynamicAuthConfig | HNAPAuthConfig | UrlTokenSessionConfig | BasicAuthConfig | NoAuthConfig
+    FormAuthConfig
+    | FormDynamicAuthConfig
+    | FormEncryptedTokenAuthConfig
+    | HNAPAuthConfig
+    | UrlTokenSessionConfig
+    | BasicAuthConfig
+    | NoAuthConfig
 )
 
 
@@ -57,6 +65,7 @@ def modem_config_to_auth_config(
     from custom_components.cable_modem_monitor.modem_config.schema import (
         FormAuthConfig as SchemaFormAuthConfig,
         FormDynamicAuthConfig as SchemaFormDynamicAuthConfig,
+        FormEncryptedTokenAuthConfig as SchemaFormEncryptedTokenAuthConfig,
         HnapAuthConfig as SchemaHnapAuthConfig,
         UrlTokenAuthConfig as SchemaUrlTokenAuthConfig,
     )
@@ -95,6 +104,9 @@ def modem_config_to_auth_config(
 
     if isinstance(type_config, SchemaUrlTokenAuthConfig):
         return url_token_config_to_auth_config(type_config)
+
+    if isinstance(type_config, SchemaFormEncryptedTokenAuthConfig):
+        return form_encrypted_token_config_to_auth_config(type_config)
 
     # Default: no auth
     return AuthStrategyType.NO_AUTH, NoAuthConfig()
@@ -198,4 +210,27 @@ def url_token_config_to_auth_config(
         success_indicator=url_token.success_indicator or "Downstream",
         ajax_login=url_token.ajax_login,
         auth_header_data=url_token.auth_header_data,
+    )
+
+
+def form_encrypted_token_config_to_auth_config(
+    config: ModemFormEncryptedTokenAuthConfig,
+) -> tuple[AuthStrategyType, FormEncryptedTokenAuthConfig]:
+    """Convert modem.yaml FormEncryptedTokenAuthConfig to auth config.
+
+    Args:
+        config: FormEncryptedTokenAuthConfig from modem.yaml schema
+
+    Returns:
+        Tuple of (AuthStrategyType, FormEncryptedTokenAuthConfig)
+    """
+    return AuthStrategyType.FORM_ENCRYPTED_TOKEN, FormEncryptedTokenAuthConfig(
+        strategy=AuthStrategyType.FORM_ENCRYPTED_TOKEN,
+        login_page=config.login_page,
+        setter_endpoint=config.setter_endpoint,
+        getter_endpoint=config.getter_endpoint,
+        session_cookie_name=config.session_cookie_name,
+        sid_cookie_name=config.sid_cookie_name,
+        username_value=config.username_value,
+        login_fun=config.login_fun,
     )

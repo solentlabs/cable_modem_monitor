@@ -153,6 +153,7 @@ class SetupResult:
     auth_form_config: dict[str, Any] | None = None
     auth_hnap_config: dict[str, Any] | None = None
     auth_url_token_config: dict[str, Any] | None = None
+    auth_encrypted_token_config: dict[str, Any] | None = None
 
     # Parser info
     parser_name: str | None = None
@@ -313,6 +314,7 @@ def setup_modem(
             auth_form_config=auth_result.form_config,
             auth_hnap_config=auth_result.hnap_config,
             auth_url_token_config=auth_result.url_token_config,
+            auth_encrypted_token_config=auth_result.encrypted_token_config,
             parser_name=parser_class.name,
             parser_instance=validation.parser_instance,
             modem_data=validation.modem_data,

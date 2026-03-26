@@ -17,8 +17,11 @@ Architecture:
     │       ├── HNAPLoader      ← HNAP/SOAP protocol (POST JSON/XML)  │
     │       │                     Used by: S33, MB8611                │
     │       │                                                          │
-    │       └── RESTLoader      ← JSON REST API (GET/POST JSON)       │
-    │                             Used by: Virgin SuperHub5           │
+    │       ├── RESTLoader      ← JSON REST API (GET/POST JSON)       │
+    │       │                     Used by: Virgin SuperHub5           │
+    │       │                                                          │
+    │       └── XMLPostLoader   ← XML POST API (POST form-encoded)   │
+    │                             Used by: Compal CH7465MT            │
     │                                                                  │
     │  ResourceLoaderFactory    ← Creates loader based on modem.yaml  │
     │                                                                  │
@@ -29,6 +32,7 @@ Loader Selection:
     - paradigm: html → HTMLLoader
     - paradigm: hnap → HNAPLoader
     - paradigm: rest_api → RESTLoader
+    - paradigm: xml_post → XMLPostLoader
 
 Module Organization:
     - base.py: ResourceLoader ABC with fetch() -> dict[str, Any]
@@ -36,6 +40,7 @@ Module Organization:
     - html.py: HTMLLoader for traditional web scraping
     - hnap.py: HNAPLoader for HNAP/SOAP modems
     - rest.py: RESTLoader for REST API modems
+    - xml_post.py: XMLPostLoader for XML POST API modems (Compal)
 
 Usage:
     from custom_components.cable_modem_monitor.core.loaders import (
@@ -63,6 +68,7 @@ from .factory import ResourceLoaderFactory
 from .hnap import HNAPLoader
 from .html import HTMLLoader
 from .rest import RESTLoader
+from .xml_post import XMLPostLoader
 
 __all__ = [
     "HNAPLoader",
@@ -70,4 +76,5 @@ __all__ = [
     "ResourceLoaderFactory",
     "RESTLoader",
     "ResourceLoader",
+    "XMLPostLoader",
 ]

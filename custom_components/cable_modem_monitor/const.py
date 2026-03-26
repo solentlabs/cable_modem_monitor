@@ -46,6 +46,7 @@ CONF_AUTH_STRATEGY = "auth_strategy"  # Discovered auth strategy type
 CONF_AUTH_FORM_CONFIG = "auth_form_config"  # Discovered form config (for form-based auth)
 CONF_AUTH_HNAP_CONFIG = "auth_hnap_config"  # HNAP config (endpoint, namespace, etc.)
 CONF_AUTH_URL_TOKEN_CONFIG = "auth_url_token_config"  # URL token config (login_prefix, etc.)
+CONF_AUTH_ENCRYPTED_TOKEN_CONFIG = "auth_encrypted_token_config"  # Encrypted token config (Compal AES)
 CONF_AUTH_DISCOVERY_STATUS = "auth_discovery_status"  # "success", "unknown_pattern", etc.
 CONF_AUTH_DISCOVERY_FAILED = "auth_discovery_failed"  # True if discovery failed but modem works
 CONF_AUTH_DISCOVERY_ERROR = "auth_discovery_error"  # Error message if discovery failed

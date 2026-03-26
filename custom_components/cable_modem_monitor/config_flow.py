@@ -52,6 +52,7 @@ from .const import (
     CONF_AUTH_DISCOVERY_ERROR,
     CONF_AUTH_DISCOVERY_FAILED,
     CONF_AUTH_DISCOVERY_STATUS,
+    CONF_AUTH_ENCRYPTED_TOKEN_CONFIG,
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
@@ -231,6 +232,7 @@ class ConfigFlowMixin:
             CONF_AUTH_FORM_CONFIG,
             CONF_AUTH_HNAP_CONFIG,
             CONF_AUTH_URL_TOKEN_CONFIG,
+            CONF_AUTH_ENCRYPTED_TOKEN_CONFIG,
         ):
             if info.get(key):
                 data[key] = info[key]

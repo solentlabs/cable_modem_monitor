@@ -35,6 +35,7 @@ from .configs import (
     BasicAuthConfig,
     FormAuthConfig,
     FormDynamicAuthConfig,
+    FormEncryptedTokenAuthConfig,
     HNAPAuthConfig,
     HNAPSoapAuthConfig,
     NoAuthConfig,
@@ -48,6 +49,7 @@ from .hnap import HNAPJsonRequestBuilder, HNAPRequestBuilder
 from .strategies import (
     BasicHttpAuthStrategy,
     FormDynamicAuthStrategy,
+    FormEncryptedTokenStrategy,
     FormPlainAuthStrategy,
     HNAPJsonAuthStrategy,
     HNAPSessionAuthStrategy,
@@ -67,6 +69,7 @@ __all__ = [
     "BasicAuthConfig",
     "FormAuthConfig",
     "FormDynamicAuthConfig",
+    "FormEncryptedTokenAuthConfig",
     "HNAPAuthConfig",
     "HNAPSoapAuthConfig",
     "NoAuthConfig",
@@ -93,6 +96,7 @@ __all__ = [
     # Strategies
     "BasicHttpAuthStrategy",
     "FormDynamicAuthStrategy",
+    "FormEncryptedTokenStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",
     "HNAPSessionAuthStrategy",

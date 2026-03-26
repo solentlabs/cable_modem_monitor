@@ -2,7 +2,7 @@
 # Regenerate with: python scripts/generate_modem_index.py
 
 version: 1
-generated: "2026-02-02T00:45:48.931303+00:00"
+generated: "2026-03-25T20:24:43.231983+00:00"
 auth_patterns:
   form:
     username_fields:
@@ -184,6 +184,21 @@ modems:
         - ARRIS SB8200
         - Downstream Bonded Channels
       page_hint: /cmswinfo.html
+  CompalCH7465MTParser:
+    path: compal/ch7465mt
+    name: Compal CH7465MT
+    manufacturer: Compal
+    model: CH7465MT
+    verified: false
+    detection:
+      pre_auth:
+        - Connect Box
+        - Internet Fiber Box
+        - sessionToken
+        - CBN_Encrypt
+      post_auth:
+        - CH7465MT
+        - Compal
   MotorolaMB7621Parser:
     path: motorola/mb7621
     name: Motorola MB7621
