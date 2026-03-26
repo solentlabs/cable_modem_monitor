@@ -5,7 +5,10 @@
     "log": {
       "entries": [
         {
-          "request": {"url": "http://192.168.100.1/status.html", "method": "GET"},
+          "request": {
+            "url": "http://192.168.100.1/status.html",
+            "method": "GET"
+          },
           "response": {
             "status": 200,
             "content": {
@@ -15,7 +18,10 @@
           }
         },
         {
-          "request": {"url": "http://192.168.100.1/info.html", "method": "GET"},
+          "request": {
+            "url": "http://192.168.100.1/info.html",
+            "method": "GET"
+          },
           "response": {
             "status": 200,
             "content": {
@@ -27,19 +33,44 @@
       ]
     }
   },
-  "_expected_channel_counts": {"downstream": 2, "upstream": 1},
-  "_expected_system_info_fields": ["software_version", "system_uptime"],
+  "_expected_channel_counts": {
+    "downstream": 2,
+    "upstream": 1
+  },
+  "_expected_system_info_fields": [
+    "downstream_channel_count",
+    "software_version",
+    "system_uptime",
+    "upstream_channel_count"
+  ],
   "_expected_golden_file": {
     "downstream": [
-      {"channel_id": 1, "frequency": 507000000, "power": 3.2, "channel_type": "qam"},
-      {"channel_id": 2, "frequency": 513000000, "power": 2.8, "channel_type": "qam"}
+      {
+        "channel_id": 1,
+        "frequency": 507000000,
+        "power": 3.2,
+        "channel_type": "qam"
+      },
+      {
+        "channel_id": 2,
+        "frequency": 513000000,
+        "power": 2.8,
+        "channel_type": "qam"
+      }
     ],
     "upstream": [
-      {"channel_id": 1, "frequency": 36800000, "power": 44.0, "channel_type": "atdma"}
+      {
+        "channel_id": 1,
+        "frequency": 36800000,
+        "power": 44.0,
+        "channel_type": "atdma"
+      }
     ],
     "system_info": {
       "software_version": "AB01.02.053",
-      "system_uptime": "7 days 00:00:01"
+      "system_uptime": "7 days 00:00:01",
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 1
     }
   }
 }

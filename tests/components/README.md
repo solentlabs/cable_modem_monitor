@@ -4,7 +4,7 @@
 
 Tests for Home Assistant components including config flow, coordinator, sensors, buttons, diagnostics, and the modem scraper.
 
-**Total Tests:** 387
+**Total Tests:** 395
 
 ## Test Files
 
@@ -21,6 +21,7 @@ Tests for Home Assistant components including config flow, coordinator, sensors,
 | [test_data_orchestrator.py](test_data_orchestrator.py) | 108 | Tests for DataOrchestrator. |
 | [test_diagnostics.py](test_diagnostics.py) | 47 | Tests for Cable Modem Monitor diagnostics platform. |
 | [test_entity_migration.py](test_entity_migration.py) | 11 | Tests for entity migration utilities. |
+| [test_migrations_v1_to_v2.py](test_migrations_v1_to_v2.py) | 8 | Tests for v1 → v2 config entry migration. |
 | [test_protocol_caching.py](test_protocol_caching.py) | 12 | Tests for protocol caching optimization. |
 | [test_protocol_lock.py](test_protocol_lock.py) | 32 | Stress tests for the protocol lock fix. |
 | [test_sensor.py](test_sensor.py) | 68 | Tests for Cable Modem Monitor sensors. |
@@ -614,6 +615,43 @@ Tests for entity migration utilities.
 - `test_migrates_statistics_upstream`: Test migration of upstream statistics.
 - `test_merges_statistics_when_new_exists`: Test that old statistics are merged when new statistic already exists.
 - `test_migrates_both_states_and_statistics`: Test that both states and statistics are migrated together.
+
+### test_migrations_v1_to_v2.py
+
+Tests for v1 → v2 config entry migration.
+
+Tests the pure helper functions (extract_model, derive_protocol,
+resolve_modem_dir) and the full migration data transform.  The
+helpers are tested without HA dependencies; resolve_modem_dir uses
+the real catalog on disk.
+
+**TestExtractModel** (1 tests)
+: Test model extraction from v1 display names.
+
+- `test_extract`
+
+**TestDeriveProtocol** (1 tests)
+: Test protocol derivation from v1 entry data.
+
+- `test_derive`
+
+**TestResolveModemDir** (1 tests)
+: Test catalog resolution from v1 display names.
+
+- `test_resolve`
+
+**TestResolveModemDirAliases** (2 tests)
+: Test model alias resolution.
+
+- `test_model_alias_match`: MB8600 is an alias for MB8611 in the catalog.
+- `test_manufacturer_rename_model_only_match`: Arris/CommScope G54 should resolve via model-only match.
+
+**TestFullMigrationShape** (3 tests)
+: Test that a complete v1 → v2 transform produces correct keys.
+
+- `test_v2_has_required_keys`: After transform, all v2 keys are present.
+- `test_no_v1_stale_keys_remain`: After transform, no v1-only keys are present.
+- `test_values_are_correct`: Spot-check migrated values.
 
 ### test_protocol_caching.py
 

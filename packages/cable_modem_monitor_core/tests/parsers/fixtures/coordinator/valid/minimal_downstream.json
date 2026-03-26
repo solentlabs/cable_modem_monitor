@@ -1,5 +1,5 @@
 {
-  "_description": "Minimal downstream config with one table — no HTML content (for empty resource / edge case tests)",
+  "_description": "Minimal downstream config with one table \u2014 no HTML content (for empty resource / edge case tests)",
   "_html": {},
   "_parser_config": {
     "downstream": {
@@ -7,10 +7,17 @@
       "resource": "/status.html",
       "tables": [
         {
-          "selector": {"type": "header_text", "match": "DS"},
+          "selector": {
+            "type": "header_text",
+            "match": "DS"
+          },
           "row_start": 1,
           "columns": [
-            {"index": 0, "field": "channel_id", "type": "integer"}
+            {
+              "index": 0,
+              "field": "channel_id",
+              "type": "integer"
+            }
           ]
         }
       ]
@@ -18,6 +25,10 @@
   },
   "_expected": {
     "downstream": [],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 0,
+      "upstream_channel_count": 0
+    }
   }
 }

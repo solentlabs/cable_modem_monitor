@@ -17,6 +17,9 @@ from pydantic import ValidationError
 from solentlabs.cable_modem_monitor_core.models.parser_config import (
     ParserConfig,
 )
+from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+    AggregateField,
+)
 
 from tests.conftest import collect_fixtures, load_fixture
 
@@ -59,3 +62,29 @@ def test_invalid_parser_config(fixture_path: Path):
     raw = load_fixture(fixture_path)
     with pytest.raises(ValidationError, match=raw["_expected_error"]):
         ParserConfig(**raw["_config"])
+
+
+# ---------------------------------------------------------------------------
+# Behavioral tests — aggregate field access
+# ---------------------------------------------------------------------------
+
+
+class TestAggregateBehavior:
+    """Aggregate section on ParserConfig."""
+
+    def test_aggregate_field_access(self) -> None:
+        """Aggregate fields are accessible after parse."""
+        config = ParserConfig(**load_fixture(VALID_DIR / "with_aggregate.json"))
+        agg = config.aggregate["total_corrected"]
+        assert agg.sum == "corrected"
+        assert agg.channels == "downstream.qam"
+
+    def test_aggregate_default_empty(self) -> None:
+        """ParserConfig without aggregate has empty dict."""
+        config = ParserConfig(**load_fixture(VALID_DIR / "table_single.json"))
+        assert config.aggregate == {}
+
+    def test_aggregate_field_rejects_extra(self) -> None:
+        """AggregateField rejects unknown fields."""
+        with pytest.raises(ValidationError, match="extra"):
+            AggregateField(sum="corrected", channels="downstream", bogus="x")  # type: ignore[call-arg]

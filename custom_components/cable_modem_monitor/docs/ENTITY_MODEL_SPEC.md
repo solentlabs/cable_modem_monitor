@@ -33,7 +33,7 @@ does not create entities for every possible use case.
 | Platform | Purpose |
 |----------|---------|
 | `sensor` | All modem data — metrics, counters, text, timestamps |
-| `button` | Actions (restart, update, reset, capture) |
+| `button` | Actions (restart, update, reset) |
 
 No `binary_sensor`, `select`, `switch`, `number`. Modems are
 read-only data sources. Boolean fields (`lock_status`) and enum
@@ -52,23 +52,26 @@ output (some gated by config).
 | Entity | unique_id suffix | State | device_class | state_class | Unit | Attributes |
 |--------|-----------------|-------|--------------|-------------|------|------------|
 | Status | `_status` | display¹ | — | — | — | `connection_status`, `health_status`, `docsis_status`, `diagnosis` |
-| Modem Info | `_info` | detected model | — | — | — | `manufacturer`, `release_date`, `docsis_version`, `fixtures_url`, `parser_verified` (all from `ModemIdentity`) |
+| Modem Info | `_info` | detected model | — | — | — | `manufacturer`, `model`, `release_date`, `docsis_version`, `status` (from Core's `ModemIdentity`) |
 | Software Version | `_software_version` | string | — | — | — | — |
 | System Uptime | `_system_uptime` | string | — | — | — | — |
 | Last Boot Time | `_last_boot_time` | datetime | TIMESTAMP | — | — | — |
-| DS Channel Count | `_downstream_channel_count` | int | — | MEASUREMENT | — | Orchestrator-derived: `len(downstream)` |
-| US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | Orchestrator-derived: `len(upstream)` |
-| Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | Source: modem.yaml `aggregate` or parser.yaml `system_info`² |
-| Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | Source: modem.yaml `aggregate` or parser.yaml `system_info`² |
+| DS Channel Count | `_downstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
+| US Channel Count | `_upstream_channel_count` | int | — | MEASUREMENT | — | From `system_info` — native or coordinator-computed² |
+| Total Corrected | `_total_corrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
+| Total Uncorrected | `_total_uncorrected` | int | — | TOTAL_INCREASING | — | From `system_info` — native or coordinator-computed² |
 
 ¹ See [Status Sensor](#status-sensor) for the priority cascade that
 produces the display state.
 
-² Error totals are modem-controlled. Modems with native totals in
-their web UI map them as `system_info` fields in parser.yaml. Modems
-without native totals declare derivation rules in modem.yaml's
-`aggregate` section. See
-[MODEM_YAML_SPEC.md](../../../packages/cable_modem_monitor_core/docs/MODEM_YAML_SPEC.md#aggregate).
+² Channel counts and error totals appear in `modem_data.system_info`.
+Modems with native values have them mapped in parser.yaml. Modems
+without native values declare derivation rules in parser.yaml's
+`aggregate` section — the parser coordinator computes them from
+channel data. Channel counts (`len(channels)`) are always computed
+by the coordinator if not natively mapped. Consumers read from one
+place regardless of source. See
+[PARSING_SPEC.md](../../../packages/cable_modem_monitor_core/docs/PARSING_SPEC.md#aggregate-derived-system_info-fields).
 
 **Implicit capabilities:** Capabilities are not declared — they are
 implicit from parser.yaml mappings (see
@@ -135,10 +138,9 @@ Created per network interface, 8 sensors each.
 | Restart Modem | `_restart_button` | — | Only if `actions.restart` in modem.yaml |
 | Update Modem Data | `_update_data_button` | — | Always |
 | Reset Entities | `_reset_entities_button` | CONFIG | Always |
-| Capture Modem Data | `_capture_modem_data_button` | DIAGNOSTIC | Always |
 
 Restart Modem is only created when modem.yaml declares
-`actions.restart`. The other three buttons are always created.
+`actions.restart`. The other two buttons are always created.
 
 ### Status Sensor
 
@@ -150,24 +152,25 @@ a pure lookup over values derived upstream.
 
 | Attribute | Source | Values |
 |-----------|--------|--------|
-| `connection_status` | Orchestrator (pipeline outcome) | `online`, `limited`, `no_signal`, `parser_issue`, `auth_failed`, `unreachable` |
+| `connection_status` | Orchestrator (pipeline outcome) | `online`, `no_signal`, `parser_issue`, `auth_failed`, `unreachable` |
 | `health_status` | Health pipeline (probe results) | `responsive`, `unresponsive`, `icmp_blocked`, `degraded` |
 | `docsis_status` | Orchestrator (normalized `lock_status`) | `operational`, `partial_lock`, `not_locked`, `unknown` |
-| `diagnosis` | Health pipeline (human-readable) | Free text |
+| `diagnosis` | HA integration (derived from `health_status`) | Free text |
 
 **Priority cascade** (most to least concerning):
 
 | Priority | Condition | Display State |
 |----------|-----------|---------------|
 | 1 | `health_status == unresponsive` | Unresponsive |
-| 2 | `health_status == degraded` | Degraded |
-| 3 | `connection_status == parser_issue` | Parser Error |
-| 4 | `connection_status == no_signal` | No Signal |
-| 5 | `docsis_status == not_locked` | Not Locked |
-| 6 | `docsis_status == partial_lock` | Partial Lock |
-| 7 | `health_status == icmp_blocked` | ICMP Blocked |
-| 8 | `connection_status == limited` | Limited |
-| 9 | default | Operational |
+| 2 | `connection_status == unreachable` | Unreachable |
+| 3 | `connection_status == auth_failed` | Auth Failed |
+| 4 | `health_status == degraded` | Degraded |
+| 5 | `connection_status == parser_issue` | Parser Error |
+| 6 | `connection_status == no_signal` | No Signal |
+| 7 | `docsis_status == not_locked` | Not Locked |
+| 8 | `docsis_status == partial_lock` | Partial Lock |
+| 9 | `health_status == icmp_blocked` | ICMP Blocked |
+| 10 | default | Operational |
 
 See [RUNTIME_POLLING_SPEC.md](../../../packages/cable_modem_monitor_core/docs/RUNTIME_POLLING_SPEC.md#status-derivation)
 for the derivation rules that produce the three input values.
@@ -219,7 +222,7 @@ for field naming authority and tier definitions.
 | Core (platform-agnostic) | HA Integration |
 |--------------------------|----------------|
 | `ModemData` output (channels, system_info) | Sensor entities with HA metadata |
-| `ModemIdentity` (manufacturer, model, `parser_verified`, `fixtures_url`) | Modem Info sensor attributes (pass-through) |
+| `ModemIdentity` (manufacturer, model, docsis_version, release_date, status) | Modem Info sensor attributes (pass-through) |
 | Field names, types, units | `device_class`, `state_class`, `unit_of_measurement` |
 | Implicit capabilities (field present = capable) | Entity created if field present |
 | Health check results (latency, reachability) | Health sensor entities |
@@ -290,8 +293,8 @@ created. No channel sensors, no system sensors.
 
 `ModemSensorBase.available` returns `True` when:
 - `coordinator.last_update_success` is `True`, AND
-- modem status is in a reportable state (online, offline, limited,
-  parser_issue, no_signal)
+- modem status is in a reportable state (see `connection_status`
+  values in the Status Sensor table above)
 
 Health sensors (Ping, HTTP) have independent availability based on
 whether the health check ran (`ping_success is not None`,

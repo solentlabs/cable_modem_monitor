@@ -96,7 +96,7 @@ but modem-specific behavior comes from config, not from Core code.
 | RestartMonitor | Two-phase restart recovery: wait for response → wait for channel sync |
 | Auth Manager | Strategy dispatch, session reuse, backoff |
 | Modem loader | `load_modem_config(path, mfr, model, variant)` — knows the directory convention |
-| Discovery API | `search_modems(path, query)`, `list_variants(path, mfr, model)` — searches across `manufacturer`, `model`, `model_aliases`, `brands` fields |
+| Catalog Manager | `list_modems(catalog_path)` → `list[ModemSummary]` — walks catalog, returns identity fields for config flow display and filtering |
 | Connectivity | Protocol detection, legacy SSL, health probes |
 | Exceptions | `LoginLockoutError`, `AuthFailedError`, `ParseError` |
 | Test harness | Schema validators, HAR replay framework, parser output assertions |
@@ -143,25 +143,49 @@ Core's engine. Depends on both Core and Catalog.
 
 | Responsibility | What |
 |----------------|------|
-| Config flow | Calls Core's discovery API with Catalog's path |
-| Coordinator | Wraps Core's `Orchestrator` in HA's `DataUpdateCoordinator` |
-| Entities | Maps Core's `ModemData` / `HealthInfo` → HA sensors |
-| Restart button | Maps HA button press → Core's action API |
-| Update button | Triggers an immediate poll via the coordinator |
+| Config flow | Manufacturer dropdown → model filter → variant → connection → validate. Uses Core's `list_modems()` with Catalog's `CATALOG_PATH` |
+| Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2024.12+) |
+| Data coordinator | Wraps Core's `Orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator` |
+| Health coordinator | Second `DataUpdateCoordinator` wrapping `HealthMonitor.ping()`. Conditional — only created if probes work. Independent cadence (default 30s) |
+| Entities | Maps Core's `ModemSnapshot` → HA sensors. Channel sensors unavailable when `modem_data` is None |
+| Status sensor | Priority cascade over `connection_status`, `health_status`, `docsis_status`. `diagnosis` attribute derived in HA from `health_status` enum |
+| Restart button | Maps HA button press → `orchestrator.restart()` in executor thread with `cancel_event` for clean shutdown |
+| Update button | Triggers immediate poll via `coordinator.async_request_refresh()` |
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
-| Capture button | Triggers diagnostic poll cycle, PII-scrubs raw data via `har-capture` redaction, exposes via HA diagnostics download |
-| Diagnostics | Passes Core's diagnostic data to HA's diagnostics platform |
+| Reauth flow | Circuit breaker triggers HA native `async_step_reauth`. Calls `orchestrator.reset_auth()` on success |
+| Diagnostics | Combines Core's `OrchestratorDiagnostics` with HA-side sanitized logs, channel dump, PII checklist |
+| Dashboard generator | Service that generates Lovelace YAML for modem dashboard based on current channels |
 
-No parsing, no auth, no modem-specific knowledge. If Core and Catalog were
-wired to a different platform, none of this code would be needed.
+No parsing, no auth, no modem-specific knowledge. The Capture button from
+v3.13 was removed — `har-capture` is the tool for collecting raw modem data
+for parser development.
 
 **Startup example:**
 ```python
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
-from solentlabs.cable_modem_monitor_core import Orchestrator, load_modem_config
+from solentlabs.cable_modem_monitor_core.orchestration import (
+    HealthMonitor,
+    ModemDataCollector,
+    Orchestrator,
+)
 
-config = load_modem_config(CATALOG_PATH, "arris", "sb8200", "url-token")
-orchestrator = Orchestrator(config, host="192.168.100.1", credentials=...)
+# Load configs from catalog
+modem_config = load_modem_config(CATALOG_PATH / "arris" / "sb8200" / "modem.yaml")
+parser_config = load_parser_config(CATALOG_PATH / "arris" / "sb8200" / "parser.yaml")
+
+# Create components
+collector = ModemDataCollector(
+    modem_config, parser_config, post_processor=None,
+    base_url="http://192.168.100.1", username="admin", password="...",
+)
+health_monitor = HealthMonitor(
+    base_url="http://192.168.100.1",
+    supports_icmp=True, supports_head=True,
+)
+orchestrator = Orchestrator(collector, health_monitor, modem_config)
+
+# Poll
+snapshot = orchestrator.get_modem_data()
 ```
 
 ---
@@ -267,16 +291,19 @@ Handles authentication for all transports through configuration, not code.
 Each auth strategy is a single audited implementation that reads its parameters
 from modem.yaml:
 
-| Strategy | Transport | Stateless? | Config Flags |
-|----------|-----------|:----------:|-------------|
-| `none` | HTTP | Yes | — |
-| `basic` | HTTP | Yes | challenge_cookie (retry with server-set cookie on 401) |
-| `form` | HTTP | No | encoding (plain/base64), CSRF (field/header), session cookie name, hidden fields |
-| `form_nonce` | HTTP | No | nonce field, credential format, success/error prefixes |
-| `hnap` | HNAP | No | HMAC algorithm (MD5/SHA256) |
-| `form_pbkdf2` | HTTP | No | login_endpoint, pbkdf2_iterations, pbkdf2_key_length, double_hash (salt + saltwebui), csrf_init_endpoint |
-| `form_sjcl` | HTTP | No | login_page, login_endpoint, pbkdf2_iterations, pbkdf2_key_length, ccm_tag_length, encrypt_aad, decrypt_aad, csrf_header |
-| `url_token` | HTTP | No | login_page, login_prefix, success_indicator, ajax_login, auth_header_data |
+| Strategy | Transport | Stateless? |
+|----------|-----------|:----------:|
+| `none` | HTTP | Yes |
+| `basic` | HTTP | Yes |
+| `form` | HTTP | No |
+| `form_nonce` | HTTP | No |
+| `hnap` | HNAP | No |
+| `form_pbkdf2` | HTTP | No |
+| `form_sjcl` | HTTP | No |
+| `url_token` | HTTP | No |
+
+See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#auth) for per-strategy
+config fields.
 
 **Key points:**
 - `form` and `form_nonce` are separate strategies because they have different
@@ -535,26 +562,19 @@ Maintains authenticated state between requests. For the HTTP transport,
 session is independent from auth — the same auth strategy can use different
 session mechanisms across modems. For HNAP, session is locked to the transport.
 
-| Mechanism | Transport | Config |
-|-----------|-----------|--------|
-| Stateless | HTTP | — |
-| Cookie | HTTP | `session.cookie_name` |
-| CSRF token | HTTP | `auth.csrf_header` (`form_pbkdf2` and `form_sjcl` strategy-specific) |
-| Nonce | HTTP | Server-side tracking, no client config |
-| URL token | HTTP | `session.token_prefix` |
-| HNAP session | HNAP | Implicit — `uid` cookie + `HNAP_AUTH` header |
+| Mechanism | Transport |
+|-----------|-----------|
+| Stateless | HTTP |
+| Cookie | HTTP |
+| CSRF token | HTTP |
+| Nonce | HTTP |
+| URL token | HTTP |
+| HNAP session | HNAP |
 
-**Key points:**
-- Session config is independent from auth config in modem.yaml — different
-  modems using the same auth strategy often have different session mechanisms
-- Cookie names are vendor-specific (e.g., `PHPSESSID`, `SessionID`, `DUKSID`,
-  `sysauth`) — all handled by one config field
-- Logout is declared in `actions.logout` (see MODEM_YAML_SPEC.md
-  Actions section) and concurrency limit (`session.max_concurrent`)
-  is optional session config
-- Session-wide headers (`session.headers`) apply to all requests —
-  used by SPA-style modems that expect `X-Requested-With` on every
-  request
+Session config is independent from auth config — different modems using
+the same auth strategy often have different session mechanisms. See
+[MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#session) for config fields
+(cookie names, token prefixes, concurrency limits, headers, logout).
 
 ### Resource Loaders
 
@@ -650,27 +670,15 @@ interface (data poll every 10 minutes). Each model has its own cadence and
 lifecycle.
 
 **`ModemSnapshot`** — return type of `get_modem_data()`, combining
-collection results with health and operational state:
-  - `modem_data` — `ModemData` from the collector (None on failure)
-  - `health_info` — latest `HealthInfo` from the health monitor (None if no monitor)
-  - `connection_status` — derived from pipeline outcome
-  - `docsis_status` — derived from channel lock states
-  - `aggregates` — computed aggregate fields (if configured)
-  - `collector_signal` — signal from the collector (OK on success)
-  - `error` — diagnostic message on failure
+collection results with health and operational state. Carries
+`connection_status` and `docsis_status` (derived by the orchestrator),
+`modem_data` from the collector (None on failure), and `health_info`
+from the health monitor. Channel counts and aggregate fields are
+already in `system_info` — computed by the parser coordinator.
 
-**`OrchestratorMetrics`** — operational metrics snapshot from `metrics()`:
-  - `poll_duration` — wall-clock time of last collection in seconds
-  - `auth_failure_streak` — consecutive auth failures (0 = healthy)
-  - `circuit_breaker_open` — whether polling is stopped
-  - `session_is_valid` — current session state
-  - `resource_fetches` — list of `ResourceFetch` per resource
-  - `last_poll_timestamp` — monotonic time of last poll
-
-**`ResourceFetch`** — timing and size for a single resource fetch:
-  - `path` — resource path (e.g., "/status.html")
-  - `duration_ms` — fetch time in milliseconds
-  - `size_bytes` — response body size
+**`OrchestratorDiagnostics`** — operational diagnostics snapshot from
+`diagnostics()`, including poll timing, auth failure streak, circuit
+breaker state, and per-resource fetch details (`ResourceFetch`).
 
 **`ChannelData`** — per-channel metrics for downstream and upstream:
   - Fixed fields: channel ID, frequency, power, SNR, lock status,
@@ -686,28 +694,22 @@ collection results with health and operational state:
     doesn't provide it natively — consumers see the same field regardless
     of source
 
-**`ModemIdentity`** — modem metadata derived from config at load time:
-  - `manufacturer`, `model`, `transport`
-  - `parser_verified: bool` — `True` when `status == "verified"`
-  - `fixtures_url: str` — GitHub URL to the modem's catalog directory,
-    constructed from catalog path + manufacturer + model
-  - `docsis_version`, `release_date` — from modem.yaml `hardware` section
+**`ModemIdentity`** — static modem metadata from modem.yaml, populated
+once at config load time. Built by `load_modem_config()`. Consumers
+use it for display and device registration.
 
-`ModemIdentity` is built by `load_modem_config()` from data it already
-has (modem.yaml fields + catalog path). Consumers receive it ready-to-use
-— no derivation or URL construction needed downstream.
+See [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) for
+field-level definitions of `ModemSnapshot`, `OrchestratorDiagnostics`,
+`ResourceFetch`, and `ModemIdentity`.
 
 **Status** — three independent signals, each derived from different data:
 
-- `connection_status` (on `ModemSnapshot`) — from pipeline outcome:
-  channels present → `online`, zero channels → `no_signal`,
-  auth failure → `auth_failed`, timeout → `unreachable`
-- `docsis_status` (on `ModemSnapshot`) — from channel `lock_status`
-  fields: all locked → `operational`, some → `partial_lock`,
-  none → `not_locked`, no field → `unknown`
-- `health_status` (on `HealthInfo`) — from probe results:
-  both respond → `responsive`, ICMP only → `degraded`,
-  HTTP only → `icmp_blocked`, neither → `unresponsive`
+- `connection_status` (on `ModemSnapshot`) — from pipeline outcome
+- `docsis_status` (on `ModemSnapshot`) — from channel `lock_status` fields
+- `health_status` (on `HealthInfo`) — from probe results
+
+See [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) for
+per-value definitions (`ConnectionStatus`, `DocsisStatus`, `HealthStatus`).
 
 Consumers compose these into a display state. The HA integration's
 Status sensor uses a priority cascade — see `ENTITY_MODEL_SPEC.md`.
@@ -986,7 +988,7 @@ separation ensures no hidden policy in protocol layers.
 See `RUNTIME_POLLING_SPEC.md` for the full specification: poll cycle
 sequence, signal and policy separation, session lifecycle (reuse, stale
 retry, backoff, single-session logout), health pipeline, modem restart
-(planned and unplanned), and per-poll metrics.
+(planned and unplanned), and per-poll diagnostics.
 
 ---
 
@@ -1416,12 +1418,19 @@ levels; Core only emits log records.
 
 | Document | Purpose |
 |----------|---------|
-| `MODEM_DIRECTORY_SPEC.md` | Catalog package structure |
-| `MODEM_YAML_SPEC.md` | modem.yaml schema |
-| `PARSING_SPEC.md` | Strategy selection, parser.yaml schema, parser.py contract, output format |
+| `ARCHITECTURE_DECISIONS.md` | Design rationale — the "why" behind the architecture |
+| `MODEM_YAML_SPEC.md` | modem.yaml schema — identity, auth, session, actions |
+| `MODEM_DIRECTORY_SPEC.md` | Catalog directory structure, file roles, assembly rules |
+| `PARSING_SPEC.md` | Extraction formats, parser.yaml schema, parser.py contract, output format |
 | `RESOURCE_LOADING_SPEC.md` | Resource dict contract, loader behavior per transport |
+| `ORCHESTRATION_SPEC.md` | Orchestrator, collector, health monitor, restart monitor — interface contracts and data models |
+| `ORCHESTRATION_USE_CASES.md` | Scenario-based use cases — normal ops, auth failures, connectivity, restart, health, lifecycle |
 | `RUNTIME_POLLING_SPEC.md` | Poll cycle, session lifecycle, health pipeline, restart recovery |
+| `FIELD_REGISTRY.md` | Three-tier field naming authority |
+| `VERIFICATION_STATUS.md` | Parser status lifecycle |
+| `ONBOARDING_SPEC.md` | MCP-driven modem onboarding workflow |
 <!-- Cross-package links: these relative paths work in the monorepo but
      will need updating if packages are published separately to PyPI. -->
 | `../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md` | Setup wizard step sequence |
-| `VERIFICATION_STATUS.md` | Parser status lifecycle |
+| `../../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md` | Core output → HA entities, attributes, availability |
+| `../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md` | HA wiring — runtime data, coordinators, polling modes, restart, reauth |

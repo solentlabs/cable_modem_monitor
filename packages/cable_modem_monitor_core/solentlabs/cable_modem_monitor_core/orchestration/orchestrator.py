@@ -19,7 +19,6 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from .actions import execute_restart_action
-from .metrics import compute_metrics
 from .models import ModemSnapshot, OrchestratorDiagnostics, RestartResult
 from .policy import SignalPolicy
 from .restart import RestartMonitor
@@ -52,8 +51,8 @@ class Orchestrator:
         collector: ModemDataCollector instance (reused across polls).
         health_monitor: Optional health probe monitor. None if the
             modem doesn't support ICMP or HTTP HEAD probes.
-        modem_config: Parsed modem.yaml config. Used for behaviors,
-            actions, and aggregate field definitions.
+        modem_config: Parsed modem.yaml config. Used for behaviors
+            and actions.
     """
 
     AUTH_FAILURE_THRESHOLD: int = 6
@@ -73,6 +72,10 @@ class Orchestrator:
         self._is_restarting: bool = False
         self._last_status: ConnectionStatus | None = None
 
+        # First-poll verbose logging — INFO on first poll and after
+        # reset_auth(), DEBUG on steady-state
+        self._first_poll_complete: bool = False
+
         # Diagnostics state
         self._last_poll_duration: float | None = None
         self._last_poll_timestamp: float | None = None
@@ -86,7 +89,7 @@ class Orchestrator:
         3. Check backoff — if active, decrement and return AUTH_FAILED
         4. Run ModemDataCollector
         5. If collection failed, apply signal policy
-        6. On success: reset streak, derive statuses, compute metrics
+        6. On success: reset streak, derive statuses
         7. Detect state transitions
         8. Return ModemSnapshot
 
@@ -195,6 +198,7 @@ class Orchestrator:
         """
         self._policy.reset()
         self._collector.clear_session()
+        self._first_poll_complete = False
         _logger.info("Auth state reset — next poll will attempt fresh login")
 
     def diagnostics(self) -> OrchestratorDiagnostics:
@@ -224,6 +228,12 @@ class Orchestrator:
     def is_restarting(self) -> bool:
         """Whether a restart is currently in progress."""
         return self._is_restarting
+
+    @property
+    def supports_restart(self) -> bool:
+        """Whether the modem declares a restart action in modem.yaml."""
+        actions = self._modem_config.actions
+        return actions is not None and actions.restart is not None
 
     # ------------------------------------------------------------------
     # Internal — poll execution
@@ -255,12 +265,18 @@ class Orchestrator:
                 error="Login backoff active",
             )
 
+        # Log poll context — INFO on first poll, DEBUG on steady-state
+        self._log_poll_context()
+
         # Run collector
         result = self._collector.execute()
 
         if not result.success:
+            self._log_poll_result(result)
             return self._handle_failure(result)
 
+        self._first_poll_complete = True
+        self._log_poll_result(result)
         return self._handle_success(result)
 
     def _handle_failure(self, result: ModemResult) -> ModemSnapshot:
@@ -289,9 +305,6 @@ class Orchestrator:
         connection_status = derive_connection_status(modem_data)
         docsis_status = derive_docsis_status(modem_data)
 
-        # Compute metrics
-        metrics = compute_metrics(modem_data, self._modem_config.aggregate)
-
         # Read latest health info
         health_info: HealthInfo | None = None
         if self._health_monitor is not None:
@@ -304,7 +317,6 @@ class Orchestrator:
             docsis_status,
             modem_data=modem_data,
             health_info=health_info,
-            metrics=metrics,
             collector_signal=CollectorSignal.OK,
         )
 
@@ -326,6 +338,46 @@ class Orchestrator:
             )
 
     # ------------------------------------------------------------------
+    # Internal — first-poll verbose logging
+    # ------------------------------------------------------------------
+
+    def _log_poll_context(self) -> None:
+        """Log auth context before poll. INFO on first poll, DEBUG after."""
+        log = _logger.info if not self._first_poll_complete else _logger.debug
+
+        auth = self._modem_config.auth
+        strategy = type(auth).__name__ if auth is not None else "none"
+        has_creds = bool(self._collector._username or self._collector._password)
+        session_valid = self._collector.session_is_valid
+
+        log(
+            "Poll — auth: %s, url: %s, credentials: %s, session_valid: %s",
+            strategy,
+            self._collector._base_url,
+            "yes" if has_creds else "no",
+            session_valid,
+        )
+
+    def _log_poll_result(self, result: ModemResult) -> None:
+        """Log poll outcome. INFO on first poll or failure, DEBUG after."""
+        if not result.success:
+            _logger.warning(
+                "Poll failed — signal: %s, error: %s",
+                result.signal.value,
+                result.error,
+            )
+            return
+
+        if not self._first_poll_complete:
+            ds = len(result.modem_data.get("downstream", [])) if result.modem_data else 0
+            us = len(result.modem_data.get("upstream", [])) if result.modem_data else 0
+            _logger.info(
+                "First poll succeeded — %d downstream, %d upstream channels",
+                ds,
+                us,
+            )
+
+    # ------------------------------------------------------------------
     # Internal — snapshot construction
     # ------------------------------------------------------------------
 
@@ -336,7 +388,6 @@ class Orchestrator:
         *,
         modem_data: dict[str, Any] | None = None,
         health_info: HealthInfo | None = None,
-        metrics: dict[str, int | float] | None = None,
         collector_signal: CollectorSignal = CollectorSignal.OK,
         error: str = "",
     ) -> ModemSnapshot:
@@ -346,7 +397,6 @@ class Orchestrator:
             docsis_status=docsis_status,
             modem_data=modem_data,
             health_info=health_info,
-            metrics=metrics if metrics is not None else {},
             collector_signal=collector_signal,
             error=error,
         )

@@ -142,13 +142,6 @@ def test_field_access(fixture, attr_path, expected):
 class TestRelationships:
     """Tests for multi-field relationships that don't fit a flat table."""
 
-    def test_aggregate_sum_and_channels(self):
-        """Aggregate field references correct source and scope."""
-        config = _load("with_aggregate.json")
-        agg = config.aggregate["total_corrected"]
-        assert agg.sum == "corrected"
-        assert agg.channels == "downstream"
-
     def test_references_issues_and_prs(self):
         """References section contains both issues and PRs."""
         config = _load("with_optional_identity.json")

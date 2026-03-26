@@ -142,7 +142,6 @@ def _mock_collector(
 def _mock_config(
     *,
     has_restart: bool = False,
-    has_aggregate: bool = False,
 ) -> MagicMock:
     """Build a minimal ModemConfig-like object."""
     config = MagicMock()
@@ -162,18 +161,6 @@ def _mock_config(
         )
     else:
         config.actions = None
-
-    # Aggregate
-    if has_aggregate:
-        from solentlabs.cable_modem_monitor_core.models.modem_config.metadata import (
-            AggregateField,
-        )
-
-        config.aggregate = {
-            "total_corrected": AggregateField(sum="corrected", channels="downstream"),
-        }
-    else:
-        config.aggregate = {}
 
     return config
 
@@ -1037,50 +1024,6 @@ class TestStatusProperty:
 
         orch.get_modem_data()
         assert orch.status == ConnectionStatus.UNREACHABLE  # type: ignore[comparison-overlap]
-
-
-# ==================================================================
-# Metrics integration
-# ==================================================================
-
-
-class TestMetricsIntegration:
-    """Metrics computation wired through get_modem_data()."""
-
-    def test_metrics_computed_on_success(self) -> None:
-        """Metrics from modem_config are computed on successful poll."""
-        data = _make_modem_data(
-            downstream=[
-                {"corrected": 100, "lock_status": "locked"},
-                {"corrected": 200, "lock_status": "locked"},
-            ],
-            upstream=[{"channel_id": 1}],
-            system_info={"firmware": "1.0"},
-        )
-        collector = _mock_collector(_ok_result(data))
-        config = _mock_config(has_aggregate=True)
-        orch = _make_orchestrator(collector=collector, config=config)
-
-        snapshot = orch.get_modem_data()
-
-        assert snapshot.metrics == {"total_corrected": 300}
-
-    def test_no_metrics_without_config(self) -> None:
-        """No aggregate config → empty dict."""
-        orch = _make_orchestrator()
-
-        snapshot = orch.get_modem_data()
-
-        assert snapshot.metrics == {}
-
-    def test_no_metrics_on_failure(self) -> None:
-        """Failed collection → empty metrics."""
-        collector = _mock_collector(_fail_result(CollectorSignal.CONNECTIVITY))
-        orch = _make_orchestrator(collector=collector)
-
-        snapshot = orch.get_modem_data()
-
-        assert snapshot.metrics == {}
 
 
 # ==================================================================

@@ -333,7 +333,7 @@ resource_fetches: list[ResourceFetch]
 ```
 
 Units are milliseconds for `duration_ms` and bytes for `size_bytes`.
-The orchestrator stores these on `OrchestratorMetrics.resource_fetches`
+The orchestrator stores these on `OrchestratorDiagnostics.resource_fetches`
 from the last successful collection. Consumers convert to display
 units as needed.
 

@@ -84,6 +84,10 @@
         "channel_type": "ofdm"
       }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 0
+    }
   }
 }

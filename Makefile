@@ -1,4 +1,4 @@
-.PHONY: help sync test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell mock
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell mock
 
 # Default target - show help
 help:
@@ -33,22 +33,17 @@ help:
 	@echo "  make docker-clean   - Remove container and all test data"
 	@echo ""
 	@echo "Maintenance:"
-	@echo "  make sync         - Sync modem configs/parsers from modems/ to custom_components/"
 	@echo "  make deploy       - Deploy to Home Assistant server"
 	@echo "  make sync-version - Sync version from const.py to manifest.json"
 	@echo ""
 	@echo "For more details, see scripts/README.md"
 
-# Sync modem configs and parsers from modems/ to custom_components/
-sync:
-	@python3 scripts/release.py --sync-only
-
-# Run full test suite with coverage (syncs first)
-test: sync
+# Run full test suite with coverage
+test:
 	@bash scripts/dev/run_tests_local.sh
 
-# Quick test (assumes venv setup, syncs first)
-test-quick: sync
+# Quick test (assumes venv setup)
+test-quick:
 	@bash scripts/dev/quick_test.sh
 
 # Simple test without venv

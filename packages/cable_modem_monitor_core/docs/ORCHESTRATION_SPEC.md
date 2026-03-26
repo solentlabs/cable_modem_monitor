@@ -157,7 +157,7 @@ class CollectorSignal(Enum):
 
 | Signal | Orchestrator Policy |
 |--------|-------------------|
-| `OK` | Reset auth streak, derive statuses, compute aggregates, return `ModemSnapshot` (see § Connection Status Derivation) |
+| `OK` | Reset auth streak, derive statuses, return `ModemSnapshot` (see § Connection Status Derivation) |
 | `AUTH_FAILED` | Abort, report `auth_failed`, no retry |
 | `AUTH_LOCKOUT` | Suppress login for 3 polls, report `auth_failed` |
 | `CONNECTIVITY` | Abort, report `unreachable`, no backoff |
@@ -235,7 +235,7 @@ Both can also be triggered manually from the UI:
 | Operation | Scheduled | Manual trigger | API call |
 |-----------|-----------|---------------|----------|
 | Data collection | Consumer timer (e.g., 10m) | "Update" button in HA | `orchestrator.get_modem_data()` |
-| Health check | Consumer timer (e.g., 30s) | "Check Health" button in HA | `health_monitor.ping()` |
+| Health check | Consumer timer (e.g., 30s) | Included in "Update" button refresh | `health_monitor.ping()` |
 | Restart | N/A | "Restart Modem" button in HA | `orchestrator.restart()` |
 
 The API methods are identical for scheduled and manual calls — the
@@ -247,7 +247,7 @@ circuit breaker protection apply equally to both.
 | Interval | Min | Max | Default | Rationale |
 |----------|-----|-----|---------|-----------|
 | Data collection | 30s | 24h | 10m | Min protects HNAP modems from anti-brute-force. Max prevents excessively stale data. |
-| Health check | 10s | poll_interval | 30s | Min avoids wasteful probing. Max capped at poll interval — if health runs less often than data collection, the collector already exercises the modem more frequently and health probes add no value. |
+| Health check | 10s | 24h | 30s | Min avoids wasteful probing. Max matches data collection. Both intervals are independently configurable or disabled — see HA_ADAPTER_SPEC Polling Modes. |
 
 The consumer enforces these limits in its configuration UI. Core
 does not validate intervals — it processes one call at a time
@@ -270,8 +270,7 @@ class Orchestrator:
             health_monitor: Optional health probe monitor. None if the
                 modem doesn't support ICMP or HTTP HEAD probes.
             modem_config: Parsed modem.yaml config. Used for behaviors
-                (restart window), actions (logout, restart), and
-                aggregate field definitions.
+                (restart window) and actions (logout, restart).
         """
 
     def get_modem_data(self) -> ModemSnapshot:
@@ -287,10 +286,9 @@ class Orchestrator:
         6. On success, notify HealthMonitor via update_from_collection()
         7. Derive connection_status from data
         8. Derive docsis_status from lock_status fields
-        9. Compute aggregate fields if configured
-        10. Read latest HealthInfo from HealthMonitor (if present)
-        11. Detect state transitions (unreachable → online)
-        12. Return combined result
+        9. Read latest HealthInfo from HealthMonitor (if present)
+        10. Detect state transitions (unreachable → online)
+        11. Return combined result
 
         The HealthMonitor runs on its own cadence, independent of
         get_modem_data(). The orchestrator reads the latest health
@@ -375,14 +373,14 @@ class Orchestrator:
         known-bad credentials. Credentials must be fixed first.
         """
 
-    def metrics(self) -> OrchestratorMetrics:
-        """Return a read-only snapshot of operational metrics.
+    def diagnostics(self) -> OrchestratorDiagnostics:
+        """Return a read-only snapshot of operational diagnostics.
 
         No side effects — safe to call at any time, including when the
         circuit breaker is open or a restart is in progress.
 
         Returns:
-            OrchestratorMetrics with current operational state.
+            OrchestratorDiagnostics with current operational state.
         """
 
     @property
@@ -406,6 +404,88 @@ class Orchestrator:
         """
 ```
 
+### Data Models
+
+```python
+@dataclass
+class ModemIdentity:
+    """Static modem metadata from modem.yaml.
+
+    Populated once at config load time. Consumers use this for
+    display and device registration. The model field comes from
+    the modem.yaml config — if the modem reports a different model
+    in system_info at runtime, that value is available in
+    modem_data.system_info and takes precedence for display.
+
+    Attributes:
+        manufacturer: Modem manufacturer (e.g., "Arris", "Netgear").
+        model: Model name from modem.yaml (e.g., "SB8200").
+        docsis_version: DOCSIS version (e.g., "3.1"). None if unknown.
+        release_date: Release date string (e.g., "2020"). None if unknown.
+        status: Verification status — "verified", "awaiting_verification",
+            or "unsupported".
+    """
+
+    manufacturer: str
+    model: str
+    docsis_version: str | None = None
+    release_date: str | None = None
+    status: str = "awaiting_verification"
+
+
+@dataclass
+class ModemSummary:
+    """Lightweight modem summary for catalog browsing.
+
+    Returned by list_modems(). Contains enough for config flow
+    display and filtering — not the full modem config.
+
+    Attributes:
+        manufacturer: Modem manufacturer.
+        model: Model name.
+        model_aliases: Alternative model names (e.g., "Surfboard").
+        brands: ISP brand names (e.g., "Xfinity").
+        docsis_version: DOCSIS version string. None if unknown.
+        status: Verification status.
+        default_host: Default IP for this modem (e.g., "192.168.100.1").
+        auth_strategy: Auth strategy of the default variant. For
+            multi-variant modems, the config flow loads variant-specific
+            auth strategy in Step 2.
+        path: Filesystem path to the modem directory in the catalog.
+    """
+
+    manufacturer: str
+    model: str
+    model_aliases: list[str]
+    brands: list[str]
+    docsis_version: str | None
+    status: str
+    default_host: str
+    auth_strategy: str
+    path: Path
+```
+
+### Catalog Manager
+
+```python
+def list_modems(catalog_path: Path) -> list[ModemSummary]:
+    """Walk the catalog and return summaries of all modems.
+
+    Reads identity fields from each modem.yaml (and modem-{variant}.yaml)
+    in the catalog directory. Returns a flat list suitable for config flow
+    dropdowns, search, or filtering.
+
+    The consumer owns the UI pattern — dropdowns, typeahead, flat list.
+    This API returns everything; the consumer filters client-side.
+
+    Args:
+        catalog_path: Root of the catalog modems directory.
+
+    Returns:
+        List of ModemSummary, one per modem (default variant).
+    """
+```
+
 ### Result Types
 
 ```python
@@ -415,18 +495,19 @@ class ModemSnapshot:
 
     This is the top-level result consumers receive from
     get_modem_data(). It combines the ModemDataCollector output,
-    health probe output, and orchestrator-derived fields into a
-    single immutable structure.
+    health probe output, and orchestrator-derived status fields
+    into a single immutable structure.
 
     Attributes:
         connection_status: Derived from collector signal and data.
         docsis_status: Derived from downstream lock_status fields.
         modem_data: Parsed channel and system_info data. None on
             collection failure. Present (possibly with empty channels)
-            on successful collection.
+            on successful collection. Channel counts and aggregate
+            fields (e.g., total_corrected) are computed by the parser
+            coordinator — consumers read them from system_info
+            regardless of whether the modem reported them natively.
         health_info: Health probe results. None if no health monitor.
-        aggregates: Computed aggregate fields (e.g., total_corrected).
-            Empty dict if no aggregates configured in modem.yaml.
         collector_signal: Raw signal from the collector (for diagnostics).
         error: Human-readable error summary.
     """
@@ -435,7 +516,6 @@ class ModemSnapshot:
     docsis_status: DocsisStatus
     modem_data: ModemData | None = None
     health_info: HealthInfo | None = None
-    aggregates: dict[str, int | float] = field(default_factory=dict)
     collector_signal: CollectorSignal = CollectorSignal.OK
     error: str = ""
 
@@ -471,10 +551,10 @@ class ResourceFetch:
 
 
 @dataclass
-class OrchestratorMetrics:
-    """Read-only snapshot of operational metrics.
+class OrchestratorDiagnostics:
+    """Read-only snapshot of operational diagnostics.
 
-    Returned by metrics(). No side effects. Safe to call at any time.
+    Returned by diagnostics(). No side effects. Safe to call at any time.
 
     Attributes:
         poll_duration: Wall-clock time of last get_modem_data() call
@@ -511,8 +591,8 @@ class ConnectionStatus(Enum):
 
 # Note: "degraded" (health passes but data fetch fails) is a
 # display-layer composition of connection_status + health_status, not
-# a Core signal. The HA Status sensor cascade should evaluate whether
-# to surface this combination as a display state (Step 21).
+# a Core signal. The HA Status sensor cascade evaluates whether to
+# surface this combination as a display state.
 
 
 class DocsisStatus(Enum):
@@ -583,7 +663,7 @@ def get_modem_data(self) -> ModemSnapshot:
         self._health_monitor.update_from_collection(time.monotonic())
 
     status = self._derive_connection_status(result.modem_data)
-    # ... docsis_status, aggregates ...
+    # ... docsis_status ...
     health_info = self._health_monitor.latest if self._health_monitor else None
     # ... transition detection ...
     return ModemSnapshot(connection_status=status, health_info=health_info, ...)
@@ -798,15 +878,11 @@ The orchestrator computes these after a successful collection:
 | No DS channels (no signal) | `not_locked` |
 | No `lock_status` field on channels | `unknown` |
 
-**Aggregate fields** — computed from modem.yaml `aggregate` section:
-- Scoped sums (e.g., `total_corrected` = sum of `corrected` across
-  downstream channels, optionally filtered by `channel_type`)
-- Only computed when declared in modem.yaml
-- Empty dict when no channels are present
-
-**Channel counts** — `downstream_channel_count`, `upstream_channel_count`
-derived from `len(modem_data["downstream"])` and `len(modem_data["upstream"])`.
-Zero is a valid count.
+**Channel counts and aggregate fields** are computed by the parser
+coordinator, not the orchestrator. By the time the orchestrator
+receives `modem_data`, `system_info` already contains channel counts
+and any declared aggregate fields. See
+[PARSING_SPEC.md](PARSING_SPEC.md#aggregate-derived-system_info-fields).
 
 ### Logging Contract
 

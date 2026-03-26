@@ -106,7 +106,6 @@ def _extract_metadata_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "notes",
         "references",
         "timeout",
-        "aggregate",
     ):
         if key in config:
             metadata[key] = config[key]

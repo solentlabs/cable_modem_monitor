@@ -1,34 +1,27 @@
 """Service handlers for Cable Modem Monitor.
 
 Services:
-    cable_modem_monitor.clear_history: Clear historical sensor data
-    cable_modem_monitor.generate_dashboard: Generate Lovelace dashboard YAML
+    cable_modem_monitor.generate_dashboard:
+        Generates Lovelace YAML for a complete modem dashboard based on
+        current channel data.
+
+See HA_ADAPTER_SPEC.md § Services.
 """
 
 from __future__ import annotations
 
 import logging
-import sqlite3
-from datetime import datetime, timedelta
+from collections import defaultdict
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import entity_registry as er
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
-from .channel_utils import get_channel_info, get_channel_types, group_channels_by_type
 from .const import DOMAIN
+from .coordinator import CableModemConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
-
-# Service definitions
-SERVICE_CLEAR_HISTORY = "clear_history"
-SERVICE_CLEAR_HISTORY_SCHEMA = vol.Schema(
-    {
-        vol.Required("days_to_keep"): cv.positive_int,
-    }
-)
 
 SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
 SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
@@ -47,6 +40,58 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
     }
 )
+
+
+# ------------------------------------------------------------------
+# Channel helpers — read v3.14 ModemSnapshot data directly
+# ------------------------------------------------------------------
+
+
+def _get_channel_info(
+    channels: list[dict[str, Any]],
+    default_type: str,
+) -> list[tuple[str, int]]:
+    """Extract (channel_type, channel_id) pairs from a channel list.
+
+    Core's parser coordinator normalizes these fields, so this is a
+    straight read — no type guessing or ID parsing needed.
+
+    Args:
+        channels: Channel dicts from modem_data["downstream"] or
+            modem_data["upstream"].
+        default_type: Fallback type when channel_type is absent.
+    """
+    result: list[tuple[str, int]] = []
+    for idx, ch in enumerate(channels):
+        ch_type = ch.get("channel_type", default_type)
+        ch_id = ch.get("channel_id", idx + 1)
+        if isinstance(ch_id, str):
+            try:
+                ch_id = int(ch_id)
+            except ValueError:
+                ch_id = idx + 1
+        result.append((ch_type, ch_id))
+    return sorted(result)
+
+
+def _group_by_type(
+    channel_info: list[tuple[str, int]],
+) -> dict[str, list[tuple[str, int]]]:
+    """Group channel info tuples by channel type."""
+    grouped: dict[str, list[tuple[str, int]]] = defaultdict(list)
+    for ch_type, ch_id in channel_info:
+        grouped[ch_type].append((ch_type, ch_id))
+    return dict(grouped)
+
+
+def _unique_types(channel_info: list[tuple[str, int]]) -> set[str]:
+    """Get unique channel types from channel info."""
+    return {ch_type for ch_type, _ in channel_info}
+
+
+# ------------------------------------------------------------------
+# YAML builders
+# ------------------------------------------------------------------
 
 
 def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
@@ -72,31 +117,49 @@ def _get_dashboard_titles(short_titles: bool) -> dict[str, str]:
     }
 
 
-def _format_title_with_type(base_title: str, channel_type: str | None, short_titles: bool) -> str:
-    """Format a title with optional channel type.
+def _format_title_with_type(
+    base_title: str,
+    channel_type: str | None,
+    short_titles: bool,
+) -> str:
+    """Format a title with optional channel type prefix.
 
-    For single-type directions, includes the channel type in the title.
-    E.g., "Downstream Power Levels (dBmV)" -> "Downstream QAM Power Levels (dBmV)"
+    For single-type directions, puts the type in the title so labels
+    can omit it (e.g., "Downstream QAM Power Levels (dBmV)").
     """
     if not channel_type:
         return base_title
-
     type_upper = channel_type.upper()
-
     if short_titles:
-        # "DS Power (dBmV)" -> "DS QAM Power (dBmV)"
         if base_title.startswith("DS "):
             return f"DS {type_upper} {base_title[3:]}"
-        elif base_title.startswith("US "):
+        if base_title.startswith("US "):
             return f"US {type_upper} {base_title[3:]}"
     else:
-        # "Downstream Power Levels (dBmV)" -> "Downstream QAM Power Levels (dBmV)"
         if base_title.startswith("Downstream "):
             return f"Downstream {type_upper} {base_title[11:]}"
-        elif base_title.startswith("Upstream "):
+        if base_title.startswith("Upstream "):
             return f"Upstream {type_upper} {base_title[9:]}"
-
     return base_title
+
+
+def _format_channel_label(
+    ch_type: str,
+    ch_id: int,
+    label_format: str,
+) -> str:
+    """Format a channel label for the dashboard.
+
+    Args:
+        ch_type: Channel type (e.g., "qam", "ofdm").
+        ch_id: Channel ID number.
+        label_format: One of "full", "id_only", "type_id".
+    """
+    if label_format == "id_only":
+        return f"Ch {ch_id}"
+    if label_format == "type_id":
+        return f"{ch_type.upper()} {ch_id}"
+    return f"{ch_type.upper()} Ch {ch_id}"
 
 
 def _build_status_card_yaml() -> list[str]:
@@ -134,35 +197,14 @@ def _build_status_card_yaml() -> list[str]:
     ]
 
 
-def _format_channel_label(ch_type: str, ch_id: int, label_format: str) -> str:
-    """Format channel label based on user preference.
-
-    label_format options:
-    - 'full': 'QAM Ch 32' or 'OFDM Ch 1'
-    - 'id_only': 'Ch 32'
-    - 'type_id': 'QAM 32' or 'OFDM 1'
-    """
-    if label_format == "id_only":
-        return f"Ch {ch_id}"
-    elif label_format == "type_id":
-        return f"{ch_type.upper()} {ch_id}"
-    else:  # 'full' (default)
-        return f"{ch_type.upper()} Ch {ch_id}"
-
-
 def _build_channel_graph_yaml(
     title: str,
     hours: int,
     channel_info: list[tuple[str, int]],
     entity_pattern: str,
-    channel_label: str = "full",
+    channel_label: str,
 ) -> list[str]:
-    """Build YAML for a channel history graph.
-
-    channel_info: list of (channel_type, channel_id) tuples
-    entity_pattern: pattern with {ch_type} and {ch_id} placeholders
-    channel_label: 'full', 'id_only', or 'type_id'
-    """
+    """Build YAML for a channel history graph card."""
     yaml_parts = [
         "  - type: history-graph",
         f"    title: {title}",
@@ -219,226 +261,163 @@ def _add_channel_graphs(
     channel_grouping: str,
     short_titles: bool,
 ) -> None:
-    """Add channel graph cards based on grouping and labeling options.
+    """Add channel graph cards based on grouping preference.
 
-    Modifies yaml_parts in place.
+    Modifies *yaml_parts* in place.
     """
     if not channel_info:
         return
 
-    channel_types = get_channel_types(channel_info)
-    is_single_type = len(channel_types) == 1
+    types = _unique_types(channel_info)
+    is_single_type = len(types) == 1
 
     if channel_grouping == "by_type":
-        # Separate cards per channel type
-        grouped = group_channels_by_type(channel_info)
-        for ch_type in sorted(grouped.keys()):
+        grouped = _group_by_type(channel_info)
+        for ch_type in sorted(grouped):
             channels = grouped[ch_type]
             title = _format_title_with_type(base_title, ch_type, short_titles)
-            # With by_type, labels should be id_only (type is in title)
             effective_label = "id_only" if channel_label == "auto" else channel_label
-            yaml_parts.extend(_build_channel_graph_yaml(title, graph_hours, channels, entity_pattern, effective_label))
+            yaml_parts.extend(
+                _build_channel_graph_yaml(
+                    title,
+                    graph_hours,
+                    channels,
+                    entity_pattern,
+                    effective_label,
+                )
+            )
     else:
-        # by_direction: all channels in one card
         if is_single_type:
-            # Single type: put type in title, use id_only labels
-            single_type = next(iter(channel_types))
+            single_type = next(iter(types))
             title = _format_title_with_type(base_title, single_type, short_titles)
             effective_label = "id_only" if channel_label == "auto" else channel_label
         else:
-            # Mixed types: keep base title, need type in labels
             title = base_title
             effective_label = "full" if channel_label == "auto" else channel_label
-
-        yaml_parts.extend(_build_channel_graph_yaml(title, graph_hours, channel_info, entity_pattern, effective_label))
-
-
-def _clear_db_history(hass: HomeAssistant, cable_modem_entities: list, days_to_keep: int) -> int:
-    """Clear history from database (runs in executor)."""
-    try:
-        cutoff_date = datetime.now() - timedelta(days=days_to_keep)
-        cutoff_ts = cutoff_date.timestamp()
-
-        db_path = hass.config.path("home-assistant_v2.db")
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        # Find metadata IDs for entities
-        placeholders = ",".join("?" * len(cable_modem_entities))
-        query = f"SELECT metadata_id, entity_id FROM states_meta WHERE entity_id IN ({placeholders})"  # nosec B608
-        cursor.execute(query, cable_modem_entities)
-        metadata_ids = [row[0] for row in cursor.fetchall()]
-
-        if not metadata_ids:
-            _LOGGER.warning("No cable modem sensors found in database states")
-            conn.close()
-            return 0
-
-        # Delete old states
-        placeholders = ",".join("?" * len(metadata_ids))
-        query = f"DELETE FROM states WHERE metadata_id IN ({placeholders}) AND last_updated_ts < ?"  # nosec B608
-        cursor.execute(query, (*metadata_ids, cutoff_ts))
-        states_deleted = cursor.rowcount
-
-        # Delete old statistics
-        stats_deleted = _delete_statistics(cursor, cable_modem_entities, cutoff_ts)
-
-        conn.commit()
-        cursor.execute("VACUUM")
-        conn.close()
-
-        _LOGGER.info(
-            "Cleared %d state records and %d statistics records older than %d days",
-            states_deleted,
-            stats_deleted,
-            days_to_keep,
+        yaml_parts.extend(
+            _build_channel_graph_yaml(
+                title,
+                graph_hours,
+                channel_info,
+                entity_pattern,
+                effective_label,
+            )
         )
 
-        return states_deleted + stats_deleted
 
-    except Exception as e:
-        _LOGGER.error("Error clearing history: %s", e)
-        return 0
-
-
-def _delete_statistics(cursor, cable_modem_entities: list, cutoff_ts: float) -> int:
-    """Delete statistics records (helper for _clear_db_history)."""
-    placeholders = ",".join("?" * len(cable_modem_entities))
-    query = f"SELECT id FROM statistics_meta WHERE statistic_id IN ({placeholders})"  # nosec B608
-    cursor.execute(query, cable_modem_entities)
-    stats_metadata_ids = [row[0] for row in cursor.fetchall()]
-
-    if not stats_metadata_ids:
-        return 0
-
-    placeholders = ",".join("?" * len(stats_metadata_ids))
-
-    # Delete from statistics table
-    query = f"DELETE FROM statistics WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608
-    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
-    stats_deleted: int = cursor.rowcount
-
-    # Delete from statistics_short_term table
-    query = f"DELETE FROM statistics_short_term WHERE metadata_id IN ({placeholders}) AND start_ts < ?"  # nosec B608
-    cursor.execute(query, (*stats_metadata_ids, cutoff_ts))
-    stats_deleted += cursor.rowcount
-
-    return stats_deleted
+# ------------------------------------------------------------------
+# Service handler factory
+# ------------------------------------------------------------------
 
 
-def create_clear_history_handler(hass: HomeAssistant):
-    """Create the clear history service handler."""
+def _find_loaded_entry(
+    hass: HomeAssistant,
+) -> CableModemConfigEntry | None:
+    """Find the first loaded config entry for our domain."""
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if hasattr(entry, "runtime_data") and entry.runtime_data is not None:
+            return entry  # type: ignore[return-value]
+    return None
 
-    async def handle_clear_history(call: ServiceCall) -> None:
-        """Handle the clear_history service call."""
-        days_to_keep = call.data.get("days_to_keep", 30)
-        _LOGGER.info("Clearing cable modem history older than %s days", days_to_keep)
 
-        # Get all cable modem entities
-        entity_reg = er.async_get(hass)
-        cable_modem_entities = [
-            entity_entry.entity_id for entity_entry in entity_reg.entities.values() if entity_entry.platform == DOMAIN
+def create_generate_dashboard_handler(
+    hass: HomeAssistant,
+) -> Any:
+    """Create the generate_dashboard service handler."""
+
+    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:
+        """Handle the generate_dashboard service call."""
+        entry = _find_loaded_entry(hass)
+        if entry is None:
+            return {"yaml": "# Error: No cable modem configured"}
+
+        snapshot = entry.runtime_data.data_coordinator.data
+        if snapshot is None or snapshot.modem_data is None:
+            return {"yaml": "# Error: No modem data available"}
+
+        modem_data = snapshot.modem_data
+
+        opts = {
+            "ds_power": call.data.get("include_downstream_power", True),
+            "ds_snr": call.data.get("include_downstream_snr", True),
+            "ds_freq": call.data.get("include_downstream_frequency", True),
+            "us_power": call.data.get("include_upstream_power", True),
+            "us_freq": call.data.get("include_upstream_frequency", False),
+            "errors": call.data.get("include_errors", True),
+            "latency": call.data.get("include_latency", True),
+            "status": call.data.get("include_status_card", True),
+        }
+        graph_hours = call.data.get("graph_hours", 24)
+        short_titles = call.data.get("short_titles", False)
+        titles = _get_dashboard_titles(short_titles)
+        channel_label = call.data.get("channel_label", "auto")
+        channel_grouping = call.data.get("channel_grouping", "by_direction")
+
+        downstream_info = _get_channel_info(modem_data.get("downstream", []), "qam")
+        upstream_info = _get_channel_info(modem_data.get("upstream", []), "atdma")
+
+        yaml_parts = [
+            "# Cable Modem Dashboard",
+            "# Copy from here, paste into:" " Dashboard > Add Card > Manual",
+            "type: vertical-stack",
+            "cards:",
         ]
 
-        if not cable_modem_entities:
-            _LOGGER.warning("No cable modem entities found in registry")
-            return
+        if opts["status"]:
+            yaml_parts.extend(_build_status_card_yaml())
 
-        _LOGGER.info("Found %s cable modem entities to purge", len(cable_modem_entities))
+        # fmt: off
+        channel_graphs = [
+            ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
+            ("ds_snr",   downstream_info, "ds_snr",   "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
+            ("ds_freq",  downstream_info, "ds_freq",  "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
+            ("us_power", upstream_info,   "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
+            ("us_freq",  upstream_info,   "us_freq",  "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
+        ]
+        # fmt: on
 
-        # Clear history in database
-        deleted = await hass.async_add_executor_job(_clear_db_history, hass, cable_modem_entities, days_to_keep)
+        for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
+            if opts[opt_key]:
+                _add_channel_graphs(
+                    yaml_parts,
+                    ch_info,
+                    titles[title_key],
+                    entity_pattern,
+                    graph_hours,
+                    channel_label,
+                    channel_grouping,
+                    short_titles,
+                )
 
-        if deleted > 0:
-            _LOGGER.info("Successfully cleared %s historical records", deleted)
-        else:
-            _LOGGER.warning("No records were deleted")
+        if opts["errors"]:
+            yaml_parts.extend(_build_error_graphs_yaml(titles))
 
-    return handle_clear_history
+        if opts["latency"]:
+            yaml_parts.extend(_build_latency_graph_yaml())
 
-
-def create_generate_dashboard_handler(hass: HomeAssistant):  # noqa: C901
-    """Create the generate dashboard service handler."""
-
-    def handle_generate_dashboard(call: ServiceCall) -> dict[str, Any]:  # noqa: C901
-        """Handle the generate_dashboard service call."""
-        try:
-            # Get options from call
-            opts = {
-                "ds_power": call.data.get("include_downstream_power", True),
-                "ds_snr": call.data.get("include_downstream_snr", True),
-                "ds_freq": call.data.get("include_downstream_frequency", True),
-                "us_power": call.data.get("include_upstream_power", True),
-                "us_freq": call.data.get("include_upstream_frequency", False),
-                "errors": call.data.get("include_errors", True),
-                "latency": call.data.get("include_latency", True),
-                "status": call.data.get("include_status_card", True),
-            }
-            graph_hours = call.data.get("graph_hours", 24)
-            short_titles = call.data.get("short_titles", False)
-            titles = _get_dashboard_titles(short_titles)
-            channel_label = call.data.get("channel_label", "auto")
-            channel_grouping = call.data.get("channel_grouping", "by_direction")
-
-            # Get coordinator data to find actual channel info
-            if DOMAIN not in hass.data or not hass.data[DOMAIN]:
-                return {"yaml": "# Error: No cable modem configured"}
-
-            # Find first coordinator (skip non-coordinator entries like "log_buffer")
-            coordinator = None
-            for value in hass.data[DOMAIN].values():
-                if hasattr(value, "data") and hasattr(value, "async_refresh"):
-                    coordinator = value
-                    break
-
-            if coordinator is None:
-                return {"yaml": "# Error: No cable modem coordinator found"}
-
-            downstream_info, upstream_info = get_channel_info(coordinator)
-
-            # Build YAML
-            yaml_parts = [
-                "# Cable Modem Dashboard",
-                "# Copy from here, paste into: Dashboard > Add Card > Manual",
-                "type: vertical-stack",
-                "cards:",
-            ]
-
-            if opts["status"]:
-                yaml_parts.extend(_build_status_card_yaml())
-
-            # Channel graph configurations: (opt_key, channel_info, title_key, entity_pattern)
-            channel_graphs = [
-                ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
-                ("ds_snr", downstream_info, "ds_snr", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
-                ("ds_freq", downstream_info, "ds_freq", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
-                ("us_power", upstream_info, "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
-                ("us_freq", upstream_info, "us_freq", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
-            ]
-
-            for opt_key, ch_info, title_key, entity_pattern in channel_graphs:
-                if opts[opt_key]:
-                    _add_channel_graphs(
-                        yaml_parts,
-                        ch_info,
-                        titles[title_key],
-                        entity_pattern,
-                        graph_hours,
-                        channel_label,
-                        channel_grouping,
-                        short_titles,
-                    )
-
-            if opts["errors"]:
-                yaml_parts.extend(_build_error_graphs_yaml(titles))
-
-            if opts["latency"]:
-                yaml_parts.extend(_build_latency_graph_yaml())
-
-            return {"yaml": "\n".join(yaml_parts)}
-
-        except Exception as e:
-            _LOGGER.exception("Error generating dashboard: %s", e)
-            return {"yaml": f"# Error generating dashboard: {e}"}
+        return {"yaml": "\n".join(yaml_parts)}
 
     return handle_generate_dashboard
+
+
+# ------------------------------------------------------------------
+# Registration
+# ------------------------------------------------------------------
+
+
+def async_register_services(hass: HomeAssistant) -> None:
+    """Register services (called on first entry setup)."""
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GENERATE_DASHBOARD,
+        create_generate_dashboard_handler(hass),
+        schema=SERVICE_GENERATE_DASHBOARD_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    _LOGGER.debug("Registered %s service", SERVICE_GENERATE_DASHBOARD)
+
+
+def async_unregister_services(hass: HomeAssistant) -> None:
+    """Unregister services (called when last entry is removed)."""
+    hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
+    _LOGGER.debug("Unregistered %s service", SERVICE_GENERATE_DASHBOARD)

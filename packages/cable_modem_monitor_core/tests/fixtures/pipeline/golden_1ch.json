@@ -2,5 +2,9 @@
   "downstream": [
     {"channel_id": 1, "frequency": 507000000, "power": 2.5}
   ],
-  "upstream": []
+  "upstream": [],
+  "system_info": {
+    "downstream_channel_count": 1,
+    "upstream_channel_count": 0
+  }
 }

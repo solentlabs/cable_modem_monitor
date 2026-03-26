@@ -1,15 +1,5 @@
-clear_history:
-  fields:
-    days_to_keep:
-      required: true
-      example: 30
-      selector:
-        number:
-          min: 1
-          max: 365
-          unit_of_measurement: days
-
 generate_dashboard:
+  supports_response: optional
   fields:
     include_status_card:
       default: true

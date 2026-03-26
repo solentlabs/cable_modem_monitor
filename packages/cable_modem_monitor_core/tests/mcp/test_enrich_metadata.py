@@ -376,7 +376,6 @@ _COMPLETE_CONFIG: dict[str, Any] = {
     "notes": "Dual-stack IPv6 supported",
     "references": {"documentation": "https://example.com/t100"},
     "timeout": 15,
-    "aggregate": {"total_corrected": {"sum": "corrected", "channels": "downstream"}},
 }
 
 # Every field that generate_config reads from the metadata dict.
@@ -393,7 +392,6 @@ _METADATA_FIELDS_FOR_GENERATE_CONFIG: list[str] = [
     "transport",
     "default_host",
     # _add_metadata_fields
-    "aggregate",
     "hardware",
     "timeout",
     "status",
@@ -498,7 +496,7 @@ _ENRICH_GENERATE_CASES: list[_EnrichGenerateCase] = [
         [
             "manufacturer: Solent Labs", "model: T100", "transport: hnap",
             "default_host: 10.0.0.1", "docsis_version: '3.1'", "timeout: 15",
-            "Comcast", "total_corrected",
+            "Comcast",
         ],
         [],
     ),

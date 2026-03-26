@@ -1,256 +1,263 @@
 """Sensor platform for Cable Modem Monitor.
 
-This module creates Home Assistant sensor entities from modem data provided by
-the DataUpdateCoordinator. It does NOT handle authentication or data fetching -
-those responsibilities belong to __init__.py and DataOrchestrator.
+Creates Home Assistant sensor entities from Core's ModemSnapshot and
+HealthInfo types.  All modem-specific logic lives in Core — this module
+is pure HA presentation.
 
-Entity Types:
-    - Status/Info: ModemStatusSensor, ModemInfoSensor
-    - Latency: ModemPingLatencySensor, ModemHttpLatencySensor
-    - System: channel counts, software version, uptime, last boot time
-    - Per-channel: power, SNR, frequency, corrected/uncorrected errors
+Entity types:
+    - Status: 10-level priority cascade over connection/health/DOCSIS
+    - Modem Info: static metadata from ModemIdentity
+    - System: channel counts, error totals, software version, uptime
+    - Per-channel: power, SNR, frequency, corrected/uncorrected
     - LAN stats: bytes, packets, errors, drops per interface
+    - Health: ICMP and HTTP latency (from health coordinator)
 
-Architecture:
-    - All sensors inherit from ModemSensorBase (device info, availability)
-    - Per-channel sensors use O(1) indexed lookups (_downstream_by_id, _upstream_by_id)
-    - Capability-gated sensors only created if parser reports the capability
-    - Fallback mode: only connectivity sensors when modem is unsupported
+See ENTITY_MODEL_SPEC.md for the full entity catalog.
 """
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
 from homeassistant.util import dt as dt_util
-
-from .const import (
-    CONF_ACTUAL_MODEL,
-    CONF_DETECTED_MODEM,
-    CONF_ENTITY_PREFIX,
-    CONF_HOST,
-    CONF_PROTOCOL,
-    DOMAIN,
-    ENTITY_PREFIX_IP,
-    ENTITY_PREFIX_MODEL,
-    ENTITY_PREFIX_NONE,
+from solentlabs.cable_modem_monitor_core.orchestration.models import (
+    HealthInfo,
+    ModemSnapshot,
 )
-from .core.base_parser import ModemCapability
-from .lib.host_validation import build_url
+from solentlabs.cable_modem_monitor_core.orchestration.signals import (
+    ConnectionStatus,
+    DocsisStatus,
+    HealthStatus,
+)
+
+from .const import CONF_SUPPORTS_ICMP, DOMAIN
+from .coordinator import CableModemConfigEntry
 from .lib.utils import parse_uptime_to_seconds
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _has_capability(coordinator: DataUpdateCoordinator, capability: ModemCapability) -> bool:
-    """Check if the parser has a specific capability."""
-    capabilities = coordinator.data.get("_parser_capabilities", [])
-    return capability.value in capabilities
+# ------------------------------------------------------------------
+# Channel indexing
+# ------------------------------------------------------------------
 
 
-def _create_system_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
-    """Create system-level sensors (error totals, channel counts, version, uptime)."""
-    entities: list[SensorEntity] = []
+def _index_channels(
+    channels: list[dict[str, Any]],
+    default_type: str,
+) -> dict[tuple[str, str | int], dict[str, Any]]:
+    """Build an indexed dict from a channel list for O(1) lookup.
 
-    # Error totals
-    entities.append(ModemTotalCorrectedSensor(coordinator, entry))
-    entities.append(ModemTotalUncorrectedSensor(coordinator, entry))
+    Args:
+        channels: List of channel dicts from modem_data.
+        default_type: Default channel_type when not present on channel.
 
-    # Channel counts
-    entities.append(ModemDownstreamChannelCountSensor(coordinator, entry))
-    entities.append(ModemUpstreamChannelCountSensor(coordinator, entry))
-
-    # Software version (only if parser has capability)
-    if _has_capability(coordinator, ModemCapability.SOFTWARE_VERSION):
-        entities.append(ModemSoftwareVersionSensor(coordinator, entry))
-
-    # Uptime sensors (only if parser has capability)
-    if _has_capability(coordinator, ModemCapability.SYSTEM_UPTIME):
-        entities.append(ModemSystemUptimeSensor(coordinator, entry))
-        entities.append(ModemLastBootTimeSensor(coordinator, entry))
-
-    return entities
+    Returns:
+        Dict keyed by (channel_type, channel_id).
+    """
+    result: dict[tuple[str, str | int], dict[str, Any]] = {}
+    for ch in channels:
+        ch_type = ch.get("channel_type", default_type)
+        ch_id = ch.get("channel_id")
+        if ch_id is not None:
+            result[(ch_type, ch_id)] = ch
+    return result
 
 
-def _create_downstream_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
-    """Create per-channel downstream sensors."""
-    entities: list[SensorEntity] = []
-    downstream_by_id = coordinator.data.get("_downstream_by_id", {})
-
-    for (channel_type, channel_id), channel in downstream_by_id.items():
-        entities.append(ModemDownstreamPowerSensor(coordinator, entry, channel_type, channel_id))
-        entities.append(ModemDownstreamSNRSensor(coordinator, entry, channel_type, channel_id))
-
-        if "frequency" in channel:
-            entities.append(ModemDownstreamFrequencySensor(coordinator, entry, channel_type, channel_id))
-        if "corrected" in channel:
-            entities.append(ModemDownstreamCorrectedSensor(coordinator, entry, channel_type, channel_id))
-        if "uncorrected" in channel:
-            entities.append(ModemDownstreamUncorrectedSensor(coordinator, entry, channel_type, channel_id))
-
-    return entities
+# ------------------------------------------------------------------
+# Status cascade
+# ------------------------------------------------------------------
 
 
-def _create_upstream_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
-    """Create per-channel upstream sensors."""
-    entities: list[SensorEntity] = []
-    upstream_by_id = coordinator.data.get("_upstream_by_id", {})
+def _compute_display_status(
+    connection: ConnectionStatus,
+    health: HealthStatus | None,
+    docsis: DocsisStatus,
+) -> str:
+    """Apply the 10-level priority cascade to derive display state.
 
-    _LOGGER.debug("Creating entities for %s upstream channels", len(upstream_by_id))
-    for (channel_type, channel_id), channel in upstream_by_id.items():
-        entities.append(ModemUpstreamPowerSensor(coordinator, entry, channel_type, channel_id))
-        if "frequency" in channel:
-            entities.append(ModemUpstreamFrequencySensor(coordinator, entry, channel_type, channel_id))
+    Pure lookup — no business logic.  Core derives the three input
+    values; this function maps them to a human-readable string.
 
-    return entities
+    See ENTITY_MODEL_SPEC.md § Status Sensor.
+    """
+    effective_health = health or HealthStatus.UNKNOWN
 
-
-def _create_lan_stats_sensors(coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> list[SensorEntity]:
-    """Create LAN stats sensors for each interface."""
-    entities: list[SensorEntity] = []
-    lan_stats = coordinator.data.get("cable_modem_lan_stats")
-
-    if not lan_stats:
-        return entities
-
-    for interface in lan_stats:
-        entities.extend(
-            [
-                ModemLanReceivedBytesSensor(coordinator, entry, interface),
-                ModemLanReceivedPacketsSensor(coordinator, entry, interface),
-                ModemLanReceivedErrorsSensor(coordinator, entry, interface),
-                ModemLanReceivedDropsSensor(coordinator, entry, interface),
-                ModemLanTransmittedBytesSensor(coordinator, entry, interface),
-                ModemLanTransmittedPacketsSensor(coordinator, entry, interface),
-                ModemLanTransmittedErrorsSensor(coordinator, entry, interface),
-                ModemLanTransmittedDropsSensor(coordinator, entry, interface),
-            ]
-        )
-
-    return entities
+    if effective_health == HealthStatus.UNRESPONSIVE:
+        return "Unresponsive"
+    if connection == ConnectionStatus.UNREACHABLE:
+        return "Unreachable"
+    if connection == ConnectionStatus.AUTH_FAILED:
+        return "Auth Failed"
+    if effective_health == HealthStatus.DEGRADED:
+        return "Degraded"
+    if connection == ConnectionStatus.PARSER_ISSUE:
+        return "Parser Error"
+    if connection == ConnectionStatus.NO_SIGNAL:
+        return "No Signal"
+    if docsis == DocsisStatus.NOT_LOCKED:
+        return "Not Locked"
+    if docsis == DocsisStatus.PARTIAL_LOCK:
+        return "Partial Lock"
+    if effective_health == HealthStatus.ICMP_BLOCKED:
+        return "ICMP Blocked"
+    return "Operational"
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up Cable Modem Monitor sensors."""
-    _LOGGER.debug("async_setup_entry called for %s", entry.entry_id)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    entities: list[SensorEntity] = []
-
-    # Core sensors (always created)
-    entities.append(ModemStatusSensor(coordinator, entry))
-    entities.append(ModemInfoSensor(coordinator, entry))
-    entities.append(ModemHttpLatencySensor(coordinator, entry))
-    if coordinator.data.get("supports_icmp", True):
-        entities.append(ModemPingLatencySensor(coordinator, entry))
-
-    # System and channel sensors (not in fallback mode)
-    is_fallback_mode = coordinator.data.get("cable_modem_fallback_mode", False)
-    if not is_fallback_mode:
-        entities.extend(_create_system_sensors(coordinator, entry))
-    else:
-        _LOGGER.info("Fallback mode - skipping channel/system sensors")
-
-    # Per-channel sensors
-    entities.extend(_create_downstream_sensors(coordinator, entry))
-    entities.extend(_create_upstream_sensors(coordinator, entry))
-
-    # LAN stats sensors
-    entities.extend(_create_lan_stats_sensors(coordinator, entry))
-
-    _LOGGER.info("Created %s total sensor entities", len(entities))
-    async_add_entities(entities)
+_DIAGNOSIS_MAP: dict[HealthStatus, str] = {
+    HealthStatus.RESPONSIVE: "Modem is responsive to health probes",
+    HealthStatus.DEGRADED: ("Modem responds to ICMP but HTTP is failing" " — web server may be hung"),
+    HealthStatus.ICMP_BLOCKED: ("HTTP works but ICMP is blocked" " — network may filter ping"),
+    HealthStatus.UNRESPONSIVE: ("Modem is not responding to any health probes"),
+}
 
 
-class ModemSensorBase(CoordinatorEntity, SensorEntity):
-    """Base class for modem sensors."""
+def _derive_diagnosis(health: HealthStatus | None) -> str:
+    """Derive a human-readable diagnosis from health status."""
+    if health is None:
+        return ""
+    return _DIAGNOSIS_MAP.get(health, "")
+
+
+# ------------------------------------------------------------------
+# Channel metric definitions (table-driven entity creation)
+# ------------------------------------------------------------------
+
+# Aliases for table readability
+_M = SensorStateClass.MEASUREMENT
+_TI = SensorStateClass.TOTAL_INCREASING
+_FREQ = SensorDeviceClass.FREQUENCY
+_DSIZE = SensorDeviceClass.DATA_SIZE
+
+# Each tuple: (field, name_suffix, unit, device_class, state_class, icon, value_type)
+# fmt: off
+_DS_METRICS = [
+    ("power",       "Power",       "dBmV", None,  _M,  "mdi:signal",        float),
+    ("snr",         "SNR",         "dB",   None,  _M,  "mdi:signal-variant", float),
+    ("frequency",   "Frequency",   "Hz",   _FREQ, _M,  "mdi:sine-wave",     int),
+    ("corrected",   "Corrected",   None,   None,  _TI, "mdi:check-circle",  int),
+    ("uncorrected", "Uncorrected", None,   None,  _TI, "mdi:alert-circle",  int),
+]
+
+_US_METRICS = [
+    ("power",     "Power",     "dBmV", None,  _M, "mdi:signal",    float),
+    ("frequency", "Frequency", "Hz",   _FREQ, _M, "mdi:sine-wave", int),
+]
+
+_LAN_METRICS = [
+    ("received_bytes",      "Received Bytes",      _DSIZE, "B"),
+    ("received_packets",    "Received Packets",    None,   None),
+    ("received_errors",     "Received Errors",     None,   None),
+    ("received_drops",      "Received Drops",      None,   None),
+    ("transmitted_bytes",   "Transmitted Bytes",   _DSIZE, "B"),
+    ("transmitted_packets", "Transmitted Packets", None,   None),
+    ("transmitted_errors",  "Transmitted Errors",  None,   None),
+    ("transmitted_drops",   "Transmitted Drops",   None,   None),
+]
+# fmt: on
+
+# Power and SNR are always created for downstream; power for upstream.
+# Other metrics are created only when the field is present on the channel.
+_DS_ALWAYS_FIELDS = frozenset(("power", "snr"))
+_US_ALWAYS_FIELDS = frozenset(("power",))
+
+
+# ------------------------------------------------------------------
+# Base classes
+# ------------------------------------------------------------------
+
+
+class ModemSensorBase(
+    CoordinatorEntity[DataUpdateCoordinator[ModemSnapshot]],
+    SensorEntity,
+):
+    """Base class for sensors that read from the data coordinator."""
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize with data coordinator and config entry."""
         super().__init__(coordinator)
         self._entry = entry
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+        )
 
-        # Get modem info from config entry
-        manufacturer = entry.data.get("detected_manufacturer", "Unknown")
-        actual_model = entry.data.get(CONF_ACTUAL_MODEL)
-        detected_modem = entry.data.get(CONF_DETECTED_MODEM, "Cable Modem")
-        host = entry.data.get(CONF_HOST, "")
-        protocol = entry.data.get(CONF_PROTOCOL)
-
-        # Use actual_model if available, otherwise fall back to detected_modem
-        # Strip manufacturer prefix to avoid redundancy (e.g., "Motorola MB7621" -> "MB7621")
-        model = actual_model or detected_modem
-        if model and manufacturer and model.lower().startswith(manufacturer.lower()):
-            model = model[len(manufacturer) :].strip()
-
-        # Device name based on entity_prefix setting (for multi-modem disambiguation)
-        # With has_entity_name=True, entity IDs are generated from device_name + entity_name
-        entity_prefix = entry.data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
-        if entity_prefix == ENTITY_PREFIX_MODEL:
-            device_name = f"Cable Modem {model}"
-        elif entity_prefix == ENTITY_PREFIX_IP:
-            sanitized_host = host.replace(".", "_").replace(":", "_")
-            device_name = f"Cable Modem {sanitized_host}"
-        else:
-            device_name = "Cable Modem"
-
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": device_name,
-            "manufacturer": manufacturer,
-            "model": model,
-            "configuration_url": build_url(host, protocol),
-        }
+    @property
+    def _snapshot(self) -> ModemSnapshot:
+        """Current snapshot from the data coordinator."""
+        return self.coordinator.data  # type: ignore[no-any-return]
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        # Sensors remain available if coordinator succeeds, even if modem is temporarily offline
-        # This allows sensors to retain last known values during modem reboots
-        # Only mark unavailable if we truly can't reach the modem
-        status = self.coordinator.data.get("cable_modem_connection_status", "unknown")
-        return self.coordinator.last_update_success and status in (
-            "online",
-            "offline",
-            "limited",  # Fallback mode - basic connectivity only
-            "parser_issue",  # Known parser but no channel data extracted
-            "no_signal",  # Modem online but no cable signal
+        """Available when coordinator succeeds and modem_data is present."""
+        return self.coordinator.last_update_success and self._snapshot.modem_data is not None
+
+
+class HealthSensorBase(
+    CoordinatorEntity[DataUpdateCoordinator[HealthInfo]],
+    SensorEntity,
+):
+    """Base class for sensors that read from the health coordinator."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[HealthInfo],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize with health coordinator and config entry."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
         )
+
+    @property
+    def _health_info(self) -> HealthInfo:
+        """Current health info from the health coordinator."""
+        return self.coordinator.data  # type: ignore[no-any-return]
+
+
+# ------------------------------------------------------------------
+# System sensors
+# ------------------------------------------------------------------
 
 
 class ModemStatusSensor(ModemSensorBase):
-    """Unified sensor for modem status.
+    """Unified status sensor with 10-level priority cascade.
 
-    Pass/fail status combining connection, health, and DOCSIS state:
-    - Operational: All good - data parsed, DOCSIS locked, reachable
-    - ICMP Blocked: HTTP works but ping fails (only if supports_icmp=True)
-    - Partial Lock: Some downstream channels not locked
-    - Not Locked: DOCSIS not locked to ISP
-    - Parser Error: Modem reachable but data couldn't be parsed
-    - Unresponsive: Can't reach modem via HTTP
+    Always available — shows the modem's current state even during
+    failures.  No business logic — pure lookup over Core-derived values.
+
+    See ENTITY_MODEL_SPEC.md § Status Sensor.
     """
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the status sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Status"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_status"
@@ -259,533 +266,191 @@ class ModemStatusSensor(ModemSensorBase):
     @property
     def available(self) -> bool:
         """Status sensor is always available to show current state."""
-        return bool(self.coordinator.last_update_success)
+        return self.coordinator.last_update_success  # type: ignore[no-any-return]
 
     @property
     def native_value(self) -> str:
-        """Return the unified modem status.
-
-        Priority order (most to least concerning):
-        1. Unresponsive - can't reach modem via ping OR HTTP
-        2. Degraded - ping works but HTTP doesn't (web server hung)
-        3. Parser Error - reached modem but can't parse data
-        4. Not Locked - DOCSIS not locked to ISP
-        5. Partial Lock - some downstream channels unlocked
-        6. ICMP Blocked - HTTP works but ping fails (parser expects ping)
-        7. Operational - all good
-        """
-        data = self.coordinator.data
-
-        # Check health status first - can we reach the modem?
-        health_status = data.get("health_status", "unknown")
-        if health_status == "unresponsive":
-            return "Unresponsive"
-
-        # Check connection status - did parsing work?
-        connection_status = data.get("cable_modem_connection_status", "unknown")
-
-        # Degraded = ping works but HTTP/scraper failed (web server hung)
-        if connection_status == "degraded":
-            return "Degraded"
-
-        if connection_status in ("offline", "unreachable"):
-            return "Unresponsive"
-        if connection_status == "parser_issue":
-            return "Parser Error"
-        if connection_status == "no_signal":
-            return "No Signal"
-
-        # Check DOCSIS status - derive from channel lock status
-        docsis_status = self._derive_docsis_status(data)
-        if docsis_status == "Not Locked":
-            return "Not Locked"
-        if docsis_status == "Partial Lock":
-            return "Partial Lock"
-
-        # Check for ICMP blocked (only if parser expects ping to work)
-        supports_icmp = data.get("supports_icmp", True)
-        if supports_icmp and health_status == "icmp_blocked":
-            return "ICMP Blocked"
-
-        # All good
-        return "Operational"
-
-    def _derive_docsis_status(self, data: dict) -> str:
-        """Derive DOCSIS lock status from channel data.
-
-        Returns:
-            - "Operational": All DS channels locked and US channels present
-            - "Partial Lock": Some DS channels locked
-            - "Not Locked": No DS channels locked
-        """
-        downstream = data.get("cable_modem_downstream", [])
-        upstream = data.get("cable_modem_upstream", [])
-
-        if not downstream:
-            # No downstream data - might be fallback mode or parser issue
-            # Don't report as "Not Locked" if we simply don't have the data
-            return "Operational" if data.get("cable_modem_fallback_mode") else "Unknown"
-
-        # Count locked channels
-        locked_count = 0
-        total_count = len(downstream)
-
-        for ch in downstream:
-            lock_status = ch.get("lock_status", "").lower()
-            # Consider various "locked" indicators
-            if lock_status in ("locked", "locked qam", "qam256", "qam64", "ofdm"):
-                locked_count += 1
-            elif not lock_status:
-                # No lock_status field - assume locked if we have data
-                locked_count += 1
-
-        if locked_count == total_count and upstream:
-            return "Operational"
-        elif locked_count > 0:
-            return "Partial Lock"
-        else:
-            return "Not Locked"
+        """Return display state from the priority cascade."""
+        snapshot = self._snapshot
+        health_status = snapshot.health_info.health_status if snapshot.health_info else None
+        return _compute_display_status(
+            snapshot.connection_status,
+            health_status,
+            snapshot.docsis_status,
+        )
 
     @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional diagnostic attributes."""
-        data = self.coordinator.data
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return connection, health, DOCSIS status and diagnosis."""
+        snapshot = self._snapshot
+        health_status = snapshot.health_info.health_status if snapshot.health_info else None
         return {
-            "connection_status": data.get("cable_modem_connection_status", "unknown"),
-            "health_status": data.get("health_status", "unknown"),
-            "docsis_status": self._derive_docsis_status(data),
-            "diagnosis": data.get("health_diagnosis", ""),
+            "connection_status": snapshot.connection_status.value,
+            "health_status": (health_status.value if health_status else "unknown"),
+            "docsis_status": snapshot.docsis_status.value,
+            "diagnosis": _derive_diagnosis(health_status),
         }
 
 
 class ModemInfoSensor(ModemSensorBase):
-    """Sensor for modem device information and parser metadata."""
+    """Static modem metadata from ModemIdentity.
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    State is the detected model.  Attributes pass through all
+    ModemIdentity fields.  Always available — reads from runtime_data,
+    not live poll data.
+    """
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the modem info sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Modem Info"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_info"
         self._attr_icon = "mdi:information-outline"
 
     @property
+    def available(self) -> bool:
+        """Always available — reads static identity, not live data."""
+        return self.coordinator.last_update_success  # type: ignore[no-any-return]
+
+    @property
     def native_value(self) -> str:
-        """Return the detected modem model as the state."""
-        return str(self._entry.data.get("detected_modem", "Unknown"))
+        """Return the detected model name."""
+        return self._entry.runtime_data.modem_identity.model  # type: ignore[no-any-return]
 
     @property
-    def extra_state_attributes(self) -> dict:
-        """Return device metadata as attributes."""
-        attrs: dict[str, str | bool | None] = {}
-
-        # Static info from config entry
-        attrs["manufacturer"] = self._entry.data.get("detected_manufacturer", "Unknown")
-
-        # Dynamic info from coordinator (parser metadata)
-        if release_date := self.coordinator.data.get("_parser_release_date"):
-            attrs["release_date"] = release_date
-        if docsis_version := self.coordinator.data.get("_parser_docsis_version"):
-            attrs["docsis_version"] = docsis_version
-        if fixtures_url := self.coordinator.data.get("_parser_fixtures_url"):
-            attrs["fixtures_url"] = fixtures_url
-        attrs["parser_verified"] = self.coordinator.data.get("_parser_verified", False)
-
-        return attrs
+    def extra_state_attributes(self) -> dict[str, str | None]:
+        """Return ModemIdentity fields as attributes."""
+        identity = self._entry.runtime_data.modem_identity
+        return {
+            "manufacturer": identity.manufacturer,
+            "model": identity.model,
+            "release_date": identity.release_date,
+            "docsis_version": identity.docsis_version,
+            "status": identity.status,
+        }
 
 
-class ModemTotalCorrectedSensor(ModemSensorBase):
-    """Sensor for total corrected errors."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "Total Corrected Errors"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_corrected"
-        self._attr_icon = "mdi:alert-circle-check"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        value = self.coordinator.data.get("cable_modem_total_corrected")
-        return int(value) if value is not None else None
+# ------------------------------------------------------------------
+# System info sensors
+# ------------------------------------------------------------------
 
 
-class ModemTotalUncorrectedSensor(ModemSensorBase):
-    """Sensor for total uncorrected errors."""
+class _SystemInfoSensor(ModemSensorBase):
+    """Base for sensors that read from modem_data system_info."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "Total Uncorrected Errors"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_uncorrected"
-        self._attr_icon = "mdi:alert-circle"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        value = self.coordinator.data.get("cable_modem_total_uncorrected")
-        return int(value) if value is not None else None
+    def _get_system_info(self) -> dict[str, Any]:
+        """Return system_info dict, or empty dict if unavailable."""
+        modem_data = self._snapshot.modem_data
+        if modem_data is None:
+            return {}
+        return modem_data.get("system_info", {})  # type: ignore[no-any-return]
 
 
-class ModemDownstreamPowerSensor(ModemSensorBase):
-    """Sensor for downstream channel power."""
+class ModemChannelCountSensor(_SystemInfoSensor):
+    """Channel count sensor (downstream or upstream)."""
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator,
-        entry: ConfigEntry,
-        channel_type: str,
-        channel_id: int,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        direction: str,
     ) -> None:
-        """Initialize the sensor."""
+        """Initialize the channel count sensor."""
         super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Power"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_power"
-        self._attr_native_unit_of_measurement = "dBmV"
-        self._attr_icon = "mdi:signal"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-
-    @property
-    def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("power")
-            return float(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            ch = channel_map[key]
-            return {
-                "channel_id": self._channel_id,
-                "channel_type": self._channel_type,
-                "frequency": ch.get("frequency"),
-            }
-        return {}
-
-
-class ModemDownstreamSNRSensor(ModemSensorBase):
-    """Sensor for downstream channel SNR."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} SNR"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_snr"
-        self._attr_native_unit_of_measurement = "dB"
-        self._attr_icon = "mdi:signal-variant"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-
-    @property
-    def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("snr")
-            return float(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            ch = channel_map[key]
-            return {
-                "channel_id": self._channel_id,
-                "channel_type": self._channel_type,
-                "frequency": ch.get("frequency"),
-            }
-        return {}
-
-
-class ModemDownstreamFrequencySensor(ModemSensorBase):
-    """Sensor for downstream channel frequency."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_frequency"
-        self._attr_native_unit_of_measurement = "Hz"
-        self._attr_icon = "mdi:sine-wave"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.FREQUENCY
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("frequency")
-            return int(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        return {
-            "channel_id": self._channel_id,
-            "channel_type": self._channel_type,
-        }
-
-
-class ModemDownstreamCorrectedSensor(ModemSensorBase):
-    """Sensor for downstream channel corrected errors."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Corrected"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_corrected"
-        self._attr_icon = "mdi:check-circle"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("corrected")
-            return int(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            ch = channel_map[key]
-            return {
-                "channel_id": self._channel_id,
-                "channel_type": self._channel_type,
-                "frequency": ch.get("frequency"),
-            }
-        return {}
-
-
-class ModemDownstreamUncorrectedSensor(ModemSensorBase):
-    """Sensor for downstream channel uncorrected errors."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"DS {channel_type.upper()} Ch {channel_id} Uncorrected"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_ds_{channel_type}_ch_{channel_id}_uncorrected"
-        self._attr_icon = "mdi:alert-circle"
-        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("uncorrected")
-            return int(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        channel_map = self.coordinator.data.get("_downstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            ch = channel_map[key]
-            return {
-                "channel_id": self._channel_id,
-                "channel_type": self._channel_type,
-                "frequency": ch.get("frequency"),
-            }
-        return {}
-
-
-class ModemUpstreamPowerSensor(ModemSensorBase):
-    """Sensor for upstream channel power."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"US {channel_type.upper()} Ch {channel_id} Power"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_us_{channel_type}_ch_{channel_id}_power"
-        self._attr_native_unit_of_measurement = "dBmV"
-        self._attr_icon = "mdi:signal"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-
-    @property
-    def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_upstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("power")
-            return float(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        channel_map = self.coordinator.data.get("_upstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            ch = channel_map[key]
-            return {
-                "channel_id": self._channel_id,
-                "channel_type": self._channel_type,
-                "frequency": ch.get("frequency"),
-            }
-        return {}
-
-
-class ModemUpstreamFrequencySensor(ModemSensorBase):
-    """Sensor for upstream channel frequency."""
-
-    def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, channel_type: str, channel_id: int
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._channel_type = channel_type
-        self._channel_id = channel_id
-        self._attr_name = f"US {channel_type.upper()} Ch {channel_id} Frequency"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_us_{channel_type}_ch_{channel_id}_frequency"
-        self._attr_native_unit_of_measurement = "Hz"
-        self._attr_icon = "mdi:sine-wave"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_device_class = SensorDeviceClass.FREQUENCY
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        # Use indexed lookup for O(1) performance instead of O(n) linear search
-        channel_map = self.coordinator.data.get("_upstream_by_id", {})
-        key = (self._channel_type, self._channel_id)
-        if key in channel_map:
-            value = channel_map[key].get("frequency")
-            return int(value) if value is not None else None
-        return None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return additional channel attributes."""
-        return {
-            "channel_id": self._channel_id,
-            "channel_type": self._channel_type,
-        }
-
-
-class ModemDownstreamChannelCountSensor(ModemSensorBase):
-    """Sensor for downstream channel count."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_name = "DS Channel Count"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_downstream_channel_count"
+        label = "DS" if direction == "downstream" else "US"
+        self._field = f"{direction}_channel_count"
+        self._attr_name = f"{label} Channel Count"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_{direction}_channel_count"
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def native_value(self) -> int:
-        """Return the state of the sensor."""
-        return int(self.coordinator.data.get("cable_modem_downstream_channel_count", 0))
+    def native_value(self) -> int | None:
+        """Return the channel count."""
+        value = self._get_system_info().get(self._field)
+        return int(value) if value is not None else None
 
 
-class ModemUpstreamChannelCountSensor(ModemSensorBase):
-    """Sensor for upstream channel count."""
+class ModemErrorTotalSensor(_SystemInfoSensor):
+    """Total corrected or uncorrected error sensor."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        error_type: str,
+    ) -> None:
+        """Initialize the error total sensor."""
         super().__init__(coordinator, entry)
-        self._attr_name = "US Channel Count"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_upstream_channel_count"
-        self._attr_icon = "mdi:numeric"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._field = f"total_{error_type}"
+        label = error_type.title()
+        self._attr_name = f"Total {label} Errors"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_total_{error_type}"
+        self._attr_icon = "mdi:alert-circle-check" if error_type == "corrected" else "mdi:alert-circle"
+        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def native_value(self) -> int:
-        """Return the state of the sensor."""
-        return int(self.coordinator.data.get("cable_modem_upstream_channel_count", 0))
+    def native_value(self) -> int | None:
+        """Return the error total."""
+        value = self._get_system_info().get(self._field)
+        return int(value) if value is not None else None
 
 
-class ModemSoftwareVersionSensor(ModemSensorBase):
-    """Sensor for modem software version."""
+class ModemSoftwareVersionSensor(_SystemInfoSensor):
+    """Software version sensor."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the software version sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Software Version"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_software_version"
         self._attr_icon = "mdi:information-outline"
 
     @property
-    def native_value(self) -> str:
-        """Return the state of the sensor."""
-        return str(self.coordinator.data.get("cable_modem_software_version", "Unknown"))
+    def native_value(self) -> str | None:
+        """Return the software version string."""
+        return self._get_system_info().get("software_version")
 
 
-class ModemSystemUptimeSensor(ModemSensorBase):
-    """Sensor for modem system uptime."""
+class ModemSystemUptimeSensor(_SystemInfoSensor):
+    """System uptime sensor (raw string from modem)."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the system uptime sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "System Uptime"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_system_uptime"
         self._attr_icon = "mdi:clock-outline"
 
     @property
-    def native_value(self) -> str:
-        """Return the state of the sensor."""
-        return str(self.coordinator.data.get("cable_modem_system_uptime", "Unknown"))
+    def native_value(self) -> str | None:
+        """Return the uptime string as reported by the modem."""
+        return self._get_system_info().get("system_uptime")
 
 
-class ModemLastBootTimeSensor(ModemSensorBase):
-    """Sensor for modem last boot time (calculated from uptime)."""
+class ModemLastBootTimeSensor(_SystemInfoSensor):
+    """Last boot time (derived from system uptime)."""
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the last boot time sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Last Boot Time"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_last_boot_time"
@@ -794,181 +459,345 @@ class ModemLastBootTimeSensor(ModemSensorBase):
 
     @property
     def native_value(self) -> datetime | None:
-        """Return the last boot time as a datetime object."""
-        uptime_str = self.coordinator.data.get("cable_modem_system_uptime")
-        if not uptime_str or uptime_str == "Unknown":
+        """Return last boot time calculated from uptime."""
+        uptime_str = self._get_system_info().get("system_uptime")
+        if not uptime_str:
             return None
-
-        # Parse uptime string to seconds
         uptime_seconds = parse_uptime_to_seconds(uptime_str)
         if uptime_seconds is None:
             return None
-
-        # Calculate last boot time: current time - uptime
-        now = dt_util.now()
-        last_boot: datetime | None = now - timedelta(seconds=uptime_seconds)
-        return last_boot
+        return dt_util.now() - timedelta(seconds=uptime_seconds)  # type: ignore[no-any-return]
 
 
-class ModemLanStatsSensor(ModemSensorBase):
-    """Base class for LAN statistics sensors."""
+# ------------------------------------------------------------------
+# Per-channel sensors
+# ------------------------------------------------------------------
+
+
+class ChannelSensor(ModemSensorBase):
+    """Generic channel metric sensor.
+
+    Parameterized by direction, channel key, and metric definition.
+    One instance per channel per metric.  All non-metric fields from the
+    channel dict flow as extra_state_attributes (tier 2/3 pass-through).
+    """
 
     def __init__(
-        self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str, sensor_type: str
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        direction: str,
+        channel_type: str,
+        channel_id: str | int,
+        field: str,
+        name_suffix: str,
+        unit: str | None,
+        device_class: SensorDeviceClass | None,
+        state_class: SensorStateClass,
+        icon: str,
+        value_type: type,
     ) -> None:
-        """Initialize the sensor."""
+        """Initialize the channel sensor."""
+        super().__init__(coordinator, entry)
+        self._direction = direction
+        self._channel_type = channel_type
+        self._channel_id = channel_id
+        self._field = field
+        self._value_type = value_type
+
+        prefix = "DS" if direction == "downstream" else "US"
+        dir_code = "ds" if direction == "downstream" else "us"
+
+        self._attr_name = f"{prefix} {channel_type.upper()} Ch {channel_id} {name_suffix}"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem" f"_{dir_code}_{channel_type}_ch_{channel_id}_{field}"
+        self._attr_icon = icon
+        self._attr_state_class = state_class
+        if unit:
+            self._attr_native_unit_of_measurement = unit
+        if device_class:
+            self._attr_device_class = device_class
+
+    def _find_channel(self) -> dict[str, Any] | None:
+        """Find this channel in modem_data by type and ID."""
+        modem_data = self._snapshot.modem_data
+        if modem_data is None:
+            return None
+        for ch in modem_data.get(self._direction, []):
+            if ch.get("channel_type", "") == self._channel_type and ch.get("channel_id") == self._channel_id:
+                return ch  # type: ignore[no-any-return]
+        return None
+
+    @property
+    def native_value(self) -> float | int | None:
+        """Return the channel metric value."""
+        ch = self._find_channel()
+        if ch is None:
+            return None
+        value = ch.get(self._field)
+        if value is None:
+            return None
+        return self._value_type(value)  # type: ignore[no-any-return]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return channel identity and all non-metric fields."""
+        attrs: dict[str, Any] = {
+            "channel_id": self._channel_id,
+            "channel_type": self._channel_type,
+        }
+        ch = self._find_channel()
+        if ch is not None:
+            for key, value in ch.items():
+                if key not in ("channel_id", "channel_type", self._field):
+                    attrs[key] = value
+        return attrs
+
+
+# ------------------------------------------------------------------
+# LAN statistics sensors
+# ------------------------------------------------------------------
+
+
+class LanStatsSensor(ModemSensorBase):
+    """LAN statistics sensor for a specific interface and metric."""
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[ModemSnapshot],
+        entry: CableModemConfigEntry,
+        *,
+        interface: str,
+        field: str,
+        name_suffix: str,
+        device_class: SensorDeviceClass | None,
+        unit: str | None,
+    ) -> None:
+        """Initialize the LAN stats sensor."""
         super().__init__(coordinator, entry)
         self._interface = interface
-        self._sensor_type = sensor_type
-        self._attr_name = f"LAN {interface} {sensor_type.replace('_', ' ').title()}"
-        self._attr_unique_id = f"{entry.entry_id}_cable_modem_lan_{interface}_{sensor_type}"
+        self._field = field
+        self._attr_name = f"LAN {interface} {name_suffix}"
+        self._attr_unique_id = f"{entry.entry_id}_cable_modem_lan_{interface}_{field}"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+        if device_class:
+            self._attr_device_class = device_class
+        if unit:
+            self._attr_native_unit_of_measurement = unit
 
     @property
     def native_value(self) -> int | None:
-        """Return the state of the sensor."""
-        lan_stats = self.coordinator.data.get("cable_modem_lan_stats", {})
-        if self._interface in lan_stats:
-            value = lan_stats[self._interface].get(self._sensor_type)
-            return int(value) if value is not None else None
-        return None
+        """Return the LAN stats value."""
+        modem_data = self._snapshot.modem_data
+        if modem_data is None:
+            return None
+        lan_stats = modem_data.get("lan_stats", {})
+        iface_data = lan_stats.get(self._interface)
+        if iface_data is None:
+            return None
+        value = iface_data.get(self._field)
+        return int(value) if value is not None else None
 
 
-class ModemLanReceivedBytesSensor(ModemLanStatsSensor):
-    """Sensor for LAN received bytes."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "received_bytes")
-        self._attr_device_class = SensorDeviceClass.DATA_SIZE
-        self._attr_native_unit_of_measurement = "B"
+# ------------------------------------------------------------------
+# Health sensors
+# ------------------------------------------------------------------
 
 
-class ModemLanReceivedPacketsSensor(ModemLanStatsSensor):
-    """Sensor for LAN received packets."""
+class PingLatencySensor(HealthSensorBase):
+    """ICMP ping latency sensor.
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "received_packets")
+    Only created when supports_icmp is True.  Reads from the health
+    coordinator, independent of data collection timing.
+    """
 
-
-class ModemLanReceivedErrorsSensor(ModemLanStatsSensor):
-    """Sensor for LAN received errors."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "received_errors")
-
-
-class ModemLanReceivedDropsSensor(ModemLanStatsSensor):
-    """Sensor for LAN received drops."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "received_drops")
-
-
-class ModemLanTransmittedBytesSensor(ModemLanStatsSensor):
-    """Sensor for LAN transmitted bytes."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "transmitted_bytes")
-        self._attr_device_class = SensorDeviceClass.DATA_SIZE
-        self._attr_native_unit_of_measurement = "B"
-
-
-class ModemLanTransmittedPacketsSensor(ModemLanStatsSensor):
-    """Sensor for LAN transmitted packets."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "transmitted_packets")
-
-
-class ModemLanTransmittedErrorsSensor(ModemLanStatsSensor):
-    """Sensor for LAN transmitted errors."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "transmitted_errors")
-
-
-class ModemLanTransmittedDropsSensor(ModemLanStatsSensor):
-    """Sensor for LAN transmitted drops."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry, interface: str) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry, interface, "transmitted_drops")
-
-
-class ModemPingLatencySensor(ModemSensorBase):
-    """Sensor for ICMP ping latency in milliseconds."""
-
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[HealthInfo],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the ping latency sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "Ping Latency"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_ping_latency"
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:speedometer"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        # No device_class - latency measurements don't have a standard class
-
-    @property
-    def available(self) -> bool:
-        """Ping sensor is available if we have ping data, independent of HTTP status.
-
-        This allows ping metrics to be reported even when the modem's HTTP
-        server is unresponsive (degraded mode).
-        """
-        if not self.coordinator.last_update_success:
-            return False
-        if self.coordinator.data is None:
-            return False
-        # Available if we have ping data (ping_success can be True or False)
-        return self.coordinator.data.get("ping_success") is not None
 
     @property
     def native_value(self) -> int | None:
-        """Return the ping latency in milliseconds."""
-        ping_latency = self.coordinator.data.get("ping_latency_ms")
-        if ping_latency is None:
-            return None
-        return int(round(ping_latency))
+        """Return ping latency in milliseconds."""
+        latency = self._health_info.icmp_latency_ms
+        return int(round(latency)) if latency is not None else None
 
 
-class ModemHttpLatencySensor(ModemSensorBase):
-    """Sensor for HTTP HEAD request latency in milliseconds."""
+class HttpLatencySensor(HealthSensorBase):
+    """HTTP latency sensor.
 
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
+    Always created when health coordinator exists.  HTTP latency may be
+    None when suppressed by collection evidence — this is transient.
+    """
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[HealthInfo],
+        entry: CableModemConfigEntry,
+    ) -> None:
+        """Initialize the HTTP latency sensor."""
         super().__init__(coordinator, entry)
         self._attr_name = "HTTP Latency"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_http_latency"
         self._attr_native_unit_of_measurement = "ms"
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        # No device_class - latency measurements don't have a standard class
-
-    @property
-    def available(self) -> bool:
-        """HTTP sensor is available if we have HTTP check data.
-
-        This allows HTTP metrics to be reported based on health check results,
-        independent of full modem data scraping success.
-        """
-        if not self.coordinator.last_update_success:
-            return False
-        if self.coordinator.data is None:
-            return False
-        # Available if we have HTTP data (http_success can be True or False)
-        return self.coordinator.data.get("http_success") is not None
 
     @property
     def native_value(self) -> int | None:
-        """Return the HTTP latency in milliseconds."""
-        http_latency = self.coordinator.data.get("http_latency_ms")
-        if http_latency is None:
-            return None
-        return int(round(http_latency))
+        """Return HTTP latency in milliseconds."""
+        latency = self._health_info.http_latency_ms
+        return int(round(latency)) if latency is not None else None
+
+
+# ------------------------------------------------------------------
+# Platform setup
+# ------------------------------------------------------------------
+
+
+def _create_channel_sensors(
+    data_coord: DataUpdateCoordinator[ModemSnapshot],
+    entry: CableModemConfigEntry,
+    modem_data: dict[str, Any],
+) -> list[SensorEntity]:
+    """Create per-channel sensor entities from first poll data."""
+    entities: list[SensorEntity] = []
+
+    # Downstream
+    ds_index = _index_channels(modem_data.get("downstream", []), "qam")
+    for (ch_type, ch_id), ch in ds_index.items():
+        for field, name, unit, dev_cls, state_cls, icon, val_type in _DS_METRICS:
+            if field in _DS_ALWAYS_FIELDS or field in ch:
+                entities.append(
+                    ChannelSensor(
+                        data_coord,
+                        entry,
+                        direction="downstream",
+                        channel_type=ch_type,
+                        channel_id=ch_id,
+                        field=field,
+                        name_suffix=name,
+                        unit=unit,
+                        device_class=dev_cls,
+                        state_class=state_cls,
+                        icon=icon,
+                        value_type=val_type,
+                    )
+                )
+
+    # Upstream
+    us_index = _index_channels(modem_data.get("upstream", []), "atdma")
+    for (ch_type, ch_id), ch in us_index.items():
+        for field, name, unit, dev_cls, state_cls, icon, val_type in _US_METRICS:
+            if field in _US_ALWAYS_FIELDS or field in ch:
+                entities.append(
+                    ChannelSensor(
+                        data_coord,
+                        entry,
+                        direction="upstream",
+                        channel_type=ch_type,
+                        channel_id=ch_id,
+                        field=field,
+                        name_suffix=name,
+                        unit=unit,
+                        device_class=dev_cls,
+                        state_class=state_cls,
+                        icon=icon,
+                        value_type=val_type,
+                    )
+                )
+
+    return entities
+
+
+def _create_lan_sensors(
+    data_coord: DataUpdateCoordinator[ModemSnapshot],
+    entry: CableModemConfigEntry,
+    modem_data: dict[str, Any],
+) -> list[SensorEntity]:
+    """Create LAN statistics sensors from first poll data."""
+    entities: list[SensorEntity] = []
+    lan_stats = modem_data.get("lan_stats", {})
+
+    for interface in lan_stats:
+        for field, name, dev_cls, unit in _LAN_METRICS:
+            entities.append(
+                LanStatsSensor(
+                    data_coord,
+                    entry,
+                    interface=interface,
+                    field=field,
+                    name_suffix=name,
+                    device_class=dev_cls,
+                    unit=unit,
+                )
+            )
+
+    return entities
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Cable Modem Monitor sensor entities."""
+    runtime = entry.runtime_data
+    data_coord = runtime.data_coordinator
+    health_coord = runtime.health_coordinator
+    snapshot = data_coord.data
+
+    entities: list[SensorEntity] = []
+
+    # -- Always created --
+    entities.append(ModemStatusSensor(data_coord, entry))
+    entities.append(ModemInfoSensor(data_coord, entry))
+
+    # -- Health sensors (from health coordinator) --
+    if health_coord is not None:
+        entities.append(HttpLatencySensor(health_coord, entry))
+        if entry.data.get(CONF_SUPPORTS_ICMP, False):
+            entities.append(PingLatencySensor(health_coord, entry))
+
+    # -- Data-dependent sensors (require modem_data from first poll) --
+    modem_data = snapshot.modem_data if snapshot else None
+    if modem_data is None:
+        _LOGGER.info("No modem data from first poll — skipping data sensors")
+        async_add_entities(entities)
+        return
+
+    system_info = modem_data.get("system_info", {})
+
+    # Channel counts (always computed by parser coordinator)
+    entities.append(ModemChannelCountSensor(data_coord, entry, direction="downstream"))
+    entities.append(ModemChannelCountSensor(data_coord, entry, direction="upstream"))
+
+    # Error totals (gated by field presence)
+    if "total_corrected" in system_info:
+        entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="corrected"))
+    if "total_uncorrected" in system_info:
+        entities.append(ModemErrorTotalSensor(data_coord, entry, error_type="uncorrected"))
+
+    # Software version and uptime (gated by field presence)
+    if "software_version" in system_info:
+        entities.append(ModemSoftwareVersionSensor(data_coord, entry))
+    if "system_uptime" in system_info:
+        entities.append(ModemSystemUptimeSensor(data_coord, entry))
+        entities.append(ModemLastBootTimeSensor(data_coord, entry))
+
+    # Per-channel sensors
+    entities.extend(_create_channel_sensors(data_coord, entry, modem_data))
+
+    # LAN stats sensors
+    entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
+
+    _LOGGER.info("Created %d sensor entities", len(entities))
+    async_add_entities(entities)

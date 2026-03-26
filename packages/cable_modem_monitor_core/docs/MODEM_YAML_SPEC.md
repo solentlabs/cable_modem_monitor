@@ -21,7 +21,6 @@ directory layout and multi-variant assembly contract.
 | [Auth](#auth) | 7 strategy types with full config examples |
 | [Session](#session) | Cookie, single-session, SPA patterns |
 | [Actions](#actions) | Restart and logout — http and hnap types |
-| [Aggregate](#aggregate) | Derived fields from channel data (e.g., error totals) |
 | [Hardware](#hardware) | DOCSIS version, chipset |
 | [Timeout](#timeout) | Per-request override |
 | [Health](#health) | Health probe configuration (fragile modems) |
@@ -62,15 +61,6 @@ actions:
     # ... action config
   logout:
     # ... action config
-
-# Aggregate (optional — derived fields from channel data)
-aggregate:
-  total_corrected:
-    sum: corrected
-    channels: downstream
-  total_uncorrected:
-    sum: uncorrected
-    channels: downstream
 
 # Hardware
 hardware:
@@ -758,55 +748,6 @@ behaviors:
 
 ---
 
-## Aggregate
-
-Optional section declaring fields derived from channel data. Each entry
-defines a field name, an aggregation operation, and the channel scope.
-
-```yaml
-aggregate:
-  total_corrected:
-    sum: corrected
-    channels: downstream
-  total_uncorrected:
-    sum: uncorrected
-    channels: downstream
-```
-
-| Field | Type | Required | Description |
-|-------|------| :--------: |-------------|
-| `sum` | string | yes | Channel field to sum (e.g., `corrected`, `uncorrected`) |
-| `channels` | string | yes | Scope: `downstream`, `upstream`, or type-qualified `downstream.qam`, `downstream.ofdm`, `upstream.atdma`, `upstream.ofdma` |
-
-**Operations:** Only `sum` is supported. This section is purpose-built
-for error totals, not a general aggregation engine.
-
-**Ownership:** Aggregation is a behavioral declaration — the modem
-package decides whether and how totals are computed. Parser.yaml stays
-pure extraction.
-
-**Execution:** The orchestrator reads `aggregate` after parsing
-completes and computes the fields from the parsed channel data. Results
-are added to the response alongside parser output.
-
-**Conflict rule:** If parser.yaml maps a `system_info` field with the
-same name as an `aggregate` entry (e.g., both produce `total_corrected`),
-build-time validation rejects the config. One source per field — modem-
-native totals mapped in parser.yaml OR orchestrator-derived totals
-declared here, never both.
-
-Modems that provide native totals in their web UI (e.g., "Total
-Correctable Codewords" in an HTML table) should map them as
-`system_info` fields in parser.yaml instead of using `aggregate`.
-
-**Channel counts** (`downstream_channel_count`, `upstream_channel_count`)
-are not part of `aggregate` — they are implicit orchestrator behavior.
-If downstream or upstream channels exist in parser output, the
-orchestrator counts them automatically. See
-[RUNTIME_POLLING_SPEC.md](RUNTIME_POLLING_SPEC.md) for details.
-
----
-
 ## Hardware
 
 ```yaml
@@ -946,7 +887,7 @@ rules below.
 
 | Transport | Valid auth strategies | Valid session | Valid formats | Valid action types |
 |-----------|---------------------|--------------|---------------|-------------------|
-| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `json` | `http` |
+| `http` | `none`, `basic`, `form`, `form_nonce`, `url_token`, `form_pbkdf2`, `form_sjcl` | stateless, cookie, CSRF, url_token | `table`, `table_transposed`, `html_fields`, `javascript`, `javascript_json`, `json` | `http` |
 | `hnap` | `hnap` | implicit (uid + HNAP_AUTH) | `hnap` | `hnap` |
 
 The format field in parser.yaml determines how the response is decoded.

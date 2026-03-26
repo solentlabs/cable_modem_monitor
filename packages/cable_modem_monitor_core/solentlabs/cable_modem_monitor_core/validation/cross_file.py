@@ -59,11 +59,11 @@ def _check_transport_format(modem: ModemConfig, parser: ParserConfig, errors: li
 
 def _check_aggregate_collisions(modem: ModemConfig, parser: ParserConfig, errors: list[str]) -> None:
     """Validate that aggregate field names don't collide with system_info fields."""
-    if not modem.aggregate or parser.system_info is None:
+    if not parser.aggregate or parser.system_info is None:
         return
 
     system_info_fields = _collect_system_info_fields(parser)
-    for agg_name in modem.aggregate:
+    for agg_name in parser.aggregate:
         if agg_name in system_info_fields:
             errors.append(f"aggregate field '{agg_name}' collides with system_info " f"field — one source per field")
 

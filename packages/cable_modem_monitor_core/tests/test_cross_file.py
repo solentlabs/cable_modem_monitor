@@ -88,13 +88,13 @@ class TestXmlFormatHardStop:
         """XML format produces 'not yet supported' rather than generic format error."""
         modem = MagicMock(spec=ModemConfig)
         modem.transport = "http"
-        modem.aggregate = {}
 
         parser = MagicMock(spec=ParserConfig)
         parser.downstream = MagicMock()
         parser.downstream.format = "xml"
         parser.upstream = None
         parser.system_info = None
+        parser.aggregate = {}
 
         errors = validate_cross_file(modem, parser)
         assert len(errors) == 1

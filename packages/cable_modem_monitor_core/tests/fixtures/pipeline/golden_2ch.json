@@ -3,5 +3,9 @@
     {"channel_id": 1, "frequency": 507000000, "power": 2.5},
     {"channel_id": 2, "frequency": 513000000, "power": 2.6}
   ],
-  "upstream": []
+  "upstream": [],
+  "system_info": {
+    "downstream_channel_count": 2,
+    "upstream_channel_count": 0
+  }
 }

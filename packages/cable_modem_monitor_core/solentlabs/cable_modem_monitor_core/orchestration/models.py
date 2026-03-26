@@ -21,6 +21,32 @@ from .signals import (
 
 
 @dataclass
+class ModemIdentity:
+    """Static modem metadata from modem.yaml.
+
+    Populated once at config load time. Consumers use this for
+    display and device registration. The model field comes from
+    the modem.yaml config — if the modem reports a different model
+    in system_info at runtime, that value is available in
+    modem_data.system_info and takes precedence for display.
+
+    Attributes:
+        manufacturer: Modem manufacturer (e.g., "Arris", "Netgear").
+        model: Model name from modem.yaml (e.g., "SB8200").
+        docsis_version: DOCSIS version (e.g., "3.1"). None if unknown.
+        release_date: Release date string (e.g., "2020"). None if unknown.
+        status: Verification status — "verified", "awaiting_verification",
+            or "unsupported".
+    """
+
+    manufacturer: str
+    model: str
+    docsis_version: str | None = None
+    release_date: str | None = None
+    status: str = "awaiting_verification"
+
+
+@dataclass
 class ModemResult:
     """Result of a single data collection attempt.
 
@@ -98,10 +124,11 @@ class ModemSnapshot:
         connection_status: Derived from collector signal and data.
         docsis_status: Derived from downstream lock_status fields.
         modem_data: Parsed channel and system_info data. None on
-            collection failure.
+            collection failure. Channel counts and aggregate fields
+            (e.g., total_corrected) are computed by the parser
+            coordinator — consumers read them from system_info
+            regardless of whether the modem reported them natively.
         health_info: Health probe results. None if no health monitor.
-        metrics: Computed aggregate fields (e.g., total_corrected).
-            Empty dict if no aggregates configured.
         collector_signal: Raw signal from the collector (for diagnostics).
         error: Human-readable error summary.
     """
@@ -110,7 +137,6 @@ class ModemSnapshot:
     docsis_status: DocsisStatus
     modem_data: dict[str, Any] | None = None
     health_info: HealthInfo | None = None
-    metrics: dict[str, int | float] = field(default_factory=dict)
     collector_signal: CollectorSignal = CollectorSignal.OK
     error: str = ""
 

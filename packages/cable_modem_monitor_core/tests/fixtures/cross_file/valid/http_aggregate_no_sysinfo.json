@@ -3,9 +3,6 @@
     "manufacturer": "Solent Labs", "model": "T400", "transport": "http",
     "default_host": "192.168.100.1",
     "auth": {"strategy": "none"},
-    "aggregate": {
-      "total_corrected": {"sum": "corrected", "channels": "downstream"}
-    },
     "hardware": {"docsis_version": "3.0"},
     "status": "verified",
     "attribution": {"contributors": [{"github": "tester", "contribution": "Test"}]},
@@ -23,6 +20,9 @@
         ],
         "channel_type": {"fixed": "qam"}
       }]
+    },
+    "aggregate": {
+      "total_corrected": {"sum": "corrected", "channels": "downstream"}
     }
   }
 }

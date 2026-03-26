@@ -66,6 +66,10 @@
         "uncorrected": 0
       }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
+    }
   }
 }

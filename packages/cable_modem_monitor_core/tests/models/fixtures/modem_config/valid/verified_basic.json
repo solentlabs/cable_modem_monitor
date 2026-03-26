@@ -7,9 +7,5 @@
   "hardware": {"docsis_version": "3.0"},
   "status": "verified",
   "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
-  "isps": ["Various"],
-  "aggregate": {
-    "total_corrected": {"sum": "corrected", "channels": "downstream"},
-    "total_uncorrected": {"sum": "uncorrected", "channels": "downstream"}
-  }
+  "isps": ["Various"]
 }

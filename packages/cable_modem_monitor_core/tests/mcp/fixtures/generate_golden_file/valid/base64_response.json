@@ -1,11 +1,14 @@
 {
-  "_description": "HAR with base64-encoded response body — decoded before parsing",
+  "_description": "HAR with base64-encoded response body \u2014 decoded before parsing",
   "_parser_yaml": "downstream:\n  format: table\n  resource: /status.html\n  tables:\n    - selector:\n        type: nth\n        match: 0\n      columns:\n        - index: 0\n          field: channel_id\n          type: integer\n        - index: 1\n          field: frequency\n          type: frequency\n      channel_type:\n        fixed: qam\n",
   "_har": {
     "log": {
       "entries": [
         {
-          "request": {"url": "http://192.168.100.1/status.html", "method": "GET"},
+          "request": {
+            "url": "http://192.168.100.1/status.html",
+            "method": "GET"
+          },
           "response": {
             "status": 200,
             "content": {
@@ -18,12 +21,26 @@
       ]
     }
   },
-  "_expected_channel_counts": {"downstream": 1, "upstream": 0},
-  "_expected_system_info_fields": [],
+  "_expected_channel_counts": {
+    "downstream": 1,
+    "upstream": 0
+  },
+  "_expected_system_info_fields": [
+    "downstream_channel_count",
+    "upstream_channel_count"
+  ],
   "_expected_golden_file": {
     "downstream": [
-      {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+      {
+        "channel_id": 1,
+        "frequency": 507000000,
+        "channel_type": "qam"
+      }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
+    }
   }
 }

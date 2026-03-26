@@ -223,7 +223,10 @@ class TestPostProcessorHooks:
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
         result = coordinator.parse(resources)
 
-        assert result["system_info"] == {"custom_key": "custom_value"}
+        # Hook replaced the extracted system_info; enrichment adds channel counts
+        assert result["system_info"]["custom_key"] == "custom_value"
+        assert result["system_info"]["downstream_channel_count"] == 1
+        assert result["system_info"]["upstream_channel_count"] == 0
 
     def test_no_post_processor(self, ds_fixture: dict[str, Any]) -> None:
         """Coordinator with no post-processor uses BaseParser output."""
@@ -264,10 +267,10 @@ class TestEdgeCases:
 
         assert result["downstream"] == []
         assert result["upstream"] == []
-        assert result["system_info"] == {
-            "software_version": "AB01.02.053",
-            "system_uptime": "7 days 00:00:01",
-        }
+        assert result["system_info"]["software_version"] == "AB01.02.053"
+        assert result["system_info"]["system_uptime"] == "7 days 00:00:01"
+        assert result["system_info"]["downstream_channel_count"] == 0
+        assert result["system_info"]["upstream_channel_count"] == 0
 
     def test_hook_on_empty_section(self) -> None:
         """Hook is still invoked when config has no mapping for a section."""
@@ -278,4 +281,268 @@ class TestEdgeCases:
 
         assert result["downstream"] == []
         # parse_system_info hook is called with empty dict — returns custom data
-        assert result["system_info"] == {"custom_key": "custom_value"}
+        # Channel counts are added by enrichment after hooks
+        assert result["system_info"]["custom_key"] == "custom_value"
+        assert result["system_info"]["downstream_channel_count"] == 0
+        assert result["system_info"]["upstream_channel_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Derived field enrichment — channel counts + aggregate sums
+# ---------------------------------------------------------------------------
+
+# ┌──────────────────────────────┬────────────────────────────────┬──────────────┐
+# │ scenario                     │ expected                       │ description  │
+# ├──────────────────────────────┼────────────────────────────────┼──────────────┤
+# │ 3 DS, 2 US, no native count │ ds=3, us=2                     │ computed     │
+# │ 3 DS, native ds_count=99    │ ds=99 (native wins)            │ setdefault   │
+# │ no channels                  │ ds=0, us=0                     │ empty        │
+# │ aggregate sum (2 channels)   │ total_corrected=300            │ scoped sum   │
+# │ aggregate + native sysinfo   │ native value preserved         │ native wins  │
+# │ type-qualified scope         │ only matching channels summed  │ qam filter   │
+# │ missing field on channels    │ field not in system_info       │ skip missing │
+# └──────────────────────────────┴────────────────────────────────┴──────────────┘
+#
+# fmt: off
+_ENRICHMENT_CASES: list[tuple[str, dict[str, Any], dict[str, Any], dict[str, Any]]] = [
+    # (description, parser_config_dict, parse_result_pre_enrichment, expected_system_info)
+    # Note: parse_result_pre_enrichment simulates what extraction produces
+    # before enrichment; tests verify the enrichment layer via parse().
+]
+# fmt: on
+
+
+class TestDerivedFieldEnrichment:
+    """Channel counts and aggregate sums added to system_info by coordinator."""
+
+    def test_channel_counts_computed(self) -> None:
+        """Channel counts added to system_info from parsed channels."""
+        config = ParserConfig(
+            downstream=_table_section("/status.html"),
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "507"], ["2", "513"], ["3", "519"]]),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        assert result["system_info"]["downstream_channel_count"] == 3
+        assert result["system_info"]["upstream_channel_count"] == 0
+
+    def test_native_channel_count_wins(self) -> None:
+        """Native channel count from system_info takes precedence."""
+        config = ParserConfig(
+            downstream=_table_section("/status.html"),
+            system_info=_sysinfo_section(
+                "/info.html",
+                [
+                    {"label": "DS Channels", "field": "downstream_channel_count", "type": "integer"},
+                ],
+            ),
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "507"]]),
+                "/info.html": _make_field_html({"DS Channels": "99"}),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        # Native value ("99") wins over computed (1)
+        # html_fields parser returns the raw string; type conversion
+        # happens downstream. The setdefault precedence rule still applies.
+        assert result["system_info"]["downstream_channel_count"] == "99"
+
+    def test_aggregate_sum(self) -> None:
+        """Aggregate sum computed from channel data."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+            AggregateField,
+        )
+
+        config = ParserConfig(
+            downstream=_table_section(
+                "/status.html",
+                columns=[
+                    {"index": 0, "field": "channel_id", "type": "integer"},
+                    {"index": 1, "field": "corrected", "type": "integer"},
+                ],
+            ),
+            aggregate={
+                "total_corrected": AggregateField(sum="corrected", channels="downstream"),
+            },
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "100"], ["2", "200"]]),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        assert result["system_info"]["total_corrected"] == 300
+
+    def test_aggregate_native_wins(self) -> None:
+        """Native system_info value takes precedence over aggregate."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+            AggregateField,
+        )
+
+        config = ParserConfig(
+            downstream=_table_section(
+                "/status.html",
+                columns=[
+                    {"index": 0, "field": "channel_id", "type": "integer"},
+                    {"index": 1, "field": "corrected", "type": "integer"},
+                ],
+            ),
+            system_info=_sysinfo_section(
+                "/info.html",
+                [
+                    {"label": "Total Corrected", "field": "total_corrected", "type": "integer"},
+                ],
+            ),
+            aggregate={
+                "total_corrected": AggregateField(sum="corrected", channels="downstream"),
+            },
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "100"], ["2", "200"]]),
+                "/info.html": _make_field_html({"Total Corrected": "999"}),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        # Native value ("999") wins over computed (300)
+        # html_fields returns raw string; the precedence rule still applies
+        assert result["system_info"]["total_corrected"] == "999"
+
+    def test_aggregate_type_qualified_scope(self) -> None:
+        """Type-qualified scope filters channels by channel_type."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+            AggregateField,
+        )
+
+        config = ParserConfig(
+            downstream=_table_section(
+                "/status.html",
+                columns=[
+                    {"index": 0, "field": "channel_id", "type": "integer"},
+                    {"index": 1, "field": "corrected", "type": "integer"},
+                ],
+                channel_type="qam",
+            ),
+            aggregate={
+                "total_corrected": AggregateField(sum="corrected", channels="downstream.qam"),
+            },
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "100"], ["2", "200"]]),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        assert result["system_info"]["total_corrected"] == 300
+
+    def test_aggregate_missing_field_skipped(self) -> None:
+        """Aggregate for a field not present on channels is not added."""
+        from solentlabs.cable_modem_monitor_core.models.parser_config.config import (
+            AggregateField,
+        )
+
+        config = ParserConfig(
+            downstream=_table_section("/status.html"),
+            aggregate={
+                "total_corrected": AggregateField(sum="corrected", channels="downstream"),
+            },
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "507"], ["2", "513"]]),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        # Channels don't have "corrected" field → no aggregate
+        assert "total_corrected" not in result["system_info"]
+
+    def test_no_aggregate_config(self) -> None:
+        """No aggregate section → only channel counts in system_info."""
+        config = ParserConfig(
+            downstream=_table_section("/status.html"),
+        )
+        resources = _build_resources(
+            {
+                "/status.html": _make_table_html("Downstream", [["1", "507"]]),
+            }
+        )
+        coordinator = ModemParserCoordinator(config)
+        result = coordinator.parse(resources)
+
+        assert result["system_info"]["downstream_channel_count"] == 1
+        assert result["system_info"]["upstream_channel_count"] == 0
+        # No aggregate fields
+        assert len(result["system_info"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Test helpers for enrichment tests
+# ---------------------------------------------------------------------------
+
+
+def _table_section(
+    resource: str,
+    columns: list[dict[str, Any]] | None = None,
+    channel_type: str | None = None,
+) -> Any:
+    """Build a minimal table section config dict."""
+    if columns is None:
+        columns = [
+            {"index": 0, "field": "channel_id", "type": "integer"},
+            {"index": 1, "field": "frequency", "type": "integer"},
+        ]
+    table: dict[str, Any] = {
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "columns": columns,
+    }
+    if channel_type:
+        table["channel_type"] = {"fixed": channel_type}
+    return {
+        "format": "table",
+        "resource": resource,
+        "tables": [table],
+    }
+
+
+def _sysinfo_section(resource: str, fields: list[dict[str, Any]]) -> Any:
+    """Build a minimal html_fields system_info section config dict."""
+    return {
+        "sources": [
+            {
+                "format": "html_fields",
+                "resource": resource,
+                "fields": fields,
+            }
+        ],
+    }
+
+
+def _make_table_html(header: str, rows: list[list[str]]) -> str:
+    """Build minimal HTML with a header and data rows."""
+    row_html = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
+    return (
+        f"<table><tr><th colspan='99'>{header}</th></tr>" f"<tr><th>Col A</th><th>Col B</th></tr>" f"{row_html}</table>"
+    )
+
+
+def _make_field_html(fields: dict[str, str]) -> str:
+    """Build minimal HTML with label/value table for html_fields parser."""
+    rows = "".join(f"<tr><td>{label}</td><td>{value}</td></tr>" for label, value in fields.items())
+    return f"<table>{rows}</table>"

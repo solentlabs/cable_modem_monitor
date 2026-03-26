@@ -108,7 +108,9 @@
     ],
     "system_info": {
       "current_time": "Wed Jan 15 2025",
-      "system_uptime": "5 days 03:22:15"
+      "system_uptime": "5 days 03:22:15",
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 1
     }
   }
 }

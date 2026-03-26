@@ -1,13 +1,14 @@
 """Top-level ParserConfig model.
 
-Assembles format-specific sections and system_info into a unified config.
+Assembles format-specific sections, system_info, and aggregate
+declarations into a unified config.
 """
 
 from __future__ import annotations
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Discriminator, Tag, model_validator
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, model_validator
 
 from .hnap import HNAPSection
 from .javascript import JSEmbeddedSection
@@ -36,11 +37,35 @@ ChannelSection = Annotated[
 ]
 
 
+class AggregateField(BaseModel):
+    """A derived field computed from channel data.
+
+    Declares a scoped sum over a channel field. Only ``sum`` is
+    supported — this is purpose-built for error totals, not a general
+    aggregation engine.
+
+    See PARSING_SPEC.md § Aggregate (Derived system_info Fields).
+
+    Attributes:
+        sum: Channel field to sum (e.g., ``corrected``, ``uncorrected``).
+        channels: Scope — ``downstream``, ``upstream``, or type-qualified
+            (``downstream.qam``, ``downstream.ofdm``, ``upstream.atdma``,
+            ``upstream.ofdma``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    sum: str
+    channels: str
+
+
 class ParserConfig(BaseModel):
     """Full parser.yaml schema.
 
     Sections are optional -- a modem may have downstream only, or downstream
     + upstream, or all three. At least one section must be present.
+
+    The ``aggregate`` section declares derived fields computed from
+    channel data (e.g., error totals). See PARSING_SPEC.md § Aggregate.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -48,6 +73,7 @@ class ParserConfig(BaseModel):
     downstream: ChannelSection | None = None
     upstream: ChannelSection | None = None
     system_info: SystemInfoSection | None = None
+    aggregate: dict[str, AggregateField] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_has_sections(self) -> ParserConfig:

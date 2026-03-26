@@ -377,9 +377,12 @@ validator updates. No existing code changes.
 | `MODEM_DIRECTORY_SPEC.md` | Catalog directory structure |
 | `PARSING_SPEC.md` | Extraction formats, parser.yaml/parser.py |
 | `RESOURCE_LOADING_SPEC.md` | Resource dict contract, loader behavior |
+| `ORCHESTRATION_SPEC.md` | Orchestrator, collector, health monitor, restart monitor — interface contracts and data models |
+| `ORCHESTRATION_USE_CASES.md` | Scenario-based use cases — normal ops, auth failures, connectivity, restart, health, lifecycle |
 | `RUNTIME_POLLING_SPEC.md` | Poll cycle, session lifecycle, error recovery |
 | `ONBOARDING_SPEC.md` | MCP-driven modem onboarding |
 | `FIELD_REGISTRY.md` | Field naming authority |
 | `VERIFICATION_STATUS.md` | Parser status lifecycle |
 | `../../../custom_components/cable_modem_monitor/docs/CONFIG_FLOW_SPEC.md` | Setup wizard |
 | `../../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md` | Core output → HA entities |
+| `../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md` | HA wiring — runtime data, coordinators, polling modes |

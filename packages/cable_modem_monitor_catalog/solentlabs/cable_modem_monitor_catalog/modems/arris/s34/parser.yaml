@@ -79,3 +79,11 @@ system_info:
         - source: StatusSoftwareModelName
           field: model_name
           type: string
+
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream

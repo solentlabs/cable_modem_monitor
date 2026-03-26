@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
+    ModemIdentity,
     ModemResult,
     ModemSnapshot,
     OrchestratorDiagnostics,
@@ -17,6 +18,32 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     HealthStatus,
     RestartPhase,
 )
+
+
+class TestModemIdentity:
+    """ModemIdentity dataclass construction and defaults."""
+
+    def test_required_fields_only(self) -> None:
+        """Identity with just manufacturer and model."""
+        identity = ModemIdentity(manufacturer="Solent Labs", model="T100")
+        assert identity.manufacturer == "Solent Labs"
+        assert identity.model == "T100"
+        assert identity.docsis_version is None
+        assert identity.release_date is None
+        assert identity.status == "awaiting_verification"
+
+    def test_all_fields(self) -> None:
+        """Identity with all optional fields populated."""
+        identity = ModemIdentity(
+            manufacturer="Solent Labs",
+            model="T200",
+            docsis_version="3.1",
+            release_date="2023",
+            status="verified",
+        )
+        assert identity.docsis_version == "3.1"
+        assert identity.release_date == "2023"
+        assert identity.status == "verified"
 
 
 class TestModemResult:
@@ -58,7 +85,6 @@ class TestModemSnapshot:
         )
         assert snap.modem_data is None
         assert snap.health_info is None
-        assert snap.metrics == {}
         assert snap.collector_signal == CollectorSignal.OK
         assert snap.error == ""
 
@@ -70,11 +96,10 @@ class TestModemSnapshot:
             docsis_status=DocsisStatus.OPERATIONAL,
             modem_data={"downstream": [{"channel_id": 1}]},
             health_info=health,
-            metrics={"total_corrected": 42},
             collector_signal=CollectorSignal.OK,
         )
         assert snap.health_info is not None
-        assert snap.metrics["total_corrected"] == 42
+        assert snap.modem_data is not None
 
 
 class TestResourceFetch:

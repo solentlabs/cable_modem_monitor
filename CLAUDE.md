@@ -1,8 +1,19 @@
 # Claude Rules
 
-> **First**: Read `AI_CONTEXT.md` for project context, workflows, and architecture before starting work.
->
 > **This file**: Behavioral constraints and development rules.
+
+## Architecture and Specifications
+
+These are the authoritative doc indexes for the project:
+
+| Index | Scope |
+|-------|-------|
+| `packages/cable_modem_monitor_core/docs/README.md` | Core specs — architecture, auth, parsing, orchestration, onboarding |
+| `custom_components/cable_modem_monitor/docs/README.md` | HA specs — config flow, entities, adapter wiring |
+| `packages/CLAUDE.md` | Coding standards, test patterns, step workflow |
+
+`AI_CONTEXT.md` is legacy (v3.13) and will be cleaned up. Do not treat it
+as authoritative — the specs above are the source of truth.
 
 ## Contents
 

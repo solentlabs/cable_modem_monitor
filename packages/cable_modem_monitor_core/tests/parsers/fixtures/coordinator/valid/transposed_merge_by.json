@@ -9,21 +9,57 @@
       "resource": "/status.html",
       "tables": [
         {
-          "selector": {"type": "header_text", "match": "Downstream"},
+          "selector": {
+            "type": "header_text",
+            "match": "Downstream"
+          },
           "rows": [
-            {"label": "Channel ID", "field": "channel_id", "type": "integer"},
-            {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
-            {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+            {
+              "label": "Channel ID",
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "label": "Frequency",
+              "field": "frequency",
+              "type": "frequency",
+              "unit": "Hz"
+            },
+            {
+              "label": "Power Level",
+              "field": "power",
+              "type": "float",
+              "unit": "dBmV"
+            }
           ],
-          "channel_type": {"fixed": "qam"}
+          "channel_type": {
+            "fixed": "qam"
+          }
         },
         {
-          "selector": {"type": "header_text", "match": "Signal Stats (Codewords)"},
-          "merge_by": ["channel_id"],
+          "selector": {
+            "type": "header_text",
+            "match": "Signal Stats (Codewords)"
+          },
+          "merge_by": [
+            "channel_id"
+          ],
           "rows": [
-            {"label": "Channel ID", "field": "channel_id", "type": "integer"},
-            {"label": "Total Correctable Codewords", "field": "corrected", "type": "integer"},
-            {"label": "Total Uncorrectable Codewords", "field": "uncorrected", "type": "integer"}
+            {
+              "label": "Channel ID",
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "label": "Total Correctable Codewords",
+              "field": "corrected",
+              "type": "integer"
+            },
+            {
+              "label": "Total Uncorrectable Codewords",
+              "field": "uncorrected",
+              "type": "integer"
+            }
           ]
         }
       ]
@@ -31,9 +67,27 @@
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 10, "frequency": 519000000, "power": 5.0, "channel_type": "qam", "corrected": 573, "uncorrected": 823},
-      {"channel_id": 9, "frequency": 513000000, "power": 4.0, "channel_type": "qam", "corrected": 609, "uncorrected": 921}
+      {
+        "channel_id": 10,
+        "frequency": 519000000,
+        "power": 5.0,
+        "channel_type": "qam",
+        "corrected": 573,
+        "uncorrected": 823
+      },
+      {
+        "channel_id": 9,
+        "frequency": 513000000,
+        "power": 4.0,
+        "channel_type": "qam",
+        "corrected": 609,
+        "uncorrected": 921
+      }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 0
+    }
   }
 }

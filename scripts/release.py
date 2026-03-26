@@ -7,20 +7,16 @@ This script automates the complete release process by:
 3. Running tests (pytest)
 4. Running code quality checks (ruff, black, mypy)
 5. Verifying translations/en.json matches strings.json
-6. Syncing modem.yaml and parser.py files from modems/ to custom_components/
-   (deployment bridge: modems/ is source of truth, ships modem.yaml + parser.py)
-7. Updating version in all required files:
+6. Updating version in all required files:
    - custom_components/cable_modem_monitor/manifest.json
    - custom_components/cable_modem_monitor/const.py
-   - tests/components/test_version_and_startup.py
-8. Updating CHANGELOG.md
-9. Creating a git commit with all changes
-10. Creating an annotated git tag
-11. Pushing to remote (optional)
-12. Creating a GitHub release (optional)
+7. Updating CHANGELOG.md
+8. Creating a git commit with all changes
+9. Creating an annotated git tag
+10. Pushing to remote (optional)
+11. Creating a GitHub release (optional)
 
 Usage:
-    python scripts/release.py --sync-only              # Sync modem configs/parsers only
     python scripts/release.py 3.5.2                    # Full release
     python scripts/release.py 3.5.2 --no-push          # Test locally without pushing
     python scripts/release.py 3.5.2 --skip-tests       # Skip tests (not recommended)
@@ -443,133 +439,6 @@ def run_code_quality_checks(repo_root: Path) -> bool:
         return False
 
 
-def _get_sync_disclaimer(source_rel_path: str, file_ext: str) -> str:
-    """Generate disclaimer header for synced files.
-
-    Args:
-        source_rel_path: Relative path from repo root (e.g., modems/arris/s34/parser.py)
-        file_ext: File extension (.py or .yaml)
-
-    Returns:
-        Disclaimer header string with appropriate comment syntax
-    """
-    if file_ext == ".py" or file_ext in (".yaml", ".yml"):
-        return f"""# =============================================================================
-# AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
-#
-# Source: {source_rel_path}
-# This file is synced from modems/ during build. Edit the source file, then run:
-#     make sync
-# =============================================================================
-
-"""
-    return ""
-
-
-def _create_package_init_files(dest_root: Path) -> None:
-    """Create __init__.py files to make directories importable Python packages."""
-    init_count = 0
-    for dir_path in dest_root.rglob("*"):
-        if dir_path.is_dir():
-            init_file = dir_path / "__init__.py"
-            if not init_file.exists():
-                init_file.write_text("", encoding="utf-8")
-                init_count += 1
-    # Also create one for the root modems directory
-    root_init = dest_root / "__init__.py"
-    if not root_init.exists():
-        root_init.write_text("", encoding="utf-8")
-        init_count += 1
-    if init_count > 0:
-        print_success(f"Created {init_count} __init__.py files")
-
-
-def sync_modem_configs(repo_root: Path) -> bool:
-    """Sync modem.yaml and parser.py files from modems/ to custom_components/.
-
-    This is the deployment bridge: modems/ is the source of truth for developer
-    ergonomics (fixtures, tests, modem.yaml, parser.py together), but only
-    modem.yaml and parser.py ship to users via custom_components/.
-
-    This keeps deployed integration small (no fixtures/tests) while maintaining
-    good developer experience.
-
-    Files are synced with a disclaimer header indicating they are auto-generated
-    and should not be edited directly.
-    """
-    source_root = repo_root / "modems"
-    dest_root = repo_root / "custom_components" / "cable_modem_monitor" / "modems"
-
-    if not source_root.exists():
-        print_warning("modems/ directory not found, skipping sync")
-        return True
-
-    try:
-        # Sync both modem.yaml and parser.py files
-        files_to_sync = ["modem.yaml", "parser.py"]
-        synced_count = 0
-
-        for filename in files_to_sync:
-            for file_path in source_root.glob(f"**/{filename}"):
-                # Get relative path (e.g., arris/s33/modem.yaml)
-                rel_path = file_path.relative_to(source_root)
-                dest_path = dest_root / rel_path
-
-                # Create parent directories if needed
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-                # Read source content
-                source_content = file_path.read_text(encoding="utf-8")
-
-                # Generate disclaimer with source path relative to repo root
-                source_rel_to_repo = f"modems/{rel_path}"
-                disclaimer = _get_sync_disclaimer(source_rel_to_repo, file_path.suffix)
-
-                # Write with disclaimer prepended
-                dest_path.write_text(disclaimer + source_content, encoding="utf-8")
-                synced_count += 1
-
-        if synced_count == 0:
-            print_warning("No modem.yaml or parser.py files found in modems/")
-        else:
-            print_success(f"Synced {synced_count} files to custom_components/modems/")
-
-        # Create __init__.py files to make directories importable Python packages
-        _create_package_init_files(dest_root)
-
-        # Generate modem index for fast parser lookups
-        _generate_modem_index(repo_root)
-
-        # Regenerate catalog index (v3.14 package)
-        _generate_catalog_index(repo_root)
-
-        return True
-    except Exception as e:
-        print_error(f"Failed to sync modem configs: {e}")
-        return False
-
-
-def _generate_modem_index(repo_root: Path) -> None:
-    """Generate modem index for fast parser lookups.
-
-    The index maps parser class names to modem paths, avoiding
-    full directory scans at runtime.
-    """
-    try:
-        import subprocess
-
-        result = subprocess.run(
-            [sys.executable, str(repo_root / "scripts" / "generate_modem_index.py")],
-            capture_output=True,
-            text=True,
-            cwd=repo_root,
-        )
-        if result.returncode != 0:
-            print_warning(f"Index generation warning: {result.stderr}")
-    except Exception as e:
-        print_warning(f"Could not generate modem index: {e}")
-
-
 def _generate_catalog_index(repo_root: Path) -> None:
     """Regenerate the v3.14 catalog package README.md."""
     catalog_script = repo_root / "scripts" / "generate_catalog_index.py"
@@ -808,9 +677,8 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
         skip_msg="Skipping code quality checks (--skip-quality)",
     )
 
-    # Verify translations and sync configs
+    # Verify translations
     _exit_on_failure(verify_translations(repo_root))
-    _exit_on_failure(sync_modem_configs(repo_root))
 
     # Update all version files
     update_all_files(repo_root, version, args.skip_changelog)
@@ -822,13 +690,6 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
     with contextlib.suppress(subprocess.CalledProcessError):
         subprocess.run(
             ["git", "add", "custom_components/cable_modem_monitor/translations/en.json"],
-            check=False,
-        )
-
-    # Stage synced modem configs
-    with contextlib.suppress(subprocess.CalledProcessError):
-        subprocess.run(
-            ["git", "add", "custom_components/cable_modem_monitor/modems/"],
             check=False,
         )
 
@@ -861,11 +722,6 @@ def main():
     parser = argparse.ArgumentParser(description="Automate Cable Modem Monitor releases")
     parser.add_argument("version", nargs="?", help="Version to release (e.g., 3.5.1)")
     parser.add_argument(
-        "--sync-only",
-        action="store_true",
-        help="Only sync modem configs and parsers from modems/ to custom_components/, skip release",
-    )
-    parser.add_argument(
         "--no-push",
         action="store_true",
         help="Don't create tag or push (for PR workflow with branch protection)",
@@ -894,16 +750,9 @@ def main():
     args = parser.parse_args()
     repo_root = get_repo_root()
 
-    # Handle --sync-only mode
-    if args.sync_only:
-        print_info("Running sync-only mode...")
-        _exit_on_failure(sync_modem_configs(repo_root))
-        print_success("Sync complete!")
-        return
-
-    # Regular release mode requires version
+    # Release mode requires version
     if not args.version:
-        parser.error("version is required for release (use --sync-only for sync without release)")
+        parser.error("version is required for release")
 
     _run_release(args, repo_root)
 

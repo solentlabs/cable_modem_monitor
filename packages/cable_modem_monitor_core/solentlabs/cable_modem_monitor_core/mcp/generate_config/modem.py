@@ -50,8 +50,6 @@ def _add_analysis_blocks(result: dict[str, Any], analysis: dict[str, Any]) -> No
 
 def _add_metadata_fields(result: dict[str, Any], metadata: dict[str, Any]) -> None:
     """Add hardware, status, attribution, and other metadata fields."""
-    if metadata.get("aggregate"):
-        result["aggregate"] = metadata["aggregate"]
     if metadata.get("hardware"):
         result["hardware"] = metadata["hardware"]
     if metadata.get("timeout"):

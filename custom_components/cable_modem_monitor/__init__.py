@@ -1,351 +1,334 @@
 """The Cable Modem Monitor integration.
 
-Home Assistant integration for monitoring cable modem signal quality and health.
-Supports DOCSIS 3.0 and 3.1 modems from various manufacturers.
+Home Assistant adapter layer for monitoring cable modem signal quality
+and health.  Consumes Core (orchestration, parsing, auth) and Catalog
+(modem configs, parsers) packages — all modem-specific logic lives
+there.
 
-Entry Points:
-    async_setup_entry: Called by HA when integration is configured
-    async_unload_entry: Called when integration is removed/reloaded
-
-Services:
-    cable_modem_monitor.clear_history: Clear historical sensor data
-    cable_modem_monitor.generate_dashboard: Generate Lovelace dashboard YAML
-
-Key Components:
-    DataUpdateCoordinator: Polls modem every scan_interval (default 30s)
-    DataOrchestrator: Fetches and parses modem data
-    ModemHealthMonitor: Tracks ICMP latency to modem
+Entry points:
+    async_setup_entry: Called by HA when integration is configured.
+    async_unload_entry: Called when integration is removed or reloaded.
 
 See Also:
-    - config_flow.py: Setup wizard UI
-    - sensor.py: Sensor entity definitions
-    - core/data_orchestrator.py: Data fetching logic
+    HA_ADAPTER_SPEC.md for the full startup/unload specification.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from .core.base_parser import ModemParser
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.config_loader import (
+    load_modem_config,
+    load_parser_config,
+)
+from solentlabs.cable_modem_monitor_core.orchestration import (
+    HealthMonitor,
+    ModemDataCollector,
+    Orchestrator,
+)
+from solentlabs.cable_modem_monitor_core.orchestration.models import (
+    HealthInfo,
+    ModemIdentity,
+    ModemSnapshot,
+)
+from solentlabs.cable_modem_monitor_core.test_harness.runner import (
+    load_post_processor,
+)
 
 from .const import (
-    CONF_AUTH_FORM_CONFIG,
-    CONF_AUTH_HNAP_CONFIG,
-    CONF_AUTH_STRATEGY,
-    CONF_AUTH_TYPE,
-    CONF_AUTH_URL_TOKEN_CONFIG,
-    CONF_DOCSIS_VERSION,
     CONF_ENTITY_PREFIX,
-    CONF_HOST,
-    CONF_LEGACY_SSL,
-    CONF_MODEM_CHOICE,
-    CONF_PASSWORD,
+    CONF_HEALTH_CHECK_INTERVAL,
+    CONF_MANUFACTURER,
+    CONF_MODEL,
+    CONF_MODEM_DIR,
     CONF_PROTOCOL,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
-    CONF_USERNAME,
-    CONF_WORKING_URL,
+    CONF_VARIANT,
+    DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
+    PLATFORMS,
     VERSION,
 )
-from .coordinator import create_health_monitor, create_update_function, perform_initial_refresh
-from .core.data_orchestrator import DataOrchestrator
-from .core.fallback import FallbackOrchestrator
-from .core.log_buffer import setup_log_buffer
-from .core.parser_registry import get_parser_by_name
-from .entity_migration import async_migrate_docsis30_entities
-from .modem_config.adapter import get_auth_adapter_for_parser
-from .services import (
-    SERVICE_CLEAR_HISTORY,
-    SERVICE_CLEAR_HISTORY_SCHEMA,
-    SERVICE_GENERATE_DASHBOARD,
-    SERVICE_GENERATE_DASHBOARD_SCHEMA,
-    create_clear_history_handler,
-    create_generate_dashboard_handler,
-)
+from .coordinator import CableModemConfigEntry, CableModemRuntimeData
+from .migrations import async_run_migrations
+from .services import async_register_services, async_unregister_services
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
+# Must match ConfigFlow.VERSION in config_flow.py
+_CURRENT_VERSION = 2
 
 
-def _log_missing_auth_config(
-    auth_strategy: str | None,
-    auth_hnap_config: dict | None,
-    auth_url_token_config: dict | None,
-) -> None:
-    """Log debug message for entries upgraded from pre-v3.12 without stored auth configs."""
-    if auth_strategy == "hnap_session" and not auth_hnap_config:
-        _LOGGER.debug("HNAP config not stored in entry (pre-v3.12.0 entry), using defaults")
-    if auth_strategy == "url_token_session" and not auth_url_token_config:
-        _LOGGER.debug("URL token config not stored in entry (pre-v3.12.0 entry), using defaults")
+async def async_migrate_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+) -> bool:
+    """Migrate a config entry to the current version.
 
-
-def _update_device_registry(hass: HomeAssistant, entry: ConfigEntry, host: str) -> None:
-    """Update device registry with detected modem info.
-
-    Device name is based on entity_prefix setting to ensure unique entity IDs
-    when multiple modems are configured. With has_entity_name=True, entity IDs
-    are generated from device name + sensor name.
-
-    Prefix options:
-    - none: "Cable Modem" -> sensor.cable_modem_downstream_1_power
-    - model: "Cable Modem MB7621" -> sensor.cable_modem_mb7621_downstream_1_power
-    - ip: "Cable Modem 192_168_100_1" -> sensor.cable_modem_192_168_100_1_downstream_1_power
+    Called by HA when entry.version < ConfigFlow.VERSION.  Delegates
+    to the migration registry which chains handlers in sequence.
     """
-    device_registry = dr.async_get(hass)
+    _LOGGER.info(
+        "Migrating config entry %s from version %d to %d",
+        entry.entry_id,
+        entry.version,
+        _CURRENT_VERSION,
+    )
+    return await async_run_migrations(hass, entry, _CURRENT_VERSION)
 
-    # Use detected_modem for model field (shown in device info)
-    actual_model = entry.data.get("actual_model")
-    detected_modem = entry.data.get("detected_modem")
-    manufacturer = entry.data.get("detected_manufacturer", "Unknown")
 
-    # Strip manufacturer prefix from model name (e.g., "Motorola MB7621" -> "MB7621")
-    model = actual_model or detected_modem or "Cable Modem Monitor"
-    if model and manufacturer and model.lower().startswith(manufacturer.lower()):
-        model = model[len(manufacturer) :].strip()
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+) -> bool:
+    """Set up Cable Modem Monitor from a config entry.
 
-    # Determine device name based on entity_prefix setting
-    entity_prefix = entry.data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
-    if entity_prefix == ENTITY_PREFIX_MODEL:
-        # Use model name (stripped of manufacturer) for prefix
-        device_name = f"Cable Modem {model}"
-    elif entity_prefix == ENTITY_PREFIX_IP:
-        # Sanitize host for entity ID (replace . and : with _)
-        sanitized_host = host.replace(".", "_").replace(":", "_")
-        device_name = f"Cable Modem {sanitized_host}"
-    else:
-        # No prefix (default for single modem setups)
-        device_name = "Cable Modem"
+    Follows the 12-step startup sequence defined in HA_ADAPTER_SPEC.md.
+    Steps 1-5 (config loading, Core component creation) run in an
+    executor thread because they involve file I/O.
+    """
+    _LOGGER.info("Cable Modem Monitor v%s starting", VERSION)
 
-    device = device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=device_name,
+    # Resolve effective polling intervals (options override data)
+    scan_interval = entry.options.get(
+        CONF_SCAN_INTERVAL,
+        entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+    )
+    health_check_interval = entry.options.get(
+        CONF_HEALTH_CHECK_INTERVAL,
+        entry.data.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL),
     )
 
-    device_registry.async_update_device(
-        device.id,
-        manufacturer=manufacturer,
-        model=model,
-    )
-    _LOGGER.debug(
-        "Updated device registry: name=%s, manufacturer=%s, model=%s",
-        device_name,
-        manufacturer,
-        model,
-    )
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901
-    """Set up Cable Modem Monitor from a config entry."""
-    # Set up log buffer early to capture startup logs for diagnostics
-    # This addresses HA 2025.11+ where home-assistant.log was removed
-    setup_log_buffer(hass)
-
-    _LOGGER.info("Cable Modem Monitor version %s is starting", VERSION)
-
-    # Extract configuration
-    host = entry.data[CONF_HOST]
-    protocol: str | None = entry.data.get(CONF_PROTOCOL)
-
-    # Backward compat: old entries may have protocol baked into CONF_HOST
-    if protocol is None and host.startswith(("http://", "https://")):
-        protocol = "https" if host.startswith("https://") else "http"
-        host = host.split("://", 1)[1].rstrip("/")
-
-    username = entry.data.get(CONF_USERNAME)
-    password = entry.data.get(CONF_PASSWORD)
-    scan_interval = entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    modem_choice = entry.data.get(CONF_MODEM_CHOICE)
-
-    # Load parser for selected modem (user must select modem during config flow)
-    selected_parser: ModemParser
-    if modem_choice:
-        parser_class = await hass.async_add_executor_job(get_parser_by_name, modem_choice)
-        if parser_class:
-            _LOGGER.info("Loaded parser: %s", modem_choice)
-            selected_parser = parser_class()
-        else:
-            # Parser not found - permanent error, user must reconfigure
-            _LOGGER.error("Parser '%s' not found - please reconfigure the integration", modem_choice)
-            return False
-    else:
-        # No modem selected - permanent error, user must reconfigure
-        _LOGGER.error("No modem selected - please reconfigure the integration")
+    # Steps 1-5: Load config and create Core components (sync I/O)
+    try:
+        orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
+            _create_core_components, entry.data, scan_interval
+        )
+    except Exception:
+        _LOGGER.exception("Failed to load modem configuration from catalog")
         return False
 
-    # Create modem_client
-    legacy_ssl = entry.data.get(CONF_LEGACY_SSL, False)
-    auth_strategy = entry.data.get(CONF_AUTH_STRATEGY)
-    auth_form_config = entry.data.get(CONF_AUTH_FORM_CONFIG)
-    auth_hnap_config = entry.data.get(CONF_AUTH_HNAP_CONFIG)
-    auth_url_token_config = entry.data.get(CONF_AUTH_URL_TOKEN_CONFIG)
+    # Step 6: Create data DataUpdateCoordinator
+    host = entry.data[CONF_HOST]
 
-    # Auto-recover from "unknown" auth strategy (failed discovery from previous attempts)
-    # Clear it so modem_client uses modem.yaml hints for authentication
-    # Also persist the cleared value so we don't repeat this message every restart
-    if auth_strategy == "unknown":
-        _LOGGER.info("Auth strategy was 'unknown' (previous discovery failed), " "clearing to use modem.yaml hints")
-        auth_strategy = None
-        # Persist the cleared strategy so this only happens once
-        new_data = dict(entry.data)
-        new_data[CONF_AUTH_STRATEGY] = None
-        hass.config_entries.async_update_entry(entry, data=new_data)
+    async def _async_update_data() -> ModemSnapshot:
+        return await hass.async_add_executor_job(orchestrator.get_modem_data)  # type: ignore[no-any-return]
 
-    # Log for entries upgraded from pre-v3.12 that don't have stored auth configs
-    # AuthHandler will use defaults for these cases
-    _log_missing_auth_config(auth_strategy, auth_hnap_config, auth_url_token_config)
-
-    # Choose orchestrator based on modem selection:
-    # - FallbackOrchestrator: For unknown modems, enables auth discovery for HTML capture
-    # - DataOrchestrator: For known modems, uses modem.yaml as source of truth
-    is_fallback_modem = modem_choice == "Unknown Modem (Fallback Mode)"
-
-    # Base args shared by both orchestrators
-    orchestrator_args: dict[str, Any] = {
-        "host": host,
-        "protocol": protocol,
-        "username": username,
-        "password": password,
-        "parser": selected_parser,
-        "cached_url": entry.data.get(CONF_WORKING_URL),
-        "verify_ssl": False,
-        "legacy_ssl": legacy_ssl,
-        "auth_strategy": auth_strategy,
-        "auth_form_config": auth_form_config,
-        "auth_hnap_config": auth_hnap_config,
-        "auth_url_token_config": auth_url_token_config,
-    }
-
-    modem_client: DataOrchestrator
-    modem_adapter = None
-    if is_fallback_modem:
-        # FallbackOrchestrator uses FALLBACK_TIMEOUT (20s) by default
-        _LOGGER.info("Using FallbackOrchestrator for unknown modem (auth discovery enabled)")
-        modem_client = FallbackOrchestrator(**orchestrator_args)
-    else:
-        # Known modem - load adapter for timeout and other modem.yaml settings
-        parser_name = selected_parser.__class__.__name__
-        modem_adapter = await hass.async_add_executor_job(get_auth_adapter_for_parser, parser_name)
-        assert modem_adapter is not None  # Known modems always have modem.yaml
-        orchestrator_args["timeout"] = modem_adapter.get_timeout()
-        auth_type = entry.data.get(CONF_AUTH_TYPE)
-        static_auth_config = modem_adapter.get_static_auth_config(auth_type)
-        orchestrator_args["challenge_cookie"] = static_auth_config.get("challenge_cookie", False)
-        _LOGGER.debug("Using DataOrchestrator for known modem (modem.yaml source of truth)")
-        modem_client = DataOrchestrator(**orchestrator_args)
-
-    # Create health monitor
-    health_monitor = await create_health_monitor(hass, legacy_ssl=legacy_ssl)
-
-    # Get ICMP and HEAD support settings (auto-detected during setup, re-tested on options change)
-    supports_icmp = entry.data.get(CONF_SUPPORTS_ICMP, True)
-    supports_head = entry.data.get(CONF_SUPPORTS_HEAD, False)
-
-    # Create coordinator
-    async_update_data = create_update_function(
-        hass, modem_client, health_monitor, host, supports_icmp, supports_head, protocol=protocol
-    )
-    coordinator = DataUpdateCoordinator[dict[str, Any]](
+    data_coordinator = DataUpdateCoordinator[ModemSnapshot](
         hass,
         _LOGGER,
         name=f"Cable Modem {host}",
-        update_method=async_update_data,
-        update_interval=timedelta(seconds=scan_interval),
+        update_method=_async_update_data,
+        update_interval=(timedelta(seconds=scan_interval) if scan_interval > 0 else None),
         config_entry=entry,
     )
 
-    # Store modem_client reference for cache invalidation after modem restart
-    coordinator.modem_client = modem_client  # type: ignore[attr-defined]
+    # Step 7: Create health DataUpdateCoordinator (conditional)
+    health_coordinator: DataUpdateCoordinator[HealthInfo] | None = None
+    if health_monitor is not None:
 
-    # Perform initial data fetch
-    await perform_initial_refresh(coordinator, entry)
+        async def _async_update_health() -> HealthInfo:
+            return await hass.async_add_executor_job(health_monitor.ping)  # type: ignore[no-any-return]
 
-    # Store coordinator
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+        health_coordinator = DataUpdateCoordinator[HealthInfo](
+            hass,
+            _LOGGER,
+            name=f"Cable Modem {host} Health",
+            update_method=_async_update_health,
+            update_interval=(timedelta(seconds=health_check_interval) if health_check_interval > 0 else None),
+            config_entry=entry,
+        )
 
-    # Migrate entity IDs for DOCSIS 3.0 modems (v3.11+ naming change)
-    # Must run before platform setup so sensors don't create duplicates
-    # Only applies to known modems - fallback modems don't have entity naming conventions
-    # TODO: Remove after v3.14 release when all users have migrated
-    if not is_fallback_modem:
-        assert modem_adapter is not None  # Known modem path always sets modem_adapter
-        docsis_version = entry.data.get(CONF_DOCSIS_VERSION)
-        if not docsis_version:
-            docsis_version = modem_adapter.get_docsis_version()
-            _LOGGER.debug("Using modem.yaml docsis_version for migration: %s", docsis_version)
-        migrated = await async_migrate_docsis30_entities(hass, entry, docsis_version)
-        if migrated > 0:
-            _LOGGER.info("Entity migration complete: %d entities updated", migrated)
+    # Step 8: First poll (always runs, even when polling is disabled)
+    await data_coordinator.async_config_entry_first_refresh()
+    if health_coordinator is not None:
+        await health_coordinator.async_config_entry_first_refresh()
 
-    # Setup platforms
+    # Step 9: Store runtime data
+    entry.runtime_data = CableModemRuntimeData(
+        data_coordinator=data_coordinator,
+        health_coordinator=health_coordinator,
+        orchestrator=orchestrator,
+        health_monitor=health_monitor,
+        cancel_event=None,
+        modem_identity=modem_identity,
+    )
+
+    # Step 10: Forward platform setup
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Update device registry
-    _update_device_registry(hass, entry, host)
+    # Step 11: Update device registry
+    _update_device_registry(hass, entry)
 
-    # Register update listener
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    # Step 12: Register services (if first entry)
+    if not hass.services.has_service(DOMAIN, "generate_dashboard"):
+        async_register_services(hass)
 
-    # Register services (only once)
-    if not hass.services.has_service(DOMAIN, SERVICE_CLEAR_HISTORY):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_CLEAR_HISTORY,
-            create_clear_history_handler(hass),
-            schema=SERVICE_CLEAR_HISTORY_SCHEMA,
-        )
-
-    if not hass.services.has_service(DOMAIN, SERVICE_GENERATE_DASHBOARD):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_GENERATE_DASHBOARD,
-            create_generate_dashboard_handler(hass),
-            schema=SERVICE_GENERATE_DASHBOARD_SCHEMA,
-            supports_response=SupportsResponse.ONLY,
-        )
+    # Register update listener (options flow changes trigger reload)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    # Try to unload platforms, but handle case where they were never loaded
-    try:
-        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    except ValueError as err:
-        # Platforms were never loaded (setup failed before platforms were added)
-        _LOGGER.debug("Platforms were never loaded for entry %s: %s", entry.entry_id, err)
-        unload_ok = True  # Consider it successful since there's nothing to unload
+async def async_unload_entry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+) -> bool:
+    """Unload a config entry.
 
-    if unload_ok:
-        # Clean up coordinator data
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+    Cancels any in-progress restart (cooperative via cancel_event),
+    then unloads platforms.  ``runtime_data`` is auto-cleaned by HA.
+    """
+    # Cancel restart if in progress
+    if entry.runtime_data.cancel_event is not None:
+        entry.runtime_data.cancel_event.set()
 
-        # Unregister services if this is the last entry
-        if not hass.data[DOMAIN]:
-            hass.services.async_remove(DOMAIN, SERVICE_CLEAR_HISTORY)
-            hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
+    # Unload platforms
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    return bool(unload_ok)
+    # Unregister services if last entry
+    if unload_ok and not hass.config_entries.async_entries(DOMAIN):
+        async_unregister_services(hass)
+
+    return unload_ok  # type: ignore[no-any-return]
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry."""
+async def _async_update_listener(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+) -> None:
+    """Reload integration when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+# ------------------------------------------------------------------
+# Sync helpers — run in executor (file I/O)
+# ------------------------------------------------------------------
+
+
+def _create_core_components(
+    data: Mapping[str, Any],
+    scan_interval: int,
+) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
+    """Load modem config and create Core components.
+
+    Implements startup Steps 1-5 from HA_ADAPTER_SPEC.md.  Runs in an
+    executor thread because config loading reads YAML files from the
+    catalog package.
+
+    Args:
+        data: Config entry data (user selections + validation results).
+        scan_interval: Effective data poll interval in seconds.  Passed
+            to HealthMonitor so it knows the collection-evidence window.
+    """
+    # Step 1: Resolve modem config from catalog
+    modem_dir = CATALOG_PATH / data[CONF_MODEM_DIR]
+    variant = data.get(CONF_VARIANT)
+
+    modem_yaml = modem_dir / f"modem-{variant}.yaml" if variant else modem_dir / "modem.yaml"
+    parser_yaml = modem_dir / "parser.yaml"
+    parser_py = modem_dir / "parser.py"
+
+    modem_config = load_modem_config(modem_yaml)
+    parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
+    post_processor = load_post_processor(parser_py) if parser_py.exists() else None
+
+    # Step 2: Extract ModemIdentity
+    hw = modem_config.hardware
+    modem_identity = ModemIdentity(
+        manufacturer=modem_config.manufacturer,
+        model=modem_config.model,
+        docsis_version=hw.docsis_version if hw else None,
+        release_date=hw.release_date if hw else None,
+        status=modem_config.status,
+    )
+
+    # Step 3: Create ModemDataCollector
+    protocol = data.get(CONF_PROTOCOL, "http")
+    host = data[CONF_HOST]
+    base_url = f"{protocol}://{host}"
+
+    collector = ModemDataCollector(
+        modem_config=modem_config,
+        parser_config=parser_config,
+        post_processor=post_processor,
+        base_url=base_url,
+        username=data.get(CONF_USERNAME, ""),
+        password=data.get(CONF_PASSWORD, ""),
+    )
+
+    # Step 4: Create HealthMonitor (conditional)
+    health_monitor: HealthMonitor | None = None
+    supports_icmp = data.get(CONF_SUPPORTS_ICMP, False)
+    supports_head = data.get(CONF_SUPPORTS_HEAD, False)
+
+    if supports_icmp or supports_head:
+        health_monitor = HealthMonitor(
+            base_url=base_url,
+            poll_interval=scan_interval,
+            supports_icmp=supports_icmp,
+            supports_head=supports_head,
+        )
+
+    # Step 5: Create Orchestrator
+    orchestrator = Orchestrator(
+        collector=collector,
+        health_monitor=health_monitor,
+        modem_config=modem_config,
+    )
+
+    return orchestrator, health_monitor, modem_identity
+
+
+# ------------------------------------------------------------------
+# Device registry
+# ------------------------------------------------------------------
+
+
+def _update_device_registry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+) -> None:
+    """Register or update the HA device for this config entry.
+
+    Device name depends on the entity_prefix setting chosen during
+    config flow.  See ENTITY_MODEL_SPEC.md Device Model section.
+    """
+    data = entry.data
+    identity = entry.runtime_data.modem_identity
+
+    prefix = data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+    if prefix == ENTITY_PREFIX_MODEL:
+        device_name = f"Cable Modem {identity.model}"
+    elif prefix == ENTITY_PREFIX_IP:
+        device_name = f"Cable Modem {data[CONF_HOST]}"
+    else:
+        device_name = "Cable Modem"
+
+    protocol = data.get(CONF_PROTOCOL, "http")
+    host = data[CONF_HOST]
+
+    registry = dr.async_get(hass)
+    registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=device_name,
+        manufacturer=identity.manufacturer,
+        model=identity.model,
+        configuration_url=f"{protocol}://{host}",
+    )

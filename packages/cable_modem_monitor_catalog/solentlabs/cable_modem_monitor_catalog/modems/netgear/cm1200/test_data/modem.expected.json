@@ -1,381 +1,383 @@
 {
   "downstream": [
     {
+      "channel_id": 32,
+      "channel_type": "qam",
+      "corrected": 8180,
+      "frequency": 765000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 32,
-      "frequency": 765000000,
       "power": 10.5,
       "snr": 44.2,
-      "corrected": 8180,
-      "uncorrected": 3392,
-      "channel_type": "qam"
+      "uncorrected": 3392
     },
     {
+      "channel_id": 3,
+      "channel_type": "qam",
+      "corrected": 12155,
+      "frequency": 579000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 3,
-      "frequency": 579000000,
       "power": 8.7,
       "snr": 44.0,
-      "corrected": 12155,
-      "uncorrected": 7783,
-      "channel_type": "qam"
+      "uncorrected": 7783
     },
     {
+      "channel_id": 4,
+      "channel_type": "qam",
+      "corrected": 12676,
+      "frequency": 585000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 4,
-      "frequency": 585000000,
       "power": 8.8,
       "snr": 44.0,
-      "corrected": 12676,
-      "uncorrected": 8520,
-      "channel_type": "qam"
+      "uncorrected": 8520
     },
     {
+      "channel_id": 5,
+      "channel_type": "qam",
+      "corrected": 11746,
+      "frequency": 591000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 5,
-      "frequency": 591000000,
       "power": 8.9,
       "snr": 44.0,
-      "corrected": 11746,
-      "uncorrected": 7216,
-      "channel_type": "qam"
+      "uncorrected": 7216
     },
     {
+      "channel_id": 6,
+      "channel_type": "qam",
+      "corrected": 11336,
+      "frequency": 597000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 6,
-      "frequency": 597000000,
       "power": 9.2,
       "snr": 44.0,
-      "corrected": 11336,
-      "uncorrected": 6683,
-      "channel_type": "qam"
+      "uncorrected": 6683
     },
     {
-      "lock_status": "locked",
-      "modulation": "QAM256",
       "channel_id": 7,
-      "frequency": 603000000,
-      "power": 9.4,
-      "snr": 44.0,
+      "channel_type": "qam",
       "corrected": 10121,
-      "uncorrected": 5581,
-      "channel_type": "qam"
-    },
-    {
+      "frequency": 603000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 8,
-      "frequency": 609000000,
       "power": 9.4,
       "snr": 44.0,
-      "corrected": 10345,
-      "uncorrected": 5911,
-      "channel_type": "qam"
+      "uncorrected": 5581
     },
     {
+      "channel_id": 8,
+      "channel_type": "qam",
+      "corrected": 10345,
+      "frequency": 609000000,
       "lock_status": "locked",
       "modulation": "QAM256",
+      "power": 9.4,
+      "snr": 44.0,
+      "uncorrected": 5911
+    },
+    {
       "channel_id": 9,
+      "channel_type": "qam",
+      "corrected": 9273,
       "frequency": 615000000,
+      "lock_status": "locked",
+      "modulation": "QAM256",
       "power": 9.5,
       "snr": 44.0,
-      "corrected": 9273,
-      "uncorrected": 4738,
-      "channel_type": "qam"
+      "uncorrected": 4738
     },
     {
+      "channel_id": 10,
+      "channel_type": "qam",
+      "corrected": 8843,
+      "frequency": 621000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 10,
-      "frequency": 621000000,
       "power": 9.7,
       "snr": 44.0,
-      "corrected": 8843,
-      "uncorrected": 4218,
-      "channel_type": "qam"
+      "uncorrected": 4218
     },
     {
+      "channel_id": 11,
+      "channel_type": "qam",
+      "corrected": 8718,
+      "frequency": 627000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 11,
-      "frequency": 627000000,
       "power": 9.8,
       "snr": 43.9,
-      "corrected": 8718,
-      "uncorrected": 5052,
-      "channel_type": "qam"
+      "uncorrected": 5052
     },
     {
+      "channel_id": 12,
+      "channel_type": "qam",
+      "corrected": 7945,
+      "frequency": 633000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 12,
-      "frequency": 633000000,
       "power": 9.9,
       "snr": 43.7,
-      "corrected": 7945,
-      "uncorrected": 3991,
-      "channel_type": "qam"
+      "uncorrected": 3991
     },
     {
+      "channel_id": 13,
+      "channel_type": "qam",
+      "corrected": 8451,
+      "frequency": 639000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 13,
-      "frequency": 639000000,
       "power": 10.0,
       "snr": 43.7,
-      "corrected": 8451,
-      "uncorrected": 4375,
-      "channel_type": "qam"
+      "uncorrected": 4375
     },
     {
+      "channel_id": 14,
+      "channel_type": "qam",
+      "corrected": 8474,
+      "frequency": 645000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 14,
-      "frequency": 645000000,
       "power": 10.1,
       "snr": 43.9,
-      "corrected": 8474,
-      "uncorrected": 4412,
-      "channel_type": "qam"
+      "uncorrected": 4412
     },
     {
+      "channel_id": 15,
+      "channel_type": "qam",
+      "corrected": 8724,
+      "frequency": 651000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 15,
-      "frequency": 651000000,
       "power": 10.4,
       "snr": 43.9,
-      "corrected": 8724,
-      "uncorrected": 5110,
-      "channel_type": "qam"
+      "uncorrected": 5110
     },
     {
+      "channel_id": 16,
+      "channel_type": "qam",
+      "corrected": 8854,
+      "frequency": 657000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 16,
-      "frequency": 657000000,
       "power": 10.4,
       "snr": 44.0,
-      "corrected": 8854,
-      "uncorrected": 4959,
-      "channel_type": "qam"
+      "uncorrected": 4959
     },
     {
+      "channel_id": 17,
+      "channel_type": "qam",
+      "corrected": 9160,
+      "frequency": 663000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 17,
-      "frequency": 663000000,
       "power": 10.7,
       "snr": 43.9,
-      "corrected": 9160,
-      "uncorrected": 5006,
-      "channel_type": "qam"
+      "uncorrected": 5006
     },
     {
+      "channel_id": 18,
+      "channel_type": "qam",
+      "corrected": 9174,
+      "frequency": 669000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 18,
-      "frequency": 669000000,
       "power": 10.8,
       "snr": 44.0,
-      "corrected": 9174,
-      "uncorrected": 5672,
-      "channel_type": "qam"
+      "uncorrected": 5672
     },
     {
+      "channel_id": 19,
+      "channel_type": "qam",
+      "corrected": 8424,
+      "frequency": 675000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 19,
-      "frequency": 675000000,
       "power": 10.8,
       "snr": 43.4,
-      "corrected": 8424,
-      "uncorrected": 4759,
-      "channel_type": "qam"
+      "uncorrected": 4759
     },
     {
+      "channel_id": 20,
+      "channel_type": "qam",
+      "corrected": 9066,
+      "frequency": 681000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 20,
-      "frequency": 681000000,
       "power": 10.8,
       "snr": 44.1,
-      "corrected": 9066,
-      "uncorrected": 4948,
-      "channel_type": "qam"
+      "uncorrected": 4948
     },
     {
+      "channel_id": 21,
+      "channel_type": "qam",
+      "corrected": 9074,
+      "frequency": 687000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 21,
-      "frequency": 687000000,
       "power": 11.1,
       "snr": 44.2,
-      "corrected": 9074,
-      "uncorrected": 5204,
-      "channel_type": "qam"
+      "uncorrected": 5204
     },
     {
+      "channel_id": 22,
+      "channel_type": "qam",
+      "corrected": 9177,
+      "frequency": 693000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 22,
-      "frequency": 693000000,
       "power": 11.3,
       "snr": 44.4,
-      "corrected": 9177,
-      "uncorrected": 5264,
-      "channel_type": "qam"
+      "uncorrected": 5264
     },
     {
+      "channel_id": 23,
+      "channel_type": "qam",
+      "corrected": 8376,
+      "frequency": 699000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 23,
-      "frequency": 699000000,
       "power": 11.5,
       "snr": 44.4,
-      "corrected": 8376,
-      "uncorrected": 4654,
-      "channel_type": "qam"
+      "uncorrected": 4654
     },
     {
+      "channel_id": 24,
+      "channel_type": "qam",
+      "corrected": 8982,
+      "frequency": 705000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 24,
-      "frequency": 705000000,
       "power": 11.4,
       "snr": 44.4,
-      "corrected": 8982,
-      "uncorrected": 5211,
-      "channel_type": "qam"
+      "uncorrected": 5211
     },
     {
+      "channel_id": 25,
+      "channel_type": "qam",
+      "corrected": 8579,
+      "frequency": 723000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 25,
-      "frequency": 723000000,
       "power": 11.3,
       "snr": 44.4,
-      "corrected": 8579,
-      "uncorrected": 4971,
-      "channel_type": "qam"
+      "uncorrected": 4971
     },
     {
+      "channel_id": 26,
+      "channel_type": "qam",
+      "corrected": 9072,
+      "frequency": 729000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 26,
-      "frequency": 729000000,
       "power": 11.3,
       "snr": 44.3,
-      "corrected": 9072,
-      "uncorrected": 5108,
-      "channel_type": "qam"
+      "uncorrected": 5108
     },
     {
+      "channel_id": 27,
+      "channel_type": "qam",
+      "corrected": 9049,
+      "frequency": 735000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 27,
-      "frequency": 735000000,
       "power": 11.2,
       "snr": 44.2,
-      "corrected": 9049,
-      "uncorrected": 4988,
-      "channel_type": "qam"
+      "uncorrected": 4988
     },
     {
+      "channel_id": 28,
+      "channel_type": "qam",
+      "corrected": 8515,
+      "frequency": 741000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 28,
-      "frequency": 741000000,
       "power": 11.2,
       "snr": 44.3,
-      "corrected": 8515,
-      "uncorrected": 4443,
-      "channel_type": "qam"
+      "uncorrected": 4443
     },
     {
+      "channel_id": 29,
+      "channel_type": "qam",
+      "corrected": 9230,
+      "frequency": 747000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 29,
-      "frequency": 747000000,
       "power": 11.0,
       "snr": 44.3,
-      "corrected": 9230,
-      "uncorrected": 4826,
-      "channel_type": "qam"
+      "uncorrected": 4826
     },
     {
+      "channel_id": 30,
+      "channel_type": "qam",
+      "corrected": 8673,
+      "frequency": 753000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 30,
-      "frequency": 753000000,
       "power": 10.8,
       "snr": 44.3,
-      "corrected": 8673,
-      "uncorrected": 4185,
-      "channel_type": "qam"
+      "uncorrected": 4185
     },
     {
+      "channel_id": 31,
+      "channel_type": "qam",
+      "corrected": 8437,
+      "frequency": 759000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 31,
-      "frequency": 759000000,
       "power": 10.6,
       "snr": 44.2,
-      "corrected": 8437,
-      "uncorrected": 3363,
-      "channel_type": "qam"
+      "uncorrected": 3363
     },
     {
+      "channel_id": 33,
+      "channel_type": "qam",
+      "corrected": 13360,
+      "frequency": 567000000,
       "lock_status": "locked",
       "modulation": "QAM256",
-      "channel_id": 33,
-      "frequency": 567000000,
       "power": 8.6,
       "snr": 44.1,
-      "corrected": 13360,
-      "uncorrected": 10040,
-      "channel_type": "qam"
+      "uncorrected": 10040
     },
     {
-      "lock_status": "locked",
       "channel_id": 1,
+      "channel_type": "ofdm",
       "frequency": 380000000,
+      "lock_status": "locked",
       "power": 7.7,
-      "snr": 44.6,
-      "channel_type": "ofdm"
-    }
-  ],
-  "upstream": [
-    {
-      "lock_status": "locked",
-      "channel_type": "atdma",
-      "channel_id": 3,
-      "symbol_rate": 5120,
-      "frequency": 13200000,
-      "power": 47.5
-    },
-    {
-      "lock_status": "locked",
-      "channel_type": "atdma",
-      "channel_id": 4,
-      "symbol_rate": 5120,
-      "frequency": 19600000,
-      "power": 47.5
-    },
-    {
-      "lock_status": "locked",
-      "channel_id": 1,
-      "frequency": 19725000,
-      "power": 44.5,
-      "channel_type": "ofdma"
+      "snr": 44.6
     }
   ],
   "system_info": {
-    "current_time": "--- --- -- --:--:-- ----"
-  }
+    "current_time": "--- --- -- --:--:-- ----",
+    "downstream_channel_count": 32,
+    "upstream_channel_count": 3
+  },
+  "upstream": [
+    {
+      "channel_id": 3,
+      "channel_type": "atdma",
+      "frequency": 13200000,
+      "lock_status": "locked",
+      "power": 47.5,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 4,
+      "channel_type": "atdma",
+      "frequency": 19600000,
+      "lock_status": "locked",
+      "power": 47.5,
+      "symbol_rate": 5120
+    },
+    {
+      "channel_id": 1,
+      "channel_type": "ofdma",
+      "frequency": 19725000,
+      "lock_status": "locked",
+      "power": 44.5
+    }
+  ]
 }

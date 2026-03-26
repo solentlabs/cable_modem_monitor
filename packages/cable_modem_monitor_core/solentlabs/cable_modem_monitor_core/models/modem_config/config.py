@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .actions import ActionsConfig, BehaviorsConfig
 from .auth import HNAP_AUTH_STRATEGIES, HTTP_AUTH_STRATEGIES, AuthConfig
-from .metadata import AggregateField, AttributionConfig, HardwareConfig, ReferencesConfig
+from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
 
 
@@ -43,9 +43,6 @@ class ModemConfig(BaseModel):
     # Actions
     actions: ActionsConfig | None = None
     behaviors: BehaviorsConfig | None = None
-
-    # Aggregate
-    aggregate: dict[str, AggregateField] = Field(default_factory=dict)
 
     # Hardware
     hardware: HardwareConfig | None = None

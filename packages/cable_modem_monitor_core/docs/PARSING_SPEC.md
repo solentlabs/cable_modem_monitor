@@ -44,6 +44,7 @@ declaratively.
 | [parser.py — Post-Processing Hooks](#parserpy--post-processing-hooks) | When and how to use code-based post-processing |
 | [Output Contract](#output-contract) | ModemData schema, field guarantees, entity identity |
 | [Channel Type Detection](#channel-type-detection) | How QAM vs OFDM is determined |
+| [Aggregate (Derived system_info Fields)](#aggregate-derived-system_info-fields) | Channel counts, error totals, scoped sums |
 | [Performance Characteristics](#performance-characteristics) | Request counts and timing by transport |
 
 ---
@@ -1722,6 +1723,70 @@ channels:
       "SC-QAM": "qam"
       "OFDM PLC": "ofdm"
 ```
+
+---
+
+## Aggregate (Derived system_info Fields)
+
+After extracting all sections (downstream, upstream, system_info) and
+applying parser.py hooks, the coordinator enriches `system_info` with
+fields derived from parsed channel data. Consumers read these from
+`system_info` — the source (native modem value vs coordinator-computed)
+is transparent.
+
+### Channel Counts (always computed)
+
+The coordinator always adds channel counts to `system_info`:
+
+- `downstream_channel_count` — `len(downstream)`
+- `upstream_channel_count` — `len(upstream)`
+
+If parser.yaml maps native channel counts from the modem's web UI
+(e.g., "Number of Channels Connected"), the native value takes
+precedence (`setdefault` — coordinator does not overwrite).
+
+### Aggregate Fields (declared in parser.yaml)
+
+Optional section declaring scoped sums from channel data. Each entry
+defines a field name, an aggregation operation, and the channel scope.
+Error totals are context-dependent — QAM and OFDM use different error
+correction mechanisms, so scoping by channel type matters.
+
+```yaml
+aggregate:
+  total_corrected:
+    sum: corrected
+    channels: downstream.qam
+  total_uncorrected:
+    sum: uncorrected
+    channels: downstream.qam
+```
+
+| Field | Type | Required | Description |
+|-------|------| :--------: |-------------|
+| `sum` | string | yes | Channel field to sum (e.g., `corrected`, `uncorrected`) |
+| `channels` | string | yes | Scope: `downstream`, `upstream`, or type-qualified `downstream.qam`, `downstream.ofdm`, `upstream.atdma`, `upstream.ofdma` |
+
+**Operations:** Only `sum` is supported. This section is purpose-built
+for error totals, not a general aggregation engine.
+
+**Why parser.yaml, not modem.yaml?** The parser layer owns the data
+context — it knows channel types, field names, and section structure.
+Aggregate declarations depend on that context (e.g., scoping by
+`downstream.qam` requires knowing that `channel_type` mapping exists).
+modem.yaml stays focused on auth, session, behaviors, and actions.
+
+**Precedence rule:** If parser.yaml maps a `system_info` field with
+the same name as an `aggregate` entry (e.g., both produce
+`total_corrected`), the native mapping wins. The coordinator skips
+the aggregate computation for that field. This handles the common
+case: a modem natively reports totals → map them directly. A modem
+that doesn't → declare the aggregate to compute them.
+
+**Execution:** The coordinator runs aggregate computation after all
+sections are extracted and parser.py hooks have run. Results are
+merged into `system_info` alongside channel counts, before the
+coordinator returns `ModemData` to the collector.
 
 ---
 

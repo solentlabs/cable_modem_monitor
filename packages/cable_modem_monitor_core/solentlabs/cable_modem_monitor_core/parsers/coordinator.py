@@ -1,12 +1,13 @@
 """ModemParserCoordinator — orchestrates parser.yaml-driven extraction.
 
 Reads parser.yaml config, dispatches to registered parsers per section,
-applies parser.py post-processing hooks, and assembles ModemData.
+applies parser.py post-processing hooks, enriches system_info with
+derived fields (channel counts, aggregate sums), and assembles ModemData.
 
 Parser registries (type-to-callable dispatch tables) live in
 ``registries.py``.
 
-See PARSING_SPEC.md ModemParserCoordinator section.
+See PARSING_SPEC.md ModemParserCoordinator and Aggregate sections.
 """
 
 from __future__ import annotations
@@ -56,13 +57,16 @@ class ModemParserCoordinator:
     def parse(self, resources: dict[str, Any]) -> dict[str, Any]:
         """Run the full extraction pipeline and assemble ModemData.
 
+        Sequence: extract channels → extract system_info → apply hooks
+        → enrich derived fields (channel counts, aggregate sums).
+
         Args:
             resources: Resource dict keyed by URL path. Values are
                 format-dependent (BeautifulSoup for HTML, dict for JSON).
 
         Returns:
             ModemData dict with downstream, upstream, and optional
-            system_info.
+            system_info. Derived fields are merged into system_info.
         """
         result: dict[str, Any] = {}
 
@@ -72,6 +76,8 @@ class ModemParserCoordinator:
         system_info = self._extract_system_info(resources)
         if system_info:
             result["system_info"] = system_info
+
+        self._enrich_derived_fields(result)
 
         _logger.info(
             "Parse complete: %d DS, %d US channels",
@@ -147,6 +153,95 @@ class ModemParserCoordinator:
         _logger.debug("Invoking parser.py hook: %s", hook_name)
         result: _T = hook(data, resources)
         return result
+
+    def _enrich_derived_fields(self, data: dict[str, Any]) -> None:
+        """Enrich system_info with channel counts and aggregate sums.
+
+        Runs after all sections are extracted and hooks have run.
+        Uses ``setdefault`` so native values from the parser take
+        precedence over computed values.
+
+        See PARSING_SPEC.md § Aggregate (Derived system_info Fields).
+        """
+        system_info = data.setdefault("system_info", {})
+
+        # Channel counts — always computed, native wins
+        downstream = data.get("downstream", [])
+        upstream = data.get("upstream", [])
+        system_info.setdefault("downstream_channel_count", len(downstream))
+        system_info.setdefault("upstream_channel_count", len(upstream))
+
+        # Aggregate sums — from parser.yaml aggregate section
+        for field_name, field_def in self._config.aggregate.items():
+            if field_name in system_info:
+                continue  # native mapping wins
+
+            channels = _select_channels(data, field_def.channels)
+            if not channels:
+                continue
+
+            total = _sum_field(channels, field_def.sum)
+            if total is not None:
+                system_info[field_name] = total
+
+
+# ---------------------------------------------------------------------------
+# Aggregate helpers — pure functions, no state
+# ---------------------------------------------------------------------------
+
+
+def _select_channels(data: dict[str, Any], scope: str) -> list[dict[str, Any]]:
+    """Select channels matching the given scope.
+
+    Scope formats:
+    - ``downstream`` — all downstream channels
+    - ``upstream`` — all upstream channels
+    - ``downstream.qam`` — downstream with ``channel_type == "qam"``
+    - ``upstream.atdma`` — upstream with ``channel_type == "atdma"``
+
+    Args:
+        data: Parsed ModemData dict with ``downstream`` and ``upstream``.
+        scope: Channel scope string from aggregate config.
+
+    Returns:
+        List of matching channel dicts.
+    """
+    parts = scope.split(".", 1)
+    direction = parts[0]
+
+    channels: list[dict[str, Any]] = data.get(direction, [])
+
+    if len(parts) == 2:
+        channel_type = parts[1]
+        channels = [ch for ch in channels if ch.get("channel_type") == channel_type]
+
+    return channels
+
+
+def _sum_field(channels: list[dict[str, Any]], field_name: str) -> int | float | None:
+    """Sum a numeric field across channels.
+
+    Channels missing the field are skipped. Returns ``None`` if no
+    channels have the field (avoids returning 0 for a genuinely
+    absent field vs. a field that sums to 0).
+
+    Args:
+        channels: List of channel dicts.
+        field_name: Field to sum.
+
+    Returns:
+        Sum of the field, or ``None`` if no channels have it.
+    """
+    total: int | float = 0
+    found = False
+
+    for ch in channels:
+        value = ch.get(field_name)
+        if value is not None:
+            total += value
+            found = True
+
+    return total if found else None
 
 
 def filter_restart_window(

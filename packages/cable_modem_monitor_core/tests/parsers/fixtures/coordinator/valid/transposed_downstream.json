@@ -7,20 +7,53 @@
     "downstream": {
       "format": "table_transposed",
       "resource": "/status.html",
-      "selector": {"type": "header_text", "match": "Downstream"},
+      "selector": {
+        "type": "header_text",
+        "match": "Downstream"
+      },
       "rows": [
-        {"label": "Channel ID", "field": "channel_id", "type": "integer"},
-        {"label": "Frequency", "field": "frequency", "type": "frequency", "unit": "Hz"},
-        {"label": "Power Level", "field": "power", "type": "float", "unit": "dBmV"}
+        {
+          "label": "Channel ID",
+          "field": "channel_id",
+          "type": "integer"
+        },
+        {
+          "label": "Frequency",
+          "field": "frequency",
+          "type": "frequency",
+          "unit": "Hz"
+        },
+        {
+          "label": "Power Level",
+          "field": "power",
+          "type": "float",
+          "unit": "dBmV"
+        }
       ],
-      "channel_type": {"fixed": "qam"}
+      "channel_type": {
+        "fixed": "qam"
+      }
     }
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 1, "frequency": 519000000, "power": 5.0, "channel_type": "qam"},
-      {"channel_id": 2, "frequency": 513000000, "power": 4.0, "channel_type": "qam"}
+      {
+        "channel_id": 1,
+        "frequency": 519000000,
+        "power": 5.0,
+        "channel_type": "qam"
+      },
+      {
+        "channel_id": 2,
+        "frequency": 513000000,
+        "power": 4.0,
+        "channel_type": "qam"
+      }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 0
+    }
   }
 }

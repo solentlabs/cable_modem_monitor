@@ -15,8 +15,20 @@ from .mappings import mapping_to_channel, mapping_to_column, mapping_to_json_cha
 from .system_info import transform_system_info
 
 
-def build_parser_dict(sections: dict[str, Any]) -> dict[str, Any] | None:
-    """Transform analysis sections into parser.yaml dict."""
+def build_parser_dict(
+    sections: dict[str, Any],
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Transform analysis sections into parser.yaml dict.
+
+    Args:
+        sections: Analysis sections (downstream, upstream, system_info).
+        metadata: Optional enriched metadata dict. If it contains an
+            ``aggregate`` key, those derived-field declarations (scoped
+            sums over channel data, e.g. ``{"total_corrected":
+            {"sum": "corrected", "channels": "downstream.qam"}}``) are
+            included in the parser.yaml output.
+    """
     result: dict[str, Any] = {}
 
     for section_name in ("downstream", "upstream"):
@@ -29,6 +41,9 @@ def build_parser_dict(sections: dict[str, Any]) -> dict[str, Any] | None:
     system_info = sections.get("system_info")
     if system_info:
         result["system_info"] = transform_system_info(system_info)
+
+    if metadata and metadata.get("aggregate"):
+        result["aggregate"] = metadata["aggregate"]
 
     return result if result else None
 

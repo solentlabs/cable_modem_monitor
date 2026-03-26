@@ -64,7 +64,7 @@ def generate_config(
 
     # Build parser.yaml dict (None if no sections)
     sections = analysis.get("sections")
-    parser_dict = build_parser_dict(sections) if sections else None
+    parser_dict = build_parser_dict(sections, metadata) if sections else None
 
     # Validate via Pydantic
     modem_config = validate_modem(modem_dict, errors)

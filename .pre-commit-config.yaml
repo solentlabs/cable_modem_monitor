@@ -121,14 +121,6 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      - id: sync-modem-configs
-        name: Sync modem configs to custom_components
-        entry: scripts/dev/sync-modem-configs.sh
-        language: script
-        files: ^modems/.*\.(yaml|py)$
-        pass_filenames: false
-        stages: [pre-commit]
-
       - id: validate-modem-yaml
         name: Validate modem.yaml configs
         entry: scripts/dev/run-python.sh scripts/validate_modem_configs.py

@@ -76,7 +76,9 @@
     "upstream": [],
     "system_info": {
       "system_uptime": "50221",
-      "docsis_version": "3.1"
+      "docsis_version": "3.1",
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
     }
   }
 }

@@ -70,6 +70,10 @@
         "channel_type": "qam"
       }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 2,
+      "upstream_channel_count": 0
+    }
   }
 }

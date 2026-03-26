@@ -69,18 +69,6 @@
       "problemMatcher": []
     },
     {
-      "label": "🔄 Sync Modems",
-      "type": "shell",
-      "command": "make sync",
-      "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared"
-      },
-      "problemMatcher": [],
-      "detail": "Sync modem.yaml and parser.py from modems/ to custom_components/"
-    },
-    {
       "label": "🐳 Check Docker Status",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/check-docker.py",
@@ -93,7 +81,7 @@
       "detail": "Verify Docker is installed and running before executing Docker commands"
     },
     {
-      "label": "🚀 HA: Sync & Run",
+      "label": "🚀 HA: Start (Fresh)",
       "type": "shell",
       "command": "python3 ${workspaceFolder}/scripts/dev/ha-sync-run.py",
       "dependsOn": ["🐳 Check Docker Status"],
@@ -105,7 +93,7 @@
         "clear": true
       },
       "problemMatcher": [],
-      "detail": "Sync modem configs, start HA if needed, restart if running"
+      "detail": "Start HA if needed, restart if running"
     },
     {
       "label": "⏹️ HA: Stop",

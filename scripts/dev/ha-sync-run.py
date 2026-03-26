@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 """
-Sync modem configs and ensure Home Assistant is running.
+Start or restart the Home Assistant dev container.
 
 This script:
-1. Syncs modem configs from modems/ to custom_components/
-2. Regenerates modem index (index.yaml)
-3. Regenerates fixture index (modems/README.md)
-4. If HA container is running -> restart it
-5. If HA container is not running -> start it
-6. Waits for HA to be ready
-7. Verifies the integration is mounted
+1. If HA container is running -> restart it
+2. If HA container is not running -> start it
+3. Waits for HA to be ready
+4. Verifies the integration is mounted
 
 Usage:
     python scripts/dev/ha-sync-run.py
@@ -352,76 +349,28 @@ def restart_container() -> bool:
 
 
 def main() -> int:
-    print_header(f"{SYNC} Sync & Run Home Assistant")
+    print_header("Start Home Assistant")
 
-    total_steps = 5
+    total_steps = 2
 
-    # Step 1: Sync modem configs
-    print_step(1, total_steps, "Syncing modem configs...")
-    result = subprocess.run(
-        ["python3", "scripts/release.py", "--sync-only"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        cwd=get_project_dir(),
-    )
-    if result.returncode != 0:
-        print_error_header("SYNC FAILED")
-        print(result.stderr or result.stdout)
-        return 1
-    print_success("Modem configs synced")
-
-    # Step 2: Regenerate modem index
-    print()
-    print_step(2, total_steps, "Regenerating modem index...")
-    result = subprocess.run(
-        ["python3", "scripts/generate_modem_index.py"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        cwd=get_project_dir(),
-    )
-    if result.returncode != 0:
-        print_error_header("INDEX GENERATION FAILED")
-        print(result.stderr or result.stdout)
-        return 1
-    print_success("Modem index regenerated")
-
-    # Step 3: Regenerate fixture index
-    print()
-    print_step(3, total_steps, "Regenerating fixture index...")
-    result = subprocess.run(
-        ["python3", "scripts/generate_fixture_index.py"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        cwd=get_project_dir(),
-    )
-    if result.returncode != 0:
-        print_error_header("FIXTURE INDEX GENERATION FAILED")
-        print(result.stderr or result.stdout)
-        return 1
-    print_success("Fixture index regenerated")
-
-    # Step 4: Start or restart container
-    print()
+    # Step 1: Start or restart container
     if is_container_running():
-        print_step(4, total_steps, "Restarting Home Assistant...")
+        print_step(1, total_steps, "Restarting Home Assistant...")
         if not restart_container():
             print_error_header("RESTART FAILED")
             return 1
         print_success("Container restarted")
     else:
-        print_step(4, total_steps, "Starting Home Assistant...")
+        print_step(1, total_steps, "Starting Home Assistant...")
         if not start_container():
             print_error_header("START FAILED")
             print_info("Check Docker Desktop is running")
             return 1
         print_success("Container started")
 
-    # Step 5: Wait for HA to be ready
+    # Step 2: Wait for HA to be ready
     print()
-    print_step(5, total_steps, "Waiting for Home Assistant...")
+    print_step(2, total_steps, "Waiting for Home Assistant...")
     print("   ", end="")
 
     if wait_for_http(HA_PORT, timeout=60):

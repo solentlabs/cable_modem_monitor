@@ -1,5 +1,5 @@
 {
-  "_description": "Downstream table for post-processor hook testing — hook adds custom_field",
+  "_description": "Downstream table for post-processor hook testing \u2014 hook adds custom_field",
   "_html": {
     "/status.html": "<html><body><table><tr><th colspan='2'>DS</th></tr><tr><th>Ch</th><th>Freq</th></tr><tr><td>1</td><td>507000000 Hz</td></tr></table></body></html>"
   },
@@ -9,21 +9,43 @@
       "resource": "/status.html",
       "tables": [
         {
-          "selector": {"type": "header_text", "match": "DS"},
+          "selector": {
+            "type": "header_text",
+            "match": "DS"
+          },
           "row_start": 2,
           "columns": [
-            {"index": 0, "field": "channel_id", "type": "integer"},
-            {"index": 1, "field": "frequency", "type": "frequency", "unit": "Hz"}
+            {
+              "index": 0,
+              "field": "channel_id",
+              "type": "integer"
+            },
+            {
+              "index": 1,
+              "field": "frequency",
+              "type": "frequency",
+              "unit": "Hz"
+            }
           ],
-          "channel_type": {"fixed": "qam"}
+          "channel_type": {
+            "fixed": "qam"
+          }
         }
       ]
     }
   },
   "_expected": {
     "downstream": [
-      {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+      {
+        "channel_id": 1,
+        "frequency": 507000000,
+        "channel_type": "qam"
+      }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
+    }
   }
 }

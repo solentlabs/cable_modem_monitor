@@ -2,333 +2,335 @@
   "downstream": [
     {
       "channel_id": 193,
-      "snr": 36.0,
-      "modulation": "4096QAM",
-      "lock_status": "locked",
       "channel_type": "ofdm",
-      "power": -8.8
+      "lock_status": "locked",
+      "modulation": "4096QAM",
+      "power": -8.8,
+      "snr": 36.0
     },
     {
       "channel_id": 194,
-      "snr": 44.0,
-      "modulation": "4096QAM",
-      "lock_status": "locked",
       "channel_type": "ofdm",
-      "power": 5.4
+      "lock_status": "locked",
+      "modulation": "4096QAM",
+      "power": 5.4,
+      "snr": 44.0
     },
     {
       "channel_id": 11,
-      "frequency": 570000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.3
+      "frequency": 570000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.3,
+      "snr": 40.4
     },
     {
       "channel_id": 12,
-      "frequency": 578000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.8
+      "frequency": 578000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.8,
+      "snr": 40.9
     },
     {
       "channel_id": 13,
-      "frequency": 586000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.4
+      "frequency": 586000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.4,
+      "snr": 40.9
     },
     {
       "channel_id": 14,
-      "frequency": 594000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.6
+      "frequency": 594000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.6,
+      "snr": 40.9
     },
     {
       "channel_id": 15,
-      "frequency": 602000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.6
+      "frequency": 602000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.6,
+      "snr": 40.9
     },
     {
       "channel_id": 16,
-      "frequency": 618000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.1
+      "frequency": 618000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.1,
+      "snr": 40.4
     },
     {
       "channel_id": 17,
-      "frequency": 626000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 626000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 18,
-      "frequency": 634000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 634000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.9
     },
     {
       "channel_id": 19,
-      "frequency": 642000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 642000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 20,
-      "frequency": 650000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.4
+      "frequency": 650000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.4,
+      "snr": 40.4
     },
     {
       "channel_id": 21,
-      "frequency": 658000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.3
+      "frequency": 658000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.3,
+      "snr": 40.4
     },
     {
       "channel_id": 22,
-      "frequency": 666000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 666000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 23,
-      "frequency": 674000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 674000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 24,
-      "frequency": 682000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.8
+      "frequency": 682000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.8,
+      "snr": 40.4
     },
     {
       "channel_id": 25,
-      "frequency": 690000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.9
+      "frequency": 690000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.9,
+      "snr": 40.9
     },
     {
       "channel_id": 1,
-      "frequency": 474000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.1
+      "frequency": 474000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.1,
+      "snr": 40.4
     },
     {
       "channel_id": 2,
-      "frequency": 482000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.1
+      "frequency": 482000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.1,
+      "snr": 40.4
     },
     {
       "channel_id": 3,
-      "frequency": 490000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 490000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 4,
-      "frequency": 498000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.6
+      "frequency": 498000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.6,
+      "snr": 40.4
     },
     {
       "channel_id": 5,
-      "frequency": 522000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.7
+      "frequency": 522000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.7,
+      "snr": 40.9
     },
     {
       "channel_id": 6,
-      "frequency": 530000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.7
+      "frequency": 530000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.7,
+      "snr": 40.9
     },
     {
       "channel_id": 7,
-      "frequency": 538000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.2
+      "frequency": 538000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.2,
+      "snr": 40.9
     },
     {
       "channel_id": 8,
-      "frequency": 546000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.4
+      "frequency": 546000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.4,
+      "snr": 40.4
     },
     {
       "channel_id": 9,
-      "frequency": 554000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.2
+      "frequency": 554000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.2,
+      "snr": 40.4
     },
     {
       "channel_id": 10,
-      "frequency": 562000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": 0.1
+      "frequency": 562000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": 0.1,
+      "snr": 40.4
     },
     {
       "channel_id": 26,
-      "frequency": 698000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.8
+      "frequency": 698000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.8,
+      "snr": 40.9
     },
     {
       "channel_id": 27,
-      "frequency": 706000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -0.7
+      "frequency": 706000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -0.7,
+      "snr": 40.9
     },
     {
       "channel_id": 28,
-      "frequency": 730000000,
-      "snr": 40.9,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -1.1
+      "frequency": 730000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -1.1,
+      "snr": 40.9
     },
     {
       "channel_id": 29,
-      "frequency": 738000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -1.2
+      "frequency": 738000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -1.2,
+      "snr": 40.4
     },
     {
       "channel_id": 30,
-      "frequency": 746000000,
-      "snr": 40.4,
-      "modulation": "256QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
-      "power": -1.5
+      "frequency": 746000000,
+      "lock_status": "locked",
+      "modulation": "256QAM",
+      "power": -1.5,
+      "snr": 40.4
     }
   ],
+  "system_info": {
+    "downstream_channel_count": 32,
+    "software_version": "01.05.063.13.EURO.PC20",
+    "upstream_channel_count": 5
+  },
   "upstream": [
     {
       "channel_id": 43,
-      "modulation": "1024QAM",
-      "lock_status": "locked",
       "channel_type": "ofdma",
+      "lock_status": "locked",
+      "modulation": "1024QAM",
       "power": 50.8
     },
     {
       "channel_id": 9,
-      "frequency": 31000000,
-      "modulation": "64QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
+      "frequency": 31000000,
+      "lock_status": "locked",
+      "modulation": "64QAM",
       "power": 43.8
     },
     {
       "channel_id": 12,
-      "frequency": 51000000,
-      "modulation": "64QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
+      "frequency": 51000000,
+      "lock_status": "locked",
+      "modulation": "64QAM",
       "power": 42.8
     },
     {
       "channel_id": 11,
-      "frequency": 45000000,
-      "modulation": "64QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
+      "frequency": 45000000,
+      "lock_status": "locked",
+      "modulation": "64QAM",
       "power": 42.8
     },
     {
       "channel_id": 10,
-      "frequency": 37000000,
-      "modulation": "64QAM",
-      "lock_status": "locked",
       "channel_type": "qam",
+      "frequency": 37000000,
+      "lock_status": "locked",
+      "modulation": "64QAM",
       "power": 43.8
     }
-  ],
-  "system_info": {
-    "software_version": "01.05.063.13.EURO.PC20"
-  }
+  ]
 }

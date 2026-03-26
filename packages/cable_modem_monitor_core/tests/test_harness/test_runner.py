@@ -243,6 +243,10 @@ class TestLoadPostProcessor:
                 {"channel_id": 2, "frequency": 513000000, "power": 2.6, "custom_field": "added"},
             ],
             "upstream": [],
+            "system_info": {
+                "downstream_channel_count": 2,
+                "upstream_channel_count": 0,
+            },
         }
         case = _build_test_dir(
             tmp_path,

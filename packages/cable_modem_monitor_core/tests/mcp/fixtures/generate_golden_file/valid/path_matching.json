@@ -5,7 +5,10 @@
     "log": {
       "entries": [
         {
-          "request": {"url": "http://10.0.0.1/data.html", "method": "GET"},
+          "request": {
+            "url": "http://10.0.0.1/data.html",
+            "method": "GET"
+          },
           "response": {
             "status": 200,
             "content": {
@@ -17,12 +20,26 @@
       ]
     }
   },
-  "_expected_channel_counts": {"downstream": 1, "upstream": 0},
-  "_expected_system_info_fields": [],
+  "_expected_channel_counts": {
+    "downstream": 1,
+    "upstream": 0
+  },
+  "_expected_system_info_fields": [
+    "downstream_channel_count",
+    "upstream_channel_count"
+  ],
   "_expected_golden_file": {
     "downstream": [
-      {"channel_id": 1, "frequency": 507000000, "channel_type": "qam"}
+      {
+        "channel_id": 1,
+        "frequency": 507000000,
+        "channel_type": "qam"
+      }
     ],
-    "upstream": []
+    "upstream": [],
+    "system_info": {
+      "downstream_channel_count": 1,
+      "upstream_channel_count": 0
+    }
   }
 }

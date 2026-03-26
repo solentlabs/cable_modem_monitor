@@ -36,9 +36,8 @@ map directly to test cases. Grouped by concern area.
 | 9 | Orchestrator: notify HM `update_from_collection()` | HM evidence=fresh | |
 | 10 | Orchestrator: derive connection_status | | ONLINE |
 | 11 | Orchestrator: derive docsis_status | | OPERATIONAL |
-| 12 | Orchestrator: compute aggregates | | |
-| 13 | Orchestrator: read HM.latest | | |
-| 14 | Return `ModemSnapshot` | last_status=ONLINE | |
+| 12 | Orchestrator: read HM.latest | | |
+| 13 | Return `ModemSnapshot` | last_status=ONLINE | |
 
 **Assertions:**
 - `snapshot.connection_status == ONLINE`
@@ -46,8 +45,8 @@ map directly to test cases. Grouped by concern area.
 - `snapshot.modem_data` has 24 DS and 4 US channels
 - `snapshot.collector_signal == OK`
 - `orchestrator.status == ONLINE`
-- `orchestrator.metrics().auth_failure_streak == 0`
-- `orchestrator.metrics().session_is_valid == True`
+- `orchestrator.diagnostics().auth_failure_streak == 0`
+- `orchestrator.diagnostics().session_is_valid == True`
 
 ---
 
@@ -66,7 +65,7 @@ map directly to test cases. Grouped by concern area.
 **Assertions:**
 - No login attempt was made (verify via auth manager call count)
 - `snapshot.connection_status == ONLINE`
-- `metrics().session_is_valid == True`
+- `diagnostics().session_is_valid == True`
 
 ---
 
@@ -191,8 +190,8 @@ intentional — backoff and lockout protection apply equally to both.
 
 **Assertions:**
 - `snapshot.connection_status == AUTH_FAILED`
-- `metrics().auth_failure_streak == 1`
-- `metrics().circuit_breaker_open == False`
+- `diagnostics().auth_failure_streak == 1`
+- `diagnostics().circuit_breaker_open == False`
 - `snapshot.modem_data is None`
 
 ---
@@ -209,7 +208,7 @@ intentional — backoff and lockout protection apply equally to both.
 | 4 | Return `ModemSnapshot(ONLINE)` | | |
 
 **Assertions:**
-- `metrics().auth_failure_streak == 0`
+- `diagnostics().auth_failure_streak == 0`
 - Streak resets on any successful collection, regardless of prior count
 - Circuit breaker stays closed
 
@@ -230,7 +229,7 @@ intentional — backoff and lockout protection apply equally to both.
 
 **Assertions:**
 - `snapshot.connection_status == AUTH_FAILED`
-- `metrics().auth_failure_streak` incremented
+- `diagnostics().auth_failure_streak` incremented
 - Next 3 polls will be suppressed (see UC-13)
 - WARNING log: "Auth lockout — firmware anti-brute-force triggered..."
 
@@ -269,8 +268,8 @@ intentional — backoff and lockout protection apply equally to both.
 | 5 | Return `ModemSnapshot(AUTH_FAILED)` | | |
 
 **Assertions:**
-- `metrics().circuit_breaker_open == True`
-- `metrics().auth_failure_streak == 6`
+- `diagnostics().circuit_breaker_open == True`
+- `diagnostics().auth_failure_streak == 6`
 - ERROR log: "Auth circuit breaker OPEN — 6 consecutive auth failures..."
 
 ---
@@ -309,9 +308,9 @@ via HA reauth flow.
 | 7 | Collector: fresh login with new credentials | | |
 
 **Assertions:**
-- `metrics().auth_failure_streak == 0`
-- `metrics().circuit_breaker_open == False`
-- `metrics().session_is_valid == False` (after reset, before next poll)
+- `diagnostics().auth_failure_streak == 0`
+- `diagnostics().circuit_breaker_open == False`
+- `diagnostics().session_is_valid == False` (after reset, before next poll)
 - Next poll attempts fresh login (no stale session, no backoff, no circuit block)
 
 ---
@@ -903,142 +902,401 @@ yet known to be blocked).
 
 ---
 
-## Metrics
+## Diagnostics
 
-### UC-60: Metrics snapshot
+### UC-60: Diagnostics snapshot
 
 **Preconditions:** Several polls have run.
 
 | Step | Action | Observable |
 |------|--------|------------|
-| 1 | Consumer calls `metrics()` | |
-| 2 | Return `OrchestratorMetrics(...)` | |
+| 1 | Consumer calls `diagnostics()` | |
+| 2 | Return `OrchestratorDiagnostics(...)` | |
 
 **Assertions:**
-- `poll_duration` — wall-clock time of last get_modem_data() call (None if never polled)
-- `auth_failure_streak` — current streak (0 if healthy)
-- `circuit_breaker_open` — bool
-- `session_is_valid` — current session state from collector
-- `resource_fetches` — per-resource timing (path, duration_ms, size_bytes) from last collection
-- `last_poll_timestamp` — monotonic time of last poll (None if never polled)
-- Metrics are a read-only snapshot — calling metrics() has no side effects
-- Metrics are available even when circuit breaker is open
+- Returns `OrchestratorDiagnostics` with all fields populated (see
+  [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) § Data Models
+  for field definitions)
+- Diagnostics are a read-only snapshot — calling `diagnostics()` has no side effects
+- Diagnostics are available even when circuit breaker is open
 
 ---
 
-## Lifecycle
+## Consumer Lifecycle
 
-### UC-70: HA integration setup
+These use cases define Core's interface contract from the consumer's
+perspective. Any platform (Home Assistant, CLI, web service) follows the
+same component creation, polling, and teardown sequence. For HA-specific
+wiring (DataUpdateCoordinator, entity availability, options flow), see
+[HA_ADAPTER_SPEC.md](../../../custom_components/cable_modem_monitor/docs/HA_ADAPTER_SPEC.md).
+
+### UC-70: Consumer setup
 
 ```mermaid
 sequenceDiagram
-    participant HA as Home Assistant
-    participant Entry as ConfigEntry
+    participant C as Consumer
     participant O as Orchestrator
     participant HM as HealthMonitor
 
-    HA->>Entry: async_setup_entry()
-    Entry->>Entry: Load modem config from catalog
-    Entry->>Entry: Create ModemDataCollector(config, creds)
-    Entry->>Entry: Create HealthMonitor(base_url)
-    Entry->>O: Create Orchestrator(collector, HM, config)
-    Entry->>Entry: Create DataUpdateCoordinator wrapping O
-    Entry->>Entry: async_track_time_interval(health, 30s)
-    Entry->>Entry: async_config_entry_first_refresh()
-    Note over Entry: First get_modem_data() runs via executor
-    Entry->>HA: Setup complete, entities created
+    C->>C: Load modem config from catalog
+    C->>C: Create ModemDataCollector(config, creds)
+    C->>C: Create HealthMonitor(base_url)
+    C->>O: Create Orchestrator(collector, HM, config)
+    C->>C: Run initial get_modem_data() in thread
+    Note over C: First poll completes before UI is ready
+    C->>C: Schedule data polling (or manual-only)
+    C->>C: Schedule health polling (conditional, see UC-76)
 ```
 
 **Assertions:**
-- All Core components created during setup
-- First poll runs before entities are created (HA requirement)
-- Health timer starts after setup
-- No threads spawned by Core — HA manages all scheduling
+- All Core components created before first poll
+- First poll runs before UI is ready (consumer gets initial data to display)
+- Health monitor only created if at least one probe works (see UC-76)
+- Core does not spawn threads — consumer manages all scheduling and threading
 
 ---
 
-### UC-71: HA integration unload
+### UC-71: Consumer teardown
 
 ```mermaid
 sequenceDiagram
-    participant HA as Home Assistant
-    participant Entry as ConfigEntry
+    participant C as Consumer
     participant O as Orchestrator
 
-    HA->>Entry: async_unload_entry()
+    C->>C: teardown()
 
     alt restart in progress
-        Entry->>Entry: cancel_event.set()
+        C->>C: cancel_event.set()
         Note over O: restart() returns within one probe_interval
     end
 
-    Entry->>Entry: Cancel health timer
-    Entry->>Entry: Cancel coordinator polling
-    Entry->>HA: Unload complete
+    C->>C: Cancel health polling
+    C->>C: Cancel data polling
     Note over O: Orchestrator garbage collected
 ```
 
 **Assertions:**
 - If restart is running, cancel_event stops it promptly
-- No threads to join (HA manages scheduling)
-- All timers cancelled
-- Orchestrator and components garbage collected normally
+- Consumer cancels all polling timers
+- Orchestrator and components garbage collected normally — no threads to join
 
 ---
 
-### UC-72: HA restart button press
+### UC-72: Consumer-triggered restart
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant HA as Home Assistant
+    participant C as Consumer
     participant O as Orchestrator
 
-    U->>HA: Press "Restart Modem" button
-    HA->>HA: Check orchestrator.is_restarting
+    U->>C: Trigger restart action
+    C->>C: Check orchestrator.is_restarting
 
     alt already restarting
-        HA->>U: "Restart already in progress"
+        C->>U: "Restart already in progress"
     else
-        HA->>HA: Disable restart button (available=False)
-        HA->>HA: Store cancel_event for unload
-        HA->>O: async_add_executor_job(restart, cancel_event)
-        Note over O: Blocks on executor thread for up to 420s
-        O-->>HA: RestartResult
-        HA->>HA: Re-enable restart button (available=True)
-        HA->>HA: Send notification (success/warning/timeout)
-        HA->>HA: Trigger immediate data refresh
+        C->>C: Disable restart action in UI
+        C->>C: Store cancel_event for teardown
+        C->>O: restart(cancel_event) in thread
+        Note over O: Blocks for up to 420s
+        O-->>C: RestartResult
+        C->>C: Re-enable restart action
+        C->>C: Notify user (success/warning/timeout)
+        C->>C: Trigger immediate data refresh
     end
 ```
 
 **Assertions:**
-- Button disabled while restart is running
-- Restart runs on executor thread (doesn't block HA's event loop)
-- cancel_event stored so unload can interrupt if needed
-- Notification sent with result details
-- Immediate data refresh after restart to get fresh readings
+- Restart action disabled while running (prevents double-trigger)
+- `restart()` runs in a thread (doesn't block consumer's event loop)
+- cancel_event stored so teardown can interrupt if needed
+- User notified of result
+- Immediate data refresh after restart for fresh readings
 
 ---
 
-### UC-73: HA refresh button press
+### UC-73: Consumer-triggered refresh
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant HA as Home Assistant
-    participant Coord as DataUpdateCoordinator
+    participant C as Consumer
+    participant HM as HealthMonitor
     participant O as Orchestrator
 
-    U->>HA: Press "Update" button
-    HA->>Coord: async_request_refresh()
-    Note over Coord: Built-in throttling prevents spam
-    Coord->>O: async_add_executor_job(get_modem_data)
-    O-->>Coord: ModemSnapshot
-    Coord->>HA: async_set_updated_data(snapshot)
-    HA->>HA: Entity states updated
+    U->>C: Trigger refresh action
+    C->>HM: ping() in thread
+    HM-->>C: HealthInfo
+    C->>O: get_modem_data() in thread
+    Note over C: Consumer throttles to prevent spam
+    O-->>C: ModemSnapshot
+    C->>C: Update UI with fresh data
 ```
 
 **Assertions:**
-- Uses HA's built-in DataUpdateCoordinator refresh (already throttled)
-- No custom deduplication needed — HA handles it
-- Same get_modem_data() call as scheduled polls (same backoff/circuit checks)
+- Refresh triggers both health probe and data collection
+- If health monitor exists, probe runs first (fresh health data for the snapshot)
+- Consumer should throttle rapid refreshes (e.g., debounce or cooldown)
+- Same `get_modem_data()` path as scheduled polls (same backoff/circuit checks)
+
+---
+
+## Polling Modes and Configuration
+
+### UC-74: Disabled data polling — health continues
+
+**Context:** Fragile modems may crash from frequent data polling.
+Consumer disables scheduled data polls but keeps health probes running
+for reachability monitoring.
+
+**Preconditions:** Consumer configured with data polling disabled,
+health check interval at 30s. Initial poll completed during setup.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Setup completes with first poll | Consumer has data | UI shows initial data |
+| 2 | No data polling timer scheduled | | No scheduled polls |
+| 3 | Health timer fires (30s) | | |
+| 4 | health_monitor.ping() runs in thread | | ICMP + HTTP probes |
+| 5 | HealthInfo updated | | Health indicators show latency |
+| 6 | User triggers manual refresh | | |
+| 7 | get_modem_data() runs in thread | | ModemSnapshot returned |
+| 8 | UI updated with fresh data | | |
+
+**Assertions:**
+- No scheduled data polls after setup
+- Health probes continue on their own cadence
+- Manual refresh triggers full data collection
+- Backoff and circuit breaker still apply to manual triggers
+- Health indicators update between manual data polls
+
+---
+
+### UC-75: Both disabled — fully manual
+
+**Preconditions:** Consumer configured with both data polling and health
+checks disabled. Initial poll completed during setup.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Setup completes with first poll + first health probe | Consumer has data | UI ready |
+| 2 | No timers scheduled | | No scheduled polls or probes |
+| 3 | User triggers manual refresh | | |
+| 4 | get_modem_data() runs in thread | | ModemSnapshot with latest health |
+| 5 | UI updated | | |
+
+**Assertions:**
+- No scheduled polls or health probes after setup
+- Manual refresh triggers data collection
+- ModemSnapshot includes most recent HealthInfo (from initial probe or last manual trigger)
+- System is completely passive until user acts
+
+---
+
+### UC-76: Conditional health monitor setup
+
+**Preconditions:** During setup, health probes are tested.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Setup: run first health_monitor.ping() | | |
+| 2a | If ICMP or HTTP succeeds | supports_icmp/supports_head recorded | |
+| 3a | Create health monitor, schedule polling | Health timer starts | Health indicators available |
+| 2b | If both ICMP and HTTP fail | Neither probe supported | |
+| 3b | Skip health monitor | No health timer | No health indicators |
+
+**Assertions:**
+- Health monitor only created when at least one probe works
+- Probe support flags stored for subsequent startups
+- When no probes work, health_monitor is None
+- Orchestrator works correctly with health_monitor=None
+
+---
+
+### UC-77: Configurable intervals
+
+**Preconditions:** Consumer running with default intervals (data: 600s,
+health: 30s).
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | User changes data poll interval to 1800s | | |
+| 2 | User changes health check interval to 60s | | |
+| 3 | Consumer validates and applies | | |
+| 4 | Polling resumes with new intervals | Both schedulers updated | |
+
+**Assertions:**
+- Data poll interval: min 30s, max 86400s, or disabled
+- Health check interval: min 10s, max 86400s, or disabled
+- Both intervals independently configurable
+- Consumer handles reload/reschedule on interval change
+- Disabling data polling stops data timer
+- Disabling health polling stops health timer
+
+---
+
+### UC-78: Data availability during restart
+
+**Preconditions:** Normal operation. Restart initiated.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Consumer
+    participant O as Orchestrator
+
+    U->>C: Trigger restart
+    C->>O: restart(cancel_event)
+    Note over O: is_restarting=True
+
+    loop During restart
+        O-->>C: ModemSnapshot(UNREACHABLE, modem_data=None)
+        C->>C: Status: "Unreachable"
+        C->>C: Health: UNRESPONSIVE
+        C->>C: Channel data: unavailable
+    end
+
+    O-->>C: Modem recovers
+    O-->>C: ModemSnapshot(ONLINE, modem_data=populated)
+    C->>C: All data available
+```
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | User triggers restart | is_restarting=True | |
+| 2 | get_modem_data() returns ModemSnapshot(UNREACHABLE, modem_data=None) | | |
+| 3 | Status: always derivable, shows "Unreachable" | | Shows restart state |
+| 4 | Health: always available (independent probes) | | Shows UNRESPONSIVE during reboot |
+| 5 | Channel data: unavailable (modem_data is None) | | No channel readings |
+| 6 | Modem recovers, first successful poll | modem_data populated | |
+| 7 | Channel data: available again | | Fresh readings |
+
+**Assertions:**
+- Status is always derivable — reports accurate state throughout restart
+- Health probes run independently — report probe results throughout
+- Channel data unavailable when modem_data is None (gap in time series)
+- Consumer decides how to surface unavailability (e.g., HA uses entity availability, CLI might show dashes)
+- Restart/refresh actions remain available throughout
+
+---
+
+### UC-79: Disabled polling — initial poll still runs
+
+**Preconditions:** Consumer configured with data polling disabled.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Setup begins | | |
+| 2 | Initial get_modem_data() runs | First poll completes | ModemSnapshot with data |
+| 3 | UI created from initial poll data | | Shows initial readings |
+| 4 | No data polling timer scheduled | | No subsequent polls |
+| 5 | Status shows "Operational" (not "Unreachable") | | |
+
+**Assertions:**
+- First poll always runs during setup regardless of polling mode
+- UI has real data from the start (no transient "Unreachable" state)
+- "Disabled" means "no scheduled polls after setup", not "never poll"
+- Health probe also runs once during setup for probe discovery
+
+---
+
+### UC-80: Channel set change
+
+**Preconditions:** Normal operation. Modem reboots and bonds to different channels.
+
+```mermaid
+sequenceDiagram
+    participant M as Modem
+    participant O as Orchestrator
+    participant C as Consumer
+    participant U as User
+
+    M->>M: Reboots externally
+    O-->>C: ModemSnapshot with new channel IDs
+    C->>C: Channel counts update
+    C->>C: Old per-channel data: stale (IDs no longer present)
+    C->>C: New channels: no history
+    U->>U: Notices stale/missing data
+    U->>C: Trigger reset
+    C->>C: Rebuild UI from current data
+```
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Modem reboots externally | | |
+| 2 | Next poll: new channel IDs in ModemSnapshot | | |
+| 3 | Channel count fields update immediately | | Show new counts |
+| 4 | Per-channel data: old channel IDs are stale | | Consumer shows stale/missing |
+| 5 | Per-channel data: new channel IDs have no prior state | | Data not visible until reset |
+| 6 | User triggers reset | | |
+| 7 | Consumer rebuilds from current data | | Fresh UI for new channels |
+
+**Assertions:**
+- Channel count fields always reflect current data (not tied to per-channel identity)
+- Consumer provides a reset mechanism for channel identity changes
+- New channels get new identifiers (different channel IDs)
+- History for old channels preserved under old identifiers
+- No automatic reset — user controls when to reset
+
+**Future enhancement:** Automatic channel change detection (stability
+monitoring across polls + notification) could replace the
+manual discovery step. See Discussion #97 for context.
+
+---
+
+### UC-81: Circuit breaker triggers reauth
+
+**Preconditions:** Normal operation. User changes modem password externally.
+
+```mermaid
+sequenceDiagram
+    participant M as Modem
+    participant O as Orchestrator
+    participant C as Consumer
+    participant U as User
+
+    loop Polls 1-3
+        O->>M: Auth attempt (wrong password)
+        M-->>O: auth_failed
+        O->>O: streak++
+    end
+
+    O->>M: Auth attempt
+    M-->>O: HNAP lockout
+    O->>O: streak=4, backoff=3
+
+    Note over O: Polls 5-6: backoff then auth_failed
+    O->>O: streak=5, streak=6
+
+    O->>O: Circuit breaker OPEN (streak >= 6)
+    O->>C: AUTH_FAILED, circuit_breaker_open=True
+    C->>U: "Credentials invalid"
+    U->>C: Provide new password
+    C->>C: Validate (connectivity + auth + parse)
+    C->>O: reset_auth()
+    Note over O: streak=0, circuit=closed, session=cleared
+    O->>M: Fresh login with new credentials
+    M-->>O: ONLINE
+```
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Poll: auth fails (wrong password) | streak=1 | auth_failed |
+| 2 | Polls 2-3: auth fails | streak=2,3 | auth_failed |
+| 3 | Poll 4: HNAP lockout | streak=4, backoff=3 | auth_failed |
+| 4 | Polls 5-6: backoff active, then auth fails | streak=5,6 | auth_failed |
+| 5 | Circuit breaker opens (streak >= 6) | circuit_open=True | Polling stopped |
+| 6 | Consumer detects circuit breaker state | | Shows credential error |
+| 7 | User provides new password | | |
+| 8 | Consumer validates (connectivity + auth + parse) | | |
+| 9 | On success: orchestrator.reset_auth() | streak=0, circuit=closed, session=cleared | |
+| 10 | Next poll: fresh login with new credentials | | ONLINE |
+
+**Assertions:**
+- Circuit breaker opens after AUTH_FAILURE_THRESHOLD (6) consecutive failures
+- Consumer surfaces credential error and provides reauth mechanism
+- Reauth validates new credentials before accepting
+- `reset_auth()` clears all auth state (streak, circuit, backoff, session)
+- No polling between circuit open and reauth completion
+- First poll after reauth attempts fresh login

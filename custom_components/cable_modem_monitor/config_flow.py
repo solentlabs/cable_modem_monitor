@@ -1,276 +1,178 @@
 """Config flow for Cable Modem Monitor integration.
 
-This module handles the Home Assistant UI configuration wizard for adding
-and modifying the cable modem monitor integration. It is the primary entry
-point for users configuring the integration through the HA UI.
+Four-step setup wizard that guides the user from "I want to monitor
+my modem" to a working integration entry:
 
-Structure:
-    - ValidationProgressHelper: Manages async validation state with progress indicator
-    - ConfigFlowMixin: Shared methods for building entry data from validation results
-    - CableModemMonitorConfigFlow: Main setup wizard
-    - OptionsFlowHandler: Reconfiguration flow
+    Step 1a  — Select manufacturer (or "All")
+    Step 1b  — Select model + entity prefix
+    Step 2   — Select variant  (skipped for single-variant modems)
+    Step 3   — Enter connection details (host, credentials)
+    Step 4   — Validate  (progress spinner)
 
-Flow Steps:
-    Main Flow (CableModemMonitorConfigFlow):
-        1. async_step_user - Collect host, credentials, parser choice
-        2. async_step_validate - Show progress during validation
-        3. async_step_validate_success - Create config entry on success
-        4. async_step_user_with_errors - Re-show form on failure
+Plus:
+    Options flow  — change host, credentials, prefix, intervals
+    Reauth flow   — re-enter credentials when circuit breaker opens
 
-    Options Flow (OptionsFlowHandler):
-        1. async_step_init - Show current config with edit form
-        2. async_step_options_validate - Validate changes with progress
-        3. async_step_options_success - Update config entry on success
-        4. async_step_options_with_errors - Re-show form on failure
-
-Validation logic (validate_input, etc.) lives in config_flow_helpers.py.
-Core utilities (exceptions, parser utils) live in core/ modules.
+See CONFIG_FLOW_SPEC.md for the full specification.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Mapping
-from datetime import datetime
 from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.catalog_manager import (
+    ModemSummary,
+    VariantInfo,
+)
 
 from .config_flow_helpers import (
-    build_parser_dropdown,
-    classify_error,
-    get_auth_type_dropdown,
-    needs_auth_type_selection,
-    validate_input,
+    build_model_display_name,
+    filter_by_manufacturer,
+    format_variant_label,
+    get_manufacturers,
+    load_modem_catalog,
+    load_variant_list,
+    validate_connection,
 )
 from .const import (
-    CONF_ACTUAL_MODEL,
-    CONF_AUTH_DISCOVERY_ERROR,
-    CONF_AUTH_DISCOVERY_FAILED,
-    CONF_AUTH_DISCOVERY_STATUS,
-    CONF_AUTH_FORM_CONFIG,
-    CONF_AUTH_HNAP_CONFIG,
-    CONF_AUTH_STRATEGY,
-    CONF_AUTH_TYPE,
-    CONF_AUTH_URL_TOKEN_CONFIG,
-    CONF_DETECTED_MANUFACTURER,
-    CONF_DETECTED_MODEM,
-    CONF_DOCSIS_VERSION,
     CONF_ENTITY_PREFIX,
-    CONF_HOST,
+    CONF_HEALTH_CHECK_INTERVAL,
     CONF_LEGACY_SSL,
-    CONF_MODEM_CHOICE,
-    CONF_PARSER_NAME,
-    CONF_PARSER_SELECTED_AT,
-    CONF_PASSWORD,
+    CONF_MANUFACTURER,
+    CONF_MODEL,
+    CONF_MODEM_DIR,
     CONF_PROTOCOL,
     CONF_SCAN_INTERVAL,
     CONF_SUPPORTS_HEAD,
     CONF_SUPPORTS_ICMP,
-    CONF_USERNAME,
-    CONF_WORKING_URL,
+    CONF_USER_SELECTED_MODEM,
+    CONF_VARIANT,
+    DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
+    MAX_HEALTH_CHECK_INTERVAL,
     MAX_SCAN_INTERVAL,
+    MIN_HEALTH_CHECK_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
-from .core.exceptions import (
-    CannotConnectError,
-    InvalidAuthError,
-    UnsupportedModemError,
-)
-from .core.parser_utils import create_title
 from .lib.host_validation import parse_host_input
 
 _LOGGER = logging.getLogger(__name__)
 
+# Sentinel value for the "All manufacturers" option
+_ALL_MANUFACTURERS = "__all__"
+
 
 # =============================================================================
-# Validation Progress Helper
+# Validation progress helper
 # =============================================================================
 
 
-class ValidationProgressHelper:
-    """Manages async validation state for progress indicator flows.
+class _ValidationProgress:
+    """Manages async validation state for HA's progress-spinner pattern.
 
-    HA config flows support showing a progress spinner during long-running
-    validation. This helper encapsulates the task state, result caching,
-    and error handling needed for that pattern.
-
-    Used by both CableModemMonitorConfigFlow and OptionsFlowHandler.
-
-    Attributes:
-        user_input: The form data being validated.
-        task: The running asyncio.Task, or None.
-        error: The caught exception if validation failed, or None.
-        info: The validation result dict if successful, or None.
+    HA config flows show a spinner while a background task runs.  This
+    helper encapsulates the task lifecycle, result caching, and error
+    handling.
     """
 
     def __init__(self) -> None:
         """Initialize with empty state."""
-        self.user_input: dict[str, Any] | None = None
-        self.task: asyncio.Task | None = None
+        self.task: asyncio.Task[dict[str, Any]] | None = None
+        self.result: dict[str, Any] | None = None
         self.error: Exception | None = None
-        self.info: dict[str, Any] | None = None
+        self.error_key: str = "unknown"
 
-    def start(self, hass: HomeAssistant, user_input: dict[str, Any]) -> None:
-        """Start the validation task.
-
-        Args:
-            hass: Home Assistant instance for task creation.
-            user_input: Form data to validate.
-        """
-        self.user_input = user_input
-        self.task = hass.async_create_task(validate_input(hass, user_input))
+    def start(
+        self,
+        hass: HomeAssistant,
+        coro: Any,
+    ) -> None:
+        """Start the validation coroutine as a background task."""
+        self.task = hass.async_create_task(coro)
 
     def is_running(self) -> bool:
-        """Check if validation task is still running."""
+        """Return True if the task is still in progress."""
         return self.task is not None and not self.task.done()
 
-    async def get_result(self) -> str | None:
-        """Wait for task completion and return error type if failed.
+    async def collect(self) -> bool:
+        """Await the task and store the outcome.
 
         Returns:
-            None if validation succeeded (result stored in self.info).
-            Error type string if failed (exception stored in self.error).
+            True if validation succeeded.
         """
-        if not self.task:
-            return "missing_input"
+        if self.task is None:
+            return False
 
         try:
-            self.info = await self.task
-            return None
-        except Exception as err:
-            if not isinstance(err, InvalidAuthError | UnsupportedModemError | CannotConnectError):
-                _LOGGER.exception("Unexpected exception during validation")
-            self.error = err
-            return classify_error(err)
+            self.result = await self.task
+            return True
+        except ConnectionError as exc:
+            self.error = exc
+            self.error_key = "network_unreachable"
+        except PermissionError as exc:
+            self.error = exc
+            # Extract error key from "auth_error:{key}:{msg}" format
+            parts = str(exc).split(":", 2)
+            self.error_key = parts[1] if len(parts) >= 2 else "invalid_auth"
+        except RuntimeError as exc:
+            self.error = exc
+            parts = str(exc).split(":", 2)
+            self.error_key = parts[1] if len(parts) >= 2 else "unknown"
+        except Exception as exc:
+            _LOGGER.exception("Unexpected validation error")
+            self.error = exc
+            self.error_key = "unknown"
         finally:
             self.task = None
 
-    def get_error_type(self) -> str:
-        """Get error type string for the stored error."""
-        return classify_error(self.error)
+        return False
 
     def reset(self) -> None:
-        """Clear all state for next validation attempt."""
-        self.user_input = None
+        """Clear all state for the next attempt."""
         self.task = None
+        self.result = None
         self.error = None
-        self.info = None
+        self.error_key = "unknown"
 
 
 # =============================================================================
-# Config Flow Mixin
-# =============================================================================
-
-
-class ConfigFlowMixin:
-    """Shared methods for config flow and options flow.
-
-    Provides common functionality for building parser dropdowns and
-    applying validation results to config entry data.
-
-    Type stubs declare attributes that exist on the HA base classes.
-    """
-
-    # Type stubs for attributes from HA base classes
-    _modem_choices: list[str]
-    hass: HomeAssistant
-    config_entry: config_entries.ConfigEntry  # Only on OptionsFlow
-
-    async def _ensure_parser_dropdown(self) -> None:
-        """Load parser dropdown options from index.yaml, caching for the session."""
-        if not self._modem_choices:
-            self._modem_choices = await build_parser_dropdown(self.hass)
-
-    def _apply_detection_info(
-        self,
-        data: dict[str, Any],
-        detection_info: dict[str, Any],
-        log_prefix: str = "",
-    ) -> None:
-        """Apply modem detection results to config entry data.
-
-        Args:
-            data: Target dict to update with detection fields.
-            detection_info: Detection results from validation.
-            log_prefix: Optional prefix for log messages (e.g., "Options flow: ").
-        """
-        detected_modem_name = detection_info.get("modem_name")
-        data[CONF_PARSER_NAME] = detected_modem_name
-        data[CONF_DETECTED_MODEM] = detection_info.get("modem_name", "Unknown")
-        data[CONF_DETECTED_MANUFACTURER] = detection_info.get("manufacturer", "Unknown")
-        data[CONF_DOCSIS_VERSION] = detection_info.get("docsis_version")
-        data[CONF_PARSER_SELECTED_AT] = datetime.now().isoformat()
-
-        if detection_info.get("actual_model"):
-            data[CONF_ACTUAL_MODEL] = detection_info["actual_model"]
-
-    def _apply_auth_discovery_info(
-        self,
-        data: dict[str, Any],
-        info: dict[str, Any],
-        fallback_data: Mapping[str, Any] | None = None,
-    ) -> None:
-        """Apply auth discovery results to config entry data.
-
-        Args:
-            data: Target dict to update with auth fields.
-            info: Validation info containing new auth discovery results.
-            fallback_data: Existing entry data for fallback values (options flow).
-        """
-        # Prefer new values, fall back to existing
-        for key in (
-            CONF_AUTH_STRATEGY,
-            CONF_AUTH_FORM_CONFIG,
-            CONF_AUTH_HNAP_CONFIG,
-            CONF_AUTH_URL_TOKEN_CONFIG,
-        ):
-            if info.get(key):
-                data[key] = info[key]
-            elif fallback_data and fallback_data.get(key):
-                data[key] = fallback_data[key]
-
-        # Status fields always come from current validation
-        if info.get(CONF_AUTH_DISCOVERY_STATUS):
-            data[CONF_AUTH_DISCOVERY_STATUS] = info[CONF_AUTH_DISCOVERY_STATUS]
-        if info.get(CONF_AUTH_DISCOVERY_FAILED) is not None:
-            data[CONF_AUTH_DISCOVERY_FAILED] = info[CONF_AUTH_DISCOVERY_FAILED]
-        if info.get(CONF_AUTH_DISCOVERY_ERROR):
-            data[CONF_AUTH_DISCOVERY_ERROR] = info[CONF_AUTH_DISCOVERY_ERROR]
-
-
-# =============================================================================
-# Main Config Flow
+# Main config flow — 4-step wizard
 # =============================================================================
 
 
 @config_entries.HANDLERS.register(DOMAIN)
-class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
+class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
     """Handle initial setup flow for Cable Modem Monitor.
 
-    This flow guides users through adding a new modem to Home Assistant:
-    1. Enter modem IP, credentials, and select parser
-    2. Select auth type (only if modem has multiple options)
-    3. Validate connectivity and authentication
-    4. Create config entry on success
+    State is carried across steps via instance attributes.  Each step
+    narrows the user's selection until validation confirms everything
+    works.
     """
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         """Initialize config flow state."""
-        self._progress = ValidationProgressHelper()
-        self._modem_choices: list[str] = []
-        self._selected_auth_type: str | None = None
+        self._summaries: list[ModemSummary] = []
+        self._selected_manufacturer: str = _ALL_MANUFACTURERS
+        self._selected_summary: ModemSummary | None = None
+        self._variants: list[VariantInfo] = []
+        self._selected_variant: str | None = None
+        self._progress = _ValidationProgress()
+        # Carried from connection step for retry on error
+        self._connection_input: dict[str, Any] | None = None
 
     @staticmethod
     @callback
@@ -280,129 +182,229 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
         """Return the options flow handler."""
         return OptionsFlowHandler()
 
-    def _build_user_schema(
+    # -----------------------------------------------------------------
+    # Step 1a: Select manufacturer
+    # -----------------------------------------------------------------
+
+    async def async_step_user(
         self,
-        default_host: str = "192.168.100.1",
-        default_username: str = "",
-        default_password: str = "",
-        default_modem: str = "",
-        default_entity_prefix: str = "",
-    ) -> vol.Schema:
-        """Build the form schema for user input step."""
-        # Determine entity prefix options based on existing entries
-        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-
-        if existing_entries:
-            # Second+ modem: no "None" option, default to "Model"
-            prefix_options = [
-                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
-                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
-            ]
-            prefix_default = default_entity_prefix or ENTITY_PREFIX_MODEL
-        else:
-            # First modem: all options available, default to "None"
-            prefix_options = [
-                selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="None"),
-                selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
-                selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
-            ]
-            prefix_default = default_entity_prefix or ENTITY_PREFIX_NONE
-
-        return vol.Schema(
-            {
-                vol.Required(CONF_HOST, default=default_host): str,
-                vol.Optional(CONF_USERNAME, default=default_username): str,
-                vol.Optional(CONF_PASSWORD, default=default_password): str,
-                vol.Required(CONF_MODEM_CHOICE, default=default_modem): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=self._modem_choices,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Required(CONF_ENTITY_PREFIX, default=prefix_default): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=prefix_options,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-            }
-        )
-
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
-        """Handle the initial user input step."""
-        # Restore user input when returning from progress step
-        if user_input is None and self._progress.user_input:
-            user_input = self._progress.user_input
-
-        await self._ensure_parser_dropdown()
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 1a — Select manufacturer."""
+        if not self._summaries:
+            self._summaries = await load_modem_catalog(self.hass)
 
         if user_input is not None:
-            self._progress.user_input = user_input
+            self._selected_manufacturer = user_input["manufacturer"]
+            return await self.async_step_model()
 
-            # Check if auth type selection is needed
-            from .core.parser_registry import get_parser_by_name
-
-            modem_choice = user_input.get(CONF_MODEM_CHOICE, "")
-            choice_clean = modem_choice.rstrip(" *")
-            selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
-
-            if await needs_auth_type_selection(self.hass, selected_parser):
-                return await self.async_step_auth_type()
-
-            return await self.async_step_validate()
+        manufacturers = get_manufacturers(self._summaries)
+        options = [
+            selector.SelectOptionDict(value=_ALL_MANUFACTURERS, label="All"),
+        ] + [selector.SelectOptionDict(value=m, label=m) for m in manufacturers]
 
         return self.async_show_form(
             step_id="user",
-            data_schema=self._build_user_schema(),
-        )
-
-    async def async_step_auth_type(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
-        """Show auth type selection if modem has multiple types.
-
-        This step is only shown for modems with auth.types{} in modem.yaml
-        that have more than one option (e.g., SB8200 with "none" and "url_token").
-        """
-        from .core.parser_registry import get_parser_by_name
-
-        if user_input is not None:
-            # Store selected auth type and proceed to validation
-            self._selected_auth_type = user_input.get(CONF_AUTH_TYPE)
-            if self._progress.user_input:
-                self._progress.user_input[CONF_AUTH_TYPE] = self._selected_auth_type
-            return await self.async_step_validate()
-
-        # Get selected parser to build auth type dropdown
-        saved_input = self._progress.user_input or {}
-        modem_choice = saved_input.get(CONF_MODEM_CHOICE, "")
-        choice_clean = modem_choice.rstrip(" *")
-        selected_parser = await self.hass.async_add_executor_job(get_parser_by_name, choice_clean)
-
-        # Get auth type options for dropdown
-        auth_type_options = await get_auth_type_dropdown(self.hass, selected_parser)
-
-        return self.async_show_form(
-            step_id="auth_type",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_AUTH_TYPE): selector.SelectSelector(
+                    vol.Required("manufacturer"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[selector.SelectOptionDict(value=k, label=v) for k, v in auth_type_options.items()],
+                            options=options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
                 }
             ),
-            description_placeholders={
-                "modem_name": choice_clean,
-            },
         )
 
-    async def async_step_validate(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
-        """Show progress indicator during validation."""
+    # -----------------------------------------------------------------
+    # Step 1b: Select model + entity prefix
+    # -----------------------------------------------------------------
+
+    async def async_step_model(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 1b — Select model and entity prefix."""
+        if user_input is not None:
+            # Find the selected summary by model key
+            model_key = user_input["model"]
+            for s in self._summaries:
+                if f"{s.manufacturer}/{s.model}" == model_key:
+                    self._selected_summary = s
+                    break
+
+            if self._selected_summary is None:
+                return self.async_abort(reason="unknown_model")
+
+            # Check for variants
+            self._variants = await load_variant_list(self.hass, self._selected_summary.path)
+
+            # Store entity prefix for later
+            self._connection_input = {
+                CONF_ENTITY_PREFIX: user_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+            }
+
+            if len(self._variants) > 1:
+                return await self.async_step_variant()
+
+            # Single variant — skip Step 2
+            self._selected_variant = None
+            return await self.async_step_connection()
+
+        # Build model dropdown
+        if self._selected_manufacturer == _ALL_MANUFACTURERS:
+            models = self._summaries
+        else:
+            models = filter_by_manufacturer(self._summaries, self._selected_manufacturer)
+
+        model_options = [
+            selector.SelectOptionDict(
+                value=f"{s.manufacturer}/{s.model}",
+                label=build_model_display_name(s),
+            )
+            for s in models
+        ]
+
+        # Entity prefix options
+        prefix_options = _build_prefix_options(self.hass)
+
+        return self.async_show_form(
+            step_id="model",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("model"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=model_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_ENTITY_PREFIX,
+                        default=prefix_options[0]["value"],
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=prefix_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+        )
+
+    # -----------------------------------------------------------------
+    # Step 2: Select variant (conditional)
+    # -----------------------------------------------------------------
+
+    async def async_step_variant(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 2 — Select variant (only shown for multi-variant modems)."""
+        if user_input is not None:
+            self._selected_variant = user_input["variant"] or None
+            return await self.async_step_connection()
+
+        variant_options = []
+        for v in self._variants:
+            value = v.name or ""
+            label = format_variant_label(v)
+            variant_options.append(selector.SelectOptionDict(value=value, label=label))
+
+        return self.async_show_form(
+            step_id="variant",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("variant"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=variant_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+        )
+
+    # -----------------------------------------------------------------
+    # Step 3: Connection details
+    # -----------------------------------------------------------------
+
+    async def async_step_connection(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 3 — Enter host and credentials."""
+        if user_input is not None:
+            # Merge with entity prefix from Step 1b
+            if self._connection_input:
+                user_input[CONF_ENTITY_PREFIX] = self._connection_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
+            self._connection_input = user_input
+            return await self.async_step_validate()
+
+        return self.async_show_form(
+            step_id="connection",
+            data_schema=self._build_connection_schema(),
+        )
+
+    def _build_connection_schema(
+        self,
+        defaults: dict[str, Any] | None = None,
+    ) -> vol.Schema:
+        """Build the connection form schema based on auth strategy."""
+        summary = self._selected_summary
+        d = defaults or {}
+        default_host = d.get(CONF_HOST, summary.default_host if summary else "192.168.100.1")
+
+        # Determine auth strategy from selected variant
+        auth_strategy = self._get_selected_auth_strategy()
+
+        fields: dict[Any, Any] = {
+            vol.Required(CONF_HOST, default=default_host): str,
+        }
+
+        if auth_strategy != "none":
+            fields[vol.Optional(CONF_USERNAME, default=d.get(CONF_USERNAME, ""))] = str
+            fields[vol.Optional(CONF_PASSWORD, default=d.get(CONF_PASSWORD, ""))] = str
+
+        return vol.Schema(fields)
+
+    def _get_selected_auth_strategy(self) -> str:
+        """Return the auth strategy for the currently selected variant."""
+        if self._selected_variant is not None:
+            for v in self._variants:
+                if v.name == self._selected_variant:
+                    return v.auth_strategy
+        elif self._variants:
+            # Default variant (first in list)
+            return self._variants[0].auth_strategy
+        elif self._selected_summary:
+            return self._selected_summary.auth_strategy
+        return "none"
+
+    # -----------------------------------------------------------------
+    # Step 4: Validate (progress spinner)
+    # -----------------------------------------------------------------
+
+    async def async_step_validate(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Step 4 — Validate connectivity, auth, and parsing."""
         if not self._progress.task:
-            if not self._progress.user_input:
+            if not self._connection_input or not self._selected_summary:
                 return self.async_abort(reason="missing_input")
-            self._progress.start(self.hass, self._progress.user_input)
+
+            self._progress.start(
+                self.hass,
+                validate_connection(
+                    self.hass,
+                    host=self._connection_input[CONF_HOST],
+                    username=self._connection_input.get(CONF_USERNAME, ""),
+                    password=self._connection_input.get(CONF_PASSWORD, ""),
+                    modem_dir=self._selected_summary.path,
+                    variant=self._selected_variant,
+                ),
+            )
 
         if self._progress.is_running():
             return self.async_show_progress(
@@ -411,209 +413,258 @@ class CableModemMonitorConfigFlow(ConfigFlowMixin, config_entries.ConfigFlow):
                 progress_task=self._progress.task,
             )
 
-        error_type = await self._progress.get_result()
-        if error_type:
-            return self.async_show_progress_done(next_step_id="user_with_errors")
-
-        # HA requires: progress -> progress_done -> final_step
-        return self.async_show_progress_done(next_step_id="validate_success")
+        success = await self._progress.collect()
+        if success:
+            return self.async_show_progress_done(next_step_id="validate_success")
+        return self.async_show_progress_done(next_step_id="connection_with_errors")
 
     async def async_step_validate_success(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
         """Create config entry after successful validation."""
-        if not self._progress.user_input or not self._progress.info:
+        if not self._connection_input or not self._selected_summary or not self._progress.result:
             return self.async_abort(reason="missing_input")
 
-        user_input = self._progress.user_input
-        info = self._progress.info
+        summary = self._selected_summary
+        validation = self._progress.result
+        conn = self._connection_input
         self._progress.reset()
 
-        # Prevent duplicate entries for same host (use bare hostname for unique_id)
-        hostname, _ = parse_host_input(user_input[CONF_HOST])
+        # Deduplicate by hostname
+        hostname, _ = parse_host_input(conn[CONF_HOST])
         await self.async_set_unique_id(hostname)
         self._abort_if_unique_id_configured()
 
-        entry_data = self._build_entry_data(user_input, info)
-        return self.async_create_entry(title=info["title"], data=entry_data)
+        display_name = build_model_display_name(summary)
+        title = f"{summary.manufacturer} {summary.model} ({hostname})"
 
-    def _build_entry_data(self, user_input: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
-        """Build config entry data from user input and validation results."""
-        data = dict(user_input)
+        modem_dir = str(summary.path.relative_to(CATALOG_PATH))
 
-        # Decompose protocol from host: "https://192.168.100.1" → host="192.168.100.1", protocol="https"
-        hostname, protocol = parse_host_input(data[CONF_HOST])
-        data[CONF_HOST] = hostname
-        data[CONF_PROTOCOL] = protocol
+        entry_data: dict[str, Any] = {
+            # User selections (Steps 1-2)
+            CONF_MANUFACTURER: summary.manufacturer,
+            CONF_MODEL: summary.model,
+            CONF_VARIANT: self._selected_variant,
+            CONF_USER_SELECTED_MODEM: display_name,
+            CONF_ENTITY_PREFIX: conn.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+            CONF_MODEM_DIR: modem_dir,
+            # Connection (Step 3)
+            CONF_HOST: hostname,
+            CONF_USERNAME: conn.get(CONF_USERNAME, ""),
+            CONF_PASSWORD: conn.get(CONF_PASSWORD, ""),
+            # Derived during validation (Step 4)
+            CONF_PROTOCOL: validation["protocol"],
+            CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
+            CONF_SUPPORTS_ICMP: validation["supports_icmp"],
+            CONF_SUPPORTS_HEAD: validation["supports_head"],
+            # Polling defaults
+            CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+            CONF_HEALTH_CHECK_INTERVAL: DEFAULT_HEALTH_CHECK_INTERVAL,
+        }
 
-        data.setdefault(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
-        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
-        data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
+        return self.async_create_entry(title=title, data=entry_data)
 
-        # Store entity prefix (default to "none" for backwards compatibility)
-        data[CONF_ENTITY_PREFIX] = user_input.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
-
-        # Store auth type if selected
-        if self._selected_auth_type:
-            data[CONF_AUTH_TYPE] = self._selected_auth_type
-
-        detection_info = info.get("detection_info", {})
-        if detection_info:
-            self._apply_detection_info(data, detection_info)
-
-        if info.get(CONF_WORKING_URL):
-            data[CONF_WORKING_URL] = info[CONF_WORKING_URL]
-
-        self._apply_auth_discovery_info(data, info)
-        return data
-
-    async def async_step_user_with_errors(
-        self, user_input: dict[str, Any] | None = None
+    async def async_step_connection_with_errors(
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Re-show form with error message after validation failure."""
-        await self._ensure_parser_dropdown()
-
-        saved_input = self._progress.user_input or {}
-        errors = {"base": self._progress.get_error_type()}
+        """Return to connection step with an error message."""
+        errors = {"base": self._progress.error_key}
+        defaults = self._connection_input or {}
         self._progress.reset()
 
         return self.async_show_form(
-            step_id="user",
-            data_schema=self._build_user_schema(
-                default_host=saved_input.get(CONF_HOST, "192.168.100.1"),
-                default_username=saved_input.get(CONF_USERNAME, ""),
-                default_password=saved_input.get(CONF_PASSWORD, ""),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, ""),
-                default_entity_prefix=saved_input.get(CONF_ENTITY_PREFIX, ""),
-            ),
+            step_id="connection",
+            data_schema=self._build_connection_schema(defaults=defaults),
             errors=errors,
         )
 
+    # -----------------------------------------------------------------
+    # Reauth flow
+    # -----------------------------------------------------------------
+
+    async def async_step_reauth(
+        self,
+        entry_data: dict[str, Any],
+    ) -> config_entries.ConfigFlowResult:
+        """Handle reauth triggered by circuit breaker."""
+        # Store the entry data so reauth_confirm can access it
+        self._connection_input = dict(entry_data)
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Show connection form for reauthentication."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        if entry is None:
+            return self.async_abort(reason="reauth_failed")
+
+        if user_input is not None:
+            # Load summary to get modem_dir
+            summaries = await load_modem_catalog(self.hass)
+            mfr = entry.data[CONF_MANUFACTURER]
+            model = entry.data[CONF_MODEL]
+            summary = next(
+                (s for s in summaries if s.manufacturer == mfr and s.model == model),
+                None,
+            )
+            if summary is None:
+                return self.async_abort(reason="reauth_failed")
+
+            try:
+                result = await validate_connection(
+                    self.hass,
+                    host=user_input[CONF_HOST],
+                    username=user_input.get(CONF_USERNAME, ""),
+                    password=user_input.get(CONF_PASSWORD, ""),
+                    modem_dir=summary.path,
+                    variant=entry.data.get(CONF_VARIANT),
+                )
+            except (ConnectionError, PermissionError, RuntimeError) as exc:
+                _LOGGER.error("Reauth validation failed: %s", exc)
+                return self.async_show_form(
+                    step_id="reauth_confirm",
+                    data_schema=_build_reauth_schema(entry.data),
+                    errors={"base": "invalid_auth"},
+                )
+
+            # Update entry with new credentials + validation results
+            hostname, _ = parse_host_input(user_input[CONF_HOST])
+            updated = {
+                **entry.data,
+                CONF_HOST: hostname,
+                CONF_USERNAME: user_input.get(CONF_USERNAME, ""),
+                CONF_PASSWORD: user_input.get(CONF_PASSWORD, ""),
+                CONF_PROTOCOL: result["protocol"],
+                CONF_LEGACY_SSL: result.get("legacy_ssl", False),
+                CONF_SUPPORTS_ICMP: result["supports_icmp"],
+                CONF_SUPPORTS_HEAD: result["supports_head"],
+            }
+            self.hass.config_entries.async_update_entry(entry, data=updated)
+            await self.hass.config_entries.async_reload(entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=_build_reauth_schema(entry.data),
+        )
+
 
 # =============================================================================
-# Options Flow
+# Options flow
 # =============================================================================
 
 
-class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
-    """Handle reconfiguration flow for Cable Modem Monitor.
-
-    Allows users to modify settings after initial setup:
-    - Change modem IP address
-    - Update credentials
-    - Switch parser selection
-    - Adjust scan interval
-    """
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle reconfiguration of connection params and intervals."""
 
     def __init__(self) -> None:
         """Initialize options flow state."""
-        self._progress = ValidationProgressHelper()
-        self._modem_choices: list[str] = []
+        self._progress = _ValidationProgress()
+        self._user_input: dict[str, Any] | None = None
 
-    def _build_options_schema(
+    async def async_step_init(
         self,
-        default_host: str,
-        default_username: str,
-        default_modem: str,
-        default_scan_interval: int,
-    ) -> vol.Schema:
-        """Build the form schema for options step."""
-        return vol.Schema(
-            {
-                vol.Required(CONF_HOST, default=default_host): str,
-                vol.Optional(CONF_USERNAME, default=default_username): str,
-                vol.Optional(CONF_PASSWORD, default=""): str,
-                vol.Required(CONF_MODEM_CHOICE, default=default_modem): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=self._modem_choices,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Required(CONF_SCAN_INTERVAL, default=default_scan_interval): vol.All(
-                    vol.Coerce(int),
-                    vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
-                ),
-            }
-        )
-
-    def _preserve_credentials(self, user_input: dict[str, Any]) -> None:
-        """Fill in existing credentials and auth type if user left fields empty."""
-        if not user_input.get(CONF_PASSWORD):
-            user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
-        if not user_input.get(CONF_USERNAME):
-            user_input[CONF_USERNAME] = self.config_entry.data.get(CONF_USERNAME, "")
-        # Preserve auth_type for modems with multiple auth variants (e.g., SB6190, SB8200)
-        if not user_input.get(CONF_AUTH_TYPE):
-            stored_auth_type = self.config_entry.data.get(CONF_AUTH_TYPE)
-            if stored_auth_type:
-                user_input[CONF_AUTH_TYPE] = stored_auth_type
-
-    def _get_current_modem_choice(self) -> str:
-        """Get stored modem choice, normalized to current dropdown format."""
-        stored: str = self.config_entry.data.get(CONF_MODEM_CHOICE, "")
-        if stored:
-            # Check if stored name is in current dropdown choices
-            if stored in self._modem_choices:
-                return stored
-            # Strip " *" suffix for matching (unverified parser indicator)
-            stored_clean = stored.rstrip(" *")
-            if stored_clean in self._modem_choices:
-                return stored_clean
-        return stored
-
-    def _format_parser_selected_at(self, parser_selected_at: str) -> str:
-        """Format ISO timestamp for display."""
-        if parser_selected_at and parser_selected_at != "Never":
-            try:
-                dt = datetime.fromisoformat(parser_selected_at)
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
-            except (ValueError, TypeError):
-                pass
-        return parser_selected_at
-
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
         """Show the options form."""
-        # Restore user input when returning from progress step
-        if user_input is None and self._progress.user_input:
-            user_input = self._progress.user_input
-
-        await self._ensure_parser_dropdown()
-
         if user_input is not None:
-            self._preserve_credentials(user_input)
-            self._progress.user_input = user_input
+            # Preserve password if user left it blank
+            if not user_input.get(CONF_PASSWORD):
+                user_input[CONF_PASSWORD] = self.config_entry.data.get(CONF_PASSWORD, "")
+            self._user_input = user_input
             return await self.async_step_options_validate()
 
-        # Load current values for form defaults
-        entry_data = self.config_entry.data
-        current_host = entry_data.get(CONF_HOST, "192.168.100.1")
-        current_username = entry_data.get(CONF_USERNAME, "")
-        current_scan_interval = entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        current_modem_choice = self._get_current_modem_choice()
+        entry = self.config_entry
+        data = entry.data
+        options = entry.options
 
         return self.async_show_form(
             step_id="init",
-            data_schema=self._build_options_schema(
-                default_host=current_host,
-                default_username=current_username,
-                default_modem=current_modem_choice,
-                default_scan_interval=current_scan_interval,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST,
+                        default=data.get(CONF_HOST, "192.168.100.1"),
+                    ): str,
+                    vol.Optional(
+                        CONF_USERNAME,
+                        default=data.get(CONF_USERNAME, ""),
+                    ): str,
+                    vol.Optional(CONF_PASSWORD, default=""): str,
+                    vol.Required(
+                        CONF_ENTITY_PREFIX,
+                        default=data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=_build_prefix_options(self.hass),
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=options.get(
+                            CONF_SCAN_INTERVAL,
+                            data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                        ),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
+                    ),
+                    vol.Required(
+                        CONF_HEALTH_CHECK_INTERVAL,
+                        default=options.get(
+                            CONF_HEALTH_CHECK_INTERVAL,
+                            data.get(
+                                CONF_HEALTH_CHECK_INTERVAL,
+                                DEFAULT_HEALTH_CHECK_INTERVAL,
+                            ),
+                        ),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(
+                            min=MIN_HEALTH_CHECK_INTERVAL,
+                            max=MAX_HEALTH_CHECK_INTERVAL,
+                        ),
+                    ),
+                }
             ),
-            description_placeholders={
-                "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
-                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
-            },
         )
 
     async def async_step_options_validate(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Show progress indicator during validation."""
+        """Validate options changes with progress spinner."""
         if not self._progress.task:
-            if not self._progress.user_input:
+            if not self._user_input:
                 return self.async_abort(reason="missing_input")
-            self._progress.start(self.hass, self._progress.user_input)
+
+            entry = self.config_entry
+            summaries = await load_modem_catalog(self.hass)
+            mfr = entry.data[CONF_MANUFACTURER]
+            model = entry.data[CONF_MODEL]
+            summary = next(
+                (s for s in summaries if s.manufacturer == mfr and s.model == model),
+                None,
+            )
+            if summary is None:
+                return self.async_abort(reason="unknown_model")
+
+            self._progress.start(
+                self.hass,
+                validate_connection(
+                    self.hass,
+                    host=self._user_input[CONF_HOST],
+                    username=self._user_input.get(CONF_USERNAME, ""),
+                    password=self._user_input.get(CONF_PASSWORD, ""),
+                    modem_dir=summary.path,
+                    variant=entry.data.get(CONF_VARIANT),
+                ),
+            )
 
         if self._progress.is_running():
             return self.async_show_progress(
@@ -622,103 +673,152 @@ class OptionsFlowHandler(ConfigFlowMixin, config_entries.OptionsFlow):
                 progress_task=self._progress.task,
             )
 
-        error_type = await self._progress.get_result()
-        if error_type:
-            return self.async_show_progress_done(next_step_id="options_with_errors")
-
-        return self.async_show_progress_done(next_step_id="options_success")
+        success = await self._progress.collect()
+        if success:
+            return self.async_show_progress_done(next_step_id="options_success")
+        return self.async_show_progress_done(next_step_id="options_with_errors")
 
     async def async_step_options_success(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
-        """Update config entry after successful validation."""
-        if not self._progress.user_input or not self._progress.info:
+        """Apply validated options changes."""
+        if not self._user_input or not self._progress.result:
             return self.async_abort(reason="missing_input")
 
-        user_input = self._progress.user_input
-        info = self._progress.info
+        inp = self._user_input
+        validation = self._progress.result
         self._progress.reset()
 
-        entry_data = self._build_updated_entry_data(user_input, info)
+        hostname, _ = parse_host_input(inp[CONF_HOST])
+        entry = self.config_entry
 
-        # Update title to reflect any detection changes
-        detection_info = {
-            "modem_name": entry_data.get(CONF_DETECTED_MODEM, "Cable Modem"),
-            "manufacturer": entry_data.get(CONF_DETECTED_MANUFACTURER, ""),
+        # Update entry.data with new connection info
+        updated_data = {
+            **entry.data,
+            CONF_HOST: hostname,
+            CONF_USERNAME: inp.get(CONF_USERNAME, ""),
+            CONF_PASSWORD: inp.get(CONF_PASSWORD, ""),
+            CONF_ENTITY_PREFIX: inp.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+            CONF_PROTOCOL: validation["protocol"],
+            CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
+            CONF_SUPPORTS_ICMP: validation["supports_icmp"],
+            CONF_SUPPORTS_HEAD: validation["supports_head"],
         }
-        new_title = create_title(detection_info, entry_data.get(CONF_HOST, ""))
 
-        self.hass.config_entries.async_update_entry(self.config_entry, title=new_title, data=entry_data)
-        return self.async_create_entry(title="", data={})
+        mfr = entry.data[CONF_MANUFACTURER]
+        model = entry.data[CONF_MODEL]
+        title = f"{mfr} {model} ({hostname})"
 
-    def _build_updated_entry_data(self, user_input: dict[str, Any], info: dict[str, Any]) -> dict[str, Any]:
-        """Build updated config entry data from user input and validation results."""
-        data = dict(user_input)
+        self.hass.config_entries.async_update_entry(entry, title=title, data=updated_data)
 
-        # Decompose protocol from host (same as initial config flow)
-        hostname, protocol = parse_host_input(data[CONF_HOST])
-        data[CONF_HOST] = hostname
-        data[CONF_PROTOCOL] = protocol
-
-        # These are re-tested on every validation
-        data[CONF_SUPPORTS_ICMP] = info.get("supports_icmp", True)
-        data[CONF_SUPPORTS_HEAD] = info.get("supports_head", False)
-        data[CONF_LEGACY_SSL] = info.get("legacy_ssl", False)
-
-        # Apply new detection info, or preserve existing
-        detection_info = info.get("detection_info", {})
-        if detection_info:
-            self._apply_detection_info(data, detection_info, log_prefix="Options flow: ")
-        else:
-            self._preserve_detection_info(data)
-
-        # Preserve working URL if not in new results
-        if info.get(CONF_WORKING_URL):
-            data[CONF_WORKING_URL] = info[CONF_WORKING_URL]
-        elif self.config_entry.data.get(CONF_WORKING_URL):
-            data[CONF_WORKING_URL] = self.config_entry.data[CONF_WORKING_URL]
-
-        self._apply_auth_discovery_info(data, info, fallback_data=self.config_entry.data)
-        return data
-
-    def _preserve_detection_info(self, data: dict[str, Any]) -> None:
-        """Copy existing detection info when validation didn't return new info.
-
-        This is not in ConfigFlowMixin because it requires self.config_entry,
-        which only exists on OptionsFlow (not on the initial ConfigFlow).
-        """
-        entry_data = self.config_entry.data
-        data[CONF_PARSER_NAME] = entry_data.get(CONF_PARSER_NAME)
-        data[CONF_DETECTED_MODEM] = entry_data.get(CONF_DETECTED_MODEM, "Unknown")
-        data[CONF_DETECTED_MANUFACTURER] = entry_data.get(CONF_DETECTED_MANUFACTURER, "Unknown")
-        data[CONF_DOCSIS_VERSION] = entry_data.get(CONF_DOCSIS_VERSION)
-        data[CONF_PARSER_SELECTED_AT] = entry_data.get(CONF_PARSER_SELECTED_AT)
-        data[CONF_ACTUAL_MODEL] = entry_data.get(CONF_ACTUAL_MODEL)
-
-    async def async_step_options_with_errors(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Re-show form with error message after validation failure."""
-        await self._ensure_parser_dropdown()
-
-        saved_input = self._progress.user_input or {}
-        errors = {"base": self._progress.get_error_type()}
-        self._progress.reset()
-
-        entry_data = self.config_entry.data
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self._build_options_schema(
-                default_host=saved_input.get(CONF_HOST, entry_data.get(CONF_HOST, "192.168.100.1")),
-                default_username=saved_input.get(CONF_USERNAME, entry_data.get(CONF_USERNAME, "")),
-                default_modem=saved_input.get(CONF_MODEM_CHOICE, entry_data.get(CONF_MODEM_CHOICE, "")),
-                default_scan_interval=saved_input.get(
-                    CONF_SCAN_INTERVAL, entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-                ),
-            ),
-            errors=errors,
-            description_placeholders={
-                "detected_modem": entry_data.get(CONF_DETECTED_MODEM, "Not detected"),
-                "parser_selected_at": self._format_parser_selected_at(entry_data.get(CONF_PARSER_SELECTED_AT, "Never")),
+        # Store intervals in options (triggers reload via update listener)
+        return self.async_create_entry(
+            title="",
+            data={
+                CONF_SCAN_INTERVAL: inp.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                CONF_HEALTH_CHECK_INTERVAL: inp.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL),
             },
         )
+
+    async def async_step_options_with_errors(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Re-show options form with error message."""
+        errors = {"base": self._progress.error_key}
+        saved = self._user_input or {}
+        self._progress.reset()
+        self._user_input = None
+
+        entry = self.config_entry
+        data = entry.data
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST,
+                        default=saved.get(CONF_HOST, data.get(CONF_HOST, "")),
+                    ): str,
+                    vol.Optional(
+                        CONF_USERNAME,
+                        default=saved.get(CONF_USERNAME, data.get(CONF_USERNAME, "")),
+                    ): str,
+                    vol.Optional(CONF_PASSWORD, default=""): str,
+                    vol.Required(
+                        CONF_ENTITY_PREFIX,
+                        default=saved.get(
+                            CONF_ENTITY_PREFIX,
+                            data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
+                        ),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=_build_prefix_options(self.hass),
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
+                    ),
+                    vol.Required(
+                        CONF_HEALTH_CHECK_INTERVAL,
+                        default=saved.get(
+                            CONF_HEALTH_CHECK_INTERVAL,
+                            DEFAULT_HEALTH_CHECK_INTERVAL,
+                        ),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(
+                            min=MIN_HEALTH_CHECK_INTERVAL,
+                            max=MAX_HEALTH_CHECK_INTERVAL,
+                        ),
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
+
+# =============================================================================
+# Shared helpers
+# =============================================================================
+
+
+def _build_prefix_options(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
+    """Build entity prefix dropdown based on existing entries.
+
+    ``none`` is only available when no other entry already uses it.
+    """
+    existing = hass.config_entries.async_entries(DOMAIN)
+    none_in_use = any(e.data.get(CONF_ENTITY_PREFIX) == ENTITY_PREFIX_NONE for e in existing)
+
+    if none_in_use or existing:
+        return [
+            selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+            selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+        ]
+
+    return [
+        selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="None"),
+        selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
+        selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
+    ]
+
+
+def _build_reauth_schema(
+    data: dict[str, Any],
+) -> vol.Schema:
+    """Build the reauth form schema (host + credentials)."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_HOST, default=data.get(CONF_HOST, "")): str,
+            vol.Optional(CONF_USERNAME, default=data.get(CONF_USERNAME, "")): str,
+            vol.Optional(CONF_PASSWORD, default=""): str,
+        }
+    )

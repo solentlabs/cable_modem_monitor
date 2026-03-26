@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from solentlabs.cable_modem_monitor_core.auth.base import AuthResult
+from solentlabs.cable_modem_monitor_core.auth.base import AuthContext, AuthResult
 from solentlabs.cable_modem_monitor_core.loaders.fetch_list import ResourceTarget
 from solentlabs.cable_modem_monitor_core.loaders.http import (
     HTTPResourceLoader,
@@ -539,6 +539,41 @@ class TestLogout:
             result = collector.execute()
 
         assert result.success is True
+
+    def test_logout_clears_session_for_next_poll(self) -> None:
+        """After successful logout, session_is_valid returns False.
+
+        Regression test: without session clearing after logout, the
+        collector reuses a stale session on the next poll and hits the
+        modem's login page instead of the data page (LOAD_AUTH signal).
+        """
+        config = _make_config(
+            auth_type="form",
+            cookie_name="",
+            max_concurrent=1,
+            logout_endpoint="/logout",
+        )
+        collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
+        modem_data: dict[str, Any] = {"downstream": [{"channel_id": 1}], "upstream": [], "system_info": {}}
+
+        # Simulate a successful first poll with logout
+        auth_result = MagicMock(success=True, auth_context=AuthContext())
+        with (
+            patch.object(collector, "_ensure_authenticated", return_value=auth_result),
+            patch.object(collector, "_load_resources", return_value={}),
+            patch.object(collector, "_parse", return_value=modem_data),
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_http_action"),
+        ):
+            # Set auth context as if authentication succeeded
+            collector._auth_context = AuthContext()
+            collector._last_auth_result = auth_result
+
+            result = collector.execute()
+
+        assert result.success is True
+        # After logout, session should be cleared
+        assert collector.session_is_valid is False
+        assert collector._auth_context is None
 
 
 # ------------------------------------------------------------------

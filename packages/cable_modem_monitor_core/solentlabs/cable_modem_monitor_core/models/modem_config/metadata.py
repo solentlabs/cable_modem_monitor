@@ -1,6 +1,6 @@
 """Metadata models for modem.yaml.
 
-Hardware, attribution, aggregate, and references.
+Hardware, attribution, and references.
 Per MODEM_YAML_SPEC.md.
 """
 
@@ -9,14 +9,6 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-class AggregateField(BaseModel):
-    """A derived field computed from channel data."""
-
-    model_config = ConfigDict(extra="forbid")
-    sum: str
-    channels: str
 
 
 class HardwareConfig(BaseModel):

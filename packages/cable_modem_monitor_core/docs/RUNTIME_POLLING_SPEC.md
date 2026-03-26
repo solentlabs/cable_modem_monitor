@@ -77,27 +77,28 @@ loader behavior per transport, and URL construction details.
 
 ### Derived Fields
 
-After parsing, the orchestrator enriches the response with fields
-derived from the parsed channel data:
+The parser coordinator enriches `system_info` with fields derived
+from parsed channel data. These appear in `modem_data.system_info`
+before the orchestrator sees the data.
 
-**Channel counts** (implicit — no config needed):
+**Channel counts** (always computed by coordinator):
 - `downstream_channel_count` — `len(downstream)`, always present
 - `upstream_channel_count` — `len(upstream)`, always present
+- If the parser maps native channel counts from the modem's web UI,
+  the native value takes precedence.
 
-These are trivially derived with no ambiguity. If channels exist in
-parser output, they are counted.
-
-**Aggregate fields** (declared in modem.yaml `aggregate` section):
+**Aggregate fields** (declared in parser.yaml `aggregate` section):
 - e.g., `total_corrected` — `sum(corrected)` across scoped channels
 - Scope can be a direction (`downstream`) or type-qualified
   (`downstream.qam`, `downstream.ofdm`)
-- Only computed when declared — modems without an `aggregate` section
+- Only computed when declared — parsers without an `aggregate` section
   produce no aggregate fields
 - Modems with native totals in their web UI map them as `system_info`
   fields in parser.yaml instead
+- Consumers read from `system_info` regardless of source
 
-See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#aggregate) for the full
-schema.
+See [PARSING_SPEC.md](PARSING_SPEC.md#aggregate-derived-system_info-fields)
+for the full schema.
 
 ### Status Derivation
 
@@ -457,20 +458,15 @@ log scraping required.
 
 ---
 
-## Metrics
+## Diagnostics
 
-The orchestrator exposes operational metrics via `metrics()` →
-`OrchestratorMetrics` (see `ORCHESTRATION_SPEC.md` § Data Models):
-
-- `poll_duration` — wall-clock time of last `get_modem_data()` call in seconds
-- `auth_failure_streak` — consecutive auth-related failures (0 = healthy)
-- `circuit_breaker_open` — whether polling is stopped due to persistent auth failures
-- `session_is_valid` — whether the Auth Manager believes the session is usable
-- `resource_fetches` — per-resource timing and size from the last successful collection (`list[ResourceFetch]`)
-- `last_poll_timestamp` — monotonic time of last `get_modem_data()` call
+The orchestrator exposes operational diagnostics via `diagnostics()` →
+`OrchestratorDiagnostics`. See
+[ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) § Data Models
+for field definitions.
 
 Health probe latencies (`icmp_latency_ms`, `http_latency_ms`) are on
-`HealthInfo`, not `OrchestratorMetrics` — different cadence, different
+`HealthInfo`, not `OrchestratorDiagnostics` — different cadence, different
 model.
 
 These are available as HA sensor attributes or diagnostic data, not

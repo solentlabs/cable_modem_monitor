@@ -383,6 +383,12 @@ class ModemDataCollector:
                 )
         except Exception:
             _logger.debug("Logout failed (best-effort)", exc_info=True)
+        else:
+            # Session is dead server-side after logout — clear local
+            # state so next poll re-authenticates instead of reusing
+            # a stale session.
+            self.clear_session()
+            _logger.debug("Session cleared after logout")
 
 
 def _should_detect_login_pages(modem_config: Any) -> bool:
