@@ -159,6 +159,7 @@ class DataOrchestrator:
         auth_form_config: dict[str, Any] | None = None,
         auth_hnap_config: dict[str, Any] | None = None,
         auth_url_token_config: dict[str, Any] | None = None,
+        auth_encrypted_token_config: dict[str, Any] | None = None,
         authenticated_html: str | None = None,
         session_pre_authenticated: bool = False,
         timeout: int | None = None,
@@ -248,6 +249,7 @@ class DataOrchestrator:
             form_config=auth_form_config,
             hnap_config=auth_hnap_config,
             url_token_config=auth_url_token_config,
+            encrypted_token_config=auth_encrypted_token_config,
             timeout=timeout,
         )
         self._auth_strategy = auth_strategy
@@ -620,8 +622,8 @@ class DataOrchestrator:
                 - success: True if login succeeded or no login required
                 - authenticated_html: HTML from login response, or None
         """
-        if not self.username or not self.password:
-            _LOGGER.debug("No credentials provided, skipping login")
+        if not self.password:
+            _LOGGER.debug("No password configured, skipping login")
             return (True, None)
 
         # Skip login if session was pre-authenticated by auth discovery
@@ -630,17 +632,16 @@ class DataOrchestrator:
             self._session_pre_authenticated = False
             return (True, None)
 
+        # Clear stale cookies before re-authenticating
+        self.session.cookies.clear()
+
         # Use auth handler with stored strategy
         if self._auth_handler and self._auth_strategy:
-            _LOGGER.debug(
-                "Using auth handler with strategy: %s",
-                self._auth_handler.strategy.value,
-            )
+            _LOGGER.debug("Using auth handler with strategy: %s", self._auth_handler.strategy.value)
             auth_result = self._auth_handler.authenticate(self.session, self.base_url, self.username, self.password)
             return auth_result.success, auth_result.response_html
 
         # No auth strategy stored - assume no authentication required
-        # This handles modems with public status pages
         _LOGGER.debug("No auth strategy stored, assuming no auth required")
         return (True, None)
 
@@ -1248,7 +1249,13 @@ class DataOrchestrator:
                 - html_from_auth: HTML returned during auth (some strategies return data), or None
                 - auth_performed: True if authentication was actually executed (not skipped)
         """
-        if not self._auth_strategy or not self.username or not self.password:
+        if not self._auth_strategy or not self.password:
+            return (True, None, False)
+
+        # Strategies that only need password (no username required)
+        password_only_strategies = ("form_encrypted_token",)
+
+        if not self.username and self._auth_strategy not in password_only_strategies:
             return (True, None, False)
 
         # URL token auth: skip pre-auth, use reactive auth flow instead

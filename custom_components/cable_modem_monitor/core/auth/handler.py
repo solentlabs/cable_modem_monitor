@@ -78,6 +78,7 @@ class AuthHandler:
         form_config: dict[str, Any] | None = None,
         hnap_config: dict[str, Any] | None = None,
         url_token_config: dict[str, Any] | None = None,
+        encrypted_token_config: dict[str, Any] | None = None,
         fallback_strategies: list[dict[str, Any]] | None = None,
         timeout: int | None = None,
     ):
@@ -88,6 +89,7 @@ class AuthHandler:
             form_config: Form configuration for form-based auth (required for FORM_*)
             hnap_config: HNAP configuration (endpoint, namespace, empty_action_value)
             url_token_config: URL token configuration (login_page, etc.)
+            encrypted_token_config: Encrypted token config (Compal AES auth)
             fallback_strategies: Ordered list of alternate strategies to try if primary fails.
                 Each entry is a dict with 'strategy' key and optional config keys.
                 Used for try-until-success pattern (e.g., modems with firmware variations).
@@ -120,6 +122,7 @@ class AuthHandler:
         self.form_config = form_config or {}
         self.hnap_config = {**DEFAULT_HNAP_CONFIG, **(hnap_config or {})}
         self.url_token_config = {**DEFAULT_URL_TOKEN_CONFIG, **(url_token_config or {})}
+        self.encrypted_token_config = encrypted_token_config or {}
         if timeout is None:
             raise ValueError("timeout is required but was None. Schema defines default in const.py.")
         self.timeout = timeout
@@ -175,6 +178,7 @@ class AuthHandler:
             form_config=static_config.get("auth_form_config"),
             hnap_config=static_config.get("auth_hnap_config"),
             url_token_config=static_config.get("auth_url_token_config"),
+            encrypted_token_config=static_config.get("auth_encrypted_token_config"),
             timeout=timeout,
         )
 
@@ -405,6 +409,7 @@ class AuthHandler:
             FormAjaxAuthConfig,
             FormAuthConfig,
             FormDynamicAuthConfig,
+            FormEncryptedTokenAuthConfig,
             FormNonceAuthConfig,
             HNAPAuthConfig,
             NoAuthConfig,
@@ -501,6 +506,20 @@ class AuthHandler:
                 token_prefix=merged.get("token_prefix", "ct_"),
                 session_cookie_name=merged.get("session_cookie_name", "credential"),
                 success_indicator=merged.get("success_indicator", "Downstream"),
+            )
+
+        if strategy == AuthStrategyType.FORM_ENCRYPTED_TOKEN:
+            encrypted_config = self.encrypted_token_config or {}
+            return FormEncryptedTokenAuthConfig(
+                strategy=strategy,
+                timeout=timeout,
+                login_page=encrypted_config.get("login_page", "/common_page/login.html"),
+                setter_endpoint=encrypted_config.get("setter_endpoint", "/xml/setter.xml"),
+                getter_endpoint=encrypted_config.get("getter_endpoint", "/xml/getter.xml"),
+                session_cookie_name=encrypted_config.get("session_cookie_name", "sessionToken"),
+                sid_cookie_name=encrypted_config.get("sid_cookie_name", "SID"),
+                username_value=encrypted_config.get("username_value", "NULL"),
+                login_fun=encrypted_config.get("login_fun", 15),
             )
 
         # Default: return NoAuthConfig for unknown strategies

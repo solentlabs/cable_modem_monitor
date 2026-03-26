@@ -241,3 +241,25 @@ class UrlTokenSessionConfig(AuthConfig):
     # Behavioral attributes - control header behavior based on modem requirements
     ajax_login: bool = False  # Add X-Requested-With: XMLHttpRequest to login
     auth_header_data: bool = True  # Include Authorization header on data requests
+
+
+@dataclass(kw_only=True)
+class FormEncryptedTokenAuthConfig(AuthConfig):
+    """Form auth with AES-encrypted password and session token cookie.
+
+    Auth flow (Compal CH7465MT and similar):
+    1. GET login page to receive sessionToken cookie
+    2. Encrypt password: AES-256-CBC(password, key=SHA256(token), iv=MD5(token))
+    3. POST to setter endpoint with fun=15, Username=NULL, Password=encrypted
+    4. Parse "successful SID=NNNNN" response, store SID cookie
+    5. Subsequent requests include token= in POST data
+    """
+
+    strategy: AuthStrategyType = AuthStrategyType.FORM_ENCRYPTED_TOKEN
+    login_page: str = "/common_page/login.html"
+    setter_endpoint: str = "/xml/setter.xml"
+    getter_endpoint: str = "/xml/getter.xml"
+    session_cookie_name: str = "sessionToken"
+    sid_cookie_name: str = "SID"
+    username_value: str = "NULL"
+    login_fun: int = 15

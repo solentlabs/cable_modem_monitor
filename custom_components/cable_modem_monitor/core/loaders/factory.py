@@ -13,6 +13,7 @@ from .base import ResourceLoader
 from .hnap import HNAPLoader
 from .html import HTMLLoader
 from .rest import RESTLoader
+from .xml_post import XMLPostLoader
 
 if TYPE_CHECKING:
     import requests
@@ -63,6 +64,26 @@ class ResourceLoaderFactory:
             paradigm,
             parser_format,
         )
+
+        # XML POST paradigm (Compal modems)
+        if paradigm == "xml_post":
+            _LOGGER.debug("ResourceLoaderFactory: Creating XMLPostLoader")
+            # Extract session token from auth result if available
+            auth_types = modem_config.get("auth", {}).get("types", {})
+            enc_config = auth_types.get("form_encrypted_token", {})
+            cookie_name = enc_config.get("session_cookie_name", "sessionToken") if isinstance(enc_config, dict) else "sessionToken"
+            session_token = None
+            for cookie in session.cookies:
+                if cookie.name == cookie_name and cookie.value:
+                    session_token = cookie.value
+                    break
+            return XMLPostLoader(
+                session=session,
+                base_url=base_url,
+                modem_config=modem_config,
+                verify_ssl=verify_ssl,
+                session_token=session_token,
+            )
 
         # HNAP paradigm
         if paradigm == "hnap":

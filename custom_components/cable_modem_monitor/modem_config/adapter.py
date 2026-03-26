@@ -251,6 +251,7 @@ class ModemConfigAuthAdapter:
             "hnap": "hnap_session",
             "url_token": "url_token_session",
             "rest_api": "no_auth",  # REST API = no traditional auth
+            "form_encrypted_token": "form_encrypted_token",  # AES-encrypted token (Compal)
         }
 
         strategy_str = strategy_mapping.get(auth_type, "no_auth")
@@ -264,6 +265,7 @@ class ModemConfigAuthAdapter:
             "auth_form_config": type_config if is_form_type else None,
             "auth_hnap_config": type_config if auth_type == "hnap" else None,
             "auth_url_token_config": type_config if auth_type == "url_token" else None,
+            "auth_encrypted_token_config": type_config if auth_type == "form_encrypted_token" else None,
             "timeout": self.config.timeout,
         }
 

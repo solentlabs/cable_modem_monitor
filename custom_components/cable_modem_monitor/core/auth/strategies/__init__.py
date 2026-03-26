@@ -57,6 +57,7 @@ from __future__ import annotations
 from .basic_http import BasicHttpAuthStrategy
 from .form_ajax import FormAjaxAuthStrategy
 from .form_dynamic import FormDynamicAuthStrategy
+from .form_encrypted_token import FormEncryptedTokenStrategy
 from .form_plain import FormPlainAuthStrategy
 from .hnap_json import HNAPJsonAuthStrategy
 from .hnap_session import HNAPSessionAuthStrategy
@@ -68,6 +69,7 @@ __all__ = [
     "BasicHttpAuthStrategy",
     "FormAjaxAuthStrategy",
     "FormDynamicAuthStrategy",
+    "FormEncryptedTokenStrategy",
     "FormPlainAuthStrategy",
     "HNAPJsonAuthStrategy",
     "HNAPSessionAuthStrategy",

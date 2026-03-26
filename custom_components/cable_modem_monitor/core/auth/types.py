@@ -81,5 +81,8 @@ class AuthStrategyType(Enum):
     URL_TOKEN_SESSION = "url_token_session"
     """URL-based token auth with session cookie."""
 
+    FORM_ENCRYPTED_TOKEN = "form_encrypted_token"
+    """Form auth with AES-encrypted password and session token cookie."""
+
     UNKNOWN = "unknown"
     """Unrecognized auth pattern - captured for debugging and future implementation."""

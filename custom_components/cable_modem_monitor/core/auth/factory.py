@@ -30,6 +30,7 @@ class AuthFactory:
         from .strategies.basic_http import BasicHttpAuthStrategy
         from .strategies.form_ajax import FormAjaxAuthStrategy
         from .strategies.form_dynamic import FormDynamicAuthStrategy
+        from .strategies.form_encrypted_token import FormEncryptedTokenStrategy
         from .strategies.form_nonce import FormNonceAuthStrategy
         from .strategies.form_plain import FormPlainAuthStrategy
         from .strategies.hnap_json import HNAPJsonAuthStrategy
@@ -49,6 +50,7 @@ class AuthFactory:
             AuthStrategyType.HNAP_SESSION: HNAPJsonAuthStrategy,  # Default to JSON HNAP
             AuthStrategyType.HNAP_SOAP: HNAPSessionAuthStrategy,  # Legacy XML/SOAP HNAP
             AuthStrategyType.URL_TOKEN_SESSION: UrlTokenSessionStrategy,
+            AuthStrategyType.FORM_ENCRYPTED_TOKEN: FormEncryptedTokenStrategy,
         }
 
         if strategy_type not in _strategies:
@@ -107,6 +109,7 @@ class AuthFactory:
             "url_token": AuthStrategyType.URL_TOKEN_SESSION,
             "hnap": AuthStrategyType.HNAP_SESSION,
             "basic": AuthStrategyType.BASIC_HTTP,
+            "form_encrypted_token": AuthStrategyType.FORM_ENCRYPTED_TOKEN,
         }
 
         strategy_type = type_mapping.get(auth_type)

@@ -1,0 +1,96 @@
+# Compal CH7465MT - Magenta/UPC/Ziggo Connect Box (DOCSIS 3.0)
+# Firmware: CH7465MT-AT-NCIP-6.15.32p3TM-GA-NOSH
+# XML API with AES-encrypted password authentication
+
+manufacturer: Compal
+model: CH7465MT
+paradigm: xml_post
+
+hardware:
+  docsis_version: "3.0"
+  chipset: "Intel Puma 6"
+  release_date: "2020"
+
+default_host: "192.168.100.1"
+timeout: 15
+
+auth:
+  types:
+    form_encrypted_token:
+      login_page: "/common_page/login.html"
+      setter_endpoint: "/xml/setter.xml"
+      getter_endpoint: "/xml/getter.xml"
+      session_cookie_name: "sessionToken"
+      sid_cookie_name: "SID"
+      username_value: "NULL"
+      login_fun: 15
+      logout_fun: 16
+  session:
+    cookie_name: "SID"
+    max_concurrent: 1
+
+pages:
+  public:
+    - "/common_page/login.html"
+  protected:
+    - "/xml/getter.xml"
+    - "/xml/setter.xml"
+  data:
+    global_settings: "fun=1"
+    system_info: "fun=2"
+    downstream_channels: "fun=10"
+    upstream_channels: "fun=11"
+    cm_status: "fun=144"
+
+parser:
+  class: CompalCH7465MTParser
+  module: custom_components.cable_modem_monitor.modems.compal.ch7465mt.parser
+  format:
+    type: xml
+
+detection:
+  pre_auth:
+    - "Connect Box"
+    - "Internet Fiber Box"
+    - "sessionToken"
+    - "CBN_Encrypt"
+  post_auth:
+    - "CH7465MT"
+    - "Compal"
+  model_aliases:
+    - "Connect Box"
+    - "Internet Fiber Box"
+    - "CH7465MT-AT"
+    - "CH7465MT"
+
+capabilities:
+  - scqam_downstream
+  - scqam_upstream
+  - system_uptime
+  - software_version
+  - hardware_version
+
+status_info:
+  status: awaiting_verification
+  verification_source: "https://github.com/solentlabs/cable_modem_monitor/issues/"
+
+fixtures:
+  path: modems/compal/ch7465mt/fixtures
+  source: diagnostics
+
+isps:
+  - "Magenta (A1 Telekom Austria)"
+  - "UPC"
+  - "Ziggo"
+  - "Virgin Media"
+
+notes: |
+  DOCSIS 3.0 cable modem by Compal, distributed by various European ISPs.
+  Uses XML API via POST to getter.xml with fun=N parameters.
+  Authentication requires AES-256-CBC encrypted password (CBN_Encrypt).
+  Supports bridge mode (accessible at 192.168.100.1).
+  24 downstream SC-QAM channels, 8 upstream ATDMA channels.
+
+references:
+  compal_wifi_library: "https://github.com/ties/compal_CH7465LG_py"
+  hass_compal_wifi: "https://github.com/frimtec/hass-compal-wifi"

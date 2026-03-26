@@ -38,6 +38,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    CONF_AUTH_ENCRYPTED_TOKEN_CONFIG,
     CONF_AUTH_FORM_CONFIG,
     CONF_AUTH_HNAP_CONFIG,
     CONF_AUTH_STRATEGY,
@@ -186,6 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     auth_form_config = entry.data.get(CONF_AUTH_FORM_CONFIG)
     auth_hnap_config = entry.data.get(CONF_AUTH_HNAP_CONFIG)
     auth_url_token_config = entry.data.get(CONF_AUTH_URL_TOKEN_CONFIG)
+    auth_encrypted_token_config = entry.data.get(CONF_AUTH_ENCRYPTED_TOKEN_CONFIG)
 
     # Auto-recover from "unknown" auth strategy (failed discovery from previous attempts)
     # Clear it so modem_client uses modem.yaml hints for authentication
@@ -220,6 +222,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         "auth_form_config": auth_form_config,
         "auth_hnap_config": auth_hnap_config,
         "auth_url_token_config": auth_url_token_config,
+        "auth_encrypted_token_config": auth_encrypted_token_config,
     }
 
     modem_client: DataOrchestrator
