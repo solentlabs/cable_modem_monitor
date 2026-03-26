@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check deploy sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell mock
+.PHONY: help test test-quick test-simple clean lint lint-fix fix-imports lint-all type-check format format-check check sync-version docker-start docker-stop docker-restart docker-logs docker-status docker-clean docker-shell
 
 # Default target - show help
 help:
@@ -8,7 +8,6 @@ help:
 	@echo "  make test        - Run full test suite with coverage (creates venv)"
 	@echo "  make test-quick  - Quick test run (assumes venv exists)"
 	@echo "  make test-simple - Simple test without venv (global install)"
-	@echo "  make mock MODEM=g54 - Run mock server (e.g., g54, mb7621, sb8200)"
 	@echo "  make clean       - Remove test artifacts and cache files"
 	@echo ""
 	@echo "Code Quality:"
@@ -33,7 +32,6 @@ help:
 	@echo "  make docker-clean   - Remove container and all test data"
 	@echo ""
 	@echo "Maintenance:"
-	@echo "  make deploy       - Deploy to Home Assistant server"
 	@echo "  make sync-version - Sync version from const.py to manifest.json"
 	@echo ""
 	@echo "For more details, see scripts/README.md"
@@ -49,11 +47,6 @@ test-quick:
 # Simple test without venv
 test-simple:
 	@bash scripts/dev/test_simple.sh
-
-# Run mock modem server for manual testing
-# Usage: make mock MODEM=g54
-mock:
-	@python3 scripts/mock_modem.py $(MODEM)
 
 # Clean test artifacts
 clean:
@@ -112,10 +105,6 @@ validate:
 # Cross-platform validation (auto-installs tools, works without venv)
 validate-host:
 	@python scripts/dev/validate.py
-
-# Full CI validation (comprehensive)
-validate-ci:
-	@./scripts/ci-check.sh
 
 # Sync version numbers
 sync-version:

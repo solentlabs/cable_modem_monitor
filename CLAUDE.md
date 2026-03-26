@@ -12,9 +12,6 @@ These are the authoritative doc indexes for the project:
 | `custom_components/cable_modem_monitor/docs/README.md` | HA specs — config flow, entities, adapter wiring |
 | `packages/CLAUDE.md` | Coding standards, test patterns, step workflow |
 
-`AI_CONTEXT.md` is legacy (v3.13) and will be cleaned up. Do not treat it
-as authoritative — the specs above are the source of truth.
-
 ## Contents
 
 | Section                 | What it covers                              |

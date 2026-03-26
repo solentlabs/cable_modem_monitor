@@ -348,10 +348,42 @@ def restart_container() -> bool:
     return result.returncode == 0
 
 
+def install_packages() -> bool:
+    """Install solentlabs packages (Core + Catalog) into the HA container."""
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "exec",
+                CONTAINER_NAME,
+                "pip",
+                "install",
+                "--quiet",
+                "-e",
+                "/workspace/packages/cable_modem_monitor_core",
+                "-e",
+                "/workspace/packages/cable_modem_monitor_catalog",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            print_error("Package install failed")
+            if result.stderr:
+                for line in result.stderr.strip().splitlines()[-3:]:
+                    print_info(line)
+            return False
+        return True
+    except subprocess.SubprocessError as exc:
+        print_error(f"Package install error: {exc}")
+        return False
+
+
 def main() -> int:
     print_header("Start Home Assistant")
 
-    total_steps = 2
+    total_steps = 3
 
     # Step 1: Start or restart container
     if is_container_running():
@@ -368,9 +400,22 @@ def main() -> int:
             return 1
         print_success("Container started")
 
-    # Step 2: Wait for HA to be ready
+    # Step 2: Install solentlabs packages
     print()
-    print_step(2, total_steps, "Waiting for Home Assistant...")
+    print_step(2, total_steps, "Installing solentlabs packages...")
+    if install_packages():
+        print_success("Core + Catalog packages installed")
+    else:
+        print_warning("Package install failed — integration will not load")
+        print_info(
+            "Manual fix: docker exec ha-cable-modem-test pip install"
+            " -e /workspace/packages/cable_modem_monitor_core"
+            " -e /workspace/packages/cable_modem_monitor_catalog"
+        )
+
+    # Step 3: Wait for HA to be ready
+    print()
+    print_step(3, total_steps, "Waiting for Home Assistant...")
     print("   ", end="")
 
     if wait_for_http(HA_PORT, timeout=60):

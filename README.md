@@ -336,8 +336,6 @@ MIT License - see LICENSE file for details
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Examples](./docs/EXAMPLES.md) - Dashboard and automation YAML
 - [Modem Request Guide](./docs/MODEM_REQUEST.md) - Help add support for your modem
-- [AI Context](./AI_CONTEXT.md) - Project context for AI assistants
-
 ### External Resources
 - [Home Assistant Releases](https://github.com/home-assistant/core/releases)
 - [HACS Brand Repository](https://github.com/home-assistant/brands/tree/master/custom_integrations/cable_modem_monitor)

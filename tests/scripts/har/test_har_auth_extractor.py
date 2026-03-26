@@ -1007,7 +1007,7 @@ def test_c7000v2_regression_post_auth() -> None:
 # -------------------------------------------------------------------
 
 # HARs captured with har-capture v0.4.4+ include a _probes section
-HARS_WITH_PROBES = {"netgear-cm1200-https.har"}
+HARS_WITH_PROBES = {"netgear-cm1200-https.har", "arris-s33v3.har"}
 
 
 @pytest.mark.skipif(not CORPUS_AVAILABLE, reason="RAW_DATA/har/ not available (CI)")

@@ -1,1 +1,0 @@
-"""Compal modems."""
