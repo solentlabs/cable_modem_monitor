@@ -16,9 +16,17 @@ from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
+from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.util import slugify as ha_slugify
 
-from .const import DOMAIN
+from .const import (
+    CONF_ENTITY_PREFIX,
+    CONF_SUPPORTS_ICMP,
+    DOMAIN,
+    ENTITY_PREFIX_IP,
+    ENTITY_PREFIX_MODEL,
+)
 from .coordinator import CableModemConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,6 +48,31 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
     }
 )
+
+
+# ------------------------------------------------------------------
+# Entity ID prefix — matches _update_device_registry in __init__.py
+# ------------------------------------------------------------------
+
+
+def _get_entity_prefix(entry: CableModemConfigEntry) -> str:
+    """Derive the entity ID prefix from config entry settings.
+
+    Must match the device_name logic in _update_device_registry so
+    generated entity IDs match what HA actually creates.
+    """
+    data = entry.data
+    prefix = data.get(CONF_ENTITY_PREFIX, "none")
+
+    if prefix == ENTITY_PREFIX_MODEL:
+        identity = entry.runtime_data.modem_identity
+        device_name = f"Cable Modem {identity.model}"
+    elif prefix == ENTITY_PREFIX_IP:
+        device_name = f"Cable Modem {data[CONF_HOST]}"
+    else:
+        device_name = "Cable Modem"
+
+    return str(ha_slugify(device_name))
 
 
 # ------------------------------------------------------------------
@@ -162,39 +195,61 @@ def _format_channel_label(
     return f"{ch_type.upper()} Ch {ch_id}"
 
 
-def _build_status_card_yaml() -> list[str]:
-    """Build YAML for the status entities card."""
-    return [
+def _build_status_card_yaml(
+    entity_prefix: str,
+    *,
+    has_icmp: bool,
+    has_restart: bool,
+) -> list[str]:
+    """Build YAML for the status entities card.
+
+    Args:
+        entity_prefix: Entity ID prefix (e.g., "cable_modem").
+        has_icmp: Whether ICMP ping latency entity exists.
+        has_restart: Whether the restart button exists.
+    """
+    lines = [
         "  - type: entities",
         "    title: Cable Modem Status",
         "    entities:",
-        "      - entity: sensor.cable_modem_status",
+        f"      - entity: sensor.{entity_prefix}_status",
         "        name: Status",
-        "      - entity: sensor.cable_modem_ping_latency",
-        "        name: Ping",
-        "      - entity: sensor.cable_modem_http_latency",
-        "        name: HTTP",
-        "        icon: mdi:speedometer",
-        "      - entity: sensor.cable_modem_software_version",
-        "        name: Software Version",
-        "      - entity: sensor.cable_modem_system_uptime",
-        "        name: Uptime",
-        "      - entity: sensor.cable_modem_last_boot_time",
-        "        name: Last Boot",
-        "        format: date",
-        "      - entity: sensor.cable_modem_ds_channel_count",
-        "        name: Downstream Channel Count",
-        "      - entity: sensor.cable_modem_us_channel_count",
-        "        name: Upstream Channel Count",
-        "      - entity: sensor.cable_modem_total_corrected_errors",
-        "        name: Total Corrected Errors",
-        "      - entity: sensor.cable_modem_total_uncorrected_errors",
-        "        name: Total Uncorrected Errors",
-        "      - entity: button.cable_modem_restart_modem",
-        "        name: Restart",
-        "    show_header_toggle: false",
-        "    state_color: false",
     ]
+    if has_icmp:
+        lines.append(f"      - entity: sensor.{entity_prefix}_ping_latency")
+        lines.append("        name: Ping")
+    lines.extend(
+        [
+            f"      - entity: sensor.{entity_prefix}_http_latency",
+            "        name: HTTP",
+            "        icon: mdi:speedometer",
+            f"      - entity: sensor.{entity_prefix}_software_version",
+            "        name: Software Version",
+            f"      - entity: sensor.{entity_prefix}_system_uptime",
+            "        name: Uptime",
+            f"      - entity: sensor.{entity_prefix}_last_boot_time",
+            "        name: Last Boot",
+            "        format: date",
+            f"      - entity: sensor.{entity_prefix}_ds_channel_count",
+            "        name: Downstream Channel Count",
+            f"      - entity: sensor.{entity_prefix}_us_channel_count",
+            "        name: Upstream Channel Count",
+            f"      - entity: sensor.{entity_prefix}_total_corrected_errors",
+            "        name: Total Corrected Errors",
+            f"      - entity: sensor.{entity_prefix}_total_uncorrected_errors",
+            "        name: Total Uncorrected Errors",
+        ]
+    )
+    if has_restart:
+        lines.append(f"      - entity: button.{entity_prefix}_restart_modem")
+        lines.append("        name: Restart")
+    lines.extend(
+        [
+            "    show_header_toggle: false",
+            "    state_color: false",
+        ]
+    )
+    return lines
 
 
 def _build_channel_graph_yaml(
@@ -219,36 +274,38 @@ def _build_channel_graph_yaml(
     return yaml_parts
 
 
-def _build_error_graphs_yaml(titles: dict[str, str]) -> list[str]:
+def _build_error_graphs_yaml(entity_prefix: str, titles: dict[str, str]) -> list[str]:
     """Build YAML for error history graphs."""
     return [
         "  - type: history-graph",
         f"    title: {titles['corrected']}",
         "    hours_to_show: 168",
         "    entities:",
-        "      - entity: sensor.cable_modem_total_corrected_errors",
+        f"      - entity: sensor.{entity_prefix}_total_corrected_errors",
         "        name: Corrected Error Count",
         "  - type: history-graph",
         f"    title: {titles['uncorrected']}",
         "    hours_to_show: 168",
         "    entities:",
-        "      - entity: sensor.cable_modem_total_uncorrected_errors",
+        f"      - entity: sensor.{entity_prefix}_total_uncorrected_errors",
         "        name: Uncorrected Error Count",
     ]
 
 
-def _build_latency_graph_yaml() -> list[str]:
+def _build_latency_graph_yaml(entity_prefix: str, *, has_icmp: bool) -> list[str]:
     """Build YAML for the latency history graph."""
-    return [
+    lines = [
         "  - type: history-graph",
         "    title: Latency",
         "    hours_to_show: 6",
         "    entities:",
-        "      - entity: sensor.cable_modem_ping_latency",
-        "        name: Ping",
-        "      - entity: sensor.cable_modem_http_latency",
-        "        name: HTTP",
     ]
+    if has_icmp:
+        lines.append(f"      - entity: sensor.{entity_prefix}_ping_latency")
+        lines.append("        name: Ping")
+    lines.append(f"      - entity: sensor.{entity_prefix}_http_latency")
+    lines.append("        name: HTTP")
+    return lines
 
 
 def _add_channel_graphs(
@@ -336,6 +393,9 @@ def create_generate_dashboard_handler(
             return {"yaml": "# Error: No modem data available"}
 
         modem_data = snapshot.modem_data
+        entity_prefix = _get_entity_prefix(entry)
+        has_icmp = bool(entry.data.get(CONF_SUPPORTS_ICMP, False))
+        has_restart = entry.runtime_data.orchestrator.supports_restart
 
         opts = {
             "ds_power": call.data.get("include_downstream_power", True),
@@ -364,15 +424,15 @@ def create_generate_dashboard_handler(
         ]
 
         if opts["status"]:
-            yaml_parts.extend(_build_status_card_yaml())
+            yaml_parts.extend(_build_status_card_yaml(entity_prefix, has_icmp=has_icmp, has_restart=has_restart))
 
         # fmt: off
         channel_graphs = [
-            ("ds_power", downstream_info, "ds_power", "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_power"),
-            ("ds_snr",   downstream_info, "ds_snr",   "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_snr"),
-            ("ds_freq",  downstream_info, "ds_freq",  "sensor.cable_modem_ds_{ch_type}_ch_{ch_id}_frequency"),
-            ("us_power", upstream_info,   "us_power", "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_power"),
-            ("us_freq",  upstream_info,   "us_freq",  "sensor.cable_modem_us_{ch_type}_ch_{ch_id}_frequency"),
+            ("ds_power", downstream_info, "ds_power", f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_power"),
+            ("ds_snr",   downstream_info, "ds_snr",   f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_snr"),
+            ("ds_freq",  downstream_info, "ds_freq",  f"sensor.{entity_prefix}_ds_{{ch_type}}_ch_{{ch_id}}_frequency"),
+            ("us_power", upstream_info,   "us_power", f"sensor.{entity_prefix}_us_{{ch_type}}_ch_{{ch_id}}_power"),
+            ("us_freq",  upstream_info,   "us_freq",  f"sensor.{entity_prefix}_us_{{ch_type}}_ch_{{ch_id}}_frequency"),
         ]
         # fmt: on
 
@@ -390,11 +450,17 @@ def create_generate_dashboard_handler(
                 )
 
         if opts["errors"]:
-            yaml_parts.extend(_build_error_graphs_yaml(titles))
+            yaml_parts.extend(_build_error_graphs_yaml(entity_prefix, titles))
 
         if opts["latency"]:
-            yaml_parts.extend(_build_latency_graph_yaml())
+            yaml_parts.extend(_build_latency_graph_yaml(entity_prefix, has_icmp=has_icmp))
 
+        _LOGGER.info(
+            "Generated dashboard: %d DS channels, %d US channels, prefix=%s",
+            len(downstream_info),
+            len(upstream_info),
+            entity_prefix,
+        )
         return {"yaml": "\n".join(yaml_parts)}
 
     return handle_generate_dashboard

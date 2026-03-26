@@ -243,7 +243,7 @@ class TestFetch:
 class TestRequestSigning:
     """Test HNAP_AUTH header on data requests."""
 
-    @patch("solentlabs.cable_modem_monitor_core.loaders.hnap.time")
+    @patch("solentlabs.cable_modem_monitor_core.protocol.hnap.time")
     def test_auth_header_sent(
         self,
         mock_time: Any,

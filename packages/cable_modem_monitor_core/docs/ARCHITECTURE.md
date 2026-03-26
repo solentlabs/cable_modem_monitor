@@ -86,7 +86,9 @@ but modem-specific behavior comes from config, not from Core code.
 |----------------|------|
 | Data models | `ModemData`, `ChannelData`, `SystemInfo`, `HealthInfo`, `ModemIdentity` |
 | Config schemas | `ModemConfig`, `AuthConfig`, `PageConfig`, `ParserConfig` |
-| ABCs / base classes | `BaseParser`, `BaseAuthStrategy`, `BaseAction` |
+| ABCs / base classes | `BaseParser`, `BaseAuthStrategy` |
+| Action executors | `orchestration/actions/` — transport-scoped executors (`http_action`, `hnap_action`) with single `execute_action()` dispatch. `ActionResult` return type. |
+| Protocol primitives | `protocol/hnap` — shared HNAP constants and HMAC signing used by auth, loaders, and action executors |
 | Parser coordinator | `ModemParserCoordinator` — factory + orchestration: parser.yaml → `BaseParser` instances → parser.py chaining → `ModemData` |
 | Auth strategies | `none`, `basic`, `form`, `form_nonce`, `form_pbkdf2`, `form_sjcl`, `hnap`, `url_token` |
 | Resource loaders | HTTP → `BeautifulSoup` or `dict` (format-dependent), HNAP → JSON |

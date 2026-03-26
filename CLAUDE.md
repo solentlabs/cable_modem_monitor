@@ -1,10 +1,128 @@
 # Claude Rules
 
-> **This file**: Behavioral constraints and development rules.
+> **This file**: Core principles, behavioral constraints, and development rules.
+> The principles section is the foundation — internalize it before any work.
+
+## Core Principles
+
+These principles govern every change to this project. They are not
+guidelines — they are hard constraints. When in doubt, the principle
+wins over convenience.
+
+### Architecture
+
+1. **Separation of Concerns is non-negotiable.** Each module does one
+   thing. Transport-specific logic stays in transport-scoped modules.
+   Shared logic lives in shared modules. No generic abstractions that
+   span transport boundaries — if two things share a name but not
+   logic, they belong in separate modules.
+
+2. **DRY is non-negotiable.** If the same logic appears in 2+ places,
+   extract a shared helper. Duplicated protocol constants, signing
+   functions, or dispatch logic are architecture bugs, not tech debt.
+
+3. **Core is platform-agnostic.** No `homeassistant.*` imports in
+   Core. HA-specific code stays in `custom_components/`. Core's API
+   is synchronous (`requests`-based I/O). The HA adapter is a thin
+   wrapper — if HA wiring requires non-trivial logic, Core's API
+   boundaries are wrong.
+
+4. **New features are additive only.** New format, new auth strategy,
+   new transport, new parser — none of these change existing code.
+   Add a new implementation, register it, done. If adding a feature
+   requires modifying unrelated modules, the architecture is wrong.
+
+5. **Protocol primitives are shared, implementation is scoped.**
+   Constants and signing functions live in shared protocol modules
+   (`protocol/hnap.py`). How a transport uses them is transport-
+   specific (auth, loaders, and action executors each own their flow).
+
+### Modem Configuration
+
+6. **Modem behavior is data-driven.** Core provides a set of
+   behaviours (auth strategies, extraction modes, parsers, executors).
+   Each modem selects from them via YAML. No modem's configuration
+   requires code changes. No modem's configuration affects another.
+
+7. **Config fields are parameters to core behaviours, not raw
+   implementations.** `auth.strategy: form` selects an auth strategy.
+   `endpoint_pattern: "RouterStatus"` supplies a keyword to a core
+   extraction strategy. Contributors provide *what*, core handles
+   *how*. If a config field requires regex, code, or implementation
+   knowledge, the abstraction is wrong.
+
+8. **MCP intake is the onboarding path.** New modems come through the
+   MCP pipeline (`/modem-intake`), not manual file construction. The
+   pipeline validates against specs end-to-end. Manual construction
+   bypasses that validation.
+
+### Specs and Documentation
+
+9. **Specs are the authority.** Code follows specs. No silent
+   deviations. If the code needs to diverge, discuss the gap first,
+   update the spec, then update the code.
+
+10. **Design decisions land in specs, not in conversation.** Every
+    architectural decision made during a session must be committed to
+    the relevant spec file before the session ends. Conversation
+    history is ephemeral — specs are durable.
+
+11. **Docs and code move together.** Every core change reconciles the
+    affected specs (ARCHITECTURE, ORCHESTRATION_SPEC, MODEM_YAML_SPEC,
+    etc.). A code change without a corresponding spec update is
+    incomplete.
+
+### Code Quality
+
+12. **No shortcuts, no deferred structure.** If a better design is
+    obvious (split by transport, shared types module, DRY utility),
+    use it now. Don't optimise for speed of first draft. When a module
+    grows past its natural boundary, restructure the whole module —
+    don't bolt on the new thing and leave the rest.
+
+13. **Quality gates are not negotiable.** If mypy, ruff, black, or
+    pytest fails, fix the code. Don't exclude files, skip checks,
+    or weaken thresholds. The only valid exclusions are generated code
+    and vendored dependencies.
+
+14. **Test overrides are a code smell.** If reaching coverage requires
+    heavy mocking, monkeypatching, or test overrides, the code
+    structure is wrong. Restructure the code (extract dependency, make
+    injectable), don't paper over it with test complexity.
+
+### Testing
+
+15. **Table-driven tests by default.** Identify the pattern BEFORE
+    writing tests, not during review. If 3+ tests share the same
+    setup→call→assert structure, start with the table.
+
+16. **Schema tests use fixtures, behavioural tests stay inline.**
+    Valid/invalid configs are JSON fixture files (add a file to add a
+    test case). Field defaults, access patterns, and state mutations
+    are inline tests.
+
+17. **No inline data blobs in test files.** No inline JSON, HTML, or
+    multi-line data in test methods. Data comes from fixture files or
+    named constants at module top.
+
+### Process
+
+18. **Only the developer stages files.** Never run `git add`. Show
+    the list of changed files and proposed commit message. Let the
+    developer stage them.
+
+19. **No external actions without discussion.** Never create GitHub
+    issues, PRs, commits, pushes, label changes, or any external-
+    facing action without explicit discussion first.
+
+20. **Before deleting or moving ANY file, run `rg <filename>` across
+    the entire project.** Files are referenced by non-Python sources
+    (CI workflows, Makefiles, docs, VS Code tasks) that linters don't
+    scan.
 
 ## Architecture and Specifications
 
-These are the authoritative doc indexes for the project:
+Authoritative doc indexes:
 
 | Index | Scope |
 |-------|-------|
@@ -16,6 +134,7 @@ These are the authoritative doc indexes for the project:
 
 | Section                 | What it covers                              |
 |-------------------------|---------------------------------------------|
+| Core Principles         | Architecture, config, specs, quality, testing, process |
 | Code Review Criteria    | See `docs/CODE_REVIEW.md`                   |
 | Pre-Push Verification   | Run `ruff` and `pytest` before pushing      |
 | Async/Blocking I/O      | Wrap sync I/O in executor for HA            |

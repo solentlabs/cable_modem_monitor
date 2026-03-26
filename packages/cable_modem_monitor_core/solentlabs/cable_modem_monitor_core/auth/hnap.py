@@ -13,14 +13,17 @@ for lockout handling.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import logging
-import time
 from typing import TYPE_CHECKING
 
 import requests
 
+from ..protocol.hnap import (
+    HNAP_ENDPOINT,
+    HNAP_NAMESPACE,
+    compute_auth_header,
+    hmac_hex,
+)
 from .base import AuthContext, AuthResult, BaseAuthManager
 
 if TYPE_CHECKING:
@@ -28,19 +31,9 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-# Fixed by protocol — all HNAP modems use this namespace.
-HNAP_NAMESPACE = "http://purenetworks.com/HNAP1/"
-
-# Fixed HNAP endpoint.
-HNAP_ENDPOINT = "/HNAP1/"
-
 # Pre-auth signing key used for the initial challenge request,
 # before the private key is derived from the challenge response.
 _PRE_AUTH_KEY = "withoutloginkey"
-
-# Timestamp modulo to match firmware's 32-bit integer handling.
-# From SOAPAction.js: Math.floor(Date.now()) % 2000000000000
-_TIMESTAMP_MODULO = 2_000_000_000_000
 
 
 class HnapAuthManager(BaseAuthManager):
@@ -133,9 +126,10 @@ class HnapAuthManager(BaseAuthManager):
         headers = {
             "Content-Type": "application/json; charset=utf-8",
             "SOAPAction": f'"{HNAP_NAMESPACE}Login"',
-            "HNAP_AUTH": self._compute_auth_header(
+            "HNAP_AUTH": compute_auth_header(
                 _PRE_AUTH_KEY,
                 "Login",
+                self._hmac_algorithm,
             ),
         }
 
@@ -194,13 +188,15 @@ class HnapAuthManager(BaseAuthManager):
     ) -> AuthResult:
         """Compute credentials and send the login request (phase 2)."""
         # Derive keys from challenge
-        private_key = self._hmac_hex(
+        private_key = hmac_hex(
             key=self._public_key + password,
             message=self._challenge,
+            algorithm=self._hmac_algorithm,
         )
-        login_password = self._hmac_hex(
+        login_password = hmac_hex(
             key=private_key,
             message=self._challenge,
+            algorithm=self._hmac_algorithm,
         )
 
         # Set session cookie from challenge response
@@ -219,9 +215,10 @@ class HnapAuthManager(BaseAuthManager):
         headers = {
             "Content-Type": "application/json; charset=utf-8",
             "SOAPAction": f'"{HNAP_NAMESPACE}Login"',
-            "HNAP_AUTH": self._compute_auth_header(
+            "HNAP_AUTH": compute_auth_header(
                 private_key,
                 "Login",
+                self._hmac_algorithm,
             ),
         }
 
@@ -273,61 +270,3 @@ class HnapAuthManager(BaseAuthManager):
             success=True,
             auth_context=AuthContext(private_key=private_key),
         )
-
-    def _hmac_hex(self, key: str, message: str) -> str:
-        """Compute HMAC and return uppercase hex digest.
-
-        Uses the algorithm configured in modem.yaml (MD5 or SHA256).
-
-        Args:
-            key: HMAC key string.
-            message: HMAC message string.
-
-        Returns:
-            Uppercase hex digest string.
-        """
-        if self._hmac_algorithm == "sha256":
-            digest = hashlib.sha256
-        else:
-            digest = hashlib.md5
-
-        return (
-            hmac.new(
-                key.encode("utf-8"),
-                message.encode("utf-8"),
-                digest,
-            )
-            .hexdigest()
-            .upper()
-        )
-
-    def _compute_auth_header(
-        self,
-        private_key: str,
-        action: str,
-    ) -> str:
-        """Compute the ``HNAP_AUTH`` header value.
-
-        Format: ``HMAC_HEX TIMESTAMP`` where:
-        - ``HMAC_HEX`` = HMAC(key=private_key, msg=timestamp + soapActionURI)
-        - ``soapActionURI`` includes quotes per protocol:
-          ``'"http://purenetworks.com/HNAP1/Login"'``
-        - ``TIMESTAMP`` = ``floor(time_ms) % 2_000_000_000_000``
-
-        Args:
-            private_key: Signing key (``"withoutloginkey"`` for
-                pre-auth, derived key for post-auth).
-            action: HNAP action name (e.g., ``"Login"``).
-
-        Returns:
-            Header value string.
-        """
-        timestamp = str(
-            int(time.time() * 1000) % _TIMESTAMP_MODULO,
-        )
-        soap_action_uri = f'"{HNAP_NAMESPACE}{action}"'
-        auth_hash = self._hmac_hex(
-            key=private_key,
-            message=timestamp + soap_action_uri,
-        )
-        return f"{auth_hash} {timestamp}"

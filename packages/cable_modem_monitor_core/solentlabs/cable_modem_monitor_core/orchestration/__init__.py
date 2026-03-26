@@ -11,7 +11,7 @@ RUNTIME_POLLING_SPEC.md for behavioral rules.
 
 from __future__ import annotations
 
-from .actions import execute_hnap_action, execute_http_action, execute_restart_action
+from .actions import ActionResult, execute_action, execute_hnap_action, execute_http_action
 from .channel_stability import ChannelStabilityMonitor
 from .collector import LoginLockoutError, ModemDataCollector
 from .models import (
@@ -59,7 +59,8 @@ __all__ = [
     "SignalPolicy",
     "derive_connection_status",
     "derive_docsis_status",
+    "ActionResult",
+    "execute_action",
     "execute_hnap_action",
     "execute_http_action",
-    "execute_restart_action",
 ]

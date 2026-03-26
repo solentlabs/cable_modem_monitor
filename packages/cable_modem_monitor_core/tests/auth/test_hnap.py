@@ -12,11 +12,13 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from solentlabs.cable_modem_monitor_core.auth.hnap import (
-    HNAP_NAMESPACE,
-    HnapAuthManager,
-)
+from solentlabs.cable_modem_monitor_core.auth.hnap import HnapAuthManager
 from solentlabs.cable_modem_monitor_core.models.modem_config.auth import HnapAuth
+from solentlabs.cable_modem_monitor_core.protocol.hnap import (
+    HNAP_NAMESPACE,
+    compute_auth_header,
+    hmac_hex,
+)
 
 
 def _make_manager(hmac_algorithm: str = "md5") -> HnapAuthManager:
@@ -239,8 +241,7 @@ HMAC_ALGORITHM_CASES = [
 )
 def test_hmac_algorithm_output(algorithm: str, hex_len: int, desc: str) -> None:
     """Verify HMAC algorithm produces correct output length."""
-    manager = _make_manager(hmac_algorithm=algorithm)
-    result = manager._hmac_hex("test_key", "test_message")
+    result = hmac_hex("test_key", "test_message", algorithm=algorithm)
     assert len(result) == hex_len
     assert result == result.upper()
 
@@ -248,40 +249,37 @@ def test_hmac_algorithm_output(algorithm: str, hex_len: int, desc: str) -> None:
 class TestAuthHeader:
     """Test HNAP_AUTH header computation."""
 
-    @patch("solentlabs.cable_modem_monitor_core.auth.hnap.time")
+    @patch("solentlabs.cable_modem_monitor_core.protocol.hnap.time")
     def test_header_format(self, mock_time: Any) -> None:
         """HNAP_AUTH header has correct format: 'HMAC_HEX TIMESTAMP'."""
         mock_time.time.return_value = 1708960420.646
-        manager = _make_manager()
 
-        header = manager._compute_auth_header("withoutloginkey", "Login")
+        header = compute_auth_header("withoutloginkey", "Login")
 
         parts = header.split(" ")
         assert len(parts) == 2
-        hmac_hex, timestamp = parts
-        assert len(hmac_hex) == 32
-        assert hmac_hex == hmac_hex.upper()
+        hmac_part, timestamp = parts
+        assert len(hmac_part) == 32
+        assert hmac_part == hmac_part.upper()
         assert timestamp.isdigit()
 
-    @patch("solentlabs.cable_modem_monitor_core.auth.hnap.time")
+    @patch("solentlabs.cable_modem_monitor_core.protocol.hnap.time")
     def test_timestamp_modulo(self, mock_time: Any) -> None:
         """Timestamp uses modulo 2_000_000_000_000."""
         mock_time.time.return_value = 2_500_000_000.123
-        manager = _make_manager()
 
-        header = manager._compute_auth_header("key", "Action")
+        header = compute_auth_header("key", "Action")
 
         timestamp = int(header.split(" ")[1])
         expected = 2_500_000_000_123 % 2_000_000_000_000
         assert timestamp == expected
 
-    @patch("solentlabs.cable_modem_monitor_core.auth.hnap.time")
+    @patch("solentlabs.cable_modem_monitor_core.protocol.hnap.time")
     def test_hmac_includes_quoted_namespace(self, mock_time: Any) -> None:
         """HMAC message includes quoted SOAP namespace URI."""
         mock_time.time.return_value = 1.0
-        manager = _make_manager()
 
-        header = manager._compute_auth_header("test_key", "Login")
+        header = compute_auth_header("test_key", "Login")
 
         timestamp = "1000"
         soap_uri = f'"{HNAP_NAMESPACE}Login"'

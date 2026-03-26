@@ -22,10 +22,9 @@ from ..loaders.http import (
     LoginPageDetectedError,
     ResourceLoadError,
 )
-from ..models.modem_config.actions import HnapAction, HttpAction
 from ..models.modem_config.auth import BasicAuth, NoneAuth
 from ..parsers.coordinator import ModemParserCoordinator, filter_restart_window
-from .actions import execute_hnap_action, execute_http_action
+from .actions import execute_action
 from .models import ModemResult
 from .signals import CollectorSignal
 
@@ -358,29 +357,7 @@ class ModemDataCollector:
 
         _logger.debug("Executing logout action")
         try:
-            action = actions.logout
-            if isinstance(action, HttpAction):
-                execute_http_action(
-                    self._session,
-                    self._base_url,
-                    action,
-                    timeout=self._modem_config.timeout,
-                )
-            elif isinstance(action, HnapAction):
-                private_key = ""
-                if self._auth_context:
-                    private_key = self._auth_context.private_key
-                hmac_algorithm = "md5"
-                if hasattr(self._modem_config.auth, "hmac_algorithm"):
-                    hmac_algorithm = self._modem_config.auth.hmac_algorithm
-                execute_hnap_action(
-                    self._session,
-                    self._base_url,
-                    action,
-                    private_key=private_key,
-                    hmac_algorithm=hmac_algorithm,
-                    timeout=self._modem_config.timeout,
-                )
+            execute_action(self, self._modem_config, actions.logout)
         except Exception:
             _logger.debug("Logout failed (best-effort)", exc_info=True)
         else:

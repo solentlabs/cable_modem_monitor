@@ -1428,3 +1428,58 @@ period state are internal to `monitor_recovery()`.
 - WARNING: `"Restart recovery: channel stabilization timeout after 300s (counts still changing)"`
 
 ---
+
+## Action Executors
+
+Transport-scoped executors for modem-side actions (logout, restart).
+Located in `orchestration/actions/`.
+
+### Single Dispatch
+
+`execute_action(collector, modem_config, action)` is the single entry
+point for all action execution. Both the collector (logout) and
+orchestrator (restart) call it. The function extracts session, base
+URL, and HNAP credentials from the collector and dispatches to the
+appropriate transport-scoped executor based on the action's type
+discriminator (`http` or `hnap`).
+
+### HTTP Executor
+
+`http_action.execute_http_action()` handles standard HTTP actions.
+
+Phases:
+1. **Pre-fetch** (optional): GET `pre_fetch_url` to establish session
+   state (CSRF tokens, nonces).
+2. **Endpoint extraction** (optional): find a `<form>` whose `action`
+   attribute contains the `endpoint_pattern` keyword. Core-provided
+   extraction — the keyword is not a regex.
+3. **Main request**: send the action request to the resolved endpoint.
+
+Connection errors and timeouts are treated as success (the modem is
+rebooting during restart). Returns `ActionResult`.
+
+### HNAP Executor
+
+`hnap_action.execute_hnap_action()` handles HNAP SOAP actions.
+
+Phases:
+1. **Pre-fetch** (optional): call `pre_fetch_action` HNAP action to
+   retrieve current config values.
+2. **Interpolation**: replace `${var:default}` placeholders in `params`
+   with values from the pre-fetch response.
+3. **Main request**: HMAC-sign and send a SOAP POST to `/HNAP1/`.
+4. **Response validation**: check `response_key`, `result_key`, and
+   `success_value` from the action config.
+
+Connection errors during the main request are treated as success.
+HMAC signing uses shared primitives from `protocol.hnap`.
+Returns `ActionResult`.
+
+### ActionResult
+
+All executors return `ActionResult(success, message, details)`.
+Callers may use or ignore it — restart is fire-and-forget today,
+but the result is available for diagnostics and future recovery
+decisions.
+
+---

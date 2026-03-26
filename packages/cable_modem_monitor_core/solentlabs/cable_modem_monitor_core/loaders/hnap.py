@@ -9,28 +9,18 @@ See RESOURCE_LOADING_SPEC.md HNAP Batching section.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import logging
-import time
 from typing import TYPE_CHECKING, Any
 
 import requests
+
+from ..protocol.hnap import HNAP_ENDPOINT, HNAP_NAMESPACE, compute_auth_header
 
 if TYPE_CHECKING:
     from ..models.parser_config import ParserConfig
 
 _logger = logging.getLogger(__name__)
-
-# Fixed by protocol — all HNAP modems use this namespace.
-HNAP_NAMESPACE = "http://purenetworks.com/HNAP1/"
-
-# Fixed HNAP endpoint.
-HNAP_ENDPOINT = "/HNAP1/"
-
-# Timestamp modulo matching firmware integer handling.
-_TIMESTAMP_MODULO = 2_000_000_000_000
 
 # Empty string is used as the action value in GetMultipleHNAPs requests.
 # HAR evidence from all known HNAP modems confirms empty string ("").
@@ -98,7 +88,11 @@ class HNAPLoader:
         headers = {
             "Content-Type": "application/json; charset=utf-8",
             "SOAPAction": f'"{HNAP_NAMESPACE}GetMultipleHNAPs"',
-            "HNAP_AUTH": self._compute_auth_header("GetMultipleHNAPs"),
+            "HNAP_AUTH": compute_auth_header(
+                self._private_key,
+                "GetMultipleHNAPs",
+                self._hmac_algorithm,
+            ),
         }
 
         try:
@@ -139,37 +133,6 @@ class HNAPLoader:
         )
 
         return {"hnap_response": hnap_response}
-
-    def _compute_auth_header(self, action: str) -> str:
-        """Compute the ``HNAP_AUTH`` header value for a request.
-
-        Args:
-            action: HNAP action name (e.g., ``"GetMultipleHNAPs"``).
-
-        Returns:
-            Header value: ``"HMAC_HEX TIMESTAMP"``.
-        """
-        timestamp = str(
-            int(time.time() * 1000) % _TIMESTAMP_MODULO,
-        )
-        soap_action_uri = f'"{HNAP_NAMESPACE}{action}"'
-
-        if self._hmac_algorithm == "sha256":
-            digest = hashlib.sha256
-        else:
-            digest = hashlib.md5
-
-        auth_hash = (
-            hmac.new(
-                self._private_key.encode("utf-8"),
-                (timestamp + soap_action_uri).encode("utf-8"),
-                digest,
-            )
-            .hexdigest()
-            .upper()
-        )
-
-        return f"{auth_hash} {timestamp}"
 
 
 class HNAPLoadError(Exception):

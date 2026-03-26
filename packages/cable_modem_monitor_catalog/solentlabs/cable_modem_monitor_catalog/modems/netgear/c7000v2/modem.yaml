@@ -6,6 +6,16 @@ default_host: "192.168.100.1"
 auth:
   strategy: basic
 
+actions:
+  restart:
+    type: http
+    method: POST
+    pre_fetch_url: "/RouterStatus.htm"
+    endpoint_pattern: "RouterStatus"
+    endpoint: "/goform/RouterStatus"
+    params:
+      buttonSelect: "2"
+
 hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"

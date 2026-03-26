@@ -651,8 +651,8 @@ actions:
 | `endpoint` | string | yes | URL path to send the request to |
 | `params` | map | no | Form parameters. If present, body is `application/x-www-form-urlencoded`. If absent, no request body. |
 | `headers` | map | no | Per-action headers. Merged with session-level `headers` (action wins on conflict). |
-| `pre_fetch_url` | string | no | URL to fetch before the action (extract dynamic endpoint or tokens) |
-| `endpoint_pattern` | string | no | Regex to extract the actual endpoint from pre-fetch response |
+| `pre_fetch_url` | string | no | URL to fetch before the action (establish session state or extract dynamic endpoint) |
+| `endpoint_pattern` | string | no | Keyword to match within form action attributes on the pre-fetch page. Core wraps this in a form-action regex — not a raw regex. See Architecture Decision below. |
 
 ### Action schema — `type: hnap`
 
@@ -703,7 +703,7 @@ actions:
     method: POST
     endpoint: "/goform/logout"
     pre_fetch_url: "/Logout.htm"
-    endpoint_pattern: "action='(/goform/logout[^']*)'"
+    endpoint_pattern: "logout"
     params:
       nowTime: ""
 ```
@@ -713,6 +713,32 @@ actions:
 The CSRF token is managed by the `form_pbkdf2` auth strategy
 (`csrf_init_endpoint` + `csrf_header` in auth config). The action
 config doesn't need CSRF awareness.
+
+### Architecture Decision: endpoint_pattern
+
+`endpoint_pattern` is a **keyword/substring**, not a regex. Core
+provides form-action extraction as a built-in strategy — it wraps the
+keyword in a `<form ... action="...keyword...">` regex internally.
+
+**Why:** modem.yaml selects from core-provided behaviours and supplies
+parameters. This follows the same pattern as auth strategies — the
+modem declares *what* to find, core handles *how*. Contributors supply
+a simple keyword, not a fragile regex.
+
+**Extraction logic (in `orchestration/actions/http_action.py`):**
+1. Fetch `pre_fetch_url`
+2. Search for `<form ... action="...keyword...">` (case-insensitive)
+3. If found → use the full action attribute value as the endpoint
+4. If not found and `endpoint` is set → fallback with ERROR log
+5. If not found and no `endpoint` → fail the action
+
+**Logging on extraction failure:**
+- ERROR with the keyword, fallback endpoint (if any), and a 500-char
+  page content preview for diagnostics.
+
+**Extensibility:** If a future modem needs non-form extraction (e.g.,
+JavaScript variable), add an `extraction_mode` field to the schema and
+a new core strategy. Don't build until needed.
 
 ```yaml
 auth:

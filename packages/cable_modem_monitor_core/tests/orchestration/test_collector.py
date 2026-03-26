@@ -464,7 +464,7 @@ class TestLogout:
                 "_parse",
                 return_value=modem_data,
             ),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_http_action") as mock_action,
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
             result = collector.execute()
 
@@ -498,7 +498,7 @@ class TestLogout:
                 "_parse",
                 return_value=modem_data,
             ),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_http_action") as mock_action,
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
             collector.execute()
 
@@ -532,7 +532,7 @@ class TestLogout:
                 return_value=modem_data,
             ),
             patch(
-                "solentlabs.cable_modem_monitor_core.orchestration.collector.execute_http_action",
+                "solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action",
                 side_effect=RuntimeError("logout failed"),
             ),
         ):
@@ -562,7 +562,7 @@ class TestLogout:
             patch.object(collector, "_ensure_authenticated", return_value=auth_result),
             patch.object(collector, "_load_resources", return_value={}),
             patch.object(collector, "_parse", return_value=modem_data),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_http_action"),
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action"),
         ):
             # Set auth context as if authentication succeeded
             collector._auth_context = AuthContext()

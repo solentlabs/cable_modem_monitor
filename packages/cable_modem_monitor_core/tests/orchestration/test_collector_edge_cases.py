@@ -267,10 +267,10 @@ class TestHnapResourceLoading:
 
 
 class TestHnapLogout:
-    """HNAP logout action dispatches to execute_hnap_action."""
+    """HNAP logout action dispatches via execute_action."""
 
     def test_hnap_logout_called(self) -> None:
-        """HNAP logout action dispatches to execute_hnap_action."""
+        """HNAP logout action dispatches via execute_action."""
         logout_action = HnapAction(
             type="hnap",
             action_name="Logout",
@@ -290,15 +290,16 @@ class TestHnapLogout:
             patch.object(collector, "_ensure_authenticated", return_value=MagicMock(success=True)),
             patch.object(collector, "_load_resources", return_value={}),
             patch.object(collector, "_parse", return_value=modem_data),
-            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_hnap_action") as mock_hnap,
+            patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,
         ):
             result = collector.execute()
 
         assert result.success is True
-        mock_hnap.assert_called_once()
-        call_kwargs = mock_hnap.call_args
-        assert call_kwargs[1]["private_key"] == "test_key"
-        assert call_kwargs[1]["hmac_algorithm"] == "md5"
+        mock_action.assert_called_once()
+        # Verify the logout action was passed through
+        call_args = mock_action.call_args[0]
+        assert call_args[0] is collector
+        assert call_args[2] is logout_action
 
 
 # ------------------------------------------------------------------

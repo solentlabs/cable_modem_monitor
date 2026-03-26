@@ -18,7 +18,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from .actions import execute_restart_action
+from .actions import execute_action
 from .models import ModemSnapshot, OrchestratorDiagnostics, RestartResult
 from .policy import SignalPolicy
 from .restart import RestartMonitor
@@ -160,7 +160,7 @@ class Orchestrator:
         self._is_restarting = True
         try:
             # Send restart command
-            execute_restart_action(self._collector, self._modem_config, actions.restart)
+            execute_action(self._collector, self._modem_config, actions.restart)
             self._collector.clear_session()
             _logger.info(
                 "Restart command sent — session cleared (%.1fs)",

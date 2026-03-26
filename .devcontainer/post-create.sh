@@ -8,6 +8,10 @@ echo "📦 Installing Python dependencies..."
 pip install --root-user-action=ignore -r requirements-dev.txt
 pip install --root-user-action=ignore -r tests/requirements.txt
 
+echo "📦 Installing solentlabs packages (editable)..."
+pip install --root-user-action=ignore -e packages/cable_modem_monitor_core
+pip install --root-user-action=ignore -e packages/cable_modem_monitor_catalog
+
 # Install CodeQL CLI if not already installed
 if ! command -v codeql > /dev/null 2>&1; then
     echo "🔍 Installing CodeQL CLI..."
