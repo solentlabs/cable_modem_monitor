@@ -237,14 +237,12 @@ Run before creating a pull request:
 ```bash
 make validate-ci
 # OR
-./scripts/ci-check.sh
+ruff check . && pytest
 ```
 
 This runs:
-- Code linting
-- Format checking
-- Type checking (mypy)
-- Full test suite
+- Code linting (ruff)
+- Full test suite (pytest)
 
 ### Using VS Code Tasks
 
@@ -498,7 +496,7 @@ See [WSL2_SETUP.md](WSL2_SETUP.md) - native Windows development is not supported
 | Lint code | `make lint` |
 | **Validation** | |
 | Quick validation | `make validate` |
-| Full CI validation | `make validate-ci` or `./scripts/ci-check.sh` |
+| Full CI validation | `make validate-ci` or `ruff check . && pytest` |
 | **Other** | |
 | Fresh start test | `python scripts/dev/fresh_start.py` |
 | View all tasks | `Ctrl+Shift+P` → "Tasks: Run Task" |

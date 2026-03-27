@@ -248,8 +248,8 @@ class TestStatusUpgrade:
 class TestDocsisInference:
     """Edge cases for DOCSIS version inference."""
 
-    def test_channel_type_field_mapping(self) -> None:
-        """channel_type field in mappings → 3.1 (mixed types)."""
+    def test_channel_type_field_without_ofdm(self) -> None:
+        """channel_type field in mappings but QAM-only → 3.0."""
         analysis: dict[str, Any] = {
             "transport": "http",
             "sections": {
@@ -260,6 +260,24 @@ class TestDocsisInference:
                         {"field": "channel_type", "type": "string"},
                         {"field": "frequency", "type": "integer"},
                     ],
+                },
+            },
+        }
+        result = enrich_metadata(analysis)
+        assert result.metadata["hardware"]["docsis_version"] == "3.0"
+
+    def test_channel_type_map_with_ofdm(self) -> None:
+        """channel_type map containing OFDM values → 3.1."""
+        analysis: dict[str, Any] = {
+            "transport": "http",
+            "sections": {
+                "downstream": {
+                    "format": "table",
+                    "channel_type": {
+                        "field": "modulation",
+                        "map": {"QAM256": "qam", "OFDM PLC": "ofdm"},
+                    },
+                    "mappings": [],
                 },
             },
         }

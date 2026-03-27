@@ -242,15 +242,9 @@ See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and
 
 ## Adding Support for New Modem Models
 
-> **📖 See [Parser Guide](docs/reference/PARSER_GUIDE.md)** for complete instructions.
+New modems are onboarded through the MCP intake pipeline. See [MODEM_REQUEST.md](docs/MODEM_REQUEST.md) for how to submit your modem's data.
 
-**Quick overview:**
-1. Capture HTML from your modem's status pages
-2. Create parser in `parsers/<manufacturer>/<model>.py` (extend `ModemParser`)
-3. Add test fixtures with `metadata.yaml` (see [Fixture Format](docs/reference/FIXTURE_FORMAT.md))
-4. Write tests - the plugin system auto-discovers your parser
-
-**Example parsers:** `arris/sb6141.py` (simple), `motorola/mb7621.py` (form auth), `technicolor/xb7.py` (complex)
+Modem configurations live in the catalog package (`packages/cable_modem_monitor_catalog/`). Each modem has a `modem.yaml`, `parser.yaml`, and `test_data/` directory with a HAR capture and golden file.
 
 ## Code Style
 
@@ -300,12 +294,6 @@ See `docs/SECURITY_LINTING.md` for security-specific linting tools (Bandit, Semg
 See `docs/reference/LINTING.md` for comprehensive linting documentation.
 
 ## Testing Guide
-
-> **📖 See [Testing Guide](./docs/reference/TESTING.md)** for comprehensive testing documentation including:
-> - Running tests locally
-> - Test suite overview
-> - CI/CD pipeline details
-> - Troubleshooting common issues
 
 **Quick commands:**
 ```bash

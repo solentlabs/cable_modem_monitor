@@ -93,7 +93,8 @@ def _extract_row(
     """Extract field values from a table row's cells.
 
     Returns ``None`` if the row has fewer cells than any column index
-    (likely a header or malformed row).
+    (likely a header or malformed row), or if fewer than half the
+    declared columns produced values (likely a footer/summary row).
     """
     channel: dict[str, Any] = {}
 
@@ -112,7 +113,16 @@ def _extract_row(
         if value is not None:
             channel[col.field] = value
 
-    return channel if channel else None
+    if not channel:
+        return None
+
+    # Sparse row detection: footer/summary rows typically have values
+    # in only a few columns (e.g., "Total" with corrected/uncorrected
+    # but no channel_id, frequency, lock_status).
+    if len(channel) < len(columns) // 2:
+        return None
+
+    return channel
 
 
 def _apply_channel_type(

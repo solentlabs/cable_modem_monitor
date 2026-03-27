@@ -286,8 +286,11 @@ def detect_row_start(table: DetectedTable) -> int:
     return skip
 
 
+_FOOTER_KEYWORDS: frozenset[str] = frozenset({"total", "sum", "summary", "subtotal", "average", "avg"})
+
+
 def is_data_row(row: list[str]) -> bool:
-    """Check if a row contains actual data (not headers/empty/dashes)."""
+    """Check if a row contains actual data (not headers/empty/dashes/footers)."""
     if not row:
         return False
 
@@ -297,6 +300,11 @@ def is_data_row(row: list[str]) -> bool:
 
     # All dashes
     if all(cell.strip() in ("-", "--", "---", "N/A", "n/a") for cell in row):
+        return False
+
+    # Footer detection — first cell is a summary keyword
+    first_cell = row[0].strip().lower()
+    if first_cell in _FOOTER_KEYWORDS:
         return False
 
     # At least one cell with a numeric-looking value

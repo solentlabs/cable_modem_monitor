@@ -238,11 +238,11 @@ def _run_collector_with_failure(
     collector = ModemDataCollector(config, MagicMock(), None, "http://localhost", "", "")
 
     auth_patch = (
-        patch.object(collector, "_ensure_authenticated", side_effect=auth_side_effect)
+        patch.object(collector, "authenticate", side_effect=auth_side_effect)
         if auth_side_effect
         else patch.object(
             collector,
-            "_ensure_authenticated",
+            "authenticate",
             return_value=auth_return or MagicMock(success=True),
         )
     )
@@ -374,7 +374,7 @@ class TestSuccessfulCollection:
         with (
             patch.object(
                 collector,
-                "_ensure_authenticated",
+                "authenticate",
                 return_value=MagicMock(success=True),
             ),
             patch.object(
@@ -407,7 +407,7 @@ class TestSuccessfulCollection:
         with (
             patch.object(
                 collector,
-                "_ensure_authenticated",
+                "authenticate",
                 return_value=MagicMock(success=True),
             ),
             patch.object(
@@ -451,7 +451,7 @@ class TestLogout:
         with (
             patch.object(
                 collector,
-                "_ensure_authenticated",
+                "authenticate",
                 return_value=MagicMock(success=True),
             ),
             patch.object(
@@ -485,7 +485,7 @@ class TestLogout:
         with (
             patch.object(
                 collector,
-                "_ensure_authenticated",
+                "authenticate",
                 return_value=MagicMock(success=True),
             ),
             patch.object(
@@ -518,7 +518,7 @@ class TestLogout:
         with (
             patch.object(
                 collector,
-                "_ensure_authenticated",
+                "authenticate",
                 return_value=MagicMock(success=True),
             ),
             patch.object(
@@ -559,7 +559,7 @@ class TestLogout:
         # Simulate a successful first poll with logout
         auth_result = MagicMock(success=True, auth_context=AuthContext())
         with (
-            patch.object(collector, "_ensure_authenticated", return_value=auth_result),
+            patch.object(collector, "authenticate", return_value=auth_result),
             patch.object(collector, "_load_resources", return_value={}),
             patch.object(collector, "_parse", return_value=modem_data),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action"),

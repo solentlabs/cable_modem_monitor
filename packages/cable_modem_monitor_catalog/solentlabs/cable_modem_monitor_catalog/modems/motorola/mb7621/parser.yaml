@@ -71,6 +71,14 @@ upstream:
       filter:
         lock_status: "locked"
 
+aggregate:
+  total_corrected:
+    channels: downstream
+    sum: corrected
+  total_uncorrected:
+    channels: downstream
+    sum: uncorrected
+
 system_info:
   sources:
     - format: html_fields

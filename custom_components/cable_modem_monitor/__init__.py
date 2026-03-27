@@ -65,6 +65,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
+from .core.log_buffer import setup_log_buffer
 from .migrations import async_run_migrations
 from .services import async_register_services, async_unregister_services
 
@@ -103,6 +104,10 @@ async def async_setup_entry(
     executor thread because they involve file I/O.
     """
     _LOGGER.info("Cable Modem Monitor v%s starting", VERSION)
+
+    # Initialize log buffer before any Core calls so auth, parsing,
+    # action, and health logs are captured from the first poll.
+    setup_log_buffer(hass)
 
     # Resolve effective polling intervals (options override data)
     scan_interval = entry.options.get(

@@ -34,7 +34,11 @@ from .const import (
     VERSION,
 )
 from .coordinator import CableModemConfigEntry
-from .core.log_buffer import get_log_entries
+from .core.log_buffer import (
+    get_log_entries,
+    sanitize_log_message,
+    strip_logger_prefix,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,24 +50,6 @@ MAX_LOG_RECORDS = 150
 # ------------------------------------------------------------------
 # Sanitization
 # ------------------------------------------------------------------
-
-
-def _sanitize_log_message(message: str) -> str:
-    """Remove credentials, private IPs, and file paths from a string."""
-    message = re.sub(
-        r"(password|passwd|pwd|token|key|secret|auth|username|user)" r"[\s]*[=:]\s*[^\s,}\]]+",
-        r"\1=***REDACTED***",
-        message,
-        flags=re.IGNORECASE,
-    )
-    message = re.sub(r"/config/[^\s,}\]]+", "/config/***PATH***", message)
-    message = re.sub(r"/home/[^\s,}\]]+", "/home/***PATH***", message)
-    message = re.sub(
-        r"\b(?!192\.168\.100\.1\b)" r"(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)" r"\d{1,3}\.\d{1,3}\b",
-        "***PRIVATE_IP***",
-        message,
-    )
-    return message
 
 
 # ------------------------------------------------------------------
@@ -81,8 +67,8 @@ def _create_log_entry(
     return {
         "timestamp": timestamp,
         "level": level,
-        "logger": str(logger).replace("custom_components.cable_modem_monitor.", ""),
-        "message": _sanitize_log_message(str(message)),
+        "logger": strip_logger_prefix(str(logger)),
+        "message": sanitize_log_message(str(message)),
     }
 
 
@@ -198,7 +184,8 @@ def _get_logs_from_file(log_file_path: Path) -> list[dict[str, Any]]:
         r"^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+"
         r"(\w+)\s+"
         r"\([^)]+\)\s+"
-        r"\[custom_components\.cable_modem_monitor\.?([^\]]*)\]\s+"
+        r"\[(?:custom_components\.cable_modem_monitor"
+        r"|solentlabs\.cable_modem_monitor_core)\.?([^\]]*)\]\s+"
         r"(.+)$"
     )
 
@@ -347,7 +334,13 @@ def _build_diagnostics_dict(
 
     # Modem data summary
     if snapshot:
-        health_info = snapshot.health_info
+        # Prefer health coordinator data (updated every 30s) over the
+        # data coordinator snapshot (updated every 10m).
+        health_info = None
+        if runtime.health_coordinator is not None and runtime.health_coordinator.data is not None:
+            health_info = runtime.health_coordinator.data
+        if health_info is None:
+            health_info = snapshot.health_info
         diagnostics["modem_data"] = {
             "connection_status": snapshot.connection_status.value,
             "docsis_status": snapshot.docsis_status.value,
@@ -398,7 +391,7 @@ def _build_diagnostics_dict(
     # Last error from coordinator
     if data_coord.last_exception:
         exc_type = type(data_coord.last_exception).__name__
-        exc_msg = _sanitize_log_message(str(data_coord.last_exception))
+        exc_msg = sanitize_log_message(str(data_coord.last_exception))
         if len(exc_msg) > 200:
             exc_msg = exc_msg[:200] + "... (truncated)"
         diagnostics["last_error"] = {

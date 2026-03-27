@@ -72,6 +72,7 @@ class HealthMonitor:
         # State
         self._latest = HealthInfo(health_status=HealthStatus.UNKNOWN)
         self._last_collection_time: float | None = None
+        self._previous_status: HealthStatus = HealthStatus.UNKNOWN
 
     def ping(self) -> HealthInfo:
         """Run health probes and return results.
@@ -318,7 +319,32 @@ class HealthMonitor:
         icmp_ok: bool | None,
         http_ok: bool | None,
     ) -> None:
-        """Log the health check result per the logging contract."""
+        """Log the health check result.
+
+        Log levels:
+        - WARNING: degraded or unresponsive (always visible)
+        - INFO: status transitions and first check after startup
+        - DEBUG: routine "still responsive" checks (every 30s)
+        """
+        detail = self._probe_detail(info, icmp_ok, http_ok)
+        status = info.health_status.value
+        changed = info.health_status != self._previous_status
+        self._previous_status = info.health_status
+
+        if info.health_status in (HealthStatus.DEGRADED, HealthStatus.UNRESPONSIVE):
+            _logger.warning("Health check: %s (%s)", status, detail)
+        elif changed:
+            _logger.info("Health check: %s (%s)", status, detail)
+        else:
+            _logger.debug("Health check: %s (%s)", status, detail)
+
+    def _probe_detail(
+        self,
+        info: HealthInfo,
+        icmp_ok: bool | None,
+        http_ok: bool | None,
+    ) -> str:
+        """Build human-readable probe detail string for log messages."""
         parts: list[str] = []
 
         if icmp_ok is not None:
@@ -340,10 +366,4 @@ class HealthMonitor:
         elif self._http_probe:
             parts.append("HTTP skipped — collection evidence fresh")
 
-        detail = ", ".join(parts) if parts else "no probes"
-        status = info.health_status.value
-
-        if info.health_status in (HealthStatus.DEGRADED, HealthStatus.UNRESPONSIVE):
-            _logger.warning("Health check: %s (%s)", status, detail)
-        else:
-            _logger.info("Health check: %s (%s)", status, detail)
+        return ", ".join(parts) if parts else "no probes"

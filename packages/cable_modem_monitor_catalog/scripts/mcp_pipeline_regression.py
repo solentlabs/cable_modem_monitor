@@ -197,7 +197,7 @@ def _diff_config_files(
     if extra:
         diffs.append(f"{label}: extra keys {sorted(extra)}")
     for key in sorted(gen_keys & com_keys):
-        if generated[key] != committed[key]:
+        if generated[key] != committed[key]:  # type: ignore[index]
             diffs.append(f"{label}.{key}: differs")
     return diffs
 

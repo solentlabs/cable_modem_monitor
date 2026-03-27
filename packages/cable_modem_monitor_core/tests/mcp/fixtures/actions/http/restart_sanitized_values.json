@@ -1,0 +1,38 @@
+{
+  "_description": "Restart form with sanitized values detected by PASS_ pattern",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.100.1/goform/DeviceSecurity",
+        "headers": [],
+        "postData": {
+          "params": [
+            {
+              "name": "UserAuth",
+              "value": "PASS_16811255"
+            },
+            {
+              "name": "SecurityAction",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/DeviceSecurity",
+    "params": {
+      "UserAuth": "",
+      "SecurityAction": "1"
+    },
+    "credential_params": ["UserAuth"]
+  }
+}

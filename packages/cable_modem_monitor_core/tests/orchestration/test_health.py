@@ -600,13 +600,13 @@ class TestHealthLogging:
 
     @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
     @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_responsive_logs_info(
+    def test_first_responsive_logs_info(
         self,
         mock_run: MagicMock,
         mock_head: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """RESPONSIVE logs at INFO level."""
+        """First RESPONSIVE check (status transition) logs at INFO."""
         mock_run.return_value = _mock_ping_success(4.0)
         mock_head.return_value = _mock_http_response()
 
@@ -615,6 +615,31 @@ class TestHealthLogging:
             monitor.ping()
 
         assert "Health check: responsive" in caplog.text
+
+    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
+    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    def test_routine_responsive_logs_debug(
+        self,
+        mock_run: MagicMock,
+        mock_head: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Repeated RESPONSIVE checks (no transition) log at DEBUG."""
+        mock_run.return_value = _mock_ping_success(4.0)
+        mock_head.return_value = _mock_http_response()
+
+        monitor = _make_monitor()
+        monitor.ping()  # first check — transitions UNKNOWN → RESPONSIVE
+
+        caplog.clear()
+        with caplog.at_level("DEBUG"):
+            monitor.ping()  # second check — still RESPONSIVE
+
+        assert "Health check: responsive" in caplog.text
+        # Verify it was DEBUG, not INFO
+        for record in caplog.records:
+            if "Health check:" in record.message:
+                assert record.levelname == "DEBUG"
 
     @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
     @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")

@@ -18,9 +18,10 @@
 
 ## Related Issues
 
-<!-- Link to related issues using keywords like "Fixes #123" or "Closes #456" -->
+<!-- Link to related issues. Do NOT use "Fixes #" or "Closes #" — GitHub
+     auto-closes issues from commit messages on merge. Use "Related to #" instead. -->
 
-Fixes #
+Related to #
 
 ## Changes Made
 
@@ -85,23 +86,15 @@ Fixes #
 
 ### For New Modem Support
 
-<!-- Only applicable if adding support for a new modem model -->
+<!-- Only applicable if adding support for a new modem model.
+     The recommended path is the MCP intake pipeline (/modem-intake),
+     which generates configs from a HAR capture. -->
 
-- [ ] I have added a new parser in `custom_components/cable_modem_monitor/parsers/<manufacturer>/`
-- [ ] I have included test fixtures (HTML samples from the modem)
-- [ ] I have added tests for the new parser
-- [ ] I have verified the modem appears in `tests/parsers/FIXTURES.md` (auto-generated from metadata.yaml)
-- [ ] I have tested with the actual modem hardware
-
-#### Fixture Requirements
-
-- [ ] Created `metadata.yaml` in fixture directory (see [template](../docs/reference/FIXTURE_FORMAT.md#metadatayaml-template))
-- [ ] **PII scrubbed from all fixtures:**
-  - [ ] MAC addresses removed/anonymized (e.g., `00:00:00:00:00:00`)
-  - [ ] Serial numbers removed/anonymized (e.g., `XXXXXXXXXXXX`)
-  - [ ] Public IP addresses removed (e.g., `0.0.0.0`)
-  - [ ] Account/subscriber IDs removed
-- [ ] Captured ALL available status pages (downstream, upstream, system info, logs if available)
+- [ ] HAR captured with [`har-capture`](https://github.com/solentlabs/har-capture) (auto-sanitizes PII)
+- [ ] Modem directory created: `packages/cable_modem_monitor_catalog/.../modems/<manufacturer>/<model>/`
+- [ ] Contains: `modem.yaml`, `parser.yaml`, `test_data/modem.har`, `test_data/modem.expected.json`
+- [ ] Catalog test suite discovers and passes for the new modem (`pytest packages/cable_modem_monitor_catalog/tests/`)
+- [ ] Tested with actual modem hardware
 
 ### Compliance
 

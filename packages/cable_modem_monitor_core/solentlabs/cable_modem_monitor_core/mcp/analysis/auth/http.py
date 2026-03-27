@@ -403,8 +403,9 @@ def _extract_form(entries: list[dict[str, Any]], signals: _HttpAuthSignals) -> A
     params = parse_form_params(post_data)
     username_field, password_field, hidden_fields = classify_form_fields(params)
 
-    # Detect encoding: check if password value looks like base64
-    encoding = detect_encoding(params, password_field)
+    # Detect encoding: check POST value, then fall back to login page JS
+    login_page_html = _find_login_page_html(entries, entry)
+    encoding = detect_encoding(params, password_field, login_page_html)
 
     # Detect success indicator
     success: dict[str, str] = {}
@@ -490,27 +491,81 @@ def classify_form_fields(
     return username_field, password_field, hidden_fields
 
 
-def detect_encoding(params: dict[str, str], password_field: str) -> str:
-    """Detect password encoding from form parameter values.
+def detect_encoding(
+    params: dict[str, str],
+    password_field: str,
+    login_page_html: str = "",
+) -> str:
+    """Detect password encoding from POST values or login page JavaScript.
 
-    If the password value looks like valid base64, returns ``base64``.
-    Otherwise returns ``plain``.
+    Two heuristics (first match wins):
+    1. POST body: password value looks like valid base64.
+    2. Login page HTML: JavaScript encodes the password before submission
+       (e.g., ``isEncryptPswd = 1`` with a base64 ``encode()`` function,
+       or ``btoa()`` applied to the password field).
     """
+    # Heuristic 1: POST body value
     pwd_value = params.get(password_field, "")
-    if not pwd_value:
-        return "plain"
-
-    # Check if value looks like base64 (common in modem form auth)
-    if _BASE64_CHARS.match(pwd_value) and len(pwd_value) >= 4:
+    if pwd_value and _BASE64_CHARS.match(pwd_value) and len(pwd_value) >= 4:
         try:
             decoded = base64.b64decode(pwd_value, validate=True)
-            # If it decodes to valid UTF-8 text, likely base64-encoded
             decoded.decode("utf-8")
             return "base64"
         except Exception:
             pass
 
+    # Heuristic 2: Login page JavaScript
+    if login_page_html and _has_js_base64_encoding(login_page_html):
+        return "base64"
+
     return "plain"
+
+
+# Base64 keyStr — the exact 65-character alphabet string used by
+# modem firmware JavaScript encoders.  No false positives: this
+# literal only appears in base64 implementations.
+_BASE64_KEYSTR = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+_JS_BTOA_PATTERN = re.compile(r"btoa\s*\(", re.IGNORECASE)
+
+
+def _has_js_base64_encoding(html: str) -> bool:
+    """Check if login page JavaScript encodes the password in base64."""
+    if _BASE64_KEYSTR in html:
+        return True
+    return bool(_JS_BTOA_PATTERN.search(html))
+
+
+def _find_login_page_html(
+    entries: list[dict[str, Any]],
+    form_post_entry: dict[str, Any],
+) -> str:
+    """Find the login page HTML that served the login form.
+
+    Scans entries before the form POST for a GET response containing
+    an HTML form whose action matches the POST URL.
+    """
+    post_url = form_post_entry["request"].get("url", "")
+    post_path = path_from_url(post_url)
+
+    for entry in entries:
+        if entry is form_post_entry:
+            break
+        req = entry["request"]
+        if req.get("method", "") != "GET":
+            continue
+        content = entry["response"].get("content", {})
+        text: str = content.get("text", "")
+        if not text:
+            continue
+        mime: str = content.get("mimeType", "")
+        if "html" not in mime:
+            continue
+        # Check if this page contains a form posting to the login URL
+        if post_path in text:
+            return text
+
+    return ""
 
 
 def _has_challenge_cookie_retry(entries: list[dict[str, Any]], challenge_entry: dict[str, Any]) -> bool:

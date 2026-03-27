@@ -88,7 +88,7 @@ standardized name.
 ## Tier 3 — Unregistered Fields
 
 Modem-specific pass-throughs with no registry entry. These follow
-the naming rules below and flow to HA entity attributes unchanged.
+the naming rules below and flow to downstream attributes unchanged.
 No validation beyond format.
 
 Examples: `t3_timeouts`, `t4_timeouts`, `security_type`,

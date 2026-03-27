@@ -46,6 +46,8 @@ def test_http_logout_details(fixture_path: Path) -> None:
     assert result.logout.endpoint == expected["endpoint"]
     if "params" in expected:
         assert result.logout.params == expected["params"]
+    if "credential_params" in expected:
+        assert result.logout.credential_params == expected["credential_params"]
 
 
 @pytest.mark.parametrize(
@@ -64,3 +66,5 @@ def test_http_restart_details(fixture_path: Path) -> None:
     assert result.restart.endpoint == expected["endpoint"]
     if "params" in expected:
         assert result.restart.params == expected["params"]
+    if "credential_params" in expected:
+        assert result.restart.credential_params == expected["credential_params"]

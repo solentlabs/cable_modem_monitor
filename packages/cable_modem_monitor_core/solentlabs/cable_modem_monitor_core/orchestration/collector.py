@@ -109,7 +109,7 @@ class ModemDataCollector:
         """
         # Phase 1: Auth
         try:
-            auth_result = self._ensure_authenticated()
+            auth_result = self.authenticate()
         except LoginLockoutError as exc:
             _logger.warning("Auth lockout — firmware anti-brute-force triggered")
             return ModemResult(
@@ -249,8 +249,13 @@ class ModemDataCollector:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _ensure_authenticated(self) -> AuthResult:
-        """Validate session and authenticate if needed."""
+    def authenticate(self) -> AuthResult:
+        """Authenticate the session if not already valid.
+
+        Short-circuits if the session is already valid. Called internally
+        before data collection and externally by the orchestrator before
+        restart actions.
+        """
         if self.session_is_valid:
             _logger.debug("Session valid — reusing")
             return self._last_auth_result or AuthResult(success=True)

@@ -25,7 +25,7 @@ Your captured data becomes a **test fixture** - a frozen snapshot we use to:
 2. **Write tests** - Verify the parser extracts data correctly
 3. **Prevent regressions** - Ensure future changes don't break your modem
 
-You can see existing fixtures at [`modems/README.md`](../modems/README.md).
+You can see supported modems in the [catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).
 
 ---
 
@@ -188,4 +188,4 @@ If anything sensitive remains, either:
 
 - Check existing [modem request issues](https://github.com/solentlabs/cable_modem_monitor/issues?q=label%3A%22new+modem%22) for examples
 - Open a [GitHub Discussion](https://github.com/solentlabs/cable_modem_monitor/discussions) for questions
-- See [modems/README.md](../modems/README.md) for the current modem library
+- See the [modem catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/) for currently supported modems
