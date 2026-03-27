@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -812,7 +813,7 @@ def _build_prefix_options(hass: HomeAssistant) -> list[selector.SelectOptionDict
 
 
 def _build_reauth_schema(
-    data: dict[str, Any],
+    data: dict[str, Any] | Mapping[str, Any],
 ) -> vol.Schema:
     """Build the reauth form schema (host + credentials)."""
     return vol.Schema(

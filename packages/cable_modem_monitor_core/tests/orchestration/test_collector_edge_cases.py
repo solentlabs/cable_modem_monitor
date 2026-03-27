@@ -124,7 +124,7 @@ class TestConnectionFailureDuringAuth:
 
         with patch.object(
             collector,
-            "_ensure_authenticated",
+            "authenticate",
             side_effect=requests.ConnectionError("refused"),
         ):
             result = collector.execute()
@@ -139,7 +139,7 @@ class TestConnectionFailureDuringAuth:
 
         with patch.object(
             collector,
-            "_ensure_authenticated",
+            "authenticate",
             side_effect=requests.Timeout("timed out"),
         ):
             result = collector.execute()
@@ -287,7 +287,7 @@ class TestHnapLogout:
 
         modem_data: dict[str, Any] = {"downstream": [], "upstream": [], "system_info": {}}
         with (
-            patch.object(collector, "_ensure_authenticated", return_value=MagicMock(success=True)),
+            patch.object(collector, "authenticate", return_value=MagicMock(success=True)),
             patch.object(collector, "_load_resources", return_value={}),
             patch.object(collector, "_parse", return_value=modem_data),
             patch("solentlabs.cable_modem_monitor_core.orchestration.collector.execute_action") as mock_action,

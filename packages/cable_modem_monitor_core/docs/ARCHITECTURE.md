@@ -149,9 +149,9 @@ Core's engine. Depends on both Core and Catalog.
 | Runtime storage | `CableModemRuntimeData` on `entry.runtime_data` (HA 2024.12+) |
 | Data coordinator | Wraps Core's `Orchestrator.get_modem_data()` in HA's `DataUpdateCoordinator` |
 | Health coordinator | Second `DataUpdateCoordinator` wrapping `HealthMonitor.ping()`. Conditional — only created if probes work. Independent cadence (default 30s) |
-| Entities | Maps Core's `ModemSnapshot` → HA sensors. Channel sensors unavailable when `modem_data` is None |
-| Status sensor | Priority cascade over `connection_status`, `health_status`, `docsis_status`. `diagnosis` attribute derived in HA from `health_status` enum |
-| Restart button | Maps HA button press → `orchestrator.restart()` in executor thread with `cancel_event` for clean shutdown |
+| Entities | Maps Core's `ModemSnapshot` → platform entities. Channel entities unavailable when `modem_data` is None |
+| Status sensor | Priority cascade over `connection_status`, `health_status`, `docsis_status`. `diagnosis` attribute derived by adapter from `health_status` enum |
+| Restart button | Maps platform button press → `orchestrator.restart()` in executor thread with `cancel_event` for clean shutdown |
 | Update button | Triggers immediate poll via `coordinator.async_request_refresh()` |
 | Reset entities button | Removes all entities from HA registry and reloads the integration |
 | Reauth flow | Circuit breaker triggers HA native `async_step_reauth`. Calls `orchestrator.reset_auth()` on success |
@@ -713,8 +713,9 @@ field-level definitions of `ModemSnapshot`, `OrchestratorDiagnostics`,
 See [ORCHESTRATION_SPEC.md](ORCHESTRATION_SPEC.md#data-models) for
 per-value definitions (`ConnectionStatus`, `DocsisStatus`, `HealthStatus`).
 
-Consumers compose these into a display state. The HA integration's
-Status sensor uses a priority cascade — see `ENTITY_MODEL_SPEC.md`.
+Consumers compose these into a display state. The platform adapter
+uses a priority cascade — see `ENTITY_MODEL_SPEC.md` for the HA
+implementation.
 
 **Capabilities are implicit.** A field mapping in parser.yaml or an
 override in parser.py declares the capability. If downstream channels
@@ -1341,6 +1342,9 @@ The test harness in Core consumes these fixtures. This means:
 | Coordinator parser registry | Section type → parser function dispatch via dict, not isinstance chain. Five known section types registered; unimplemented formats are stubs that raise `NotImplementedError` with the missing parser name. Adding a format is one registry entry + parser implementation. |
 | `enrich_metadata` separates inference from config assembly | `generate_config` assembles YAML from known facts. Inferring facts from HAR analysis (default_host from request URLs, DOCSIS version from channel types) is a different concern. `enrich_metadata` provides structured guidance on inferred/missing/conflicting fields — essential for self-service contributors who need to know what's missing when their PR validation fails. |
 | `write_modem_package` for file placement | Pipeline produces configs and golden files in memory. Rather than relying on the LLM to write files with correct names and directory structure, a dedicated tool writes the standard catalog structure. Guarantees file layout matches what the test harness expects. |
+| Transport-scoped action executors with single dispatch | HTTP and HNAP actions have different protocols (form-based vs SOAP). Separate modules (`http_action.py`, `hnap_action.py`) prevent coupling; single `execute_action()` dispatch provides unified interface for collector (logout) and orchestrator (restart). |
+| Config fields are parameters, not implementations | `endpoint_pattern` supplies a keyword; core provides form-action extraction as a built-in strategy. Contributors specify *what* to find, core handles *how*. Extensible via `extraction_mode` field if a future modem needs non-form extraction. |
+| HNAP protocol primitives in shared `protocol/` module | HMAC signing and protocol constants are used by auth, loaders, and action executors. Shared `protocol/hnap.py` eliminates duplication while each consumer owns its protocol-specific flow. |
 
 ---
 

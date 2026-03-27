@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0] - 2026-03-26
+
+### Architecture
+
+v3.14 is a full architecture rewrite. The monolithic `custom_components/`
+codebase is split into three layered packages:
+
+- **`cable_modem_monitor_core`** — Platform-agnostic library: config models,
+  auth managers, parsers, orchestration, health monitoring, and MCP tools.
+  Zero Home Assistant dependencies. 1,572 tests, 96% coverage.
+- **`cable_modem_monitor_catalog`** — Data-driven modem catalog: YAML configs,
+  parser configs, HAR fixtures, and golden files. Drop a directory to add a
+  modem — no code changes required. 31 HAR replay regression tests.
+- **`custom_components/cable_modem_monitor`** — Thin HA adapter: maps Core
+  output to HA entities, coordinators, config flow, and diagnostics.
+
+### Added
+
+- **MCP Onboarding Pipeline** — Six-phase analysis pipeline that generates
+  `modem.yaml` and `parser.yaml` from a HAR capture: `validate_har`,
+  `analyze_har`, `generate_config`, `generate_parser`, `enrich_metadata`,
+  and `golden_file` tools. Detects auth strategy, data format, channel
+  mappings, and actions directly from HTTP evidence.
+- **31 Modems in Catalog** — All v3.13 modems migrated plus 12 new: TM1602A,
+  CODA56, CM1100, CM2050V, DM1000, CGA4236, CGA6444VF, TG3442DE, S33v2,
+  MB8600, XB6, CGM4140COM. Includes 6 variant entries (S33v2, CM1200-HTTPS,
+  TC4400AM, MB8600/MB8611 shared parser, XB6, CGM4140COM).
+- **SJCL AES-CCM Auth Strategy** (`form_sjcl`) — New auth strategy for
+  Arris TG3442DE modems that use Stanford JavaScript Crypto Library
+  encryption (AES-CCM mode with PBKDF2 key derivation).
+- **Transport-Scoped Action Executors** — HTTP and HNAP action execution
+  split into protocol-specific modules with pre-fetch support, endpoint
+  extraction, and HMAC-signed SOAP calls.
+- **Health Pipeline** — Independent health monitoring with ICMP ping and
+  HTTP probes running on a faster cadence than data polling. Configurable
+  suppression windows, per-modem probe selection, and graceful timeout
+  handling.
+- **Orchestrator** — Central polling coordinator: session reuse across
+  polls (HNAP uid + private key, cookie-based sessions), circuit breaker
+  for auth failures, restart-window awareness, evidence-based error
+  tracking with structured totals per category.
+- **Restart Monitor** — Detects modem restarts via connectivity loss +
+  recovery pattern, with configurable detection window and cooldown.
+- **HAR Replay Test Harness** — Deterministic parser testing: mock HTTP
+  server replays HAR responses, golden file comparison validates output.
+  Auto-discovers testable modems from the catalog.
+- **Circular Log Buffer** — Diagnostics log buffer with configurable
+  capacity, compatible with HA 2025.11+ reload behavior.
+- **Credential Param Classification** — MCP action detection now identifies
+  credential fields by name and sanitizer patterns, replacing values with
+  empty strings in generated configs.
+
+### Changed
+
+- **Modem configs are YAML-driven** — Auth strategy, session management,
+  data pages, parser format, field mappings, actions, and metadata are all
+  declared in `modem.yaml` and `parser.yaml`. No modem requires code changes.
+- **Parser architecture** — Format-specific parsers (HTML table, transposed
+  table, JS embedded, JSON, HNAP) with shared type conversion, field
+  registry, and table selection. Column/field mappings declared in
+  `parser.yaml`.
+- **Auth architecture** — Strategy pattern with 8 implementations (none,
+  basic, form, form_nonce, form_pbkdf2, form_sjcl, url_token, hnap).
+  Each reads config from `modem.yaml` — no strategy requires modem-specific
+  code.
+- **HA adapter is thin** — Config flow, entity creation, coordinator
+  wiring, diagnostics. No parsing, no auth, no modem-specific logic.
+  Uses `runtime_data` (HA 2024.12+) instead of `hass.data`.
+- **v3.13 modules retired** — All v3.13 core modules, parsers, tests, and
+  scripts removed. Clean break — no compatibility shims.
+
+### Fixed
+
+- **MB7621 restart** — Restart POST now includes all 6 required form fields
+  (HAR-driven, not fixture-inspected). Previous config silently failed.
+- **DOCSIS version false positive** — `enrich_metadata` now checks actual
+  `channel_type` map values for OFDM/OFDMA, not just field presence. A
+  DOCSIS 3.0 modem with a `channel_type` column no longer triggers 3.1.
+- **Auth encoding detection** — Falls back to login page JavaScript analysis
+  (`keyStr` constant, `btoa()`) when POST body value is sanitized.
+- **Table footer detection** — MCP analysis and runtime parser now reject
+  summary/footer rows ("Total", "Sum", etc.).
+- **Sparse row filtering** — Runtime parser skips rows where fewer than half
+  the declared columns produced values.
+
 ## [3.13.2] - 2026-03-11
 
 ### Added

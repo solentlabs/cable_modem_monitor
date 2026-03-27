@@ -1,11 +1,17 @@
 """Circular log buffer for Cable Modem Monitor diagnostics.
 
-Captures INFO+ logs from cable_modem_monitor loggers into a fixed-size circular
-buffer that's always available in diagnostics, independent of HA's logging config.
-Oldest entries are automatically dropped when the buffer is full.
+Captures INFO+ logs from both the HA adapter
+(``custom_components.cable_modem_monitor``) and Core package
+(``solentlabs.cable_modem_monitor_core``) loggers into a fixed-size
+circular buffer.  Always available in diagnostics, independent of HA's
+logging config.  Oldest entries are automatically dropped when the
+buffer is full.
 
-This addresses HA 2025.11+ where home-assistant.log was removed for HAOS users
-and system_log only captures WARNING/ERROR.
+Messages are sanitized and logger prefixes stripped at capture time so
+the buffer never holds sensitive data.
+
+This addresses HA 2025.11+ where home-assistant.log was removed for
+HAOS users and system_log only captures WARNING/ERROR.
 
 Usage:
     # In __init__.py during setup:
@@ -20,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -32,8 +39,64 @@ if TYPE_CHECKING:
 MAX_LOG_ENTRIES = 200
 LOG_BUFFER_KEY = "log_buffer"
 
-# Our domain - imported late to avoid circular imports
+# Our domain
 DOMAIN = "cable_modem_monitor"
+
+# Loggers to capture: HA adapter + Core package
+_MONITORED_LOGGERS = (
+    f"custom_components.{DOMAIN}",
+    "solentlabs.cable_modem_monitor_core",
+)
+
+# Prefixes to strip for cleaner diagnostics output (trailing dot included)
+_LOGGER_PREFIXES = (
+    f"custom_components.{DOMAIN}.",
+    "solentlabs.cable_modem_monitor_core.",
+)
+
+
+# ------------------------------------------------------------------
+# Shared helpers — used by log_buffer and diagnostics
+# ------------------------------------------------------------------
+
+
+def strip_logger_prefix(logger_name: str) -> str:
+    """Strip known logger prefixes for cleaner diagnostics output.
+
+    Removes the HA adapter or Core package prefix so diagnostics show
+    ``auth.form`` instead of
+    ``solentlabs.cable_modem_monitor_core.auth.form``.
+    """
+    for prefix in _LOGGER_PREFIXES:
+        if logger_name.startswith(prefix):
+            return logger_name[len(prefix) :]
+    return logger_name
+
+
+def sanitize_log_message(message: str) -> str:
+    """Remove private IPs and file paths from a log message.
+
+    Applied at capture time so the buffer never holds user-specific data.
+    We only capture logs from our own code (Core + HA adapter), which
+    never logs raw credentials.  Scrubbing targets the two things that
+    can leak user environment info: private IPs and filesystem paths.
+
+    The modem gateway IP (192.168.100.1) is preserved — it appears in
+    every modem interaction and is not user-specific.
+    """
+    message = re.sub(r"/config/[^\s,}\]]+", "/config/***PATH***", message)
+    message = re.sub(r"/home/[^\s,}\]]+", "/home/***PATH***", message)
+    message = re.sub(
+        r"\b(?!192\.168\.100\.1\b)" r"(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)" r"\d{1,3}\.\d{1,3}\b",
+        "***PRIVATE_IP***",
+        message,
+    )
+    return message
+
+
+# ------------------------------------------------------------------
+# Data types
+# ------------------------------------------------------------------
 
 
 @dataclass
@@ -62,15 +125,17 @@ class LogBuffer:
     entries: deque[LogEntry] = field(default_factory=lambda: deque(maxlen=MAX_LOG_ENTRIES))
 
     def add(self, level: str, logger: str, message: str) -> None:
-        """Add a log entry to the buffer."""
-        # Strip the common prefix for cleaner output
-        short_logger = logger.replace("custom_components.cable_modem_monitor.", "")
+        """Add a sanitized log entry to the buffer.
+
+        Logger prefixes are stripped and messages are sanitized at
+        capture time so the buffer never holds sensitive data.
+        """
         self.entries.append(
             LogEntry(
                 timestamp=time.time(),
                 level=level,
-                logger=short_logger,
-                message=message,
+                logger=strip_logger_prefix(logger),
+                message=sanitize_log_message(message),
             )
         )
 
@@ -86,8 +151,9 @@ class LogBuffer:
 class BufferingHandler(logging.Handler):
     """Log handler that captures entries to our buffer.
 
-    Installed on the cable_modem_monitor logger to capture all INFO+
-    logs while still allowing them to propagate to HA's normal handlers.
+    Installed on both the HA adapter and Core package loggers to capture
+    all INFO+ logs while still allowing them to propagate to HA's normal
+    handlers.
     """
 
     def __init__(self, buffer: LogBuffer, level: int = logging.INFO) -> None:
@@ -105,11 +171,18 @@ class BufferingHandler(logging.Handler):
             self.handleError(record)
 
 
-def setup_log_buffer(hass: HomeAssistant) -> None:
-    """Set up the log buffer and install the handler.
+# ------------------------------------------------------------------
+# Setup and retrieval
+# ------------------------------------------------------------------
 
-    Should be called once during integration setup. On reload, reuses the existing
-    buffer to preserve log history.
+
+def setup_log_buffer(hass: HomeAssistant) -> None:
+    """Set up the log buffer and install handlers on monitored loggers.
+
+    Attaches a ``BufferingHandler`` to both the HA adapter logger
+    (``custom_components.cable_modem_monitor``) and the Core package
+    logger (``solentlabs.cable_modem_monitor_core``).  On reload, reuses
+    the existing buffer to preserve log history.
 
     Args:
         hass: Home Assistant instance
@@ -117,20 +190,47 @@ def setup_log_buffer(hass: HomeAssistant) -> None:
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    # Install handler on our root logger
-    logger = logging.getLogger(f"custom_components.{DOMAIN}")
-
-    # Check if we already have a BufferingHandler (reuse on reload)
-    for handler in logger.handlers:
-        if isinstance(handler, BufferingHandler):
-            # Reuse existing buffer - preserve logs across reloads
-            hass.data[DOMAIN][LOG_BUFFER_KEY] = handler.buffer
-            return
-
-    # First setup - create new buffer and handler
-    buffer = LogBuffer()
+    # Recover existing buffer (survives reload — loggers are singletons
+    # so their handlers persist even when hass.data is cleared)
+    buffer = _find_existing_buffer(hass)
+    if buffer is None:
+        buffer = LogBuffer()
     hass.data[DOMAIN][LOG_BUFFER_KEY] = buffer
 
+    # Attach handler to each monitored logger (skip if already attached)
+    for logger_name in _MONITORED_LOGGERS:
+        _ensure_handler(logging.getLogger(logger_name), buffer)
+
+    # Ensure Core logger captures INFO+ records.  HA sets the root logger
+    # to WARNING — non-HA packages inherit that default, which suppresses
+    # all INFO-level Core logs.
+    core_logger = logging.getLogger("solentlabs.cable_modem_monitor_core")
+    if core_logger.getEffectiveLevel() > logging.INFO:
+        core_logger.setLevel(logging.INFO)
+
+
+def _find_existing_buffer(hass: HomeAssistant) -> LogBuffer | None:
+    """Find an existing log buffer from hass.data or logger handlers.
+
+    Checks hass.data first (normal path), then falls back to inspecting
+    logger handlers (recovers buffer after hass.data is cleared during
+    reload).
+    """
+    if DOMAIN in hass.data:
+        buf = hass.data[DOMAIN].get(LOG_BUFFER_KEY)
+        if isinstance(buf, LogBuffer):
+            return buf
+    for logger_name in _MONITORED_LOGGERS:
+        for handler in logging.getLogger(logger_name).handlers:
+            if isinstance(handler, BufferingHandler):
+                return handler.buffer
+    return None
+
+
+def _ensure_handler(logger: logging.Logger, buffer: LogBuffer) -> None:
+    """Add a BufferingHandler to the logger if not already present."""
+    if any(isinstance(h, BufferingHandler) for h in logger.handlers):
+        return
     handler = BufferingHandler(buffer, level=logging.INFO)
     handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(handler)

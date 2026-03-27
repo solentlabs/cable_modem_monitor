@@ -285,6 +285,30 @@ Scan HAR for logout and restart flows:
 **Restart is rarely in the HAR.** Most contributors capture status pages,
 not admin operations. Omitting restart is normal and correct.
 
+#### Credential Param Classification
+
+After extracting action params, classify each param as a credential or
+an action trigger.  This applies to both HTTP and HNAP actions.
+
+**Detection heuristics (either triggers classification):**
+
+| Signal | Example |
+|--------|---------|
+| Field name contains a credential keyword (`password`, `passwd`, `pwd`, `secret`, `token`) | `OldPassword`, `csrf_token` |
+| Value matches HAR sanitizer pattern (`FIELD_[hex]`, `PASS_[hex]`) | `FIELD_7e8cc9ae`, `PASS_16811255` |
+
+**Behaviour:**
+
+- Detected credential values are replaced with empty strings in the
+  generated config.  The sanitized values are artifacts — they are
+  neither the real credential nor a useful placeholder.
+- The field names are recorded in `credential_params` on the
+  `ActionDetail` so the MCP tool output annotates which params were
+  credentials vs action triggers.
+- All form fields are preserved in `params` — the browser submits the
+  whole form, and the server may require them to be present even if
+  their values are not validated for the action.
+
 ### Phase 5: Format Detection
 
 Format is constrained by transport:
@@ -1479,9 +1503,10 @@ downstream:
 1. **One HAR = one transport.** The tools do not support mixed-transport
    modems (no known examples exist).
 
-2. **DOCSIS version is not auto-detected.** The tools default to "3.1"
-   for DOCSIS 3.1 modems (OFDM channels present) and "3.0" otherwise.
-   Human should verify.
+2. **DOCSIS version inference is value-based.** The tools check actual
+   `channel_type` map values for OFDM/OFDMA — not just the presence of
+   a `channel_type` field. A DOCSIS 3.0 modem with a `channel_type`
+   column (QAM/ATDMA only) correctly returns "3.0". Human should verify.
 
 3. **`max_concurrent` cannot be detected from HAR.** Only one session
    exists during capture. Default to `0` and flag for verification.
@@ -1496,10 +1521,13 @@ downstream:
    typically added from modem documentation or code inspection, not
    from HAR analysis.
 
-6. **Password encoding detection is heuristic.** If the password field
-   in the HAR POST body appears to be base64-encoded (matches
-   `[A-Za-z0-9+/=]+` and decodes to printable text), flag as
-   `encoding: base64`. Otherwise default to `plain`.
+6. **Password encoding detection is heuristic.** Two signals (first
+   match wins): (1) POST body — if the password value matches
+   `[A-Za-z0-9+/=]+` and decodes to printable UTF-8, flag as
+   `encoding: base64`. (2) Login page JavaScript — if the page
+   preceding the login POST contains a base64 `keyStr` constant or
+   `btoa()` call applied to the password field, flag as `encoding:
+   base64`. Otherwise default to `plain`.
 
 7. **The tools target the current spec.** All generated configs conform
    to [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md) and [PARSING_SPEC.md](PARSING_SPEC.md) schemas.

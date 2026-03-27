@@ -153,10 +153,16 @@ def _apply_inferences(
         result.inferred.append("status")
 
 
+_OFDM_TYPES: frozenset[str] = frozenset({"ofdm", "ofdma"})
+
+
 def _infer_docsis_version(analysis: dict[str, Any]) -> str:
     """Infer DOCSIS version from channel types in analysis sections.
 
     OFDM or OFDMA channels → DOCSIS 3.1, otherwise 3.0.
+    Checks both fixed types and mapped values — the presence of a
+    channel_type field alone is not sufficient (a DOCSIS 3.0 modem
+    can have a channel_type column with only QAM/ATDMA values).
     """
     sections = analysis.get("sections") or {}
     for section_name in ("downstream", "upstream"):
@@ -164,12 +170,10 @@ def _infer_docsis_version(analysis: dict[str, Any]) -> str:
         channel_type = section.get("channel_type", {})
         if isinstance(channel_type, dict):
             fixed = channel_type.get("fixed", "")
-            if fixed in ("ofdm", "ofdma"):
+            if fixed.lower() in _OFDM_TYPES:
                 return "3.1"
-        # Check mappings for channel_type fields
-        for mapping in section.get("mappings", []):
-            if mapping.get("field") == "channel_type":
-                # Has a channel_type field → multiple types including OFDM
+            type_map = channel_type.get("map", {})
+            if any(v.lower() in _OFDM_TYPES for v in type_map.values()):
                 return "3.1"
     return "3.0"
 

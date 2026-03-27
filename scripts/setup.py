@@ -481,7 +481,7 @@ def main():  # noqa: C901
     print("Documentation:")
     print("  • Getting Started: docs/setup/GETTING_STARTED.md")
     print("  • Contributing:    CONTRIBUTING.md")
-    print("  • Architecture:    docs/reference/ARCHITECTURE.md")
+    print("  • Architecture:    packages/cable_modem_monitor_core/docs/ARCHITECTURE.md")
     print("")
     print("Happy coding! 🚀")
     print("")

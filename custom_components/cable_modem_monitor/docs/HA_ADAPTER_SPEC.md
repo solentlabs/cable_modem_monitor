@@ -401,7 +401,9 @@ Combines Core's `OrchestratorDiagnostics` with HA-side context.
 
 **From HA (adapter-side):**
 - PII review checklist
-- Sanitized recent logs from `cable_modem_monitor` logger
+- Sanitized recent logs from both the HA adapter
+  (`custom_components.cable_modem_monitor`) and Core package
+  (`solentlabs.cable_modem_monitor_core`) loggers
 - Full channel dump (downstream + upstream with all fields)
 - Config entry details (host, protocol, supports_icmp, etc.)
 - Coordinator state (last_update_success, update_interval)
@@ -533,7 +535,7 @@ The HA adapter layer consists of these modules:
 | `const.py` | Domain constants, config keys, defaults |
 | `services.py` | `generate_dashboard` service handler |
 | `migrations/` | Version-keyed config entry migration handlers |
-| `core/log_buffer.py` | Log capture for diagnostics |
+| `core/log_buffer.py` | Log capture for diagnostics (HA adapter + Core package loggers) |
 | `lib/host_validation.py` | URL building, host input parsing |
 | `lib/utils.py` | Utility functions (e.g., uptime parsing) |
 

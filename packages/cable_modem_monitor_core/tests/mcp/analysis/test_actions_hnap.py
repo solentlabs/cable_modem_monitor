@@ -46,6 +46,8 @@ def test_hnap_logout_details(fixture_path: Path) -> None:
     assert result.logout.endpoint == expected["endpoint"]
     if "action_name" in expected:
         assert result.logout.action_name == expected["action_name"]
+    if "credential_params" in expected:
+        assert result.logout.credential_params == expected["credential_params"]
 
 
 @pytest.mark.parametrize(
@@ -66,3 +68,5 @@ def test_hnap_restart_details(fixture_path: Path) -> None:
         assert result.restart.action_name == expected["action_name"]
     if "params" in expected:
         assert result.restart.params == expected["params"]
+    if "credential_params" in expected:
+        assert result.restart.credential_params == expected["credential_params"]

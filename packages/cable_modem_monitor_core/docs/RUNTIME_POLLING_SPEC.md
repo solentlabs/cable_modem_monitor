@@ -130,11 +130,11 @@ normalization):
 The `unknown` value prevents false "Not Locked" reports for modems
 that don't provide lock status data.
 
-The HA integration's Status sensor composes `connection_status`,
-`docsis_status`, and `health_status` (from the health pipeline) into
-a display state via a priority cascade. See
+The platform adapter composes `connection_status`, `docsis_status`,
+and `health_status` (from the health pipeline) into a display state
+via a priority cascade. See
 [ENTITY_MODEL_SPEC.md](../../custom_components/cable_modem_monitor/docs/ENTITY_MODEL_SPEC.md#status-sensor)
-for the cascade rules.
+for the HA implementation's cascade rules.
 
 ---
 
@@ -272,7 +272,7 @@ strategy returns `AuthResult.FAILURE`.
 
 Monitors modem availability independently from data polling. Runs on
 its own cadence (e.g., 30s) — typically faster than the data poll
-(e.g., 10m). The client (HA adapter) schedules health checks; the
+(e.g., 10m). The client (platform adapter) schedules health checks; the
 orchestrator reads the latest result during `get_modem_data()` without
 triggering a new probe.
 
@@ -399,7 +399,7 @@ Every signal a protocol layer can emit and the orchestrator's policy:
    poll fails. Partial data masks root causes — a missing page could mean
    wrong URL, changed firmware, or auth redirect. Log which page failed,
    the error type, and HTTP status if available. Previous `ModemData`
-   persists on HA sensors until the next successful poll.
+   persists in platform output until the next successful poll.
 
 2. **No backoff on connectivity failures.** Backoff protects the modem
    from brute-force login attempts. Connection failures aren't the
@@ -469,5 +469,5 @@ Health probe latencies (`icmp_latency_ms`, `http_latency_ms`) are on
 `HealthInfo`, not `OrchestratorDiagnostics` — different cadence, different
 model.
 
-These are available as HA sensor attributes or diagnostic data, not
-separate entities.
+These are available as attributes or diagnostic data, not separate
+entities.

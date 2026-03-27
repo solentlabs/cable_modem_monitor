@@ -7,7 +7,7 @@ body:
     id: model_listed
     attributes:
       label: Is your exact model listed?
-      description: Check the [Modem Fixture Library](https://github.com/solentlabs/cable_modem_monitor/blob/main/tests/parsers/FIXTURES.md). If your model isn't listed, use [New Modem Support Request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) instead.
+      description: Check the supported modems in the [Modem Catalog](https://github.com/solentlabs/cable_modem_monitor/tree/main/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems). If your model isn't listed, use [New Modem Support Request](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml) instead.
       options:
         - label: "Yes, my exact model is listed in FIXTURES.md"
           required: true

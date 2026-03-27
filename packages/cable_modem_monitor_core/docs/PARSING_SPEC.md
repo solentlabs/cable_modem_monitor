@@ -1507,7 +1507,7 @@ A modem can freely mix:
 
 All `BaseParser` implementations and parser.py hooks produce the same
 `ModemData` shape. This is the contract between parsing and everything
-downstream (entities, diagnostics, HA sensors).
+downstream (entities, diagnostics, platform output).
 
 Channel dicts and system_info are open — canonical fields are guaranteed,
 but any additional field mapped in parser.yaml or extracted by parser.py
@@ -1566,7 +1566,7 @@ without modifying Core or the `BaseParser` implementations.
 
 Channel entities are identified by the composite key
 `(channel_type, channel_id)`. This key is stable across polls and
-maps to HA entity IDs like `sensor.ds_qam_ch_21_power`.
+maps to entity IDs like `sensor.ds_qam_ch_21_power`.
 
 - `channel_type` disambiguates DOCSIS 3.1 modems where SC-QAM and
   OFDM channels can share the same channel ID
@@ -1603,7 +1603,7 @@ detection:
 - Missing optional fields are omitted (not `null` or empty string)
 
 **Additional mapped fields** — Core does not validate or interpret
-these. They flow from parser output to HA entity attributes unchanged.
+these. They flow from parser output to downstream attributes unchanged.
 Only fields explicitly mapped in parser.yaml or returned by parser.py
 are included — unmapped source fields are ignored. This is how modems
 expose additional data without requiring Core changes.

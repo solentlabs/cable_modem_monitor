@@ -100,6 +100,21 @@ SAFE_IP_PREFIXES = (
     "192.0.2.",  # TEST-NET-1
     "198.51.100.",  # TEST-NET-2
     "203.0.113.",  # TEST-NET-3
+    # har-capture format-preserving hashes produce IPs in 140-145.x.x.x
+    "140.",
+    "141.",
+    "142.",
+    "143.",
+    "144.",
+    "145.",
+    # Well-known public DNS (not user PII)
+    "1.1.1.1",
+    "1.0.0.1",
+    "8.8.8.8",
+    "8.8.4.4",
+    "9.9.9.9",
+    "208.67.222.222",
+    "208.67.220.220",
 )
 
 # Safe SSIDs (redacted placeholders or test values)
@@ -111,8 +126,9 @@ SAFE_SSID_VALUES = {
     "test_ssid",
 }
 
-# Safe values for tagValueList (status values, device names, not credentials)
+# Safe values for tagValueList (status values, device names, redacted placeholders)
 TAGVALUE_SAFE_PATTERNS = {
+    "redacted",
     # Status values
     "good",
     "locked",
@@ -181,7 +197,72 @@ def is_safe_ip(ip: str) -> bool:
 def is_safe_mac(mac: str) -> bool:
     """Check if a MAC address is safe (zeroed, broadcast, or placeholder)."""
     mac_lower = mac.lower()
-    return mac_lower in SAFE_MACS or mac_lower == "xx:xx:xx:xx:xx:xx"
+    if mac_lower in SAFE_MACS or mac_lower == "xx:xx:xx:xx:xx:xx":
+        return True
+    # har-capture format-preserving hashes produce 02:xx:xx:xx:xx:xx
+    # (locally-administered bit set)
+    return mac_lower.startswith("02:")
+
+
+# har-capture sanitized serial number prefixes
+_SAFE_SERIAL_PREFIXES = ("SNTLABS", "SERIAL_", "SN_")
+
+# Patterns in matches that indicate JS code, not real credentials/data
+_CODE_INDICATORS = ("=", "(", ".", "function", "document", "!0", "!1", "::")
+
+# har-capture redacted IPv6/MAC placeholders
+_SAFE_IPV6_PREFIXES = ("aaaa:", "abcd:", "aa:bb:cc:dd", "fe80:")
+
+# JS/code identifier: starts with s/S, all word characters (SNRLevel, SnmpLog, etc.)
+_JS_IDENT = re.compile(r"^[sS]\w+$")
+
+
+def _is_safe_ip_finding(match: str) -> bool:
+    """Check if an IP finding is a known false positive."""
+    if is_safe_ip(match):
+        return True
+    # DOCSIS/firmware version numbers (all octets < 10)
+    octets = match.split(".")
+    return len(octets) == 4 and all(o.isdigit() and int(o) < 10 for o in octets)
+
+
+def _is_safe_serial_finding(match: str) -> bool:
+    """Check if a serial_number finding is a known false positive."""
+    if any(match.startswith(p) for p in _SAFE_SERIAL_PREFIXES):
+        return True
+    if _JS_IDENT.match(match) or match in ("snapshot", "snippet"):
+        return True
+    return any(ind in match for ind in (*_CODE_INDICATORS, "/", ":"))
+
+
+def _has_code_indicators(match: str) -> bool:
+    """Check if a match contains JS/code patterns."""
+    return any(ind in match for ind in _CODE_INDICATORS)
+
+
+def _is_safe_finding(finding: dict[str, str]) -> bool:
+    """Filter known false positives from har-capture check_for_pii."""
+    pattern = finding["pattern"]
+    match = finding["match"]
+
+    if pattern == "public_ip":
+        return _is_safe_ip_finding(match)
+    if pattern == "mac_address":
+        return is_safe_mac(match)
+    if pattern == "private_ip":
+        return is_safe_ip(match) or match.startswith("10.")
+    if pattern == "serial_number":
+        return _is_safe_serial_finding(match)
+    if pattern == "password_field":
+        return _has_code_indicators(match) or match == "password=password"
+    if pattern == "session_token":
+        return _has_code_indicators(match)
+    if pattern == "ipv6":
+        match_lower = match.lower()
+        if any(match_lower.startswith(p) for p in _SAFE_IPV6_PREFIXES):
+            return True
+        return len(match) <= 5
+    return False
 
 
 def check_motorola_passwords(content: str, filepath: Path) -> list[str]:
@@ -295,8 +376,15 @@ def check_ips_in_content(content: str, filepath: Path) -> list[str]:
 
         # Validate it's a real IP (each octet 0-255)
         octets = ip.split(".")
-        if all(0 <= int(o) <= 255 for o in octets):
-            issues.append(f"  Non-allowed IP address: {ip}")
+        if not all(0 <= int(o) <= 255 for o in octets):
+            continue
+        # Skip firmware/DOCSIS versions that look like IPs
+        # Leading zeros (01.05.063.13) or all-small octets (5.7.1.5)
+        if any(len(o) > 1 and o.startswith("0") for o in octets):
+            continue
+        if all(int(o) < 10 for o in octets):
+            continue
+        issues.append(f"  Non-allowed IP address: {ip}")
 
     return issues
 
@@ -306,36 +394,16 @@ def check_html_file(filepath: Path) -> list[str]:
     issues = []
     content = filepath.read_text(errors="ignore")
 
-    # Use the comprehensive check_for_pii function
     findings = check_for_pii(content, str(filepath))
     for finding in findings:
-        # Skip safe IPs
-        if finding["pattern"] == "public_ip" and is_safe_ip(finding["match"]):
-            continue
-        # Skip safe MAC addresses
-        if finding["pattern"] == "mac_address" and is_safe_mac(finding["match"]):
-            continue
-        issues.append(f"  {finding['pattern']}: {finding['match']} (line {finding['line']})")
+        if not _is_safe_finding(finding):
+            issues.append(f"  {finding['pattern']}: {finding['match']} (line {finding['line']})")
 
-    # Additional check for tagValueList credentials
-    tagvalue_issues = check_tagvaluelist_credentials(content, filepath)
-    issues.extend(tagvalue_issues)
-
-    # Check for Motorola password variables
-    moto_issues = check_motorola_passwords(content, filepath)
-    issues.extend(moto_issues)
-
-    # Check for WiFi SSIDs
-    ssid_issues = check_ssids(content, filepath)
-    issues.extend(ssid_issues)
-
-    # Check for session tokens
-    token_issues = check_session_tokens(content, filepath)
-    issues.extend(token_issues)
-
-    # Check for non-allowed IPs
-    ip_issues = check_ips_in_content(content, filepath)
-    issues.extend(ip_issues)
+    issues.extend(check_tagvaluelist_credentials(content, filepath))
+    issues.extend(check_motorola_passwords(content, filepath))
+    issues.extend(check_ssids(content, filepath))
+    issues.extend(check_session_tokens(content, filepath))
+    issues.extend(check_ips_in_content(content, filepath))
 
     return issues
 
@@ -361,16 +429,10 @@ def check_json_file(filepath: Path) -> list[str]:
     ip_issues = check_ips_in_content(content, filepath)
     issues.extend(ip_issues)
 
-    # Use comprehensive check_for_pii for other patterns
     findings = check_for_pii(content, str(filepath))
     for finding in findings:
-        # Skip safe IPs
-        if finding["pattern"] == "public_ip" and is_safe_ip(finding["match"]):
-            continue
-        # Skip safe MAC addresses
-        if finding["pattern"] == "mac_address" and is_safe_mac(finding["match"]):
-            continue
-        issues.append(f"  {finding['pattern']}: {finding['match']} (line {finding['line']})")
+        if not _is_safe_finding(finding):
+            issues.append(f"  {finding['pattern']}: {finding['match']} (line {finding['line']})")
 
     return issues
 
@@ -393,12 +455,8 @@ def check_har_file(filepath: Path) -> list[str]:  # noqa: C901
                 if key in ("text", "value", "content") and isinstance(value, str):
                     findings = check_for_pii(value, f"{filepath}:{new_path}")
                     for finding in findings:
-                        # Skip safe IPs and MACs
-                        if finding["pattern"] == "public_ip" and is_safe_ip(finding["match"]):
-                            continue
-                        if finding["pattern"] == "mac_address" and is_safe_mac(finding["match"]):
-                            continue
-                        issues.append(f"  {finding['pattern']}: {finding['match']} " f"(in {new_path})")
+                        if not _is_safe_finding(finding):
+                            issues.append(f"  {finding['pattern']}: {finding['match']} (in {new_path})")
                     # Also check for tagValueList in HTML content
                     if "tagValueList" in value:
                         tagvalue_issues = check_tagvaluelist_credentials(value, filepath)
@@ -425,67 +483,88 @@ def check_metadata_exists(fixture_dir: Path) -> bool:
     return bool(fixture_dir.parent and (fixture_dir.parent / "metadata.yaml").exists())
 
 
-def main() -> int:  # noqa: C901
-    """Run PII checks on fixture files."""
-    fixtures_root = Path("tests/parsers")
-    if not fixtures_root.exists():
-        return 0  # No fixtures to check
+def _report_issues(path: Path, issues: list[str]) -> bool:
+    """Print PII findings for a file. Returns True if issues found."""
+    if not issues:
+        return False
+    print(f"\n  Potential PII in {path}:")
+    for issue in issues:
+        print(issue)
+    return True
 
+
+_CHECKER = {
+    ".html": check_html_file,
+    ".htm": check_html_file,
+    ".json": check_json_file,
+    ".har": check_har_file,
+}
+
+
+def _scan_directory(root: Path) -> tuple[int, int]:
+    """Scan a directory tree for PII in fixture files.
+
+    Returns (files_checked, exit_code).
+    """
     exit_code = 0
     checked_dirs: set[Path] = set()
     files_checked = 0
 
-    # Find all HTML/HTM files in fixture directories
-    for pattern in ("fixtures/**/*.html", "fixtures/**/*.htm"):
-        for html_file in fixtures_root.rglob(pattern):
-            fixture_dir = html_file.parent
-            files_checked += 1
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        suffix = path.suffix.lower()
+        if suffix == ".json" and path.name == "state.json":
+            continue
 
-            # Check for PII in HTML
-            issues = check_html_file(html_file)
-            if issues:
-                print(f"\n⚠️  Potential PII in {html_file}:")
-                for issue in issues:
-                    print(issue)
-                print("  → Please anonymize using sanitize_html() or confirm safe")
-                exit_code = 1
-
-            # Check for metadata.yaml (once per directory)
-            if fixture_dir not in checked_dirs:
-                checked_dirs.add(fixture_dir)
-                if not check_metadata_exists(fixture_dir):
-                    print(f"\n❌ Missing metadata.yaml in {fixture_dir}")
-                    print("  → See docs/reference/FIXTURE_FORMAT.md for template")
-                    exit_code = 1
-
-    # Find all JSON files in fixture directories
-    for json_file in fixtures_root.rglob("fixtures/**/*.json"):
-        # Skip state.json files (internal pytest state)
-        if json_file.name == "state.json":
+        checker = _CHECKER.get(suffix)
+        if checker is None:
             continue
 
         files_checked += 1
-        issues = check_json_file(json_file)
-        if issues:
-            print(f"\n⚠️  Potential PII in {json_file}:")
-            for issue in issues:
-                print(issue)
-            print("  → Please redact IPs, SSIDs, and tokens with ***REDACTED_*** patterns")
+        if _report_issues(path, checker(path)):
             exit_code = 1
 
-    # Find all HAR files
-    for har_file in fixtures_root.rglob("fixtures/**/*.har"):
-        files_checked += 1
-        issues = check_har_file(har_file)
-        if issues:
-            print(f"\n⚠️  Potential PII in {har_file}:")
-            for issue in issues:
-                print(issue)
-            print("  → Please sanitize using sanitize_har() or confirm safe")
+        if suffix in (".html", ".htm"):
+            fixture_dir = path.parent
+            if fixture_dir not in checked_dirs:
+                checked_dirs.add(fixture_dir)
+                if not check_metadata_exists(fixture_dir):
+                    print(f"\n  Missing metadata.yaml in {fixture_dir}")
+                    exit_code = 1
+
+    return files_checked, exit_code
+
+
+def main() -> int:
+    """Run PII checks on fixture files across all fixture locations."""
+    # Directories containing real modem data (contributor HAR captures,
+    # golden files derived from real responses).  Core test fixtures are
+    # intentionally synthetic and should NOT be scanned here.
+    fixture_roots = [
+        # v3.13 legacy path (may not exist on v3.14+)
+        Path("tests/parsers"),
+        # Catalog modem test data (HAR files, golden files)
+        Path("packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems"),
+    ]
+
+    total_checked = 0
+    exit_code = 0
+
+    for root in fixture_roots:
+        if not root.exists():
+            continue
+        checked, code = _scan_directory(root)
+        total_checked += checked
+        if code != 0:
             exit_code = 1
 
-    if exit_code == 0 and files_checked > 0:
-        print(f"✅ Checked {files_checked} fixture files - no PII issues found")
+    if total_checked == 0:
+        print("PII check: no fixture files found")
+        return 0
+
+    if exit_code == 0:
+        print(f"PII check: {total_checked} fixture files clean")
 
     return exit_code
 

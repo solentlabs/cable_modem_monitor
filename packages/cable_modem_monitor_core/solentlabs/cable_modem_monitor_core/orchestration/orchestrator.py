@@ -119,8 +119,9 @@ class Orchestrator:
         Sequence:
         1. Check is_restarting — if True, return error
         2. Set is_restarting = True
-        3. Execute restart action using the existing session
-        4. Clear session (old session is dead)
+        3. Authenticate (session may have been cleared by logout)
+        4. Execute restart action
+        5. Clear session (old session is dead)
         5. Hand off to RestartMonitor for two-phase recovery
         6. Set is_restarting = False
         7. Return result
@@ -159,6 +160,9 @@ class Orchestrator:
         start = time.monotonic()
         self._is_restarting = True
         try:
+            # Authenticate — session may have been cleared by logout
+            self._collector.authenticate()
+
             # Send restart command
             execute_action(self._collector, self._modem_config, actions.restart)
             self._collector.clear_session()

@@ -48,6 +48,7 @@ class ActionDetail:
     endpoint: str
     params: dict[str, str] = field(default_factory=dict)
     action_name: str = ""
+    credential_params: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict for MCP tool output."""
@@ -60,6 +61,8 @@ class ActionDetail:
             result["params"] = self.params
         if self.action_name:
             result["action_name"] = self.action_name
+        if self.credential_params:
+            result["credential_params"] = self.credential_params
         return result
 
 

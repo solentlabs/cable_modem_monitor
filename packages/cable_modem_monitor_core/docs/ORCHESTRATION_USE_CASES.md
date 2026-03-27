@@ -627,7 +627,7 @@ Modem has come back online.
 **Assertions:**
 - `RestartNotSupportedError` raised
 - `is_restarting` never set to True
-- HA adapter should prevent this by checking config before showing button
+- Platform adapter should prevent this by checking config before exposing restart
 
 ---
 

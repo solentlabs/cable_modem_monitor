@@ -24,6 +24,11 @@ actions:
     pre_fetch_url: "/MotoSecurity.asp"
     endpoint: "/goform/MotoSecurity"
     params:
+      UserId: ""
+      OldPassword: ""
+      NewUserId: ""
+      Password: ""
+      PasswordReEnter: ""
       MotoSecurityAction: "1"
 
 behaviors:
@@ -40,7 +45,7 @@ sources:
   docsis_version: "https://www.motorola.com/us/mb7621/p"
   isps: "https://www.amazon.com/MOTOROLA-MB7621-Approved-Spectrum-Downloads/dp/B077BL65HS"
   auth_config: "Maintainer hardware HAR capture"
-  restart: "v3.13 verified — params unverified in v3.14, needs HAR with restart flow"
+  restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
 
   detection_hints: "Maintainer verified"
 status: awaiting_verification
@@ -67,6 +72,7 @@ notes: |
   IP-based session tracking (no cookies). Single concurrent session;
   logout required after each poll to free the session for the user.
   Supports up to 24 downstream and 8 upstream bonded channels (1 Gbps max).
-  Restart action params carried from v3.13 — MotoSecurityAction=1 triggers
-  restart via the security settings form. Other form fields removed pending
-  verification through v3.14 pipeline.
+  Restart via the MotoSecurity form — POST all form fields (UserId, OldPassword,
+  NewUserId, Password, PasswordReEnter, MotoSecurityAction=1). The form is
+  dual-purpose (password change + restart); browser submits all fields on reboot.
+  Requires authenticated session (POST is silently ignored without auth).
