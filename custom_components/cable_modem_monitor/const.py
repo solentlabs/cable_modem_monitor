@@ -48,3 +48,16 @@ ENTITY_PREFIX_IP = "ip"
 # Consumer modems universally use self-signed certificates on private LANs.
 # Enabling verification would break 99%+ of installations.
 VERIFY_SSL = False
+
+
+def get_device_name(entity_prefix: str, *, model: str = "", host: str = "") -> str:
+    """Compute the HA device name from entity prefix setting.
+
+    Used by entity base classes (DeviceInfo) and _update_device_registry.
+    Must be called consistently so entities link to the correct device.
+    """
+    if entity_prefix == ENTITY_PREFIX_MODEL:
+        return f"Cable Modem {model}"
+    if entity_prefix == ENTITY_PREFIX_IP:
+        return f"Cable Modem {host}"
+    return "Cable Modem"

@@ -1,9 +1,9 @@
 """HTTP server — thin layer composing routes and auth.
 
-Context manager for clean lifecycle. Starts on an ephemeral port,
-stops cleanly on exit.
+Supports two lifecycle modes: ephemeral (context manager for automated
+tests) and persistent (``serve_forever()`` for manual integration testing).
 
-See ONBOARDING_SPEC.md HAR Mock Server section.
+See ONBOARDING_SPEC.md Test Harness section.
 """
 
 from __future__ import annotations
@@ -29,9 +29,17 @@ class _MockHandler(BaseHTTPRequestHandler):
     Dispatches requests through the auth layer and route table.
     """
 
+    # N802: Method names are dictated by BaseHTTPRequestHandler — the
+    # stdlib dispatches by looking for methods named exactly do_GET,
+    # do_POST, etc.  Renaming to snake_case would break dispatch.
+
     def do_GET(self) -> None:  # noqa: N802
         """Handle GET requests."""
         self._handle_request("GET")
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        """Handle HEAD requests — same as GET but without response body."""
+        self._handle_request("HEAD")
 
     def do_POST(self) -> None:  # noqa: N802
         """Handle POST requests."""
@@ -40,6 +48,9 @@ class _MockHandler(BaseHTTPRequestHandler):
     def _handle_request(self, method: str) -> None:
         """Dispatch a request through auth then routes."""
         server: HARMockServer = self.server  # type: ignore[assignment]
+        self._is_head = method == "HEAD"
+        # HEAD uses GET routes for lookup
+        lookup_method = "GET" if self._is_head else method
         parsed = urlparse(self.path)
         path = normalize_path(parsed.path)
         # Include query string for route lookup so endpoints like
@@ -52,6 +63,7 @@ class _MockHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length)
 
+        method = lookup_method
         auth = server.auth_handler
 
         # Login request — handle auth and serve response
@@ -134,12 +146,12 @@ class _MockHandler(BaseHTTPRequestHandler):
         headers: list[tuple[str, str]],
         body: str,
     ) -> None:
-        """Send an HTTP response."""
+        """Send an HTTP response. HEAD requests get headers only."""
         self.send_response(status)
         for name, value in headers:
             self.send_header(name, value)
         self.end_headers()
-        if body:
+        if body and not getattr(self, "_is_head", False):
             self.wfile.write(body.encode("utf-8"))
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -189,33 +201,43 @@ def _find_route(
 class HARMockServer(HTTPServer):
     """Auth-aware HAR replay HTTP server.
 
-    Context manager that starts on an ephemeral port and stops cleanly.
+    Two usage modes share the same server:
 
-    Usage::
+    **Automated testing** — context manager, ephemeral port::
 
-        har_data = json.loads(Path("modem.har").read_text())
-        entries = har_data["log"]["entries"]
-
-        with HARMockServer(entries, modem_config=modem_config) as server:
+        with HARMockServer(entries, modem_config=config) as server:
             base_url = server.base_url
             # ... run pipeline against base_url ...
+
+    **Manual integration testing** — persistent server on a fixed port::
+
+        server = HARMockServer(entries, modem_config=config,
+                               host="0.0.0.0", port=8080)
+        server.serve_forever()  # blocks until interrupted
 
     Args:
         har_entries: HAR ``log.entries`` list.
         modem_config: Validated ``ModemConfig`` for auth handler creation.
             None for no auth.
+        host: Bind address. Defaults to ``127.0.0.1`` (localhost only).
+            Use ``0.0.0.0`` to accept connections from other hosts.
+        port: Bind port. Defaults to ``0`` (OS-assigned ephemeral port).
+            Use a fixed port (e.g., ``8080``) for manual testing.
     """
 
     def __init__(
         self,
         har_entries: list[dict[str, Any]],
         modem_config: ModemConfig | None = None,
+        *,
+        host: str = "127.0.0.1",
+        port: int = 0,
     ) -> None:
         self.routes = build_routes(har_entries)
         self.auth_handler = create_auth_handler(modem_config, har_entries)
         self._thread: threading.Thread | None = None
 
-        super().__init__(("127.0.0.1", 0), _MockHandler)
+        super().__init__((host, port), _MockHandler)
 
     @property
     def base_url(self) -> str:

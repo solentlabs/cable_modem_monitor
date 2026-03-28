@@ -1,4 +1,109 @@
 {
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cable Modem Monitor",
+        "description": "Select a manufacturer or choose 'All'.",
+        "data": {
+          "manufacturer": "Manufacturer"
+        }
+      },
+      "model": {
+        "title": "Select Modem",
+        "description": "Choose a {manufacturer} modem model. Models marked * are unverified.",
+        "data": {
+          "model": "Modem Model",
+          "entity_prefix": "Entity ID Prefix"
+        },
+        "data_description": {
+          "model": "Select your modem model from the list.",
+          "entity_prefix": "Adds model name or IP to entity IDs. Required when monitoring multiple modems."
+        }
+      },
+      "variant": {
+        "title": "Firmware Variant",
+        "description": "Your modem has multiple firmware variants with different authentication. Select the one that matches your setup.",
+        "data": {
+          "variant": "Variant"
+        },
+        "data_description": {
+          "variant": "If unsure, try the first option. You can reconfigure later."
+        }
+      },
+      "connection": {
+        "title": "Connection",
+        "description": "Enter your modem's connection details.",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "Usually 192.168.100.1. Include http:// or https:// to skip protocol detection.",
+          "username": "Leave blank if not required.",
+          "password": "Leave blank if not required."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate",
+        "description": "The modem rejected your credentials. Please re-enter them.",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "network_unreachable": "Cannot reach modem.\n\nCheck:\n1. You're on the modem's network (not guest WiFi)\n2. VPN is disconnected\n3. IP address is correct (usually 192.168.100.1)\n4. Modem web interface is accessible in your browser",
+      "cannot_connect": "Modem not responding.\n\nCheck:\n1. IP address is correct\n2. Try including the protocol (e.g., http://192.168.100.1)\n3. Modem's web interface is accessible from Home Assistant's network",
+      "invalid_auth": "Login failed.\n\nCheck:\n1. Username is correct (typically 'admin')\n2. Password is correct (check modem label)\n3. Try logging in via your browser first to verify credentials",
+      "parse_failed": "Connected but couldn't read modem data.\n\nThis may mean your modem needs a different variant selection. Try going back and selecting another option, or check that your modem's firmware is supported.",
+      "unknown": "Unexpected error. Check Home Assistant logs for details."
+    },
+    "abort": {
+      "already_configured": "This modem is already configured.",
+      "missing_input": "Required data is missing. Please restart the setup.",
+      "unknown_model": "Selected modem not found in catalog.",
+      "reauth_successful": "Reauthentication successful.",
+      "reauth_failed": "Reauthentication failed. Please try again."
+    },
+    "progress": {
+      "validate": "Connecting to modem..."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cable Modem Settings",
+        "description": "Update connection details and polling intervals.",
+        "data": {
+          "host": "Modem IP Address",
+          "username": "Username",
+          "password": "Password",
+          "scan_interval": "Data Poll Interval",
+          "health_check_interval": "Health Check Interval"
+        },
+        "data_description": {
+          "host": "Usually 192.168.100.1",
+          "username": "Leave blank if not required.",
+          "password": "Blank keeps current password.",
+          "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
+          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
+        }
+      }
+    },
+    "error": {
+      "network_unreachable": "Cannot reach modem. Check IP address and network connectivity.",
+      "cannot_connect": "Modem not responding. Check IP address and protocol.",
+      "invalid_auth": "Login failed. Check username and password.",
+      "parse_failed": "Connected but couldn't read modem data.",
+      "unknown": "Unexpected error. Check Home Assistant logs."
+    },
+    "progress": {
+      "validate": "Validating connection..."
+    }
+  },
   "services": {
     "generate_dashboard": {
       "name": "Generate Dashboard",
@@ -45,80 +150,6 @@
           "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
         }
       }
-    }
-  },
-  "config": {
-    "step": {
-      "user": {
-        "title": "Cable Modem Monitor",
-        "description": "Connect to your cable modem. Models marked * are unverified.",
-        "data": {
-          "host": "Modem IP Address",
-          "username": "Username",
-          "password": "Password",
-          "modem_choice": "Modem Model",
-          "entity_prefix": "Entity ID Prefix"
-        },
-        "data_description": {
-          "host": "Usually 192.168.100.1",
-          "username": "Leave blank if not required",
-          "password": "Leave blank if not required",
-          "modem_choice": "Select your modem model. Use 'Unknown Modem (Fallback Mode)' if not listed.",
-          "entity_prefix": "Adds model or IP to entity IDs to avoid conflicts with multiple modems."
-        }
-      },
-      "auth_type": {
-        "title": "Authentication Type",
-        "description": "Your {modem_name} has multiple firmware variants with different authentication.\nSelect the type that matches your modem:",
-        "data": {
-          "auth_type": "Authentication Type"
-        },
-        "data_description": {
-          "auth_type": "No Auth: Data pages load without login\nForm Login: Login page with username/password\nURL Token: Uses URL-based session tokens"
-        }
-      }
-    },
-    "error": {
-      "invalid_auth": "Authentication failed - modem returned login page.\n\nPlease verify:\n1. Username is correct (typically 'admin', check modem label)\n2. Password is correct (check modem label)\n3. Credentials have not been changed from defaults\n\nTry logging into the modem manually at https://192.168.100.1 to verify credentials work.",
-      "network_unreachable": "Cannot reach modem - network connectivity issue.\n\nPlease check:\n1. Network connection - Are you on the correct WiFi network?\n2. Guest WiFi - Guest networks often block access to local devices\n3. VPN - Disconnect any active VPN connections\n4. IP address - Verify the modem's IP (typically 192.168.100.1)\n5. Modem web interface - Ensure it's enabled and accessible\n6. Slow response - Some modems take a few seconds to wake up; try submitting again\n\nTry accessing the modem directly in your browser to verify connectivity.",
-      "cannot_connect": "Failed to connect to the modem.\n\nPlease verify:\n1. IP address is correct (typically 192.168.100.1)\n2. If modem requires authentication, enter username/password\n3. Modem's web interface is accessible from Home Assistant's network\n\nIf your modem is not supported, select 'Unknown Modem (Fallback Mode)' to enable basic monitoring and HTML capture.",
-      "unsupported_modem": "Auto-detection could not identify your modem model.\n\nTo proceed:\n1. Select 'Unknown Modem (Fallback Mode)' from the dropdown below\n2. This enables basic connectivity monitoring (ping/HTTP latency)\n3. After installation, click 'Capture HTML' button\n4. Download diagnostics and share with developers to add full support",
-      "invalid_input": "Invalid input provided. Please check the values and try again.",
-      "unknown": "Unexpected error occurred. Check Home Assistant logs for details."
-    },
-    "abort": {
-      "already_configured": "This modem is already configured"
-    },
-    "progress": {
-      "validate": "Connecting to modem..."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Cable Modem Settings",
-        "description": "Update connection details and polling intervals.",
-        "data": {
-          "host": "Modem IP Address",
-          "username": "Username",
-          "password": "Password",
-          "scan_interval": "Data Poll Interval",
-          "health_check_interval": "Health Check Interval"
-        },
-        "data_description": {
-          "host": "Usually 192.168.100.1",
-          "username": "Leave blank if not required.",
-          "password": "Blank keeps current password.",
-          "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
-          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
-        }
-      }
-    },
-    "error": {
-      "network_unreachable": "Cannot reach modem. Check IP address and network connectivity.",
-      "cannot_connect": "Modem not responding. Check IP address and protocol.",
-      "invalid_auth": "Login failed. Check username and password.",
-      "parse_failed": "Connected but couldn't read modem data."
     }
   }
 }

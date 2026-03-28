@@ -3,14 +3,14 @@
     "step": {
       "user": {
         "title": "Cable Modem Monitor",
-        "description": "Select your modem's manufacturer, or choose 'All' to see every supported modem.",
+        "description": "Select a manufacturer or choose 'All'.",
         "data": {
           "manufacturer": "Manufacturer"
         }
       },
       "model": {
         "title": "Select Modem",
-        "description": "Choose your modem model. Models marked * are unverified.",
+        "description": "Choose a {manufacturer} modem model. Models marked * are unverified.",
         "data": {
           "model": "Modem Model",
           "entity_prefix": "Entity ID Prefix"
@@ -25,6 +25,9 @@
         "description": "Your modem has multiple firmware variants with different authentication. Select the one that matches your setup.",
         "data": {
           "variant": "Variant"
+        },
+        "data_description": {
+          "variant": "If unsure, try the first option. You can reconfigure later."
         }
       },
       "connection": {

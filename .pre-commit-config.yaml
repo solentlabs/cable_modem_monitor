@@ -119,6 +119,13 @@ repos:
         pass_filenames: false
         files: (packages/cable_modem_monitor_catalog/.*\.(har|json|html|htm)$)
 
+      - id: check-translations-sync
+        name: Check strings.json / translations sync
+        entry: scripts/dev/run-python.sh scripts/dev/check-translations-sync.py
+        language: script
+        pass_filenames: false
+        files: (custom_components/cable_modem_monitor/(strings\.json|translations/.*\.json)$)
+
       - id: pre-push-lint
         name: Full project lint check
         entry: ruff check .

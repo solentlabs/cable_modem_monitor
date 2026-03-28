@@ -1,0 +1,15 @@
+{
+  "_description": "Second minimal HAR with a different data page — for multi-HAR tests",
+  "log": {
+    "entries": [
+      {
+        "request": {"method": "GET", "url": "http://192.168.100.1/info.html"},
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {"text": "<html>info</html>"}
+        }
+      }
+    ]
+  }
+}

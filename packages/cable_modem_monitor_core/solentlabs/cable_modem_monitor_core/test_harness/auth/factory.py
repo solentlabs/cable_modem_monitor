@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from .base import AuthHandler
 from .basic import BasicAuthHandler
 from .form import FormAuthHandler
+from .pbkdf2 import FormPbkdf2AuthHandler
 from .sjcl import FormSjclAuthHandler
 
 if TYPE_CHECKING:
@@ -110,6 +111,33 @@ def _create_form_sjcl_auth_handler(modem_config: ModemConfig) -> FormSjclAuthHan
     )
 
 
+def _create_form_pbkdf2_auth_handler(modem_config: ModemConfig) -> FormPbkdf2AuthHandler:
+    """Build a FormPbkdf2AuthHandler from modem config.
+
+    Extracts PBKDF2 parameters, salt trigger, login endpoint, CSRF
+    config, session cookie, and action endpoints from the config.
+    """
+    from ...models.modem_config.auth import FormPbkdf2Auth
+
+    auth = modem_config.auth
+    assert isinstance(auth, FormPbkdf2Auth)
+
+    action_cfg = _extract_action_config(modem_config)
+    return FormPbkdf2AuthHandler(
+        login_endpoint=auth.login_endpoint,
+        salt_trigger=auth.salt_trigger,
+        pbkdf2_iterations=auth.pbkdf2_iterations,
+        pbkdf2_key_length=auth.pbkdf2_key_length,
+        double_hash=auth.double_hash,
+        csrf_init_endpoint=auth.csrf_init_endpoint,
+        csrf_header=auth.csrf_header,
+        cookie_name=action_cfg.cookie_name,
+        logout_path=action_cfg.logout_path,
+        restart_path=action_cfg.restart_path,
+        restart_method=action_cfg.restart_method,
+    )
+
+
 def create_auth_handler(
     modem_config: ModemConfig | None,
     har_entries: list[dict[str, Any]] | None = None,
@@ -149,8 +177,11 @@ def create_auth_handler(
     if isinstance(auth, BasicAuth):
         return BasicAuthHandler()
 
-    if isinstance(auth, FormAuth | FormNonceAuth | FormPbkdf2Auth):
+    if isinstance(auth, FormAuth | FormNonceAuth):
         return _create_form_auth_handler(modem_config)
+
+    if isinstance(auth, FormPbkdf2Auth):
+        return _create_form_pbkdf2_auth_handler(modem_config)
 
     if isinstance(auth, FormSjclAuth):
         return _create_form_sjcl_auth_handler(modem_config)

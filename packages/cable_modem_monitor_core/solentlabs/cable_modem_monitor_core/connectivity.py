@@ -246,8 +246,11 @@ def test_http_head(
         session = create_session(legacy_ssl=legacy_ssl)
         resp = session.head(url, timeout=timeout, allow_redirects=False)
         ok = resp.status_code < 500
-        _logger.info("HEAD probe %s: %d (%s)", url, resp.status_code, "ok" if ok else "fail")
+        if ok:
+            _logger.info("HEAD probe %s: supported (%d)", url, resp.status_code)
+        else:
+            _logger.info("HEAD probe %s: not supported (%d), health checks will use GET", url, resp.status_code)
         return ok
-    except (requests.RequestException, OSError) as exc:
-        _logger.info("HEAD probe %s: %s", url, exc)
+    except (requests.RequestException, OSError):
+        _logger.info("HEAD probe %s: not supported, health checks will use GET", url)
         return False

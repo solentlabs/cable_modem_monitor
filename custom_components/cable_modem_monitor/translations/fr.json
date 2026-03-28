@@ -1,81 +1,72 @@
 {
-  "services": {
-    "generate_dashboard": {
-      "name": "Generate Dashboard",
-      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
-      "fields": {
-        "include_status_card": {
-          "name": "Status Card",
-          "description": "Modem status, uptime, channel counts, and restart button."
-        },
-        "include_downstream_power": {
-          "name": "Downstream Power Graph",
-          "description": "Power levels for all downstream channels."
-        },
-        "include_downstream_snr": {
-          "name": "Downstream SNR Graph",
-          "description": "Signal-to-noise ratio for all downstream channels."
-        },
-        "include_downstream_frequency": {
-          "name": "Downstream Frequency Graph",
-          "description": "Frequency for all downstream channels."
-        },
-        "include_upstream_power": {
-          "name": "Upstream Power Graph",
-          "description": "Power levels for all upstream channels."
-        },
-        "include_upstream_frequency": {
-          "name": "Upstream Frequency Graph",
-          "description": "Frequency for all upstream channels."
-        },
-        "include_errors": {
-          "name": "Error Graphs",
-          "description": "Corrected and uncorrected error counts (7-day view)."
-        },
-        "include_latency": {
-          "name": "Latency Graph",
-          "description": "Ping and HTTP response times (6-hour view)."
-        },
-        "graph_hours": {
-          "name": "Graph History (hours)",
-          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
-        },
-        "short_titles": {
-          "name": "Use Short Titles",
-          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
-        }
-      }
-    }
-  },
   "config": {
     "step": {
       "user": {
-        "title": "Moniteur de Modem Câble",
-        "description": "Connectez votre modem. Les modèles avec * ne sont pas vérifiés.",
+        "title": "Moniteur de Modem Cable",
+        "description": "Sélectionnez un fabricant ou choisissez 'Tous'.",
+        "data": {
+          "manufacturer": "Fabricant"
+        }
+      },
+      "model": {
+        "title": "Selectionner le Modem",
+        "description": "Choisissez un modele de modem {manufacturer}. Les modeles marques * ne sont pas verifies.",
+        "data": {
+          "model": "Modele de Modem",
+          "entity_prefix": "Prefixe d'Entity ID"
+        },
+        "data_description": {
+          "model": "Selectionnez votre modele de modem dans la liste.",
+          "entity_prefix": "Ajoute le nom du modele ou l'IP aux Entity ID. Requis pour surveiller plusieurs modems."
+        }
+      },
+      "variant": {
+        "title": "Variante de Firmware",
+        "description": "Votre modem possede plusieurs variantes de firmware avec des authentifications differentes. Selectionnez celle qui correspond a votre configuration.",
+        "data": {
+          "variant": "Variante"
+        },
+        "data_description": {
+          "variant": "En cas de doute, essayez la première option. Vous pouvez reconfigurer plus tard."
+        }
+      },
+      "connection": {
+        "title": "Connexion",
+        "description": "Entrez les details de connexion de votre modem.",
         "data": {
           "host": "Adresse IP du Modem",
           "username": "Nom d'utilisateur",
-          "password": "Mot de passe",
-          "modem_choice": "Modèle du Modem"
+          "password": "Mot de passe"
         },
         "data_description": {
-          "host": "Généralement 192.168.100.1",
-          "username": "Laisser vide si non requis",
-          "password": "Laisser vide si non requis",
-          "modem_choice": "'auto' pour détection automatique"
+          "host": "Generalement 192.168.100.1. Incluez http:// ou https:// pour ignorer la detection de protocole.",
+          "username": "Laisser vide si non requis.",
+          "password": "Laisser vide si non requis."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthentification",
+        "description": "Le modem a rejete vos identifiants. Veuillez les saisir a nouveau.",
+        "data": {
+          "host": "Adresse IP du Modem",
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe"
         }
       }
     },
     "error": {
-      "invalid_auth": "Nom d'utilisateur ou mot de passe invalide. Veuillez vérifier vos identifiants et réessayer.",
-      "network_unreachable": "Impossible d'atteindre le modem - problème de connectivité réseau.\n\nVeuillez vérifier :\n1. Connexion réseau - Êtes-vous sur le bon réseau WiFi ?\n2. WiFi invité - Les réseaux invités bloquent souvent l'accès aux appareils locaux\n3. VPN - Déconnectez toute connexion VPN active\n4. Adresse IP - Vérifiez l'IP du modem (généralement 192.168.100.1)\n5. Interface web du modem - Assurez-vous qu'elle est activée et accessible\n6. Réponse lente - Certains modems mettent quelques secondes à se réveiller ; réessayez\n\nEssayez d'accéder au modem directement dans votre navigateur pour vérifier la connectivité.",
-      "cannot_connect": "Échec de la connexion au modem.\n\nVeuillez vérifier :\n1. L'adresse IP est correcte (généralement 192.168.100.1)\n2. Si le modem nécessite une authentification, entrez nom d'utilisateur/mot de passe\n3. L'interface web du modem est accessible depuis le réseau de Home Assistant\n\nSi votre modem n'est pas supporté, sélectionnez 'Modem Inconnu (Mode de Secours)' pour activer la surveillance de base et la capture HTML.",
-      "unsupported_modem": "La détection automatique n'a pas pu identifier votre modèle de modem.\n\nPour continuer :\n1. Sélectionnez 'Modem Inconnu (Mode de Secours)' dans le menu ci-dessous\n2. Cela activera la surveillance de connectivité de base (ping/latence HTTP)\n3. Après l'installation, cliquez sur le bouton 'Capturer HTML'\n4. Téléchargez les diagnostics et partagez-les avec les développeurs pour ajouter un support complet",
-      "invalid_input": "Entrée invalide fournie. Veuillez vérifier les valeurs et réessayer.",
-      "unknown": "Une erreur inattendue s'est produite. Vérifiez les journaux de Home Assistant pour plus de détails."
+      "network_unreachable": "Impossible d'atteindre le modem.\n\nVerifiez :\n1. Vous etes sur le reseau du modem (pas le WiFi invite)\n2. Le VPN est deconnecte\n3. L'adresse IP est correcte (generalement 192.168.100.1)\n4. L'interface web du modem est accessible dans votre navigateur",
+      "cannot_connect": "Le modem ne repond pas.\n\nVerifiez :\n1. L'adresse IP est correcte\n2. Essayez d'inclure le protocole (ex. : http://192.168.100.1)\n3. L'interface web du modem est accessible depuis le reseau de Home Assistant",
+      "invalid_auth": "Echec de connexion.\n\nVerifiez :\n1. Le nom d'utilisateur est correct (generalement 'admin')\n2. Le mot de passe est correct (verifiez l'etiquette du modem)\n3. Essayez de vous connecter via votre navigateur d'abord pour verifier les identifiants",
+      "parse_failed": "Connecte, mais impossible de lire les donnees du modem.\n\nCela peut signifier que votre modem necessite une selection de variante differente. Essayez de revenir en arriere et de selectionner une autre option, ou verifiez que le firmware de votre modem est compatible.",
+      "unknown": "Erreur inattendue. Verifiez les journaux de Home Assistant pour plus de details."
     },
     "abort": {
-      "already_configured": "Ce modem est déjà configuré"
+      "already_configured": "Ce modem est deja configure.",
+      "missing_input": "Des donnees obligatoires sont manquantes. Veuillez relancer la configuration.",
+      "unknown_model": "Le modem selectionne est introuvable dans le catalogue.",
+      "reauth_successful": "Reauthentification reussie.",
+      "reauth_failed": "Echec de la reauthentification. Veuillez reessayer."
     },
     "progress": {
       "validate": "Connexion au modem..."
@@ -84,29 +75,81 @@
   "options": {
     "step": {
       "init": {
-        "title": "Paramètres du modem câble",
-        "description": "Modifier les paramètres de connexion et les intervalles d'interrogation.",
+        "title": "Parametres du Modem Cable",
+        "description": "Mettez a jour les details de connexion et les intervalles d'interrogation.",
         "data": {
-          "host": "Adresse IP du modem",
+          "host": "Adresse IP du Modem",
           "username": "Nom d'utilisateur",
           "password": "Mot de passe",
-          "scan_interval": "Intervalle d'interrogation",
-          "health_check_interval": "Intervalle de vérification"
+          "scan_interval": "Intervalle d'Interrogation des Donnees",
+          "health_check_interval": "Intervalle de Verification de l'Etat"
         },
         "data_description": {
-          "host": "Généralement 192.168.100.1",
+          "host": "Generalement 192.168.100.1",
           "username": "Laisser vide si non requis.",
-          "password": "Vide = conserver le mot de passe actuel.",
-          "scan_interval": "Fréquence d'interrogation des données du modem. Par défaut 10 minutes. Régler sur 00:00:00 pour désactiver l'interrogation automatique (mise à jour manuelle uniquement).",
-          "health_check_interval": "Fréquence de vérification de l'accessibilité du modem. Par défaut 30 secondes. Régler sur 00:00:00 pour désactiver les vérifications."
+          "password": "Vide conserve le mot de passe actuel.",
+          "scan_interval": "Frequence d'interrogation des donnees du modem. Par defaut 10 minutes. Reglez sur 00:00:00 pour desactiver l'interrogation automatique (mise a jour manuelle uniquement via le bouton Actualiser).",
+          "health_check_interval": "Frequence de verification de l'accessibilite du modem. Par defaut 30 secondes. Reglez sur 00:00:00 pour desactiver les verifications d'etat."
         }
       }
     },
     "error": {
-      "network_unreachable": "Modem injoignable. Vérifiez l'adresse IP et la connectivité réseau.",
-      "cannot_connect": "Le modem ne répond pas. Vérifiez l'adresse IP et le protocole.",
-      "invalid_auth": "Échec de connexion. Vérifiez le nom d'utilisateur et le mot de passe.",
-      "parse_failed": "Connecté, mais impossible de lire les données du modem."
+      "network_unreachable": "Impossible d'atteindre le modem. Verifiez l'adresse IP et la connectivite reseau.",
+      "cannot_connect": "Le modem ne repond pas. Verifiez l'adresse IP et le protocole.",
+      "invalid_auth": "Echec de connexion. Verifiez le nom d'utilisateur et le mot de passe.",
+      "parse_failed": "Connecte, mais impossible de lire les donnees du modem.",
+      "unknown": "Erreur inattendue. Verifiez les journaux de Home Assistant."
+    },
+    "progress": {
+      "validate": "Validation de la connexion..."
+    }
+  },
+  "services": {
+    "generate_dashboard": {
+      "name": "Generer le Tableau de Bord",
+      "description": "Genere du YAML Lovelace pret a l'emploi pour votre tableau de bord de modem cable. Copiez la sortie et collez-la dans une carte Manuel.",
+      "fields": {
+        "include_status_card": {
+          "name": "Carte d'Etat",
+          "description": "Etat du modem, temps de fonctionnement, nombre de canaux et bouton de redemarrage."
+        },
+        "include_downstream_power": {
+          "name": "Graphique de Puissance Descendante",
+          "description": "Niveaux de puissance pour tous les canaux descendants."
+        },
+        "include_downstream_snr": {
+          "name": "Graphique SNR Descendant",
+          "description": "Rapport signal sur bruit pour tous les canaux descendants."
+        },
+        "include_downstream_frequency": {
+          "name": "Graphique de Frequence Descendante",
+          "description": "Frequence de tous les canaux descendants."
+        },
+        "include_upstream_power": {
+          "name": "Graphique de Puissance Montante",
+          "description": "Niveaux de puissance pour tous les canaux montants."
+        },
+        "include_upstream_frequency": {
+          "name": "Graphique de Frequence Montante",
+          "description": "Frequence de tous les canaux montants."
+        },
+        "include_errors": {
+          "name": "Graphiques d'Erreurs",
+          "description": "Compteurs d'erreurs corrigees et non corrigees (vue sur 7 jours)."
+        },
+        "include_latency": {
+          "name": "Graphique de Latence",
+          "description": "Temps de reponse ping et HTTP (vue sur 6 heures)."
+        },
+        "graph_hours": {
+          "name": "Historique des Graphiques (heures)",
+          "description": "Heures d'historique pour les graphiques de puissance/SNR (erreurs et latence utilisent des periodes fixes)."
+        },
+        "short_titles": {
+          "name": "Utiliser des Titres Courts",
+          "description": "Court : 'DS Power (dBmV)' vs Long : 'Downstream Power Levels (dBmV)'."
+        }
+      }
     }
   }
 }

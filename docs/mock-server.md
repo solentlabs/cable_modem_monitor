@@ -1,51 +1,94 @@
-# Mock Modem Server
+# Mock Server
 
-Run a local HTTP server that emulates any supported modem for development and testing.
+The mock server (`HARMockServer`) replays HAR-captured HTTP responses
+with auth simulation, allowing you to test modem configurations without
+a physical modem. It supports the same auth protocols as the core
+pipeline: none, basic, form, form_nonce, form_sjcl, url_token, and HNAP.
 
-The mock server is part of the Core test harness (`packages/cable_modem_monitor_core/solentlabs/cable_modem_monitor_core/test_harness/`). It auto-discovers all modems with test data in the catalog (`packages/cable_modem_monitor_catalog/.../modems/`).
+## Use Cases
 
-## Test Credentials
+### Automated Regression Testing
 
-All auth-enabled mock servers accept:
-- **Username**: `admin`
-- **Password**: `password`
+The test runner starts an ephemeral `HARMockServer` per test case,
+runs the full pipeline (auth → load → parse), and compares output
+against golden files. No user interaction required.
+
+```python
+from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test
+
+result = run_modem_test(test_case)
+assert result.passed
+```
+
+For full orchestrator tests (session lifecycle, logout, status):
+
+```python
+from solentlabs.cable_modem_monitor_core.test_harness import run_modem_test_orchestrated
+
+result = run_modem_test_orchestrated(test_case)
+assert result.passed
+```
+
+### Manual Integration Testing
+
+Start a persistent server that simulates a specific modem. Point your
+Home Assistant instance at it to verify sensors populate correctly.
+
+```bash
+python -m solentlabs.cable_modem_monitor_core.test_harness \
+    packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/arris/sb8200 \
+    --host 0.0.0.0 --port 8080
+```
+
+The server prints its base URL and blocks until Ctrl+C. Configure HA
+to connect to this address instead of a real modem.
+
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host` | `0.0.0.0` | Bind address |
+| `--port` | `8080` | Bind port |
+| `--har` | first found | Specific HAR file in `test_data/` |
+| `--log-level` | `INFO` | Logging level (DEBUG shows each request) |
 
 ## How It Works
 
-1. Reads `modem.yaml` and `parser.yaml` from the catalog modem directory
-2. Loads fixture/test data files from the modem's `test_data/` directory
-3. Implements auth handler based on the modem's auth strategy
-4. Serves fixture responses for configured URL patterns
+1. Reads `modem.yaml` to determine the auth strategy
+2. Loads HAR entries from `test_data/` as the response route table
+3. Creates an auth handler that simulates the modem's login flow
+4. Serves recorded responses on the configured address
 
-## Programmatic Usage
+## Test Credentials
 
-The test harness is used programmatically in tests via the runner API:
+All auth-enabled servers accept:
+- **Username**: `admin`
+- **Password**: `pw`
+
+## Auth Support
+
+| Strategy | Mock Handler | Validation Level |
+|----------|-------------|-----------------|
+| `none` | No gating | N/A |
+| `basic` | Accepts any Basic header | Header presence only |
+| `form` | Session gating on login POST | Login + cookie |
+| `form_nonce` | Session gating on login POST | Login + cookie |
+| `form_sjcl` | Full AES-CCM crypto | PBKDF2 key derivation + encrypted nonce |
+| `form_pbkdf2` | Full PBKDF2 validation | Salt challenge + derived key verification |
+| `url_token` | No gating (token in URL) | Routes contain auth response |
+| `hnap` | Full HMAC validation | Challenge-response + signature verification |
+
+## Known Limitations
+
+None currently. All auth strategies have dedicated mock handlers.
+
+## Auto-Discovery
+
+The test harness discovers testable modems from the catalog:
 
 ```python
-from solentlabs.cable_modem_monitor_core.test_harness.runner import run_modem_test
+from solentlabs.cable_modem_monitor_core.test_harness import discover_modem_tests
 
-# Run extraction pipeline against HAR mock server
-result = run_modem_test(modem_dir)
-assert result.passed
-```
-
-For orchestrated tests (full session lifecycle):
-
-```python
-from solentlabs.cable_modem_monitor_core.test_harness.runner import run_modem_test_orchestrated
-
-result = run_modem_test_orchestrated(modem_dir)
-assert result.passed
-```
-
-## Auto-Discovery in Tests
-
-The test harness auto-discovers modems in the catalog:
-
-```python
-from solentlabs.cable_modem_monitor_core.test_harness.discovery import discover_modem_tests
-
-# Find all modems that have test data
-for modem_dir in discover_modem_tests():
-    print(f"{modem_dir.name} - testable")
+for test_case in discover_modem_tests(modems_dir):
+    print(f"{test_case.name} — testable")
 ```

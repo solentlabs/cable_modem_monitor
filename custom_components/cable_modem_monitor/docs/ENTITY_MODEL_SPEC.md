@@ -247,10 +247,14 @@ DeviceInfo(
     name=device_name,
     manufacturer=detected_manufacturer,
     model=stripped_model,
-    sw_version=live_software_version,
     configuration_url=f"{protocol}://{host}",
 )
 ```
+
+**Device name is set on every entity's DeviceInfo**, not just in
+`_update_device_registry`. This ensures HA generates correct
+entity_ids at registration time (before the device registry update
+runs).
 
 ### Entity Prefix
 
@@ -258,9 +262,13 @@ The user selects a naming strategy at config time:
 
 | Prefix Setting | Device Name | Purpose |
 |---------------|-------------|---------|
-| `none` | "Cable Modem" | Single modem setups |
+| `none` (Default) | "Cable Modem" | Single modem setups |
 | `model` | "Cable Modem {model}" | Multi-modem by model |
 | `ip` | "Cable Modem {host}" | Multi-modem by IP |
+
+All options produce entity_ids prefixed with `cable_modem_`
+(e.g., `sensor.cable_modem_status`). The `model` and `ip` options
+add an extra disambiguator for multi-modem setups.
 
 ### Multi-Modem
 

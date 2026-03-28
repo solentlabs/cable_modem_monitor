@@ -212,8 +212,10 @@ class Orchestrator:
         connectivity backoff so the next get_modem_data() attempts
         a real connection regardless of prior failures.
         """
+        was_backing_off = self._policy.connectivity_streak > 0
         self._policy.reset_connectivity()
-        _logger.info("Connectivity backoff reset — next poll will attempt connection")
+        if was_backing_off:
+            _logger.info("Connectivity backoff reset — next poll will attempt connection")
 
     def diagnostics(self) -> OrchestratorDiagnostics:
         """Return a read-only snapshot of operational diagnostics.

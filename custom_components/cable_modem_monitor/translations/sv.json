@@ -1,81 +1,72 @@
 {
-  "services": {
-    "generate_dashboard": {
-      "name": "Generate Dashboard",
-      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
-      "fields": {
-        "include_status_card": {
-          "name": "Status Card",
-          "description": "Modem status, uptime, channel counts, and restart button."
-        },
-        "include_downstream_power": {
-          "name": "Downstream Power Graph",
-          "description": "Power levels for all downstream channels."
-        },
-        "include_downstream_snr": {
-          "name": "Downstream SNR Graph",
-          "description": "Signal-to-noise ratio for all downstream channels."
-        },
-        "include_downstream_frequency": {
-          "name": "Downstream Frequency Graph",
-          "description": "Frequency for all downstream channels."
-        },
-        "include_upstream_power": {
-          "name": "Upstream Power Graph",
-          "description": "Power levels for all upstream channels."
-        },
-        "include_upstream_frequency": {
-          "name": "Upstream Frequency Graph",
-          "description": "Frequency for all upstream channels."
-        },
-        "include_errors": {
-          "name": "Error Graphs",
-          "description": "Corrected and uncorrected error counts (7-day view)."
-        },
-        "include_latency": {
-          "name": "Latency Graph",
-          "description": "Ping and HTTP response times (6-hour view)."
-        },
-        "graph_hours": {
-          "name": "Graph History (hours)",
-          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
-        },
-        "short_titles": {
-          "name": "Use Short Titles",
-          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
-        }
-      }
-    }
-  },
   "config": {
     "step": {
       "user": {
-        "title": "Cable Modem Monitor",
-        "description": "Anslut till ditt kabelmodem. Modeller markerade med * är overifierade.",
+        "title": "Kabelmodem-monitor",
+        "description": "Välj en tillverkare eller välj 'Alla'.",
+        "data": {
+          "manufacturer": "Tillverkare"
+        }
+      },
+      "model": {
+        "title": "Välj modem",
+        "description": "Välj en {manufacturer}-modemmodell. Modeller markerade med * är overifierade.",
+        "data": {
+          "model": "Modemmodell",
+          "entity_prefix": "Entity ID-prefix"
+        },
+        "data_description": {
+          "model": "Välj din modemmodell från listan.",
+          "entity_prefix": "Lägger till modellnamn eller IP till Entity ID:n. Krävs vid övervakning av flera modem."
+        }
+      },
+      "variant": {
+        "title": "Firmware-variant",
+        "description": "Ditt modem har flera firmware-varianter med olika autentisering. Välj den som matchar din konfiguration.",
+        "data": {
+          "variant": "Variant"
+        },
+        "data_description": {
+          "variant": "Om du är osäker, prova det första alternativet. Du kan konfigurera om senare."
+        }
+      },
+      "connection": {
+        "title": "Anslutning",
+        "description": "Ange modemets anslutningsuppgifter.",
         "data": {
           "host": "Modemets IP-adress",
           "username": "Användarnamn",
-          "password": "Lösenord",
-          "modem_choice": "Modemmodell"
+          "password": "Lösenord"
         },
         "data_description": {
-          "host": "Vanligtvis 192.168.100.1",
-          "username": "Lämna tomt om det inte krävs",
-          "password": "Lämna tomt om det inte krävs",
-          "modem_choice": "Använd 'auto' för automatisk detektering"
+          "host": "Vanligtvis 192.168.100.1. Inkludera http:// eller https:// för att hoppa över protokolldetektering.",
+          "username": "Lämna tomt om det inte krävs.",
+          "password": "Lämna tomt om det inte krävs."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Återautentisera",
+        "description": "Modemet avvisade dina uppgifter. Ange dem på nytt.",
+        "data": {
+          "host": "Modemets IP-adress",
+          "username": "Användarnamn",
+          "password": "Lösenord"
         }
       }
     },
     "error": {
-      "invalid_auth": "Ogiltigt användarnamn eller lösenord. Kontrollera dina uppgifter och försök igen.",
-      "network_unreachable": "Kan inte nå modemet - problem med nätverksanslutning.\n\nVänligen kontrollera:\n1. Nätverksanslutning - Är du på rätt WiFi-nätverk?\n2. Gäst-WiFi - Gästnätverk blockerar ofta åtkomst till lokala enheter\n3. VPN - Koppla från aktiva VPN-anslutningar\n4. IP-adress - Verifiera modemets IP (vanligtvis 192.168.100.1)\n5. Modemets webbgränssnitt - Se till att det är aktiverat och tillgängligt\n6. Långsam respons - Vissa modem tar några sekunder att vakna upp; försök skicka igen\n\nFörsök komma åt modemet direkt i din webbläsare för att verifiera anslutningen.",
-      "cannot_connect": "Kunde inte ansluta till modemet.\n\nVänligen verifiera:\n1. IP-adressen är korrekt (vanligtvis 192.168.100.1)\n2. Om modemet kräver autentisering, ange användarnamn/lösenord\n3. Modemets webbgränssnitt är tillgängligt från Home Assistants nätverk\n\nOm ditt modem inte stöds, välj 'Okänt Modem (Reservläge)' för att aktivera grundläggande övervakning och HTML-fångst.",
-      "unsupported_modem": "Automatisk detektering kunde inte identifiera din modemmodell.\n\nFör att fortsätta:\n1. Välj 'Okänt Modem (Reservläge)' från rullgardinsmenyn nedan\n2. Detta aktiverar grundläggande anslutningsövervakning (ping/HTTP-latens)\n3. Efter installation, klicka på knappen 'Fånga HTML'\n4. Ladda ner diagnostik och dela med utvecklare för att lägga till fullt stöd",
-      "invalid_input": "Ogiltig inmatning. Kontrollera värdena och försök igen.",
-      "unknown": "Ett oväntat fel inträffade. Kontrollera Home Assistant-loggarna för detaljer."
+      "network_unreachable": "Kan inte nå modemet.\n\nKontrollera:\n1. Du är på modemets nätverk (inte gäst-WiFi)\n2. VPN är frånkopplat\n3. IP-adressen är korrekt (vanligtvis 192.168.100.1)\n4. Modemets webbgränssnitt är tillgängligt i din webbläsare",
+      "cannot_connect": "Modemet svarar inte.\n\nKontrollera:\n1. IP-adressen är korrekt\n2. Försök inkludera protokollet (t.ex. http://192.168.100.1)\n3. Modemets webbgränssnitt är tillgängligt från Home Assistants nätverk",
+      "invalid_auth": "Inloggningen misslyckades.\n\nKontrollera:\n1. Användarnamnet är korrekt (vanligtvis 'admin')\n2. Lösenordet är korrekt (kontrollera modemets etikett)\n3. Försök logga in via din webbläsare först för att verifiera uppgifterna",
+      "parse_failed": "Ansluten men kunde inte läsa modemdata.\n\nDetta kan innebära att ditt modem behöver ett annat variantval. Försök gå tillbaka och välj ett annat alternativ, eller kontrollera att modemets firmware stöds.",
+      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna för detaljer."
     },
     "abort": {
-      "already_configured": "Detta modem är redan konfigurerat"
+      "already_configured": "Detta modem är redan konfigurerat.",
+      "missing_input": "Obligatorisk data saknas. Starta om konfigurationen.",
+      "unknown_model": "Vald modemmodell hittades inte i katalogen.",
+      "reauth_successful": "Återautentisering lyckades.",
+      "reauth_failed": "Återautentisering misslyckades. Försök igen."
     },
     "progress": {
       "validate": "Ansluter till modem..."
@@ -106,7 +97,59 @@
       "network_unreachable": "Kan inte nå modemet. Kontrollera IP-adress och nätverksanslutning.",
       "cannot_connect": "Modemet svarar inte. Kontrollera IP-adress och protokoll.",
       "invalid_auth": "Inloggningen misslyckades. Kontrollera användarnamn och lösenord.",
-      "parse_failed": "Ansluten men kunde inte läsa modemdata."
+      "parse_failed": "Ansluten men kunde inte läsa modemdata.",
+      "unknown": "Oväntat fel. Kontrollera Home Assistant-loggarna."
+    },
+    "progress": {
+      "validate": "Validerar anslutning..."
+    }
+  },
+  "services": {
+    "generate_dashboard": {
+      "name": "Generera dashboard",
+      "description": "Genererar användningsklar Lovelace YAML för ditt kabelmodemdashboard. Kopiera utdata och klistra in det i ett manuellt kort.",
+      "fields": {
+        "include_status_card": {
+          "name": "Statuskort",
+          "description": "Modemstatus, drifttid, kanalantal och omstartsknapp."
+        },
+        "include_downstream_power": {
+          "name": "Downstream-effektdiagram",
+          "description": "Effektnivåer för alla downstream-kanaler."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream-SNR-diagram",
+          "description": "Signal-brusförhållande för alla downstream-kanaler."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream-frekvensdiagram",
+          "description": "Frekvens för alla downstream-kanaler."
+        },
+        "include_upstream_power": {
+          "name": "Upstream-effektdiagram",
+          "description": "Effektnivåer för alla upstream-kanaler."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream-frekvensdiagram",
+          "description": "Frekvens för alla upstream-kanaler."
+        },
+        "include_errors": {
+          "name": "Feldiagram",
+          "description": "Korrigerade och okorrigerade felräknare (7-dagarsvy)."
+        },
+        "include_latency": {
+          "name": "Latensdiagram",
+          "description": "Ping- och HTTP-svarstider (6-timmarsvy)."
+        },
+        "graph_hours": {
+          "name": "Diagramhistorik (timmar)",
+          "description": "Timmar av historik för effekt-/SNR-diagram (fel och latens använder fasta tidsperioder)."
+        },
+        "short_titles": {
+          "name": "Använd korta titlar",
+          "description": "Kort: 'DS Power (dBmV)' vs Lång: 'Downstream Power Levels (dBmV)'."
+        }
+      }
     }
   }
 }

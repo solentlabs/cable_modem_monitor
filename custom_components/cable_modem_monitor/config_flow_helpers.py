@@ -109,38 +109,50 @@ async def load_variant_list(
     return await hass.async_add_executor_job(list_variants, modem_dir)  # type: ignore[no-any-return]
 
 
+def _normalize_manufacturer(name: str) -> str:
+    """Normalize manufacturer name to title case for display.
+
+    modem.yaml stores the manufacturer as seen in the wild (e.g.,
+    ``ARRIS``, ``Arris``). The UI presents a normalized form so
+    case variations don't appear as separate entries.
+    """
+    return name.title()
+
+
 def get_manufacturers(summaries: list[ModemSummary]) -> list[str]:
-    """Extract sorted unique manufacturer names from modem summaries."""
-    return sorted({s.manufacturer for s in summaries})
+    """Extract sorted unique manufacturer names, normalized for display.
+
+    Case variations (e.g., ``ARRIS`` and ``Arris``) are consolidated
+    into a single title-case entry. The raw modem.yaml values are
+    preserved — normalization is presentation-only.
+    """
+    return sorted({_normalize_manufacturer(s.manufacturer) for s in summaries})
 
 
 def filter_by_manufacturer(
     summaries: list[ModemSummary],
     manufacturer: str,
 ) -> list[ModemSummary]:
-    """Filter summaries to a single manufacturer."""
-    return [s for s in summaries if s.manufacturer == manufacturer]
+    """Filter summaries to a single manufacturer (case-insensitive)."""
+    return [s for s in summaries if _normalize_manufacturer(s.manufacturer) == manufacturer]
 
 
 def build_model_display_name(summary: ModemSummary) -> str:
     """Build the display string for the model dropdown.
 
-    Format: ``{manufacturer} {model}  DOCSIS {ver}``
-    with aliases in parentheses and ``*`` for unverified.
+    Format: ``{manufacturer} {model}`` with aliases in parentheses
+    and ``*`` for unverified.
 
     Examples::
 
-        "Arris SB8200  DOCSIS 3.1"
-        "Motorola MB8611 (MB8600, MB8612)  DOCSIS 3.1"
-        "Netgear CM1100  DOCSIS 3.1 *"
+        "Arris SB8200"
+        "Motorola MB8611 (MB8600, MB8612)"
+        "Netgear CM1100 *"
     """
-    parts = [summary.manufacturer, summary.model]
+    parts = [_normalize_manufacturer(summary.manufacturer), summary.model]
 
     if summary.model_aliases:
         parts.append(f"({', '.join(summary.model_aliases)})")
-
-    if summary.docsis_version:
-        parts.append(f" DOCSIS {summary.docsis_version}")
 
     if summary.status != "verified":
         parts.append("*")

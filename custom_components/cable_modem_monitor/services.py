@@ -24,8 +24,7 @@ from .const import (
     CONF_ENTITY_PREFIX,
     CONF_SUPPORTS_ICMP,
     DOMAIN,
-    ENTITY_PREFIX_IP,
-    ENTITY_PREFIX_MODEL,
+    get_device_name,
 )
 from .coordinator import CableModemConfigEntry
 
@@ -58,20 +57,15 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
 def _get_entity_prefix(entry: CableModemConfigEntry) -> str:
     """Derive the entity ID prefix from config entry settings.
 
-    Must match the device_name logic in _update_device_registry so
+    Must match the device_name logic in get_device_name() so
     generated entity IDs match what HA actually creates.
     """
     data = entry.data
-    prefix = data.get(CONF_ENTITY_PREFIX, "none")
-
-    if prefix == ENTITY_PREFIX_MODEL:
-        identity = entry.runtime_data.modem_identity
-        device_name = f"Cable Modem {identity.model}"
-    elif prefix == ENTITY_PREFIX_IP:
-        device_name = f"Cable Modem {data[CONF_HOST]}"
-    else:
-        device_name = "Cable Modem"
-
+    device_name = get_device_name(
+        data.get(CONF_ENTITY_PREFIX, "default"),
+        model=entry.runtime_data.modem_identity.model,
+        host=data.get(CONF_HOST, ""),
+    )
     return str(ha_slugify(device_name))
 
 

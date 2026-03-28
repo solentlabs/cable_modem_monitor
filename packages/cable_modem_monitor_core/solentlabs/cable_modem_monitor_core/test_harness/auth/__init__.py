@@ -14,12 +14,14 @@ from .basic import BasicAuthHandler
 from .factory import create_auth_handler
 from .form import FormAuthHandler
 from .hnap import HnapAuthHandler
+from .pbkdf2 import FormPbkdf2AuthHandler
 from .sjcl import FormSjclAuthHandler
 
 __all__ = [
     "AuthHandler",
     "BasicAuthHandler",
     "FormAuthHandler",
+    "FormPbkdf2AuthHandler",
     "FormSjclAuthHandler",
     "HnapAuthHandler",
     "create_auth_handler",

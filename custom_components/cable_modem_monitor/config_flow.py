@@ -266,8 +266,17 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         # Entity prefix options
         prefix_options = _build_prefix_options(self.hass)
 
+        # Show selected manufacturer in the step description.
+        # "All" becomes empty so the description reads naturally:
+        # "Choose a modem model" instead of "Choose a All modem model."
+        if self._selected_manufacturer == _ALL_MANUFACTURERS:
+            mfr_display = ""
+        else:
+            mfr_display = f"{self._selected_manufacturer} "
+
         return self.async_show_form(
             step_id="model",
+            description_placeholders={"manufacturer": mfr_display},
             data_schema=vol.Schema(
                 {
                     vol.Required("model"): selector.SelectSelector(
@@ -781,7 +790,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 def _build_prefix_options(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
     """Build entity prefix dropdown based on existing entries.
 
-    ``none`` is only available when no other entry already uses it.
+    ``none`` (Default) is only available when no other entry already uses it.
     """
     existing = hass.config_entries.async_entries(DOMAIN)
     none_in_use = any(e.data.get(CONF_ENTITY_PREFIX) == ENTITY_PREFIX_NONE for e in existing)
@@ -793,7 +802,7 @@ def _build_prefix_options(hass: HomeAssistant) -> list[selector.SelectOptionDict
         ]
 
     return [
-        selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="None"),
+        selector.SelectOptionDict(value=ENTITY_PREFIX_NONE, label="Default"),
         selector.SelectOptionDict(value=ENTITY_PREFIX_MODEL, label="Model"),
         selector.SelectOptionDict(value=ENTITY_PREFIX_IP, label="IP Address"),
     ]

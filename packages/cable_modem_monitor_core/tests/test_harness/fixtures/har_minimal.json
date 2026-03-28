@@ -1,0 +1,15 @@
+{
+  "_description": "Minimal HAR with one data page — proper HAR format for loader/serve tests",
+  "log": {
+    "entries": [
+      {
+        "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {"text": "<html>data</html>"}
+        }
+      }
+    ]
+  }
+}

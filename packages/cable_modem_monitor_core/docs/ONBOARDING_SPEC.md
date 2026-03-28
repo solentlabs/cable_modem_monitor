@@ -708,7 +708,7 @@ validate, and test it.
 Core (solentlabs-cable-modem-monitor-core)
 ├── Pipeline: auth → load → parse
 ├── MCP server: onboarding tools (analyze, generate, validate)
-├── Test harness: HAR mock server, golden file comparison
+├── Test harness: HARMockServer, golden file comparison
 └── Pydantic validation models (dev dependency)
 
 Catalog (solentlabs-cable-modem-monitor-catalog)
@@ -735,14 +735,17 @@ directory path and discovers the files it needs.
 ## Test Harness (Core)
 
 Core provides a reusable test harness that takes a modem directory
-and runs the full pipeline against a HAR mock server. This harness is
-consumed by:
+and runs the full pipeline against an `HARMockServer` — a local HTTP
+server that replays HAR-captured responses with auth simulation. The
+harness is consumed by:
 
 - The MCP `run_tests` tool (during onboarding)
 - Catalog's pytest suite (during CI)
 - Developers running tests locally
+- The standalone serve command for manual HA integration testing:
+  `python -m solentlabs.cable_modem_monitor_core.test_harness <modem_dir>`
 
-### HAR Mock Server
+### HARMockServer
 
 Builds a local HTTP server from HAR entries. Each entry becomes a
 route that replays the recorded response.
@@ -758,8 +761,8 @@ Mock route:
   GET /MotoConnection.asp → 200, <html>...
 ```
 
-**Auth-aware replay:** The mock server must handle auth flows
-stateully, not just serve responses by URL:
+**Auth-aware replay:** The server handles auth flows statefully,
+not just serves responses by URL:
 
 1. **Login endpoint** returns success response only when credentials
    match the HAR's recorded login request body
@@ -777,10 +780,14 @@ stateully, not just serve responses by URL:
    but HAR captures contain multiple separate calls
 
 This is necessary because the pipeline under test performs real auth
-— if the mock server ignores auth, we're not testing the auth config.
+— if the server ignores auth, we're not testing the auth config.
 
-**Stateless fallback:** For `auth: none` modems, the mock server
-simply maps URL paths to responses with no session tracking.
+**Stateless fallback:** For `auth: none` modems, the server simply
+maps URL paths to responses with no session tracking.
+
+**Auth coverage:** All seven auth strategies have dedicated mock handlers
+including full PBKDF2 multi-round challenge-response and SJCL AES-CCM
+crypto validation.
 
 ### Golden File Comparison
 
@@ -832,12 +839,12 @@ For each modems/{mfr}/{model}/test_data/ directory:
 discover test case:
   modem.har + modem.expected.json + modem.yaml + parser.yaml
     ↓
-build mock server from modem.har
+build HARMockServer from modem.har
     ↓
 load modem config (modem.yaml → auth strategy, session, actions)
 load parser config (parser.yaml → extraction mappings)
     ↓
-run pipeline against mock server:
+run pipeline against HARMockServer:
   1. Auth strategy authenticates (login flow)
   2. Resource loader fetches pages declared in parser.yaml
   3. ModemParserCoordinator extracts ModemData
@@ -1129,7 +1136,7 @@ and retries. Invalid config is never written to disk.
 After all artifacts are placed in the modem directory, the LLM calls
 `run_tests` which invokes Core's test harness:
 
-1. Mock server built from `test_data/modem.har` (auth-aware)
+1. `HARMockServer` built from `test_data/modem.har` (auth-aware)
 2. Full pipeline runs: auth → load → parse
 3. Output compared against `test_data/modem.expected.json`
 4. Structured diff returned on failure

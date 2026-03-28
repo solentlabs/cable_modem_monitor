@@ -134,7 +134,7 @@ in Core discovers and consumes these files.
 
 Each `{name}.har` pairs with `{name}.expected.json`. The test harness
 discovers HAR files, locates the matching golden file, resolves which
-`modem*.yaml` applies, and runs the full pipeline against a mock server.
+`modem*.yaml` applies, and runs the full pipeline against the `HARMockServer`.
 
 **Config resolution for HAR files:**
 
@@ -163,7 +163,7 @@ numbers, IP addresses.
 **Golden file lifecycle:**
 1. Contributor submits HAR capture via `har-capture`
 2. Skill/MCP generates modem.yaml, parser.yaml, and parser.py if needed
-3. First pipeline run against HAR mock server produces `ModemData` output
+3. First pipeline run against `HARMockServer` produces `ModemData` output
 4. Developer reviews output against raw HAR responses
 5. Reviewed output is committed as `{name}.expected.json`
 6. All future runs are regression tests against the golden file

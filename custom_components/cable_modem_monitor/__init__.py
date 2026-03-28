@@ -58,11 +58,9 @@ from .const import (
     DEFAULT_HEALTH_CHECK_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    ENTITY_PREFIX_IP,
-    ENTITY_PREFIX_MODEL,
-    ENTITY_PREFIX_NONE,
     PLATFORMS,
     VERSION,
+    get_device_name,
 )
 from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 from .core.log_buffer import setup_log_buffer
@@ -184,10 +182,41 @@ async def async_setup_entry(
     if not hass.services.has_service(DOMAIN, "generate_dashboard"):
         async_register_services(hass)
 
+    # Log operational summary — after this, per-poll details are DEBUG only
+    _log_operational_summary(scan_interval, health_check_interval, host)
+
     # Register update listener (options flow changes trigger reload)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
+
+
+def _log_operational_summary(
+    scan_interval: int,
+    health_check_interval: int,
+    host: str,
+) -> None:
+    """Log a one-time summary after setup completes.
+
+    Tells the user the polling cadence and how to enable detailed
+    logging. After this message, per-poll details are DEBUG only.
+    """
+    if scan_interval > 0:
+        poll_msg = f"every {scan_interval // 60}m" if scan_interval >= 60 else f"every {scan_interval}s"
+    else:
+        poll_msg = "manual only"
+
+    if health_check_interval > 0:
+        health_msg = f"every {health_check_interval}s"
+    else:
+        health_msg = "disabled"
+
+    _LOGGER.info(
+        "Setup complete for %s — polling %s, health checks %s. " "Enable debug logging for per-poll details.",
+        host,
+        poll_msg,
+        health_msg,
+    )
 
 
 async def async_unload_entry(
@@ -319,13 +348,11 @@ def _update_device_registry(
     data = entry.data
     identity = entry.runtime_data.modem_identity
 
-    prefix = data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE)
-    if prefix == ENTITY_PREFIX_MODEL:
-        device_name = f"Cable Modem {identity.model}"
-    elif prefix == ENTITY_PREFIX_IP:
-        device_name = f"Cable Modem {data[CONF_HOST]}"
-    else:
-        device_name = "Cable Modem"
+    device_name = get_device_name(
+        data.get(CONF_ENTITY_PREFIX, "default"),
+        model=identity.model,
+        host=data.get(CONF_HOST, ""),
+    )
 
     protocol = data.get(CONF_PROTOCOL, "http")
     host = data[CONF_HOST]

@@ -1,81 +1,72 @@
 {
-  "services": {
-    "generate_dashboard": {
-      "name": "Generate Dashboard",
-      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
-      "fields": {
-        "include_status_card": {
-          "name": "Status Card",
-          "description": "Modem status, uptime, channel counts, and restart button."
-        },
-        "include_downstream_power": {
-          "name": "Downstream Power Graph",
-          "description": "Power levels for all downstream channels."
-        },
-        "include_downstream_snr": {
-          "name": "Downstream SNR Graph",
-          "description": "Signal-to-noise ratio for all downstream channels."
-        },
-        "include_downstream_frequency": {
-          "name": "Downstream Frequency Graph",
-          "description": "Frequency for all downstream channels."
-        },
-        "include_upstream_power": {
-          "name": "Upstream Power Graph",
-          "description": "Power levels for all upstream channels."
-        },
-        "include_upstream_frequency": {
-          "name": "Upstream Frequency Graph",
-          "description": "Frequency for all upstream channels."
-        },
-        "include_errors": {
-          "name": "Error Graphs",
-          "description": "Corrected and uncorrected error counts (7-day view)."
-        },
-        "include_latency": {
-          "name": "Latency Graph",
-          "description": "Ping and HTTP response times (6-hour view)."
-        },
-        "graph_hours": {
-          "name": "Graph History (hours)",
-          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
-        },
-        "short_titles": {
-          "name": "Use Short Titles",
-          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
-        }
-      }
-    }
-  },
   "config": {
     "step": {
       "user": {
         "title": "Kabelmodem-Monitor",
-        "description": "Verbinde dein Modem. Mit * markierte Modelle sind nicht verifiziert.",
+        "description": "Hersteller auswählen oder 'Alle' wählen.",
+        "data": {
+          "manufacturer": "Hersteller"
+        }
+      },
+      "model": {
+        "title": "Modem auswählen",
+        "description": "Wähle ein {manufacturer}-Modemmodell. Mit * markierte Modelle sind nicht verifiziert.",
+        "data": {
+          "model": "Modemmodell",
+          "entity_prefix": "Entity ID-Präfix"
+        },
+        "data_description": {
+          "model": "Wähle dein Modemmodell aus der Liste.",
+          "entity_prefix": "Fügt Modellname oder IP zu Entity IDs hinzu. Erforderlich bei Überwachung mehrerer Modems."
+        }
+      },
+      "variant": {
+        "title": "Firmware-Variante",
+        "description": "Dein Modem hat mehrere Firmware-Varianten mit unterschiedlicher Authentifizierung. Wähle die passende für dein Setup.",
+        "data": {
+          "variant": "Variante"
+        },
+        "data_description": {
+          "variant": "Im Zweifelsfall die erste Option wählen. Sie können später umkonfigurieren."
+        }
+      },
+      "connection": {
+        "title": "Verbindung",
+        "description": "Gib die Verbindungsdaten deines Modems ein.",
         "data": {
           "host": "Modem-IP-Adresse",
           "username": "Benutzername",
-          "password": "Passwort",
-          "modem_choice": "Modem-Modell"
+          "password": "Passwort"
         },
         "data_description": {
-          "host": "Normalerweise 192.168.100.1",
-          "username": "Leer lassen, wenn nicht erforderlich",
-          "password": "Leer lassen, wenn nicht erforderlich",
-          "modem_choice": "'auto' für automatische Erkennung"
+          "host": "Normalerweise 192.168.100.1. Mit http:// oder https:// die Protokollerkennung überspringen.",
+          "username": "Leer lassen, wenn nicht erforderlich.",
+          "password": "Leer lassen, wenn nicht erforderlich."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Erneut authentifizieren",
+        "description": "Das Modem hat deine Anmeldedaten abgelehnt. Bitte gib sie erneut ein.",
+        "data": {
+          "host": "Modem-IP-Adresse",
+          "username": "Benutzername",
+          "password": "Passwort"
         }
       }
     },
     "error": {
-      "invalid_auth": "Ungültiger Benutzername oder Passwort. Bitte überprüfe deine Anmeldedaten und versuche es erneut.",
-      "network_unreachable": "Modem nicht erreichbar - Netzwerkverbindungsproblem.\n\nBitte überprüfe:\n1. Netzwerkverbindung - Bist du im richtigen WLAN-Netzwerk?\n2. Gäste-WLAN - Gästenetzwerke blockieren oft den Zugriff auf lokale Geräte\n3. VPN - Trenne alle aktiven VPN-Verbindungen\n4. IP-Adresse - Überprüfe die IP des Modems (typischerweise 192.168.100.1)\n5. Modem-Weboberfläche - Stelle sicher, dass sie aktiviert und erreichbar ist\n6. Langsame Antwort - Einige Modems brauchen ein paar Sekunden zum Aufwachen; versuche es erneut\n\nVersuche, das Modem direkt im Browser zu erreichen, um die Konnektivität zu überprüfen.",
-      "cannot_connect": "Verbindung zum Modem fehlgeschlagen.\n\nBitte überprüfe:\n1. IP-Adresse ist korrekt (typischerweise 192.168.100.1)\n2. Wenn das Modem Authentifizierung erfordert, gib Benutzername/Passwort ein\n3. Modem-Weboberfläche ist vom Home Assistant-Netzwerk aus erreichbar\n\nWenn dein Modem nicht unterstützt wird, wähle 'Unbekanntes Modem (Fallback-Modus)' für grundlegende Überwachung und HTML-Erfassung.",
-      "unsupported_modem": "Automatische Erkennung konnte dein Modem-Modell nicht identifizieren.\n\nUm fortzufahren:\n1. Wähle 'Unbekanntes Modem (Fallback-Modus)' im Dropdown unten\n2. Dies aktiviert grundlegende Konnektivitätsüberwachung (Ping/HTTP-Latenz)\n3. Klicke nach der Installation auf 'HTML erfassen'\n4. Lade Diagnosen herunter und teile sie mit Entwicklern, um vollständige Unterstützung hinzuzufügen",
-      "invalid_input": "Ungültige Eingabe. Bitte überprüfe die Werte und versuche es erneut.",
-      "unknown": "Unerwarteter Fehler aufgetreten. Überprüfe die Home Assistant-Logs für Details."
+      "network_unreachable": "Modem nicht erreichbar.\n\nPrüfe:\n1. Du bist im Netzwerk des Modems (nicht Gäste-WiFi)\n2. VPN ist getrennt\n3. IP-Adresse ist korrekt (normalerweise 192.168.100.1)\n4. Modem-Weboberfläche ist in deinem Browser erreichbar",
+      "cannot_connect": "Modem antwortet nicht.\n\nPrüfe:\n1. IP-Adresse ist korrekt\n2. Versuche das Protokoll anzugeben (z. B. http://192.168.100.1)\n3. Modem-Weboberfläche ist vom Home Assistant-Netzwerk aus erreichbar",
+      "invalid_auth": "Anmeldung fehlgeschlagen.\n\nPrüfe:\n1. Benutzername ist korrekt (typischerweise 'admin')\n2. Passwort ist korrekt (siehe Modem-Etikett)\n3. Versuche dich zuerst über deinen Browser anzumelden, um die Anmeldedaten zu überprüfen",
+      "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.\n\nDies kann bedeuten, dass dein Modem eine andere Variantenauswahl benötigt. Gehe zurück und wähle eine andere Option, oder prüfe ob die Firmware deines Modems unterstützt wird.",
+      "unknown": "Unerwarteter Fehler. Überprüfe die Home Assistant-Logs für Details."
     },
     "abort": {
-      "already_configured": "Dieses Modem ist bereits konfiguriert"
+      "already_configured": "Dieses Modem ist bereits konfiguriert.",
+      "missing_input": "Erforderliche Daten fehlen. Bitte starte die Einrichtung neu.",
+      "unknown_model": "Ausgewähltes Modem nicht im Katalog gefunden.",
+      "reauth_successful": "Erneute Authentifizierung erfolgreich.",
+      "reauth_failed": "Erneute Authentifizierung fehlgeschlagen. Bitte versuche es erneut."
     },
     "progress": {
       "validate": "Verbinde mit Modem..."
@@ -106,7 +97,59 @@
       "network_unreachable": "Modem nicht erreichbar. IP-Adresse und Netzwerkverbindung prüfen.",
       "cannot_connect": "Modem antwortet nicht. IP-Adresse und Protokoll prüfen.",
       "invalid_auth": "Anmeldung fehlgeschlagen. Benutzername und Passwort prüfen.",
-      "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden."
+      "parse_failed": "Verbunden, aber Modemdaten konnten nicht gelesen werden.",
+      "unknown": "Unerwarteter Fehler. Home Assistant-Logs prüfen."
+    },
+    "progress": {
+      "validate": "Verbindung wird überprüft..."
+    }
+  },
+  "services": {
+    "generate_dashboard": {
+      "name": "Dashboard generieren",
+      "description": "Erzeugt gebrauchsfertiges Lovelace YAML für dein Kabelmodem-Dashboard. Kopiere die Ausgabe und füge sie in eine manuelle Karte ein.",
+      "fields": {
+        "include_status_card": {
+          "name": "Statuskarte",
+          "description": "Modemstatus, Betriebszeit, Kanalanzahl und Neustart-Schaltfläche."
+        },
+        "include_downstream_power": {
+          "name": "Downstream-Leistungsdiagramm",
+          "description": "Leistungspegel für alle Downstream-Kanäle."
+        },
+        "include_downstream_snr": {
+          "name": "Downstream-SNR-Diagramm",
+          "description": "Signal-Rausch-Verhältnis für alle Downstream-Kanäle."
+        },
+        "include_downstream_frequency": {
+          "name": "Downstream-Frequenzdiagramm",
+          "description": "Frequenz für alle Downstream-Kanäle."
+        },
+        "include_upstream_power": {
+          "name": "Upstream-Leistungsdiagramm",
+          "description": "Leistungspegel für alle Upstream-Kanäle."
+        },
+        "include_upstream_frequency": {
+          "name": "Upstream-Frequenzdiagramm",
+          "description": "Frequenz für alle Upstream-Kanäle."
+        },
+        "include_errors": {
+          "name": "Fehlerdiagramme",
+          "description": "Korrigierte und unkorrigierte Fehlerzähler (7-Tage-Ansicht)."
+        },
+        "include_latency": {
+          "name": "Latenzdiagramm",
+          "description": "Ping- und HTTP-Antwortzeiten (6-Stunden-Ansicht)."
+        },
+        "graph_hours": {
+          "name": "Diagramm-Historie (Stunden)",
+          "description": "Stunden an Verlaufsdaten für Leistungs-/SNR-Diagramme (Fehler und Latenz verwenden feste Zeiträume)."
+        },
+        "short_titles": {
+          "name": "Kurze Titel verwenden",
+          "description": "Kurz: 'DS Power (dBmV)' vs Lang: 'Downstream Power Levels (dBmV)'."
+        }
+      }
     }
   }
 }

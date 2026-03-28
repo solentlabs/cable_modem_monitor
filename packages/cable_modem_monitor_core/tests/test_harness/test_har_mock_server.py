@@ -375,6 +375,13 @@ class TestHARMockServerNoAuth:
             assert resp2.status_code == 200
             assert "System info" in resp2.text
 
+    def test_head_returns_status_no_body(self, entries: list[dict[str, Any]]) -> None:
+        """HEAD returns 200 with no body — used by connectivity probes."""
+        with HARMockServer(entries) as server:
+            resp = requests.head(f"{server.base_url}/status.html")
+            assert resp.status_code == 200
+            assert resp.text == ""
+
     def test_404_for_unknown_path(self, entries: list[dict[str, Any]]) -> None:
         """Unknown paths return 404."""
         with HARMockServer(entries) as server:
@@ -385,6 +392,21 @@ class TestHARMockServerNoAuth:
         """base_url is http://127.0.0.1:<port>."""
         with HARMockServer(entries) as server:
             assert server.base_url.startswith("http://127.0.0.1:")
+
+    def test_custom_port(self, entries: list[dict[str, Any]]) -> None:
+        """Server binds to a specific port when requested."""
+        with HARMockServer(entries, port=0) as server:
+            # Ephemeral port should be non-zero after binding
+            port = server.server_address[1]
+            assert port > 0
+            assert server.base_url == f"http://127.0.0.1:{port}"
+
+    def test_custom_host_and_port(self, entries: list[dict[str, Any]]) -> None:
+        """Server binds to custom host and port."""
+        with HARMockServer(entries, host="127.0.0.1", port=0) as server:
+            resp = requests.get(f"{server.base_url}/status.html")
+            assert resp.status_code == 200
+            assert resp.text == "<html>DS data</html>"
 
 
 class TestHARMockServerFormAuth:

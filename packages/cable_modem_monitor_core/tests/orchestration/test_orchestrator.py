@@ -760,6 +760,23 @@ class TestConnectivityFailures:
         assert s.connection_status == ConnectionStatus.ONLINE
         assert collector.execute.call_count == 2
 
+    def test_reset_connectivity_noop_when_not_backing_off(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """reset_connectivity() is silent when there is no active backoff."""
+        collector = _mock_collector([_ok_result()])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()  # streak=0
+        assert orch.diagnostics().connectivity_streak == 0
+
+        with caplog.at_level(logging.INFO):
+            orch.reset_connectivity()
+
+        assert "Connectivity backoff reset" not in caplog.text
+        assert orch.diagnostics().connectivity_streak == 0
+
     def test_non_connectivity_failure_clears_connectivity(self) -> None:
         """Auth failure after connectivity outage clears connectivity backoff."""
         collector = _mock_collector()

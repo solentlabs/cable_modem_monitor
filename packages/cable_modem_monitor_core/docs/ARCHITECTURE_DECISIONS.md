@@ -275,7 +275,7 @@ expanding the action model. This is intentional.
 
 **Decision:** Each modem's `tests/` directory contains HAR captures
 (pipeline input) and expected output golden files (assertions). The
-test harness replays each HAR through a mock server, runs the full
+test harness replays each HAR through the `HARMockServer`, runs the full
 pipeline, and compares output against the golden file.
 
 **Rationale:** HAR captures are engine-independent HTTP recordings —

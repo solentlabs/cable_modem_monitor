@@ -1,0 +1,23 @@
+{
+  "_description": "Minimal HAR with form auth login endpoint and one data page",
+  "log": {
+    "entries": [
+      {
+        "request": {"method": "POST", "url": "http://192.168.100.1/goform/login"},
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {"text": "OK"}
+        }
+      },
+      {
+        "request": {"method": "GET", "url": "http://192.168.100.1/status.html"},
+        "response": {
+          "status": 200,
+          "headers": [],
+          "content": {"text": "<html>data</html>"}
+        }
+      }
+    ]
+  }
+}

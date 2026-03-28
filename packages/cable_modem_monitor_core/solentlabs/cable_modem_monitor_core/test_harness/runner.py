@@ -43,7 +43,7 @@ from ..orchestration.signals import ConnectionStatus
 from ..parsers.coordinator import ModemParserCoordinator, filter_restart_window
 from .discovery import ModemTestCase
 from .golden_file import ComparisonResult, compare_golden_file
-from .har_mock_server import HARMockServer
+from .server import HARMockServer
 
 _logger = logging.getLogger(__name__)
 

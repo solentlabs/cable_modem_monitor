@@ -6,17 +6,13 @@ transport: http
 default_host: "192.168.100.1"
 
 auth:
-  # Real auth is form_pbkdf2 (double-hash SJCL). For testing, strategy
-  # is set to none because the mock server cannot replay PBKDF2 flows.
-  # Production config should use:
-  #   strategy: form_pbkdf2
-  #   login_endpoint: "/api/v1/session/login"
-  #   pbkdf2_iterations: 1000
-  #   pbkdf2_key_length: 128
-  #   double_hash: true
-  #   csrf_init_endpoint: "/api/v1/session/language"
-  #   csrf_header: "X-CSRF-TOKEN"
-  strategy: none
+  strategy: form_pbkdf2
+  login_endpoint: "/api/v1/session/login"
+  pbkdf2_iterations: 1000
+  pbkdf2_key_length: 128
+  double_hash: true
+  csrf_init_endpoint: "/api/v1/session/language"
+  csrf_header: "X-CSRF-TOKEN"
 
 session:
   cookie_name: "PHPSESSID"

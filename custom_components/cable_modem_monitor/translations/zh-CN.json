@@ -1,81 +1,72 @@
 {
-  "services": {
-    "generate_dashboard": {
-      "name": "Generate Dashboard",
-      "description": "Generates ready-to-use Lovelace YAML for your cable modem dashboard. Copy the output and paste it into a Manual card.",
-      "fields": {
-        "include_status_card": {
-          "name": "Status Card",
-          "description": "Modem status, uptime, channel counts, and restart button."
-        },
-        "include_downstream_power": {
-          "name": "Downstream Power Graph",
-          "description": "Power levels for all downstream channels."
-        },
-        "include_downstream_snr": {
-          "name": "Downstream SNR Graph",
-          "description": "Signal-to-noise ratio for all downstream channels."
-        },
-        "include_downstream_frequency": {
-          "name": "Downstream Frequency Graph",
-          "description": "Frequency for all downstream channels."
-        },
-        "include_upstream_power": {
-          "name": "Upstream Power Graph",
-          "description": "Power levels for all upstream channels."
-        },
-        "include_upstream_frequency": {
-          "name": "Upstream Frequency Graph",
-          "description": "Frequency for all upstream channels."
-        },
-        "include_errors": {
-          "name": "Error Graphs",
-          "description": "Corrected and uncorrected error counts (7-day view)."
-        },
-        "include_latency": {
-          "name": "Latency Graph",
-          "description": "Ping and HTTP response times (6-hour view)."
-        },
-        "graph_hours": {
-          "name": "Graph History (hours)",
-          "description": "Hours of history for power/SNR graphs (errors and latency use fixed timeframes)."
-        },
-        "short_titles": {
-          "name": "Use Short Titles",
-          "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
-        }
-      }
-    }
-  },
   "config": {
     "step": {
       "user": {
-        "title": "有线调制解调器监控",
-        "description": "连接到您的有线调制解调器。标有 * 的型号尚未验证。",
+        "title": "Cable Modem Monitor",
+        "description": "选择制造商或选择「全部」。",
+        "data": {
+          "manufacturer": "制造商"
+        }
+      },
+      "model": {
+        "title": "选择调制解调器",
+        "description": "选择一个 {manufacturer} 调制解调器型号。标有 * 的型号尚未验证。",
+        "data": {
+          "model": "调制解调器型号",
+          "entity_prefix": "Entity ID 前缀"
+        },
+        "data_description": {
+          "model": "从列表中选择您的调制解调器型号。",
+          "entity_prefix": "将型号名称或 IP 添加到实体 ID。监控多个调制解调器时必填。"
+        }
+      },
+      "variant": {
+        "title": "固件变体",
+        "description": "您的调制解调器有多个固件变体，使用不同的认证方式。请选择与您设置匹配的变体。",
+        "data": {
+          "variant": "变体"
+        },
+        "data_description": {
+          "variant": "如果不确定，请尝试第一个选项。您可以稍后重新配置。"
+        }
+      },
+      "connection": {
+        "title": "连接",
+        "description": "输入您的调制解调器连接信息。",
         "data": {
           "host": "调制解调器 IP 地址",
           "username": "用户名",
-          "password": "密码",
-          "modem_choice": "调制解调器型号"
+          "password": "密码"
         },
         "data_description": {
-          "host": "通常是 192.168.100.1",
-          "username": "如果不需要请留空",
-          "password": "如果不需要请留空",
-          "modem_choice": "使用 'auto' 进行自动检测"
+          "host": "通常是 192.168.100.1。添加 http:// 或 https:// 可跳过协议检测。",
+          "username": "如果不需要请留空。",
+          "password": "如果不需要请留空。"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新认证",
+        "description": "调制解调器拒绝了您的凭据。请重新输入。",
+        "data": {
+          "host": "调制解调器 IP 地址",
+          "username": "用户名",
+          "password": "密码"
         }
       }
     },
     "error": {
-      "invalid_auth": "用户名或密码无效。请检查您的凭据后重试。",
-      "network_unreachable": "无法访问调制解调器 - 网络连接问题。\n\n请检查：\n1. 网络连接 - 您是否连接到正确的 WiFi 网络？\n2. 访客 WiFi - 访客网络通常会阻止访问本地设备\n3. VPN - 断开所有活动的 VPN 连接\n4. IP 地址 - 验证调制解调器的 IP（通常是 192.168.100.1）\n5. 调制解调器 Web 界面 - 确保已启用并可访问\n6. 响应缓慢 - 某些调制解调器需要几秒钟才能唤醒；请尝试重新提交\n\n请尝试在浏览器中直接访问调制解调器以验证连接。",
-      "cannot_connect": "无法连接到调制解调器。\n\n请检查：\n1. IP 地址是否正确（通常是 192.168.100.1）\n2. 如果调制解调器需要认证，请输入用户名/密码\n3. 调制解调器的 Web 界面是否可从 Home Assistant 网络访问\n\n如果您的调制解调器不受支持，请选择「未知调制解调器（回退模式）」以启用基本监控和 HTML 捕获。",
-      "unsupported_modem": "自动检测无法识别您的调制解调器型号。\n\n请按以下步骤操作：\n1. 从下拉菜单中选择「未知调制解调器（回退模式）」\n2. 这将启用基本连接监控（ping/HTTP 延迟）\n3. 安装后，点击「捕获 HTML」按钮\n4. 下载诊断信息并与开发人员分享以添加完整支持",
-      "invalid_input": "输入无效。请检查数值并重试。",
-      "unknown": "发生意外错误。请查看 Home Assistant 日志了解详情。"
+      "network_unreachable": "无法访问调制解调器。\n\n请检查：\n1. 您已连接到调制解调器的网络（非访客 WiFi）\n2. VPN 已断开\n3. IP 地址正确（通常是 192.168.100.1）\n4. 可以在浏览器中访问调制解调器的 Web 界面",
+      "cannot_connect": "调制解调器无响应。\n\n请检查：\n1. IP 地址正确\n2. 尝试包含协议（例如 http://192.168.100.1）\n3. 调制解调器的 Web 界面可从 Home Assistant 网络访问",
+      "invalid_auth": "登录失败。\n\n请检查：\n1. 用户名正确（通常为「admin」）\n2. 密码正确（查看调制解调器标签）\n3. 先尝试通过浏览器登录以验证凭据",
+      "parse_failed": "已连接但无法读取调制解调器数据。\n\n这可能意味着您的调制解调器需要选择不同的变体。请尝试返回并选择其他选项，或检查您的调制解调器固件是否受支持。",
+      "unknown": "意外错误。请查看 Home Assistant 日志了解详情。"
     },
     "abort": {
-      "already_configured": "此调制解调器已配置"
+      "already_configured": "此调制解调器已配置。",
+      "missing_input": "缺少必填数据。请重新开始设置。",
+      "unknown_model": "在目录中未找到所选调制解调器。",
+      "reauth_successful": "重新认证成功。",
+      "reauth_failed": "重新认证失败。请重试。"
     },
     "progress": {
       "validate": "正在连接调制解调器..."
@@ -97,7 +88,7 @@
           "host": "通常是 192.168.100.1",
           "username": "如果不需要请留空。",
           "password": "留空则保留当前密码。",
-          "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过更新按钮手动获取）。",
+          "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过「更新」按钮手动获取）。",
           "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。"
         }
       }
@@ -106,7 +97,59 @@
       "network_unreachable": "无法访问调制解调器。请检查 IP 地址和网络连接。",
       "cannot_connect": "调制解调器无响应。请检查 IP 地址和协议。",
       "invalid_auth": "登录失败。请检查用户名和密码。",
-      "parse_failed": "已连接，但无法读取调制解调器数据。"
+      "parse_failed": "已连接但无法读取调制解调器数据。",
+      "unknown": "意外错误。请查看 Home Assistant 日志。"
+    },
+    "progress": {
+      "validate": "正在验证连接..."
+    }
+  },
+  "services": {
+    "generate_dashboard": {
+      "name": "生成仪表板",
+      "description": "生成可直接使用的 Lovelace YAML，用于您的有线调制解调器仪表板。复制输出内容并粘贴到手动卡片中。",
+      "fields": {
+        "include_status_card": {
+          "name": "状态卡片",
+          "description": "调制解调器状态、运行时间、频道数量和重启按钮。"
+        },
+        "include_downstream_power": {
+          "name": "下行功率图",
+          "description": "所有下行频道的功率水平。"
+        },
+        "include_downstream_snr": {
+          "name": "下行 SNR 图",
+          "description": "所有下行频道的信噪比。"
+        },
+        "include_downstream_frequency": {
+          "name": "下行频率图",
+          "description": "所有下行频道的频率。"
+        },
+        "include_upstream_power": {
+          "name": "上行功率图",
+          "description": "所有上行频道的功率水平。"
+        },
+        "include_upstream_frequency": {
+          "name": "上行频率图",
+          "description": "所有上行频道的频率。"
+        },
+        "include_errors": {
+          "name": "错误图表",
+          "description": "已纠正和未纠正的错误计数（7 天视图）。"
+        },
+        "include_latency": {
+          "name": "延迟图",
+          "description": "Ping 和 HTTP 响应时间（6 小时视图）。"
+        },
+        "graph_hours": {
+          "name": "图表历史（小时）",
+          "description": "功率/SNR 图表的历史小时数（错误和延迟使用固定时间范围）。"
+        },
+        "short_titles": {
+          "name": "使用短标题",
+          "description": "短标题：「下行功率 (dBmV)」，长标题：「下行功率水平 (dBmV)」。"
+        }
+      }
     }
   }
 }

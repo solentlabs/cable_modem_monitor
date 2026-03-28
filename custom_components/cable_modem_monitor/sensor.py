@@ -44,7 +44,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import (
     HealthStatus,
 )
 
-from .const import CONF_SUPPORTS_ICMP, DOMAIN
+from .const import CONF_ENTITY_PREFIX, CONF_SUPPORTS_ICMP, DOMAIN, get_device_name
 from .coordinator import CableModemConfigEntry
 from .lib.utils import parse_uptime_to_seconds
 
@@ -199,6 +199,11 @@ class ModemSensorBase(
         self._entry = entry
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
+            name=get_device_name(
+                entry.data.get(CONF_ENTITY_PREFIX, "default"),
+                model=entry.runtime_data.modem_identity.model,
+                host=entry.data.get("host", ""),
+            ),
         )
 
     @property
@@ -230,6 +235,11 @@ class HealthSensorBase(
         self._entry = entry
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
+            name=get_device_name(
+                entry.data.get(CONF_ENTITY_PREFIX, "default"),
+                model=entry.runtime_data.modem_identity.model,
+                host=entry.data.get("host", ""),
+            ),
         )
 
     @property
