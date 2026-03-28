@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .actions import ActionsConfig, BehaviorsConfig
 from .auth import HNAP_AUTH_STRATEGIES, HTTP_AUTH_STRATEGIES, AuthConfig
+from .health import HealthConfig
 from .metadata import AttributionConfig, HardwareConfig, ReferencesConfig
 from .session import SessionConfig
 
@@ -46,6 +47,9 @@ class ModemConfig(BaseModel):
 
     # Hardware
     hardware: HardwareConfig | None = None
+
+    # Health
+    health: HealthConfig | None = None
 
     # Timeout
     timeout: int = 10

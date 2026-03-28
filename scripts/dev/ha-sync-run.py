@@ -383,10 +383,11 @@ def install_packages() -> bool:
 def main() -> int:
     print_header("Start Home Assistant")
 
-    total_steps = 3
+    total_steps = 4
 
     # Step 1: Start or restart container
-    if is_container_running():
+    fresh_start = not is_container_running()
+    if not fresh_start:
         print_step(1, total_steps, "Restarting Home Assistant...")
         if not restart_container():
             print_error_header("RESTART FAILED")
@@ -403,7 +404,8 @@ def main() -> int:
     # Step 2: Install solentlabs packages
     print()
     print_step(2, total_steps, "Installing solentlabs packages...")
-    if install_packages():
+    packages_ok = install_packages()
+    if packages_ok:
         print_success("Core + Catalog packages installed")
     else:
         print_warning("Package install failed — integration will not load")
@@ -413,9 +415,24 @@ def main() -> int:
             " -e /workspace/packages/cable_modem_monitor_catalog"
         )
 
-    # Step 3: Wait for HA to be ready
+    # Step 3: Restart HA so it picks up the newly installed packages
+    # On fresh start, HA boots before packages are installed, so the
+    # integration fails with "No module named 'solentlabs'". Restarting
+    # after install lets HA reload with packages available.
+    if fresh_start and packages_ok:
+        print()
+        print_step(3, total_steps, "Restarting HA to load packages...")
+        if restart_container():
+            print_success("Container restarted with packages available")
+        else:
+            print_warning("Restart failed — try: docker restart ha-cable-modem-test")
+    else:
+        print()
+        print_step(3, total_steps, "Packages already available, skipping restart")
+
+    # Step 4: Wait for HA to be ready
     print()
-    print_step(3, total_steps, "Waiting for Home Assistant...")
+    print_step(4, total_steps, "Waiting for Home Assistant...")
     print("   ", end="")
 
     if wait_for_http(HA_PORT, timeout=60):

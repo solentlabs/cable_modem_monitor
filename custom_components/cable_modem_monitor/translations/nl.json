@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Cable Modem-instellingen",
-        "description": "Huidig: {detected_modem}\nLaatst gecontroleerd: {parser_selected_at}",
+        "title": "Kabelmodem-instellingen",
+        "description": "Verbindingsgegevens en poll-intervallen bijwerken.",
         "data": {
-          "host": "Modem IP",
+          "host": "Modem IP-adres",
           "username": "Gebruikersnaam",
           "password": "Wachtwoord",
-          "modem_choice": "Modemmodel",
-          "scan_interval": "Poll-interval (sec)"
+          "scan_interval": "Data-poll-interval",
+          "health_check_interval": "Bereikbaarheidscontrole"
         },
         "data_description": {
           "host": "Meestal 192.168.100.1",
-          "username": "Leeg laten indien niet vereist",
-          "password": "Leeg = huidige behouden",
-          "modem_choice": "Gebruik 'auto' voor detectie. Wijzig indien onjuist.",
-          "scan_interval": "60-1800 sec. Standaard 600 (10 min)"
+          "username": "Leeg laten indien niet vereist.",
+          "password": "Leeg = huidig wachtwoord behouden.",
+          "scan_interval": "Hoe vaak modemgegevens worden opgehaald. Standaard 10 minuten. Stel in op 00:00:00 om automatisch pollen uit te schakelen (alleen handmatig via de knop Bijwerken).",
+          "health_check_interval": "Hoe vaak de bereikbaarheid van de modem wordt gecontroleerd. Standaard 30 seconden. Stel in op 00:00:00 om bereikbaarheidscontroles uit te schakelen."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Modem niet bereikbaar. Controleer het IP-adres en de netwerkverbinding.",
+      "cannot_connect": "Modem reageert niet. Controleer het IP-adres en het protocol.",
+      "invalid_auth": "Aanmelding mislukt. Controleer gebruikersnaam en wachtwoord.",
+      "parse_failed": "Verbonden, maar kon de modemgegevens niet lezen."
     }
   }
 }

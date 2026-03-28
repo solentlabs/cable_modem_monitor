@@ -1,9 +1,10 @@
 """modem.yaml configuration models.
 
-Submodules: auth, session, actions, metadata, config.
-Public API: ModemConfig (import from here or from models/).
+Submodules: auth, session, actions, metadata, health, config.
+Public API: ModemConfig, HealthConfig (import from here or from models/).
 """
 
 from .config import ModemConfig
+from .health import HealthConfig
 
-__all__ = ["ModemConfig"]
+__all__ = ["HealthConfig", "ModemConfig"]

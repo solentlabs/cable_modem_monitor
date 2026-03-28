@@ -208,14 +208,12 @@ def test_login_failure(
 
 
 def test_connection_refused() -> None:
-    """Connection error returns failure."""
+    """ConnectionError propagates for collector to classify as CONNECTIVITY."""
     manager = _make_manager()
     session = requests.Session()
 
-    result = manager.authenticate(session, "http://127.0.0.1:1", "admin", "pw")
-
-    assert result.success is False
-    assert "challenge request failed" in result.error
+    with pytest.raises(requests.ConnectionError):
+        manager.authenticate(session, "http://127.0.0.1:1", "admin", "pw")
 
 
 # ┌─────────────┬──────────┬──────────────────────────┐

@@ -15,20 +15,31 @@ Lifecycle.
 
 from __future__ import annotations
 
+import functools
 import logging
 import threading
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.const import EntityCategory
+from homeassistant.const import CONF_HOST, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
+from solentlabs.cable_modem_monitor_core.config_loader import load_modem_config
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     RestartResult,
 )
 
-from .const import DOMAIN
+from .config_flow_helpers import detect_probes
+from .const import (
+    CONF_LEGACY_SSL,
+    CONF_MODEM_DIR,
+    CONF_SUPPORTS_HEAD,
+    CONF_SUPPORTS_ICMP,
+    CONF_VARIANT,
+    DOMAIN,
+)
 from .coordinator import CableModemConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,6 +198,10 @@ class UpdateModemDataButton(_ButtonBase):
         """Handle the button press — refresh health then data."""
         runtime = self._entry.runtime_data
 
+        # Clear connectivity backoff so this poll always attempts
+        # a real connection, even if the modem was unreachable
+        runtime.orchestrator.reset_connectivity()
+
         # Health first so data snapshot includes fresh health info
         if runtime.health_coordinator is not None:
             await runtime.health_coordinator.async_request_refresh()
@@ -199,9 +214,10 @@ class UpdateModemDataButton(_ButtonBase):
 class ResetEntitiesButton(_ButtonBase):
     """Button to reset all entities and reload integration.
 
-    Removes entities from the registry, then reloads the integration
-    to recreate them.  Unique IDs are preserved so entity_ids, history,
-    and automations survive the reset.
+    Re-detects probe capabilities (ICMP, HTTP HEAD), removes entities
+    from the registry, then reloads the integration to recreate them.
+    Unique IDs are preserved so entity_ids, history, and automations
+    survive the reset.
     """
 
     def __init__(self, entry: CableModemConfigEntry) -> None:
@@ -213,9 +229,12 @@ class ResetEntitiesButton(_ButtonBase):
         self._attr_entity_category = EntityCategory.CONFIG
 
     async def async_press(self) -> None:
-        """Handle button press — remove all entities and reload."""
-        entity_reg = er.async_get(self.hass)
+        """Handle button press — re-detect probes, remove entities, reload."""
+        # Re-detect probe capabilities
+        updated = await self._redetect_probes()
 
+        # Remove all entities
+        entity_reg = er.async_get(self.hass)
         entities_to_remove = [
             entity_entry.entity_id
             for entity_entry in entity_reg.entities.values()
@@ -226,10 +245,66 @@ class ResetEntitiesButton(_ButtonBase):
         for entity_id in entities_to_remove:
             entity_reg.async_remove(entity_id)
 
+        # Update config entry with new probe results and reload
+        if updated:
+            self.hass.config_entries.async_update_entry(
+                self._entry,
+                data={**self._entry.data, **updated},
+            )
+
         await self.hass.config_entries.async_reload(self._entry.entry_id)
+
+        probe_msg = ""
+        if updated:
+            probe_msg = (
+                f"\n\nProbe re-detection: ICMP={'yes' if updated.get(CONF_SUPPORTS_ICMP) else 'no'}, "
+                f"HEAD={'yes' if updated.get(CONF_SUPPORTS_HEAD) else 'no'}"
+            )
 
         await self._notify(
             "Entity Reset Complete",
-            f"Removed {len(entities_to_remove)} entities and reloaded the integration.",
+            f"Removed {len(entities_to_remove)} entities and reloaded the integration.{probe_msg}",
             _NOTIFY_RESET,
         )
+
+    async def _redetect_probes(self) -> dict[str, bool] | None:
+        """Re-detect ICMP and HTTP HEAD support.
+
+        Uses the shared ``detect_probes()`` helper (same logic as the
+        config flow validation pipeline). Returns updated config dict
+        or None if modem is unreachable.
+        """
+        data = self._entry.data
+        host = data[CONF_HOST]
+        protocol = data.get("protocol", "http")
+        base_url = f"{protocol}://{host}"
+        legacy_ssl = data.get(CONF_LEGACY_SSL, False)
+
+        # Load modem.yaml for health config defaults
+        modem_dir = CATALOG_PATH / data[CONF_MODEM_DIR]
+        variant = data.get(CONF_VARIANT)
+        modem_yaml = modem_dir / f"modem-{variant}.yaml" if variant else modem_dir / "modem.yaml"
+
+        try:
+            modem_config = await self.hass.async_add_executor_job(load_modem_config, modem_yaml)
+        except Exception:
+            _LOGGER.warning("Could not load modem config for probe re-detection")
+            return None
+
+        try:
+            probes = await self.hass.async_add_executor_job(
+                functools.partial(detect_probes, host, base_url, modem_config, legacy_ssl=legacy_ssl)
+            )
+        except Exception:
+            _LOGGER.warning("Probe re-detection failed — modem may be unreachable")
+            return None
+
+        _LOGGER.info(
+            "Probe re-detection: supports_icmp=%s, supports_head=%s",
+            probes["supports_icmp"],
+            probes["supports_head"],
+        )
+        return {
+            CONF_SUPPORTS_ICMP: probes["supports_icmp"],
+            CONF_SUPPORTS_HEAD: probes["supports_head"],
+        }

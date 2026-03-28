@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Cable Modem-inställningar",
-        "description": "Nuvarande: {detected_modem}\nSenast kontrollerad: {parser_selected_at}",
+        "title": "Kabelmodeminställningar",
+        "description": "Uppdatera anslutningsuppgifter och pollningsintervall.",
         "data": {
-          "host": "Modem-IP",
+          "host": "Modemets IP-adress",
           "username": "Användarnamn",
           "password": "Lösenord",
-          "modem_choice": "Modemmodell",
-          "scan_interval": "Pollningsintervall (sek)"
+          "scan_interval": "Datapollningsintervall",
+          "health_check_interval": "Hälsokontrollintervall"
         },
         "data_description": {
           "host": "Vanligtvis 192.168.100.1",
-          "username": "Lämna tomt om det inte krävs",
-          "password": "Tomt = behåll nuvarande",
-          "modem_choice": "Använd 'auto' för detektering. Ändra om felaktig.",
-          "scan_interval": "60-1800 sek. Standard 600 (10 min)"
+          "username": "Lämna tomt om det inte krävs.",
+          "password": "Tomt behåller nuvarande lösenord.",
+          "scan_interval": "Hur ofta modemdata hämtas. Standard 10 minuter. Ställ in 00:00:00 för att inaktivera automatisk pollning (manuellt via Uppdatera-knappen).",
+          "health_check_interval": "Hur ofta modemets tillgänglighet kontrolleras. Standard 30 sekunder. Ställ in 00:00:00 för att inaktivera hälsokontroller."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Kan inte nå modemet. Kontrollera IP-adress och nätverksanslutning.",
+      "cannot_connect": "Modemet svarar inte. Kontrollera IP-adress och protokoll.",
+      "invalid_auth": "Inloggningen misslyckades. Kontrollera användarnamn och lösenord.",
+      "parse_failed": "Ansluten men kunde inte läsa modemdata."
     }
   }
 }

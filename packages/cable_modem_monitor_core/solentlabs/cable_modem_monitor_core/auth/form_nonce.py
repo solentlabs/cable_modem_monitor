@@ -78,6 +78,8 @@ class FormNonceAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.ConnectionError | requests.Timeout):
+                raise
             return AuthResult(
                 success=False,
                 error=f"Nonce login POST failed: {e}",
@@ -97,7 +99,7 @@ class FormNonceAuthManager(BaseAuthManager):
         if text.startswith(config.success_prefix):
             response_url = text[len(config.success_prefix) :].strip()
 
-        _logger.info(
+        _logger.debug(
             "Nonce login succeeded: status=%d, redirect=%s",
             response.status_code,
             response_url,

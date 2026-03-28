@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Ustawienia Cable Modem",
-        "description": "Obecny: {detected_modem}\nOstatnio sprawdzono: {parser_selected_at}",
+        "title": "Ustawienia modemu kablowego",
+        "description": "Zaktualizuj dane połączenia i interwały odpytywania.",
         "data": {
-          "host": "IP modemu",
+          "host": "Adres IP modemu",
           "username": "Nazwa użytkownika",
           "password": "Hasło",
-          "modem_choice": "Model modemu",
-          "scan_interval": "Interwał odpytywania (sek)"
+          "scan_interval": "Interwał odpytywania danych",
+          "health_check_interval": "Interwał sprawdzania dostępności"
         },
         "data_description": {
           "host": "Zwykle 192.168.100.1",
-          "username": "Pozostaw puste, jeśli nie jest wymagane",
-          "password": "Puste = zachowaj obecne",
-          "modem_choice": "Użyj 'auto' do wykrywania. Zmień, jeśli niepoprawne.",
-          "scan_interval": "60-1800 sek. Domyślnie 600 (10 min)"
+          "username": "Pozostaw puste, jeśli nie jest wymagane.",
+          "password": "Puste pole zachowuje obecne hasło.",
+          "scan_interval": "Jak często pobierać dane z modemu. Domyślnie 10 minut. Ustaw 00:00:00, aby wyłączyć automatyczne odpytywanie (tylko ręcznie przyciskiem Aktualizuj).",
+          "health_check_interval": "Jak często sprawdzać dostępność modemu. Domyślnie 30 sekund. Ustaw 00:00:00, aby wyłączyć sprawdzanie dostępności."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Nie można połączyć się z modemem. Sprawdź adres IP i połączenie sieciowe.",
+      "cannot_connect": "Modem nie odpowiada. Sprawdź adres IP i protokół.",
+      "invalid_auth": "Logowanie nie powiodło się. Sprawdź nazwę użytkownika i hasło.",
+      "parse_failed": "Połączono, ale nie udało się odczytać danych z modemu."
     }
   }
 }

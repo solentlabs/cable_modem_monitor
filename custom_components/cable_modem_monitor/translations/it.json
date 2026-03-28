@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Impostazioni Cable Modem",
-        "description": "Attuale: {detected_modem}\nUltimo controllo: {parser_selected_at}",
+        "title": "Impostazioni modem via cavo",
+        "description": "Aggiorna i dati di connessione e gli intervalli di polling.",
         "data": {
-          "host": "IP del modem",
+          "host": "Indirizzo IP del modem",
           "username": "Nome utente",
           "password": "Password",
-          "modem_choice": "Modello modem",
-          "scan_interval": "Intervallo di polling (sec)"
+          "scan_interval": "Intervallo di polling dati",
+          "health_check_interval": "Intervallo verifica raggiungibilità"
         },
         "data_description": {
           "host": "Di solito 192.168.100.1",
-          "username": "Lascia vuoto se non richiesto",
-          "password": "Vuoto = mantieni attuale",
-          "modem_choice": "Usa 'auto' per il rilevamento. Cambia se non corretto.",
-          "scan_interval": "60-1800 sec. Predefinito 600 (10 min)"
+          "username": "Lascia vuoto se non richiesto.",
+          "password": "Vuoto = mantieni la password attuale.",
+          "scan_interval": "Ogni quanto interrogare i dati del modem. Predefinito 10 minuti. Imposta su 00:00:00 per disattivare il polling automatico (solo manuale tramite il pulsante Aggiorna).",
+          "health_check_interval": "Ogni quanto verificare la raggiungibilità del modem. Predefinito 30 secondi. Imposta su 00:00:00 per disattivare le verifiche."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Modem non raggiungibile. Controlla l'indirizzo IP e la connettività di rete.",
+      "cannot_connect": "Il modem non risponde. Controlla l'indirizzo IP e il protocollo.",
+      "invalid_auth": "Accesso non riuscito. Controlla nome utente e password.",
+      "parse_failed": "Connesso, ma impossibile leggere i dati del modem."
     }
   }
 }

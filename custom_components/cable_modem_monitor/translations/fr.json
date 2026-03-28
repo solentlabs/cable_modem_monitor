@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Paramètres du Modem",
-        "description": "Actuel : {detected_modem}\nDernière vérification : {parser_selected_at}",
+        "title": "Paramètres du modem câble",
+        "description": "Modifier les paramètres de connexion et les intervalles d'interrogation.",
         "data": {
-          "host": "IP du Modem",
+          "host": "Adresse IP du modem",
           "username": "Nom d'utilisateur",
           "password": "Mot de passe",
-          "modem_choice": "Modèle du Modem",
-          "scan_interval": "Intervalle (sec)"
+          "scan_interval": "Intervalle d'interrogation",
+          "health_check_interval": "Intervalle de vérification"
         },
         "data_description": {
           "host": "Généralement 192.168.100.1",
-          "username": "Laisser vide si non requis",
-          "password": "Vide = conserver actuel",
-          "modem_choice": "'auto' pour détection. Modifier si incorrect.",
-          "scan_interval": "60-1800 sec. Défaut 600 (10 min)"
+          "username": "Laisser vide si non requis.",
+          "password": "Vide = conserver le mot de passe actuel.",
+          "scan_interval": "Fréquence d'interrogation des données du modem. Par défaut 10 minutes. Régler sur 00:00:00 pour désactiver l'interrogation automatique (mise à jour manuelle uniquement).",
+          "health_check_interval": "Fréquence de vérification de l'accessibilité du modem. Par défaut 30 secondes. Régler sur 00:00:00 pour désactiver les vérifications."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Modem injoignable. Vérifiez l'adresse IP et la connectivité réseau.",
+      "cannot_connect": "Le modem ne répond pas. Vérifiez l'adresse IP et le protocole.",
+      "invalid_auth": "Échec de connexion. Vérifiez le nom d'utilisateur et le mot de passe.",
+      "parse_failed": "Connecté, mais impossible de lire les données du modem."
     }
   }
 }

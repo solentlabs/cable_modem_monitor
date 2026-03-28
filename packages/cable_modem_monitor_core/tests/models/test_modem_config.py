@@ -91,6 +91,9 @@ def test_invalid_modem_config(fixture_path: Path):
 # │ auth_basic_challenge_..  │ auth.challenge_cookie       │ True           │
 # │ auth_hnap.json           │ auth.hmac_algorithm         │ "md5"          │
 # │ auth_hnap_sha256.json    │ auth.hmac_algorithm         │ "sha256"       │
+# │ health_config.json       │ health.http_probe           │ False          │
+# │ health_config.json       │ health.supports_head        │ False          │
+# │ health_config.json       │ health.supports_icmp        │ False          │
 # └──────────────────────────┴─────────────────────────────┴────────────────┘
 
 # fmt: off
@@ -112,6 +115,9 @@ FIELD_ACCESS_CASES = [
     ("auth_basic_challenge_cookie.json", "auth.challenge_cookie",   True),
     ("auth_hnap.json",                   "auth.hmac_algorithm",     "md5"),
     ("auth_hnap_sha256.json",            "auth.hmac_algorithm",     "sha256"),
+    ("health_config.json",               "health.http_probe",       False),
+    ("health_config.json",               "health.supports_head",    False),
+    ("health_config.json",               "health.supports_icmp",    False),
 ]
 # fmt: on
 
@@ -166,6 +172,19 @@ class TestRelationships:
         config = _load("status_unsupported.json")
         assert config.auth is None
         assert config.hardware is None
+
+    def test_health_defaults_when_omitted(self):
+        """Health section omitted defaults all probes to True."""
+        config = _load("auth_none.json")
+        assert config.health is None
+
+    def test_health_explicit_values(self):
+        """Health section with explicit values overrides defaults."""
+        config = _load("health_config.json")
+        assert config.health is not None
+        assert config.health.http_probe is False
+        assert config.health.supports_head is False
+        assert config.health.supports_icmp is False
 
     def test_form_session_and_logout(self):
         """Form auth with max_concurrent requires and has logout."""

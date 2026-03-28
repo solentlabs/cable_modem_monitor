@@ -141,6 +141,8 @@ class HnapAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.ConnectionError | requests.Timeout):
+                raise
             return AuthResult(
                 success=False,
                 error=f"HNAP challenge request failed: {e}",
@@ -230,6 +232,8 @@ class HnapAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.ConnectionError | requests.Timeout):
+                raise
             return AuthResult(
                 success=False,
                 error=f"HNAP login request failed: {e}",
@@ -264,7 +268,7 @@ class HnapAuthManager(BaseAuthManager):
                 error=f"HNAP login unexpected result: {login_result!r}",
             )
 
-        _logger.info("HNAP login succeeded (result=%s)", login_result)
+        _logger.debug("HNAP login succeeded (result=%s)", login_result)
 
         return AuthResult(
             success=True,

@@ -69,6 +69,8 @@ class FormAuthManager(BaseAuthManager):
                     timeout=timeout,
                 )
             except requests.RequestException as e:
+                if isinstance(e, requests.ConnectionError | requests.Timeout):
+                    raise
                 return AuthResult(
                     success=False,
                     error=f"Login page pre-fetch failed: {e}",
@@ -93,6 +95,8 @@ class FormAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.ConnectionError | requests.Timeout):
+                raise
             return AuthResult(
                 success=False,
                 error=f"Login POST failed: {e}",
@@ -104,7 +108,7 @@ class FormAuthManager(BaseAuthManager):
             return AuthResult(success=False, error=error)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.info(
+        _logger.debug(
             "Form login succeeded: status=%d, url=%s, cookies=%s",
             response.status_code,
             response_path,

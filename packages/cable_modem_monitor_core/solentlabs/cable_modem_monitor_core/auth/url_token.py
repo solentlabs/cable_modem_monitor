@@ -91,6 +91,8 @@ class UrlTokenAuthManager(BaseAuthManager):
                 timeout=timeout,
             )
         except requests.RequestException as e:
+            if isinstance(e, requests.ConnectionError | requests.Timeout):
+                raise
             return AuthResult(
                 success=False,
                 error=f"URL token login failed: {e}",
@@ -108,7 +110,7 @@ class UrlTokenAuthManager(BaseAuthManager):
             session.auth = (username, password)
 
         response_path = urlparse(response.url).path if response.url else ""
-        _logger.info(
+        _logger.debug(
             "URL token login succeeded: cookies=%s",
             list(session.cookies.keys()),
         )

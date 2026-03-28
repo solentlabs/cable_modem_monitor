@@ -85,22 +85,28 @@
     "step": {
       "init": {
         "title": "有线调制解调器设置",
-        "description": "当前：{detected_modem}\n上次检测：{parser_selected_at}",
+        "description": "更新连接信息和轮询间隔。",
         "data": {
-          "host": "调制解调器 IP",
+          "host": "调制解调器 IP 地址",
           "username": "用户名",
           "password": "密码",
-          "modem_choice": "调制解调器型号",
-          "scan_interval": "轮询间隔（秒）"
+          "scan_interval": "数据轮询间隔",
+          "health_check_interval": "健康检查间隔"
         },
         "data_description": {
           "host": "通常是 192.168.100.1",
-          "username": "如果不需要请留空",
-          "password": "留空 = 保留当前密码",
-          "modem_choice": "使用 'auto' 进行检测。如不正确请更改。",
-          "scan_interval": "60-1800 秒。默认 600（10 分钟）"
+          "username": "如果不需要请留空。",
+          "password": "留空则保留当前密码。",
+          "scan_interval": "调制解调器数据的轮询频率。默认 10 分钟。设为 00:00:00 可禁用自动轮询（仅通过更新按钮手动获取）。",
+          "health_check_interval": "检查调制解调器是否可达的频率。默认 30 秒。设为 00:00:00 可禁用健康检查。"
         }
       }
+    },
+    "error": {
+      "network_unreachable": "无法访问调制解调器。请检查 IP 地址和网络连接。",
+      "cannot_connect": "调制解调器无响应。请检查 IP 地址和协议。",
+      "invalid_auth": "登录失败。请检查用户名和密码。",
+      "parse_failed": "已连接，但无法读取调制解调器数据。"
     }
   }
 }

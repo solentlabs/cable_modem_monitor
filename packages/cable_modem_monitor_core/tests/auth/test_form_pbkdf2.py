@@ -6,6 +6,7 @@ import hashlib
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 from solentlabs.cable_modem_monitor_core.auth.form_pbkdf2 import (
     FormPbkdf2AuthManager,
@@ -78,17 +79,19 @@ class TestFetchCsrfToken:
             )
             assert token == "csrf_from_header"
 
-    def test_unreachable_endpoint(self) -> None:
-        """Returns empty string when request fails."""
+    def test_unreachable_endpoint_propagates(self) -> None:
+        """ConnectionError propagates for collector to classify as CONNECTIVITY."""
         session = requests.Session()
-        with patch.object(session, "get", side_effect=requests.ConnectionError("refused")):
-            token = _fetch_csrf_token(
+        with (
+            patch.object(session, "get", side_effect=requests.ConnectionError("refused")),
+            pytest.raises(requests.ConnectionError),
+        ):
+            _fetch_csrf_token(
                 session,
                 "http://127.0.0.1:1/unreachable",
                 "X-CSRF-TOKEN",
                 1,
             )
-            assert token == ""
 
     def test_non_json_no_header(self) -> None:
         """Returns empty string when no token found."""
@@ -185,16 +188,17 @@ class TestFormPbkdf2AuthManager:
                 assert result.success is True
                 assert session.headers.get("X-CSRF-TOKEN") == "csrf_abc123"
 
-    def test_salt_request_failure(self, session: requests.Session) -> None:
-        """Reports error when salt request fails."""
+    def test_salt_request_connection_error_propagates(self, session: requests.Session) -> None:
+        """ConnectionError on salt request propagates for collector."""
         config = self._make_config()
         manager = FormPbkdf2AuthManager(config)
         manager.configure_session(session, {})
 
-        with patch.object(session, "post", side_effect=requests.ConnectionError("refused")):
-            result = manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
-            assert result.success is False
-            assert "failed" in result.error.lower()
+        with (
+            patch.object(session, "post", side_effect=requests.ConnectionError("refused")),
+            pytest.raises(requests.ConnectionError),
+        ):
+            manager.authenticate(session, "http://127.0.0.1:1", "admin", "password")
 
     def test_salt_response_not_json(self, session: requests.Session) -> None:
         """Reports error when salt response is not JSON."""
@@ -265,13 +269,16 @@ class TestFormPbkdf2AuthManager:
             assert result.success is False
             assert "invalid password" in result.error
 
-    def test_login_post_failure(self, session: requests.Session) -> None:
-        """Reports error when login POST raises exception."""
+    def test_login_post_connection_error_propagates(self, session: requests.Session) -> None:
+        """ConnectionError on login POST propagates for collector."""
         config = self._make_config(double_hash=False)
         manager = FormPbkdf2AuthManager(config)
         manager.configure_session(session, {})
 
-        with patch.object(session, "post") as mock_post:
+        with (
+            patch.object(session, "post") as mock_post,
+            pytest.raises(requests.ConnectionError),
+        ):
             salt_resp = MagicMock()
             salt_resp.json.return_value = {"salt": "s"}
             mock_post.side_effect = [
@@ -279,6 +286,4 @@ class TestFormPbkdf2AuthManager:
                 requests.ConnectionError("connection lost"),
             ]
 
-            result = manager.authenticate(session, "http://192.168.100.1", "admin", "password")
-            assert result.success is False
-            assert "failed" in result.error.lower()
+            manager.authenticate(session, "http://192.168.100.1", "admin", "password")

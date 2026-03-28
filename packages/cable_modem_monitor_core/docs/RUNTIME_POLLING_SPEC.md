@@ -143,16 +143,18 @@ for the HA implementation's cascade rules.
 ```
 Each poll:
  1. Orchestrator: circuit breaker open? → return auth_failed.
- 2. Orchestrator: backoff active? → suppress, return auth_failed.
- 3. Orchestrator invokes ModemDataCollector:
+ 2. Orchestrator: connectivity backoff active? → decrement, return unreachable.
+ 3. Orchestrator: login backoff active? → decrement, return auth_failed.
+ 4. Orchestrator invokes ModemDataCollector:
     a. Auth Manager: session valid? → reuse. Expired? → login.
     b. Resource Loader: fetch all pages using authenticated session.
        Build resource dict.
     c. Parser: parse_resources(resources) → channels + system info.
     d. Auth Manager: logout if single-session modem.
- 4. Orchestrator: check ModemDataCollector result.
-    Success → reset auth failure streak, derive status.
+ 5. Orchestrator: check ModemDataCollector result.
+    Success → reset auth failure streak, reset connectivity state, derive status.
     Auth failure → increment streak, check circuit breaker threshold.
+    Connectivity failure → increment connectivity streak, set exponential backoff.
     Other failure → apply signal policy.
 ```
 
@@ -262,6 +264,8 @@ strategy returns `AuthResult.FAILURE`.
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
 | Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
 | Circuit open flag | Orchestrator | Stops polling on persistent auth failure | Cleared by client reauth |
+| Connectivity streak | Orchestrator | Tracks consecutive unreachable failures | Reset on success, non-connectivity failure, or reset_connectivity() |
+| Connectivity backoff | Orchestrator | Exponential backoff: min(2^(streak-1), 6) | Decremented each poll, cleared by reset_connectivity() |
 | Last poll status | Orchestrator | Detect status transitions (e.g., unreachable → online) | Updated each poll |
 | Parser instance | Orchestrator | Skip re-instantiation | Integration lifetime |
 | Working URL | Orchestrator | Protocol (HTTP/HTTPS) | Integration lifetime |
@@ -280,13 +284,11 @@ If the health check detects "unresponsive" between data polls, health
 sensors update immediately — no waiting for the next data poll. This
 gives faster outage detection, especially for unplanned reboots.
 
-On successful data collection, the orchestrator notifies the health
-monitor via `update_from_collection()` so it skips redundant HTTP
-probes — critical for fragile modems (#117) where every HTTP request
-carries crash risk.
+Health checks and data collection run independently on their own
+cadences with no coupling. Neither pipeline suppresses the other.
 
-See `ORCHESTRATION_SPEC.md` § HealthMonitor for the probe API, status
-derivation matrix, and collection evidence behavior.
+See `ORCHESTRATION_SPEC.md` § HealthMonitor for the probe API and
+status derivation matrix.
 
 `health_status` is one of the three inputs to the Status sensor's
 priority cascade — see
@@ -385,9 +387,9 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 | `AuthResult.SUCCESS` | Auth Manager | Proceed to loading | `online` (if parse succeeds) |
 | `AuthResult.FAILURE` | Auth Manager | Abort poll, increment auth streak | `auth_failed` |
 | `LoginLockoutError` | Auth Manager | Suppress login for 3 polls, increment auth streak | `auth_failed` |
-| `ConnectionError` on auth | Auth Manager | Abort poll, no backoff | `unreachable` |
-| `Timeout` on auth | Auth Manager | Abort poll, no backoff | `unreachable` |
-| Any page `Timeout` / `ConnectionError` | Resource Loader | Abort poll (all-or-nothing), no backoff | `unreachable` |
+| `ConnectionError` on auth | Auth Manager (propagated) | Abort poll, connectivity backoff | `unreachable` |
+| `Timeout` on auth | Auth Manager (propagated) | Abort poll, connectivity backoff | `unreachable` |
+| Any page `Timeout` / `ConnectionError` | Resource Loader | Abort poll (all-or-nothing), connectivity backoff | `unreachable` |
 | HTTP 401/403 on data page | Resource Loader | Clear session, increment auth streak | `auth_failed` |
 | HTTP 5xx on data page | Resource Loader | Abort poll | `unreachable` |
 | Channels found | Parser | Build response, reset auth streak | `online` |
@@ -401,10 +403,14 @@ Every signal a protocol layer can emit and the orchestrator's policy:
    the error type, and HTTP status if available. Previous `ModemData`
    persists in platform output until the next successful poll.
 
-2. **No backoff on connectivity failures.** Backoff protects the modem
-   from brute-force login attempts. Connection failures aren't the
-   modem's fault — poll at normal cadence. Backing off on `ConnectionError`
-   delays recovery when the modem comes back.
+2. **Exponential backoff on connectivity failures.** When the modem is
+   unreachable, connectivity backoff avoids wasting polls on timeouts.
+   Backoff grows as `min(2^(streak-1), 6)` — skip 1, 2, 4, up to 6
+   polls. Any successful poll or non-connectivity failure (auth error,
+   parse error) resets the connectivity state. User-initiated refresh
+   (Update Modem Data button) calls `reset_connectivity()` to bypass
+   backoff and attempt immediately. Connectivity failures never count
+   toward the auth circuit breaker.
 
 3. **No within-poll retries.** Every failure mode waits for the next
    scheduled poll cycle. This is inherent rate limiting — even at the
@@ -431,8 +437,9 @@ Every signal a protocol layer can emit and the orchestrator's policy:
 
 6. **Each poll is independent.** The orchestrator does not distinguish
    "transient" from "permanent" failure. If the modem responds, it's
-   `online`. If it doesn't, it's `unreachable`. The only cross-poll
-   state is the backoff counter and session. The `unreachable → online`
+   `online`. If it doesn't, it's `unreachable`. Cross-poll state is
+   limited to: auth backoff, connectivity backoff, and session. The
+   `unreachable → online`
    transition is logged with session state for diagnostics (see Modem
    Restart, Unplanned restart).
 

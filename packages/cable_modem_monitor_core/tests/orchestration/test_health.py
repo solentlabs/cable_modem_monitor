@@ -1,12 +1,10 @@
 """Tests for HealthMonitor — lightweight modem probes.
 
-Covers ICMP + HTTP probes, collection evidence suppression, probe
-configurations, status derivation, and logging.
+Covers ICMP + HTTP probes, probe configurations, status derivation,
+and logging. Health checks are fully decoupled from data collection.
 
 Use case coverage:
 - UC-50: Normal health check — both probes
-- UC-51: Collection evidence suppression
-- UC-52: Evidence expiry — HTTP resumes
 - UC-53: Outage detection between data polls
 - UC-54: ICMP blocked network
 - UC-55: Degraded — HTTP fails, ICMP succeeds
@@ -17,7 +15,6 @@ Use case coverage:
 from __future__ import annotations
 
 import subprocess
-import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,13 +35,11 @@ def _make_monitor(
     supports_icmp: bool = True,
     supports_head: bool = True,
     http_probe: bool = True,
-    poll_interval: int = 600,
     timeout: int = 5,
 ) -> HealthMonitor:
     """Build a HealthMonitor with defaults."""
     return HealthMonitor(
         base_url="http://192.168.100.1",
-        poll_interval=poll_interval,
         supports_icmp=supports_icmp,
         supports_head=supports_head,
         http_probe=http_probe,
@@ -252,75 +247,6 @@ class TestUC50BothProbes:
 
 
 # ------------------------------------------------------------------
-# UC-51: Collection evidence suppression
-# ------------------------------------------------------------------
-
-
-class TestUC51EvidenceSuppression:
-    """Successful data collection suppresses HTTP probe."""
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_http_skipped_when_evidence_fresh(self, mock_run: MagicMock) -> None:
-        """Fresh collection evidence → HTTP probe skipped."""
-        mock_run.return_value = _mock_ping_success(3.0)
-
-        monitor = _make_monitor()
-        monitor.update_from_collection(time.monotonic())
-        info = monitor.ping()
-
-        assert info.health_status == HealthStatus.RESPONSIVE
-        assert info.icmp_latency_ms == 3.0
-        assert info.http_latency_ms is None  # skipped
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_icmp_still_runs_with_evidence(self, mock_run: MagicMock) -> None:
-        """ICMP runs independently even when evidence suppresses HTTP."""
-        mock_run.return_value = _mock_ping_success()
-
-        monitor = _make_monitor()
-        monitor.update_from_collection(time.monotonic())
-        info = monitor.ping()
-
-        mock_run.assert_called_once()
-        assert info.icmp_latency_ms is not None
-
-
-# ------------------------------------------------------------------
-# UC-52: Evidence expiry — HTTP resumes
-# ------------------------------------------------------------------
-
-
-class TestUC52EvidenceExpiry:
-    """Stale collection evidence → HTTP probe resumes."""
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.time.monotonic")
-    def test_http_resumes_after_expiry(
-        self,
-        mock_monotonic: MagicMock,
-        mock_run: MagicMock,
-        mock_head: MagicMock,
-    ) -> None:
-        """Evidence older than poll_interval → HTTP resumes."""
-        mock_run.return_value = _mock_ping_success()
-        mock_head.return_value = _mock_http_response()
-
-        monitor = _make_monitor(poll_interval=600)
-
-        # Simulate collection at T=1000
-        mock_monotonic.return_value = 1000.0
-        monitor.update_from_collection(1000.0)
-
-        # Ping at T=1601 (evidence expired: 601 > 600)
-        mock_monotonic.return_value = 1601.0
-        info = monitor.ping()
-
-        mock_head.assert_called_once()
-        assert info.http_latency_ms is not None
-
-
-# ------------------------------------------------------------------
 # UC-53: Outage detection between data polls
 # ------------------------------------------------------------------
 
@@ -404,16 +330,6 @@ class TestUC56NeitherProbe:
         assert info.icmp_latency_ms is None
         assert info.http_latency_ms is None
 
-    def test_no_probes_with_fresh_evidence(self) -> None:
-        """No probes but fresh collection evidence → RESPONSIVE."""
-        monitor = _make_monitor(supports_icmp=False, http_probe=True)
-        monitor.update_from_collection(time.monotonic())
-        info = monitor.ping()
-
-        # Both probes return None (ICMP disabled, HTTP suppressed)
-        # but evidence is fresh → _derive_no_probes → RESPONSIVE
-        assert info.health_status == HealthStatus.RESPONSIVE
-
 
 # ------------------------------------------------------------------
 # UC-57: Health during restart — independent
@@ -496,52 +412,6 @@ class TestICMPOnlyMode:
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNRESPONSIVE
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_icmp_fail_with_evidence(self, mock_run: MagicMock) -> None:
-        """ICMP fails but evidence is fresh → ICMP_BLOCKED."""
-        mock_run.return_value = _mock_ping_failure()
-
-        monitor = _make_monitor(http_probe=False)
-        monitor.update_from_collection(time.monotonic())
-        info = monitor.ping()
-
-        assert info.health_status == HealthStatus.ICMP_BLOCKED
-
-
-# ------------------------------------------------------------------
-# Collection evidence lifecycle
-# ------------------------------------------------------------------
-
-
-class TestCollectionEvidence:
-    """Evidence update, expiry, and clear."""
-
-    def test_clear_evidence(self) -> None:
-        """clear_collection_evidence() invalidates evidence."""
-        monitor = _make_monitor()
-        monitor.update_from_collection(time.monotonic())
-        assert monitor._is_evidence_fresh()
-
-        monitor.clear_collection_evidence()
-        assert not monitor._is_evidence_fresh()
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.time.monotonic")
-    def test_evidence_expires(self, mock_monotonic: MagicMock) -> None:
-        """Evidence expires after poll_interval."""
-        monitor = _make_monitor(poll_interval=60)
-
-        mock_monotonic.return_value = 1000.0
-        monitor.update_from_collection(1000.0)
-        assert monitor._is_evidence_fresh()
-
-        # Just before expiry
-        mock_monotonic.return_value = 1059.9
-        assert monitor._is_evidence_fresh()
-
-        # After expiry
-        mock_monotonic.return_value = 1060.1
-        assert not monitor._is_evidence_fresh()
 
 
 # ------------------------------------------------------------------
@@ -676,19 +546,3 @@ class TestHealthLogging:
             monitor.ping()
 
         assert "Health check: unresponsive" in caplog.text
-
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_evidence_suppression_logged(
-        self,
-        mock_run: MagicMock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Evidence suppression mentioned in log."""
-        mock_run.return_value = _mock_ping_success()
-
-        monitor = _make_monitor()
-        monitor.update_from_collection(time.monotonic())
-        with caplog.at_level("INFO"):
-            monitor.ping()
-
-        assert "collection evidence fresh" in caplog.text

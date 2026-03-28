@@ -122,7 +122,7 @@ async def async_setup_entry(
     # Steps 1-5: Load config and create Core components (sync I/O)
     try:
         orchestrator, health_monitor, modem_identity = await hass.async_add_executor_job(
-            _create_core_components, entry.data, scan_interval
+            _create_core_components, entry.data
         )
     except Exception:
         _LOGGER.exception("Failed to load modem configuration from catalog")
@@ -228,7 +228,6 @@ async def _async_update_listener(
 
 def _create_core_components(
     data: Mapping[str, Any],
-    scan_interval: int,
 ) -> tuple[Orchestrator, HealthMonitor | None, ModemIdentity]:
     """Load modem config and create Core components.
 
@@ -238,8 +237,6 @@ def _create_core_components(
 
     Args:
         data: Config entry data (user selections + validation results).
-        scan_interval: Effective data poll interval in seconds.  Passed
-            to HealthMonitor so it knows the collection-evidence window.
     """
     # Step 1: Resolve modem config from catalog
     modem_dir = CATALOG_PATH / data[CONF_MODEM_DIR]
@@ -278,16 +275,21 @@ def _create_core_components(
     )
 
     # Step 4: Create HealthMonitor (conditional)
-    health_monitor: HealthMonitor | None = None
-    supports_icmp = data.get(CONF_SUPPORTS_ICMP, False)
-    supports_head = data.get(CONF_SUPPORTS_HEAD, False)
+    # modem.yaml health config provides defaults, config entry overrides
+    health_cfg = modem_config.health
+    http_probe = health_cfg.http_probe if health_cfg else True
+    default_icmp = health_cfg.supports_icmp if health_cfg else True
+    default_head = health_cfg.supports_head if health_cfg else True
+    supports_icmp = data.get(CONF_SUPPORTS_ICMP, default_icmp)
+    supports_head = data.get(CONF_SUPPORTS_HEAD, default_head)
 
-    if supports_icmp or supports_head:
+    health_monitor: HealthMonitor | None = None
+    if supports_icmp or http_probe:
         health_monitor = HealthMonitor(
             base_url=base_url,
-            poll_interval=scan_interval,
             supports_icmp=supports_icmp,
             supports_head=supports_head,
+            http_probe=http_probe,
         )
 
     # Step 5: Create Orchestrator

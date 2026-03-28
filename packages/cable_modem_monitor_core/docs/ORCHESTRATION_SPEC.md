@@ -160,7 +160,7 @@ class CollectorSignal(Enum):
 | `OK` | Reset auth streak, derive statuses, return `ModemSnapshot` (see § Connection Status Derivation) |
 | `AUTH_FAILED` | Abort, report `auth_failed`, no retry |
 | `AUTH_LOCKOUT` | Suppress login for 3 polls, report `auth_failed` |
-| `CONNECTIVITY` | Abort, report `unreachable`, no backoff |
+| `CONNECTIVITY` | Abort, report `unreachable`, apply connectivity backoff |
 | `LOAD_ERROR` | Abort, report `unreachable` |
 | `LOAD_AUTH` | Clear session, report `auth_failed`, no retry |
 | `PARSE_ERROR` | Abort, report `parser_issue` |
@@ -280,11 +280,13 @@ class Orchestrator:
         1. If is_restarting, return UNREACHABLE immediately (no HTTP
            traffic to a rebooting modem)
         2. Check circuit breaker — if open, return AUTH_FAILED
-        3. Check backoff — if active, decrement and return AUTH_FAILED
-        4. Run ModemDataCollector
-        5. If collection failed, apply signal → policy mapping
-        6. On success, notify HealthMonitor via update_from_collection()
-        7. Derive connection_status from data
+        3. Check connectivity backoff — if active, decrement and
+           return UNREACHABLE
+        4. Check auth backoff — if active, decrement and return
+           AUTH_FAILED
+        5. Run ModemDataCollector
+        6. If collection failed, apply signal → policy mapping
+        7. On success, derive connection_status from data
         8. Derive docsis_status from lock_status fields
         9. Read latest HealthInfo from HealthMonitor (if present)
         10. Detect state transitions (unreachable → online)
@@ -292,9 +294,7 @@ class Orchestrator:
 
         The HealthMonitor runs on its own cadence, independent of
         get_modem_data(). The orchestrator reads the latest health
-        result but does not trigger a probe. On successful collection,
-        the orchestrator notifies the health monitor so it can skip
-        redundant HTTP probes.
+        result but does not trigger a probe.
 
         The caller decides when to poll (schedule, service call,
         automation). The orchestrator applies the same backoff and
@@ -371,6 +371,15 @@ class Orchestrator:
         get_modem_data() returns AUTH_FAILED while the circuit is open.
         This prevents 'refresh data' from hammering the modem with
         known-bad credentials. Credentials must be fixed first.
+        """
+
+    def reset_connectivity(self) -> None:
+        """Reset connectivity backoff for immediate retry.
+
+        Called when the user requests a manual refresh (Update Modem
+        Data button). Clears connectivity streak and backoff so the
+        next get_modem_data() attempts a real connection regardless
+        of prior connectivity failures.
         """
 
     def diagnostics(self) -> OrchestratorDiagnostics:
@@ -564,6 +573,10 @@ class OrchestratorDiagnostics:
         circuit_breaker_open: Whether polling is stopped due to
             persistent auth failures.
         session_is_valid: Current session state from the collector.
+        connectivity_streak: Consecutive connectivity failures. 0 when
+            reachable.
+        connectivity_backoff_remaining: Polls to skip before next
+            connection attempt. 0 when no backoff active.
         resource_fetches: Per-resource timing and size from the last
             successful collection. Empty list if never polled or
             collection failed before resource loading. Consumers
@@ -576,6 +589,8 @@ class OrchestratorDiagnostics:
     auth_failure_streak: int
     circuit_breaker_open: bool
     session_is_valid: bool
+    connectivity_streak: int = 0
+    connectivity_backoff_remaining: int = 0
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_timestamp: float | None = None
 
@@ -646,7 +661,12 @@ def get_modem_data(self) -> ModemSnapshot:
     if self._circuit_open:
         return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
 
-    # Backoff check — decrement and skip if active
+    # Connectivity backoff — skip poll if modem was recently unreachable
+    if self._connectivity_backoff > 0:
+        self._connectivity_backoff -= 1
+        return ModemSnapshot(connection_status=ConnectionStatus.UNREACHABLE, ...)
+
+    # Auth backoff check — decrement and skip if active
     if self._backoff_remaining > 0:
         self._backoff_remaining -= 1
         return ModemSnapshot(connection_status=ConnectionStatus.AUTH_FAILED, ...)
@@ -657,10 +677,8 @@ def get_modem_data(self) -> ModemSnapshot:
         status = self._apply_signal_policy(result)
         return ModemSnapshot(connection_status=status, ...)
 
-    # Success — reset auth failure streak, notify health monitor
+    # Success — reset auth failure streak
     self._auth_failure_streak = 0
-    if self._health_monitor:
-        self._health_monitor.update_from_collection(time.monotonic())
 
     status = self._derive_connection_status(result.modem_data)
     # ... docsis_status ...
@@ -723,7 +741,15 @@ def _apply_signal_policy(self, result: ModemResult) -> ConnectionStatus:
 
     Called only when result.success is False. Successful results go
     through _derive_connection_status() instead.
+
+    Non-connectivity failures clear connectivity backoff — any response
+    from the modem proves the network path works.
     """
+    # Any non-connectivity failure means the modem responded
+    if result.signal != CollectorSignal.CONNECTIVITY:
+        self._connectivity_streak = 0
+        self._connectivity_backoff = 0
+
     match result.signal:
         case CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
@@ -739,6 +765,11 @@ def _apply_signal_policy(self, result: ModemResult) -> ConnectionStatus:
             return ConnectionStatus.AUTH_FAILED
 
         case CollectorSignal.CONNECTIVITY:
+            self._connectivity_streak += 1
+            self._connectivity_backoff = min(
+                2 ** (self._connectivity_streak - 1),
+                self._max_connectivity_backoff,
+            )
             return ConnectionStatus.UNREACHABLE
 
         case CollectorSignal.LOAD_ERROR:
@@ -856,6 +887,8 @@ grows and the circuit trips — same as wrong credentials.
 | Login backoff counter | Anti-brute-force suppression | Decremented each get_modem_data(), cleared by reset_auth() |
 | Auth failure streak | Circuit breaker — consecutive auth-related failures | Reset on successful collection or reset_auth() |
 | Circuit open flag | Stops collection when streak reaches threshold | Set when tripped, cleared by reset_auth() |
+| Connectivity streak | Tracks consecutive CONNECTIVITY failures | Reset on success, non-connectivity failure, or reset_connectivity() |
+| Connectivity backoff | Exponential backoff for unreachable modem: min(2^(streak-1), 6) | Decremented each get_modem_data(), cleared by reset_connectivity() |
 | Is restarting flag | Guards get_modem_data() and restart() | Set/cleared by restart() |
 | Last connection status | Transition detection (unreachable → online) | Updated each get_modem_data() |
 | Last poll timestamp | Metrics (poll duration, cadence tracking) | Updated each get_modem_data() |
@@ -941,9 +974,9 @@ layer of the modem's stack:
 | HTTP HEAD | Application | Web server responds | Minimal — no response body |
 | HTTP GET | Application | Web server responds (fallback) | Light — response body discarded |
 
-**Probe order:** ICMP first (if supported), then HTTP (if not
-suppressed by collection evidence). Both run regardless of the
-other's result — the combination determines health status.
+**Probe order:** ICMP first (if supported), then HTTP (if enabled).
+Both run regardless of the other's result — the combination
+determines health status.
 
 **HTTP method selection:** HEAD is preferred (lightest). Some modems
 return 405 Method Not Allowed or behave unexpectedly with HEAD. When
@@ -981,18 +1014,8 @@ integration reconfiguration (HA options flow) or re-setup.
 carry risk (e.g., S33v2 firmware that crashes under HTTP load),
 modem.yaml can declare `health.http_probe: false` to disable HTTP
 health probes entirely. When disabled, only ICMP runs (if
-supported). Collection evidence from successful data polls still
-provides application-layer health indication — the health monitor
-just doesn't generate its own HTTP traffic between collections.
-
-**Collection evidence suppression:** When the ModemDataCollector
-completes a successful HTTP exchange, the modem is definitively
-responsive at the application layer. The health monitor skips its
-own HTTP probe on the next `ping()` call — the collector already
-proved the modem is up. This is critical for fragile modems (e.g.,
-S33v2) where every HTTP request increases crash risk. ICMP still
-runs independently (different network layer). Evidence expires after
-one `poll_interval`.
+supported). The health monitor does not generate its own HTTP
+traffic between collections.
 
 ### Probe Configurations
 
@@ -1024,21 +1047,16 @@ regardless of modem state.
 Lost visibility: cannot detect `degraded` (ICMP would distinguish
 "network reachable but web server hung" from "completely down").
 
-**ICMP only** (`http_probe=False` or collection evidence always fresh)
-Two paths reach this configuration:
-
-1. **Fragile modem** — modem.yaml sets `health.http_probe: false`.
-   HTTP probes are permanently disabled to protect the modem. Only
-   ICMP runs between data collections.
-2. **Evidence suppression** — data collection succeeds frequently,
-   keeping collection evidence fresh. HTTP probes are skipped
-   because the collector already proved the web server works. If
-   evidence expires (collector missed a cycle), HTTP probes resume.
+**ICMP only** (`http_probe=False`)
+Modem.yaml sets `health.http_probe: false` for fragile modems where
+even GET health probes carry risk (e.g., S33v2 firmware that crashes
+under HTTP load). HTTP probes are permanently disabled. Only ICMP
+runs between data collections.
 
 | ICMP | HTTP | Status | Meaning |
 |------|------|--------|---------|
-| pass | (suppressed/disabled) | `responsive` | Network OK, collector proved web server |
-| fail | (suppressed/disabled) | `icmp_blocked` | Collector proved web server, ICMP blocked |
+| pass | (disabled) | `responsive` | Network OK, modem reachable |
+| fail | (disabled) | `icmp_blocked` | ICMP blocked, no application-layer probe |
 
 Lost visibility: if the collector fails AND ICMP is the only probe,
 we can only detect network-layer outages. Application-layer health
@@ -1063,7 +1081,6 @@ class HealthMonitor:
     def __init__(
         self,
         base_url: str,
-        poll_interval: int = 600,
         supports_icmp: bool = True,
         supports_head: bool = True,
         http_probe: bool = True,
@@ -1078,9 +1095,6 @@ class HealthMonitor:
 
         Args:
             base_url: Modem URL for HTTP probe (e.g., "http://192.168.100.1").
-            poll_interval: Data collection cadence in seconds. Collection
-                evidence older than this is stale — the collector missed
-                a cycle, so the health monitor resumes its own HTTP probes.
             supports_icmp: Whether ICMP ping works on this network.
                 Discovered during setup — False if the network blocks
                 ICMP.
@@ -1089,12 +1103,10 @@ class HealthMonitor:
                 405 or unexpected responses to HEAD. When False, the
                 HTTP probe uses GET instead (response body discarded).
             http_probe: Whether to run HTTP health probes at all. When
-                False, only ICMP probes run (if supported). Collection
-                evidence from successful data polls still provides
-                application-layer health indication. Defaults to True.
-                Set to False via modem.yaml health.http_probe for
-                fragile modems where HTTP traffic between collections
-                risks crashes.
+                False, only ICMP probes run (if supported). Defaults
+                to True. Set to False via modem.yaml health.http_probe
+                for fragile modems where HTTP traffic between
+                collections risks crashes.
             timeout: Per-probe timeout in seconds.
         """
 
@@ -1103,45 +1115,15 @@ class HealthMonitor:
 
         Runs enabled probes and returns a combined result:
         1. ICMP ping (if supports_icmp) — network-layer check
-        2. HTTP HEAD or GET (if not suppressed by collection evidence)
+        2. HTTP HEAD or GET (if http_probe is enabled)
            — application-layer check
 
         Both probes run regardless of the other's result — the
         combination determines the health status (see Status
         Derivation table).
 
-        If a recent collection success was reported via
-        update_from_collection(), the HTTP probe is skipped — the
-        collector already proved the modem is responsive. In this
-        case, http_latency_ms is None (no probe-specific measurement).
-        The HealthMonitor considers the fresh evidence internally
-        when deriving health_status.
-
         Returns:
             HealthInfo with probe results and derived status.
-        """
-
-    def update_from_collection(self, timestamp: float) -> None:
-        """Report a successful data collection to the health monitor.
-
-        The collector's successful HTTP exchange proves the modem is
-        responsive. The health monitor uses this evidence to skip its
-        own HTTP probe on the next ping() call.
-
-        Evidence expires after one poll_interval. If the collector
-        hasn't run recently, the health monitor resumes HTTP probing.
-
-        Args:
-            timestamp: Time of the successful collection (time.monotonic()).
-        """
-
-    def clear_collection_evidence(self) -> None:
-        """Invalidate cached collection evidence.
-
-        Called by RestartMonitor at the start of recovery. Without
-        this, the health monitor would skip HTTP probes based on
-        stale pre-restart collection data, falsely reporting the
-        modem as responsive while it's rebooting.
         """
 
     @property
@@ -1164,19 +1146,14 @@ class HealthMonitor:
 class HealthInfo:
     """Result of a health probe cycle.
 
-    Only contains actual probe measurements. The HealthMonitor considers
-    collection evidence internally when deriving health_status, but does
-    not fabricate probe results — None means "not measured."
+    Only contains actual probe measurements. None means "not measured."
 
     Attributes:
-        health_status: Derived status from probe combination and
-            collection evidence. The HealthMonitor uses evidence
-            freshness to inform status even when HTTP is suppressed.
+        health_status: Derived status from probe combination.
         icmp_latency_ms: Round-trip time in milliseconds. None if
             ICMP failed, not supported, or not attempted.
         http_latency_ms: HTTP response time in milliseconds. None if
-            HTTP failed, not attempted, or suppressed by collection
-            evidence.
+            HTTP failed, not attempted, or disabled.
     """
 
     health_status: HealthStatus
@@ -1213,15 +1190,14 @@ configured health check interval. No session, no cookies, no auth.
 | State | Purpose | Lifetime |
 |-------|---------|----------|
 | Last probe result | `latest` property — read by orchestrator during get_modem_data() | Updated each `ping()` call |
-| Last collection timestamp | Skip HTTP probe when collector already proved responsiveness | Expires after one poll_interval |
 | HTTP method | HEAD or GET based on supports_head | HealthMonitor lifetime |
 
 ### Consumer Entity Guidance
 
-HealthInfo fields are `None` when a probe is disabled, not
-supported, or suppressed. Consumers should **not create UI elements
-for probes that will never produce data**. A sensor that is
-permanently None/Unknown is confusing and clutters the interface.
+HealthInfo fields are `None` when a probe is disabled or not
+supported. Consumers should **not create UI elements for probes
+that will never produce data**. A sensor that is permanently
+None/Unknown is confusing and clutters the interface.
 
 The consumer knows the probe configuration (it passed the flags to
 the HealthMonitor constructor) and should use it to decide which
@@ -1239,18 +1215,10 @@ Orchestrator. `ModemSnapshot.health_info` will always be `None`,
 and the consumer skips all health entities. This is cleaner than
 creating a HealthMonitor that produces only UNKNOWN.
 
-**Collection evidence suppression is transient.** When the HTTP
-probe is enabled but temporarily suppressed (collection evidence is
-fresh), `http_latency_ms` is `None` for that one check. The sensor
-shows its last measured value or "unavailable" briefly. This is
-normal — the probe resumes when evidence expires. This is different
-from `http_probe=False`, where the sensor should never exist.
-
 ### Logging Contract
 
 - DEBUG: probe timings, raw responses, HTTP method used
 - INFO: `"Health check: responsive (ICMP 4ms, HTTP HEAD 12ms)"`
-- INFO: `"Health check: responsive (ICMP 4ms, HTTP skipped — collection evidence fresh)"`
 - WARNING: `"Health check: degraded (ICMP OK, HTTP GET timeout)"`
 - WARNING: `"Health check: unresponsive (ICMP timeout, HTTP HEAD timeout)"`
 
@@ -1360,9 +1328,7 @@ class RestartMonitor:
             channel_stabilization_timeout is 0.
 
         The collector's session is cleared at the start — the old
-        session from before the restart is dead. If a health monitor
-        is present, its collection evidence is also cleared so it
-        doesn't skip HTTP probes based on stale pre-restart data.
+        session from before the restart is dead.
 
         The optional cancel_event enables cooperative cancellation.
         The probe loop uses cancel_event.wait(probe_interval) instead
@@ -1384,7 +1350,6 @@ class RestartMonitor:
 ```
 monitor_recovery(cancel_event) called
  ├─ Clear collector session
- ├─ Clear health monitor collection evidence (if health monitor present)
  ├─ Wait for modem to respond
  │   ├─ Loop:
  │   │   ├─ Check cancel_event (if set → return early)

@@ -97,22 +97,28 @@
     "step": {
       "init": {
         "title": "Cable Modem Settings",
-        "description": "Current: {detected_modem}\nParser selected: {parser_selected_at}",
+        "description": "Update connection details and polling intervals.",
         "data": {
-          "host": "Modem IP",
+          "host": "Modem IP Address",
           "username": "Username",
           "password": "Password",
-          "modem_choice": "Modem Model",
-          "scan_interval": "Poll Interval (sec)"
+          "scan_interval": "Data Poll Interval",
+          "health_check_interval": "Health Check Interval"
         },
         "data_description": {
           "host": "Usually 192.168.100.1",
-          "username": "Leave blank if not required",
-          "password": "Blank = keep current",
-          "modem_choice": "Select your modem model. Change if incorrect.",
-          "scan_interval": "60-1800 sec. Default 600 (10 min)"
+          "username": "Leave blank if not required.",
+          "password": "Blank keeps current password.",
+          "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
+          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Cannot reach modem. Check IP address and network connectivity.",
+      "cannot_connect": "Modem not responding. Check IP address and protocol.",
+      "invalid_auth": "Login failed. Check username and password.",
+      "parse_failed": "Connected but couldn't read modem data."
     }
   }
 }

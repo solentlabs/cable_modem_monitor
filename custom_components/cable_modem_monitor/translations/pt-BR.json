@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurações do Modem",
-        "description": "Atual: {detected_modem}\nÚltima verificação: {parser_selected_at}",
+        "title": "Configurações do modem a cabo",
+        "description": "Atualize os dados de conexão e os intervalos de consulta.",
         "data": {
-          "host": "IP do Modem",
+          "host": "Endereço IP do modem",
           "username": "Usuário",
           "password": "Senha",
-          "modem_choice": "Modelo do Modem",
-          "scan_interval": "Intervalo (seg)"
+          "scan_interval": "Intervalo de consulta",
+          "health_check_interval": "Intervalo de verificação"
         },
         "data_description": {
           "host": "Geralmente 192.168.100.1",
-          "username": "Deixe em branco se não for necessário",
-          "password": "Em branco = manter atual",
-          "modem_choice": "Use 'auto' para detecção. Altere se incorreto.",
-          "scan_interval": "60-1800 seg. Padrão 600 (10 min)"
+          "username": "Deixe em branco se não for necessário.",
+          "password": "Em branco = manter a senha atual.",
+          "scan_interval": "Com que frequência consultar os dados do modem. Padrão 10 minutos. Defina como 00:00:00 para desativar a consulta automática (apenas manual pelo botão Atualizar).",
+          "health_check_interval": "Com que frequência verificar a acessibilidade do modem. Padrão 30 segundos. Defina como 00:00:00 para desativar as verificações."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "Não foi possível alcançar o modem. Verifique o endereço IP e a conectividade de rede.",
+      "cannot_connect": "O modem não está respondendo. Verifique o endereço IP e o protocolo.",
+      "invalid_auth": "Falha no login. Verifique o usuário e a senha.",
+      "parse_failed": "Conectado, mas não foi possível ler os dados do modem."
     }
   }
 }

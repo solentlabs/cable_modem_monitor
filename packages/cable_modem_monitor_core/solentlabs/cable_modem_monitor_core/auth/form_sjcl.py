@@ -174,7 +174,7 @@ class FormSjclAuthManager(BaseAuthManager):
             if isinstance(val_result, AuthResult):
                 return val_result
 
-        _logger.info(
+        _logger.debug(
             "SJCL login succeeded: cookies=%s",
             list(session.cookies.keys()),
         )
@@ -270,6 +270,8 @@ def _fetch_page_vars(
     try:
         resp = session.get(url, timeout=timeout)
     except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
         return AuthResult(success=False, error=f"Login page fetch failed: {e}")
 
     variables: dict[str, str] = {}
@@ -340,6 +342,8 @@ def _post_json(
     try:
         resp = session.post(url, json=payload, timeout=timeout)
     except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
         return AuthResult(success=False, error=f"POST failed: {e}")
 
     try:

@@ -33,11 +33,10 @@ map directly to test cases. Grouped by concern area.
 | 6 | Collector: parse → 24 DS, 4 US | | |
 | 7 | Collector returns `ModemResult(success=True)` | | |
 | 8 | Orchestrator: streak=0 (already 0) | | |
-| 9 | Orchestrator: notify HM `update_from_collection()` | HM evidence=fresh | |
-| 10 | Orchestrator: derive connection_status | | ONLINE |
-| 11 | Orchestrator: derive docsis_status | | OPERATIONAL |
-| 12 | Orchestrator: read HM.latest | | |
-| 13 | Return `ModemSnapshot` | last_status=ONLINE | |
+| 9 | Orchestrator: derive connection_status | | ONLINE |
+| 10 | Orchestrator: derive docsis_status | | OPERATIONAL |
+| 11 | Orchestrator: read HM.latest | | |
+| 12 | Return `ModemSnapshot` | last_status=ONLINE | |
 
 **Assertions:**
 - `snapshot.connection_status == ONLINE`
@@ -421,14 +420,14 @@ modem's web UI. Session is still valid in memory.
 | 1 | Consumer calls `get_modem_data()` | | |
 | 2 | Collector: auth → ConnectionError | | |
 | 3 | Collector returns `ModemResult(signal=CONNECTIVITY)` | | |
-| 4 | Orchestrator: no backoff, no streak change | | |
+| 4 | Orchestrator: increment connectivity streak, set backoff | connectivity_streak=1, backoff=1 | |
 | 5 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
 - `snapshot.connection_status == UNREACHABLE`
 - Auth failure streak is NOT incremented (connectivity is not auth)
-- No backoff applied (connectivity failures aren't the modem's fault)
-- Next poll runs at normal cadence
+- Connectivity backoff applied: `min(2^(streak-1), 6)` polls skipped before retry
+- Next poll is skipped (backoff=1); poll after that retries
 
 ---
 
@@ -444,7 +443,7 @@ modem's web UI. Session is still valid in memory.
 | 4 | Return `ModemSnapshot(UNREACHABLE)` | | |
 
 **Assertions:**
-- Same policy as connection refused — no backoff, no streak
+- Same policy as connection refused — connectivity backoff, no auth streak
 - Modem's per-request timeout from modem.yaml applies
 
 ---
@@ -541,12 +540,11 @@ Modem has come back online.
 | 4 | Connection drop during request = success | | |
 | 5 | Orchestrator: clear_session() | session cleared | |
 | 6 | Create RestartMonitor, call monitor_recovery() | | |
-| 7 | RM: clear HM collection evidence | evidence cleared | |
-| 8 | Phase 1: probe every 10s until modem responds | | |
-| 9 | Modem responds at ~90s | | |
-| 10 | Phase 2: poll for channel stabilization | | |
-| 11 | 3 consecutive stable counts + 30s grace | | |
-| 12 | Return `RestartResult(success=True, COMPLETE, 150s)` | is_restarting=False | |
+| 7 | Phase 1: probe every 10s until modem responds | | |
+| 8 | Modem responds at ~90s | | |
+| 9 | Phase 2: poll for channel stabilization | | |
+| 10 | 3 consecutive stable counts + 30s grace | | |
+| 11 | Return `RestartResult(success=True, COMPLETE, 150s)` | is_restarting=False | |
 
 **Assertions:**
 - `result.success == True`
@@ -554,7 +552,6 @@ Modem has come back online.
 - `result.elapsed_seconds > 0`
 - `orchestrator.is_restarting == False` after return
 - Session was cleared (old pre-restart session is dead)
-- HM collection evidence was cleared at start
 
 ---
 
@@ -718,16 +715,17 @@ No restart command sent. Normal polling discovers the outage.
 | Poll | What happens | Status |
 |------|-------------|--------|
 | N | Normal poll → ONLINE | ONLINE |
-| N+1 | ConnectionError → CONNECTIVITY | UNREACHABLE |
-| N+2 | ConnectionError → CONNECTIVITY | UNREACHABLE |
-| N+3 | Modem back, stale session → LOAD_AUTH → clear session | AUTH_FAILED |
+| N+1 | ConnectionError → CONNECTIVITY (streak=1, backoff=1) | UNREACHABLE |
+| N+2 | Connectivity backoff skip | UNREACHABLE |
+| N+3 | Backoff cleared, modem back → LOAD_AUTH → clear session | AUTH_FAILED |
 | N+4 | Fresh login → success | ONLINE |
 
 **Assertions:**
 - No RestartMonitor involved — normal polling handles recovery
 - UNREACHABLE → ONLINE transition logged with session_valid state
 - Stale session self-corrects via LOAD_AUTH → clear → fresh login
-- No backoff on CONNECTIVITY (polls at normal cadence during outage)
+- Connectivity backoff reduces wasted timeouts during outage
+- LOAD_AUTH resets connectivity state (modem responded)
 - Health checks (if running) detect the outage faster than data polls
 
 **Alternative path (IP-based session):**
@@ -762,43 +760,41 @@ No LOAD_AUTH step needed. Both paths are valid.
 
 ---
 
-### UC-51: Collection evidence suppression
+### UC-51: Health checks decoupled from collection
 
-**Preconditions:** Successful data collection just occurred.
-`update_from_collection(timestamp)` was called.
+**Preconditions:** Data collection and health checks both running.
 
 | Step | Action | Observable |
 |------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: collection evidence is fresh (within poll_interval) | |
-| 3 | HM: skip HTTP HEAD (evidence proves responsiveness) | |
-| 4 | HM: run ICMP only | |
-| 5 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=Xms, http_latency_ms=None)` | |
+| 1 | Data poll completes successfully | ONLINE |
+| 2 | Health timer fires (independent cadence) | |
+| 3 | HM: run ICMP + HTTP HEAD probes | |
+| 4 | Return `HealthInfo(RESPONSIVE, icmp_latency_ms=4, http_latency_ms=12)` | |
 
 **Assertions:**
-- HTTP HEAD probe NOT executed (saves a request to the modem)
-- `http_latency_ms is None` (no probe-specific measurement)
-- `health_status` is RESPONSIVE because evidence is fresh
-- ICMP still runs independently (different network layer)
-- Critical for fragile modems where every HTTP request carries risk
+- Health checks and data collection run independently on their own cadences
+- Health probes always run their full set (ICMP + HTTP HEAD) regardless of collection state
+- No coupling between the two pipelines — neither suppresses the other
+- Health provides fast outage detection; collection provides modem data
 
 ---
 
-### UC-52: Evidence expiry — HTTP resumes
+### UC-52: Health continues when collection stops
 
-**Preconditions:** Collection evidence older than poll_interval.
-Collector missed a cycle (or hasn't run yet).
+**Preconditions:** Data polling disabled or collector missed a cycle.
+Health checks still running on their own cadence.
 
 | Step | Action | Observable |
 |------|--------|------------|
-| 1 | Consumer calls `ping()` | |
-| 2 | HM: evidence is stale (> poll_interval since last collection) | |
-| 3 | HM: run both ICMP and HTTP HEAD | |
+| 1 | No data collection runs (disabled or failed) | |
+| 2 | Health timer fires | |
+| 3 | HM: run ICMP + HTTP HEAD probes | |
 | 4 | Return `HealthInfo(...)` | |
 
 **Assertions:**
-- HTTP HEAD probe runs (evidence expired, can't assume responsiveness)
-- poll_interval is the staleness threshold
+- Health probes run regardless of whether data collection is active
+- No dependency on collection state — health is fully independent
+- Provides reachability data even when data polling is disabled (UC-74)
 
 ---
 

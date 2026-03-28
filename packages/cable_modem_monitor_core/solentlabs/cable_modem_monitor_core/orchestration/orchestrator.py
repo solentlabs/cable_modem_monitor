@@ -205,6 +205,16 @@ class Orchestrator:
         self._first_poll_complete = False
         _logger.info("Auth state reset — next poll will attempt fresh login")
 
+    def reset_connectivity(self) -> None:
+        """Reset connectivity backoff for immediate retry.
+
+        Called when the user requests a manual refresh. Clears the
+        connectivity backoff so the next get_modem_data() attempts
+        a real connection regardless of prior failures.
+        """
+        self._policy.reset_connectivity()
+        _logger.info("Connectivity backoff reset — next poll will attempt connection")
+
     def diagnostics(self) -> OrchestratorDiagnostics:
         """Return a read-only snapshot of operational diagnostics.
 
@@ -215,6 +225,8 @@ class Orchestrator:
             auth_failure_streak=self._policy.auth_failure_streak,
             circuit_breaker_open=self._policy.circuit_open,
             session_is_valid=self._collector.session_is_valid,
+            connectivity_streak=self._policy.connectivity_streak,
+            connectivity_backoff_remaining=self._policy.connectivity_backoff_remaining,
             last_poll_timestamp=self._last_poll_timestamp,
         )
 
@@ -261,6 +273,14 @@ class Orchestrator:
                 error="Circuit breaker open — reconfigure credentials",
             )
 
+        # Connectivity backoff
+        if self._policy.check_connectivity_backoff():
+            return self._make_snapshot(
+                ConnectionStatus.UNREACHABLE,
+                DocsisStatus.UNKNOWN,
+                error="Connectivity backoff active",
+            )
+
         # Backoff
         if self._policy.check_backoff():
             return self._make_snapshot(
@@ -297,10 +317,6 @@ class Orchestrator:
     def _handle_success(self, result: ModemResult) -> ModemSnapshot:
         """Process a successful collection result."""
         self._policy.clear_streak()
-
-        # Notify health monitor
-        if self._health_monitor is not None:
-            self._health_monitor.update_from_collection(time.monotonic())
 
         modem_data = result.modem_data
         assert modem_data is not None  # guaranteed by success=True
@@ -352,14 +368,20 @@ class Orchestrator:
         auth = self._modem_config.auth
         strategy = type(auth).__name__ if auth is not None else "none"
         has_creds = bool(self._collector._username or self._collector._password)
-        session_valid = self._collector.session_is_valid
+
+        if self._collector.session_is_valid:
+            session = "active"
+        elif self._first_poll_complete:
+            session = "expired"
+        else:
+            session = "new"
 
         log(
-            "Poll — auth: %s, url: %s, credentials: %s, session_valid: %s",
+            "Poll — auth: %s, url: %s, credentials: %s, session: %s",
             strategy,
             self._collector._base_url,
             "yes" if has_creds else "no",
-            session_valid,
+            session,
         )
 
     def _log_poll_result(self, result: ModemResult) -> None:

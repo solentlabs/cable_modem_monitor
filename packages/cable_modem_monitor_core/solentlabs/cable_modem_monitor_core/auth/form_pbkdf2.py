@@ -91,7 +91,7 @@ class FormPbkdf2AuthManager(BaseAuthManager):
             return login_result
         response = login_result
 
-        _logger.info(
+        _logger.debug(
             "PBKDF2 login succeeded: status=%d, cookies=%s",
             response.status_code,
             list(session.cookies.keys()),
@@ -116,7 +116,9 @@ def _fetch_csrf_token(
     """
     try:
         resp = session.get(url, timeout=timeout)
-    except requests.RequestException:
+    except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
         _logger.debug("CSRF init endpoint unreachable: %s", url)
         return ""
 
@@ -155,6 +157,8 @@ def _request_salts(
         salt_response = session.post(login_url, json=salt_data, timeout=timeout)
         salt_json: dict[str, str] = salt_response.json()
     except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
         return AuthResult(success=False, error=f"Salt request failed: {e}")
     except ValueError:
         return AuthResult(success=False, error="Salt response is not valid JSON")
@@ -180,6 +184,8 @@ def _submit_login(
     try:
         response = session.post(login_url, json=login_data, timeout=timeout)
     except requests.RequestException as e:
+        if isinstance(e, requests.ConnectionError | requests.Timeout):
+            raise
         return AuthResult(success=False, error=f"Login POST failed: {e}")
 
     # Check for failure indicators

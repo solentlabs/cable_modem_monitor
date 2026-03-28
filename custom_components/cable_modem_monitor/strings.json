@@ -78,17 +78,15 @@
           "host": "Modem IP Address",
           "username": "Username",
           "password": "Password",
-          "entity_prefix": "Entity ID Prefix",
-          "scan_interval": "Data Poll Interval (seconds)",
-          "health_check_interval": "Health Check Interval (seconds)"
+          "scan_interval": "Data Poll Interval",
+          "health_check_interval": "Health Check Interval"
         },
         "data_description": {
           "host": "Usually 192.168.100.1",
           "username": "Leave blank if not required.",
           "password": "Blank keeps current password.",
-          "entity_prefix": "Adds model name or IP to entity IDs.",
-          "scan_interval": "30–86400 seconds. Default 600 (10 min). Set to 0 to disable automatic polling.",
-          "health_check_interval": "10–86400 seconds. Default 30. Set to 0 to disable health checks."
+          "scan_interval": "How often to poll modem data. Default 10 minutes. Set to 00:00:00 to disable automatic polling (manual only via Update button).",
+          "health_check_interval": "How often to check modem reachability. Default 30 seconds. Set to 00:00:00 to disable health checks."
         }
       }
     },
