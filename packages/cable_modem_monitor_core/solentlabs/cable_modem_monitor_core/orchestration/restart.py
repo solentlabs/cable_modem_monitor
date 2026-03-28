@@ -92,8 +92,6 @@ class RestartMonitor:
 
         # Clear stale state
         self._collector.clear_session()
-        if self._health_monitor is not None:
-            self._health_monitor.clear_collection_evidence()
 
         _logger.info("Restart recovery: waiting for modem to respond")
 

@@ -104,9 +104,10 @@ async_setup_entry(hass, entry)
  │         post_processor, base_url, username, password)
  │
  ├─ 4. Create HealthMonitor (conditional)
- │     if supports_icmp or supports_head:
- │         HealthMonitor(base_url, poll_interval,
- │             supports_icmp, supports_head)
+ │     Read modem.yaml health config for defaults
+ │     if supports_icmp or http_probe:
+ │         HealthMonitor(base_url, supports_icmp,
+ │             supports_head, http_probe)
  │     else: None
  │
  ├─ 5. Create Orchestrator
@@ -262,10 +263,9 @@ The orchestrator reads `health_monitor.latest` during
 Health sensors update between data polls, giving faster outage
 detection.
 
-**Collection evidence:** On successful data collection, the
-orchestrator calls `health_monitor.update_from_collection()` so the
-health monitor skips redundant HTTP probes. This happens automatically
-inside Core — the adapter doesn't need to coordinate.
+**Decoupled operation:** Health checks and data collection run
+independently — neither suppresses the other. The health monitor
+always runs its own probes on its own cadence.
 
 ---
 

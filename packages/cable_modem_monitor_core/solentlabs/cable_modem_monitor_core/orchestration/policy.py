@@ -25,26 +25,36 @@ class SignalPolicy:
     """Auth failure tracking, backoff, and circuit breaker.
 
     Owns the auth_failure_streak counter, backoff_remaining counter,
-    and circuit_open flag. The orchestrator delegates failure handling
-    here and checks guards before each poll.
+    and circuit_open flag. Also tracks connectivity failures with
+    exponential backoff — connectivity timeouts don't count toward
+    the auth circuit breaker.
 
     Args:
         collector: ModemDataCollector for session clearing on LOAD_AUTH.
         auth_failure_threshold: Consecutive auth failures before tripping
             the circuit breaker.
+        max_connectivity_backoff: Maximum polls to skip during
+            connectivity backoff. Backoff grows as
+            min(2^(streak-1), max).
     """
 
     def __init__(
         self,
         collector: ModemDataCollector,
         auth_failure_threshold: int = 6,
+        max_connectivity_backoff: int = 6,
     ) -> None:
         self._collector = collector
         self._threshold = auth_failure_threshold
+        self._max_connectivity_backoff = max_connectivity_backoff
 
         self._auth_failure_streak: int = 0
         self._circuit_open: bool = False
         self._backoff_remaining: int = 0
+
+        # Connectivity backoff — separate from auth
+        self._connectivity_streak: int = 0
+        self._connectivity_backoff: int = 0
 
     @property
     def circuit_open(self) -> bool:
@@ -60,6 +70,35 @@ class SignalPolicy:
     def auth_failure_streak(self) -> int:
         """Current consecutive auth failure count."""
         return self._auth_failure_streak
+
+    @property
+    def connectivity_streak(self) -> int:
+        """Current consecutive connectivity failure count."""
+        return self._connectivity_streak
+
+    @property
+    def connectivity_backoff_remaining(self) -> int:
+        """Polls remaining in the connectivity backoff window."""
+        return self._connectivity_backoff
+
+    def check_connectivity_backoff(self) -> bool:
+        """Check and decrement the connectivity backoff counter.
+
+        Returns True if backoff is active (caller should skip collection).
+        Returns False if backoff is cleared or was not active.
+        """
+        if self._connectivity_backoff <= 0:
+            return False
+
+        self._connectivity_backoff -= 1
+        if self._connectivity_backoff > 0:
+            _logger.info(
+                "Connectivity backoff active (%d remaining), skipping poll",
+                self._connectivity_backoff,
+            )
+        else:
+            _logger.info("Connectivity backoff cleared, retrying")
+        return True
 
     def check_backoff(self) -> bool:
         """Check and decrement the backoff counter.
@@ -94,6 +133,12 @@ class SignalPolicy:
         """
         signal = result.signal
 
+        # Any non-connectivity failure means the modem responded —
+        # clear connectivity backoff since the network path works.
+        if signal != CollectorSignal.CONNECTIVITY:
+            self._connectivity_streak = 0
+            self._connectivity_backoff = 0
+
         if signal == CollectorSignal.AUTH_FAILED:
             self._auth_failure_streak += 1
             self._log_auth_failure()
@@ -123,7 +168,17 @@ class SignalPolicy:
             return ConnectionStatus.AUTH_FAILED
 
         if signal == CollectorSignal.CONNECTIVITY:
-            _logger.info("Connection failure — reporting unreachable")
+            self._connectivity_streak += 1
+            backoff = min(
+                2 ** (self._connectivity_streak - 1),
+                self._max_connectivity_backoff,
+            )
+            self._connectivity_backoff = backoff
+            _logger.info(
+                "Connection failure — unreachable (streak: %d, " "backoff: %d polls)",
+                self._connectivity_streak,
+                backoff,
+            )
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.LOAD_ERROR:
@@ -146,10 +201,23 @@ class SignalPolicy:
         self._auth_failure_streak = 0
         self._circuit_open = False
         self._backoff_remaining = 0
+        self._connectivity_streak = 0
+        self._connectivity_backoff = 0
+
+    def reset_connectivity(self) -> None:
+        """Reset connectivity backoff state.
+
+        Called when the user requests a manual refresh or when health
+        status transitions back to responsive.
+        """
+        self._connectivity_streak = 0
+        self._connectivity_backoff = 0
 
     def clear_streak(self) -> None:
-        """Clear the auth failure streak on successful collection."""
+        """Clear auth and connectivity streaks on successful collection."""
         self._auth_failure_streak = 0
+        self._connectivity_streak = 0
+        self._connectivity_backoff = 0
 
     def _log_auth_failure(self) -> None:
         """Log auth failure with streak context."""

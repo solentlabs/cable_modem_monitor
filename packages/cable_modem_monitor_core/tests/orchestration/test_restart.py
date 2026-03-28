@@ -163,12 +163,11 @@ class TestUC40FullRecovery:
         assert result.success is True
         assert result.phase_reached == RestartPhase.COMPLETE
         collector.clear_session.assert_called_once()
-        hm.clear_collection_evidence.assert_called_once()
 
     @patch("solentlabs.cable_modem_monitor_core.orchestration.restart.time.sleep")
     @patch("solentlabs.cable_modem_monitor_core.orchestration.restart.time.monotonic")
-    def test_clears_session_and_evidence(self, mock_monotonic: MagicMock, mock_sleep: MagicMock) -> None:
-        """Recovery clears collector session and health evidence."""
+    def test_clears_session(self, mock_monotonic: MagicMock, mock_sleep: MagicMock) -> None:
+        """Recovery clears collector session."""
         hm = _mock_health_monitor()
         collector = _mock_collector()
 
@@ -183,7 +182,6 @@ class TestUC40FullRecovery:
         monitor.monitor_recovery()
 
         collector.clear_session.assert_called_once()
-        hm.clear_collection_evidence.assert_called_once()
 
 
 # ------------------------------------------------------------------

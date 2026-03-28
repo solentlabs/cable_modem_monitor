@@ -68,6 +68,8 @@ class BasicAuthManager(BaseAuthManager):
                     list(session.cookies.keys()),
                 )
             except requests.RequestException as e:
+                if isinstance(e, requests.ConnectionError | requests.Timeout):
+                    raise
                 return AuthResult(
                     success=False,
                     error=f"Challenge cookie request failed: {e}",

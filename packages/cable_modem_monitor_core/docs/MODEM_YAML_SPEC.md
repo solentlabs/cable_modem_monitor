@@ -72,7 +72,9 @@ timeout: 15
 
 # Health (optional, defaults are correct for most modems)
 health:
-  http_probe: false  # disable HTTP probes for fragile modems
+  http_probe: false      # disable HTTP probes for fragile modems
+  supports_head: false   # modem rejects HTTP HEAD (use GET)
+  supports_icmp: true    # hint; auto-detection overrides at setup
 
 # Metadata
 status: verified
@@ -810,6 +812,8 @@ endpoints.
 ```yaml
 health:
   http_probe: false
+  supports_head: false
+  supports_icmp: true
 ```
 
 Health check configuration. Controls how the HealthMonitor probes
@@ -818,10 +822,24 @@ this modem.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `http_probe` | bool | `true` | Whether HTTP health probes are enabled |
+| `supports_head` | bool | `true` | Whether the modem handles HTTP HEAD correctly |
+| `supports_icmp` | bool | `true` | Whether ICMP ping is expected to work |
 
 When `http_probe` is `false`, the HealthMonitor skips HTTP HEAD/GET
 probes entirely — only ICMP runs (if supported). Use this for fragile
 modems where every HTTP request carries crash risk (e.g., S33v2, #117).
+
+When `supports_head` is `false`, the HealthMonitor uses GET instead
+of HEAD for HTTP probes. Some modems return 405 or unexpected
+responses to HEAD requests. This is a modem characteristic — set
+per-model in modem.yaml.
+
+`supports_icmp` is a network-dependent hint. Auto-detection during
+setup overrides this default. User options override both. Useful for
+ISP-managed modems known to block ICMP.
+
+**Precedence:** modem.yaml provides defaults → auto-detection
+overrides at setup → user options (highest priority).
 
 Most modems omit this section — defaults are correct. Only declare it
 when a modem is known to be fragile.

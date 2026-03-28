@@ -209,14 +209,14 @@ NETWORK_ERROR_CASES = [
     NETWORK_ERROR_CASES,
     ids=[c[0] for c in NETWORK_ERROR_CASES],
 )
-def test_network_error(
+def test_network_error_propagates(
     session: requests.Session,
     desc: str,
     login_page: str,
     mock_method: str,
     expected_error: str,
 ) -> None:
-    """Network errors during auth are captured, not raised."""
+    """ConnectionError propagates for collector to classify as CONNECTIVITY."""
     config = FormAuth(
         strategy="form",
         action="/goform/login",
@@ -225,17 +225,17 @@ def test_network_error(
     manager = FormAuthManager(config)
     manager.configure_session(session, {})
 
-    with patch.object(
-        session,
-        mock_method,
-        side_effect=requests.ConnectionError("refused"),
+    with (
+        patch.object(
+            session,
+            mock_method,
+            side_effect=requests.ConnectionError("refused"),
+        ),
+        pytest.raises(requests.ConnectionError),
     ):
-        result = manager.authenticate(
+        manager.authenticate(
             session,
             "http://192.168.100.1",
             "admin",
             "password",
         )
-
-    assert result.success is False
-    assert expected_error in result.error

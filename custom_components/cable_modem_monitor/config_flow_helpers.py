@@ -31,6 +31,7 @@ from solentlabs.cable_modem_monitor_core.connectivity import (
     test_http_head,
     test_icmp,
 )
+from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
 from solentlabs.cable_modem_monitor_core.orchestration import ModemDataCollector
 from solentlabs.cable_modem_monitor_core.orchestration.models import ModemResult
 from solentlabs.cable_modem_monitor_core.orchestration.signals import (
@@ -180,6 +181,42 @@ def classify_error(error: str | None, signal: CollectorSignal | None = None) -> 
 
 
 # ---------------------------------------------------------------------------
+# Probe detection (shared by validation pipeline and Reset Entities)
+# ---------------------------------------------------------------------------
+
+
+def detect_probes(
+    host: str,
+    base_url: str,
+    modem_config: ModemConfig,
+    *,
+    legacy_ssl: bool = False,
+) -> dict[str, bool]:
+    """Detect ICMP and HTTP HEAD probe support.
+
+    Respects modem.yaml ``health.supports_head`` as a ceiling — if the
+    modem is known to reject HEAD, the test is skipped and GET is used.
+    ICMP is always tested (network-dependent, modem.yaml is only a hint).
+
+    Args:
+        host: Bare hostname/IP for ICMP test.
+        base_url: Full URL for HTTP HEAD test.
+        modem_config: Loaded modem config (provides health defaults).
+        legacy_ssl: Whether to use legacy SSL ciphers for HEAD test.
+
+    Returns:
+        Dict with ``supports_icmp`` and ``supports_head`` booleans.
+    """
+    health_cfg = modem_config.health
+    supports_icmp = test_icmp(host)
+    if health_cfg and not health_cfg.supports_head:
+        supports_head = False
+    else:
+        supports_head = test_http_head(base_url, legacy_ssl=legacy_ssl)
+    return {"supports_icmp": supports_icmp, "supports_head": supports_head}
+
+
+# ---------------------------------------------------------------------------
 # Validation pipeline
 # ---------------------------------------------------------------------------
 
@@ -232,11 +269,7 @@ def _run_validation(
         legacy_ssl = conn.legacy_ssl
         _LOGGER.info("Protocol detected: %s (legacy_ssl=%s)", protocol, legacy_ssl)
 
-    # -- Step 2: Health-probe discovery ---------------------------------------
-    supports_icmp = test_icmp(host)
-    supports_head = test_http_head(base_url, legacy_ssl=legacy_ssl)
-
-    # -- Step 3: Load config from catalog -------------------------------------
+    # -- Step 2: Load config from catalog -------------------------------------
     modem_yaml = modem_dir / f"modem-{variant}.yaml" if variant else modem_dir / "modem.yaml"
     parser_yaml = modem_dir / "parser.yaml"
     parser_py = modem_dir / "parser.py"
@@ -244,6 +277,11 @@ def _run_validation(
     modem_config = load_modem_config(modem_yaml)
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
+
+    # -- Step 3: Health-probe discovery ---------------------------------------
+    probes = detect_probes(host, base_url, modem_config, legacy_ssl=legacy_ssl)
+    supports_icmp = probes["supports_icmp"]
+    supports_head = probes["supports_head"]
 
     # -- Step 4: Test data collection -----------------------------------------
     collector = ModemDataCollector(

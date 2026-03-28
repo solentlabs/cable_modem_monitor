@@ -84,23 +84,29 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configuración del Módem",
-        "description": "Actual: {detected_modem}\nÚltima verificación: {parser_selected_at}",
+        "title": "Configuración del módem",
+        "description": "Actualiza los datos de conexión e intervalos de consulta.",
         "data": {
-          "host": "IP del Módem",
+          "host": "Dirección IP del módem",
           "username": "Usuario",
           "password": "Contraseña",
-          "modem_choice": "Modelo del Módem",
-          "scan_interval": "Intervalo (seg)"
+          "scan_interval": "Intervalo de consulta",
+          "health_check_interval": "Intervalo de verificación"
         },
         "data_description": {
           "host": "Normalmente 192.168.100.1",
-          "username": "Dejar en blanco si no es necesario",
-          "password": "En blanco = mantener actual",
-          "modem_choice": "Usa 'auto' para detección. Cambia si es incorrecto.",
-          "scan_interval": "60-1800 seg. Predeterminado 600 (10 min)"
+          "username": "Dejar en blanco si no es necesario.",
+          "password": "En blanco = mantener la contraseña actual.",
+          "scan_interval": "Cada cuánto consultar los datos del módem. Por defecto 10 minutos. Establecer en 00:00:00 para desactivar la consulta automática (solo manual mediante el botón Actualizar).",
+          "health_check_interval": "Cada cuánto verificar que el módem es accesible. Por defecto 30 segundos. Establecer en 00:00:00 para desactivar las verificaciones."
         }
       }
+    },
+    "error": {
+      "network_unreachable": "No se puede alcanzar el módem. Verifica la dirección IP y la conectividad de red.",
+      "cannot_connect": "El módem no responde. Verifica la dirección IP y el protocolo.",
+      "invalid_auth": "Error de inicio de sesión. Verifica el usuario y la contraseña.",
+      "parse_failed": "Conectado, pero no se pudieron leer los datos del módem."
     }
   }
 }

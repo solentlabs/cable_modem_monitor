@@ -62,10 +62,6 @@ from .const import (
     ENTITY_PREFIX_IP,
     ENTITY_PREFIX_MODEL,
     ENTITY_PREFIX_NONE,
-    MAX_HEALTH_CHECK_INTERVAL,
-    MAX_SCAN_INTERVAL,
-    MIN_HEALTH_CHECK_INTERVAL,
-    MIN_SCAN_INTERVAL,
 )
 from .lib.host_validation import parse_host_input
 
@@ -555,6 +551,29 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
 
 
 # =============================================================================
+# Duration helpers
+# =============================================================================
+
+
+def _seconds_to_duration(seconds: int) -> dict[str, int]:
+    """Convert seconds to a duration dict for DurationSelector."""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return {"hours": hours, "minutes": minutes, "seconds": secs}
+
+
+def _duration_to_seconds(duration: dict[str, int] | int) -> int:
+    """Convert a DurationSelector dict to seconds.
+
+    Accepts raw int for backward compatibility with existing entries.
+    """
+    if isinstance(duration, int):
+        return duration
+    return duration.get("hours", 0) * 3600 + duration.get("minutes", 0) * 60 + duration.get("seconds", 0)
+
+
+# =============================================================================
 # Options flow
 # =============================================================================
 
@@ -597,40 +616,26 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): str,
                     vol.Optional(CONF_PASSWORD, default=""): str,
                     vol.Required(
-                        CONF_ENTITY_PREFIX,
-                        default=data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=_build_prefix_options(self.hass),
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required(
                         CONF_SCAN_INTERVAL,
-                        default=options.get(
-                            CONF_SCAN_INTERVAL,
-                            data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                        default=_seconds_to_duration(
+                            options.get(
+                                CONF_SCAN_INTERVAL,
+                                data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                            )
                         ),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
-                    ),
+                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                     vol.Required(
                         CONF_HEALTH_CHECK_INTERVAL,
-                        default=options.get(
-                            CONF_HEALTH_CHECK_INTERVAL,
-                            data.get(
+                        default=_seconds_to_duration(
+                            options.get(
                                 CONF_HEALTH_CHECK_INTERVAL,
-                                DEFAULT_HEALTH_CHECK_INTERVAL,
-                            ),
+                                data.get(
+                                    CONF_HEALTH_CHECK_INTERVAL,
+                                    DEFAULT_HEALTH_CHECK_INTERVAL,
+                                ),
+                            )
                         ),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(
-                            min=MIN_HEALTH_CHECK_INTERVAL,
-                            max=MAX_HEALTH_CHECK_INTERVAL,
-                        ),
-                    ),
+                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                 }
             ),
         )
@@ -700,7 +705,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             CONF_HOST: hostname,
             CONF_USERNAME: inp.get(CONF_USERNAME, ""),
             CONF_PASSWORD: inp.get(CONF_PASSWORD, ""),
-            CONF_ENTITY_PREFIX: inp.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
             CONF_PROTOCOL: validation["protocol"],
             CONF_LEGACY_SSL: validation.get("legacy_ssl", False),
             CONF_SUPPORTS_ICMP: validation["supports_icmp"],
@@ -713,12 +717,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         self.hass.config_entries.async_update_entry(entry, title=title, data=updated_data)
 
-        # Store intervals in options (triggers reload via update listener)
+        # Store intervals in options as int seconds (triggers reload via update listener)
+        scan = _duration_to_seconds(inp.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        health = _duration_to_seconds(inp.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL))
         return self.async_create_entry(
             title="",
             data={
-                CONF_SCAN_INTERVAL: inp.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                CONF_HEALTH_CHECK_INTERVAL: inp.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL),
+                CONF_SCAN_INTERVAL: scan,
+                CONF_HEALTH_CHECK_INTERVAL: health,
             },
         )
 
@@ -749,37 +755,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): str,
                     vol.Optional(CONF_PASSWORD, default=""): str,
                     vol.Required(
-                        CONF_ENTITY_PREFIX,
-                        default=saved.get(
-                            CONF_ENTITY_PREFIX,
-                            data.get(CONF_ENTITY_PREFIX, ENTITY_PREFIX_NONE),
-                        ),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=_build_prefix_options(self.hass),
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required(
                         CONF_SCAN_INTERVAL,
-                        default=saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
-                    ),
+                        default=_seconds_to_duration(saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                     vol.Required(
                         CONF_HEALTH_CHECK_INTERVAL,
-                        default=saved.get(
-                            CONF_HEALTH_CHECK_INTERVAL,
-                            DEFAULT_HEALTH_CHECK_INTERVAL,
+                        default=_seconds_to_duration(
+                            saved.get(
+                                CONF_HEALTH_CHECK_INTERVAL,
+                                DEFAULT_HEALTH_CHECK_INTERVAL,
+                            )
                         ),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(
-                            min=MIN_HEALTH_CHECK_INTERVAL,
-                            max=MAX_HEALTH_CHECK_INTERVAL,
-                        ),
-                    ),
+                    ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                 }
             ),
             errors=errors,

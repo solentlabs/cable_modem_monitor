@@ -155,6 +155,10 @@ class OrchestratorDiagnostics:
         circuit_breaker_open: Whether polling is stopped due to
             persistent auth failures.
         session_is_valid: Current session state from the collector.
+        connectivity_streak: Consecutive connectivity failures. 0 when
+            reachable.
+        connectivity_backoff_remaining: Polls to skip before next
+            connection attempt. 0 when no backoff active.
         resource_fetches: Per-resource timing and size from the last
             successful collection.
         last_poll_timestamp: Monotonic time of last get_modem_data()
@@ -165,6 +169,8 @@ class OrchestratorDiagnostics:
     auth_failure_streak: int
     circuit_breaker_open: bool
     session_is_valid: bool
+    connectivity_streak: int = 0
+    connectivity_backoff_remaining: int = 0
     resource_fetches: list[ResourceFetch] = field(default_factory=list)
     last_poll_timestamp: float | None = None
 

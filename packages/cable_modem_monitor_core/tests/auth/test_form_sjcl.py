@@ -140,13 +140,14 @@ class TestFetchPageVars:
         assert result["mySalt"] == _TEST_SALT
         assert result["currentSessionId"] == _TEST_SESSION_ID
 
-    def test_network_error(self) -> None:
-        """Returns AuthResult on network error."""
+    def test_network_error_propagates(self) -> None:
+        """ConnectionError propagates for collector to classify as CONNECTIVITY."""
         session = requests.Session()
-        with patch.object(session, "get", side_effect=requests.ConnectionError("refused")):
-            result = _fetch_page_vars(session, "http://modem/", 10)
-        assert hasattr(result, "success")
-        assert result.success is False
+        with (
+            patch.object(session, "get", side_effect=requests.ConnectionError("refused")),
+            pytest.raises(requests.ConnectionError),
+        ):
+            _fetch_page_vars(session, "http://modem/", 10)
 
 
 class TestFormSjclAuthManager:
@@ -218,19 +219,19 @@ class TestFormSjclAuthManager:
         assert result.success is False
         assert "myIv" in result.error
 
-    def test_page_fetch_failure(self, session: requests.Session) -> None:
-        """Reports error when login page cannot be fetched."""
+    def test_page_fetch_connection_error_propagates(self, session: requests.Session) -> None:
+        """ConnectionError on login page fetch propagates for collector."""
         config = _make_config()
         manager = FormSjclAuthManager(config)
 
-        with patch.object(session, "get", side_effect=requests.ConnectionError("refused")):
-            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
+        with (
+            patch.object(session, "get", side_effect=requests.ConnectionError("refused")),
+            pytest.raises(requests.ConnectionError),
+        ):
+            manager.authenticate(session, "http://192.168.0.1", "admin", "password")
 
-        assert result.success is False
-        assert "fetch failed" in result.error.lower()
-
-    def test_login_post_failure(self, session: requests.Session) -> None:
-        """Reports error when login POST fails."""
+    def test_login_post_connection_error_propagates(self, session: requests.Session) -> None:
+        """ConnectionError on login POST propagates for collector."""
         config = _make_config()
         manager = FormSjclAuthManager(config)
 
@@ -240,11 +241,9 @@ class TestFormSjclAuthManager:
         with (
             patch.object(session, "get", return_value=page_resp),
             patch.object(session, "post", side_effect=requests.ConnectionError("lost")),
+            pytest.raises(requests.ConnectionError),
         ):
-            result = manager.authenticate(session, "http://192.168.0.1", "admin", "password")
-
-        assert result.success is False
-        assert "failed" in result.error.lower()
+            manager.authenticate(session, "http://192.168.0.1", "admin", "password")
 
     def test_login_response_not_json(self, session: requests.Session) -> None:
         """Reports error when login response is not JSON."""

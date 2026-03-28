@@ -1,11 +1,11 @@
 """HealthMonitor — lightweight probes for modem reachability.
 
-Runs ICMP ping and HTTP HEAD/GET probes independently. Collection
-evidence from ModemDataCollector suppresses redundant HTTP probes.
+Runs ICMP ping and HTTP HEAD/GET probes independently on their own
+cadence. Health checks and data collection are fully decoupled — the
+HealthMonitor has no knowledge of the data collector.
 
-Probe discovery determines which probes work on the target network
-during setup. HealthMonitor stores the results and uses them for all
-subsequent ping() calls.
+Probe capabilities (ICMP, HEAD) are declared in modem.yaml and
+confirmed by auto-detection during setup.
 
 See ORCHESTRATION_SPEC.md § HealthMonitor and ORCHESTRATION_USE_CASES.md
 UC-50 through UC-57.
@@ -17,7 +17,6 @@ import logging
 import platform
 import re
 import subprocess
-import time
 
 import requests
 
@@ -35,13 +34,11 @@ class HealthMonitor:
     """Lightweight modem health probes.
 
     Runs ICMP and HTTP probes to detect modem reachability between data
-    collection cycles. Collection evidence from a successful data poll
-    suppresses redundant HTTP probes.
+    collection cycles. Fully decoupled from data collection — each
+    ping() call runs all enabled probes independently.
 
     Args:
         base_url: Modem URL for HTTP probe (e.g., "http://192.168.100.1").
-        poll_interval: Data collection cadence in seconds. Collection
-            evidence older than this is stale.
         supports_icmp: Whether ICMP ping works on this network.
             Discovered during setup.
         supports_head: Whether modem handles HTTP HEAD correctly.
@@ -54,7 +51,6 @@ class HealthMonitor:
     def __init__(
         self,
         base_url: str,
-        poll_interval: int = 600,
         *,
         supports_icmp: bool = True,
         supports_head: bool = True,
@@ -63,7 +59,6 @@ class HealthMonitor:
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._host = self._extract_host(base_url)
-        self._poll_interval = poll_interval
         self._supports_icmp = supports_icmp
         self._http_probe = http_probe
         self._http_method = "HEAD" if supports_head else "GET"
@@ -71,15 +66,13 @@ class HealthMonitor:
 
         # State
         self._latest = HealthInfo(health_status=HealthStatus.UNKNOWN)
-        self._last_collection_time: float | None = None
         self._previous_status: HealthStatus = HealthStatus.UNKNOWN
 
     def ping(self) -> HealthInfo:
         """Run health probes and return results.
 
-        ICMP runs first (if supported), then HTTP (if not suppressed by
-        collection evidence or disabled). Both probes run regardless of
-        each other's result.
+        ICMP runs first (if supported), then HTTP (if enabled). Both
+        probes run regardless of each other's result.
 
         Returns:
             HealthInfo with probe results and derived status.
@@ -93,8 +86,8 @@ class HealthMonitor:
         if self._supports_icmp:
             icmp_ok, icmp_ms = self._probe_icmp()
 
-        # HTTP probe (suppressed by fresh collection evidence or disabled)
-        if self._http_probe and not self._is_evidence_fresh():
+        # HTTP probe
+        if self._http_probe:
             http_ok, http_ms = self._probe_http()
 
         # Derive status
@@ -117,26 +110,6 @@ class HealthMonitor:
         Returns default HealthInfo(UNKNOWN) if ping() has never been called.
         """
         return self._latest
-
-    def update_from_collection(self, timestamp: float) -> None:
-        """Report a successful data collection.
-
-        The collector's HTTP exchange proves modem is responsive. Health
-        monitor skips its own HTTP probe on next ping() call until the
-        evidence expires after one poll_interval.
-
-        Args:
-            timestamp: Monotonic time of the successful collection.
-        """
-        self._last_collection_time = timestamp
-
-    def clear_collection_evidence(self) -> None:
-        """Invalidate cached collection evidence.
-
-        Called by RestartMonitor at start of recovery so that health
-        probes are not suppressed by stale pre-restart data.
-        """
-        self._last_collection_time = None
 
     # ------------------------------------------------------------------
     # Internal — probes
@@ -220,14 +193,13 @@ class HealthMonitor:
     ) -> HealthStatus:
         """Derive health status from probe results.
 
-        None means the probe was not run (disabled, unsupported, or
-        suppressed by collection evidence).
+        None means the probe was not run (disabled or unsupported).
 
         See ORCHESTRATION_SPEC.md § Probe Configurations Matrix.
         """
         # Neither probe ran
         if icmp_ok is None and http_ok is None:
-            return self._derive_no_probes()
+            return HealthStatus.UNKNOWN
 
         # Both probes ran
         if icmp_ok is not None and http_ok is not None:
@@ -237,14 +209,8 @@ class HealthMonitor:
         if icmp_ok is None:
             return HealthStatus.RESPONSIVE if http_ok else HealthStatus.UNRESPONSIVE
 
-        # ICMP only (HTTP suppressed by evidence or disabled)
-        return self._derive_icmp_only(icmp_ok)
-
-    def _derive_no_probes(self) -> HealthStatus:
-        """Derive status when neither probe ran."""
-        if self._is_evidence_fresh():
-            return HealthStatus.RESPONSIVE
-        return HealthStatus.UNKNOWN
+        # ICMP only (HTTP disabled)
+        return HealthStatus.RESPONSIVE if icmp_ok else HealthStatus.UNRESPONSIVE
 
     @staticmethod
     def _derive_both_probes(icmp_ok: bool, http_ok: bool) -> HealthStatus:
@@ -257,24 +223,9 @@ class HealthMonitor:
             return HealthStatus.ICMP_BLOCKED
         return HealthStatus.UNRESPONSIVE
 
-    def _derive_icmp_only(self, icmp_ok: bool) -> HealthStatus:
-        """Derive status from ICMP only (HTTP suppressed or disabled)."""
-        if icmp_ok:
-            return HealthStatus.RESPONSIVE
-        # ICMP failed but HTTP is suppressed — can't determine HTTP
-        if self._is_evidence_fresh():
-            return HealthStatus.ICMP_BLOCKED
-        return HealthStatus.UNRESPONSIVE
-
     # ------------------------------------------------------------------
-    # Internal — evidence and helpers
+    # Internal — helpers
     # ------------------------------------------------------------------
-
-    def _is_evidence_fresh(self) -> bool:
-        """Whether collection evidence is still valid."""
-        if self._last_collection_time is None:
-            return False
-        return (time.monotonic() - self._last_collection_time) < self._poll_interval
 
     def _build_ping_command(self) -> list[str]:
         """Build platform-specific ping command."""
@@ -355,15 +306,12 @@ class HealthMonitor:
             else:
                 parts.append("ICMP timeout")
 
-        if self._http_probe and not self._is_evidence_fresh():
-            if http_ok is not None:
-                if info.http_latency_ms is not None:
-                    parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.0f}ms")
-                elif http_ok:
-                    parts.append(f"HTTP {self._http_method} OK")
-                else:
-                    parts.append(f"HTTP {self._http_method} timeout")
-        elif self._http_probe:
-            parts.append("HTTP skipped — collection evidence fresh")
+        if http_ok is not None:
+            if info.http_latency_ms is not None:
+                parts.append(f"HTTP {self._http_method} {info.http_latency_ms:.0f}ms")
+            elif http_ok:
+                parts.append(f"HTTP {self._http_method} OK")
+            else:
+                parts.append(f"HTTP {self._http_method} timeout")
 
         return ", ".join(parts) if parts else "no probes"

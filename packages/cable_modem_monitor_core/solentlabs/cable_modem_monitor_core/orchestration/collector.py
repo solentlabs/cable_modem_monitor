@@ -187,7 +187,7 @@ class ModemDataCollector:
 
         ds_count = len(data.get("downstream", []))
         us_count = len(data.get("upstream", []))
-        _logger.info(
+        _logger.debug(
             "Collection complete: %d downstream, %d upstream channels",
             ds_count,
             us_count,
