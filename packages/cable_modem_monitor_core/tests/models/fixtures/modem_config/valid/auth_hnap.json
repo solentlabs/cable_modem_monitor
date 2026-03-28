@@ -15,7 +15,7 @@
     "restart": {"window_seconds": 300}
   },
   "hardware": {"docsis_version": "3.1", "chipset": "Broadcom BCM3390"},
-  "status": "verified",
+  "status": "confirmed",
   "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
   "isps": ["Various"]
 }

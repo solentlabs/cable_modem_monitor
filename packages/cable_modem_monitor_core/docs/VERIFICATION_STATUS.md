@@ -10,7 +10,7 @@ from enum import StrEnum
 class ParserStatus(StrEnum):
     IN_PROGRESS = "in_progress"                   # Actively being developed
     AWAITING_VERIFICATION = "awaiting_verification"  # Released, needs user confirmation
-    VERIFIED = "verified"                         # Confirmed working by real user
+    CONFIRMED = "confirmed"                         # Confirmed working by real user
     UNSUPPORTED = "unsupported"                   # Modem locked down, kept for documentation
 ```
 

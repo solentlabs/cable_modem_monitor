@@ -4,8 +4,6 @@
 Reads from packages/cable_modem_monitor_catalog/ and generates a README.md
 with modem landscape table, chipset info, ISP coverage, and status summary.
 
-Reuses reference data (chipsets, ISPs, badges) from generate_fixture_index.py.
-
 Usage:
     python scripts/generate_catalog_index.py
     python scripts/generate_catalog_index.py --print
@@ -14,24 +12,24 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import importlib
 import sys
 from pathlib import Path
 
 import yaml
 
-# Add scripts dir to path for importing shared reference data
 script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
-
-_fixture_index = importlib.import_module("generate_fixture_index")
-chipset_to_link = _fixture_index.chipset_to_link
-generate_chipset_reference = _fixture_index.generate_chipset_reference
-generate_provider_reference = _fixture_index.generate_provider_reference
-isp_to_badge = _fixture_index.isp_to_badge
-protocol_to_badge = _fixture_index.protocol_to_badge
-
 repo_root = script_dir.parent
+
+from catalog_reference import (  # noqa: E402
+    check_reference_gaps,
+    chipset_to_link,
+    generate_chipset_reference,
+    generate_provider_reference,
+    isp_to_badge,
+    protocol_to_badge,
+)
+
 CATALOG_DIR = (
     repo_root / "packages" / "cable_modem_monitor_catalog" / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
 )
@@ -153,6 +151,7 @@ def generate_timeline(modems: list[dict]) -> list[str]:
 
 
 _STATUS_ICONS = {
+    "confirmed": "✅ Confirmed",
     "verified": "✅ Verified",
     "in_progress": "🔧 In Progress",
     "awaiting_verification": "⏳ Awaiting",
@@ -168,8 +167,8 @@ def _build_summary(supported: list[dict]) -> tuple[str, str]:
         counts[s] = counts.get(s, 0) + 1
 
     status_parts = []
-    if counts.get("verified"):
-        status_parts.append(f"{counts['verified']} ✅ verified")
+    if counts.get("confirmed"):
+        status_parts.append(f"{counts['confirmed']} ✅ confirmed")
     if counts.get("awaiting_verification"):
         status_parts.append(f"{counts['awaiting_verification']} ⏳ awaiting")
     if counts.get("in_progress"):
@@ -223,6 +222,14 @@ def generate_index(output_path: Path | None = None) -> str:
     modems = load_catalog_modems()
     supported = [m for m in modems if m["status"] != "unsupported"]
     unsupported = [m for m in modems if m["status"] == "unsupported"]
+
+    # Warn about missing reference data
+    gaps = check_reference_gaps(supported)
+    if gaps:
+        print("WARNING: Reference data gaps (generic badges will be used):")
+        for gap in gaps:
+            print(gap)
+
     summary, auth_str = _build_summary(supported)
 
     lines = [
@@ -289,7 +296,7 @@ def generate_index(output_path: Path | None = None) -> str:
             "## Legend",
             "",
             "- **Names**: All model names and part numbers that share this config (searchable)",
-            "- **Status**: ✅ Verified | 🔧 In Progress | ⏳ Awaiting Verification",
+            "- **Status**: ✅ Confirmed | ⏳ Awaiting Verification | 🚫 Unsupported",
             "- **Transport**: "
             "![HTML](https://img.shields.io/badge/-HTML-E34C26?style=flat-square) = web scraping | "
             "![REST](https://img.shields.io/badge/-REST-5B9A5B?style=flat-square) = JSON REST API | "

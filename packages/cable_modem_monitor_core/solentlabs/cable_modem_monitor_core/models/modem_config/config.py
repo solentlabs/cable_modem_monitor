@@ -55,7 +55,7 @@ class ModemConfig(BaseModel):
     timeout: int = 10
 
     # Metadata
-    status: Literal["verified", "awaiting_verification", "in_progress", "unsupported"]
+    status: Literal["confirmed", "awaiting_verification", "in_progress", "unsupported"]
     sources: dict[str, str] = Field(default_factory=dict)
     attribution: AttributionConfig | None = None
     isps: list[str] = Field(default_factory=list)
@@ -109,7 +109,7 @@ class ModemConfig(BaseModel):
         """Enforce required fields based on status level."""
         errors: list[str] = []
 
-        if self.status in ("verified", "awaiting_verification"):
+        if self.status in ("confirmed", "awaiting_verification"):
             # Confirmed in the wild with successful diagnostics —
             # full metadata required.
             if self.auth is None:

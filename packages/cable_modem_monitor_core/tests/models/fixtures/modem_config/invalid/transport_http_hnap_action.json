@@ -6,7 +6,7 @@
     "auth": {"strategy": "none"},
     "actions": {"restart": {"type": "hnap", "action_name": "Reboot"}},
     "hardware": {"docsis_version": "3.0"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
     "isps": ["ISP"]
   }

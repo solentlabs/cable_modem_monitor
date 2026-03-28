@@ -24,7 +24,7 @@
     }
   },
   "hardware": {"docsis_version": "3.1"},
-  "status": "verified",
+  "status": "confirmed",
   "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
   "isps": ["Various"]
 }

@@ -33,7 +33,7 @@
     "model": "T400",
     "default_host": "192.168.100.1",
     "hardware": {"docsis_version": "3.0"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "tester", "contribution": "JS format capture"}]},
     "isps": ["Various"]
   }

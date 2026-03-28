@@ -6,7 +6,7 @@
     "auth": {"strategy": "hnap", "hmac_algorithm": "md5"},
     "session": {"cookie_name": "s"},
     "hardware": {"docsis_version": "3.1"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
     "isps": ["ISP"]
   }

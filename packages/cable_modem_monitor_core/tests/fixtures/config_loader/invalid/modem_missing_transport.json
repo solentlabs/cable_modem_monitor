@@ -1,5 +1,5 @@
 {
   "_type": "modem",
   "_expected_error": "transport",
-  "_yaml": "manufacturer: Solent Labs\nmodel: T100\ndefault_host: '192.168.100.1'\nauth:\n  strategy: none\nhardware:\n  docsis_version: '3.0'\nstatus: verified\nattribution:\n  contributors:\n    - github: tester\n      contribution: Initial capture\nisps:\n  - Various\n"
+  "_yaml": "manufacturer: Solent Labs\nmodel: T100\ndefault_host: '192.168.100.1'\nauth:\n  strategy: none\nhardware:\n  docsis_version: '3.0'\nstatus: confirmed\nattribution:\n  contributors:\n    - github: tester\n      contribution: Initial capture\nisps:\n  - Various\n"
 }

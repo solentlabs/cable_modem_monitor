@@ -91,7 +91,7 @@ Contains:
 - `hardware` — DOCSIS version, chipset, release date
 - `default_host` — default modem IP
 - `session` — cookie name, concurrency, headers
-- `status` — per-variant verification status
+- `status` — verification status (see [Verification Status](#verification-status))
 - `attribution` — per-variant contributors
 - `isps` — ISPs known to use this variant
 - `notes`, `references` — per-variant documentation
@@ -129,8 +129,10 @@ in Core discovers and consumes these files.
 |------|-------------|
 | `modem.har` | Primary/default HAR capture |
 | `modem.expected.json` | Expected `ModemData` output for `modem.har` |
+| `modem.verified.json` | Real hardware verification artifact (see [Verification Status](#verification-status)) |
 | `modem-{name}.har` | Additional HAR captures (variant or compatibility) |
 | `modem-{name}.expected.json` | Expected output for that capture |
+| `modem-{name}.verified.json` | Variant verification artifact |
 
 Each `{name}.har` pairs with `{name}.expected.json`. The test harness
 discovers HAR files, locates the matching golden file, resolves which
@@ -167,6 +169,57 @@ numbers, IP addresses.
 4. Developer reviews output against raw HAR responses
 5. Reviewed output is committed as `{name}.expected.json`
 6. All future runs are regression tests against the golden file
+
+---
+
+## Verification Status
+
+The `status` field in modem.yaml tracks how thoroughly a modem config
+has been validated. Each level builds on the previous.
+
+| Status | Meaning | Evidence |
+|--------|---------|----------|
+| `unsupported` | Placeholder — no parser, awaiting contributor data | None |
+| `awaiting_verification` | Config exists, golden file tests pass against HAR replay | `test_data/*.expected.json` |
+| `confirmed` | Full pipeline verified on real hardware | `test_data/verified.json` |
+
+### Verification artifact
+
+When a modem reaches `confirmed`, a verification artifact is committed
+to `test_data/`. This is a sanitized HA diagnostics dump capturing
+the integration's output from a real modem — proof that auth, parsing,
+health checks, and entity creation all work end-to-end.
+
+**File naming** follows the existing convention:
+
+| File | Description |
+|------|-------------|
+| `modem.verified.json` | Default variant verification |
+| `modem-{variant}.verified.json` | Named variant verification |
+
+Each variant gets its own verification artifact because each has its
+own auth strategy and potentially different channel data.
+
+**Required fields** (everything else stripped):
+
+```json
+{
+  "verified_at": "2026-03-28",
+  "version": "3.14.0-beta.1",
+  "config_entry": { ... },
+  "core_diagnostics": { ... },
+  "modem_data": { ... },
+  "downstream_channels": [ ... ],
+  "upstream_channels": [ ... ]
+}
+```
+
+**Stripped:** `home_assistant` (environment), `setup_times` (internals),
+`recent_logs` (ephemeral), `integration_manifest` (derivable),
+`_review_before_sharing` (instruction text).
+
+See `motorola/mb7621/test_data/modem.verified.json` for the reference
+example.
 
 ---
 

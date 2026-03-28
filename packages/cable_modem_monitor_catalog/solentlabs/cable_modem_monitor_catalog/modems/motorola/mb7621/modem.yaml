@@ -48,7 +48,7 @@ sources:
   restart: "HAR verified — all form fields from MotoSecurity.asp (2026-03-26 capture)"
 
   detection_hints: "Maintainer verified"
-status: awaiting_verification
+status: confirmed
 
 attribution:
   contributors:

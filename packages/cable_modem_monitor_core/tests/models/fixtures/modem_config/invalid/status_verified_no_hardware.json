@@ -4,7 +4,7 @@
     "manufacturer": "Solent Labs", "model": "T1", "transport": "http",
     "default_host": "192.168.100.1",
     "auth": {"strategy": "none"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
     "isps": ["ISP"]
   }

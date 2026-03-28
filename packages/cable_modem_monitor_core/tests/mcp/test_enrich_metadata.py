@@ -158,7 +158,7 @@ class TestMVPReview:
         user_input = {
             "manufacturer": "Solent Labs",
             "model": "T100",
-            "status": "verified",
+            "status": "confirmed",
         }
         result = enrich_metadata(analysis, user_input=user_input)
 
@@ -499,7 +499,7 @@ _ENRICH_GENERATE_CASES: list[_EnrichGenerateCase] = [
             "hardware": {"docsis_version": "3.1"},
         },
         {
-            "status": "verified",
+            "status": "confirmed",
             "attribution": {"contributors": [{"github": "t", "contribution": "t"}]},
             "isps": ["ISP"],
         },

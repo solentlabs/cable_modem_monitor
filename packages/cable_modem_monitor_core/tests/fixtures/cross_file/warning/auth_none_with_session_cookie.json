@@ -6,7 +6,7 @@
     "auth": {"strategy": "none"},
     "session": {"cookie_name": "sessionId"},
     "hardware": {"docsis_version": "3.0"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "t", "contribution": "t"}]},
     "isps": ["ISP"]
   },

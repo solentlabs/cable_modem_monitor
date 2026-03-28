@@ -22,7 +22,7 @@
     }
   },
   "hardware": {"docsis_version": "3.0", "chipset": "Broadcom BCM3384"},
-  "status": "verified",
+  "status": "confirmed",
   "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
   "isps": ["Various"],
   "notes": "Single-session modem — must logout before new login."

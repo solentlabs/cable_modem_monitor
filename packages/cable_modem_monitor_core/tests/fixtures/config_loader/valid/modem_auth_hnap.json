@@ -1,4 +1,4 @@
 {
   "_type": "modem",
-  "_yaml": "manufacturer: Solent Labs\nmodel: T300\ntransport: hnap\ndefault_host: '192.168.100.1'\nauth:\n  strategy: hnap\n  hmac_algorithm: md5\nhardware:\n  docsis_version: '3.1'\nstatus: verified\nattribution:\n  contributors:\n    - github: tester\n      contribution: HNAP capture\nisps:\n  - Various\n"
+  "_yaml": "manufacturer: Solent Labs\nmodel: T300\ntransport: hnap\ndefault_host: '192.168.100.1'\nauth:\n  strategy: hnap\n  hmac_algorithm: md5\nhardware:\n  docsis_version: '3.1'\nstatus: confirmed\nattribution:\n  contributors:\n    - github: tester\n      contribution: HNAP capture\nisps:\n  - Various\n"
 }

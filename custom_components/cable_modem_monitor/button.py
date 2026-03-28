@@ -215,7 +215,8 @@ class UpdateModemDataButton(_ButtonBase):
 
         await runtime.data_coordinator.async_request_refresh()
 
-        _LOGGER.info("Manual data update triggered")
+        success = runtime.data_coordinator.last_update_success
+        _LOGGER.info("Manual data update %s", "complete" if success else "failed")
 
 
 class ResetEntitiesButton(_ButtonBase):
@@ -267,6 +268,8 @@ class ResetEntitiesButton(_ButtonBase):
                 f"\n\nProbe re-detection: ICMP={'yes' if updated.get(CONF_SUPPORTS_ICMP) else 'no'}, "
                 f"HEAD={'yes' if updated.get(CONF_SUPPORTS_HEAD) else 'no'}"
             )
+
+        _LOGGER.info("Entity reset complete — removed %d entities and reloaded", len(entities_to_remove))
 
         await self._notify(
             "Entity Reset Complete",

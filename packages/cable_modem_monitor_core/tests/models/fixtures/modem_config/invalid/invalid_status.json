@@ -1,5 +1,5 @@
 {
-  "_expected_error": "Input should be 'verified', 'awaiting_verification', 'in_progress' or 'unsupported'",
+  "_expected_error": "Input should be 'confirmed', 'awaiting_verification', 'in_progress' or 'unsupported'",
   "_config": {
     "manufacturer": "Solent Labs",
     "model": "T1",

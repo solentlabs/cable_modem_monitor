@@ -1,0 +1,60 @@
+{
+  "_comment": "Chipset reference data for catalog README generation. Add new entries when onboarding modems with unknown chipsets.",
+  "chipsets": {
+    "bcm3390": {
+      "display": "BCM3390",
+      "manufacturer": "Broadcom",
+      "docsis": "3.1",
+      "notes": "Current flagship. 2x2 OFDM, 32x8 SC-QAM. Speeds exceeding 1 Gbps.",
+      "link": "https://www.prnewswire.com/news-releases/broadcom-unleashes-gigabit-speeds-for-consumer-cable-modems-300016203.html"
+    },
+    "bcm3384": {
+      "display": "BCM3384",
+      "manufacturer": "Broadcom",
+      "docsis": "3.0",
+      "notes": "Reliable mid-tier. 16x4 or 24x8 channels.",
+      "link": "https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html"
+    },
+    "bcm3383": {
+      "display": "BCM3383",
+      "manufacturer": "Broadcom",
+      "docsis": "3.0",
+      "notes": "Entry-level 8x4 chipset with integrated WiFi SoC.",
+      "link": "https://www.prnewswire.com/news-releases/broadcom-launches-gigabit-docsis-cable-gateway-family-186004842.html"
+    },
+    "bcm3380": {
+      "display": "BCM3380",
+      "manufacturer": "Broadcom",
+      "docsis": "3.0",
+      "notes": "Legacy 8x4 chipset. First single-chip DOCSIS 3.0 solution (2009).",
+      "link": "https://www.webwire.com/ViewPressRel.asp?aId=92729"
+    },
+    "puma 5": {
+      "display": "Puma 5",
+      "manufacturer": "Intel",
+      "docsis": "3.0",
+      "notes": "Legacy 8x4 chipset (TI TNETC4800). [Latency issues](https://www.theregister.com/2017/08/09/intel_puma_modem_woes/) less severe than Puma 6.",
+      "link": "https://boxmatrix.info/wiki/Property:Puma5"
+    },
+    "puma 6": {
+      "display": "Puma 6",
+      "manufacturer": "Intel",
+      "docsis": "3.0",
+      "notes": "⚠️ **Avoid.** [Hardware flaw](https://www.theregister.com/2017/04/11/intel_puma_6_arris/) causes latency spikes up to 250ms under load. No fix available.",
+      "link": "https://boxmatrix.info/wiki/Property:Puma6"
+    },
+    "puma 7": {
+      "display": "Puma 7",
+      "manufacturer": "Intel",
+      "docsis": "3.1",
+      "notes": "⚠️ **Avoid.** [Same architectural issues](https://www.theregister.com/2018/08/14/intel_puma_modem/) as Puma 6. Major vendors switched to Broadcom.",
+      "link": "https://boxmatrix.info/wiki/Property:Puma7"
+    }
+  },
+  "aliases": {
+    "3390": "bcm3390",
+    "3384": "bcm3384",
+    "3383": "bcm3383",
+    "3380": "bcm3380"
+  }
+}

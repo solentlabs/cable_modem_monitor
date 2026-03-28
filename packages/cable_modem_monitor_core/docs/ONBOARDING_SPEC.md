@@ -994,7 +994,7 @@ clear guidance on what's missing.
    `inferred` / `missing` / `warnings` output, fills gaps via web search,
    passes complete metadata to `generate_config`.
 
-3. **Status upgrade:** Existing modem moves from `in_progress` → `verified`.
+3. **Status upgrade:** Existing modem moves from `in_progress` → `confirmed`.
    Tool merges new metadata (ISPs, attribution) with existing config.
 
 **Input:** Analysis result + optional existing config + optional user input

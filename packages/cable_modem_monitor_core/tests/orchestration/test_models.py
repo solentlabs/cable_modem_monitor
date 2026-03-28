@@ -39,11 +39,11 @@ class TestModemIdentity:
             model="T200",
             docsis_version="3.1",
             release_date="2023",
-            status="verified",
+            status="confirmed",
         )
         assert identity.docsis_version == "3.1"
         assert identity.release_date == "2023"
-        assert identity.status == "verified"
+        assert identity.status == "confirmed"
 
 
 class TestModemResult:

@@ -750,7 +750,7 @@ during development and CI — an HTTP modem declaring HNAP auth is
 rejected before it ships. Runtime loads into dataclasses.
 
 modem.yaml serves two purposes based on `status`:
-- **Working modems** (`verified`, `awaiting_verification`, `in_progress`) —
+- **Working modems** (`confirmed`, `awaiting_verification`, `in_progress`) —
   full config including auth, session, actions, hardware
 - **Database entries** (`unsupported`) — identity and hardware info only,
   documents modems awaiting data or locked down
@@ -1030,7 +1030,7 @@ What a modem must provide to plug into the system:
 
 - **`tests/modem.har`** — PII-scrubbed HAR capture. Source of truth for
   analysis, testing, and validation. Required for working modems
-  (`verified`, `awaiting_verification`, `in_progress`). Not required for
+  (`confirmed`, `awaiting_verification`, `in_progress`). Not required for
   `unsupported` modems.
 
   **Completeness criteria** — a HAR must demonstrate:

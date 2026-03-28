@@ -220,7 +220,7 @@ def _check_missing(
     """Check for fields still missing based on target status.
 
     ``in_progress`` needs: manufacturer, model, auth (from analysis).
-    ``verified`` / ``awaiting_verification`` also needs: hardware,
+    ``confirmed`` / ``awaiting_verification`` also needs: hardware,
     attribution, isps.
     """
     # Always required
@@ -230,7 +230,7 @@ def _check_missing(
         result.missing.append("model")
 
     status = metadata.get("status", "in_progress")
-    if status in ("verified", "awaiting_verification"):
+    if status in ("confirmed", "awaiting_verification"):
         hw = metadata.get("hardware") or {}
         if not isinstance(hw, dict) or not hw.get("docsis_version"):
             result.missing.append("hardware.docsis_version")

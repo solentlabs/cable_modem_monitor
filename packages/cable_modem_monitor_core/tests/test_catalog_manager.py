@@ -34,7 +34,7 @@ class TestListModems:
                 "default_host": "192.168.100.1",
                 "auth": {"strategy": "none"},
                 "hardware": {"docsis_version": "3.0"},
-                "status": "verified",
+                "status": "confirmed",
             },
         )
         _write_modem_yaml(
@@ -69,7 +69,7 @@ class TestListModems:
                 "default_host": "10.0.0.1",
                 "auth": {"strategy": "cookie"},
                 "hardware": {"docsis_version": "3.1"},
-                "status": "verified",
+                "status": "confirmed",
             },
         )
 
@@ -81,7 +81,7 @@ class TestListModems:
         assert summary.model_aliases == ["Surfboard"]
         assert summary.brands == ["Comcast"]
         assert summary.docsis_version == "3.1"
-        assert summary.status == "verified"
+        assert summary.status == "confirmed"
         assert summary.default_host == "10.0.0.1"
         assert summary.auth_strategy == "cookie"
         assert summary.path == tmp_path / "solent" / "t100"

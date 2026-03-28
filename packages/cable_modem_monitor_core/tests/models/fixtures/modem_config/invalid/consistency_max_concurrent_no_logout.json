@@ -6,7 +6,7 @@
     "auth": {"strategy": "form", "action": "/login"},
     "session": {"cookie_name": "s", "max_concurrent": 1},
     "hardware": {"docsis_version": "3.0"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Shall we play a game?"}]},
     "isps": ["ISP"]
   }

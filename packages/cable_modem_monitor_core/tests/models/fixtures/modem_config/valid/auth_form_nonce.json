@@ -10,7 +10,7 @@
     "nonce_length": 8
   },
   "hardware": {"docsis_version": "3.0"},
-  "status": "verified",
+  "status": "confirmed",
   "attribution": {"contributors": [{"github": "Crash Override", "contribution": "Initiated modem takeover sequence"}]},
   "isps": ["Various"]
 }

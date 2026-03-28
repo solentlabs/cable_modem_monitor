@@ -55,7 +55,7 @@
     "model": "T200",
     "default_host": "192.168.100.1",
     "hardware": {"docsis_version": "3.0", "chipset": "Broadcom BCM3384"},
-    "status": "verified",
+    "status": "confirmed",
     "attribution": {"contributors": [{"github": "tester", "contribution": "Initial capture"}]},
     "isps": ["Various"]
   }

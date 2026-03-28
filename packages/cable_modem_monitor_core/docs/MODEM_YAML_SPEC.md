@@ -77,7 +77,7 @@ health:
   supports_icmp: true    # hint; auto-detection overrides at setup
 
 # Metadata
-status: verified
+status: confirmed
 sources:
   auth_config: "#81"
   chipset: "FCC filing"
@@ -854,12 +854,12 @@ It documents what we know about a modem even before we can monitor it.
 ### Status
 
 ```yaml
-status: verified
+status: confirmed
 ```
 
 | Value | Meaning |
 |-------|---------|
-| `verified` | Parser works, confirmed by user reports |
+| `confirmed` | Full pipeline verified on real hardware (modem.verified.json present) |
 | `awaiting_verification` | Parser written, waiting for user confirmation |
 | `in_progress` | Work underway, not yet functional |
 | `unsupported` | Placeholder — awaiting user data |
@@ -946,7 +946,7 @@ failures.
 
 ### Required fields by status
 
-| Field | `verified` / `awaiting_verification` | `in_progress` | `unsupported` |
+| Field | `confirmed` / `awaiting_verification` | `in_progress` | `unsupported` |
 |-------| :------------------------------------: | :--------------: | :-------------: |
 | `manufacturer` | required | required | required |
 | `model` | required | required | required |
@@ -1007,7 +1007,7 @@ modems/arris/sb8200/
 4. **Same transport.** All variants in a directory share a transport.
    Different transport = different directory.
 5. **Per-variant metadata.** Status, attribution, ISPs, and references
-   are per-variant. A variant can be `verified` while another is
+   are per-variant. A variant can be `confirmed` while another is
    `awaiting_verification`.
 
 ### Single-variant modems
@@ -1059,7 +1059,7 @@ auth:
 hardware:
   docsis_version: "3.0"
 
-status: verified
+status: confirmed
 sources:
   auth_config: "Community forum"
 attribution:
@@ -1099,7 +1099,7 @@ hardware:
   docsis_version: "3.0"
   chipset: "Broadcom BCM3384"
 
-status: verified
+status: confirmed
 sources:
   auth_config: "HAR capture"
 attribution:
@@ -1147,7 +1147,7 @@ hardware:
   docsis_version: "3.1"
   chipset: "Broadcom BCM3390"
 
-status: verified
+status: confirmed
 sources:
   auth_config: "HAR capture, user testing"
 attribution:
@@ -1174,7 +1174,7 @@ auth:
 hardware:
   docsis_version: "3.1"
 
-status: verified
+status: confirmed
 sources:
   auth_config: "HAR capture"
 attribution:

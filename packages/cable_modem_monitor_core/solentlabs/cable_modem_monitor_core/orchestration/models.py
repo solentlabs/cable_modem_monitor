@@ -35,7 +35,7 @@ class ModemIdentity:
         model: Model name from modem.yaml (e.g., "SB8200").
         docsis_version: DOCSIS version (e.g., "3.1"). None if unknown.
         release_date: Release date string (e.g., "2020"). None if unknown.
-        status: Verification status — "verified", "awaiting_verification",
+        status: Verification status — "confirmed", "awaiting_verification",
             or "unsupported".
     """
 
