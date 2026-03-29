@@ -146,6 +146,7 @@ def _mock_config(
     """Build a minimal ModemConfig-like object."""
     config = MagicMock()
     config.timeout = 10
+    config.model = "T100"
 
     # Actions
     if has_restart:
@@ -835,7 +836,7 @@ class TestStatusTransition:
         with caplog.at_level(logging.INFO):
             orch.get_modem_data()  # backoff cleared, execute → ONLINE
 
-        assert "Status transition: unreachable" in caplog.text
+        assert "Status transition [T100]: unreachable" in caplog.text
         assert "online" in caplog.text
 
     def test_online_to_unreachable_logged(self, caplog: Any) -> None:
@@ -853,7 +854,7 @@ class TestStatusTransition:
         with caplog.at_level(logging.INFO):
             orch.get_modem_data()  # UNREACHABLE
 
-        assert "Status transition: online" in caplog.text
+        assert "Status transition [T100]: online" in caplog.text
         assert "unreachable" in caplog.text
 
     def test_no_transition_on_same_status(self, caplog: Any) -> None:
@@ -1210,3 +1211,120 @@ class TestHealthMonitorIntegration:
         snapshot = orch.get_modem_data()
 
         assert snapshot.health_info is None
+
+
+# ==================================================================
+# Counter-Reset Detection (#110)
+# ==================================================================
+
+
+def _make_channels_with_errors(
+    corrected: int = 100,
+    uncorrected: int = 10,
+) -> dict[str, Any]:
+    """Build ModemData with error counters on channels."""
+    ds = [
+        {
+            "channel_id": i + 1,
+            "frequency": 600 + i * 6,
+            "lock_status": "locked",
+            "corrected": corrected,
+            "uncorrected": uncorrected,
+        }
+        for i in range(2)
+    ]
+    return _make_modem_data(
+        downstream=ds,
+        upstream=[
+            {"channel_id": 3, "frequency": 30, "corrected": corrected // 2, "uncorrected": 0},
+        ],
+        system_info={"firmware": "1.0"},
+    )
+
+
+class TestCounterResetDetection:
+    """Counter-reset detection for last boot time proxy (#110)."""
+
+    def test_first_poll_no_reset(self) -> None:
+        """First poll stores totals but does not detect a reset."""
+        data = _make_channels_with_errors(corrected=100, uncorrected=10)
+        collector = _mock_collector(_ok_result(data))
+        orch = _make_orchestrator(collector=collector)
+
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.stats_last_reset is None
+
+    def test_steady_state_no_reset(self) -> None:
+        """Increasing counters do not trigger reset."""
+        data1 = _make_channels_with_errors(corrected=100, uncorrected=10)
+        data2 = _make_channels_with_errors(corrected=200, uncorrected=20)
+        collector = _mock_collector([_ok_result(data1), _ok_result(data2)])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.stats_last_reset is None
+
+    def test_corrected_decrease_triggers_reset(self) -> None:
+        """Corrected counter decrease → reset detected."""
+        data1 = _make_channels_with_errors(corrected=500, uncorrected=50)
+        data2 = _make_channels_with_errors(corrected=0, uncorrected=0)
+        collector = _mock_collector([_ok_result(data1), _ok_result(data2)])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.stats_last_reset is not None
+
+    def test_uncorrected_decrease_triggers_reset(self) -> None:
+        """Uncorrected counter decrease → reset detected."""
+        data1 = _make_channels_with_errors(corrected=100, uncorrected=50)
+        data2 = _make_channels_with_errors(corrected=200, uncorrected=0)
+        collector = _mock_collector([_ok_result(data1), _ok_result(data2)])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.stats_last_reset is not None
+
+    def test_reset_timestamp_persists(self) -> None:
+        """Once set, stats_last_reset stays on subsequent snapshots."""
+        data1 = _make_channels_with_errors(corrected=500, uncorrected=50)
+        data2 = _make_channels_with_errors(corrected=0, uncorrected=0)
+        data3 = _make_channels_with_errors(corrected=10, uncorrected=1)
+        collector = _mock_collector([_ok_result(data1), _ok_result(data2), _ok_result(data3)])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        orch.get_modem_data()  # reset detected
+        snapshot = orch.get_modem_data()  # counters increasing again
+
+        assert snapshot.stats_last_reset is not None
+
+    def test_no_error_counters_no_detection(self) -> None:
+        """Modems without error counters get no detection."""
+        data = _make_channels()  # no corrected/uncorrected fields
+        collector = _mock_collector([_ok_result(data), _ok_result(data)])
+        orch = _make_orchestrator(collector=collector)
+
+        orch.get_modem_data()
+        snapshot = orch.get_modem_data()
+
+        assert snapshot.stats_last_reset is None
+
+    def test_reset_logged(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Counter reset is logged at INFO level."""
+        data1 = _make_channels_with_errors(corrected=500, uncorrected=50)
+        data2 = _make_channels_with_errors(corrected=0, uncorrected=0)
+        collector = _mock_collector([_ok_result(data1), _ok_result(data2)])
+        orch = _make_orchestrator(collector=collector)
+
+        with caplog.at_level(logging.INFO):
+            orch.get_modem_data()
+            orch.get_modem_data()
+
+        assert any("Counter reset detected" in r.message for r in caplog.records)

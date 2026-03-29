@@ -26,7 +26,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
@@ -256,8 +256,9 @@ class HealthSensorBase(
 class ModemStatusSensor(ModemSensorBase):
     """Unified status sensor with 10-level priority cascade.
 
-    Always available — shows the modem's current state even during
-    failures.  No business logic — pure lookup over Core-derived values.
+    Listens to both the data coordinator (10min poll) and the health
+    coordinator (30s probes) so status reflects health changes in
+    near-real-time.
 
     See ENTITY_MODEL_SPEC.md § Status Sensor.
     """
@@ -272,6 +273,22 @@ class ModemStatusSensor(ModemSensorBase):
         self._attr_name = "Status"
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_status"
         self._attr_icon = "mdi:router-network"
+        self._health_coordinator: DataUpdateCoordinator[HealthInfo] | None = entry.runtime_data.health_coordinator
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to both data and health coordinators."""
+        await super().async_added_to_hass()
+        if self._health_coordinator is not None:
+            self.async_on_remove(
+                self._health_coordinator.async_add_listener(
+                    self._handle_health_update,
+                )
+            )
+
+    @callback
+    def _handle_health_update(self) -> None:
+        """Re-render when health coordinator updates."""
+        self.async_write_ha_state()
 
     @property
     def available(self) -> bool:
@@ -279,13 +296,25 @@ class ModemStatusSensor(ModemSensorBase):
         return self.coordinator.last_update_success  # type: ignore[no-any-return]
 
     @property
+    def _latest_health_status(self) -> HealthStatus | None:
+        """Return the freshest health status from either source.
+
+        Prefers the health coordinator (30s updates) over the snapshot
+        (10min updates) so status reflects health changes promptly.
+        """
+        if self._health_coordinator is not None and self._health_coordinator.data is not None:
+            health_info: HealthInfo = self._health_coordinator.data
+            return health_info.health_status
+        snapshot = self._snapshot
+        return snapshot.health_info.health_status if snapshot.health_info else None
+
+    @property
     def native_value(self) -> str:
         """Return display state from the priority cascade."""
         snapshot = self._snapshot
-        health_status = snapshot.health_info.health_status if snapshot.health_info else None
         return _compute_display_status(
             snapshot.connection_status,
-            health_status,
+            self._latest_health_status,
             snapshot.docsis_status,
         )
 
@@ -293,7 +322,7 @@ class ModemStatusSensor(ModemSensorBase):
     def extra_state_attributes(self) -> dict[str, str]:
         """Return connection, health, DOCSIS status and diagnosis."""
         snapshot = self._snapshot
-        health_status = snapshot.health_info.health_status if snapshot.health_info else None
+        health_status = self._latest_health_status
         return {
             "connection_status": snapshot.connection_status.value,
             "health_status": (health_status.value if health_status else "unknown"),
@@ -448,12 +477,28 @@ class ModemSystemUptimeSensor(_SystemInfoSensor):
 
     @property
     def native_value(self) -> str | None:
-        """Return the uptime string as reported by the modem."""
-        return self._get_system_info().get("system_uptime")
+        """Return the uptime string as reported by the modem.
+
+        If the modem reports raw seconds (e.g., "1471890"), formats
+        as "17d 0h 51m 30s" for readability.
+        """
+        raw = self._get_system_info().get("system_uptime")
+        if raw and raw.strip().isdigit():
+            total = int(raw.strip())
+            days, rem = divmod(total, 86400)
+            hours, rem = divmod(rem, 3600)
+            minutes, seconds = divmod(rem, 60)
+            return f"{days}d {hours}h {minutes}m {seconds}s"
+        return raw
 
 
 class ModemLastBootTimeSensor(_SystemInfoSensor):
-    """Last boot time (derived from system uptime)."""
+    """Last boot time (derived from system uptime or counter reset).
+
+    Priority: native system_uptime from modem > counter-reset detection
+    from the orchestrator. Counter-reset provides a proxy for modems
+    that don't report uptime (see #110).
+    """
 
     def __init__(
         self,
@@ -469,14 +514,16 @@ class ModemLastBootTimeSensor(_SystemInfoSensor):
 
     @property
     def native_value(self) -> datetime | None:
-        """Return last boot time calculated from uptime."""
+        """Return last boot time calculated from uptime or counter reset."""
+        # Priority 1: native uptime from modem
         uptime_str = self._get_system_info().get("system_uptime")
-        if not uptime_str:
-            return None
-        uptime_seconds = parse_uptime_to_seconds(uptime_str)
-        if uptime_seconds is None:
-            return None
-        return dt_util.now() - timedelta(seconds=uptime_seconds)  # type: ignore[no-any-return]
+        if uptime_str:
+            uptime_seconds = parse_uptime_to_seconds(uptime_str)
+            if uptime_seconds is not None:
+                return dt_util.now() - timedelta(seconds=uptime_seconds)  # type: ignore[no-any-return]
+
+        # Priority 2: counter-reset detection from orchestrator
+        return self._snapshot.stats_last_reset
 
 
 # ------------------------------------------------------------------
@@ -780,7 +827,10 @@ async def async_setup_entry(
     # -- Data-dependent sensors (require modem_data from first poll) --
     modem_data = snapshot.modem_data if snapshot else None
     if modem_data is None:
-        _LOGGER.info("No modem data from first poll — skipping data sensors")
+        _LOGGER.info(
+            "No modem data from first poll [%s] — skipping data sensors",
+            runtime.modem_identity.model,
+        )
         async_add_entities(entities)
         return
 
@@ -801,6 +851,16 @@ async def async_setup_entry(
         entities.append(ModemSoftwareVersionSensor(data_coord, entry))
     if "system_uptime" in system_info:
         entities.append(ModemSystemUptimeSensor(data_coord, entry))
+
+    # Last boot time — from native uptime OR counter-reset detection.
+    # Created when modem has uptime data OR any channel has error counters
+    # (for reset proxy — orchestrator sums from channels, not aggregates).
+    has_error_counters = any(
+        "corrected" in ch or "uncorrected" in ch
+        for direction in ("downstream", "upstream")
+        for ch in modem_data.get(direction, [])
+    )
+    if "system_uptime" in system_info or has_error_counters:
         entities.append(ModemLastBootTimeSensor(data_coord, entry))
 
     # Per-channel sensors
@@ -809,5 +869,5 @@ async def async_setup_entry(
     # LAN stats sensors
     entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
 
-    _LOGGER.info("Created %d sensor entities", len(entities))
+    _LOGGER.info("Created %d sensor entities [%s]", len(entities), runtime.modem_identity.model)
     async_add_entities(entities)

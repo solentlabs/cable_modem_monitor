@@ -75,10 +75,10 @@ def _valid_phase1_headers(handler: HnapAuthHandler) -> dict[str, str]:
 
 
 class TestHnapNonLoginSoapAction:
-    """Non-Login SOAPAction before authentication returns 401."""
+    """Non-Login SOAPAction returns None to delegate to server."""
 
-    def test_non_login_soap_action_returns_401(self) -> None:
-        """HNAP request with non-Login SOAPAction → 401."""
+    def test_non_login_soap_action_returns_none(self) -> None:
+        """HNAP request with non-Login SOAPAction → None (delegate)."""
         handler = _make_hnap_handler()
         response = handler.handle_login(
             "POST",
@@ -86,8 +86,7 @@ class TestHnapNonLoginSoapAction:
             b'{"GetDeviceInfo": {}}',
             {"soapaction": '"http://purenetworks.com/HNAP1/GetDeviceInfo"'},
         )
-        assert response is not None
-        assert response.status == 401
+        assert response is None
 
 
 class TestHnapPhase1Errors:

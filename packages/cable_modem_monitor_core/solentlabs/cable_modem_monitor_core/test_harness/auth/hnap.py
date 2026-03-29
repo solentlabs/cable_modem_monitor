@@ -79,12 +79,16 @@ class HnapAuthHandler(AuthHandler):
         }
 
     def is_login_request(self, method: str, path: str) -> bool:
-        """HNAP login: POST /HNAP1/ before authentication completes.
+        """HNAP login: POST /HNAP1/ is always a potential login.
 
-        After login succeeds, subsequent POST /HNAP1/ requests are
-        data requests routed through ``get_route_override`` instead.
+        All POST /HNAP1/ requests pass through ``handle_login``,
+        which inspects the SOAPAction header to distinguish login
+        requests from data requests. This allows re-authentication
+        from a new client session after a previous session was
+        already authenticated (e.g. config flow validation followed
+        by orchestrator poll).
         """
-        return method == "POST" and normalize_path(path) == _HNAP_PATH and not self._authenticated
+        return method == "POST" and normalize_path(path) == _HNAP_PATH
 
     def handle_login(
         self,
@@ -93,24 +97,23 @@ class HnapAuthHandler(AuthHandler):
         body: bytes,
         headers: dict[str, str],
     ) -> RouteEntry | None:
-        """Handle HNAP login phases.
+        """Handle HNAP login phases or delegate data requests.
 
         Phase 1 (``Action="request"``): Validates pre-auth signature,
-        returns deterministic challenge response.
+        returns deterministic challenge response. Resets auth state if
+        a previous session was authenticated.
 
         Phase 2 (``Action="login"``): Validates private key signature
         and ``LoginPassword``, sets authenticated on success.
 
         If the ``SOAPAction`` header does not indicate a Login request,
-        returns a 401 to signal that this is not a valid login attempt.
+        returns ``None`` so the server falls through to the route
+        override handler (authenticated data request).
         """
         soap_action = headers.get("soapaction", "")
         if "Login" not in soap_action:
-            return RouteEntry(
-                status=401,
-                headers=[("Content-Type", "text/plain")],
-                body="Unauthorized",
-            )
+            # Not a login — delegate to server's auth check + route override.
+            return None
 
         try:
             data = json.loads(body.decode("utf-8"))
@@ -125,6 +128,11 @@ class HnapAuthHandler(AuthHandler):
         action = login.get("Action", "")
 
         if action == "request":
+            # New login — reset any prior authenticated state so a
+            # different client session can re-authenticate.
+            if self._authenticated:
+                _logger.debug("HNAP mock: resetting auth state for new login")
+                self._authenticated = False
             return self._handle_challenge_request(headers)
 
         if action == "login":

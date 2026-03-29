@@ -181,21 +181,28 @@ ModemDataCollector logs detail at the point of failure *before*
 classifying it into a signal. The signal is for the orchestrator to act
 on. The log record is for humans troubleshooting. Both always happen.
 
+**All log lines include `[MODEL]`** for multi-modem disambiguation.
+When multiple integrations run in the same HA instance, the model tag
+is the primary way to correlate log lines to a specific modem.
+
 Example — HTTP 401 on a data page:
-- **Log** (WARNING): `"HTTP 401 on /status.html — session likely expired"`
+- **Log** (WARNING): `"HTTP 401 on /status.html [MODEL] — session likely expired"`
 - **Signal**: `CollectorSignal.LOAD_AUTH`
-- **ModemResult.error**: `"HTTP 401 on resource /status.html"`
+- **ModemResult.error**: `"401 on /status.html — session likely expired"`
 
 Example — successful collection with no channels:
-- **Log** (INFO): `"Collection complete: 0 downstream, 0 upstream channels"`
+- **Log** (INFO): `"Parse complete [MODEL]: 0 DS, 0 US channels"`
 - **Signal**: `CollectorSignal.OK`
 - **ModemResult.modem_data**: `{downstream: [], upstream: [], system_info: {...}}`
 
-Log levels follow `ARCHITECTURE.md` conventions:
-- DEBUG: internal state, wire data, parsing details
-- INFO: pipeline milestones (auth succeeded, resources loaded, parse complete)
-- WARNING: recoverable issues (resource not found, stale session detected)
-- ERROR: unrecoverable failures (auth failed after retry, config load error)
+**Log level tiers:**
+
+| Tier | Level | When | Purpose |
+|------|-------|------|---------|
+| Pulse | INFO always | Every successful poll | `"Parse complete [MODEL]: 24 DS, 4 US"` — heartbeat showing the modem is alive and parsing |
+| Auth/resource | INFO first poll, DEBUG after | Steady-state noise reduction | Auth strategy, session state, resource loading. Visible at INFO for first-poll diagnostics, drops to DEBUG after to avoid flooding multi-modem logs |
+| Failures | WARNING/ERROR always | Never demoted | Auth failures, connectivity errors, parse errors. Always visible regardless of poll count |
+| Wire data | DEBUG always | Troubleshooting only | Request/response details, parsing internals |
 
 ### Exceptions
 
@@ -919,36 +926,42 @@ and any declared aggregate fields. See
 
 ### Logging Contract
 
-Every orchestrator policy decision is logged with enough context to
+Every orchestrator log line includes `[MODEL]` for multi-modem
+disambiguation. Policy decisions are logged with enough context to
 identify root cause without reading code. The auth failure streak
 count appears in every auth-related log so the progression is visible
 in a linear log scan.
 
+**Two steady-state INFO lines per poll cycle (the "pulse"):**
+
+1. `"Poll [MODEL] — auth: FormAuth, url: http://..., credentials: yes, session: cached"` (first poll only; DEBUG after)
+2. `"Parse complete [MODEL]: 24 DS, 4 US channels"` (every poll — the heartbeat)
+
+The parse line is the integration's pulse. In a multi-modem setup,
+each modem produces one INFO line per 10-minute poll. All other
+orchestration logging (auth, resource loading, session state) drops
+to DEBUG after the first successful poll to avoid flooding logs.
+
 **Auth lifecycle:**
-- INFO: `"Auth succeeded — session reused"` or `"Auth succeeded — fresh login (streak reset)"`
-- INFO: `"Auth failed — wrong credentials or strategy mismatch (streak: 2/6)"`
-- WARNING: `"Auth lockout — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"`
-- ERROR: `"Auth circuit breaker OPEN — 6 consecutive auth failures. Polling stopped. Reconfigure credentials to resume."`
+- INFO (first poll) / DEBUG (after): `"Poll [MODEL] — auth: FormAuth, url: ..., credentials: yes, session: new"`
+- WARNING: `"Auth lockout [MODEL] — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"`
+- ERROR: `"Circuit breaker OPEN [MODEL] — polling stopped. Reconfigure credentials to resume."`
 
 **Backoff and circuit breaker:**
-- INFO: `"Backoff active (2 remaining), skipping collection"`
-- INFO: `"Backoff cleared, resuming"`
-- ERROR: `"Circuit breaker is OPEN — polling stopped. Reconfigure credentials to resume."`
+- INFO: `"Backoff active [MODEL] (2 remaining), skipping collection"`
+- INFO: `"Backoff cleared [MODEL], resuming"`
 
 **Collection outcomes:**
-- INFO: `"Collection OK — 24 DS, 4 US channels"`
-- INFO: `"Collection OK, 0 channels — modem has no cable signal"`
-- WARNING: `"Collection OK, 0 channels, no system_info — verify modem model matches configured parser"`
-- INFO: `"LOAD_AUTH — clearing session, reporting auth_failed (streak: 1/6)"`
-- CONNECTIVITY, LOAD_ERROR, PARSE_ERROR: log the policy decision with
-  signal name and resulting status. Exact levels TBD during implementation.
+- INFO: `"Parse complete [MODEL]: 24 DS, 4 US channels"` (every poll)
+- WARNING: `"Poll failed [MODEL] — signal: connectivity, error: ..."`
+- INFO: `"Counter reset detected [MODEL] — corrected: 1000→0, uncorrected: 50→0"`
 
 **State transitions:**
-- INFO: `"Status transition: unreachable → online (session_valid: True)"`
-- INFO: `"Status transition: online → unreachable"`
+- INFO: `"Status transition [MODEL]: unreachable → online (session_valid: True)"`
 
-**Restart recovery:**
-- INFO: `"Restart: modem responding, waiting for channel stabilization"`
+**Restart:**
+- INFO: `"Restart command sent [MODEL] — session cleared (1.2s)"`
+- ERROR: `"Restart failed [MODEL]: ..."`
 
 State transitions and policy decisions are the orchestrator's unique
 contribution — these are the logs that tell the story of what happened
@@ -981,29 +994,40 @@ determines health status.
 **HTTP method selection:** HEAD is preferred (lightest). Some modems
 return 405 Method Not Allowed or behave unexpectedly with HEAD. When
 `supports_head=False`, the monitor uses GET instead (response body
-is discarded — only the status code and timing matter).
+is discarded — only the round-trip time matters).
+
+**The HTTP probe is a connectivity check, not a content check.**
+Any response — 200, 302, 401 — means the modem's web server is
+alive. Redirects are not followed (`allow_redirects=False`); a 3xx
+is as valid a sign of life as a 200. The probe uses a pre-configured
+session with `verify=False` and optional legacy SSL ciphers — the
+same SSL knowledge that the setup flow discovered.
 
 **ICMP availability:** Some networks block ICMP. When
 `supports_icmp=False`, the ICMP probe is skipped entirely.
 
 ### Probe Discovery
 
-Both `supports_icmp` and `supports_head` are **discovered during
-setup**, not user-configured. The consumer's setup flow (HA config
-flow, CLI init) runs a connectivity check against the modem and
-passes the results to the HealthMonitor constructor.
+`supports_icmp`, `supports_head`, and `legacy_ssl` are **discovered
+during setup**, not user-configured. The consumer's setup flow (HA
+config flow, CLI init) runs a connectivity check against the modem
+and passes the results to the HealthMonitor constructor.
 
 Discovery sequence (run once during setup):
 
-1. **ICMP** — ping the modem IP. Success → `supports_icmp=True`.
+1. **Protocol** — `detect_protocol()` tries HTTP → HTTPS →
+   HTTPS+SECLEVEL=0. Determines `protocol` and `legacy_ssl`.
+2. **ICMP** — ping the modem IP. Success → `supports_icmp=True`.
    Timeout or error → `supports_icmp=False` (network blocks ICMP).
-2. **HTTP HEAD** — HEAD request to `base_url`. Normal response
+3. **HTTP HEAD** — HEAD request to `base_url`. Normal response
    (2xx, 3xx) → `supports_head=True`. 405 Method Not Allowed or
    unexpected behavior → `supports_head=False` (modem rejects HEAD,
    fall back to GET).
 
 The user never sees or configures these flags. The setup flow
-tests what works and passes the results through.
+tests what works and passes the results through. The HealthMonitor
+receives `legacy_ssl` so its HTTP probe session matches the SSL
+configuration that worked during setup.
 
 **Rediscovery:** Capabilities are stable — ICMP blocking is a
 network characteristic, HEAD support is a firmware characteristic.
@@ -1084,14 +1108,20 @@ class HealthMonitor:
         supports_icmp: bool = True,
         supports_head: bool = True,
         http_probe: bool = True,
+        legacy_ssl: bool = False,
         timeout: int = 5,
     ) -> None:
         """Initialize health monitor with probe configuration.
 
-        The supports_icmp and supports_head flags are discovered
-        during setup (see Probe Discovery), not user-configured.
-        The http_probe flag comes from modem.yaml for known-fragile
-        modems.
+        The supports_icmp, supports_head, and legacy_ssl flags are
+        discovered during setup (see Probe Discovery), not user-
+        configured. The http_probe flag comes from modem.yaml for
+        known-fragile modems.
+
+        Creates a pre-configured requests.Session with verify=False
+        and optional legacy SSL ciphers. The HTTP probe uses this
+        session with allow_redirects=False — any response means the
+        modem is alive.
 
         Args:
             base_url: Modem URL for HTTP probe (e.g., "http://192.168.100.1").
@@ -1107,6 +1137,9 @@ class HealthMonitor:
                 to True. Set to False via modem.yaml health.http_probe
                 for fragile modems where HTTP traffic between
                 collections risks crashes.
+            legacy_ssl: Whether HTTPS requires legacy (SECLEVEL=0)
+                ciphers. Discovered during setup by detect_protocol().
+                Passed through to create_session() for the HTTP probe.
             timeout: Per-probe timeout in seconds.
         """
 
@@ -1217,10 +1250,21 @@ creating a HealthMonitor that produces only UNKNOWN.
 
 ### Logging Contract
 
-- DEBUG: probe timings, raw responses, HTTP method used
-- INFO: `"Health check: responsive (ICMP 4ms, HTTP HEAD 12ms)"`
-- WARNING: `"Health check: degraded (ICMP OK, HTTP GET timeout)"`
-- WARNING: `"Health check: unresponsive (ICMP timeout, HTTP HEAD timeout)"`
+All health log lines include `[MODEL]`. Log levels are transition-
+based — the same status at the same level would flood logs every 30s:
+
+| Event | Level | Example |
+|-------|-------|---------|
+| Transition to responsive (recovery) | INFO | `"Health check [MODEL]: responsive (ICMP 3ms, HTTP GET 110ms)"` |
+| Transition to degraded | WARNING | `"Health check [MODEL]: degraded (ICMP 2ms, HTTP HEAD timeout)"` |
+| Transition to unresponsive | WARNING | `"Health check [MODEL]: unresponsive (ICMP timeout, HTTP HEAD timeout)"` |
+| First check (UNKNOWN → any) | INFO or WARNING | Depending on the target status |
+| Steady-state (no change) | DEBUG | Same format, but only visible with debug logging enabled |
+
+This ensures a single WARNING on transition to a bad state, then
+silence until recovery (INFO) or further degradation (WARNING).
+Routine "still responsive" checks produce no visible output at
+default log levels.
 
 ---
 

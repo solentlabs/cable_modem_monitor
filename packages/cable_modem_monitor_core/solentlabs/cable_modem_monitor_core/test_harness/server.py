@@ -119,7 +119,13 @@ class _MockHandler(BaseHTTPRequestHandler):
         body: bytes,
         headers: dict[str, str],
     ) -> None:
-        """Handle a login request through auth then route table."""
+        """Handle a login request through auth then route table.
+
+        If ``handle_login`` returns ``None``, the request is not a login
+        attempt (e.g. HNAP data request on POST /HNAP1/). In that case,
+        fall through to the authenticated request path: auth check,
+        route override, then route table.
+        """
         auth = server.auth_handler
         login_response = auth.handle_login(method, path, body, headers)
         if login_response is not None:
@@ -129,7 +135,20 @@ class _MockHandler(BaseHTTPRequestHandler):
                 login_response.body,
             )
             return
-        # Fall through to route table (form auth)
+
+        # Not a login — fall through to authenticated request handling.
+        # This path is used by HNAP when is_login_request matches all
+        # POST /HNAP1/ but handle_login returns None for data requests.
+        if not auth.is_authenticated(headers):
+            self._send_response(401, [], "Unauthorized")
+            return
+
+        override = auth.get_route_override(method, path, body, headers)
+        if override is not None:
+            self._send_response(override.status, override.headers, override.body)
+            return
+
+        # Form auth fallthrough — route table + set_authenticated
         route = _find_route(server.routes, method, path, route_path)
         if route is None:
             self._send_response(404, [], "Not Found")

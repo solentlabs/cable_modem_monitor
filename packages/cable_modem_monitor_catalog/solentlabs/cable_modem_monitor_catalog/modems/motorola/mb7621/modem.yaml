@@ -69,8 +69,10 @@ isps:
 notes: |
   DOCSIS 3.0 24x8 cable modem (released 2017). Broadcom BCM3384 chipset.
   Form-based authentication with base64 password encoding.
-  IP-based session tracking (no cookies). Single concurrent session;
-  logout required after each poll to free the session for the user.
+  IP-based session tracking (no cookies). Session expires server-side in
+  ~10 minutes — shorter than the default poll interval. Single-session
+  config (max_concurrent: 1) ensures logout after each poll so next poll
+  starts fresh rather than hitting a stale session.
   Supports up to 24 downstream and 8 upstream bonded channels (1 Gbps max).
   Restart via the MotoSecurity form — POST all form fields (UserId, OldPassword,
   NewUserId, Password, PasswordReEnter, MotoSecurityAction=1). The form is

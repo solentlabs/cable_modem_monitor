@@ -55,6 +55,7 @@ class RestartMonitor:
         response_timeout: int = 120,
         channel_stabilization_timeout: int = 300,
         probe_interval: int = 10,
+        model: str = "",
     ) -> None:
         self._response_monitor = ResponseMonitor(
             collector=collector,
@@ -66,9 +67,11 @@ class RestartMonitor:
             collector=collector,
             channel_stabilization_timeout=channel_stabilization_timeout,
             probe_interval=probe_interval,
+            model=model,
         )
         self._collector = collector
         self._health_monitor = health_monitor
+        self._model = model
 
     def monitor_recovery(
         self,
@@ -93,7 +96,7 @@ class RestartMonitor:
         # Clear stale state
         self._collector.clear_session()
 
-        _logger.info("Restart recovery: waiting for modem to respond")
+        _logger.info("Restart recovery [%s]: waiting for modem to respond", self._model)
 
         # Phase 1: Response detection
         result = self._wait_for_response(start, cancel_event)
@@ -102,7 +105,8 @@ class RestartMonitor:
 
         response_time = time.monotonic() - start
         _logger.info(
-            "Restart recovery: modem responding (%.0fs), " "waiting for channel stabilization",
+            "Restart recovery [%s]: modem responding (%.0fs), " "waiting for channel stabilization",
+            self._model,
             response_time,
         )
 
@@ -121,7 +125,7 @@ class RestartMonitor:
 
         elapsed = time.monotonic() - start
         if cancel_event is not None and cancel_event.is_set():
-            _logger.info("Restart recovery: cancelled during response wait")
+            _logger.info("Restart recovery [%s]: cancelled during response wait", self._model)
             return RestartResult(
                 success=False,
                 phase_reached=RestartPhase.WAITING_RESPONSE,
@@ -131,7 +135,8 @@ class RestartMonitor:
 
         timeout = self._response_monitor.response_timeout
         _logger.warning(
-            "Restart recovery: response timeout after %ds",
+            "Restart recovery [%s]: response timeout after %ds",
+            self._model,
             timeout,
         )
         return RestartResult(
@@ -153,7 +158,8 @@ class RestartMonitor:
         if timeout == 0:
             elapsed = time.monotonic() - start
             _logger.info(
-                "Restart recovery: channel stabilization skipped (timeout=0), " "recovered in %.0fs",
+                "Restart recovery [%s]: channel stabilization skipped (timeout=0), " "recovered in %.0fs",
+                self._model,
                 elapsed,
             )
             return RestartResult(
@@ -167,7 +173,7 @@ class RestartMonitor:
 
         if not channels_stable:
             if cancel_event is not None and cancel_event.is_set():
-                _logger.info("Restart recovery: cancelled during channel sync")
+                _logger.info("Restart recovery [%s]: cancelled during channel sync", self._model)
                 return RestartResult(
                     success=False,
                     phase_reached=RestartPhase.CHANNEL_SYNC,
@@ -175,7 +181,8 @@ class RestartMonitor:
                     error="Cancelled",
                 )
             _logger.warning(
-                "Restart recovery: channel stabilization timeout after %ds " "(counts still changing)",
+                "Restart recovery [%s]: channel stabilization timeout after %ds " "(counts still changing)",
+                self._model,
                 timeout,
             )
             return RestartResult(
@@ -186,7 +193,8 @@ class RestartMonitor:
             )
 
         _logger.info(
-            "Restart recovery: grace period complete, recovered in %.0fs",
+            "Restart recovery [%s]: grace period complete, recovered in %.0fs",
+            self._model,
             elapsed,
         )
         return RestartResult(

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from .actions import execute_action
@@ -68,13 +69,18 @@ class Orchestrator:
         self._modem_config = modem_config
 
         # Policy
-        self._policy = SignalPolicy(collector, self.AUTH_FAILURE_THRESHOLD)
+        self._policy = SignalPolicy(collector, self.AUTH_FAILURE_THRESHOLD, model=modem_config.model)
         self._is_restarting: bool = False
         self._last_status: ConnectionStatus | None = None
 
         # First-poll verbose logging — INFO on first poll and after
         # reset_auth(), DEBUG on steady-state
         self._first_poll_complete: bool = False
+
+        # Counter-reset detection — proxy for "last boot time" when
+        # the modem doesn't report native uptime (see #110)
+        self._prev_error_totals: tuple[int, int] | None = None  # (corrected, uncorrected)
+        self._stats_last_reset: datetime | None = None
 
         # Diagnostics state
         self._last_poll_duration: float | None = None
@@ -167,7 +173,8 @@ class Orchestrator:
             execute_action(self._collector, self._modem_config, actions.restart)
             self._collector.clear_session()
             _logger.info(
-                "Restart command sent — session cleared (%.1fs)",
+                "Restart command sent [%s] — session cleared (%.1fs)",
+                self._modem_config.model,
                 time.monotonic() - start,
             )
 
@@ -178,12 +185,13 @@ class Orchestrator:
                 response_timeout=response_timeout,
                 channel_stabilization_timeout=channel_stabilization_timeout,
                 probe_interval=probe_interval,
+                model=self._modem_config.model,
             )
             return monitor.monitor_recovery(cancel_event)
 
         except Exception as exc:
             elapsed = time.monotonic() - start
-            _logger.error("Restart failed: %s", exc)
+            _logger.error("Restart failed [%s]: %s", self._modem_config.model, exc)
             return RestartResult(
                 success=False,
                 phase_reached=RestartPhase.COMMAND_SENT,
@@ -268,7 +276,10 @@ class Orchestrator:
 
         # Circuit breaker
         if self._policy.circuit_open:
-            _logger.error("Circuit breaker is OPEN — polling stopped. " "Reconfigure credentials to resume.")
+            _logger.error(
+                "Circuit breaker OPEN [%s] — polling stopped. Reconfigure credentials to resume.",
+                self._modem_config.model,
+            )
             return self._make_snapshot(
                 ConnectionStatus.AUTH_FAILED,
                 DocsisStatus.UNKNOWN,
@@ -327,6 +338,9 @@ class Orchestrator:
         connection_status = derive_connection_status(modem_data)
         docsis_status = derive_docsis_status(modem_data)
 
+        # Counter-reset detection
+        self._check_counter_reset(modem_data)
+
         # Read latest health info
         health_info: HealthInfo | None = None
         if self._health_monitor is not None:
@@ -340,6 +354,7 @@ class Orchestrator:
             modem_data=modem_data,
             health_info=health_info,
             collector_signal=CollectorSignal.OK,
+            stats_last_reset=self._stats_last_reset,
         )
 
     # ------------------------------------------------------------------
@@ -353,7 +368,8 @@ class Orchestrator:
 
         if old_status is not None and old_status != new_status:
             _logger.info(
-                "Status transition: %s → %s (session_valid: %s)",
+                "Status transition [%s]: %s → %s (session_valid: %s)",
+                self._modem_config.model,
                 old_status.value,
                 new_status.value,
                 self._collector.session_is_valid,
@@ -379,7 +395,8 @@ class Orchestrator:
             session = "new"
 
         log(
-            "Poll — auth: %s, url: %s, credentials: %s, session: %s",
+            "Poll [%s] — auth: %s, url: %s, credentials: %s, session: %s",
+            self._modem_config.model,
             strategy,
             self._collector._base_url,
             "yes" if has_creds else "no",
@@ -387,23 +404,84 @@ class Orchestrator:
         )
 
     def _log_poll_result(self, result: ModemResult) -> None:
-        """Log poll outcome. INFO on first poll or failure, DEBUG after."""
+        """Log poll outcome. Parse line at INFO always. Failure at WARNING."""
+        model = self._modem_config.model
+
         if not result.success:
             _logger.warning(
-                "Poll failed — signal: %s, error: %s",
+                "Poll failed [%s] — signal: %s, error: %s",
+                model,
                 result.signal.value,
                 result.error,
             )
             return
 
-        if not self._first_poll_complete:
-            ds = len(result.modem_data.get("downstream", [])) if result.modem_data else 0
-            us = len(result.modem_data.get("upstream", [])) if result.modem_data else 0
+        ds = len(result.modem_data.get("downstream", [])) if result.modem_data else 0
+        us = len(result.modem_data.get("upstream", [])) if result.modem_data else 0
+
+        _logger.info(
+            "Parse complete [%s]: %d DS, %d US channels",
+            model,
+            ds,
+            us,
+        )
+
+    # ------------------------------------------------------------------
+    # Internal — counter-reset detection (#110)
+    # ------------------------------------------------------------------
+
+    def _check_counter_reset(self, modem_data: dict[str, Any]) -> None:
+        """Detect error counter resets between polls.
+
+        When total corrected or uncorrected counts decrease, the modem
+        has likely rebooted and cleared its stats. Records the timestamp
+        as a proxy for last boot time.
+        """
+        current = self._sum_error_totals(modem_data)
+        if current is None:
+            return
+
+        prev = self._prev_error_totals
+        self._prev_error_totals = current
+
+        if prev is None:
+            # First poll — no comparison possible
+            return
+
+        prev_corrected, prev_uncorrected = prev
+        cur_corrected, cur_uncorrected = current
+
+        if cur_corrected < prev_corrected or cur_uncorrected < prev_uncorrected:
+            self._stats_last_reset = datetime.now(UTC)
             _logger.info(
-                "First poll succeeded — %d downstream, %d upstream channels",
-                ds,
-                us,
+                "Counter reset detected [%s] — corrected: %d→%d, uncorrected: %d→%d",
+                self._modem_config.model,
+                prev_corrected,
+                cur_corrected,
+                prev_uncorrected,
+                cur_uncorrected,
             )
+
+    @staticmethod
+    def _sum_error_totals(modem_data: dict[str, Any]) -> tuple[int, int] | None:
+        """Sum corrected and uncorrected counts across all channels.
+
+        Returns None if no channels have error count fields.
+        """
+        total_corrected = 0
+        total_uncorrected = 0
+        found = False
+
+        for direction in ("downstream", "upstream"):
+            for channel in modem_data.get(direction, []):
+                corrected = channel.get("corrected")
+                uncorrected = channel.get("uncorrected")
+                if corrected is not None or uncorrected is not None:
+                    found = True
+                    total_corrected += int(corrected or 0)
+                    total_uncorrected += int(uncorrected or 0)
+
+        return (total_corrected, total_uncorrected) if found else None
 
     # ------------------------------------------------------------------
     # Internal — snapshot construction
@@ -418,6 +496,7 @@ class Orchestrator:
         health_info: HealthInfo | None = None,
         collector_signal: CollectorSignal = CollectorSignal.OK,
         error: str = "",
+        stats_last_reset: datetime | None = None,
     ) -> ModemSnapshot:
         """Build a ModemSnapshot with defaults."""
         return ModemSnapshot(
@@ -427,4 +506,5 @@ class Orchestrator:
             health_info=health_info,
             collector_signal=collector_signal,
             error=error,
+            stats_last_reset=stats_last_reset,
         )

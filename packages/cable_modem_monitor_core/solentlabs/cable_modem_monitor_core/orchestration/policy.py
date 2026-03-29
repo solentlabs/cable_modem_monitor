@@ -43,10 +43,12 @@ class SignalPolicy:
         collector: ModemDataCollector,
         auth_failure_threshold: int = 6,
         max_connectivity_backoff: int = 6,
+        model: str = "",
     ) -> None:
         self._collector = collector
         self._threshold = auth_failure_threshold
         self._max_connectivity_backoff = max_connectivity_backoff
+        self._model = model
 
         self._auth_failure_streak: int = 0
         self._circuit_open: bool = False
@@ -93,11 +95,12 @@ class SignalPolicy:
         self._connectivity_backoff -= 1
         if self._connectivity_backoff > 0:
             _logger.info(
-                "Connectivity backoff active (%d remaining), skipping poll",
+                "Connectivity backoff active [%s] (%d remaining), skipping poll",
+                self._model,
                 self._connectivity_backoff,
             )
         else:
-            _logger.info("Connectivity backoff cleared, retrying")
+            _logger.info("Connectivity backoff cleared [%s], retrying", self._model)
         return True
 
     def check_backoff(self) -> bool:
@@ -112,11 +115,12 @@ class SignalPolicy:
         self._backoff_remaining -= 1
         if self._backoff_remaining > 0:
             _logger.info(
-                "Backoff active (%d remaining), skipping collection",
+                "Backoff active [%s] (%d remaining), skipping collection",
+                self._model,
                 self._backoff_remaining,
             )
         else:
-            _logger.info("Backoff cleared, resuming")
+            _logger.info("Backoff cleared [%s], resuming", self._model)
         return True
 
     def apply(self, result: ModemResult) -> ConnectionStatus:
@@ -149,7 +153,9 @@ class SignalPolicy:
             self._auth_failure_streak += 1
             self._backoff_remaining = 3
             _logger.warning(
-                "Auth lockout — firmware anti-brute-force triggered, " "suppressing login for 3 polls (streak: %d/%d)",
+                "Auth lockout [%s] — firmware anti-brute-force triggered, "
+                "suppressing login for 3 polls (streak: %d/%d)",
+                self._model,
                 self._auth_failure_streak,
                 self._threshold,
             )
@@ -160,7 +166,8 @@ class SignalPolicy:
             self._auth_failure_streak += 1
             self._collector.clear_session()
             _logger.info(
-                "LOAD_AUTH — clearing session, reporting auth_failed " "(streak: %d/%d)",
+                "LOAD_AUTH [%s] — clearing session, reporting auth_failed " "(streak: %d/%d)",
+                self._model,
                 self._auth_failure_streak,
                 self._threshold,
             )
@@ -175,18 +182,19 @@ class SignalPolicy:
             )
             self._connectivity_backoff = backoff
             _logger.info(
-                "Connection failure — unreachable (streak: %d, " "backoff: %d polls)",
+                "Connection failure [%s] — unreachable (streak: %d, " "backoff: %d polls)",
+                self._model,
                 self._connectivity_streak,
                 backoff,
             )
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.LOAD_ERROR:
-            _logger.info("Resource load error — reporting unreachable")
+            _logger.info("Resource load error [%s] — reporting unreachable", self._model)
             return ConnectionStatus.UNREACHABLE
 
         if signal == CollectorSignal.PARSE_ERROR:
-            _logger.error("Parse error — reporting parser_issue")
+            _logger.error("Parse error [%s] — reporting parser_issue", self._model)
             return ConnectionStatus.PARSER_ISSUE
 
         # Defensive — should never reach here
@@ -222,7 +230,8 @@ class SignalPolicy:
     def _log_auth_failure(self) -> None:
         """Log auth failure with streak context."""
         _logger.info(
-            "Auth failed — wrong credentials or strategy mismatch " "(streak: %d/%d)",
+            "Auth failed [%s] — wrong credentials or strategy mismatch " "(streak: %d/%d)",
+            self._model,
             self._auth_failure_streak,
             self._threshold,
         )
@@ -232,7 +241,8 @@ class SignalPolicy:
         if self._auth_failure_streak >= self._threshold:
             self._circuit_open = True
             _logger.error(
-                "Auth circuit breaker OPEN — %d consecutive auth failures. "
+                "Auth circuit breaker OPEN [%s] — %d consecutive auth failures. "
                 "Polling stopped. Reconfigure credentials to resume.",
+                self._model,
                 self._auth_failure_streak,
             )

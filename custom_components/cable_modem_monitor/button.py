@@ -152,11 +152,13 @@ class RestartModemButton(_ButtonBase):
         runtime = self._entry.runtime_data
         orchestrator = runtime.orchestrator
 
+        model = runtime.modem_identity.model
+
         if orchestrator.is_restarting:
-            _LOGGER.warning("Restart already in progress — ignoring press")
+            _LOGGER.warning("Restart already in progress [%s] — ignoring press", model)
             return
 
-        _LOGGER.info("Modem restart initiated")
+        _LOGGER.info("Modem restart initiated [%s]", model)
 
         # Create cancel_event for cooperative cancellation
         cancel_event = threading.Event()
@@ -169,17 +171,17 @@ class RestartModemButton(_ButtonBase):
 
         # Notify user of outcome
         if result.success:
-            _LOGGER.info("Modem restart completed in %.0fs", result.elapsed_seconds)
+            _LOGGER.info("Modem restart completed in %.0fs [%s]", result.elapsed_seconds, model)
             await self._notify(
-                "Modem Restart Complete",
-                f"Modem restarted successfully in {result.elapsed_seconds:.0f} seconds.",
+                f"Modem Restart Complete [{model}]",
+                f"{model} restarted successfully in {result.elapsed_seconds:.0f} seconds.",
                 _NOTIFY_RESTART,
             )
         else:
-            _LOGGER.warning("Modem restart failed: %s", result.error)
+            _LOGGER.warning("Modem restart failed [%s]: %s", model, result.error)
             await self._notify(
-                "Modem Restart Failed",
-                f"Restart did not complete: {result.error}",
+                f"Modem Restart Failed [{model}]",
+                f"{model} restart did not complete: {result.error}",
                 _NOTIFY_RESTART,
             )
 
@@ -204,6 +206,9 @@ class UpdateModemDataButton(_ButtonBase):
     async def async_press(self) -> None:
         """Handle the button press — refresh health then data."""
         runtime = self._entry.runtime_data
+        model = runtime.modem_identity.model
+
+        _LOGGER.info("Manual data update triggered [%s]", model)
 
         # Clear connectivity backoff so this poll always attempts
         # a real connection, even if the modem was unreachable
@@ -216,7 +221,8 @@ class UpdateModemDataButton(_ButtonBase):
         await runtime.data_coordinator.async_request_refresh()
 
         success = runtime.data_coordinator.last_update_success
-        _LOGGER.info("Manual data update %s", "complete" if success else "failed")
+        if not success:
+            _LOGGER.warning("Manual data update failed [%s]", model)
 
 
 class ResetEntitiesButton(_ButtonBase):
@@ -249,7 +255,8 @@ class ResetEntitiesButton(_ButtonBase):
             if (entity_entry.platform == DOMAIN and entity_entry.config_entry_id == self._entry.entry_id)
         ]
 
-        _LOGGER.info("Removing %d entities for reset", len(entities_to_remove))
+        model = self._entry.runtime_data.modem_identity.model
+        _LOGGER.info("Removing %d entities for reset [%s]", len(entities_to_remove), model)
         for entity_id in entities_to_remove:
             entity_reg.async_remove(entity_id)
 
@@ -269,7 +276,7 @@ class ResetEntitiesButton(_ButtonBase):
                 f"HEAD={'yes' if updated.get(CONF_SUPPORTS_HEAD) else 'no'}"
             )
 
-        _LOGGER.info("Entity reset complete — removed %d entities and reloaded", len(entities_to_remove))
+        _LOGGER.info("Entity reset complete [%s] — removed %d entities and reloaded", model, len(entities_to_remove))
 
         await self._notify(
             "Entity Reset Complete",

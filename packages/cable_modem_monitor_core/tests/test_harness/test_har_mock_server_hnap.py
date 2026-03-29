@@ -132,19 +132,18 @@ class TestHnapAuthHandler:
         assert response is not None
         assert "ERROR" in response.body
 
-    def test_non_login_soapaction_returns_401(
+    def test_non_login_soapaction_returns_none(
         self,
         handler: HnapAuthHandler,
     ) -> None:
-        """POST without Login SOAPAction before auth returns 401."""
+        """POST without Login SOAPAction returns None (delegates to server)."""
         response = handler.handle_login(
             "POST",
             "/HNAP1/",
             b"{}",
             {"soapaction": '"http://purenetworks.com/HNAP1/GetMultipleHNAPs"'},
         )
-        assert response is not None
-        assert response.status == 401
+        assert response is None
 
     def test_merged_response_contains_all_actions(
         self,
@@ -276,3 +275,89 @@ class TestHARMockServerHnapAuth:
             assert "GetStatusUpstreamResponse" in hnap_resp
             # From second GetMultipleHNAPs entry (merged)
             assert "GetDeviceStatusResponse" in hnap_resp
+
+    def test_reauth_after_prior_session(
+        self,
+        entries: list[dict[str, Any]],
+    ) -> None:
+        """New session can re-authenticate after prior session completed.
+
+        Regression test: config flow validation logs in (session A),
+        then orchestrator creates a new session (B) and must be able
+        to log in again despite the harness already being authenticated.
+        """
+        config = _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}})
+        auth_config = HnapAuth(strategy="hnap", hmac_algorithm="md5")
+
+        with HARMockServer(entries, modem_config=config) as server:
+            # Session A — config flow validation
+            session_a = requests.Session()
+            manager_a = HnapAuthManager(auth_config)
+            result_a = manager_a.authenticate(
+                session_a,
+                server.base_url,
+                username="admin",
+                password="pw",
+            )
+            assert result_a.success, f"Session A failed: {result_a.error}"
+
+            # Session B — orchestrator poll (fresh session)
+            session_b = requests.Session()
+            manager_b = HnapAuthManager(auth_config)
+            result_b = manager_b.authenticate(
+                session_b,
+                server.base_url,
+                username="admin",
+                password="pw",
+            )
+            assert result_b.success, f"Session B failed: {result_b.error}"
+            assert result_b.auth_context.private_key
+
+    def test_orchestrated_reauth_after_prior_session(
+        self,
+        entries: list[dict[str, Any]],
+    ) -> None:
+        """Full orchestrator cycle succeeds after a prior session on same server.
+
+        Regression test for the HA dogfood scenario: config flow
+        validation runs a full orchestrator collect (session A), then
+        the integration starts and runs another collect (session B)
+        against the same persistent harness. Both must succeed.
+        """
+        from solentlabs.cable_modem_monitor_core.config_loader import (
+            load_parser_config,
+        )
+        from solentlabs.cable_modem_monitor_core.orchestration.collector import (
+            ModemDataCollector,
+        )
+
+        config = _make_config({"transport": "hnap", "auth": {"strategy": "hnap", "hmac_algorithm": "md5"}})
+        parser_config = load_parser_config(FIXTURES_DIR / "parser_hnap_minimal.yaml")
+
+        with HARMockServer(entries, modem_config=config) as server:
+            # Session A — config flow validation collect
+            collector_a = ModemDataCollector(
+                modem_config=config,
+                parser_config=parser_config,
+                post_processor=None,
+                base_url=server.base_url,
+                username="admin",
+                password="pw",
+            )
+            result_a = collector_a.execute()
+            assert result_a.success, f"Session A failed: {result_a.error}"
+            assert result_a.modem_data is not None
+
+            # Session B — orchestrator poll (fresh collector, fresh session)
+            collector_b = ModemDataCollector(
+                modem_config=config,
+                parser_config=parser_config,
+                post_processor=None,
+                base_url=server.base_url,
+                username="admin",
+                password="pw",
+            )
+            result_b = collector_b.execute()
+            assert result_b.success, f"Session B failed: {result_b.error}"
+            assert result_b.modem_data is not None
+            assert len(result_b.modem_data.get("downstream", [])) > 0
