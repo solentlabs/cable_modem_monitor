@@ -36,7 +36,7 @@
     },
     "lock_status": {
       "tier": 1,
-      "type": "string",
+      "type": "lock_status",
       "headers": ["lock status", "status"],
       "json_keys": ["lockstatus", "lock_status"]
     },

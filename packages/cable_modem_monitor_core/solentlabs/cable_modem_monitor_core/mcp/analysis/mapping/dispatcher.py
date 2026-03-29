@@ -356,14 +356,29 @@ def _remove_row_counters(
     if row_count == 0:
         return mappings
 
-    # Check each mapping in a duplicated field for row-counter pattern
-    keep: list[FieldMapping] = []
-    for m in mappings:
+    # Identify row-counter mappings per duplicated field
+    row_counter_indices: dict[str, list[int]] = {}
+    for i, m in enumerate(mappings):
         if m.field in duplicated_fields and m.index is not None and _is_row_counter(m.index, data_rows, row_count):
-            continue
-        keep.append(m)
+            row_counter_indices.setdefault(m.field, []).append(i)
 
-    return keep
+    # For each duplicated field, determine which mappings to remove.
+    # If ALL mappings for a field look like row counters (e.g., real
+    # DOCSIS channel IDs happen to be sequential 1..N), keep the
+    # highest-index column — it's the explicit "Channel ID" column,
+    # not the display counter.
+    remove_indices: set[int] = set()
+    for field_name, counter_idxs in row_counter_indices.items():
+        total_for_field = field_counts[field_name]
+        if len(counter_idxs) == total_for_field:
+            # All are row counters — keep the one at the highest column index
+            best = max(counter_idxs, key=lambda i: mappings[i].index or 0)
+            remove_indices.update(i for i in counter_idxs if i != best)
+        else:
+            # Only some are row counters — remove those, keep the rest
+            remove_indices.update(counter_idxs)
+
+    return [m for i, m in enumerate(mappings) if i not in remove_indices]
 
 
 def _is_row_counter(

@@ -42,7 +42,6 @@ _UNIT_PATTERNS: list[tuple[re.Pattern[str], str, str]] = [
 
 # Type sets derived from registry
 _KNOWN_INTEGER_FIELDS = frozenset(name for name, ftype in _FIELD_TYPE_MAP.items() if ftype == "integer")
-_KNOWN_STRING_FIELDS = frozenset(name for name, ftype in _FIELD_TYPE_MAP.items() if ftype == "string")
 
 
 # -----------------------------------------------------------------------
@@ -155,8 +154,12 @@ def _detect_known_field_type(
     if field_name == "snr":
         unit = header_unit if header_unit else _detect_unit_suffix(sample_values, ("dB", "db"))
         return "float", unit
-    if field_name in _KNOWN_STRING_FIELDS:
-        return "string", ""
+
+    # Generic registry lookup — covers lock_status, modulation, channel_type,
+    # and any future custom types without per-field branches.
+    if field_name in _FIELD_TYPE_MAP:
+        return _FIELD_TYPE_MAP[field_name], header_unit
+
     return None
 
 

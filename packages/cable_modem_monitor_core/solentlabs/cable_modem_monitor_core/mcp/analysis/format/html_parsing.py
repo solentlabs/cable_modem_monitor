@@ -156,10 +156,10 @@ def _extract_preceding_text(table: Tag) -> str:
     the table. Handles multiple patterns:
 
     1. Direct previous sibling heading/bold (``<h2>Title</h2><table>``)
-    2. Title inside a sibling element (Netgear: ``<b>Title</b>`` in
-       adjacent ``<tr>``)
-    3. Title in a sibling row of a wrapper table (Motorola: title table
-       and data table are both inside an outer wrapper ``<table>``)
+    2. Title inside a sibling element (``<b>Title</b>`` in adjacent
+       ``<tr>``)
+    3. Title in a sibling row of a wrapper table (title table and data
+       table are both inside an outer wrapper ``<table>``)
 
     Walks up through ``<td>`` → ``<tr>`` → parent containers to find
     the title, checking siblings at each level.
@@ -247,14 +247,24 @@ def detect_tables(body: str) -> list[DetectedTable]:
         if not all_rows:
             continue
 
+        title_row_text = _extract_title_row(table_el)
+
+        # When a th-colspan title row is the first extracted row,
+        # skip it — the real column headers are in the next row.
+        headers = all_rows[0]
+        data_rows = all_rows[1:] if len(all_rows) > 1 else []
+        if title_row_text and len(all_rows) > 1 and len(all_rows[0]) == 1 and all_rows[0][0] == title_row_text:
+            headers = all_rows[1]
+            data_rows = all_rows[2:] if len(all_rows) > 2 else []
+
         tables.append(
             DetectedTable(
                 table_id=_extract_table_id(table_el),
                 css_class=_extract_css_class(table_el),
-                headers=all_rows[0],
-                rows=all_rows[1:] if len(all_rows) > 1 else [],
+                headers=headers,
+                rows=data_rows,
                 preceding_text=_extract_preceding_text(table_el),
-                title_row_text=_extract_title_row(table_el),
+                title_row_text=title_row_text,
                 table_index=idx,
             )
         )

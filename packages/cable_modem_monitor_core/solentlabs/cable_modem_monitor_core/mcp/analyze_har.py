@@ -23,6 +23,7 @@ from .analysis.auth import AuthDetail, detect_auth
 from .analysis.format import detect_sections
 from .analysis.session import SessionDetail, detect_session
 from .analysis.transport import TransportResult, detect_transport
+from .analysis.types import CoreGap
 
 
 @dataclass
@@ -36,10 +37,11 @@ class AnalysisResult:
     sections: dict[str, Any] | None = None
     warnings: list[str] = field(default_factory=list)
     hard_stops: list[str] = field(default_factory=list)
+    core_gaps: list[CoreGap] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a plain dict matching the MCP tool output contract."""
-        return {
+        result: dict[str, Any] = {
             "transport": self.transport.transport,
             "confidence": self.transport.confidence,
             "auth": self.auth.to_dict(),
@@ -49,6 +51,9 @@ class AnalysisResult:
             "warnings": self.warnings,
             "hard_stops": self.hard_stops,
         }
+        if self.core_gaps:
+            result["core_gaps"] = [gap.to_dict() for gap in self.core_gaps]
+        return result
 
 
 def analyze_har(har_path: str | Path) -> AnalysisResult:
@@ -74,18 +79,19 @@ def analyze_har(har_path: str | Path) -> AnalysisResult:
 
     warnings: list[str] = []
     hard_stops: list[str] = []
+    core_gaps: list[CoreGap] = []
 
     # Phase 1: Transport
     transport_result = detect_transport(entries)
 
     # Phase 2: Auth
-    auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops)
+    auth_result = detect_auth(entries, transport_result.transport, warnings, hard_stops, core_gaps)
 
     # Phase 3: Session
     session_result = detect_session(entries, transport_result.transport, auth_result.strategy, warnings)
 
     # Phase 4: Actions
-    actions_result = detect_actions(entries, transport_result.transport)
+    actions_result = detect_actions(entries, transport_result.transport, warnings, core_gaps)
 
     # Phase 5-6: Format detection and field mapping
     sections = detect_sections(entries, transport_result.transport, warnings, hard_stops)
@@ -98,6 +104,7 @@ def analyze_har(har_path: str | Path) -> AnalysisResult:
         sections=sections if sections else None,
         warnings=warnings,
         hard_stops=hard_stops,
+        core_gaps=core_gaps,
     )
 
 

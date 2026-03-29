@@ -42,8 +42,13 @@ def build_parser_dict(
     if system_info:
         result["system_info"] = transform_system_info(system_info)
 
+    # Aggregate: explicit metadata wins, otherwise auto-generate from fields
     if metadata and metadata.get("aggregate"):
         result["aggregate"] = metadata["aggregate"]
+    else:
+        aggregate = _build_aggregate(sections)
+        if aggregate:
+            result["aggregate"] = aggregate
 
     return result if result else None
 
@@ -206,3 +211,36 @@ def _transform_json(section: dict[str, Any]) -> dict[str, Any]:
         result["filter"] = section["filter"]
 
     return result
+
+
+# -----------------------------------------------------------------------
+# Aggregate auto-generation
+# -----------------------------------------------------------------------
+
+# Fields eligible for aggregate sum generation
+_AGGREGATE_FIELDS: list[tuple[str, str]] = [
+    ("corrected", "total_corrected"),
+    ("uncorrected", "total_uncorrected"),
+]
+
+
+def _build_aggregate(sections: dict[str, Any]) -> dict[str, Any] | None:
+    """Auto-generate aggregate section from downstream field mappings.
+
+    Scans downstream mappings for corrected/uncorrected fields and
+    generates sum declarations scoped to "downstream".
+
+    Returns None if no eligible fields found.
+    """
+    ds = sections.get("downstream")
+    if not ds:
+        return None
+
+    ds_fields = {m.get("field") for m in ds.get("mappings", [])}
+
+    aggregate: dict[str, Any] = {}
+    for source_field, agg_name in _AGGREGATE_FIELDS:
+        if source_field in ds_fields:
+            aggregate[agg_name] = {"sum": source_field, "channels": "downstream"}
+
+    return aggregate if aggregate else None

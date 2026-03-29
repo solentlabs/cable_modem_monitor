@@ -498,13 +498,13 @@ class TestDetectChannelType:
         result = _detect_channel_type([["5"]], mappings)
         assert result is None
 
-    def test_single_value_fixed(self) -> None:
-        """Single channel type value produces fixed config."""
+    def test_single_value_field_map(self) -> None:
+        """Single channel type value produces field map with normalized value."""
         mappings = [{"field": "channel_type", "type": "string", "index": 0}]
         records = [["QAM256"], ["QAM256"], ["QAM256"]]
         result = _detect_channel_type(records, mappings)
         assert result is not None
-        assert result == {"fixed": "QAM256"}
+        assert result == {"source": "field", "index": 0, "map": {"QAM256": "qam"}}
 
     def test_multiple_values_map(self) -> None:
         """Multiple channel type values produce map config."""

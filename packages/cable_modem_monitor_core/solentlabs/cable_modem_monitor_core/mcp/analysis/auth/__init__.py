@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..types import AuthDetail
+from ..types import AuthDetail, CoreGap
 from .hnap import detect_hnap_auth
 from .http import detect_http_auth
 
@@ -23,6 +23,7 @@ def detect_auth(
     transport: str,
     warnings: list[str],
     hard_stops: list[str],
+    core_gaps: list[CoreGap] | None = None,
 ) -> AuthDetail:
     """Detect auth strategy from HAR entries.
 
@@ -35,10 +36,13 @@ def detect_auth(
         transport: Detected transport (``http`` or ``hnap``).
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
+        core_gaps: Mutable list to append core gap items to.
 
     Returns:
         AuthDetail with strategy, extracted fields, and confidence.
     """
+    if core_gaps is None:
+        core_gaps = []
     if transport == "hnap":
         return detect_hnap_auth(entries, warnings)
-    return detect_http_auth(entries, warnings, hard_stops)
+    return detect_http_auth(entries, warnings, hard_stops, core_gaps)

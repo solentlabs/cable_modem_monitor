@@ -1,7 +1,11 @@
-"""Phase 2/4 result types for auth and action detection.
+"""Phase 2/4 result types and pipeline-wide gap detection.
 
 Auth and action types used by auth.http, auth.hnap, actions.http,
 actions.hnap, and the phase dispatchers.
+
+``CoreGap`` is the shared type used across all phases when the pipeline
+encounters a pattern that Core does not yet support. Gaps halt the
+intake process and provide wire evidence for a development effort.
 
 Phase 5 types live in ``format/types.py``.
 Phase 6 types live in ``mapping/types.py``.
@@ -11,6 +15,43 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+# -----------------------------------------------------------------------
+# Pipeline-wide: Core gap detection
+# -----------------------------------------------------------------------
+
+
+@dataclass
+class CoreGap:
+    """A pattern the pipeline detected but Core cannot yet handle.
+
+    When the intake pipeline encounters an auth mechanism, action
+    endpoint, session pattern, or data format that doesn't match any
+    known Core pattern, it creates a ``CoreGap`` with structured wire
+    evidence. This halts config generation and provides enough detail
+    to file a development issue or extend Core's pattern set.
+
+    Attributes:
+        phase: Pipeline phase that produced this gap.
+        category: Machine-readable key (e.g., ``unmatched_login``).
+        summary: Human-readable one-liner describing the gap.
+        evidence: Structured wire data from the HAR for diagnosis.
+    """
+
+    phase: str
+    category: str
+    summary: str
+    evidence: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a plain dict for MCP tool output."""
+        return {
+            "phase": self.phase,
+            "category": self.category,
+            "summary": self.summary,
+            "evidence": self.evidence,
+        }
+
 
 # -----------------------------------------------------------------------
 # Phase 2: Auth

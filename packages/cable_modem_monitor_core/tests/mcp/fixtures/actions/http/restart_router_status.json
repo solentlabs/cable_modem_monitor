@@ -1,0 +1,32 @@
+{
+  "_description": "Restart via /goform/RouterStatus endpoint (Netgear pattern)",
+  "_entries": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "http://192.168.0.1/goform/RouterStatus",
+        "headers": [],
+        "postData": {
+          "params": [
+            {
+              "name": "buttonSelect",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "_expected_logout": null,
+  "_expected_restart": {
+    "type": "http",
+    "method": "POST",
+    "endpoint": "/goform/RouterStatus",
+    "params": {
+      "buttonSelect": "2"
+    }
+  }
+}

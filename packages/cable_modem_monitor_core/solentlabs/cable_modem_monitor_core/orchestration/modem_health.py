@@ -169,7 +169,7 @@ class HealthMonitor:
                     allow_redirects=True,
                 )
 
-            latency_ms = response.elapsed.total_seconds() * 1000
+            latency_ms = max(0.0, response.elapsed.total_seconds() * 1000)
             _logger.debug(
                 "HTTP %s probe: %d (%.1fms)",
                 self._http_method,

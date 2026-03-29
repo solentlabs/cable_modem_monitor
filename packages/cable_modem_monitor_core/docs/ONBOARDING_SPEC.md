@@ -938,7 +938,7 @@ detection, format detection, and field mapping extraction.
       "selector": { "type": "header_text", "match": "Downstream Bonded Channels" },
       "row_start": 2,
       "channel_type": { "fixed": "qam" },
-      "filter": { "lock_status": "Locked" },
+      "filter": { "lock_status": "locked" },
       "channel_count": 24
     },
     "upstream": {
@@ -966,12 +966,42 @@ detection, format detection, and field mapping extraction.
     }
   },
   "warnings": ["max_concurrent cannot be determined from HAR"],
-  "hard_stops": []
+  "hard_stops": [],
+  "core_gaps": [
+    {
+      "phase": "auth",
+      "category": "unmatched_login",
+      "summary": "Form POST to /custom/endpoint has credential fields but URL not in login patterns",
+      "evidence": { "endpoint": "/custom/endpoint", "method": "POST" }
+    }
+  ]
 }
 ```
 
 Returns `hard_stops` if transport or auth is ambiguous — the LLM presents
 these to the user for resolution before proceeding.
+
+**Core gaps** indicate patterns the pipeline detected but Core cannot yet
+handle. When `core_gaps` is non-empty, config generation should not
+proceed — the modem needs a development effort to extend Core's pattern
+set. Each gap has:
+- `phase` / `category`: identifies the pipeline phase and gap type
+- `summary`: human-readable description of the gap
+- `evidence`: structured wire data from the HAR for diagnosis
+
+The `/modem-intake` skill reports gaps to the user and stops. The gap
+report contains enough detail to file a GitHub issue for a development
+effort. Categories:
+
+| Category | Phase | Evidence | What Core needs |
+|----------|-------|----------|-----------------|
+| `unmatched_login` | auth | POST endpoint + credential fields | New URL pattern in `auth_patterns.json` or new auth strategy |
+| `auth_unknown` | auth | Signal flags + description | New auth strategy implementation |
+| `unmatched_restart` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
+| `unmatched_logout` | actions | POST endpoint + action-like params | New URL pattern in `action_patterns.json` |
+
+Well-known modems with standard patterns produce zero core gaps.
+Novel modems produce gaps that require development before onboarding.
 
 ### `enrich_metadata`
 

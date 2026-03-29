@@ -24,6 +24,7 @@ _CANDIDATE_RECORD_DELIMITERS = ["|+|", "|-|", "||"]
 # HNAP channel type values that indicate technology types.
 _CHANNEL_TYPE_MAP_VALUES = {
     "QAM256",
+    "256QAM",
     "QAM64",
     "QAM16",
     "OFDM",
@@ -147,8 +148,10 @@ def _detect_channel_data(
         if field_delim is None:
             continue
 
-        # Parse sample records for field mapping (use all, up to 30)
-        sample_records = [r.split(field_delim) for r in records[:30]]
+        # Parse all records for field mapping and channel_type detection.
+        # HNAP channel data is small (typically <100 records); sampling
+        # can miss OFDM channels at the tail of the list.
+        sample_records = [r.split(field_delim) for r in records]
 
         # Infer field mappings from positional values
         mappings = _infer_field_mappings(sample_records)
@@ -391,19 +394,42 @@ def _classify_definitive(
     """
     # Lock status
     if all(_LOCK_PATTERN.match(s) for s in samples):
-        return {"field": "lock_status", "type": "string", "index": index}
+        return {"field": "lock_status", "type": "lock_status", "index": index}
 
     # Channel type (non-numeric strings matching known types)
     if any(s in _CHANNEL_TYPE_MAP_VALUES for s in samples):
         return {"field": "channel_type", "type": "string", "index": index}
 
-    # Large integers (>= 100k): frequency or symbol_rate.
+    # Filter placeholder zeros (unlocked/inactive channels report 0
+    # for frequency, symbol_rate, etc.)
+    non_zero = [s for s in samples if s not in ("0", "0.0")]
+    if not non_zero:
+        return None
+
+    # Large integers (>= 100k, <= 2B): frequency or symbol_rate.
+    # Capped at 2 GHz — cumulative error counters can exceed this and
+    # must not be misclassified as frequency/symbol_rate.
     # Deferred to pass 1.5 (_resolve_large_integers) when multiple
     # large-integer positions exist. Return a provisional classification.
-    if all(_FREQUENCY_PATTERN.match(s) for s in samples):
-        max_val = max(int(s) for s in samples)
-        if max_val >= 100_000:
-            # Provisional: mark as large integer for resolution later
+    if all(_FREQUENCY_PATTERN.match(s) for s in non_zero):
+        max_val = max(int(s) for s in non_zero)
+        if 100_000 <= max_val <= 2_000_000_000:
+            return {
+                "field": "_large_int",
+                "type": "frequency",
+                "index": index,
+                "_max_val": max_val,
+            }
+
+    # MHz-range floats: some HNAP modems report frequency in MHz
+    # (e.g., 543.0) instead of Hz. Cable frequencies range 54–1218 MHz,
+    # so all non-zero values >= 100.0 distinguishes from power/SNR.
+    # Only triggered when values contain actual decimal points — pure
+    # integers are handled by the integer path above.
+    if any("." in s for s in non_zero) and all(_SMALL_FLOAT_PATTERN.match(s) for s in non_zero):
+        float_vals = [float(s) for s in non_zero]
+        if all(v >= 100.0 for v in float_vals):
+            max_val = int(max(float_vals) * 1_000_000)
             return {
                 "field": "_large_int",
                 "type": "frequency",
@@ -437,17 +463,12 @@ def _classify_remaining_numeric(
         if not _is_sequential_from_one(int_vals) and max(int_vals) < 1000 and any(v > 0 for v in int_vals):
             return {"field": "channel_id", "type": "int", "index": index}
 
-    # Float values with decimals → power
-    if any("." in s for s in samples):
-        return {"field": "power", "type": "float", "index": index}
-
-    # Large values that aren't frequency → only symbol_rate if frequency
-    # is NOT yet assigned (both are large, first = symbol_rate, second = frequency).
-    # If frequency IS assigned, large values are likely corrected codewords.
+    # Large values that aren't frequency → symbol_rate
     if max_val >= 100_000 and not frequency_assigned:
         return {"field": "symbol_rate", "type": "frequency", "index": index}
 
-    # Assign from remaining standard field order
+    # Assign from remaining standard DOCSIS field order
+    # (power, snr, corrected, uncorrected)
     next_field = state.next_remaining_field()
     if next_field is not None:
         field_name, field_type = next_field
@@ -462,8 +483,10 @@ def _detect_channel_type(
 ) -> dict[str, Any] | None:
     """Detect channel type configuration from sample data.
 
-    If a field maps to ``channel_type`` and has multiple distinct
-    values, returns a ``map`` config for channel type detection.
+    When a field maps to ``channel_type``, always returns a field-based
+    map with normalized values. This ensures ``generate_config`` can
+    produce an inline ``map:`` on the field mapping — the form the
+    parser expects at runtime.
     """
     ct_mapping = None
     for m in mappings:
@@ -480,14 +503,13 @@ def _detect_channel_type(
         if idx < len(record) and record[idx].strip():
             type_values.add(record[idx].strip())
 
-    if len(type_values) <= 1:
-        return {"fixed": list(type_values)[0] if type_values else "unknown"}
+    if not type_values:
+        return {"fixed": "unknown"}
 
-    # Build map from observed values
+    # Build normalized map from observed values
     type_map: dict[str, str] = {}
     for val in sorted(type_values):
-        normalized = _normalize_channel_type(val)
-        type_map[val] = normalized
+        type_map[val] = _normalize_channel_type(val)
 
     return {"source": "field", "index": idx, "map": type_map}
 
@@ -501,7 +523,7 @@ def _normalize_channel_type(value: str) -> str:
         return "ofdm"
     if "atdma" in lower:
         return "atdma"
-    if lower in ("sc-qam", "qam256", "qam64", "qam16"):
+    if lower in ("sc-qam", "qam256", "256qam", "qam64", "qam16"):
         return "qam"
     return lower
 

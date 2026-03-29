@@ -18,7 +18,7 @@ from ..models.parser_config.system_info import JSSystemInfoSource
 # Formats valid per transport (same constraint table as MODEM_YAML_SPEC)
 _VALID_FORMATS: dict[str, frozenset[str]] = {
     "hnap": frozenset({"hnap"}),
-    "http": frozenset({"table", "table_transposed", "html_fields", "javascript", "json"}),
+    "http": frozenset({"table", "table_transposed", "html_fields", "javascript", "javascript_json", "json"}),
 }
 
 

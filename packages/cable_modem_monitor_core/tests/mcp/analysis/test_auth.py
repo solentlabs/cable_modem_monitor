@@ -19,6 +19,7 @@ from solentlabs.cable_modem_monitor_core.mcp.analysis.auth.hnap import (
 from solentlabs.cable_modem_monitor_core.mcp.analysis.auth.http import (
     _extract_form_pbkdf2,
     _extract_url_token_parts,
+    _has_credential_fields,
     _HttpAuthSignals,
     _is_login_url,
     _parse_auth_scheme,
@@ -178,6 +179,11 @@ def test_parse_auth_scheme(www_authenticate: str, expected: str, desc: str) -> N
 # │ /cgi-bin/auth                │ True     │ cgi-bin endpoint         │
 # │ /api/v1/session/login        │ True     │ API session endpoint     │
 # │ /LOGIN                       │ True     │ case insensitive         │
+# │ /check.jst                   │ True     │ jst login page           │
+# │ /goform/GenieLogin           │ True     │ genie login              │
+# │ /goform/home                 │ True     │ goform home login        │
+# │ /php/ajaxSet_Password.php    │ True     │ php ajax login           │
+# │ /setup.cgi                   │ True     │ setup cgi login          │
 # │ /status.html                 │ False    │ data page                │
 # │ /info.html                   │ False    │ info page                │
 # │ /                            │ False    │ root path                │
@@ -189,6 +195,11 @@ LOGIN_URL_CASES = [
     ("/cgi-bin/auth",           True,  "cgi-bin endpoint"),
     ("/api/v1/session/login",   True,  "API session endpoint"),
     ("/LOGIN",                  True,  "case insensitive"),
+    ("/check.jst",              True,  "jst login page"),
+    ("/goform/GenieLogin",      True,  "genie login"),
+    ("/goform/home",            True,  "goform home login"),
+    ("/php/ajaxSet_Password.php", True, "php ajax login"),
+    ("/setup.cgi",              True,  "setup cgi login"),
     ("/status.html",            False, "data page"),
     ("/info.html",              False, "info page"),
     ("/",                       False, "root path"),
@@ -290,6 +301,85 @@ class TestClassifyFormFields:
         assert user == "username"
         assert pwd == "password"
         assert hidden == {"field1": "val1", "field2": "val2"}
+
+
+class TestHasCredentialFields:
+    """Credential field detection in POST data."""
+
+    def test_params_with_password(self) -> None:
+        """Detects password field in structured params."""
+        post_data = {"params": [{"name": "loginPassword", "value": "secret"}]}
+        assert _has_credential_fields(post_data) is True
+
+    def test_params_without_credentials(self) -> None:
+        """No credential fields in non-auth form."""
+        post_data = {"params": [{"name": "action", "value": "reboot"}]}
+        assert _has_credential_fields(post_data) is False
+
+    def test_text_with_password(self) -> None:
+        """Detects password in URL-encoded text fallback."""
+        post_data = {"text": "username=admin&password=secret"}
+        assert _has_credential_fields(post_data) is True
+
+    def test_empty(self) -> None:
+        """Empty postData returns False."""
+        assert _has_credential_fields({}) is False
+
+
+# -----------------------------------------------------------------------
+# Core gap detection — unmatched credential POSTs
+# -----------------------------------------------------------------------
+#
+# ┌───────────────────────┬──────────┬───────────────────────────────┐
+# │ url_path              │ gap?     │ description                   │
+# ├───────────────────────┼──────────┼───────────────────────────────┤
+# │ /custom/auth_endpoint │ True     │ unrecognized URL → core gap   │
+# │ /goform/login         │ False    │ known pattern → no gap        │
+# └───────────────────────┴──────────┴───────────────────────────────┘
+#
+# fmt: off
+CREDENTIAL_GAP_CASES = [
+    # (url_path,               expect_gap, description)
+    ("/custom/auth_endpoint",  True,       "unrecognized URL produces core gap"),
+    ("/goform/login",          False,      "known login pattern produces no gap"),
+]
+# fmt: on
+
+
+def _build_credential_post_entry(url_path: str) -> dict:
+    """Build a minimal HAR entry with a credential POST to the given path."""
+    return {
+        "request": {
+            "method": "POST",
+            "url": f"http://192.168.0.1{url_path}",
+            "headers": [],
+            "postData": {
+                "mimeType": "application/x-www-form-urlencoded",
+                "params": [
+                    {"name": "username", "value": "admin"},
+                    {"name": "password", "value": "secret"},
+                ],
+            },
+        },
+        "response": {"status": 200, "headers": []},
+    }
+
+
+@pytest.mark.parametrize("url_path,expect_gap,desc", CREDENTIAL_GAP_CASES, ids=[c[2] for c in CREDENTIAL_GAP_CASES])
+def test_credential_post_gap_detection(url_path: str, expect_gap: bool, desc: str) -> None:
+    """Credential POST to unrecognized URL produces a core gap."""
+    from solentlabs.cable_modem_monitor_core.mcp.analysis.types import CoreGap
+
+    entries = [_build_credential_post_entry(url_path)]
+    core_gaps: list[CoreGap] = []
+    detect_auth(entries, "http", [], [], core_gaps)
+    login_gaps = [g for g in core_gaps if g.category == "unmatched_login"]
+    if expect_gap:
+        assert len(login_gaps) == 1
+        assert login_gaps[0].phase == "auth"
+        assert login_gaps[0].evidence["endpoint"] == url_path
+    else:
+        assert len(login_gaps) == 0
 
 
 class TestDetectEncoding:

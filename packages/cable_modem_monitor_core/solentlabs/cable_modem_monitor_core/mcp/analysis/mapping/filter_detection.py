@@ -42,7 +42,7 @@ def detect_filter_table(
         and lock_mapping.index is not None
         and _column_has_value(table, lock_mapping.index, _UNLOCKED_VALUES)
     ):
-        filters["lock_status"] = "Locked"
+        filters["lock_status"] = "locked"
 
     freq_mapping = find_mapping(mappings, "frequency")
     if (

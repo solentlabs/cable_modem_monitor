@@ -281,7 +281,7 @@ def test_json_field_extraction(fixture_path: Path) -> None:
 # fmt: off
 FILTER_CASES = [
     # (fixture,              filter_key,    expected_value,  desc)
-    ("table_with_filter.json", "lock_status", "Locked",      "unlocked rows trigger lock_status filter"),
+    ("table_with_filter.json", "lock_status", "locked",       "unlocked rows trigger lock_status filter"),
     ("table_with_filter.json", "frequency",   {"not": 0},    "zero-frequency rows trigger not-0 filter"),
 ]
 # fmt: on
@@ -812,11 +812,11 @@ class TestMappingTypeSerialization:
             resource="/status.html",
             mappings=[FieldMapping(field="frequency", type="frequency", index=1)],
             row_start=2,
-            filter={"lock_status": "Locked"},
+            filter={"lock_status": "locked"},
         )
         d = section.to_dict()
         assert d["row_start"] == 2
-        assert d["filter"] == {"lock_status": "Locked"}
+        assert d["filter"] == {"lock_status": "locked"}
 
     def test_section_detail_js_fields(self) -> None:
         """SectionDetail.to_dict() includes JS-specific fields."""

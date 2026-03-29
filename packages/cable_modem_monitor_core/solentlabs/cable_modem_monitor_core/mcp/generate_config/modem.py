@@ -78,6 +78,8 @@ def _build_auth_block(auth: dict[str, Any]) -> dict[str, Any] | None:
     # Merge strategy-specific fields
     for key, value in auth.get("fields", {}).items():
         result[key] = value
+
+    _clean_auth_defaults(result)
     return result
 
 
@@ -127,3 +129,41 @@ def _build_single_action(action: dict[str, Any]) -> dict[str, Any]:
             result["params"] = action["params"]
 
     return result
+
+
+# -----------------------------------------------------------------------
+# Default cleaning — remove values that match Pydantic model defaults
+# -----------------------------------------------------------------------
+
+# FormAuth model defaults (from modem_config/auth.py)
+_AUTH_DEFAULTS: list[tuple[str, object]] = [
+    ("method", "POST"),
+    ("encoding", "plain"),
+]
+
+# Keys to remove when their value is empty/falsy
+_AUTH_REMOVE_IF_EMPTY: list[str] = [
+    "hidden_fields",
+    "success",
+]
+
+
+def _clean_auth_defaults(block: dict[str, Any]) -> None:
+    """Remove auth fields that match Pydantic model defaults.
+
+    Modifies the dict in place. Keeps the generated YAML clean by
+    omitting values the model would supply anyway.
+    """
+    for key, default_value in _AUTH_DEFAULTS:
+        if block.get(key) == default_value:
+            block.pop(key, None)
+
+    for key in _AUTH_REMOVE_IF_EMPTY:
+        value = block.get(key)
+        if (
+            value is None
+            or value == {}
+            or value == ""
+            or (isinstance(value, dict) and all(v == "" for v in value.values()))
+        ):
+            block.pop(key, None)

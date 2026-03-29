@@ -183,6 +183,71 @@ class TestSystemInfo:
 
 
 # ---------------------------------------------------------------------------
+# Spot-check: auth default stripping
+# ---------------------------------------------------------------------------
+
+
+class TestAuthDefaultStripping:
+    """Verify empty/default auth fields are stripped from modem.yaml."""
+
+    def test_form_auth_defaults_stripped(self) -> None:
+        """method: POST, hidden_fields: {}, success: {}, encoding: plain are stripped."""
+        fixture = load_fixture(VALID_DIR / "form_auth_with_defaults.json")
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        modem = yaml.safe_load(result.modem_yaml)
+        auth = modem["auth"]
+        assert "method" not in auth
+        assert "hidden_fields" not in auth
+        assert "success" not in auth
+        assert "encoding" not in auth
+
+    def test_non_default_encoding_kept(self) -> None:
+        """encoding: base64 is NOT stripped (it's not the default)."""
+        fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        modem = yaml.safe_load(result.modem_yaml)
+        assert modem["auth"]["encoding"] == "base64"
+
+
+# ---------------------------------------------------------------------------
+# Spot-check: aggregate auto-generation
+# ---------------------------------------------------------------------------
+
+
+class TestAggregateGeneration:
+    """Verify aggregate section auto-generation from field mappings."""
+
+    def test_aggregate_from_corrected_uncorrected(self) -> None:
+        """Aggregate generated when downstream has corrected + uncorrected."""
+        fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.parser_yaml is not None
+        parser = yaml.safe_load(result.parser_yaml)
+        assert "aggregate" in parser
+        assert parser["aggregate"]["total_corrected"] == {"sum": "corrected", "channels": "downstream"}
+        assert parser["aggregate"]["total_uncorrected"] == {"sum": "uncorrected", "channels": "downstream"}
+
+    def test_no_aggregate_without_corrected(self) -> None:
+        """No aggregate when downstream lacks corrected/uncorrected fields."""
+        fixture = load_fixture(VALID_DIR / "form_auth_with_defaults.json")
+        result = generate_config(fixture["_analysis"], fixture["_metadata"])
+        assert result.parser_yaml is not None
+        parser = yaml.safe_load(result.parser_yaml)
+        assert "aggregate" not in parser
+
+    def test_metadata_aggregate_wins(self) -> None:
+        """Explicit metadata aggregate overrides auto-generation."""
+        fixture = load_fixture(VALID_DIR / "table_form_auth.json")
+        metadata = dict(fixture["_metadata"])
+        metadata["aggregate"] = {"custom": {"sum": "power", "channels": "upstream"}}
+        result = generate_config(fixture["_analysis"], metadata)
+        assert result.parser_yaml is not None
+        parser = yaml.safe_load(result.parser_yaml)
+        assert "custom" in parser["aggregate"]
+        assert "total_corrected" not in parser["aggregate"]
+
+
+# ---------------------------------------------------------------------------
 # Invalid configs — generation reports errors
 # ---------------------------------------------------------------------------
 

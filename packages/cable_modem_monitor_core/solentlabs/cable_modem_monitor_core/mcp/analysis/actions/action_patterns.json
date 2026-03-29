@@ -1,0 +1,16 @@
+{
+  "logout_url_patterns": [
+    "/logout",
+    "/goform/logout",
+    "/api/.*/logout",
+    "/api/.*/session/logout"
+  ],
+  "restart_url_patterns": [
+    "/reboot",
+    "/restart",
+    "/goform/.*[Ss]ecurity",
+    "/goform/.*[Rr]eboot",
+    "/goform/RouterStatus",
+    "/api/.*/device/reboot"
+  ]
+}

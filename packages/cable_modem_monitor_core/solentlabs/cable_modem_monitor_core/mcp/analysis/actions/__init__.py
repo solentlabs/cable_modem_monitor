@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ..types import ActionDetail, ActionsDetail
+from ..types import ActionDetail, ActionsDetail, CoreGap
 from .hnap import detect_hnap_actions
 from .http import detect_http_actions
 
@@ -32,6 +32,8 @@ _SANITIZER_VALUE_PATTERN: re.Pattern[str] = re.compile(r"^(FIELD|PASS)_[0-9a-f]+
 def detect_actions(
     entries: list[dict[str, Any]],
     transport: str,
+    warnings: list[str] | None = None,
+    core_gaps: list[CoreGap] | None = None,
 ) -> ActionsDetail:
     """Detect logout and restart actions from HAR entries.
 
@@ -41,14 +43,20 @@ def detect_actions(
     Args:
         entries: HAR ``log.entries`` list.
         transport: Detected transport (``http`` or ``hnap``).
+        warnings: Mutable list to append suggestions to.
+        core_gaps: Mutable list to append core gap items to.
 
     Returns:
         ActionsDetail with detected actions and credential annotations.
     """
+    if warnings is None:
+        warnings = []
+    if core_gaps is None:
+        core_gaps = []
     if transport == "hnap":
         result = detect_hnap_actions(entries)
     else:
-        result = detect_http_actions(entries)
+        result = detect_http_actions(entries, warnings, core_gaps)
     _classify_credentials(result)
     return result
 

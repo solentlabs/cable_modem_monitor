@@ -22,7 +22,7 @@ from ...validation.har_utils import (
     parse_form_params,
     path_from_url,
 )
-from ..types import AuthDetail
+from ..types import AuthDetail, CoreGap
 from .patterns import (
     get_login_url_patterns,
     get_nonce_error_prefix,
@@ -53,6 +53,7 @@ def detect_http_auth(
     entries: list[dict[str, Any]],
     warnings: list[str],
     hard_stops: list[str],
+    core_gaps: list[CoreGap] | None = None,
 ) -> AuthDetail:
     """Walk the HTTP auth decision tree.
 
@@ -63,11 +64,16 @@ def detect_http_auth(
         entries: HAR ``log.entries`` list.
         warnings: Mutable list to append warnings to.
         hard_stops: Mutable list to append hard stops to.
+        core_gaps: Mutable list to append core gap items to.
 
     Returns:
         AuthDetail with strategy, extracted fields, and confidence.
     """
+    if core_gaps is None:
+        core_gaps = []
+
     signals = _collect_http_signals(entries)
+    _flag_unmatched_logins(signals, core_gaps)
 
     # No auth signals at all -> none
     if not signals.has_any_auth_signal:
@@ -103,11 +109,25 @@ def detect_http_auth(
         # Standard form auth
         return _extract_form(entries, signals)
 
-    # Auth signals detected but no strategy matched -> HARD STOP
+    # Auth signals detected but no strategy matched -> HARD STOP + evidence
     hard_stops.append(
         f"{HARD_STOP_PREFIX} Cannot determine auth mechanism. "
         f"Observed signals: {signals.describe()}. "
         "Manual review required - check HAR for login flow details."
+    )
+    core_gaps.append(
+        CoreGap(
+            phase="auth",
+            category="auth_unknown",
+            summary=f"Auth signals detected but no strategy matched: {signals.describe()}",
+            evidence={
+                "has_401": signals.has_401,
+                "has_authorization_header": signals.has_authorization_header,
+                "has_form_post": signals.form_post_entry is not None,
+                "has_set_cookie_after_login": signals.has_set_cookie_after_login,
+                "signals_description": signals.describe(),
+            },
+        )
     )
     return AuthDetail(strategy="unknown", confidence="low")
 
@@ -136,6 +156,7 @@ class _HttpAuthSignals:
     has_302_after_post: bool = False
     has_authorization_header: bool = False
     has_set_cookie_after_login: bool = False
+    unmatched_credential_posts: list[str] = field(default_factory=list)
 
     def describe(self) -> str:
         """Describe what signals were found, for hard stop messages."""
@@ -152,6 +173,26 @@ class _HttpAuthSignals:
         if self.has_set_cookie_after_login:
             parts.append("Set-Cookie after login")
         return ", ".join(parts) if parts else "ambiguous auth artifacts"
+
+
+def _flag_unmatched_logins(signals: _HttpAuthSignals, core_gaps: list[CoreGap]) -> None:
+    """Flag credential POSTs to unrecognized endpoints as core gaps.
+
+    Only relevant when no login URL was matched — if the pipeline already
+    found a login via URL matching, extra credential POSTs are non-auth
+    forms (e.g., restart forms with password fields).
+    """
+    if signals.form_post_entry is not None or not signals.unmatched_credential_posts:
+        return
+    for endpoint in signals.unmatched_credential_posts:
+        core_gaps.append(
+            CoreGap(
+                phase="auth",
+                category="unmatched_login",
+                summary=f"Form POST to {endpoint} has credential fields but URL not in login patterns",
+                evidence={"endpoint": endpoint, "method": "POST"},
+            )
+        )
 
 
 def _collect_http_signals(entries: list[dict[str, Any]]) -> _HttpAuthSignals:
@@ -236,20 +277,23 @@ def _check_post_signals(
             signals.has_any_auth_signal = True
 
     # Form POST to login-like endpoint
-    if ("form" in mime or "x-www-form-urlencoded" in mime) and _is_login_url(url):
-        signals.form_post_entry = entry
-        signals.has_any_auth_signal = True
+    if "form" in mime or "x-www-form-urlencoded" in mime:
+        if _is_login_url(url):
+            signals.form_post_entry = entry
+            signals.has_any_auth_signal = True
 
-        # Check response for nonce-style text prefixes
-        resp_text = resp.get("content", {}).get("text", "")
-        if resp_text and (
-            resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX) or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
-        ):
-            signals.form_nonce_entry = entry
+            # Check response for nonce-style text prefixes
+            resp_text = resp.get("content", {}).get("text", "")
+            if resp_text and (
+                resp_text.strip().startswith(_NONCE_SUCCESS_PREFIX) or resp_text.strip().startswith(_NONCE_ERROR_PREFIX)
+            ):
+                signals.form_nonce_entry = entry
 
-        # 302 redirect after POST
-        if status in (301, 302):
-            signals.has_302_after_post = True
+            # 302 redirect after POST
+            if status in (301, 302):
+                signals.has_302_after_post = True
+        elif _has_credential_fields(post_data):
+            signals.unmatched_credential_posts.append(path_from_url(url))
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +497,18 @@ def _is_login_url(url: str) -> bool:
     """Check if a URL matches known login endpoint patterns."""
     lower = url.lower()
     return any(p in lower for p in _LOGIN_URL_PATTERNS)
+
+
+_CREDENTIAL_INDICATORS = ("password", "pass", "pwd")
+
+
+def _has_credential_fields(post_data: dict[str, Any]) -> bool:
+    """Check if form POST data contains credential-like field names."""
+    params = post_data.get("params", [])
+    if not params:
+        text = post_data.get("text", "")
+        return any(ind in text.lower() for ind in _CREDENTIAL_INDICATORS)
+    return any(any(ind in p.get("name", "").lower() for ind in _CREDENTIAL_INDICATORS) for p in params)
 
 
 def classify_form_fields(

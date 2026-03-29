@@ -1,0 +1,48 @@
+{
+  "_description": "Form auth with default fields that should be stripped from output",
+  "_expected_auth_strategy": "form",
+  "_expected_has_parser": true,
+  "_expected_format": "table",
+  "_analysis": {
+    "transport": "http",
+    "confidence": "high",
+    "auth": {
+      "strategy": "form",
+      "fields": {
+        "action": "/goform/login",
+        "method": "POST",
+        "username_field": "loginUsername",
+        "password_field": "loginPassword",
+        "encoding": "plain",
+        "hidden_fields": {},
+        "success": {}
+      },
+      "confidence": "high"
+    },
+    "session": {"cookie_name": "", "max_concurrent": null, "headers": {}, "token_prefix": ""},
+    "actions": {"logout": null, "restart": null},
+    "sections": {
+      "downstream": {
+        "format": "table",
+        "resource": "/data.html",
+        "mappings": [
+          {"field": "channel_id", "type": "integer", "index": 0},
+          {"field": "frequency", "type": "frequency", "unit": "Hz", "index": 1},
+          {"field": "power", "type": "float", "unit": "dBmV", "index": 2}
+        ],
+        "selector": {"type": "header_text", "match": "Downstream"},
+        "channel_type": {"fixed": "qam"},
+        "channel_count": 8
+      }
+    },
+    "warnings": [],
+    "hard_stops": []
+  },
+  "_metadata": {
+    "manufacturer": "Solent Labs",
+    "model": "T300",
+    "default_host": "192.168.100.1",
+    "hardware": {"docsis_version": "3.0"},
+    "status": "in_progress"
+  }
+}

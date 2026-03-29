@@ -15,5 +15,5 @@
   },
   "_format": "table",
   "_direction": "downstream",
-  "_expected_filter": {"lock_status": "Locked", "frequency": {"not": 0}}
+  "_expected_filter": {"lock_status": "locked", "frequency": {"not": 0}}
 }
