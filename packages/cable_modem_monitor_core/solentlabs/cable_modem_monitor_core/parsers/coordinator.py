@@ -79,7 +79,7 @@ class ModemParserCoordinator:
 
         self._enrich_derived_fields(result)
 
-        _logger.info(
+        _logger.debug(
             "Parse complete: %d DS, %d US channels",
             len(result.get("downstream", [])),
             len(result.get("upstream", [])),

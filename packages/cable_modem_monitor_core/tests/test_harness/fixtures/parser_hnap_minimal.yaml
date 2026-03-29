@@ -1,0 +1,61 @@
+downstream:
+  format: hnap
+  response_key: GetStatusDownstreamResponse
+  data_key: DownstreamData
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  fields:
+    - field: lock_status
+      type: lock_status
+      index: 1
+    - field: channel_type
+      type: string
+      index: 2
+      map:
+        "QAM256": "qam"
+    - field: channel_id
+      type: integer
+      index: 3
+    - field: frequency
+      type: frequency
+      index: 4
+    - field: power
+      type: float
+      index: 5
+    - field: snr
+      type: float
+      index: 6
+    - field: corrected
+      type: integer
+      index: 7
+    - field: uncorrected
+      type: integer
+      index: 8
+
+upstream:
+  format: hnap
+  response_key: GetStatusUpstreamResponse
+  data_key: UpstreamData
+  record_delimiter: "|+|"
+  field_delimiter: "^"
+  fields:
+    - field: lock_status
+      type: lock_status
+      index: 1
+    - field: channel_type
+      type: string
+      index: 2
+      map:
+        "SC-QAM": "qam"
+    - field: channel_id
+      type: integer
+      index: 3
+    - field: symbol_rate
+      type: integer
+      index: 4
+    - field: frequency
+      type: frequency
+      index: 5
+    - field: power
+      type: float
+      index: 6

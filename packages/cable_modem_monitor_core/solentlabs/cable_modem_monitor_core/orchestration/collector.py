@@ -10,7 +10,7 @@ See ORCHESTRATION_SPEC.md ModemDataCollector section.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Final
 
 import requests
 
@@ -29,6 +29,7 @@ from .models import ModemResult
 from .signals import CollectorSignal
 
 _logger = logging.getLogger(__name__)
+_LOGOUT_LOG_LEVEL: Final[int] = logging.DEBUG
 
 
 class LoginLockoutError(Exception):
@@ -111,14 +112,14 @@ class ModemDataCollector:
         try:
             auth_result = self.authenticate()
         except LoginLockoutError as exc:
-            _logger.warning("Auth lockout — firmware anti-brute-force triggered")
+            _logger.warning("Auth lockout [%s] — firmware anti-brute-force triggered", self._modem_config.model)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.AUTH_LOCKOUT,
                 error=str(exc),
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
-            _logger.info("Connection failed during auth: %s", exc)
+            _logger.info("Connection failed during auth [%s]: %s", self._modem_config.model, exc)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,
@@ -126,7 +127,7 @@ class ModemDataCollector:
             )
 
         if not auth_result.success:
-            _logger.info("Auth failed: %s", auth_result.error)
+            _logger.info("Auth failed [%s]: %s", self._modem_config.model, auth_result.error)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.AUTH_FAILED,
@@ -144,24 +145,27 @@ class ModemDataCollector:
             )
         except ResourceLoadError as exc:
             if exc.status_code in (401, 403):
+                hint = _auth_failure_hint(self._modem_config)
                 _logger.warning(
-                    "HTTP %s on %s — session likely expired",
+                    "%s on %s [%s] — %s",
                     exc.status_code,
                     exc.path,
+                    self._modem_config.model,
+                    hint,
                 )
                 return ModemResult(
                     success=False,
                     signal=CollectorSignal.LOAD_AUTH,
-                    error=str(exc),
+                    error=f"{exc.status_code} on {exc.path} — {hint}",
                 )
-            _logger.info("Resource load error: %s", exc)
+            _logger.info("Resource load error [%s]: %s", self._modem_config.model, exc)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.LOAD_ERROR,
                 error=str(exc),
             )
         except (requests.ConnectionError, requests.Timeout) as exc:
-            _logger.info("Connection failed during resource loading: %s", exc)
+            _logger.info("Connection failed during resource loading [%s]: %s", self._modem_config.model, exc)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.CONNECTIVITY,
@@ -172,7 +176,7 @@ class ModemDataCollector:
         try:
             data = self._parse(resources)
         except Exception as exc:
-            _logger.error("Parse error: %s", exc)
+            _logger.error("Parse error [%s]: %s", self._modem_config.model, exc)
             return ModemResult(
                 success=False,
                 signal=CollectorSignal.PARSE_ERROR,
@@ -362,7 +366,7 @@ class ModemDataCollector:
 
         _logger.debug("Executing logout action")
         try:
-            execute_action(self, self._modem_config, actions.logout)
+            execute_action(self, self._modem_config, actions.logout, log_level=_LOGOUT_LOG_LEVEL)
         except Exception:
             _logger.debug("Logout failed (best-effort)", exc_info=True)
         else:
@@ -371,6 +375,15 @@ class ModemDataCollector:
             # a stale session.
             self.clear_session()
             _logger.debug("Session cleared after logout")
+
+
+def _auth_failure_hint(modem_config: Any) -> str:
+    """Return a context-appropriate hint for a 401/403 during resource loading."""
+    if modem_config.auth is None or isinstance(modem_config.auth, NoneAuth):
+        return "modem requires authentication (check config)"
+    if isinstance(modem_config.auth, BasicAuth):
+        return "credentials rejected"
+    return "session expired"
 
 
 def _should_detect_login_pages(modem_config: Any) -> bool:

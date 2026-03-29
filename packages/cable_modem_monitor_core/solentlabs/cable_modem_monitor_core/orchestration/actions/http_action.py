@@ -35,6 +35,9 @@ def execute_http_action(
     base_url: str,
     action: HttpAction,
     timeout: int = 10,
+    *,
+    log_level: int = logging.INFO,
+    model: str = "",
 ) -> ActionResult:
     """Execute an HTTP action (logout or restart).
 
@@ -53,6 +56,9 @@ def execute_http_action(
         base_url: Modem base URL (e.g., ``"http://192.168.100.1"``).
         action: HTTP action config from modem.yaml.
         timeout: Per-request timeout in seconds.
+        log_level: Log level for action messages. Use ``logging.DEBUG``
+            for routine operations (logout) to reduce noise.
+        model: Modem model name for log context.
 
     Returns:
         ActionResult with success status and details.
@@ -60,7 +66,7 @@ def execute_http_action(
     stripped_base = base_url.rstrip("/")
 
     # Phase 1 + 2: Pre-fetch and endpoint extraction
-    endpoint = _resolve_endpoint(session, stripped_base, action, timeout)
+    endpoint = _resolve_endpoint(session, stripped_base, action, timeout, log_level=log_level, model=model)
     if endpoint is None:
         return ActionResult(
             success=False,
@@ -76,7 +82,7 @@ def execute_http_action(
     headers = dict(action.headers) if action.headers else None
     data = dict(action.params) if action.params else None
 
-    _logger.info("Action: %s %s", action.method, endpoint)
+    _logger.log(log_level, "Action [%s]: %s %s", model, action.method, endpoint)
 
     try:
         resp = session.request(
@@ -86,15 +92,17 @@ def execute_http_action(
             headers=headers,
             timeout=timeout,
         )
-        _logger.info("Action response: %d", resp.status_code)
+        _logger.log(log_level, "Action response [%s]: %d", model, resp.status_code)
         return ActionResult(
             success=True,
             message=f"Action completed with status {resp.status_code}",
             details={"status_code": resp.status_code},
         )
     except (requests.ConnectionError, requests.Timeout):
-        _logger.info(
-            "Action: connection lost after %s %s — expected for restart",
+        _logger.log(
+            log_level,
+            "Action [%s]: connection lost after %s %s — expected for restart",
+            model,
             action.method,
             endpoint,
         )
@@ -109,6 +117,9 @@ def _resolve_endpoint(
     base_url: str,
     action: HttpAction,
     timeout: int,
+    *,
+    log_level: int = logging.INFO,
+    model: str = "",
 ) -> str | None:
     """Resolve the action endpoint — static or dynamic extraction.
 
@@ -118,6 +129,8 @@ def _resolve_endpoint(
         action: Action config with optional pre_fetch_url and
             endpoint_pattern.
         timeout: Per-request timeout in seconds.
+        log_level: Log level for informational messages.
+        model: Modem model name for log context.
 
     Returns:
         Endpoint path to use for the main request, or ``None`` if
@@ -128,18 +141,21 @@ def _resolve_endpoint(
 
     # Phase 1: Pre-fetch
     pre_url = f"{base_url}{action.pre_fetch_url}"
-    _logger.info("Action pre-fetch: GET %s", action.pre_fetch_url)
+    _logger.log(log_level, "Action pre-fetch [%s]: GET %s", model, action.pre_fetch_url)
 
     try:
         pre_resp = session.get(pre_url, timeout=timeout)
-        _logger.info(
-            "Action pre-fetch: %d (%d bytes)",
+        _logger.log(
+            log_level,
+            "Action pre-fetch [%s]: %d (%d bytes)",
+            model,
             pre_resp.status_code,
             len(pre_resp.content),
         )
     except (requests.ConnectionError, requests.Timeout):
         _logger.warning(
-            "Action pre-fetch failed: GET %s — connection lost",
+            "Action pre-fetch failed [%s]: GET %s — connection lost",
+            model,
             action.pre_fetch_url,
         )
         # Pre-fetch may only be for session state; try static endpoint
@@ -152,16 +168,17 @@ def _resolve_endpoint(
             action.endpoint_pattern,
         )
         if extracted:
-            _logger.info("Action endpoint extracted: %s", extracted)
+            _logger.log(log_level, "Action endpoint extracted [%s]: %s", model, extracted)
             return extracted
 
         # Extraction failed — use fallback or fail
         page_preview = pre_resp.text[:500] if pre_resp.text else "(empty)"
         if action.endpoint:
             _logger.error(
-                'Action endpoint extraction failed — keyword "%s" not '
+                'Action endpoint extraction failed [%s] — keyword "%s" not '
                 "found in any form action. Falling back to static "
                 "endpoint %s. Page content preview: %s",
+                model,
                 action.endpoint_pattern,
                 action.endpoint,
                 page_preview,
@@ -169,9 +186,10 @@ def _resolve_endpoint(
             return action.endpoint
 
         _logger.error(
-            'Action endpoint extraction failed — keyword "%s" not '
+            'Action endpoint extraction failed [%s] — keyword "%s" not '
             "found in any form action. No static endpoint fallback. "
             "Page content preview: %s",
+            model,
             action.endpoint_pattern,
             page_preview,
         )

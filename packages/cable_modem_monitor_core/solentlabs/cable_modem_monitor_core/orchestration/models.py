@@ -9,6 +9,7 @@ See ORCHESTRATION_SPEC.md Data Models section.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from .signals import (
@@ -131,6 +132,10 @@ class ModemSnapshot:
         health_info: Health probe results. None if no health monitor.
         collector_signal: Raw signal from the collector (for diagnostics).
         error: Human-readable error summary.
+        stats_last_reset: Timestamp when error counters were detected
+            to have reset (decreased between polls). Used as a proxy
+            for last boot time when the modem lacks native uptime.
+            None until a reset is detected.
     """
 
     connection_status: ConnectionStatus
@@ -139,6 +144,7 @@ class ModemSnapshot:
     health_info: HealthInfo | None = None
     collector_signal: CollectorSignal = CollectorSignal.OK
     error: str = ""
+    stats_last_reset: datetime | None = None
 
 
 @dataclass

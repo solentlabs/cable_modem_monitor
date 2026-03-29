@@ -43,9 +43,14 @@ def parse_uptime_to_seconds(uptime_str: str | None) -> int | None:
     try:
         total_seconds = 0
 
+        # Plain numeric string — treat as raw seconds (e.g., "1471890")
+        stripped = uptime_str.strip()
+        if stripped.isdigit():
+            return int(stripped) if int(stripped) > 0 else None
+
         # Check for HH:MM:SS or HHHH:MM:SS format (e.g., "1308:19:22")
         # This format is hours:minutes:seconds with no unit suffixes
-        hms_match = re.match(r"^(\d+):(\d{1,2}):(\d{1,2})$", uptime_str.strip())
+        hms_match = re.match(r"^(\d+):(\d{1,2}):(\d{1,2})$", stripped)
         if hms_match:
             hours = int(hms_match.group(1))
             minutes = int(hms_match.group(2))

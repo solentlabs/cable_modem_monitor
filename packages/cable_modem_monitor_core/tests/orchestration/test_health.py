@@ -29,22 +29,36 @@ from solentlabs.cable_modem_monitor_core.orchestration.signals import HealthStat
 # Helpers
 # ------------------------------------------------------------------
 
+_MODULE = "solentlabs.cable_modem_monitor_core.orchestration.modem_health"
+
 
 def _make_monitor(
     *,
     supports_icmp: bool = True,
     supports_head: bool = True,
     http_probe: bool = True,
+    legacy_ssl: bool = False,
     timeout: int = 5,
-) -> HealthMonitor:
-    """Build a HealthMonitor with defaults."""
-    return HealthMonitor(
-        base_url="http://192.168.100.1",
-        supports_icmp=supports_icmp,
-        supports_head=supports_head,
-        http_probe=http_probe,
-        timeout=timeout,
-    )
+) -> tuple[HealthMonitor, MagicMock]:
+    """Build a HealthMonitor with a mocked session.
+
+    Patches create_session during construction so no real HTTP session
+    is created. Returns the monitor and the mock session so tests can
+    set up .head/.get return values with proper typing.
+    """
+    with patch(f"{_MODULE}.create_session") as mock_cs:
+        mock_session = MagicMock()
+        mock_cs.return_value = mock_session
+        monitor = HealthMonitor(
+            base_url="http://192.168.100.1",
+            model="T100",
+            supports_icmp=supports_icmp,
+            supports_head=supports_head,
+            http_probe=http_probe,
+            legacy_ssl=legacy_ssl,
+            timeout=timeout,
+        )
+    return monitor, mock_session
 
 
 def _mock_ping_success(latency_ms: float = 4.12) -> MagicMock:
@@ -168,29 +182,52 @@ def test_extract_host(url: str, expected: str, _desc: str) -> None:
 class TestBuildPingCommand:
     """Verify platform-specific ping command generation."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.platform.system")
+    @patch(f"{_MODULE}.platform.system")
     def test_linux(self, mock_system: MagicMock) -> None:
         """Linux uses -c 1 -W timeout."""
         mock_system.return_value = "Linux"
-        monitor = _make_monitor(timeout=5)
+        monitor, session = _make_monitor(timeout=5)
         cmd = monitor._build_ping_command()
         assert cmd == ["ping", "-c", "1", "-W", "5", "192.168.100.1"]
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.platform.system")
+    @patch(f"{_MODULE}.platform.system")
     def test_darwin(self, mock_system: MagicMock) -> None:
         """macOS uses -c 1 -t timeout."""
         mock_system.return_value = "Darwin"
-        monitor = _make_monitor(timeout=5)
+        monitor, session = _make_monitor(timeout=5)
         cmd = monitor._build_ping_command()
         assert cmd == ["ping", "-c", "1", "-t", "5", "192.168.100.1"]
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.platform.system")
+    @patch(f"{_MODULE}.platform.system")
     def test_windows(self, mock_system: MagicMock) -> None:
         """Windows uses -n 1 -w timeout_ms."""
         mock_system.return_value = "Windows"
-        monitor = _make_monitor(timeout=5)
+        monitor, session = _make_monitor(timeout=5)
         cmd = monitor._build_ping_command()
         assert cmd == ["ping", "-n", "1", "-w", "5000", "192.168.100.1"]
+
+
+# ------------------------------------------------------------------
+# Session creation
+# ------------------------------------------------------------------
+
+
+class TestSessionCreation:
+    """Verify HealthMonitor creates session with correct SSL config."""
+
+    def test_default_session(self) -> None:
+        """Default construction passes legacy_ssl=False."""
+        with patch(f"{_MODULE}.create_session") as mock_cs:
+            mock_cs.return_value = MagicMock()
+            HealthMonitor(base_url="http://192.168.100.1")
+            mock_cs.assert_called_once_with(legacy_ssl=False)
+
+    def test_legacy_ssl_session(self) -> None:
+        """legacy_ssl=True is forwarded to create_session."""
+        with patch(f"{_MODULE}.create_session") as mock_cs:
+            mock_cs.return_value = MagicMock()
+            HealthMonitor(base_url="https://192.168.100.1", legacy_ssl=True)
+            mock_cs.assert_called_once_with(legacy_ssl=True)
 
 
 # ------------------------------------------------------------------
@@ -201,49 +238,67 @@ class TestBuildPingCommand:
 class TestUC50BothProbes:
     """Both ICMP and HTTP probes run and succeed."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_both_pass(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_both_pass(self, mock_run: MagicMock) -> None:
         """ICMP + HTTP both succeed → RESPONSIVE."""
         mock_run.return_value = _mock_ping_success(4.0)
-        mock_head.return_value = _mock_http_response(0.012)
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response(0.012)
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.RESPONSIVE
         assert info.icmp_latency_ms == 4.0
         assert info.http_latency_ms == pytest.approx(12.0, abs=0.1)
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_latest_property(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_latest_property(self, mock_run: MagicMock) -> None:
         """ping() result accessible via latest property."""
         mock_run.return_value = _mock_ping_success()
-        mock_head.return_value = _mock_http_response()
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
         info = monitor.ping()
 
         assert monitor.latest is info
 
     def test_latest_default(self) -> None:
         """latest returns UNKNOWN before first ping()."""
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
         assert monitor.latest.health_status == HealthStatus.UNKNOWN
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.get")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_http_uses_get_when_head_unsupported(self, mock_run: MagicMock, mock_get: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_http_uses_get_when_head_unsupported(self, mock_run: MagicMock) -> None:
         """supports_head=False → uses GET instead of HEAD."""
         mock_run.return_value = _mock_ping_success()
-        mock_get.return_value = _mock_http_response()
 
-        monitor = _make_monitor(supports_head=False)
+        monitor, session = _make_monitor(supports_head=False)
+        session.get.return_value = _mock_http_response()
         info = monitor.ping()
 
-        mock_get.assert_called_once()
+        session.get.assert_called_once()
+        session.head.assert_not_called()
         assert info.health_status == HealthStatus.RESPONSIVE
+
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_http_probe_does_not_follow_redirects(self, mock_run: MagicMock) -> None:
+        """HTTP probe uses allow_redirects=False — any response is alive."""
+        mock_run.return_value = _mock_ping_success()
+
+        redirect_response = _mock_http_response(0.005)
+        redirect_response.status_code = 302
+
+        monitor, session = _make_monitor()
+        session.head.return_value = redirect_response
+        info = monitor.ping()
+
+        session.head.assert_called_once_with(
+            "http://192.168.100.1",
+            timeout=5,
+            allow_redirects=False,
+        )
+        assert info.health_status == HealthStatus.RESPONSIVE
+        assert info.http_latency_ms == pytest.approx(5.0, abs=0.1)
 
 
 # ------------------------------------------------------------------
@@ -254,14 +309,13 @@ class TestUC50BothProbes:
 class TestUC53OutageDetection:
     """Health probes detect outage between data polls."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_detects_modem_down(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_detects_modem_down(self, mock_run: MagicMock) -> None:
         """Both probes fail → UNRESPONSIVE."""
         mock_run.return_value = _mock_ping_failure()
-        mock_head.side_effect = requests.ConnectionError("refused")
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.side_effect = requests.ConnectionError("refused")
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNRESPONSIVE
@@ -277,14 +331,13 @@ class TestUC53OutageDetection:
 class TestUC54ICMPBlocked:
     """Network blocks ICMP but HTTP works."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_icmp_fail_http_pass(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_icmp_fail_http_pass(self, mock_run: MagicMock) -> None:
         """ICMP fails + HTTP succeeds → ICMP_BLOCKED."""
         mock_run.return_value = _mock_ping_failure()
-        mock_head.return_value = _mock_http_response()
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.ICMP_BLOCKED
@@ -298,14 +351,13 @@ class TestUC54ICMPBlocked:
 class TestUC55Degraded:
     """ICMP works but HTTP fails (web server hung)."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_icmp_pass_http_fail(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_icmp_pass_http_fail(self, mock_run: MagicMock) -> None:
         """ICMP succeeds + HTTP fails → DEGRADED."""
         mock_run.return_value = _mock_ping_success(4.0)
-        mock_head.side_effect = requests.Timeout("timeout")
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.side_effect = requests.Timeout("timeout")
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.DEGRADED
@@ -323,7 +375,7 @@ class TestUC56NeitherProbe:
 
     def test_no_probes(self) -> None:
         """supports_icmp=False + http_probe=False → UNKNOWN."""
-        monitor = _make_monitor(supports_icmp=False, http_probe=False)
+        monitor, session = _make_monitor(supports_icmp=False, http_probe=False)
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNKNOWN
@@ -339,14 +391,13 @@ class TestUC56NeitherProbe:
 class TestUC57HealthDuringRestart:
     """Health checks continue independently during restart."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_ping_works_independently(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_ping_works_independently(self, mock_run: MagicMock) -> None:
         """ping() works regardless of restart state (stateless probes)."""
         mock_run.return_value = _mock_ping_failure()
-        mock_head.side_effect = requests.ConnectionError("refused")
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.side_effect = requests.ConnectionError("refused")
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNRESPONSIVE
@@ -360,25 +411,20 @@ class TestUC57HealthDuringRestart:
 class TestHTTPOnlyMode:
     """Only HTTP probe runs when ICMP is not supported."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_http_pass(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    @patch(f"{_MODULE}.subprocess.run")
+    def test_http_pass(self, mock_run: MagicMock) -> None:
         """HTTP only, passes → RESPONSIVE."""
-        mock_head.return_value = _mock_http_response()
-
-        monitor = _make_monitor(supports_icmp=False)
+        monitor, session = _make_monitor(supports_icmp=False)
+        session.head.return_value = _mock_http_response()
         info = monitor.ping()
 
         mock_run.assert_not_called()
         assert info.health_status == HealthStatus.RESPONSIVE
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
-    def test_http_fail(self, mock_run: MagicMock, mock_head: MagicMock) -> None:
+    def test_http_fail(self) -> None:
         """HTTP only, fails → UNRESPONSIVE."""
-        mock_head.side_effect = requests.Timeout("timeout")
-
-        monitor = _make_monitor(supports_icmp=False)
+        monitor, session = _make_monitor(supports_icmp=False)
+        session.head.side_effect = requests.Timeout("timeout")
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNRESPONSIVE
@@ -392,23 +438,23 @@ class TestHTTPOnlyMode:
 class TestICMPOnlyMode:
     """Only ICMP runs when HTTP probe is disabled."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_icmp_pass(self, mock_run: MagicMock) -> None:
         """ICMP only, passes → RESPONSIVE."""
         mock_run.return_value = _mock_ping_success()
 
-        monitor = _make_monitor(http_probe=False)
+        monitor, session = _make_monitor(http_probe=False)
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.RESPONSIVE
         assert info.http_latency_ms is None
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_icmp_fail(self, mock_run: MagicMock) -> None:
         """ICMP only, fails → UNRESPONSIVE."""
         mock_run.return_value = _mock_ping_failure()
 
-        monitor = _make_monitor(http_probe=False)
+        monitor, session = _make_monitor(http_probe=False)
         info = monitor.ping()
 
         assert info.health_status == HealthStatus.UNRESPONSIVE
@@ -422,29 +468,29 @@ class TestICMPOnlyMode:
 class TestICMPErrorHandling:
     """ICMP probe handles subprocess errors gracefully."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_subprocess_timeout(self, mock_run: MagicMock) -> None:
         """subprocess.TimeoutExpired → probe fails gracefully."""
         mock_run.side_effect = subprocess.TimeoutExpired(cmd=["ping"], timeout=7)
 
-        monitor = _make_monitor(supports_icmp=True, http_probe=False)
+        monitor, session = _make_monitor(supports_icmp=True, http_probe=False)
         info = monitor.ping()
 
         assert info.icmp_latency_ms is None
         assert info.health_status == HealthStatus.UNRESPONSIVE
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_os_error(self, mock_run: MagicMock) -> None:
         """OSError (ping not found) → probe fails gracefully."""
         mock_run.side_effect = OSError("No such file or directory: 'ping'")
 
-        monitor = _make_monitor(supports_icmp=True, http_probe=False)
+        monitor, session = _make_monitor(supports_icmp=True, http_probe=False)
         info = monitor.ping()
 
         assert info.icmp_latency_ms is None
         assert info.health_status == HealthStatus.UNRESPONSIVE
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_ping_success_unparseable_output(self, mock_run: MagicMock) -> None:
         """Return code 0 but unparseable output → success with no latency."""
         result = MagicMock()
@@ -452,7 +498,7 @@ class TestICMPErrorHandling:
         result.stdout = "unexpected output format"
         mock_run.return_value = result
 
-        monitor = _make_monitor(supports_icmp=True, http_probe=False)
+        monitor, session = _make_monitor(supports_icmp=True, http_probe=False)
         info = monitor.ping()
 
         # Probe is success (rc=0) but no latency extracted
@@ -468,81 +514,73 @@ class TestICMPErrorHandling:
 class TestHealthLogging:
     """Verify logging contract."""
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_first_responsive_logs_info(
         self,
         mock_run: MagicMock,
-        mock_head: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """First RESPONSIVE check (status transition) logs at INFO."""
         mock_run.return_value = _mock_ping_success(4.0)
-        mock_head.return_value = _mock_http_response()
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
         with caplog.at_level("INFO"):
             monitor.ping()
 
-        assert "Health check: responsive" in caplog.text
+        assert "Health check [T100]: responsive" in caplog.text
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_routine_responsive_logs_debug(
         self,
         mock_run: MagicMock,
-        mock_head: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Repeated RESPONSIVE checks (no transition) log at DEBUG."""
         mock_run.return_value = _mock_ping_success(4.0)
-        mock_head.return_value = _mock_http_response()
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.return_value = _mock_http_response()
         monitor.ping()  # first check — transitions UNKNOWN → RESPONSIVE
 
         caplog.clear()
         with caplog.at_level("DEBUG"):
             monitor.ping()  # second check — still RESPONSIVE
 
-        assert "Health check: responsive" in caplog.text
+        assert "Health check [T100]: responsive" in caplog.text
         # Verify it was DEBUG, not INFO
         for record in caplog.records:
             if "Health check:" in record.message:
                 assert record.levelname == "DEBUG"
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_degraded_logs_warning(
         self,
         mock_run: MagicMock,
-        mock_head: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """DEGRADED logs at WARNING level."""
         mock_run.return_value = _mock_ping_success()
-        mock_head.side_effect = requests.Timeout("timeout")
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.side_effect = requests.Timeout("timeout")
         with caplog.at_level("WARNING"):
             monitor.ping()
 
-        assert "Health check: degraded" in caplog.text
+        assert "Health check [T100]: degraded" in caplog.text
 
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.requests.head")
-    @patch("solentlabs.cable_modem_monitor_core.orchestration.modem_health.subprocess.run")
+    @patch(f"{_MODULE}.subprocess.run")
     def test_unresponsive_logs_warning(
         self,
         mock_run: MagicMock,
-        mock_head: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """UNRESPONSIVE logs at WARNING level."""
         mock_run.return_value = _mock_ping_failure()
-        mock_head.side_effect = requests.ConnectionError("refused")
 
-        monitor = _make_monitor()
+        monitor, session = _make_monitor()
+        session.head.side_effect = requests.ConnectionError("refused")
         with caplog.at_level("WARNING"):
             monitor.ping()
 
-        assert "Health check: unresponsive" in caplog.text
+        assert "Health check [T100]: unresponsive" in caplog.text

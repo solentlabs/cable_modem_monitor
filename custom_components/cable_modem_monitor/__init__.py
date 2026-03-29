@@ -47,6 +47,7 @@ from solentlabs.cable_modem_monitor_core.test_harness.runner import (
 from .const import (
     CONF_ENTITY_PREFIX,
     CONF_HEALTH_CHECK_INTERVAL,
+    CONF_LEGACY_SSL,
     CONF_MANUFACTURER,
     CONF_MODEL,
     CONF_MODEM_DIR,
@@ -101,7 +102,12 @@ async def async_setup_entry(
     Steps 1-5 (config loading, Core component creation) run in an
     executor thread because they involve file I/O.
     """
-    _LOGGER.info("Cable Modem Monitor v%s starting", VERSION)
+    _LOGGER.info(
+        "Cable Modem Monitor v%s starting [%s %s]",
+        VERSION,
+        entry.data.get(CONF_MANUFACTURER, ""),
+        entry.data.get(CONF_MODEL, ""),
+    )
 
     # Initialize log buffer before any Core calls so auth, parsing,
     # action, and health logs are captured from the first poll.
@@ -158,9 +164,11 @@ async def async_setup_entry(
         )
 
     # Step 8: First poll (always runs, even when polling is disabled)
+    model = entry.data.get(CONF_MODEL, host)
     await data_coordinator.async_config_entry_first_refresh()
     if health_coordinator is not None:
         await health_coordinator.async_config_entry_first_refresh()
+        _LOGGER.info("Health monitoring started [%s] — every %ds", model, health_check_interval)
 
     # Step 9: Store runtime data
     entry.runtime_data = CableModemRuntimeData(
@@ -183,7 +191,7 @@ async def async_setup_entry(
         async_register_services(hass)
 
     # Log operational summary — after this, per-poll details are DEBUG only
-    _log_operational_summary(scan_interval, health_check_interval, host)
+    _log_operational_summary(scan_interval, health_check_interval, model)
 
     # Register update listener (options flow changes trigger reload)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -194,9 +202,9 @@ async def async_setup_entry(
 def _log_operational_summary(
     scan_interval: int,
     health_check_interval: int,
-    host: str,
+    model: str,
 ) -> None:
-    """Log a one-time summary after setup completes.
+    """Log a one-time summary after startup completes.
 
     Tells the user the polling cadence and how to enable detailed
     logging. After this message, per-poll details are DEBUG only.
@@ -212,8 +220,8 @@ def _log_operational_summary(
         health_msg = "disabled"
 
     _LOGGER.info(
-        "Setup complete for %s — polling %s, health checks %s. " "Enable debug logging for per-poll details.",
-        host,
+        "Initialized [%s] — polling %s, health checks %s. " "Enable debug logging for per-poll details.",
+        model,
         poll_msg,
         health_msg,
     )
@@ -316,9 +324,11 @@ def _create_core_components(
     if supports_icmp or http_probe:
         health_monitor = HealthMonitor(
             base_url=base_url,
+            model=modem_config.model,
             supports_icmp=supports_icmp,
             supports_head=supports_head,
             http_probe=http_probe,
+            legacy_ssl=data.get(CONF_LEGACY_SSL, False),
         )
 
     # Step 5: Create Orchestrator

@@ -182,7 +182,7 @@ collector = ModemDataCollector(
 )
 health_monitor = HealthMonitor(
     base_url="http://192.168.100.1",
-    supports_icmp=True, supports_head=True,
+    supports_icmp=True, supports_head=True, legacy_ssl=False,
 )
 orchestrator = Orchestrator(collector, health_monitor, modem_config)
 

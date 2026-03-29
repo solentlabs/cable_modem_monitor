@@ -107,7 +107,7 @@ async_setup_entry(hass, entry)
  │     Read modem.yaml health config for defaults
  │     if supports_icmp or http_probe:
  │         HealthMonitor(base_url, supports_icmp,
- │             supports_head, http_probe)
+ │             supports_head, http_probe, legacy_ssl)
  │     else: None
  │
  ├─ 5. Create Orchestrator

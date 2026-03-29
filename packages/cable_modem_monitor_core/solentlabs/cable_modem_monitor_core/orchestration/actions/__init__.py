@@ -29,6 +29,8 @@ def execute_action(
     collector: ModemDataCollector,
     modem_config: ModemConfig,
     action: HttpAction | HnapAction,
+    *,
+    log_level: int = logging.INFO,
 ) -> ActionResult:
     """Execute an action using the collector's session.
 
@@ -40,11 +42,15 @@ def execute_action(
         collector: Active collector with authenticated session.
         modem_config: Modem configuration for timeout and auth fields.
         action: Action config from modem.yaml (logout or restart).
+        log_level: Log level for action messages. Use ``logging.DEBUG``
+            for routine operations (logout) to reduce noise.
 
     Returns:
         ActionResult with success status and details.
     """
     from ...models.modem_config.actions import HnapAction, HttpAction
+
+    model = modem_config.model
 
     if isinstance(action, HttpAction):
         return execute_http_action(
@@ -52,6 +58,8 @@ def execute_action(
             collector._base_url,
             action,
             timeout=modem_config.timeout,
+            log_level=log_level,
+            model=model,
         )
 
     if isinstance(action, HnapAction):
@@ -66,9 +74,11 @@ def execute_action(
             private_key=private_key,
             hmac_algorithm=hmac_algorithm,
             timeout=modem_config.timeout,
+            log_level=log_level,
+            model=model,
         )
 
-    _logger.error("Unknown action type: %s", type(action).__name__)
+    _logger.error("Unknown action type [%s]: %s", model, type(action).__name__)
     return ActionResult(
         success=False,
         message=f"Unknown action type: {type(action).__name__}",

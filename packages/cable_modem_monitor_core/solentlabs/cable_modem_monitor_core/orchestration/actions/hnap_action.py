@@ -38,6 +38,9 @@ def execute_hnap_action(
     private_key: str,
     hmac_algorithm: str = "md5",
     timeout: int = 10,
+    *,
+    log_level: int = logging.INFO,
+    model: str = "",
 ) -> ActionResult:
     """Execute an HNAP SOAP action (restart).
 
@@ -60,6 +63,8 @@ def execute_hnap_action(
         private_key: HNAP HMAC signing key from auth context.
         hmac_algorithm: HMAC algorithm (``"md5"`` or ``"sha256"``).
         timeout: Per-request timeout in seconds.
+        log_level: Log level for action messages. Use ``logging.DEBUG``
+            for routine operations to reduce noise.
 
     Returns:
         ActionResult with success status and response details.
@@ -76,13 +81,15 @@ def execute_hnap_action(
             private_key,
             hmac_algorithm,
             timeout,
+            log_level=log_level,
+            model=model,
         )
 
     # Phase 2: Interpolate params
     params = _interpolate_params(dict(action.params), pre_fetch_data)
 
     # Phase 3: Send SOAP request
-    _logger.info("Action: HNAP %s", action.action_name)
+    _logger.log(log_level, "Action [%s]: HNAP %s", model, action.action_name)
 
     body = {action.action_name: params}
     headers = {
@@ -103,8 +110,10 @@ def execute_hnap_action(
             timeout=timeout,
         )
     except (requests.ConnectionError, requests.Timeout):
-        _logger.info(
-            "Action: connection lost after HNAP %s — expected for restart",
+        _logger.log(
+            log_level,
+            "Action [%s]: connection lost after HNAP %s — expected for restart",
+            model,
             action.action_name,
         )
         return ActionResult(
@@ -117,7 +126,8 @@ def execute_hnap_action(
         response_data = resp.json()
     except (ValueError, TypeError):
         _logger.warning(
-            "HNAP action response is not valid JSON (status %d)",
+            "HNAP action response [%s] is not valid JSON (status %d)",
+            model,
             resp.status_code,
         )
         return ActionResult(
@@ -126,7 +136,7 @@ def execute_hnap_action(
             details={"status_code": resp.status_code},
         )
 
-    return _validate_response(response_data, action)
+    return _validate_response(response_data, action, log_level=log_level, model=model)
 
 
 def _execute_pre_fetch(
@@ -136,6 +146,9 @@ def _execute_pre_fetch(
     private_key: str,
     hmac_algorithm: str,
     timeout: int,
+    *,
+    log_level: int = logging.INFO,
+    model: str = "",
 ) -> dict[str, str]:
     """Call an HNAP action to get current config for interpolation.
 
@@ -148,12 +161,13 @@ def _execute_pre_fetch(
         private_key: HMAC signing key.
         hmac_algorithm: Hash algorithm.
         timeout: Request timeout.
+        log_level: Log level for informational messages.
 
     Returns:
         Dict of values from the pre-fetch response, or empty dict
         on failure.
     """
-    _logger.info("Action pre-fetch: HNAP %s", pre_fetch_action)
+    _logger.log(log_level, "Action pre-fetch [%s]: HNAP %s", model, pre_fetch_action)
 
     body: dict[str, dict[str, str]] = {pre_fetch_action: {}}
     headers = {
@@ -175,15 +189,17 @@ def _execute_pre_fetch(
         )
         data = resp.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
-        _logger.warning("Action pre-fetch failed: %s", exc)
+        _logger.warning("Action pre-fetch failed [%s]: %s", model, exc)
         return {}
 
     # Unwrap response: {ActionResponse: {...data...}}
     response_key = f"{pre_fetch_action}Response"
     inner = data.get(response_key, data)
 
-    _logger.info(
-        "Action pre-fetch: %s returned %d keys",
+    _logger.log(
+        log_level,
+        "Action pre-fetch [%s]: %s returned %d keys",
+        model,
         pre_fetch_action,
         len(inner) if isinstance(inner, dict) else 0,
     )
@@ -237,6 +253,9 @@ def _interpolate_params(
 def _validate_response(
     response_data: dict,
     action: HnapAction,
+    *,
+    log_level: int = logging.INFO,
+    model: str = "",
 ) -> ActionResult:
     """Validate the HNAP action response.
 
@@ -246,6 +265,7 @@ def _validate_response(
     Args:
         response_data: Parsed JSON response.
         action: HNAP action config with validation fields.
+        log_level: Log level for informational messages.
 
     Returns:
         ActionResult based on response validation.
@@ -260,8 +280,10 @@ def _validate_response(
     if action.result_key:
         result_value = data.get(action.result_key, "")
         if action.success_value and result_value == action.success_value:
-            _logger.info(
-                "HNAP action accepted (result=%s)",
+            _logger.log(
+                log_level,
+                "HNAP action accepted [%s] (result=%s)",
+                model,
                 result_value,
             )
             return ActionResult(
@@ -271,7 +293,8 @@ def _validate_response(
             )
         if result_value:
             _logger.warning(
-                "HNAP action unexpected result: %s",
+                "HNAP action unexpected result [%s]: %s",
+                model,
                 result_value,
             )
             return ActionResult(
@@ -281,7 +304,7 @@ def _validate_response(
             )
 
     # No result key or no match — assume success if we got a response
-    _logger.info("HNAP action sent (no result key in response)")
+    _logger.log(log_level, "HNAP action sent [%s] (no result key in response)", model)
     return ActionResult(
         success=True,
         message="Action sent",

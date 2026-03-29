@@ -52,10 +52,12 @@ class ChannelStabilityMonitor:
         collector: ModemDataCollector,
         channel_stabilization_timeout: int = 300,
         probe_interval: int = 10,
+        model: str = "",
     ) -> None:
         self._collector = collector
         self._channel_stabilization_timeout = channel_stabilization_timeout
         self._probe_interval = probe_interval
+        self._model = model
 
     @property
     def channel_stabilization_timeout(self) -> int:
@@ -99,7 +101,7 @@ class ChannelStabilityMonitor:
                 _logger.debug("Restart recovery: probe %d — collection failed", probe_num)
             else:
                 consecutive_stable, grace_start = _update_stability(
-                    counts, last_counts, consecutive_stable, grace_start, probe_num
+                    counts, last_counts, consecutive_stable, grace_start, probe_num, self._model
                 )
                 last_counts = counts
                 if grace_start is not None and (time.monotonic() - grace_start) >= GRACE_PERIOD_SECONDS:
@@ -137,6 +139,7 @@ def _update_stability(
     consecutive_stable: int,
     grace_start: float | None,
     probe_num: int,
+    model: str = "",
 ) -> tuple[int, float | None]:
     """Update stability tracking after a successful channel poll.
 
@@ -160,7 +163,8 @@ def _update_stability(
     if consecutive_stable >= STABILITY_COUNT and grace_start is None:
         grace_start = time.monotonic()
         _logger.info(
-            "Restart recovery: channels stable (%d DS, %d US), entering grace period",
+            "Restart recovery [%s]: channels stable (%d DS, %d US), entering grace period",
+            model,
             counts[0],
             counts[1],
         )

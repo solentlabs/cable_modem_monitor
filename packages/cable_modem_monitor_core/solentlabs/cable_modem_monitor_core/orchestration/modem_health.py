@@ -20,6 +20,7 @@ import subprocess
 
 import requests
 
+from ..connectivity import create_session
 from .models import HealthInfo
 from .signals import HealthStatus
 
@@ -45,6 +46,8 @@ class HealthMonitor:
             Discovered during setup. When False, GET is used instead.
         http_probe: Whether to run HTTP health probes at all. Set to
             False for fragile modems via modem.yaml health.http_probe.
+        legacy_ssl: Whether HTTPS requires legacy (SECLEVEL=0) ciphers.
+            Discovered during config-flow protocol detection.
         timeout: Per-probe timeout in seconds.
     """
 
@@ -52,17 +55,21 @@ class HealthMonitor:
         self,
         base_url: str,
         *,
+        model: str = "",
         supports_icmp: bool = True,
         supports_head: bool = True,
         http_probe: bool = True,
+        legacy_ssl: bool = False,
         timeout: int = 5,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._host = self._extract_host(base_url)
+        self._model = model
         self._supports_icmp = supports_icmp
         self._http_probe = http_probe
         self._http_method = "HEAD" if supports_head else "GET"
         self._timeout = timeout
+        self._session = create_session(legacy_ssl=legacy_ssl)
 
         # State
         self._latest = HealthInfo(health_status=HealthStatus.UNKNOWN)
@@ -149,24 +156,26 @@ class HealthMonitor:
     def _probe_http(self) -> tuple[bool, float | None]:
         """Run an HTTP HEAD or GET probe.
 
-        Uses a fresh session (no auth). Only checks reachability and
-        measures response time.
+        Uses a pre-configured session (no auth, verify=False, optional
+        legacy SSL).  This is a connectivity check — any response means
+        the modem's web server is alive.  Redirects are not followed;
+        a 3xx is as valid a sign of life as a 200.
 
         Returns:
             Tuple of (success, latency_ms). latency_ms is None on failure.
         """
         try:
             if self._http_method == "HEAD":
-                response = requests.head(
+                response = self._session.head(
                     self._base_url,
                     timeout=self._timeout,
-                    allow_redirects=True,
+                    allow_redirects=False,
                 )
             else:
-                response = requests.get(
+                response = self._session.get(
                     self._base_url,
                     timeout=self._timeout,
-                    allow_redirects=True,
+                    allow_redirects=False,
                 )
 
             latency_ms = max(0.0, response.elapsed.total_seconds() * 1000)
@@ -273,21 +282,24 @@ class HealthMonitor:
         """Log the health check result.
 
         Log levels:
-        - WARNING: degraded or unresponsive (always visible)
-        - INFO: status transitions and first check after startup
-        - DEBUG: routine "still responsive" checks (every 30s)
+        - WARNING: transition to degraded or unresponsive
+        - INFO: other status transitions (recovery, first check)
+        - DEBUG: routine checks with no status change
         """
         detail = self._probe_detail(info, icmp_ok, http_ok)
         status = info.health_status.value
         changed = info.health_status != self._previous_status
         self._previous_status = info.health_status
 
-        if info.health_status in (HealthStatus.DEGRADED, HealthStatus.UNRESPONSIVE):
-            _logger.warning("Health check: %s (%s)", status, detail)
+        if changed and info.health_status in (
+            HealthStatus.DEGRADED,
+            HealthStatus.UNRESPONSIVE,
+        ):
+            _logger.warning("Health check [%s]: %s (%s)", self._model, status, detail)
         elif changed:
-            _logger.info("Health check: %s (%s)", status, detail)
+            _logger.info("Health check [%s]: %s (%s)", self._model, status, detail)
         else:
-            _logger.debug("Health check: %s (%s)", status, detail)
+            _logger.debug("Health check [%s]: %s (%s)", self._model, status, detail)
 
     def _probe_detail(
         self,

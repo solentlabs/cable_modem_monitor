@@ -8,6 +8,7 @@ connection loss handling for both transports.
 from __future__ import annotations
 
 import json
+import logging
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -510,6 +511,8 @@ class TestExecuteAction:
             collector._base_url,
             action,
             timeout=10,
+            log_level=logging.INFO,
+            model=modem_config.model,
         )
 
     def test_hnap_action_dispatches(self) -> None:
