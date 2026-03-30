@@ -29,16 +29,9 @@
   // Disable automatic venv activation (we handle it with custom wrapper script)
   "python.terminal.activateEnvironment": false,
 
-  // Workspace-level enforcement (prevents user extension conflicts)
-  "python.linting.pylintEnabled": false,
-  "python.linting.flake8Enabled": false,
-  "python.formatting.provider": "none",
-
-  // Enable Python linting with Ruff (modern, fast linter)
-  "python.linting.enabled": true,
-  "python.linting.lintOnSave": true,
-  "python.linting.ruffEnabled": true,
-  "python.linting.ruffArgs": [
+  // Ruff extension settings (replaces deprecated python.linting.* settings)
+  "ruff.lint.run": "onSave",
+  "ruff.lint.args": [
     "--config",
     "pyproject.toml"
   ],
@@ -116,7 +109,9 @@
   "python.analysis.diagnosticMode": "workspace",
   "python.analysis.extraPaths": [
     "packages/cable_modem_monitor_core",
-    "packages/cable_modem_monitor_catalog"
+    "packages/cable_modem_monitor_core/tests",
+    "packages/cable_modem_monitor_catalog",
+    "packages/cable_modem_monitor_catalog/tests"
   ],
 
   // ========================================

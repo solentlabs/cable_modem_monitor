@@ -12,6 +12,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
+from solentlabs.cable_modem_monitor_core.models.parser_config.common import (
+    TableSelector,
+)
 from solentlabs.cable_modem_monitor_core.models.parser_config.json_format import (
     JSONSection,
 )
@@ -144,7 +147,7 @@ JSON_VALIDATOR_CASES = [
 def test_json_section_form_exclusivity(kwargs: dict[str, Any], error_match: str, desc: str) -> None:
     """JSONSection validator rejects invalid form combinations."""
     with pytest.raises(ValidationError, match=error_match):
-        JSONSection(**kwargs)
+        JSONSection.model_validate(kwargs)
 
 
 # ------------------------------------------------------------------
@@ -158,5 +161,5 @@ def test_transposed_flat_missing_rows() -> None:
         HTMLTableTransposedSection(
             format="table_transposed",
             resource="/data.htm",
-            selector={"type": "nth", "match": 0},
+            selector=TableSelector.model_validate({"type": "nth", "match": 0}),
         )

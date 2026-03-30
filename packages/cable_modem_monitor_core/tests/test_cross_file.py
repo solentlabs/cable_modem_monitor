@@ -45,8 +45,8 @@ VALID_FIXTURES = collect_fixtures(VALID_DIR)
 def test_valid_cross_file(fixture_path: Path) -> None:
     """Valid fixture pair passes cross-file validation."""
     fixture = load_fixture(fixture_path)
-    modem = ModemConfig(**fixture["_modem"])
-    parser = ParserConfig(**fixture["_parser"])
+    modem = ModemConfig.model_validate(fixture["_modem"])
+    parser = ParserConfig.model_validate(fixture["_parser"])
     errors = validate_cross_file(modem, parser)
     assert errors == [], f"Unexpected errors: {errors}"
 
@@ -66,8 +66,8 @@ INVALID_FIXTURES = collect_fixtures(INVALID_DIR)
 def test_invalid_cross_file(fixture_path: Path) -> None:
     """Invalid fixture pair produces expected cross-file error."""
     fixture = load_fixture(fixture_path)
-    modem = ModemConfig(**fixture["_modem"])
-    parser = ParserConfig(**fixture["_parser"])
+    modem = ModemConfig.model_validate(fixture["_modem"])
+    parser = ParserConfig.model_validate(fixture["_parser"])
     expected_error = fixture["_expected_error"]
 
     errors = validate_cross_file(modem, parser)
@@ -121,7 +121,7 @@ def test_auth_none_session_cookie_warning(fixture_path: Path) -> None:
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        ModemConfig(**fixture["_config"])
+        ModemConfig.model_validate(fixture["_config"])
 
         auth_warnings = [x for x in w if "auth:none" in str(x.message)]
         if expected_warning:

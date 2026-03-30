@@ -27,7 +27,7 @@ def _make_config(**overrides: Any) -> HNAPSection:
         ],
     }
     defaults.update(overrides)
-    return HNAPSection(**defaults)
+    return HNAPSection.model_validate(defaults)
 
 
 def _make_resources(

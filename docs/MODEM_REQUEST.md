@@ -4,26 +4,30 @@ This guide explains how to submit data from your modem to help us add support fo
 
 ## What We're Building Together
 
-Cable Modem Monitor extracts signal quality data from your modem's web interface - the same information you'd see if you logged into your modem manually. To add support for a new modem model, we need sample data from that modem's web pages.
+Cable Modem Monitor extracts signal quality data from your modem's web interface - the same information you'd see if you logged into your modem manually. To add support for a new modem model, we need a HAR capture from your modem's web pages.
 
 **What we extract:**
+
 - Downstream/upstream channel data (frequency, power levels, SNR)
 - Error counts (corrected/uncorrectable codewords)
 - Connection status and DOCSIS lock state
 - System information (firmware version, uptime)
 
 **What we DON'T need:**
+
 - WiFi settings or passwords
 - Router configuration
 - Device lists or client names
 - Account information
 
-### Why Test Fixtures Matter
+### Why HAR Captures Matter
 
 Your captured data becomes a **test fixture** - a frozen snapshot we use to:
+
 1. **Develop the parser** - Understand your modem's HTML/API structure
-2. **Write tests** - Verify the parser extracts data correctly
-3. **Prevent regressions** - Ensure future changes don't break your modem
+2. **Detect auth strategy** - Identify how your modem authenticates
+3. **Write tests** - Verify the parser extracts data correctly
+4. **Prevent regressions** - Ensure future changes don't break your modem
 
 You can see supported modems in the [catalog](../packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems/).
 
@@ -34,6 +38,7 @@ You can see supported modems in the [catalog](../packages/cable_modem_monitor_ca
 > **Automated sanitization is best-effort, not foolproof.**
 
 We automatically attempt to remove personally identifiable information (PII) from captured data:
+
 - MAC addresses
 - Serial numbers
 - Public/private IP addresses
@@ -52,6 +57,7 @@ Before sharing any captured data:
 4. **Review any sections flagged as warnings**
 
 If you find credentials that weren't automatically redacted:
+
 - Manually replace them with `***REDACTED***`
 - Let us know in your issue so we can improve the sanitizer
 
@@ -61,23 +67,7 @@ If you find credentials that weren't automatically redacted:
 
 ## How to Capture Data
 
-### Option 1: Integration Capture (Easiest)
-
-**Best for:** Users who already have the integration installed (even if your modem isn't fully supported).
-
-1. Configure the integration with your modem (use "Fallback Mode" if your model isn't listed)
-2. Go to **Settings > Devices & Services > Cable Modem Monitor**
-3. Press the **"Capture HTML"** button
-4. **Download diagnostics** within 5 minutes:
-   - Same page > Click menu (three dots) > **Download diagnostics**
-5. **Review the JSON file** - search for your credentials before sharing
-6. Attach to your GitHub issue
-
-### Option 2: HAR Capture with har-capture
-
-**Best for:** Modems with login requirements, HNAP/API-based modems, or when Option 1 doesn't capture what's needed.
-
-[HAR (HTTP Archive)](http://www.softwareishard.com/blog/har-12-spec/) files capture the complete HTTP conversation including authentication and API calls.
+Use [har-capture](https://github.com/solentlabs/har-capture) to record the complete HTTP conversation between your browser and your modem. HAR files capture authentication flows, API calls, and page content — everything needed to build a parser.
 
 ```bash
 # Install har-capture (one-time)
@@ -96,23 +86,16 @@ har-capture get 192.168.100.1 -u admin -p yourpassword
 See the [har-capture documentation](https://github.com/solentlabs/har-capture) for more options.
 
 **During capture:**
+
 1. Browser opens to your modem
 2. Log in normally (if form-based auth)
 3. Navigate to status/DOCSIS pages
 4. **Wait 3-5 seconds per page** (let async data load)
 5. Close browser when done
 
+**Important:** Use an incognito/private browsing window or clear cookies first. If your browser has a cached session, the capture will miss the login flow.
+
 The tool automatically sanitizes and compresses the output. **Review before sharing.**
-
-### Which Method Do I Need?
-
-| Modem Type | Recommended Method |
-|------------|-------------------|
-| HTML-based (SB6141, SB8200, CM600) | Either works |
-| HNAP/API modems (MB8611, S33) | HAR Capture required |
-| Login issues or errors | HAR Capture |
-
-> **Why HNAP modems need HAR:** These modems load data via JavaScript API calls after the page renders. The Integration Capture only sees the HTML shell, not the actual data.
 
 ---
 
@@ -128,17 +111,17 @@ Open your captured file and verify:
 
 ### What to Look For
 
-**In JSON files**, search for:
+Check for:
+
+- Cookie values
+- Authorization headers
+- POST body content
 - Literal password values
 - Network names you recognize
 - Patterns like `password`, `passphrase`, `psk`, `wpa`
 
-**In HAR files**, also check:
-- Cookie values
-- Authorization headers
-- POST body content
-
 If anything sensitive remains, either:
+
 1. Manually redact it (replace with `***REDACTED***`)
 2. Note it in your issue so we can improve the sanitizer
 
@@ -148,18 +131,19 @@ If anything sensitive remains, either:
 
 1. **Open a new issue** using the [Modem Request template](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
 2. Fill in modem details (model, manufacturer, IP address)
-3. Attach your captured file (JSON or HAR)
+3. Attach your HAR capture
 4. Note any manual redactions you made
 
 ### What Happens Next
 
-1. **We analyze your capture** - Understanding the HTML/API structure
+1. **We analyze your capture** - Understanding the HTML/API structure and auth mechanism
 2. **We may request additional captures** - Different pages or scenarios
 3. **We develop a parser** - Using your data as test fixtures
 4. **You verify it works** - Test on your actual modem
 5. **Parser ships in next release** - Your modem is now supported!
 
 **Setting expectations:**
+
 - This is a solo-maintained project - requests are handled as capacity allows
 - Complete submissions with clean captures get prioritized
 - Parser complexity varies widely - some modems take significantly longer
@@ -171,7 +155,7 @@ If anything sensitive remains, either:
 ## Privacy Summary
 
 | Data Type | What Happens |
-|-----------|--------------|
+| ----------- | -------------- |
 | WiFi credentials | Should be auto-redacted, **verify before sharing** |
 | MAC addresses | Auto-redacted (format-preserving hash, e.g., `02:xx:xx:xx:xx:xx`) |
 | Serial numbers | Auto-redacted (hash with `SERIAL_` prefix) |

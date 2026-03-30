@@ -7,7 +7,7 @@ import hmac
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import patch
 
 import pytest
@@ -21,7 +21,7 @@ from solentlabs.cable_modem_monitor_core.protocol.hnap import (
 )
 
 
-def _make_manager(hmac_algorithm: str = "md5") -> HnapAuthManager:
+def _make_manager(hmac_algorithm: Literal["md5", "sha256"] = "md5") -> HnapAuthManager:
     """Create an HnapAuthManager with the given algorithm."""
     config = HnapAuth(strategy="hnap", hmac_algorithm=hmac_algorithm)
     return HnapAuthManager(config)

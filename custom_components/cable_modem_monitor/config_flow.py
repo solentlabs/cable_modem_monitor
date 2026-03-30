@@ -504,7 +504,10 @@ class CableModemMonitorConfigFlow(config_entries.ConfigFlow):
         user_input: dict[str, Any] | None = None,
     ) -> config_entries.ConfigFlowResult:
         """Show connection form for reauthentication."""
-        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        entry_id = self.context.get("entry_id")
+        if entry_id is None:
+            return self.async_abort(reason="reauth_failed")
+        entry = self.hass.config_entries.async_get_entry(entry_id)
         if entry is None:
             return self.async_abort(reason="reauth_failed")
 

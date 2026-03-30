@@ -34,7 +34,7 @@ def load_modem_config(path: Path) -> ModemConfig:
         pydantic.ValidationError: If content fails schema validation.
     """
     data = _load_yaml(path)
-    return ModemConfig(**data)
+    return ModemConfig.model_validate(data)
 
 
 def load_parser_config(path: Path) -> ParserConfig:
@@ -52,7 +52,7 @@ def load_parser_config(path: Path) -> ParserConfig:
         pydantic.ValidationError: If content fails schema validation.
     """
     data = _load_yaml(path)
-    return ParserConfig(**data)
+    return ParserConfig.model_validate(data)
 
 
 def validate_modem_config(data: dict[str, Any]) -> ModemConfig:
@@ -67,7 +67,7 @@ def validate_modem_config(data: dict[str, Any]) -> ModemConfig:
     Raises:
         pydantic.ValidationError: If data fails schema validation.
     """
-    return ModemConfig(**data)
+    return ModemConfig.model_validate(data)
 
 
 def validate_parser_config(data: dict[str, Any]) -> ParserConfig:
@@ -82,7 +82,7 @@ def validate_parser_config(data: dict[str, Any]) -> ParserConfig:
     Raises:
         pydantic.ValidationError: If data fails schema validation.
     """
-    return ParserConfig(**data)
+    return ParserConfig.model_validate(data)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

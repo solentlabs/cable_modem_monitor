@@ -13,6 +13,7 @@ See PARSING_SPEC.md JSEmbeddedParser section.
 
 from __future__ import annotations
 
+import functools
 import logging
 import re
 from typing import Any
@@ -26,10 +27,6 @@ from ..type_conversion import convert_value
 
 _logger = logging.getLogger(__name__)
 
-# Regex to extract the function body: everything between the first { and
-# the closing } at the start of a line. Uses DOTALL so . matches newlines.
-_FUNC_BODY_RE_CACHE: dict[str, re.Pattern[str]] = {}
-
 # Regex to find ``var tagValueList = 'value'`` or ``"value"`` inside
 # a function body. Handles optional whitespace and both quote styles.
 _TAG_VALUE_RE = re.compile(
@@ -37,14 +34,13 @@ _TAG_VALUE_RE = re.compile(
 )
 
 
+@functools.cache
 def _get_func_body_re(func_name: str) -> re.Pattern[str]:
     """Return a compiled regex for extracting a named function body."""
-    if func_name not in _FUNC_BODY_RE_CACHE:
-        _FUNC_BODY_RE_CACHE[func_name] = re.compile(
-            rf"function\s+{re.escape(func_name)}\s*\([^)]*\)\s*\{{(.*?)\n\}}",
-            re.DOTALL,
-        )
-    return _FUNC_BODY_RE_CACHE[func_name]
+    return re.compile(
+        rf"function\s+{re.escape(func_name)}\s*\([^)]*\)\s*\{{(.*?)\n\}}",
+        re.DOTALL,
+    )
 
 
 class JSEmbeddedParser(BaseParser):

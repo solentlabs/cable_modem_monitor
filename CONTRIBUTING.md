@@ -13,18 +13,19 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ---
 
-## 📡 Help Us Add Your Modem
+## Help Us Add Your Modem
 
-**Don't see your modem supported?** You can help us add it by capturing data from your modem's web interface.
+**Don't see your modem supported?** You can help us add it by capturing a HAR file from your modem's web interface.
 
-> **📖 See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for complete instructions on capturing data, reviewing for PII, and submitting your request.
+> **See the [Modem Request Guide](./docs/MODEM_REQUEST.md)** for complete instructions on capturing data, reviewing for PII, and submitting your request.
 
 **Quick summary:**
-1. Capture your modem's web pages (two methods available)
+
+1. Capture your modem's login and status pages with [har-capture](https://github.com/solentlabs/har-capture)
 2. **Review the capture for your WiFi credentials** - automated sanitization isn't perfect
 3. [Open a modem request issue](https://github.com/solentlabs/cable_modem_monitor/issues/new?template=modem_request.yml)
 
-Your captured data becomes a test fixture that lets us develop and verify the parser without physical access to your modem.
+Your HAR capture becomes the test fixture that lets us develop and verify the parser without physical access to your modem.
 
 ---
 
@@ -174,16 +175,16 @@ make lint-all
 **Manual commands:**
 ```bash
 # Auto-format your code with Black
-black custom_components/cable_modem_monitor/
+black custom_components/ packages/
 
 # Check for linting issues with Ruff
-ruff check custom_components/cable_modem_monitor/
+ruff check .
 
 # Auto-fix linting issues
-ruff check --fix custom_components/cable_modem_monitor/
+ruff check --fix .
 
 # Type checking with mypy
-mypy custom_components/cable_modem_monitor/
+mypy . --config-file=mypy.ini
 
 # Or use the comprehensive lint script
 bash scripts/dev/lint.sh
@@ -242,7 +243,9 @@ See [Testing on HA](./docs/setup/TESTING_ON_HA.md) for detailed instructions and
 
 ## Adding Support for New Modem Models
 
-New modems are onboarded through the MCP intake pipeline. See [MODEM_REQUEST.md](docs/MODEM_REQUEST.md) for how to submit your modem's data.
+**For users:** Submit a HAR capture via the [Modem Request Guide](docs/MODEM_REQUEST.md). This is the primary onboarding path.
+
+**For developers:** New modems are onboarded through the MCP intake pipeline. The pipeline validates HAR captures, detects auth strategy, generates modem/parser configs, and produces golden files. See [Intake Pipeline](docs/INTAKE_PIPELINE.md) for an overview, or [ONBOARDING_SPEC.md](packages/cable_modem_monitor_core/docs/ONBOARDING_SPEC.md) for the full specification.
 
 Modem configurations live in the catalog package (`packages/cable_modem_monitor_catalog/`). Each modem has a `modem.yaml`, `parser.yaml`, and `test_data/` directory with a HAR capture and golden file.
 
@@ -260,25 +263,25 @@ The project uses multiple linting tools for code quality:
 
 **Ruff** (Primary linter - fast and comprehensive):
 ```bash
-# Check for issues
-ruff check custom_components/cable_modem_monitor/
+# Check for issues (runs on entire project)
+ruff check .
 
 # Auto-fix issues
-ruff check --fix custom_components/cable_modem_monitor/
+ruff check --fix .
 ```
 
 **mypy** (Type checking):
 ```bash
-mypy custom_components/cable_modem_monitor/ --config-file=mypy.ini
+mypy . --config-file=mypy.ini
 ```
 
 **Black** (Code formatting):
 ```bash
 # Format code
-black custom_components/cable_modem_monitor/
+black custom_components/ packages/
 
 # Check formatting (CI mode)
-black --check custom_components/cable_modem_monitor/
+black --check custom_components/ packages/
 ```
 
 **Comprehensive linting:**
@@ -297,8 +300,11 @@ See `docs/reference/LINTING.md` for comprehensive linting documentation.
 
 **Quick commands:**
 ```bash
-# Run all tests
+# Run HA integration tests
 pytest tests/ -v
+
+# Run Core package tests
+cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
 
 # Quick test during development
 ./scripts/dev/quick_test.sh
@@ -323,6 +329,7 @@ pytest tests/ -v
 4. **Run the test suite**
    ```bash
    pytest tests/ -v
+   cd packages/cable_modem_monitor_core && pytest tests/ -v && cd ../..
    ```
 
 5. **Update documentation** if needed (README.md, CHANGELOG.md)
@@ -486,7 +493,7 @@ We believe in giving credit where credit is due. This section outlines how we ac
 Users who provide modem captures for new parser development are acknowledged in:
 
 | Location | What's Credited |
-|----------|-----------------|
+| ---------- | ----------------- |
 | Fixture README | Name, modem model, capture date |
 | Parser `verification_source` | Issue link after user confirms working |
 | Release notes | When parser ships |
@@ -528,7 +535,7 @@ When using AI tools during development, additional care is needed for attributio
 #### Honest Framing Levels
 
 | Framing | Use When | Example |
-|---------|----------|---------|
+| --------- | ---------- | --------- |
 | "Based on" / "Informed by" | You directly studied their code or docs | BowlesCR's HMAC-MD5 auth flow |
 | "Field definitions from" | You verified specific details came from them | Tatsh's StatusSoftwareSfVer fields |
 | "Related prior art" | Similar work exists, can't verify direct influence | Projects doing similar modem monitoring |
@@ -544,7 +551,7 @@ When using AI tools during development, additional care is needed for attributio
 Users who test pre-release parsers and confirm functionality:
 
 | Contribution | Acknowledgment |
-|--------------|----------------|
+| -------------- | ---------------- |
 | Confirms parser works | Parser marked "Verified", issue closed with thanks |
 | Reports bugs during testing | Credited in fix commit |
 | Provides additional captures | Added to fixture README |

@@ -320,12 +320,19 @@ git push --force-with-lease
 
 ## Release Checklist - Verify ALL Before Saying "Ready"
 
-1. [ ] Run `scripts/release.py <version>` to bump versions
-2. [ ] `CHANGELOG.md` has entry for this version
-3. [ ] CI checks are passing
-4. [ ] Dogfooded on local HA (for significant changes)
+1. [ ] Bump pinned tool versions in `.github/workflows/tests.yml` (quarterly)
+2. [ ] Run `scripts/release.py <version>` to bump versions
+3. [ ] `CHANGELOG.md` has entry for this version
+4. [ ] CI checks are passing (all 8 required checks)
+5. [ ] Dogfooded on local HA (for significant changes)
 
 **NEVER manually edit version numbers. ALWAYS use `scripts/release.py`.**
+
+**Tool version bump process (quarterly, at start of each release branch):**
+1. `pip install --upgrade ruff black mypy` in the local venv
+2. Update pinned versions in `.github/workflows/tests.yml` lint job
+3. Run `ruff check . && black --check . && mypy . --config-file=mypy.ini` locally
+4. Fix any new lint/type issues before they compound
 
 ## PR and Issue Rules
 

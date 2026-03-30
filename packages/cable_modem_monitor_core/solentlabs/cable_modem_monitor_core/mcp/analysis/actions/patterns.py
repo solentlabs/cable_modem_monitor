@@ -9,6 +9,7 @@ All matching is case-insensitive.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 from pathlib import Path
@@ -16,25 +17,21 @@ from typing import Any
 
 _PATTERNS_PATH = Path(__file__).parent / "action_patterns.json"
 
-# Module-level cache — loaded once on first access
-_patterns: dict[str, Any] | None = None
 
-
+@functools.lru_cache(maxsize=1)
 def _load_patterns() -> dict[str, Any]:
     """Load and cache the action patterns JSON."""
-    global _patterns  # noqa: PLW0603
-    if _patterns is None:
-        _patterns = json.loads(_PATTERNS_PATH.read_text(encoding="utf-8"))
-    return _patterns
+    data: dict[str, Any] = json.loads(_PATTERNS_PATH.read_text(encoding="utf-8"))
+    return data
 
 
 def get_logout_patterns() -> tuple[re.Pattern[str], ...]:
     """Return compiled logout URL regex patterns."""
     data = _load_patterns()
-    return tuple(re.compile(p, re.IGNORECASE) for p in data["logout_url_patterns"])  # type: ignore[arg-type]
+    return tuple(re.compile(p, re.IGNORECASE) for p in data["logout_url_patterns"])
 
 
 def get_restart_patterns() -> tuple[re.Pattern[str], ...]:
     """Return compiled restart URL regex patterns."""
     data = _load_patterns()
-    return tuple(re.compile(p, re.IGNORECASE) for p in data["restart_url_patterns"])  # type: ignore[arg-type]
+    return tuple(re.compile(p, re.IGNORECASE) for p in data["restart_url_patterns"])

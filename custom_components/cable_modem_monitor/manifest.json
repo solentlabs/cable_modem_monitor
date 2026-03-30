@@ -8,6 +8,7 @@
     "@solentlabs"
   ],
   "config_flow": true,
+  "homeassistant": "2024.12.0",
   "documentation": "https://github.com/solentlabs/cable_modem_monitor",
   "integration_type": "device",
   "iot_class": "local_polling",

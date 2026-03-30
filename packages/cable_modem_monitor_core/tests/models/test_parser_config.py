@@ -41,7 +41,7 @@ VALID_FIXTURES = collect_fixtures(VALID_DIR)
 )
 def test_valid_parser_config(fixture_path: Path):
     """Valid fixture parses without error."""
-    config = ParserConfig(**load_fixture(fixture_path))
+    config = ParserConfig.model_validate(load_fixture(fixture_path))
     assert config.downstream is not None or config.upstream is not None or config.system_info is not None
 
 
@@ -61,7 +61,7 @@ def test_invalid_parser_config(fixture_path: Path):
     """Invalid fixture raises ValidationError with expected message."""
     raw = load_fixture(fixture_path)
     with pytest.raises(ValidationError, match=raw["_expected_error"]):
-        ParserConfig(**raw["_config"])
+        ParserConfig.model_validate(raw["_config"])
 
 
 # ---------------------------------------------------------------------------
@@ -74,14 +74,14 @@ class TestAggregateBehavior:
 
     def test_aggregate_field_access(self) -> None:
         """Aggregate fields are accessible after parse."""
-        config = ParserConfig(**load_fixture(VALID_DIR / "with_aggregate.json"))
+        config = ParserConfig.model_validate(load_fixture(VALID_DIR / "with_aggregate.json"))
         agg = config.aggregate["total_corrected"]
         assert agg.sum == "corrected"
         assert agg.channels == "downstream.qam"
 
     def test_aggregate_default_empty(self) -> None:
         """ParserConfig without aggregate has empty dict."""
-        config = ParserConfig(**load_fixture(VALID_DIR / "table_single.json"))
+        config = ParserConfig.model_validate(load_fixture(VALID_DIR / "table_single.json"))
         assert config.aggregate == {}
 
     def test_aggregate_field_rejects_extra(self) -> None:

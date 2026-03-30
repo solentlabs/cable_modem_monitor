@@ -10,7 +10,7 @@ and basic session lifecycle.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,7 +45,7 @@ def _make_config(
     max_concurrent: int = 0,
     logout_action: Any = None,
     timeout: int = 10,
-    hmac_algorithm: str = "md5",
+    hmac_algorithm: Literal["md5", "sha256"] = "md5",
 ) -> Any:
     """Build a minimal ModemConfig-like object for testing."""
     config = MagicMock()

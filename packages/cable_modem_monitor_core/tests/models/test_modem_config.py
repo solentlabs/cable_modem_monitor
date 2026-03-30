@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from solentlabs.cable_modem_monitor_core.models.modem_config import ModemConfig
+from solentlabs.cable_modem_monitor_core.models.modem_config.actions import HttpAction
 
 from tests.conftest import collect_fixtures, load_fixture
 
@@ -28,7 +29,7 @@ INVALID_DIR = FIXTURES_DIR / "invalid"
 
 def _load(name: str) -> ModemConfig:
     """Load and parse a valid modem config fixture by name."""
-    return ModemConfig(**load_fixture(VALID_DIR / name))
+    return ModemConfig.model_validate(load_fixture(VALID_DIR / name))
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ VALID_FIXTURES = collect_fixtures(VALID_DIR)
 )
 def test_valid_modem_config(fixture_path: Path):
     """Valid fixture parses without error."""
-    config = ModemConfig(**load_fixture(fixture_path))
+    config = ModemConfig.model_validate(load_fixture(fixture_path))
     assert config.manufacturer
     assert config.model
     assert config.transport in ("http", "hnap")
@@ -67,7 +68,7 @@ def test_invalid_modem_config(fixture_path: Path):
     """Invalid fixture raises ValidationError with expected message."""
     raw = load_fixture(fixture_path)
     with pytest.raises(ValidationError, match=raw["_expected_error"]):
-        ModemConfig(**raw["_config"])
+        ModemConfig.model_validate(raw["_config"])
 
 
 # ---------------------------------------------------------------------------
@@ -193,5 +194,5 @@ class TestRelationships:
         assert config.session.max_concurrent == 1
         assert config.actions is not None
         assert config.actions.logout is not None
-        assert hasattr(config.actions.logout, "endpoint")
+        assert isinstance(config.actions.logout, HttpAction)
         assert config.actions.logout.endpoint == "/logout.asp"

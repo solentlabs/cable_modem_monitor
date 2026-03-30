@@ -7,6 +7,7 @@ operations, and dual-logger setup.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -171,13 +172,13 @@ class TestSetupLogBuffer:
     """Verify handler installation on both monitored loggers."""
 
     @pytest.fixture(autouse=True)
-    def _save_and_restore_loggers(self) -> None:
+    def _save_and_restore_loggers(self) -> Iterator[None]:
         """Save and restore logger state around each test."""
         saved: dict[str, tuple[int, list[logging.Handler]]] = {}
         for name in _MONITORED_LOGGERS:
             lg = logging.getLogger(name)
             saved[name] = (lg.level, lg.handlers[:])
-        yield  # type: ignore[misc]
+        yield
         for name in _MONITORED_LOGGERS:
             lg = logging.getLogger(name)
             lg.level = saved[name][0]
@@ -245,8 +246,8 @@ class TestSetupLogBuffer:
             handlers = [h for h in lg.handlers if isinstance(h, BufferingHandler)]
             assert len(handlers) == 1, f"Duplicate handlers on {logger_name}"
 
-    def test_core_logger_level_lowered_to_info(self) -> None:
-        """Core logger effective level is set to INFO when higher."""
+    def test_core_logger_capped_at_info_when_ha_default(self) -> None:
+        """Core logger is capped at INFO when HA logger is at default (WARNING)."""
         hass = self._make_hass()
         core = logging.getLogger("solentlabs.cable_modem_monitor_core")
         core.setLevel(logging.WARNING)
@@ -255,11 +256,12 @@ class TestSetupLogBuffer:
 
         assert core.getEffectiveLevel() <= logging.INFO
 
-    def test_core_logger_level_not_raised(self) -> None:
-        """Core logger level is not raised if already at DEBUG."""
+    def test_core_logger_mirrors_ha_debug(self) -> None:
+        """Core logger follows HA logger when HA is set to DEBUG."""
         hass = self._make_hass()
+        ha = logging.getLogger("custom_components.cable_modem_monitor")
+        ha.setLevel(logging.DEBUG)
         core = logging.getLogger("solentlabs.cable_modem_monitor_core")
-        core.setLevel(logging.DEBUG)
 
         setup_log_buffer(hass)
 

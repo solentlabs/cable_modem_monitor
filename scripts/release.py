@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
-"""Release automation script for Cable Modem Monitor.
+"""Release preparation script for Cable Modem Monitor.
 
-This script automates the complete release process by:
-1. Validating the version format
-2. Checking git working directory is clean
-3. Running tests (pytest)
-4. Running code quality checks (ruff, black, mypy)
-5. Verifying translations/en.json matches strings.json
-6. Updating version in all required files:
+Updates version strings across all files and verifies consistency.
+Does NOT stage, commit, push, tag, or create releases — the developer
+handles all git operations.
+
+Steps:
+1. Validate version format
+2. Check git working directory is clean
+3. Run tests (pytest)
+4. Run code quality checks (ruff, black, mypy)
+5. Verify translations/en.json matches strings.json
+6. Update version in all required files:
    - custom_components/cable_modem_monitor/manifest.json
    - custom_components/cable_modem_monitor/const.py
-7. Updating CHANGELOG.md
-8. Creating a git commit with all changes
-9. Creating an annotated git tag
-10. Pushing to remote (optional)
-11. Creating a GitHub release (optional)
+   - tests/components/test_version_and_startup.py
+   - packages/cable_modem_monitor_core/pyproject.toml
+   - packages/cable_modem_monitor_catalog/pyproject.toml
+7. Update CHANGELOG.md
+8. Verify all version files are consistent
+9. Print changed files and suggested next steps
 
 Usage:
-    python scripts/release.py 3.5.2                    # Full release
-    python scripts/release.py 3.5.2 --no-push          # Test locally without pushing
-    python scripts/release.py 3.5.2 --skip-tests       # Skip tests (not recommended)
-    python scripts/release.py 3.5.2 --skip-quality     # Skip code quality checks
+    python scripts/release.py 3.5.2                    # Full release prep
     python scripts/release.py 3.5.2 --skip-changelog   # Don't update changelog
 """
 
 from __future__ import annotations
 
 import argparse
-import contextlib
 import json
 import re
 import subprocess
@@ -59,11 +60,6 @@ def validate_version(version: str) -> bool:
     """Validate that version follows semantic versioning (X.Y.Z or X.Y.Z-beta.N)."""
     pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
     return bool(re.match(pattern, version))
-
-
-def is_prerelease(version: str) -> bool:
-    """Check if version is a prerelease (beta)."""
-    return "-beta." in version
 
 
 def get_repo_root() -> Path:
@@ -254,132 +250,39 @@ def update_changelog(repo_root: Path, version: str) -> bool:
         return False
 
 
-def create_commit(version: str, skip_verify: bool = False) -> bool:
-    """Create a git commit with version changes."""
+def show_changed_files(version: str) -> None:
+    """Show the files that were updated and suggested next steps."""
+    files = [
+        "custom_components/cable_modem_monitor/manifest.json",
+        "custom_components/cable_modem_monitor/const.py",
+        "tests/components/test_version_and_startup.py",
+        "packages/cable_modem_monitor_core/pyproject.toml",
+        "packages/cable_modem_monitor_catalog/pyproject.toml",
+        "CHANGELOG.md",
+    ]
+
+    # Check if translations were updated
     try:
-        # Stage the files
-        subprocess.run(
-            [
-                "git",
-                "add",
-                "custom_components/cable_modem_monitor/manifest.json",
-                "custom_components/cable_modem_monitor/const.py",
-                "tests/components/test_version_and_startup.py",
-                "CHANGELOG.md",
-            ],
-            check=True,
-        )
-
-        # Create commit
-        commit_msg = f"chore: bump version to {version}"
-        cmd = ["git", "commit", "-m", commit_msg]
-        if skip_verify:
-            cmd.append("--no-verify")
-
-        subprocess.run(cmd, check=True)
-
-        print_success(f"Created commit: {commit_msg}")
-        return True
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to create commit: {e}")
-        return False
-
-
-def create_tag(version: str) -> bool:
-    """Create an annotated git tag."""
-    try:
-        tag_name = f"v{version}"
-        tag_msg = f"Release v{version}"
-
-        subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
-
-        print_success(f"Created tag: {tag_name}")
-        return True
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to create tag: {e}")
-        return False
-
-
-def push_changes(version: str, skip_verify: bool = False) -> bool:
-    """Push commit and tag to remote."""
-    try:
-        tag_name = f"v{version}"
-
-        # Get current branch name
         result = subprocess.run(
-            ["git", "branch", "--show-current"],
+            ["git", "diff", "--name-only", "--", "custom_components/cable_modem_monitor/translations/en.json"],
             capture_output=True,
             text=True,
-            check=True,
+            check=False,
         )
-        current_branch = result.stdout.strip()
+        if result.stdout.strip():
+            files.append("custom_components/cable_modem_monitor/translations/en.json")
+    except subprocess.CalledProcessError:
+        pass
 
-        # Push commit to current branch
-        cmd = ["git", "push", "origin", current_branch]
-        if skip_verify:
-            cmd.append("--no-verify")
+    print_info("Files updated:")
+    for f in files:
+        print(f"  {f}")
 
-        subprocess.run(cmd, check=True)
-        print_success(f"Pushed commit to origin/{current_branch}")
-
-        # Push tag
-        cmd = ["git", "push", "origin", tag_name]
-        if skip_verify:
-            cmd.append("--no-verify")
-
-        subprocess.run(cmd, check=True)
-        print_success(f"Pushed tag {tag_name} to origin")
-
-        return True
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to push changes: {e}")
-        return False
-
-
-def create_github_release(version: str, repo_root: Path) -> bool:
-    """Create a GitHub release using gh CLI."""
-    try:
-        tag_name = f"v{version}"
-
-        # Extract release notes from CHANGELOG
-        changelog_path = repo_root / "CHANGELOG.md"
-        with open(changelog_path, encoding="utf-8") as f:
-            content = f.read()
-
-        # Find the section for this version
-        version_pattern = rf"## \[{re.escape(version)}\][^\n]*\n(.*?)(?=## \[|$)"
-        match = re.search(version_pattern, content, re.DOTALL)
-
-        if match:
-            release_notes = match.group(1).strip()
-        else:
-            release_notes = f"Release version {version}"
-
-        # Build release command
-        cmd = [
-            "gh",
-            "release",
-            "create",
-            tag_name,
-            "--title",
-            f"Version {version}",
-            "--notes",
-            release_notes,
-        ]
-
-        # Mark as prerelease if beta version
-        if is_prerelease(version):
-            cmd.append("--prerelease")
-            print_info(f"Creating prerelease (beta) for {tag_name}")
-
-        subprocess.run(cmd, check=True)
-
-        print_success(f"Created GitHub release: {tag_name}")
-        return True
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to create GitHub release: {e}")
-        print_info("You can create it manually using: gh release create")
-        return False
+    print_info(f"Suggested commit message: chore: bump version to {version}")
+    print_info("After committing and merging to main:")
+    print_info("  git checkout main && git pull")
+    print_info(f"  git tag -a v{version} -m 'Release v{version}'")
+    print_info(f"  git push origin v{version}")
 
 
 def run_tests(repo_root: Path) -> bool:
@@ -562,6 +465,20 @@ def update_all_files(repo_root: Path, version: str, skip_changelog: bool) -> Non
         sys.exit(1)
 
 
+def _check_file_contains(path: Path, label: str, needle: str) -> bool:
+    """Check that a file contains an expected string."""
+    try:
+        content = path.read_text(encoding="utf-8")
+        if needle not in content:
+            print_error(f"{label} version mismatch: expected '{needle}'")
+            return False
+        print_success(f"{label} version correct")
+        return True
+    except Exception as e:
+        print_error(f"Failed to read {label}: {e}")
+        return False
+
+
 def verify_version_consistency(repo_root: Path, version: str) -> bool:
     """Verify that all version files have been updated correctly.
 
@@ -573,7 +490,7 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
 
     all_correct = True
 
-    # Check manifest.json
+    # Check manifest.json (JSON structure, not substring)
     manifest_path = repo_root / "custom_components" / "cable_modem_monitor" / "manifest.json"
     try:
         with open(manifest_path, encoding="utf-8") as f:
@@ -583,38 +500,25 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
                 print_error(f"manifest.json version mismatch: expected {version}, got {manifest_version}")
                 all_correct = False
             else:
-                print_success(f"manifest.json version correct: {version}")
+                print_success("manifest.json version correct")
     except Exception as e:
         print_error(f"Failed to read manifest.json: {e}")
         all_correct = False
 
-    # Check const.py
-    const_path = repo_root / "custom_components" / "cable_modem_monitor" / "const.py"
-    try:
-        with open(const_path, encoding="utf-8") as f:
-            content = f.read()
-            if f'VERSION = "{version}"' not in content:
-                print_error(f'const.py version mismatch: expected VERSION = "{version}"')
-                all_correct = False
-            else:
-                print_success(f"const.py version correct: {version}")
-    except Exception as e:
-        print_error(f"Failed to read const.py: {e}")
-        all_correct = False
-
-    # Check test file
-    test_path = repo_root / "tests" / "components" / "test_version_and_startup.py"
-    try:
-        with open(test_path, encoding="utf-8") as f:
-            content = f.read()
-            if f'assert VERSION == "{version}"' not in content:
-                print_error(f'test_version_and_startup.py version mismatch: expected VERSION == "{version}"')
-                all_correct = False
-            else:
-                print_success(f"test_version_and_startup.py version correct: {version}")
-    except Exception as e:
-        print_error(f"Failed to read test_version_and_startup.py: {e}")
-        all_correct = False
+    # Check text-based version files
+    cc = repo_root / "custom_components" / "cable_modem_monitor"
+    pkg = repo_root / "packages"
+    ver_assert = f'assert VERSION == "{version}"'
+    ver_field = f'version = "{version}"'
+    checks = [
+        (cc / "const.py", "const.py", f'VERSION = "{version}"'),
+        (repo_root / "tests" / "components" / "test_version_and_startup.py", "version test", ver_assert),
+        (pkg / "cable_modem_monitor_core" / "pyproject.toml", "core/pyproject.toml", ver_field),
+        (pkg / "cable_modem_monitor_catalog" / "pyproject.toml", "catalog/pyproject.toml", ver_field),
+    ]
+    for path, label, needle in checks:
+        if not _check_file_contains(path, label, needle):
+            all_correct = False
 
     if all_correct:
         print_success("All version files are consistent!")
@@ -623,34 +527,6 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
         print_error("Version consistency check failed!")
         print_error("This would cause CI to fail with: 'Tag version does not match manifest.json version'")
         return False
-
-
-def perform_git_operations(version: str, skip_verify: bool, no_push: bool, repo_root: Path) -> None:
-    """Perform git commit, tag, push, and release operations."""
-    # Create commit
-    if not create_commit(version, skip_verify):
-        sys.exit(1)
-
-    # Only create tag and push if --no-push is not set
-    # With branch protection, use --no-push for PR workflow, then tag manually after merge
-    if no_push:
-        print_info("Skipping tag creation (--no-push). After PR merges, run:")
-        print_info("  git checkout main && git pull")
-        print_info(f"  git tag -a v{version} -m 'Release v{version}'")
-        print_info(f"  git push origin v{version}")
-        return
-
-    # Create tag
-    if not create_tag(version):
-        sys.exit(1)
-
-    # Push commit and tag
-    if not push_changes(version, skip_verify):
-        sys.exit(1)
-
-    # Create GitHub release
-    if not create_github_release(version, repo_root):
-        print_warning("Release created but GitHub release failed")
 
 
 def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
@@ -663,19 +539,11 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
     # Validate preconditions
     validate_release_preconditions(version, repo_root)
 
-    # Run tests (unless skipped)
-    _run_optional_step(
-        not args.skip_tests,
-        lambda: run_tests(repo_root),
-        skip_msg="Skipping tests (--skip-tests)",
-    )
+    # Run tests — not optional
+    _exit_on_failure(run_tests(repo_root))
 
-    # Run code quality checks (unless skipped)
-    _run_optional_step(
-        not args.skip_quality,
-        lambda: run_code_quality_checks(repo_root),
-        skip_msg="Skipping code quality checks (--skip-quality)",
-    )
+    # Run code quality checks — not optional
+    _exit_on_failure(run_code_quality_checks(repo_root))
 
     # Verify translations
     _exit_on_failure(verify_translations(repo_root))
@@ -686,29 +554,10 @@ def _run_release(args: argparse.Namespace, repo_root: Path) -> None:
     # Verify version consistency (prevents CI tag/manifest mismatch error)
     _exit_on_failure(verify_version_consistency(repo_root, version))
 
-    # Stage translations if it was updated
-    with contextlib.suppress(subprocess.CalledProcessError):
-        subprocess.run(
-            ["git", "add", "custom_components/cable_modem_monitor/translations/en.json"],
-            check=False,
-        )
+    # Show what changed — developer stages and commits
+    show_changed_files(version)
 
-    # Perform git operations
-    perform_git_operations(version, args.skip_verify, args.no_push, repo_root)
-
-    # Success message
-    if args.no_push:
-        print_success(f"\n🎉 Version {version} prepared! Create PR, then tag after merge.")
-    else:
-        print_success(f"\n🎉 Release {version} complete!")
-
-
-def _run_optional_step(should_run: bool, step_fn, skip_msg: str) -> None:
-    """Run an optional step or print skip message."""
-    if should_run:
-        _exit_on_failure(step_fn())
-    else:
-        print_warning(skip_msg)
+    print_success(f"\nVersion {version} prepared. Review, stage, and commit.")
 
 
 def _exit_on_failure(success: bool) -> None:
@@ -722,29 +571,9 @@ def main():
     parser = argparse.ArgumentParser(description="Automate Cable Modem Monitor releases")
     parser.add_argument("version", nargs="?", help="Version to release (e.g., 3.5.1)")
     parser.add_argument(
-        "--no-push",
-        action="store_true",
-        help="Don't create tag or push (for PR workflow with branch protection)",
-    )
-    parser.add_argument(
         "--skip-changelog",
         action="store_true",
         help="Skip updating CHANGELOG.md",
-    )
-    parser.add_argument(
-        "--skip-verify",
-        action="store_true",
-        help="Skip git hooks (--no-verify)",
-    )
-    parser.add_argument(
-        "--skip-tests",
-        action="store_true",
-        help="Skip running tests (not recommended)",
-    )
-    parser.add_argument(
-        "--skip-quality",
-        action="store_true",
-        help="Skip code quality checks (not recommended)",
     )
 
     args = parser.parse_args()

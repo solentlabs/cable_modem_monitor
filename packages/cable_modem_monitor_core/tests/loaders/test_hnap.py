@@ -16,7 +16,11 @@ from solentlabs.cable_modem_monitor_core.loaders.hnap import (
     _collect_hnap_actions,
     _strip_response_suffix,
 )
-from solentlabs.cable_modem_monitor_core.models.parser_config.common import TableSelector
+from solentlabs.cable_modem_monitor_core.models.parser_config.common import (
+    ChannelMapping,
+    ColumnMapping,
+    TableSelector,
+)
 from solentlabs.cable_modem_monitor_core.models.parser_config.config import ParserConfig
 from solentlabs.cable_modem_monitor_core.models.parser_config.hnap import HNAPSection
 from solentlabs.cable_modem_monitor_core.models.parser_config.system_info import (
@@ -38,7 +42,7 @@ def _make_parser_config(**overrides: Any) -> ParserConfig:
         data_key="DownstreamChannel",
         record_delimiter="|+|",
         field_delimiter="^",
-        fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
+        fields=[ChannelMapping(index=0, field="channel_id", type="integer")],
     )
     us_section = HNAPSection(
         format="hnap",
@@ -46,14 +50,14 @@ def _make_parser_config(**overrides: Any) -> ParserConfig:
         data_key="UpstreamChannel",
         record_delimiter="|+|",
         field_delimiter="^",
-        fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
+        fields=[ChannelMapping(index=0, field="channel_id", type="integer")],
     )
     defaults: dict[str, Any] = {
         "downstream": ds_section,
         "upstream": us_section,
     }
     defaults.update(overrides)
-    return ParserConfig(**defaults)
+    return ParserConfig.model_validate(defaults)
 
 
 def _make_http_parser_config() -> ParserConfig:
@@ -65,7 +69,7 @@ def _make_http_parser_config() -> ParserConfig:
             tables=[
                 TableDefinition(
                     selector=TableSelector(type="nth", match=0),
-                    columns=[{"index": 0, "field": "channel_id", "type": "integer"}],
+                    columns=[ColumnMapping(index=0, field="channel_id", type="integer")],
                 ),
             ],
         ),
@@ -181,7 +185,7 @@ class TestActionCollection:
             data_key="Channel",
             record_delimiter="|+|",
             field_delimiter="^",
-            fields=[{"index": 0, "field": "channel_id", "type": "integer"}],
+            fields=[ChannelMapping(index=0, field="channel_id", type="integer")],
         )
         config = _make_parser_config(
             downstream=same_section,

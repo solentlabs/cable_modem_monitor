@@ -42,7 +42,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           file: ./coverage.xml
           flags: unittests
@@ -98,7 +98,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy types-requests pytest-socket pydantic types-cryptography requests-mock har-capture>=0.3.2
+          pip install ruff==0.15.2 black==26.1.0 mypy==1.19.1 types-requests pytest-socket pydantic types-cryptography requests-mock har-capture>=0.5.0
           pip install -e packages/cable_modem_monitor_core
           pip install -e packages/cable_modem_monitor_catalog
 
@@ -175,7 +175,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 har-capture>=0.3.2
+          pip install beautifulsoup4 har-capture>=0.5.0
 
       - name: Check fixtures for PII
         run: |

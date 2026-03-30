@@ -44,7 +44,7 @@ def _make_config(**overrides: Any) -> FormSjclAuth:
         "csrf_header": "csrfNonce",
     }
     defaults.update(overrides)
-    return FormSjclAuth(**defaults)
+    return FormSjclAuth.model_validate(defaults)
 
 
 def _login_page_html(

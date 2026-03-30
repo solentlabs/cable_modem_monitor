@@ -209,7 +209,7 @@ class ModemSensorBase(
     @property
     def _snapshot(self) -> ModemSnapshot:
         """Current snapshot from the data coordinator."""
-        return self.coordinator.data  # type: ignore[no-any-return]
+        return self.coordinator.data
 
     @property
     def available(self) -> bool:
@@ -245,7 +245,7 @@ class HealthSensorBase(
     @property
     def _health_info(self) -> HealthInfo:
         """Current health info from the health coordinator."""
-        return self.coordinator.data  # type: ignore[no-any-return]
+        return self.coordinator.data
 
 
 # ------------------------------------------------------------------
@@ -293,7 +293,7 @@ class ModemStatusSensor(ModemSensorBase):
     @property
     def available(self) -> bool:
         """Status sensor is always available to show current state."""
-        return self.coordinator.last_update_success  # type: ignore[no-any-return]
+        return self.coordinator.last_update_success
 
     @property
     def _latest_health_status(self) -> HealthStatus | None:
@@ -353,12 +353,12 @@ class ModemInfoSensor(ModemSensorBase):
     @property
     def available(self) -> bool:
         """Always available — reads static identity, not live data."""
-        return self.coordinator.last_update_success  # type: ignore[no-any-return]
+        return self.coordinator.last_update_success
 
     @property
     def native_value(self) -> str:
         """Return the detected model name."""
-        return self._entry.runtime_data.modem_identity.model  # type: ignore[no-any-return]
+        return self._entry.runtime_data.modem_identity.model
 
     @property
     def extra_state_attributes(self) -> dict[str, str | None]:
@@ -520,7 +520,7 @@ class ModemLastBootTimeSensor(_SystemInfoSensor):
         if uptime_str:
             uptime_seconds = parse_uptime_to_seconds(uptime_str)
             if uptime_seconds is not None:
-                return dt_util.now() - timedelta(seconds=uptime_seconds)  # type: ignore[no-any-return]
+                return dt_util.now() - timedelta(seconds=uptime_seconds)
 
         # Priority 2: counter-reset detection from orchestrator
         return self._snapshot.stats_last_reset

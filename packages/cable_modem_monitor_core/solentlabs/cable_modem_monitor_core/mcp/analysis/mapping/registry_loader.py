@@ -8,22 +8,19 @@ Per docs/FIELD_REGISTRY.md three-tier system.
 
 from __future__ import annotations
 
+import functools
 import json
 from pathlib import Path
 from typing import Any
 
 _REGISTRY_PATH = Path(__file__).parent / "field_registry.json"
 
-# Module-level cache — loaded once on first access
-_registry: dict[str, Any] | None = None
 
-
+@functools.lru_cache(maxsize=1)
 def _load_registry() -> dict[str, Any]:
     """Load and cache the field registry JSON."""
-    global _registry  # noqa: PLW0603
-    if _registry is None:
-        _registry = json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
-    return _registry
+    data: dict[str, Any] = json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
+    return data
 
 
 def get_header_field_map() -> dict[str, tuple[str, int]]:

@@ -201,12 +201,15 @@ def setup_log_buffer(hass: HomeAssistant) -> None:
     for logger_name in _MONITORED_LOGGERS:
         _ensure_handler(logging.getLogger(logger_name), buffer)
 
-    # Ensure Core logger captures INFO+ records.  HA sets the root logger
-    # to WARNING — non-HA packages inherit that default, which suppresses
-    # all INFO-level Core logs.
+    # Sync Core logger level with HA logger.  Core logs under
+    # "solentlabs.*", HA adapter under "custom_components.*".  Users
+    # setting debug on the HA namespace would otherwise miss all Core
+    # logs.  We mirror the HA level but cap it at INFO — HA defaults
+    # its root to WARNING, which would suppress Core INFO logs without
+    # this cap.  min() ensures: DEBUG HA → DEBUG Core, WARNING HA → INFO Core.
+    ha_logger = logging.getLogger(f"custom_components.{DOMAIN}")
     core_logger = logging.getLogger("solentlabs.cable_modem_monitor_core")
-    if core_logger.getEffectiveLevel() > logging.INFO:
-        core_logger.setLevel(logging.INFO)
+    core_logger.setLevel(min(ha_logger.getEffectiveLevel(), logging.INFO))
 
 
 def _find_existing_buffer(hass: HomeAssistant) -> LogBuffer | None:

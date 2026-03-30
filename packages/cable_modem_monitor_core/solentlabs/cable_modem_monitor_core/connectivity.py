@@ -18,16 +18,18 @@ import logging
 import ssl
 import subprocess
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 import urllib3
 from requests.adapters import HTTPAdapter
+from urllib3.exceptions import InsecureRequestWarning
 from urllib3.util.ssl_ import create_urllib3_context
 
 # Suppress InsecureRequestWarning globally.
 # Cable modems use self-signed certs on private LANs; we always use
 # verify=False.  The warning is noise, not a signal.
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+urllib3.disable_warnings(InsecureRequestWarning)
 
 _logger = logging.getLogger(__name__)
 
@@ -61,21 +63,21 @@ class LegacySSLAdapter(HTTPAdapter):
         response = session.get("https://192.168.100.1", verify=False)
     """
 
-    def init_poolmanager(self, *args: object, **kwargs: object) -> object:
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
         """Create pool manager with legacy SSL context."""
         context = create_urllib3_context(ciphers=LEGACY_CIPHERS)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         kwargs["ssl_context"] = context
-        return super().init_poolmanager(*args, **kwargs)  # type: ignore[arg-type]
+        super().init_poolmanager(*args, **kwargs)
 
-    def proxy_manager_for(self, proxy: str, **proxy_kwargs: object) -> object:  # type: ignore[override]
+    def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
         """Create proxy manager with legacy SSL context."""
         context = create_urllib3_context(ciphers=LEGACY_CIPHERS)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         proxy_kwargs["ssl_context"] = context
-        return super().proxy_manager_for(proxy, **proxy_kwargs)  # type: ignore[arg-type]
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
 
 
 def create_session(*, legacy_ssl: bool = False) -> requests.Session:
@@ -88,7 +90,7 @@ def create_session(*, legacy_ssl: bool = False) -> requests.Session:
         Configured session with ``verify=False``.
     """
     session = requests.Session()
-    session.verify = False  # type: ignore[assignment]
+    session.verify = False
     if legacy_ssl:
         session.mount("https://", LegacySSLAdapter())
     return session

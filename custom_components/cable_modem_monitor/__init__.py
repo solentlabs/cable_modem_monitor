@@ -136,7 +136,7 @@ async def async_setup_entry(
     host = entry.data[CONF_HOST]
 
     async def _async_update_data() -> ModemSnapshot:
-        return await hass.async_add_executor_job(orchestrator.get_modem_data)  # type: ignore[no-any-return]
+        return await hass.async_add_executor_job(orchestrator.get_modem_data)
 
     data_coordinator = DataUpdateCoordinator[ModemSnapshot](
         hass,
@@ -152,7 +152,7 @@ async def async_setup_entry(
     if health_monitor is not None:
 
         async def _async_update_health() -> HealthInfo:
-            return await hass.async_add_executor_job(health_monitor.ping)  # type: ignore[no-any-return]
+            return await hass.async_add_executor_job(health_monitor.ping)
 
         health_coordinator = DataUpdateCoordinator[HealthInfo](
             hass,
@@ -247,7 +247,7 @@ async def async_unload_entry(
     if unload_ok and not hass.config_entries.async_entries(DOMAIN):
         async_unregister_services(hass)
 
-    return unload_ok  # type: ignore[no-any-return]
+    return unload_ok
 
 
 async def _async_update_listener(

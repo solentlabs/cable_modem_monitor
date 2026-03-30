@@ -52,7 +52,7 @@ def test_extraction(fixture_path: Path) -> None:
     resource_key = data["_resource"]
     resources = _build_resources(data.get("_json"), resource_key)
 
-    section_config = JSONSection(**data["_config"])
+    section_config = JSONSection.model_validate(data["_config"])
     parser = JSONParser(section_config)
 
     result = parser.parse(resources)

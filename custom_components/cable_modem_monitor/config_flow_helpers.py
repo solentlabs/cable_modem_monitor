@@ -95,7 +95,7 @@ async def load_modem_catalog(hass: HomeAssistant) -> list[ModemSummary]:
 
     Runs in executor — reads YAML files from disk.
     """
-    return await hass.async_add_executor_job(list_modems, CATALOG_PATH)  # type: ignore[no-any-return]
+    return await hass.async_add_executor_job(list_modems, CATALOG_PATH)
 
 
 async def load_variant_list(
@@ -106,7 +106,7 @@ async def load_variant_list(
 
     Runs in executor — reads YAML files from disk.
     """
-    return await hass.async_add_executor_job(list_variants, modem_dir)  # type: ignore[no-any-return]
+    return await hass.async_add_executor_job(list_variants, modem_dir)
 
 
 def _normalize_manufacturer(name: str) -> str:
@@ -360,7 +360,7 @@ async def validate_connection(
     """
     hostname, user_protocol = parse_host_input(host)
 
-    return await hass.async_add_executor_job(  # type: ignore[no-any-return]
+    return await hass.async_add_executor_job(
         _run_validation,
         hostname,
         user_protocol,

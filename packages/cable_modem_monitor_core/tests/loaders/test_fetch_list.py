@@ -22,7 +22,7 @@ class TestCollectFetchTargets:
     def test_table_single_resource(self) -> None:
         """Single table section produces one resource target."""
         data = json.loads((FIXTURES_DIR / "table_single.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         assert len(targets) == 1
@@ -32,7 +32,7 @@ class TestCollectFetchTargets:
     def test_downstream_and_upstream_same_resource(self) -> None:
         """Duplicate paths are deduplicated."""
         data = json.loads((FIXTURES_DIR / "upstream_table.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         paths = [t.path for t in targets]
@@ -42,7 +42,7 @@ class TestCollectFetchTargets:
     def test_system_info_resources_collected(self) -> None:
         """System info sources add to the fetch list."""
         data = json.loads((FIXTURES_DIR / "system_info_html_fields.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         formats = {t.format for t in targets}
@@ -51,7 +51,7 @@ class TestCollectFetchTargets:
     def test_hnap_sections_skipped(self) -> None:
         """HNAP sections are excluded from HTTP fetch list."""
         data = json.loads((FIXTURES_DIR / "hnap_downstream.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         # HNAP sections have no resource paths -- skip entirely
@@ -60,7 +60,7 @@ class TestCollectFetchTargets:
     def test_javascript_format(self) -> None:
         """JavaScript sections produce resource targets."""
         data = json.loads((FIXTURES_DIR / "javascript_single_function.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         assert len(targets) >= 1
@@ -70,7 +70,7 @@ class TestCollectFetchTargets:
     def test_json_format(self) -> None:
         """JSON sections produce resource targets."""
         data = json.loads((FIXTURES_DIR / "json_downstream.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         assert len(targets) >= 1
@@ -80,7 +80,7 @@ class TestCollectFetchTargets:
     def test_mixed_formats_deduplicated(self) -> None:
         """Multiple sections with same path keep first format."""
         data = json.loads((LOCAL_FIXTURES_DIR / "parser_config_shared_resource.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         # Same resource path -- deduplicated to one target
@@ -92,7 +92,7 @@ class TestCollectFetchTargets:
         """Config with no sections produces empty fetch list."""
         # system_info only, with HNAP source
         data = json.loads((FIXTURES_DIR / "system_info_hnap.json").read_text())
-        config = ParserConfig(**data)
+        config = ParserConfig.model_validate(data)
         targets = collect_fetch_targets(config)
 
         # HNAP system info has no resource path

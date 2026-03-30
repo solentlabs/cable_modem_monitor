@@ -367,7 +367,7 @@ def _find_loaded_entry(
     """Find the first loaded config entry for our domain."""
     for entry in hass.config_entries.async_entries(DOMAIN):
         if hasattr(entry, "runtime_data") and entry.runtime_data is not None:
-            return entry  # type: ignore[return-value]
+            return entry
     return None
 
 

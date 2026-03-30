@@ -45,7 +45,7 @@ def test_extraction(fixture_path: Path) -> None:
     """Parse JS JSON channels and verify extracted data matches expected."""
     data = _load_fixture(fixture_path)
 
-    config = JSJsonSection(**data["_config"])
+    config = JSJsonSection.model_validate(data["_config"])
     resources = _build_resources(data.get("_html"), config.resource)
 
     parser = JSJsonParser(config)

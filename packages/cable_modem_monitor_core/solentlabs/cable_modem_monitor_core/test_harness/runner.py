@@ -434,7 +434,7 @@ def load_post_processor(parser_py_path: Path) -> Any:
         return None
 
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    spec.loader.exec_module(module)
 
     cls = getattr(module, _POST_PROCESSOR_CLASS, None)
     if cls is None:

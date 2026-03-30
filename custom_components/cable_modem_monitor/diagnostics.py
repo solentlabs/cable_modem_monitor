@@ -436,4 +436,4 @@ async def async_get_config_entry_diagnostics(
             },
         }
 
-    return await hass.async_add_executor_job(_build_diagnostics_dict, hass, entry)  # type: ignore[no-any-return]
+    return await hass.async_add_executor_job(_build_diagnostics_dict, hass, entry)

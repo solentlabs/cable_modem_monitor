@@ -129,7 +129,7 @@ Track your cable modem's health with comprehensive dashboards and real-time moni
 
 This integration supports modems from ARRIS, Compal, Motorola, Netgear, Technicolor, and Virgin Media. Compatibility varies based on firmware versions and ISP customizations.
 
-> **📊 [View the Supported Modems List](./modems/README.md)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
+> **[View the Supported Modems List](./packages/cable_modem_monitor_catalog/README.md)** - Complete list with DOCSIS versions, ISP compatibility, verification status, and model timelines.
 
 ### Fallback Mode
 If your modem isn't listed, you can still install the integration! It will enter **Fallback Mode** which:

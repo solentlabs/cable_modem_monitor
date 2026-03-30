@@ -124,7 +124,7 @@ class TestFormPbkdf2AuthManager:
             "pbkdf2_key_length": 128,
         }
         defaults.update(overrides)
-        return FormPbkdf2Auth(**defaults)
+        return FormPbkdf2Auth.model_validate(defaults)
 
     def test_successful_login(self, session: requests.Session) -> None:
         """Full PBKDF2 login flow succeeds."""

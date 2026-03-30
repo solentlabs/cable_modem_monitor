@@ -11,7 +11,7 @@ import hashlib
 import hmac as hmac_mod
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import MagicMock
 
 from solentlabs.cable_modem_monitor_core.test_harness.auth.base import AuthHandler
@@ -37,13 +37,13 @@ def _load_entries(name: str) -> list[dict[str, Any]]:
     return list(data["_entries"])
 
 
-def _make_hnap_handler(algorithm: str = "md5") -> HnapAuthHandler:
+def _make_hnap_handler(algorithm: Literal["md5", "sha256"] = "md5") -> HnapAuthHandler:
     """Create an HNAP handler with fixture entries."""
     entries = _load_entries("har_entries_hnap_auth.json")
     return HnapAuthHandler(hmac_algorithm=algorithm, har_entries=entries)
 
 
-def _hmac_hex(key: str, message: str, algorithm: str = "md5") -> str:
+def _hmac_hex(key: str, message: str, algorithm: Literal["md5", "sha256"] = "md5") -> str:
     """Compute HMAC and return uppercase hex digest."""
     digest = hashlib.sha256 if algorithm == "sha256" else hashlib.md5
     return (

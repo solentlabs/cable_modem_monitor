@@ -63,7 +63,7 @@ def test_extraction(fixture_path: Path) -> None:
     else:
         resources = {}
 
-    config = ParserConfig(**data["_parser_config"])
+    config = ParserConfig.model_validate(data["_parser_config"])
     coordinator = ModemParserCoordinator(config)
 
     result = coordinator.parse(resources)
@@ -184,7 +184,7 @@ class TestPostProcessorHooks:
     def test_hook_enriches_channels(self, ds_fixture: dict[str, Any]) -> None:
         """Hook adds fields to BaseParser extraction output."""
         resources = _build_resources(ds_fixture["_html"])
-        config = ParserConfig(**ds_fixture["_parser_config"])
+        config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
         result = coordinator.parse(resources)
 
@@ -194,7 +194,7 @@ class TestPostProcessorHooks:
     def test_hook_replaces_output(self, ds_fixture: dict[str, Any]) -> None:
         """Hook can fully replace BaseParser extraction output."""
         resources = _build_resources(ds_fixture["_html"])
-        config = ParserConfig(**ds_fixture["_parser_config"])
+        config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config, _ReplacingPostProcessor())
         result = coordinator.parse(resources)
 
@@ -204,7 +204,7 @@ class TestPostProcessorHooks:
         """Section without a hook uses BaseParser output as-is."""
         data = _load_fixture("downstream_upstream.json")
         resources = _build_resources(data["_html"])
-        config = ParserConfig(**data["_parser_config"])
+        config = ParserConfig.model_validate(data["_parser_config"])
         # _MockPostProcessor has parse_downstream but NOT parse_upstream
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
         result = coordinator.parse(resources)
@@ -219,7 +219,7 @@ class TestPostProcessorHooks:
         """system_info hook replaces extracted system_info."""
         data = _load_fixture("with_system_info.json")
         resources = _build_resources(data["_html"])
-        config = ParserConfig(**data["_parser_config"])
+        config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
         result = coordinator.parse(resources)
 
@@ -231,7 +231,7 @@ class TestPostProcessorHooks:
     def test_no_post_processor(self, ds_fixture: dict[str, Any]) -> None:
         """Coordinator with no post-processor uses BaseParser output."""
         resources = _build_resources(ds_fixture["_html"])
-        config = ParserConfig(**ds_fixture["_parser_config"])
+        config = ParserConfig.model_validate(ds_fixture["_parser_config"])
         coordinator = ModemParserCoordinator(config)
         result = coordinator.parse(resources)
 
@@ -250,7 +250,7 @@ class TestEdgeCases:
     def test_empty_resources(self) -> None:
         """Missing resource returns empty channels."""
         data = _load_fixture("minimal_downstream.json")
-        config = ParserConfig(**data["_parser_config"])
+        config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config)
         result = coordinator.parse({})
 
@@ -275,7 +275,7 @@ class TestEdgeCases:
     def test_hook_on_empty_section(self) -> None:
         """Hook is still invoked when config has no mapping for a section."""
         data = _load_fixture("minimal_downstream.json")
-        config = ParserConfig(**data["_parser_config"])
+        config = ParserConfig.model_validate(data["_parser_config"])
         coordinator = ModemParserCoordinator(config, _MockPostProcessor())
         result = coordinator.parse({})
 

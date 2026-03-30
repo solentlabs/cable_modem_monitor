@@ -61,7 +61,7 @@ def test_factory_selects_correct_manager(
     """Factory returns the correct manager type for each auth strategy."""
     fixture_path = FIXTURES_DIR / fixture_name
     data = json.loads(fixture_path.read_text())
-    config = ModemConfig(**data)
+    config = ModemConfig.model_validate(data)
     manager = create_auth_manager(config)
     assert isinstance(manager, expected_type)
 
@@ -75,6 +75,6 @@ def test_factory_none_auth_when_auth_missing() -> None:
         "default_host": "192.168.100.1",
         "status": "unsupported",
     }
-    config = ModemConfig(**data)
+    config = ModemConfig.model_validate(data)
     manager = create_auth_manager(config)
     assert isinstance(manager, NoneAuthManager)
