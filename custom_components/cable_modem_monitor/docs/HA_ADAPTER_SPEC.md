@@ -34,7 +34,7 @@ Core, it should.
 | [Restart Lifecycle](#restart-lifecycle) | Button → executor → cancel_event → cleanup |
 | [Reauth Flow](#reauth-flow) | Circuit breaker → `async_step_reauth` |
 | [Diagnostics Platform](#diagnostics-platform) | Core diagnostics + HA-side data |
-| [Services](#services) | `generate_dashboard` |
+| [Services](#services) | `generate_dashboard`, `request_refresh`, `request_health_check` |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
 
 ---
@@ -421,6 +421,9 @@ data for parser development.
 
 ## Services
 
+All services are registered once on first entry setup and unregistered
+when the last entry is removed.
+
 ### `generate_dashboard`
 
 Generates Lovelace YAML for a complete modem dashboard based on
@@ -438,8 +441,68 @@ current channel data.
 2. Generates entity references for actual channels
 3. Returns YAML string the user pastes into a manual dashboard card
 
-**Registration:** Registered once on first entry setup. Unregistered
-when last entry is removed.
+### `request_refresh`
+
+Triggers an immediate modem data poll, bypassing connectivity backoff.
+Intended for automations that need on-demand polling (e.g., "ping
+fails → trigger modem check").
+
+**Fields:** Optional `device_id` (device selector filtered to
+`cable_modem_monitor`). Falls back to all loaded entries when no
+device is specified.
+
+**Behavior:**
+1. Resolve device_id to config entry
+2. Call `orchestrator.reset_connectivity()` to clear backoff
+3. Refresh health coordinator (if health monitoring is enabled)
+4. Refresh data coordinator
+
+Same logic as the "Update Modem Data" button — both use the shared
+`async_request_modem_refresh()` helper to stay DRY.
+
+**Automation example:**
+```yaml
+automation:
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.ping_gateway
+      to: "off"
+      for: "00:01:00"
+  action:
+    - service: cable_modem_monitor.request_refresh
+      data:
+        device_id: <modem_device_id>
+```
+
+### `request_health_check`
+
+Triggers an immediate health check (ICMP + HTTP probes).
+
+**Fields:** Optional `device_id` (device selector filtered to
+`cable_modem_monitor`). Falls back to all loaded entries when no
+device is specified.
+
+**Behavior:**
+1. Resolve device_id to config entry
+2. If health monitoring is enabled, refresh health coordinator
+3. If health monitoring is disabled, log a warning and return
+
+**Automation example:**
+```yaml
+automation:
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.ping_gateway
+      to: "off"
+  action:
+    - service: cable_modem_monitor.request_health_check
+      data:
+        device_id: <modem_device_id>
+    - delay: "00:00:30"
+    - service: cable_modem_monitor.request_refresh
+      data:
+        device_id: <modem_device_id>
+```
 
 ---
 

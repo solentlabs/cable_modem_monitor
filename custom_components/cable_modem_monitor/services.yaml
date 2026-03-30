@@ -43,3 +43,19 @@ generate_dashboard:
       default: true
       selector:
         boolean:
+
+request_refresh:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: cable_modem_monitor
+
+request_health_check:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: cable_modem_monitor

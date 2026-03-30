@@ -142,6 +142,13 @@ Created per network interface, 8 sensors each.
 Restart Modem is only created when modem.yaml declares
 `actions.restart`. The other two buttons are always created.
 
+The Update Modem Data button and the `request_refresh` service share
+the same logic (`async_request_modem_refresh`): reset connectivity
+backoff, refresh health probes, then trigger a data poll. The
+`request_health_check` service triggers only the health probe. Both
+services accept a device target for multi-modem setups. See
+HA_ADAPTER_SPEC.md § Services for details and automation examples.
+
 ### Status Sensor
 
 The Status sensor composes three inputs into a single display state

@@ -210,31 +210,43 @@ def mock_health_monitor(mock_health_info: HealthInfo) -> MagicMock:
 
 
 @pytest.fixture
+def mock_data_coordinator(mock_modem_snapshot: ModemSnapshot) -> MagicMock:
+    """A mock DataUpdateCoordinator for modem data."""
+    coord = MagicMock()
+    coord.data = mock_modem_snapshot
+    coord.last_update_success = True
+    coord.last_exception = None
+    coord.update_interval = "0:10:00"
+    return coord
+
+
+@pytest.fixture
+def mock_health_coordinator(mock_health_info: HealthInfo) -> MagicMock:
+    """A mock DataUpdateCoordinator for health probes."""
+    coord = MagicMock()
+    coord.data = mock_health_info
+    coord.last_update_success = True
+    coord.update_interval = "0:00:30"
+    return coord
+
+
+@pytest.fixture
 def mock_runtime_data(
     mock_orchestrator: MagicMock,
     mock_health_monitor: MagicMock,
     mock_modem_identity: ModemIdentity,
-    mock_modem_snapshot: ModemSnapshot,
-    mock_health_info: HealthInfo,
+    mock_data_coordinator: MagicMock,
+    mock_health_coordinator: MagicMock,
 ) -> CableModemRuntimeData:
     """Runtime data with mock coordinators.
 
-    Uses MagicMock coordinators to avoid needing real HA coordinator setup.
+    Coordinators are injected as fixtures so tests can receive them
+    directly (typed as MagicMock) for assertions — no type: ignore
+    casts needed.
     """
-    data_coord = MagicMock()
-    data_coord.data = mock_modem_snapshot
-    data_coord.last_update_success = True
-    data_coord.last_exception = None
-    data_coord.update_interval = "0:10:00"
-
-    health_coord = MagicMock()
-    health_coord.data = mock_health_info
-    health_coord.last_update_success = True
-    health_coord.update_interval = "0:00:30"
-
     return CableModemRuntimeData(
-        data_coordinator=data_coord,
-        health_coordinator=health_coord,
+        data_coordinator=mock_data_coordinator,
+        health_coordinator=mock_health_coordinator,
         orchestrator=mock_orchestrator,
         health_monitor=mock_health_monitor,
         cancel_event=None,

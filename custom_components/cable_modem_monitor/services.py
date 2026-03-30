@@ -4,6 +4,11 @@ Services:
     cable_modem_monitor.generate_dashboard:
         Generates Lovelace YAML for a complete modem dashboard based on
         current channel data.
+    cable_modem_monitor.request_refresh:
+        Triggers an immediate modem data poll, bypassing connectivity
+        backoff. Targets a specific config entry via device_id.
+    cable_modem_monitor.request_health_check:
+        Triggers an immediate health check (ICMP + HTTP probes).
 
 See HA_ADAPTER_SPEC.md § Services.
 """
@@ -15,6 +20,7 @@ from collections import defaultdict
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
+import homeassistant.helpers.device_registry as dr
 import voluptuous as vol
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
@@ -26,11 +32,13 @@ from .const import (
     DOMAIN,
     get_device_name,
 )
-from .coordinator import CableModemConfigEntry
+from .coordinator import CableModemConfigEntry, CableModemRuntimeData
 
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_GENERATE_DASHBOARD = "generate_dashboard"
+SERVICE_REQUEST_REFRESH = "request_refresh"
+SERVICE_REQUEST_HEALTH_CHECK = "request_health_check"
 SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
     {
         vol.Optional("include_downstream_power", default=True): cv.boolean,
@@ -47,6 +55,92 @@ SERVICE_GENERATE_DASHBOARD_SCHEMA = vol.Schema(
         vol.Optional("channel_grouping", default="by_direction"): vol.In(["by_direction", "by_type"]),
     }
 )
+
+
+# ------------------------------------------------------------------
+# Shared refresh helper — used by UpdateModemDataButton and services
+# ------------------------------------------------------------------
+
+
+async def async_request_modem_refresh(runtime: CableModemRuntimeData) -> None:
+    """Trigger an immediate modem data poll, bypassing connectivity backoff.
+
+    Resets connectivity backoff, refreshes health probes (if enabled),
+    then triggers a data poll. Health runs first so the snapshot
+    includes fresh health info.
+
+    Used by UpdateModemDataButton.async_press() and the
+    request_refresh service.
+    """
+    runtime.orchestrator.reset_connectivity()
+
+    if runtime.health_coordinator is not None:
+        await runtime.health_coordinator.async_request_refresh()
+
+    await runtime.data_coordinator.async_request_refresh()
+
+
+# ------------------------------------------------------------------
+# Device target resolution
+# ------------------------------------------------------------------
+
+
+def _find_loaded_entries(
+    hass: HomeAssistant,
+) -> list[CableModemConfigEntry]:
+    """Find all loaded config entries for our domain."""
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if hasattr(entry, "runtime_data") and entry.runtime_data is not None
+    ]
+
+
+def _resolve_config_entry_for_device(
+    hass: HomeAssistant,
+    device_id: str,
+) -> CableModemConfigEntry | None:
+    """Resolve a device_id to a loaded config entry for our domain."""
+    registry = dr.async_get(hass)
+    device = registry.async_get(device_id)
+    if device is None:
+        return None
+
+    for entry_id in device.config_entries:
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if (
+            entry is not None
+            and entry.domain == DOMAIN
+            and hasattr(entry, "runtime_data")
+            and entry.runtime_data is not None
+        ):
+            return entry  # type: ignore[return-value]
+
+    return None
+
+
+def _resolve_target_entries(
+    hass: HomeAssistant,
+    call: ServiceCall,
+) -> list[CableModemConfigEntry]:
+    """Resolve service call target to loaded config entries.
+
+    Checks for device_id in the service call data (provided by HA when
+    the automation uses ``target: {device_id: ...}``). Falls back to all
+    loaded entries when no target is specified.
+    """
+    device_ids = call.data.get("device_id")
+    if device_ids:
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+        entries: list[CableModemConfigEntry] = []
+        for did in device_ids:
+            entry = _resolve_config_entry_for_device(hass, did)
+            if entry is not None:
+                entries.append(entry)
+        return entries
+
+    return _find_loaded_entries(hass)
 
 
 # ------------------------------------------------------------------
@@ -461,6 +555,60 @@ def create_generate_dashboard_handler(
 
 
 # ------------------------------------------------------------------
+# request_refresh / request_health_check handler factories
+# ------------------------------------------------------------------
+
+
+def create_request_refresh_handler(
+    hass: HomeAssistant,
+) -> Any:
+    """Create the request_refresh service handler."""
+
+    async def handle_request_refresh(call: ServiceCall) -> None:
+        """Handle the request_refresh service call."""
+        entries = _resolve_target_entries(hass, call)
+        if not entries:
+            _LOGGER.warning("request_refresh: no loaded config entry found for target")
+            return
+
+        for entry in entries:
+            model = entry.runtime_data.modem_identity.model
+            _LOGGER.info("Refresh requested via service [%s]", model)
+            await async_request_modem_refresh(entry.runtime_data)
+
+    return handle_request_refresh
+
+
+def create_request_health_check_handler(
+    hass: HomeAssistant,
+) -> Any:
+    """Create the request_health_check service handler."""
+
+    async def handle_request_health_check(call: ServiceCall) -> None:
+        """Handle the request_health_check service call."""
+        entries = _resolve_target_entries(hass, call)
+        if not entries:
+            _LOGGER.warning("request_health_check: no loaded config entry found for target")
+            return
+
+        for entry in entries:
+            runtime = entry.runtime_data
+            model = runtime.modem_identity.model
+
+            if runtime.health_coordinator is None:
+                _LOGGER.warning(
+                    "Health monitoring is not enabled for %s — skipping health check",
+                    model,
+                )
+                continue
+
+            _LOGGER.info("Health check requested via service [%s]", model)
+            await runtime.health_coordinator.async_request_refresh()
+
+    return handle_request_health_check
+
+
+# ------------------------------------------------------------------
 # Registration
 # ------------------------------------------------------------------
 
@@ -474,10 +622,27 @@ def async_register_services(hass: HomeAssistant) -> None:
         schema=SERVICE_GENERATE_DASHBOARD_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    _LOGGER.debug("Registered %s service", SERVICE_GENERATE_DASHBOARD)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REQUEST_REFRESH,
+        create_request_refresh_handler(hass),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REQUEST_HEALTH_CHECK,
+        create_request_health_check_handler(hass),
+    )
+    _LOGGER.debug(
+        "Registered services: %s, %s, %s",
+        SERVICE_GENERATE_DASHBOARD,
+        SERVICE_REQUEST_REFRESH,
+        SERVICE_REQUEST_HEALTH_CHECK,
+    )
 
 
 def async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister services (called when last entry is removed)."""
     hass.services.async_remove(DOMAIN, SERVICE_GENERATE_DASHBOARD)
-    _LOGGER.debug("Unregistered %s service", SERVICE_GENERATE_DASHBOARD)
+    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_REFRESH)
+    hass.services.async_remove(DOMAIN, SERVICE_REQUEST_HEALTH_CHECK)
+    _LOGGER.debug("Unregistered services")

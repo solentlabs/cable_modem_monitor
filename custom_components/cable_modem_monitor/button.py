@@ -43,6 +43,7 @@ from .const import (
     get_device_name,
 )
 from .coordinator import CableModemConfigEntry
+from .services import async_request_modem_refresh
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -210,15 +211,7 @@ class UpdateModemDataButton(_ButtonBase):
 
         _LOGGER.info("Manual data update triggered [%s]", model)
 
-        # Clear connectivity backoff so this poll always attempts
-        # a real connection, even if the modem was unreachable
-        runtime.orchestrator.reset_connectivity()
-
-        # Health first so data snapshot includes fresh health info
-        if runtime.health_coordinator is not None:
-            await runtime.health_coordinator.async_request_refresh()
-
-        await runtime.data_coordinator.async_request_refresh()
+        await async_request_modem_refresh(runtime)
 
         success = runtime.data_coordinator.last_update_success
         if not success:

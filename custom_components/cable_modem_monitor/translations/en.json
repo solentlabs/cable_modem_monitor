@@ -150,6 +150,14 @@
           "description": "Short: 'DS Power (dBmV)' vs Long: 'Downstream Power Levels (dBmV)'."
         }
       }
+    },
+    "request_refresh": {
+      "name": "Request Refresh",
+      "description": "Triggers an immediate modem data poll, bypassing any connectivity backoff. Use in automations to refresh modem data on demand."
+    },
+    "request_health_check": {
+      "name": "Request Health Check",
+      "description": "Triggers an immediate health check (ICMP and HTTP probes). Only works if health monitoring is enabled for the modem."
     }
   }
 }

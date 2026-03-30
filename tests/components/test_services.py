@@ -1,27 +1,38 @@
-"""Tests for the services module — YAML builders and channel helpers.
+"""Tests for the services module — YAML builders, channel helpers, and service handlers.
 
 Most functions are pure (no I/O), tested via table-driven patterns.
-The service handler test mocks runtime_data.
+Service handler tests mock runtime_data and HA infrastructure.
 """
 
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from custom_components.cable_modem_monitor.const import DOMAIN
+from custom_components.cable_modem_monitor.coordinator import (
+    CableModemRuntimeData,
+)
 from custom_components.cable_modem_monitor.services import (
     _add_channel_graphs,
     _build_channel_graph_yaml,
     _build_error_graphs_yaml,
     _build_latency_graph_yaml,
     _build_status_card_yaml,
+    _find_loaded_entries,
     _format_channel_label,
     _format_title_with_type,
     _get_channel_info,
     _get_dashboard_titles,
     _group_by_type,
+    _resolve_config_entry_for_device,
+    _resolve_target_entries,
     _unique_types,
+    async_request_modem_refresh,
+    create_request_health_check_handler,
+    create_request_refresh_handler,
 )
 
 # -----------------------------------------------------------------------
@@ -285,3 +296,357 @@ def test_add_channel_graphs_empty():
         False,
     )
     assert parts == []
+
+
+# -----------------------------------------------------------------------
+# Helpers for service handler tests
+# -----------------------------------------------------------------------
+
+
+def _make_mock_entry(
+    runtime_data: CableModemRuntimeData,
+    entry_id: str = "test_entry",
+) -> MagicMock:
+    """Create a mock config entry with runtime_data and domain."""
+    entry = MagicMock()
+    entry.entry_id = entry_id
+    entry.domain = DOMAIN
+    entry.runtime_data = runtime_data
+    return entry
+
+
+def _make_mock_call(device_id: str | list[str] | None = None) -> MagicMock:
+    """Create a mock ServiceCall with optional device_id."""
+    call = MagicMock()
+    call.data = {}
+    if device_id is not None:
+        call.data["device_id"] = device_id
+    return call
+
+
+# -----------------------------------------------------------------------
+# async_request_modem_refresh (shared helper)
+# -----------------------------------------------------------------------
+
+
+# ┌──────────────────────┬──────────────────────────────────────────────────────┬────────────────┐
+# │ health_coordinator   │ expected calls                                       │ description    │
+# ├──────────────────────┼──────────────────────────────────────────────────────┼────────────────┤
+# │ mock coordinator     │ reset_connectivity, health.refresh, data.refresh     │ with health    │
+# │ None                 │ reset_connectivity, data.refresh                     │ without health │
+# └──────────────────────┴──────────────────────────────────────────────────────┴────────────────┘
+#
+# fmt: off
+REFRESH_HELPER_CASES = [
+    (True,  "with_health"),
+    (False, "without_health"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "has_health,desc",
+    REFRESH_HELPER_CASES,
+    ids=[c[1] for c in REFRESH_HELPER_CASES],
+)
+async def test_async_request_modem_refresh(
+    has_health: bool,
+    desc: str,
+    mock_orchestrator: MagicMock,
+    mock_data_coordinator: MagicMock,
+    mock_health_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Shared helper resets backoff, optionally refreshes health, then data."""
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+
+    if has_health:
+        mock_health_coordinator.async_request_refresh = AsyncMock()
+    else:
+        mock_runtime_data.health_coordinator = None
+
+    await async_request_modem_refresh(mock_runtime_data)
+
+    mock_orchestrator.reset_connectivity.assert_called_once()
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
+
+    if has_health:
+        mock_health_coordinator.async_request_refresh.assert_awaited_once()
+
+
+async def test_refresh_helper_calls_health_before_data(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Health coordinator refreshed before data coordinator."""
+    call_order: list[str] = []
+
+    data_coord: MagicMock = mock_runtime_data.data_coordinator  # type: ignore[assignment]
+    health_coord: MagicMock = mock_runtime_data.health_coordinator  # type: ignore[assignment]
+
+    async def record_health() -> None:
+        call_order.append("health")
+
+    async def record_data() -> None:
+        call_order.append("data")
+
+    health_coord.async_request_refresh = record_health
+    data_coord.async_request_refresh = record_data
+
+    await async_request_modem_refresh(mock_runtime_data)
+
+    assert call_order == ["health", "data"]
+
+
+# -----------------------------------------------------------------------
+# _find_loaded_entries
+# -----------------------------------------------------------------------
+
+
+def test_find_loaded_entries() -> None:
+    """Returns only entries with non-None runtime_data."""
+    loaded = MagicMock()
+    loaded.runtime_data = MagicMock()
+
+    unloaded = MagicMock(spec=[])  # no runtime_data attribute
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [loaded, unloaded]
+
+    result = _find_loaded_entries(hass)
+
+    hass.config_entries.async_entries.assert_called_once_with(DOMAIN)
+    assert result == [loaded]
+
+
+# -----------------------------------------------------------------------
+# _resolve_config_entry_for_device
+# -----------------------------------------------------------------------
+
+# ┌─────────────────┬──────────────────────┬────────────────────┬──────────────────┐
+# │ device exists?  │ config entry state   │ expected result    │ description      │
+# ├─────────────────┼──────────────────────┼────────────────────┼──────────────────┤
+# │ yes             │ loaded, our domain   │ the entry          │ valid_device     │
+# │ no              │ —                    │ None               │ unknown_device   │
+# │ yes             │ loaded, other domain │ None               │ wrong_domain     │
+# │ yes             │ no runtime_data      │ None               │ not_loaded       │
+# └─────────────────┴──────────────────────┴────────────────────┴──────────────────┘
+#
+# fmt: off
+RESOLVE_DEVICE_CASES = [
+    ("dev_1", True,  DOMAIN,  True,  True,  "valid_device"),
+    ("dev_2", False, None,    None,  False, "unknown_device"),
+    ("dev_3", True,  "other", True,  False, "wrong_domain"),
+    ("dev_4", True,  DOMAIN,  False, False, "not_loaded"),
+]
+# fmt: on
+
+
+@pytest.mark.parametrize(
+    "device_id,device_exists,domain,has_runtime,expect_found,desc",
+    RESOLVE_DEVICE_CASES,
+    ids=[c[5] for c in RESOLVE_DEVICE_CASES],
+)
+@patch("custom_components.cable_modem_monitor.services.dr")
+def test_resolve_config_entry_for_device(
+    mock_dr: MagicMock,
+    device_id: str,
+    device_exists: bool,
+    domain: str | None,
+    has_runtime: bool | None,
+    expect_found: bool,
+    desc: str,
+) -> None:
+    """Device ID resolves to config entry only when valid."""
+    hass = MagicMock()
+    mock_registry = MagicMock()
+    mock_dr.async_get.return_value = mock_registry
+
+    if device_exists:
+        device = MagicMock()
+        device.config_entries = {"entry_1"}
+        mock_registry.async_get.return_value = device
+
+        entry = MagicMock()
+        entry.domain = domain
+        if has_runtime:
+            entry.runtime_data = MagicMock()
+        else:
+            entry.runtime_data = None
+        hass.config_entries.async_get_entry.return_value = entry
+    else:
+        mock_registry.async_get.return_value = None
+
+    result = _resolve_config_entry_for_device(hass, device_id)
+
+    if expect_found:
+        assert result is not None
+    else:
+        assert result is None
+
+
+# -----------------------------------------------------------------------
+# _resolve_target_entries
+# -----------------------------------------------------------------------
+
+
+@patch("custom_components.cable_modem_monitor.services.dr")
+def test_resolve_target_with_device_id(mock_dr: MagicMock) -> None:
+    """Resolves device_id to matching config entry."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.domain = DOMAIN
+    entry.runtime_data = MagicMock()
+
+    mock_registry = MagicMock()
+    mock_dr.async_get.return_value = mock_registry
+    device = MagicMock()
+    device.config_entries = {"entry_1"}
+    mock_registry.async_get.return_value = device
+    hass.config_entries.async_get_entry.return_value = entry
+
+    call = _make_mock_call(device_id="dev_abc")
+    result = _resolve_target_entries(hass, call)
+
+    assert result == [entry]
+
+
+def test_resolve_target_no_device_id_returns_all_loaded() -> None:
+    """Falls back to all loaded entries when no device_id in call."""
+    loaded = MagicMock()
+    loaded.runtime_data = MagicMock()
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [loaded]
+
+    call = _make_mock_call(device_id=None)
+    result = _resolve_target_entries(hass, call)
+
+    assert result == [loaded]
+
+
+@patch("custom_components.cable_modem_monitor.services.dr")
+def test_resolve_target_unknown_device_returns_empty(mock_dr: MagicMock) -> None:
+    """Unknown device_id returns empty list, not fallback."""
+    hass = MagicMock()
+    mock_registry = MagicMock()
+    mock_dr.async_get.return_value = mock_registry
+    mock_registry.async_get.return_value = None
+
+    call = _make_mock_call(device_id="nonexistent")
+    result = _resolve_target_entries(hass, call)
+
+    assert result == []
+
+
+@patch("custom_components.cable_modem_monitor.services.dr")
+def test_resolve_target_string_device_id(mock_dr: MagicMock) -> None:
+    """Single string device_id is handled (not just list)."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.domain = DOMAIN
+    entry.runtime_data = MagicMock()
+
+    mock_registry = MagicMock()
+    mock_dr.async_get.return_value = mock_registry
+    device = MagicMock()
+    device.config_entries = {"entry_1"}
+    mock_registry.async_get.return_value = device
+    hass.config_entries.async_get_entry.return_value = entry
+
+    call = _make_mock_call(device_id="single_id")
+    result = _resolve_target_entries(hass, call)
+
+    assert len(result) == 1
+
+
+# -----------------------------------------------------------------------
+# request_refresh service handler
+# -----------------------------------------------------------------------
+
+
+async def test_request_refresh_triggers_refresh(
+    mock_orchestrator: MagicMock,
+    mock_data_coordinator: MagicMock,
+    mock_health_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Handler calls async_request_modem_refresh for resolved entry."""
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+    mock_health_coordinator.async_request_refresh = AsyncMock()
+
+    entry = _make_mock_entry(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_request_refresh_handler(hass)
+    call = _make_mock_call()
+
+    await handler(call)
+
+    mock_orchestrator.reset_connectivity.assert_called_once()
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
+
+
+async def test_request_refresh_no_entries() -> None:
+    """Handler returns gracefully when no entries found."""
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+
+    handler = create_request_refresh_handler(hass)
+    call = _make_mock_call()
+
+    # Should not raise
+    await handler(call)
+
+
+# -----------------------------------------------------------------------
+# request_health_check service handler
+# -----------------------------------------------------------------------
+
+
+async def test_request_health_check_triggers_probe(
+    mock_health_coordinator: MagicMock,
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Handler refreshes health coordinator when enabled."""
+    mock_health_coordinator.async_request_refresh = AsyncMock()
+
+    entry = _make_mock_entry(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_request_health_check_handler(hass)
+    call = _make_mock_call()
+
+    await handler(call)
+
+    mock_health_coordinator.async_request_refresh.assert_awaited_once()
+
+
+async def test_request_health_check_no_health(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Handler skips when health monitoring is disabled."""
+    mock_runtime_data.health_coordinator = None
+
+    entry = _make_mock_entry(mock_runtime_data)
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_request_health_check_handler(hass)
+    call = _make_mock_call()
+
+    # Should not raise — logs warning and returns
+    await handler(call)
+
+
+async def test_request_health_check_no_entries() -> None:
+    """Handler returns gracefully when no entries found."""
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+
+    handler = create_request_health_check_handler(hass)
+    call = _make_mock_call()
+
+    # Should not raise
+    await handler(call)

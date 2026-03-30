@@ -93,6 +93,8 @@ async def test_setup_entry_without_restart(
 
 async def test_update_button_press(
     mock_orchestrator: MagicMock,
+    mock_data_coordinator: MagicMock,
+    mock_health_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
     """Update button refreshes health then data coordinators."""
@@ -100,21 +102,19 @@ async def test_update_button_press(
     button = UpdateModemDataButton(entry)
     button.hass = MagicMock()
 
-    # Mock async refresh methods
-    data_coord: MagicMock = mock_runtime_data.data_coordinator  # type: ignore[assignment]
-    health_coord: MagicMock = mock_runtime_data.health_coordinator  # type: ignore[assignment]
-    data_coord.async_request_refresh = AsyncMock()
-    health_coord.async_request_refresh = AsyncMock()
-    data_coord.last_update_success = True
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+    mock_health_coordinator.async_request_refresh = AsyncMock()
+    mock_data_coordinator.last_update_success = True
 
     await button.async_press()
 
     mock_orchestrator.reset_connectivity.assert_called_once()
-    health_coord.async_request_refresh.assert_awaited_once()
-    data_coord.async_request_refresh.assert_awaited_once()
+    mock_health_coordinator.async_request_refresh.assert_awaited_once()
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
 
 async def test_update_button_press_no_health(
+    mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
     """Update button skips health refresh when no health coordinator."""
@@ -123,13 +123,12 @@ async def test_update_button_press_no_health(
     button = UpdateModemDataButton(entry)
     button.hass = MagicMock()
 
-    data_coord: MagicMock = mock_runtime_data.data_coordinator  # type: ignore[assignment]
-    data_coord.async_request_refresh = AsyncMock()
-    data_coord.last_update_success = True
+    mock_data_coordinator.async_request_refresh = AsyncMock()
+    mock_data_coordinator.last_update_success = True
 
     await button.async_press()
 
-    data_coord.async_request_refresh.assert_awaited_once()
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
 
 # -----------------------------------------------------------------------
@@ -160,6 +159,7 @@ def test_restart_button_available_normally(
 
 
 async def test_restart_button_press_success(
+    mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
     """Successful restart sends notification and refreshes data."""
@@ -174,8 +174,7 @@ async def test_restart_button_press_success(
         )
     )
     button.hass.services.async_call = AsyncMock()
-    data_coord: MagicMock = mock_runtime_data.data_coordinator  # type: ignore[assignment]
-    data_coord.async_request_refresh = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
 
     await button.async_press()
 
@@ -185,13 +184,14 @@ async def test_restart_button_press_success(
     assert "Complete" in call_args[0][2]["title"]
 
     # Data refreshed
-    data_coord.async_request_refresh.assert_awaited_once()
+    mock_data_coordinator.async_request_refresh.assert_awaited_once()
 
     # Cancel event cleared
     assert mock_runtime_data.cancel_event is None
 
 
 async def test_restart_button_press_failure(
+    mock_data_coordinator: MagicMock,
     mock_runtime_data: CableModemRuntimeData,
 ):
     """Failed restart sends failure notification."""
@@ -207,8 +207,7 @@ async def test_restart_button_press_failure(
         )
     )
     button.hass.services.async_call = AsyncMock()
-    data_coord: MagicMock = mock_runtime_data.data_coordinator  # type: ignore[assignment]
-    data_coord.async_request_refresh = AsyncMock()
+    mock_data_coordinator.async_request_refresh = AsyncMock()
 
     await button.async_press()
 
