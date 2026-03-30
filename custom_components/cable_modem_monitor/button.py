@@ -142,7 +142,7 @@ class RestartModemButton(_ButtonBase):
         self._attr_unique_id = f"{entry.entry_id}_restart_button"
         self._attr_icon = "mdi:restart"
 
-    @property
+    @functools.cached_property
     def available(self) -> bool:
         """Unavailable while a restart is already in progress."""
         return not self._entry.runtime_data.orchestrator.is_restarting

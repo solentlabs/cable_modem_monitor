@@ -1,6 +1,6 @@
 """Shared reference data for catalog index generation.
 
-Loads chipset and ISP data from JSON files in scripts/data/.
+Loads chipset and ISP data from JSON files in data/.
 Provides badge, link, and reference table generators for the catalog README.
 
 When onboarding a modem with an unknown chipset or ISP, add the entry
@@ -114,12 +114,12 @@ def check_reference_gaps(modems: list[dict[str, object]]) -> list[str]:
     for m in modems:
         chipset = str(m.get("chipset", "") or "").lower()
         if chipset not in skip_chipsets and not _chipset_known(chipset):
-            warnings.append(f"  {m.get('model')}: chipset '{m.get('chipset')}' not in scripts/data/chipsets.json")
+            warnings.append(f"  {m.get('model')}: chipset '{m.get('chipset')}' not in data/chipsets.json")
 
         for isp in m.get("isps", []):  # type: ignore[union-attr]
             isp_lower = str(isp).lower().strip()
             if isp_lower not in skip_isps and not any(key in isp_lower for key in ISP_COLORS):
-                warnings.append(f"  {m.get('model')}: ISP '{isp}' not in scripts/data/providers.json")
+                warnings.append(f"  {m.get('model')}: ISP '{isp}' not in data/providers.json")
     return warnings
 
 

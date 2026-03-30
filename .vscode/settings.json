@@ -29,12 +29,8 @@
   // Disable automatic venv activation (we handle it with custom wrapper script)
   "python.terminal.activateEnvironment": false,
 
-  // Ruff extension settings (replaces deprecated python.linting.* settings)
-  "ruff.lint.run": "onSave",
-  "ruff.lint.args": [
-    "--config",
-    "pyproject.toml"
-  ],
+  // Ruff extension — native server auto-discovers pyproject.toml
+  "ruff.nativeServer": true,
 
   // ========================================
   // Code Formatting
@@ -107,12 +103,7 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.extraPaths": [
-    "packages/cable_modem_monitor_core",
-    "packages/cable_modem_monitor_core/tests",
-    "packages/cable_modem_monitor_catalog",
-    "packages/cable_modem_monitor_catalog/tests"
-  ],
+  // Pylance exclude and extraPaths are in pyrightconfig.json
 
   // ========================================
   // CodeQL Configuration (Optional)

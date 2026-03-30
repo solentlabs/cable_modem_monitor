@@ -17,6 +17,7 @@ See ENTITY_MODEL_SPEC.md for the full entity catalog.
 
 from __future__ import annotations
 
+import functools
 import logging
 from datetime import datetime, timedelta
 from typing import Any
@@ -212,12 +213,12 @@ class ModemSensorBase(
         return self.coordinator.data
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Available when coordinator succeeds and modem_data is present."""
         return self.coordinator.last_update_success and self._snapshot.modem_data is not None
 
 
-class HealthSensorBase(
+class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     CoordinatorEntity[DataUpdateCoordinator[HealthInfo]],
     SensorEntity,
 ):
@@ -308,7 +309,7 @@ class ModemStatusSensor(ModemSensorBase):
         snapshot = self._snapshot
         return snapshot.health_info.health_status if snapshot.health_info else None
 
-    @property
+    @functools.cached_property
     def native_value(self) -> str:
         """Return display state from the priority cascade."""
         snapshot = self._snapshot
@@ -318,7 +319,7 @@ class ModemStatusSensor(ModemSensorBase):
             snapshot.docsis_status,
         )
 
-    @property
+    @functools.cached_property
     def extra_state_attributes(self) -> dict[str, str]:
         """Return connection, health, DOCSIS status and diagnosis."""
         snapshot = self._snapshot
@@ -355,12 +356,12 @@ class ModemInfoSensor(ModemSensorBase):
         """Always available — reads static identity, not live data."""
         return self.coordinator.last_update_success
 
-    @property
+    @functools.cached_property
     def native_value(self) -> str:
         """Return the detected model name."""
         return self._entry.runtime_data.modem_identity.model
 
-    @property
+    @functools.cached_property
     def extra_state_attributes(self) -> dict[str, str | None]:
         """Return ModemIdentity fields as attributes."""
         identity = self._entry.runtime_data.modem_identity
@@ -408,7 +409,7 @@ class ModemChannelCountSensor(_SystemInfoSensor):
         self._attr_icon = "mdi:numeric"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
-    @property
+    @functools.cached_property
     def native_value(self) -> int | None:
         """Return the channel count."""
         value = self._get_system_info().get(self._field)
@@ -434,7 +435,7 @@ class ModemErrorTotalSensor(_SystemInfoSensor):
         self._attr_icon = "mdi:alert-circle-check" if error_type == "corrected" else "mdi:alert-circle"
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
 
-    @property
+    @functools.cached_property
     def native_value(self) -> int | None:
         """Return the error total."""
         value = self._get_system_info().get(self._field)
@@ -455,7 +456,7 @@ class ModemSoftwareVersionSensor(_SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_software_version"
         self._attr_icon = "mdi:information-outline"
 
-    @property
+    @functools.cached_property
     def native_value(self) -> str | None:
         """Return the software version string."""
         return self._get_system_info().get("software_version")
@@ -475,7 +476,7 @@ class ModemSystemUptimeSensor(_SystemInfoSensor):
         self._attr_unique_id = f"{entry.entry_id}_cable_modem_system_uptime"
         self._attr_icon = "mdi:clock-outline"
 
-    @property
+    @functools.cached_property
     def native_value(self) -> str | None:
         """Return the uptime string as reported by the modem.
 
@@ -512,7 +513,7 @@ class ModemLastBootTimeSensor(_SystemInfoSensor):
         self._attr_icon = "mdi:restart"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
 
-    @property
+    @functools.cached_property
     def native_value(self) -> datetime | None:
         """Return last boot time calculated from uptime or counter reset."""
         # Priority 1: native uptime from modem
@@ -585,7 +586,7 @@ class ChannelSensor(ModemSensorBase):
                 return ch  # type: ignore[no-any-return]
         return None
 
-    @property
+    @functools.cached_property
     def native_value(self) -> float | int | None:
         """Return the channel metric value."""
         ch = self._find_channel()
@@ -596,7 +597,7 @@ class ChannelSensor(ModemSensorBase):
             return None
         return self._value_type(value)  # type: ignore[no-any-return]
 
-    @property
+    @functools.cached_property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return channel identity and all non-metric fields."""
         attrs: dict[str, Any] = {
@@ -642,7 +643,7 @@ class LanStatsSensor(ModemSensorBase):
         if unit:
             self._attr_native_unit_of_measurement = unit
 
-    @property
+    @functools.cached_property
     def native_value(self) -> int | None:
         """Return the LAN stats value."""
         modem_data = self._snapshot.modem_data
@@ -681,7 +682,7 @@ class PingLatencySensor(HealthSensorBase):
         self._attr_icon = "mdi:speedometer"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
-    @property
+    @functools.cached_property
     def native_value(self) -> int | None:
         """Return ping latency in milliseconds."""
         latency = self._health_info.icmp_latency_ms
@@ -708,7 +709,7 @@ class HttpLatencySensor(HealthSensorBase):
         self._attr_icon = "mdi:web-clock"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
-    @property
+    @functools.cached_property
     def native_value(self) -> int | None:
         """Return HTTP latency in milliseconds."""
         latency = self._health_info.http_latency_ms

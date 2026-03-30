@@ -1,0 +1,21 @@
+{
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    "packages/cable_modem_monitor_core",
+    "packages/cable_modem_monitor_catalog"
+  ],
+  "exclude": [
+    "**/.venv",
+    "RAW_DATA",
+    "codeql",
+    "cable-modem-monitor-ql"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "packages/cable_modem_monitor_core",
+      "extraPaths": ["."]
+    }
+  ]
+}

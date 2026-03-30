@@ -319,8 +319,11 @@ def show_changed_files(version: str) -> None:
     print_info(f"Suggested commit message: chore: bump version to {version}")
     print_info("After committing and merging to main:")
     print_info("  git checkout main && git pull")
-    print_info(f"  git tag -a v{version} -m 'Release v{version}'")
+    print_info(f"  git tag v{version}")
     print_info(f"  git push origin v{version}")
+    print_info("")
+    print_info("Wait for PyPI publish before restarting HA:")
+    print_info("  gh run watch $(gh run list -w 'Publish to PyPI' --json databaseId -q '.[0].databaseId')")
 
 
 def run_tests(repo_root: Path) -> bool:
@@ -382,7 +385,7 @@ def run_code_quality_checks(repo_root: Path) -> bool:
 
 def _generate_catalog_index(repo_root: Path) -> None:
     """Regenerate the v3.14 catalog package README.md."""
-    catalog_script = repo_root / "scripts" / "generate_catalog_index.py"
+    catalog_script = repo_root / "packages" / "cable_modem_monitor_catalog" / "scripts" / "generate_catalog_index.py"
     if not catalog_script.exists():
         return
     try:
@@ -535,6 +538,7 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
 
     # Check manifest.json (JSON structure, not substring)
     manifest_path = repo_root / "custom_components" / "cable_modem_monitor" / "manifest.json"
+    manifest = None
     try:
         with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
@@ -549,16 +553,17 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
         all_correct = False
 
     # Check manifest requirements pins
-    for pkg_name in [
-        "solentlabs-cable-modem-monitor-core",
-        "solentlabs-cable-modem-monitor-catalog",
-    ]:
-        expected_pin = f"{pkg_name}=={version}"
-        if expected_pin not in manifest.get("requirements", []):
-            print_error(f"manifest.json requirements missing: {expected_pin}")
-            all_correct = False
-        else:
-            print_success(f"manifest.json requirement pin correct: {pkg_name}")
+    if manifest is not None:
+        for pkg_name in [
+            "solentlabs-cable-modem-monitor-core",
+            "solentlabs-cable-modem-monitor-catalog",
+        ]:
+            expected_pin = f"{pkg_name}=={version}"
+            if expected_pin not in manifest.get("requirements", []):
+                print_error(f"manifest.json requirements missing: {expected_pin}")
+                all_correct = False
+            else:
+                print_success(f"manifest.json requirement pin correct: {pkg_name}")
 
     # Check text-based version files
     cc = repo_root / "custom_components" / "cable_modem_monitor"

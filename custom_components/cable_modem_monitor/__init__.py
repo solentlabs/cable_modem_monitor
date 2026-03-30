@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from datetime import timedelta
+from importlib.metadata import version as pkg_version
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -74,6 +75,23 @@ _LOGGER = logging.getLogger(__name__)
 _CURRENT_VERSION = 2
 
 
+def _get_package_versions() -> str:
+    """Build package version string for the startup log.
+
+    Uses importlib.metadata which does file I/O — call from executor.
+    """
+    parts = []
+    for pkg, label in (
+        ("solentlabs-cable-modem-monitor-core", "core"),
+        ("solentlabs-cable-modem-monitor-catalog", "catalog"),
+    ):
+        try:
+            parts.append(f"{label}: v{pkg_version(pkg)}")
+        except Exception:  # noqa: BLE001
+            parts.append(f"{label}: not installed")
+    return ", ".join(parts)
+
+
 async def async_migrate_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -102,11 +120,13 @@ async def async_setup_entry(
     Steps 1-5 (config loading, Core component creation) run in an
     executor thread because they involve file I/O.
     """
+    pkg_versions = await hass.async_add_executor_job(_get_package_versions)
     _LOGGER.info(
-        "Cable Modem Monitor v%s starting [%s %s]",
+        "Cable Modem Monitor v%s starting [%s %s] — %s",
         VERSION,
         entry.data.get(CONF_MANUFACTURER, ""),
         entry.data.get(CONF_MODEL, ""),
+        pkg_versions,
     )
 
     # Initialize log buffer before any Core calls so auth, parsing,
