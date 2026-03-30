@@ -5,6 +5,10 @@
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<!-- Packages -->
+[![Core](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-core?label=core)](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)
+[![Catalog](https://img.shields.io/pypi/v/solentlabs-cable-modem-monitor-catalog?label=catalog)](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)
+
 <!-- Build Status -->
 [![GitHub Actions](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/tests.yml)
 [![CodeQL](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/codeql.yml/badge.svg)](https://github.com/solentlabs/cable_modem_monitor/actions/workflows/codeql.yml)
@@ -39,8 +43,8 @@ A custom Home Assistant integration that monitors cable modem signal quality, po
 **📖 See the [Getting Started Guide](./docs/setup/GETTING_STARTED.md)** for development environment setup.
 
 **Architecture (v3.14):** Two pip packages in `packages/`:
-- **Core** (`solentlabs-cable-modem-monitor-core`) — platform-agnostic engine (auth, parsing, testing, MCP tools)
-- **Catalog** (`solentlabs-cable-modem-monitor-catalog`) — modem configs, parsers, test fixtures
+- **Core** ([`solentlabs-cable-modem-monitor-core`](https://pypi.org/project/solentlabs-cable-modem-monitor-core/)) — platform-agnostic engine (auth, parsing, testing, MCP tools)
+- **Catalog** ([`solentlabs-cable-modem-monitor-catalog`](https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/)) — modem configs, parsers, test fixtures
 
 Quick start:
 ```bash
@@ -49,6 +53,27 @@ cd cable_modem_monitor
 ./scripts/setup.sh    # Local Python setup
 # OR open in VS Code and click "Reopen in Container" for Dev Container
 ```
+
+### Testing Feature Branches
+
+To install a feature branch on a live HA instance via HACS:
+
+```yaml
+# Developer Tools > Actions
+action: update.install
+data:
+  version: "feature/v3.14.0"   # branch name, tag, or commit SHA
+target:
+  entity_id: update.cable_modem_monitor_update
+```
+
+HA will download the branch from GitHub and auto-install any PyPI
+dependencies from `manifest.json` on restart.
+
+> **Important:** After installing a branch, HACS may show "Update
+> available" because it compares the branch name against the latest
+> release tag. **Ignore that badge** — clicking it will revert you
+> to the stable release.
 
 ---
 

@@ -359,31 +359,12 @@ def _build_diagnostics_dict(
     else:
         diagnostics["modem_data"] = {"note": "No snapshot available"}
 
-    # Channel dump
+    # Channel dump — pass through parser output as-is.  Parsers emit
+    # sparse dicts (only fields the modem produces), already validated
+    # against field_registry by validate_modem_data.
     if modem_data:
-        diagnostics["downstream_channels"] = [
-            {
-                "channel_id": ch.get("channel_id"),
-                "channel_type": ch.get("channel_type"),
-                "frequency": ch.get("frequency"),
-                "power": ch.get("power"),
-                "snr": ch.get("snr"),
-                "corrected": ch.get("corrected"),
-                "uncorrected": ch.get("uncorrected"),
-                "modulation": ch.get("modulation"),
-            }
-            for ch in modem_data.get("downstream", [])
-        ]
-        diagnostics["upstream_channels"] = [
-            {
-                "channel_id": ch.get("channel_id"),
-                "channel_type": ch.get("channel_type"),
-                "frequency": ch.get("frequency"),
-                "power": ch.get("power"),
-                "modulation": ch.get("modulation"),
-            }
-            for ch in modem_data.get("upstream", [])
-        ]
+        diagnostics["downstream_channels"] = modem_data.get("downstream", [])
+        diagnostics["upstream_channels"] = modem_data.get("upstream", [])
     else:
         diagnostics["downstream_channels"] = []
         diagnostics["upstream_channels"] = []

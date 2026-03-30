@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.2] - 2026-03-30
+
+### Added
+
+- 75 HA adapter tests (config flow, options flow, services, diagnostics,
+  migrations, sensors, buttons) — coverage 28% → 70%
+- PyPI publishing workflow (`publish.yml`) with trusted publishers
+- Alpha versioning support in CI — feature branch pushes trigger PyPI
+  alpha releases, GitHub release workflow skips alpha tags
+- Package README updates with PyPI badges and installation instructions
+
+### Fixed
+
+- CI validation failures from version consistency and package build checks
+- HA dev container startup reliability (correct pip install paths)
+- Release workflow: skip GitHub release creation for alpha tags
+
 ## [3.14.0-alpha.1] - 2026-03-30
 
 ### Architecture

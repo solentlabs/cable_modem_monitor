@@ -34,6 +34,13 @@ CATALOG_DIR = (
     repo_root / "packages" / "cable_modem_monitor_catalog" / "solentlabs" / "cable_modem_monitor_catalog" / "modems"
 )
 
+# Fully qualified base URL for modem.yaml links — required because PyPI
+# renders the README outside the GitHub repo context.
+_GITHUB_MODEM_BASE = (
+    "https://github.com/solentlabs/cable_modem_monitor/blob/main"
+    "/packages/cable_modem_monitor_catalog/solentlabs/cable_modem_monitor_catalog/modems"
+)
+
 
 def load_catalog_modems() -> list[dict]:
     """Load all modem.yaml files from the catalog package."""
@@ -189,7 +196,7 @@ def _modem_table_row(m: dict) -> str:
     status = _STATUS_ICONS.get(m["status"], "❓ Unknown")
     chipset = chipset_to_link(m["chipset"])
     protocol = protocol_to_badge(m["protocol"])
-    model_link = f"[{m['model']}]({m['path']}/modem.yaml)"
+    model_link = f"[{m['model']}]({_GITHUB_MODEM_BASE}/{m['path']}/modem.yaml)"
     all_names = [m["model"]] + m["model_aliases"]
     names_cell = "<br>".join(all_names)
     auth = "<br>".join(m["auth_strategies"])
@@ -291,7 +298,7 @@ def generate_index(output_path: Path | None = None) -> str:
             ]
         )
         for m in unsupported:
-            model_link = f"[{m['model']}]({m['path']}/modem.yaml)"
+            model_link = f"[{m['model']}]({_GITHUB_MODEM_BASE}/{m['path']}/modem.yaml)"
             isp_list = m["isps"]
             badge_str = " ".join(isp_to_badge(isp) for isp in isp_list) if isp_list else ""
             lines.append(f"| {m['manufacturer']} | {model_link} | {m['docsis']} | {badge_str} | 🚫 Unsupported |")

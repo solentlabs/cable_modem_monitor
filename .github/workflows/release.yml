@@ -13,7 +13,8 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     # Alpha tags publish to PyPI only (via publish.yml) — no GitHub
-    # release, so HACS never advertises them. For internal dogfooding.
+    # release, so HACS never advertises them. Developers side-load
+    # alphas via HACS branch tracking on the feature branch.
     if: "!contains(github.ref, '-alpha.')"
 
     steps:

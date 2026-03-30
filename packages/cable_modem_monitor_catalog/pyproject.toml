@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "solentlabs-cable-modem-monitor-catalog"
-version = "3.14.0-alpha.1"
+version = "3.14.0-alpha.2"
 description = "Cable Modem Monitor Catalog — modem config files and parser overrides"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,7 +30,9 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/solentlabs/cable_modem_monitor"
 Repository = "https://github.com/solentlabs/cable_modem_monitor"
+Documentation = "https://github.com/solentlabs/cable_modem_monitor#readme"
 Issues = "https://github.com/solentlabs/cable_modem_monitor/issues"
+Changelog = "https://github.com/solentlabs/cable_modem_monitor/blob/main/CHANGELOG.md"
 "Supported Modems" = "https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/"
 
 [dependency-groups]
