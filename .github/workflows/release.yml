@@ -4,10 +4,6 @@ on:
   push:
     tags:
       - "v*.*.*"
-      - "v*.*.*-beta.*"
-      # Alpha tags intentionally excluded — they publish to PyPI
-      # (via publish.yml) but don't create GitHub releases, so
-      # HACS never advertises them. For internal dogfooding only.
 
 permissions:
   contents: write
@@ -16,6 +12,9 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    # Alpha tags publish to PyPI only (via publish.yml) — no GitHub
+    # release, so HACS never advertises them. For internal dogfooding.
+    if: "!contains(github.ref, '-alpha.')"
 
     steps:
       - name: Checkout code
