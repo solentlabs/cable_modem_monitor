@@ -383,64 +383,37 @@ def install_packages() -> bool:
 def main() -> int:
     print_header("Start Home Assistant")
 
-    total_steps = 4
+    total_steps = 2
 
     # Step 1: Start or restart container
-    fresh_start = not is_container_running()
-    if not fresh_start:
+    # The entrypoint (scripts/dev/ha-entrypoint.sh) installs Core and
+    # Catalog packages before HA starts, so every boot — fresh or
+    # restart — has packages available when HA loads integrations.
+    if is_container_running():
         print_step(1, total_steps, "Restarting Home Assistant...")
         if not restart_container():
             print_error_header("RESTART FAILED")
             return 1
-        print_success("Container restarted")
+        print_success("Container restarted (entrypoint installs packages)")
     else:
         print_step(1, total_steps, "Starting Home Assistant...")
         if not start_container():
             print_error_header("START FAILED")
             print_info("Check Docker Desktop is running")
             return 1
-        print_success("Container started")
+        print_success("Container started (entrypoint installs packages)")
 
-    # Step 2: Install solentlabs packages
+    # Step 2: Wait for HA to be ready
     print()
-    print_step(2, total_steps, "Installing solentlabs packages...")
-    packages_ok = install_packages()
-    if packages_ok:
-        print_success("Core + Catalog packages installed")
-    else:
-        print_warning("Package install failed — integration will not load")
-        print_info(
-            "Manual fix: docker exec ha-cable-modem-test pip install"
-            " -e /workspace/packages/cable_modem_monitor_core"
-            " -e /workspace/packages/cable_modem_monitor_catalog"
-        )
-
-    # Step 3: Restart HA so it picks up the newly installed packages
-    # On fresh start, HA boots before packages are installed, so the
-    # integration fails with "No module named 'solentlabs'". Restarting
-    # after install lets HA reload with packages available.
-    if fresh_start and packages_ok:
-        print()
-        print_step(3, total_steps, "Restarting HA to load packages...")
-        if restart_container():
-            print_success("Container restarted with packages available")
-        else:
-            print_warning("Restart failed — try: docker restart ha-cable-modem-test")
-    else:
-        print()
-        print_step(3, total_steps, "Packages already available, skipping restart")
-
-    # Step 4: Wait for HA to be ready
-    print()
-    print_step(4, total_steps, "Waiting for Home Assistant...")
+    print_step(2, total_steps, "Waiting for Home Assistant...")
     print("   ", end="")
 
-    if wait_for_http(HA_PORT, timeout=60):
+    if wait_for_http(HA_PORT, timeout=90):
         print()
         print_success("HTTP responding")
     else:
         print()
-        print_warning("HTTP not responding after 60s (may still be initializing)")
+        print_warning("HTTP not responding after 90s (may still be initializing)")
         print_info("Check logs: docker logs -f ha-cable-modem-test")
 
     # Verify integration

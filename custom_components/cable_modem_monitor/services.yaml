@@ -1,5 +1,4 @@
 generate_dashboard:
-  supports_response: optional
   fields:
     include_status_card:
       default: true

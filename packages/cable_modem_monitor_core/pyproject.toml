@@ -21,7 +21,6 @@ authors = [
 keywords = ["docsis", "cable-modem", "monitoring", "home-assistant", "snmp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Framework :: Home Assistant",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",

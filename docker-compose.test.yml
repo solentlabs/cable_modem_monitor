@@ -2,6 +2,7 @@ services:
   homeassistant-test:
     container_name: ha-cable-modem-test
     image: ghcr.io/home-assistant/home-assistant:stable
+    entrypoint: /workspace/scripts/dev/ha-entrypoint.sh
     ports:
       - "8123:8123" # Home Assistant web interface
       # Note: Port 8300 removed - conflicts with VS Code devcontainer
