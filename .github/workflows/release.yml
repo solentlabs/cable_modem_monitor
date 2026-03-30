@@ -4,8 +4,10 @@ on:
   push:
     tags:
       - "v*.*.*"
-      - "v*.*.*-alpha.*"
       - "v*.*.*-beta.*"
+      # Alpha tags intentionally excluded — they publish to PyPI
+      # (via publish.yml) but don't create GitHub releases, so
+      # HACS never advertises them. For internal dogfooding only.
 
 permissions:
   contents: write
