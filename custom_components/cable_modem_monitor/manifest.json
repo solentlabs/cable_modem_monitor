@@ -14,9 +14,8 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/solentlabs/cable_modem_monitor/issues",
   "requirements": [
-    "beautifulsoup4==4.12.2",
-    "defusedxml==0.7.1",
-    "har-capture>=0.4.0,<0.5.0"
+    "solentlabs-cable-modem-monitor-core==3.14.0-alpha.1",
+    "solentlabs-cable-modem-monitor-catalog==3.14.0-alpha.1"
   ],
-  "version": "3.14.0-beta.1"
+  "version": "3.14.0-alpha.1"
 }

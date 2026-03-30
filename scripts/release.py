@@ -57,8 +57,8 @@ def print_warning(msg: str) -> None:
 
 
 def validate_version(version: str) -> bool:
-    """Validate that version follows semantic versioning (X.Y.Z or X.Y.Z-beta.N)."""
-    pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
+    """Validate that version follows semantic versioning (X.Y.Z, X.Y.Z-alpha.N, or X.Y.Z-beta.N)."""
+    pattern = r"^\d+\.\d+\.\d+(-(alpha|beta)\.\d+)?$"
     return bool(re.match(pattern, version))
 
 
@@ -110,6 +110,44 @@ def update_manifest(repo_root: Path, version: str) -> bool:
         return True
     except Exception as e:
         print_error(f"Failed to update manifest.json: {e}")
+        return False
+
+
+def update_manifest_requirements(repo_root: Path, version: str) -> bool:
+    """Update Core and Catalog version pins in manifest.json requirements."""
+    manifest_path = repo_root / "custom_components" / "cable_modem_monitor" / "manifest.json"
+
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        requirements = manifest.get("requirements", [])
+        updated = []
+        packages_found = 0
+        for req in requirements:
+            if req.startswith("solentlabs-cable-modem-monitor-core=="):
+                updated.append(f"solentlabs-cable-modem-monitor-core=={version}")
+                packages_found += 1
+            elif req.startswith("solentlabs-cable-modem-monitor-catalog=="):
+                updated.append(f"solentlabs-cable-modem-monitor-catalog=={version}")
+                packages_found += 1
+            else:
+                updated.append(req)
+
+        if packages_found != 2:
+            print_error(f"Expected 2 package pins in manifest requirements, found {packages_found}")
+            return False
+
+        manifest["requirements"] = updated
+
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
+            f.write("\n")
+
+        print_success(f"Updated manifest.json requirements pins → {version}")
+        return True
+    except Exception as e:
+        print_error(f"Failed to update manifest requirements: {e}")
         return False
 
 
@@ -405,7 +443,11 @@ def validate_release_preconditions(version: str, repo_root: Path) -> None:
     """Validate all preconditions for creating a release."""
     # Validate version format
     if not validate_version(version):
-        print_error(f"Invalid version format: {version}. Must be X.Y.Z or X.Y.Z-beta.N (e.g., 3.5.1 or 3.5.1-beta.1)")
+        print_error(
+            f"Invalid version format: {version}. "
+            "Must be X.Y.Z, X.Y.Z-alpha.N, or X.Y.Z-beta.N "
+            "(e.g., 3.5.1, 3.5.1-alpha.1, 3.5.1-beta.1)"
+        )
         sys.exit(1)
 
     # Check if pre-commit is installed
@@ -453,6 +495,7 @@ def update_all_files(repo_root: Path, version: str, skip_changelog: bool) -> Non
     """Update all version files."""
     success = True
     success = update_manifest(repo_root, version) and success
+    success = update_manifest_requirements(repo_root, version) and success
     success = update_const_py(repo_root, version) and success
     success = update_version_test(repo_root, version) and success
     success = update_package_versions(repo_root, version) and success
@@ -504,6 +547,18 @@ def verify_version_consistency(repo_root: Path, version: str) -> bool:
     except Exception as e:
         print_error(f"Failed to read manifest.json: {e}")
         all_correct = False
+
+    # Check manifest requirements pins
+    for pkg_name in [
+        "solentlabs-cable-modem-monitor-core",
+        "solentlabs-cable-modem-monitor-catalog",
+    ]:
+        expected_pin = f"{pkg_name}=={version}"
+        if expected_pin not in manifest.get("requirements", []):
+            print_error(f"manifest.json requirements missing: {expected_pin}")
+            all_correct = False
+        else:
+            print_success(f"manifest.json requirement pin correct: {pkg_name}")
 
     # Check text-based version files
     cc = repo_root / "custom_components" / "cable_modem_monitor"

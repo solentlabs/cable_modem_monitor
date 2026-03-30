@@ -11,8 +11,8 @@ class TestVersion:
     """Test version constant."""
 
     def test_version_format(self):
-        """VERSION follows semantic versioning: X.Y.Z or X.Y.Z-beta.N."""
-        pattern = r"^\d+\.\d+\.\d+(-beta\.\d+)?$"
+        """VERSION follows semantic versioning: X.Y.Z, X.Y.Z-alpha.N, or X.Y.Z-beta.N."""
+        pattern = r"^\d+\.\d+\.\d+(-(alpha|beta)\.\d+)?$"
         assert re.match(pattern, VERSION), f"Invalid version format: {VERSION}"
 
     def test_current_version(self):
@@ -22,7 +22,7 @@ class TestVersion:
         Use: python scripts/release.py <version>
         The script updates const.py, manifest.json, and this file.
         """
-        assert VERSION == "3.14.0-beta.1"
+        assert VERSION == "3.14.0-alpha.1"
 
     def test_startup_log_message_format(self):
         """The startup log line includes the version string."""

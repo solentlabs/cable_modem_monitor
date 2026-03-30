@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+      - "v*.*.*-alpha.*"
       - "v*.*.*-beta.*"
 
 permissions:
@@ -33,8 +34,8 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-          # Check if this is a prerelease (beta)
-          if [[ "$VERSION" == *"-beta."* ]]; then
+          # Check if this is a prerelease (alpha or beta)
+          if [[ "$VERSION" == *"-alpha."* ]] || [[ "$VERSION" == *"-beta."* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "📦 Detected prerelease: $VERSION"
           else

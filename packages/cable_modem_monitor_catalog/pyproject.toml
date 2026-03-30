@@ -4,16 +4,35 @@ build-backend = "hatchling.build"
 
 [project]
 name = "solentlabs-cable-modem-monitor-catalog"
-version = "0.1.0"
+version = "3.14.0-alpha.1"
 description = "Cable Modem Monitor Catalog — modem config files and parser overrides"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "solentlabs-cable-modem-monitor-core",
 ]
 license = "MIT"
 authors = [
-    { name = "Solent Labs" },
+    { name = "Solent Labs™" },
 ]
+keywords = ["docsis", "cable-modem", "monitoring", "home-assistant", "modem-catalog"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Home Assistant",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+[project.urls]
+Homepage = "https://github.com/solentlabs/cable_modem_monitor"
+Repository = "https://github.com/solentlabs/cable_modem_monitor"
+Issues = "https://github.com/solentlabs/cable_modem_monitor/issues"
+"Supported Modems" = "https://pypi.org/project/solentlabs-cable-modem-monitor-catalog/"
 
 [dependency-groups]
 dev = [
