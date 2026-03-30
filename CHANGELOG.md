@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.3] - 2026-03-30
+
+### Fixed
+
+- Catalog package dependency on Core now allows pre-release versions
+  (`>=3.14.0a1`). Fixes `uv`/`pip` resolver failure on fresh HA installs
+  where no stable Core release exists on PyPI.
+
 ## [3.14.0-alpha.2] - 2026-03-30
 
 ### Added
