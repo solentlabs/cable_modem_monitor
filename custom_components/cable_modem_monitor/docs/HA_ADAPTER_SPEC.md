@@ -36,6 +36,7 @@ Core, it should.
 | [Diagnostics Platform](#diagnostics-platform) | Core diagnostics + HA-side data |
 | [Services](#services) | `generate_dashboard`, `request_refresh`, `request_health_check` |
 | [Config Entry Migration](#config-entry-migration) | Version-keyed migration with auto-discovery |
+| [Testing](#testing) | No modem-specific names, dynamic catalog discovery |
 
 ---
 
@@ -606,6 +607,35 @@ through the setup wizard.
 `auth_url_token_config`, `auth_discovery_status`,
 `auth_discovery_failed`, `auth_discovery_error`, `auth_type`,
 `auth_captured_response`.
+
+---
+
+## Testing
+
+The adapter is modem-agnostic — its tests must be too.
+
+**No modem-specific names.** Mock data uses generic names (`Solent
+Labs`, `TPS-2000`, `TPS-3000`) — not real manufacturers or models. This
+applies to all mock fixtures: entry data, catalog summaries, modem
+identity, config flow selections, diagnostics titles, log messages.
+
+**Mock at the Core/Catalog boundary.** Adapter tests mock the I/O
+boundary (`load_modem_config`, `load_parser_config`,
+`load_post_processor`, `list_modems`) and test wiring logic:
+path dispatch, conditional construction, error propagation.
+Do not parametrize over real catalog modems — that crosses the
+layer boundary into catalog testing.
+
+**Catalog tests own "every modem works."** The catalog test suite
+(`test_modem_yaml_schema`, `test_modem_har_replay`) validates that
+every modem config is valid and produces correct output through the
+full orchestrator cycle. The adapter layer does not repeat this.
+
+**Migration tests verify schema, not modem data.** Config entry
+migration tests verify the key transform (v1 keys → v2 keys with
+correct types and defaults). Use generic names for migration test
+data. Catalog resolution algorithms (`resolve_modem_dir`) are tested
+with synthetic `ModemSummary` data — not the real catalog.
 
 ---
 

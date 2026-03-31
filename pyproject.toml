@@ -98,14 +98,21 @@ strict = false                     # Avoid strict import enforcement for type-ch
 # Pytest (test runner)
 # -------------------------------
 [tool.pytest.ini_options]
-minversion = "8.0"                 # Ensure compatibility with latest plugins
-addopts = "-v --tb=short --cov=custom_components.cable_modem_monitor --cov-report=term-missing"
-testpaths = [
-    "tests",                       # Core and integration tests
-    "modems",                      # Modem-specific tests (colocated with config)
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+norecursedirs = ["cable-modem-monitor-ql", ".git", "__pycache__", ".venv", "codeql"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --strict-markers --tb=short --disable-warnings"
+markers = [
+    "integration: Integration tests that may require network access",
+    "unit: Unit tests that don't require external dependencies",
+    "enable_socket: Allow socket operations in tests",
 ]
 
 # -------------------------------
 # Note: mypy configuration lives in mypy.ini (the active config file).
-# pytest.ini has been deprecated - all settings now in pyproject.toml
 # -------------------------------

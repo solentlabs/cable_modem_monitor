@@ -6,7 +6,7 @@ Mocks: orchestrator.restart(), orchestrator.reset_connectivity(),
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     RestartResult,
@@ -14,6 +14,7 @@ from solentlabs.cable_modem_monitor_core.orchestration.models import (
 from solentlabs.cable_modem_monitor_core.orchestration.signals import RestartPhase
 
 from custom_components.cable_modem_monitor.button import (
+    ResetEntitiesButton,
     RestartModemButton,
     UpdateModemDataButton,
     async_setup_entry,
@@ -229,3 +230,142 @@ async def test_restart_button_skips_if_already_restarting(
     await button.async_press()
 
     button.hass.async_add_executor_job.assert_not_awaited()
+
+
+# -----------------------------------------------------------------------
+# ResetEntitiesButton
+# -----------------------------------------------------------------------
+
+
+async def test_reset_button_press_with_probes(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Reset button re-detects probes, removes entities, reloads."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.services.async_call = AsyncMock()
+    button.hass.config_entries.async_update_entry = MagicMock()
+    button.hass.config_entries.async_reload = AsyncMock()
+
+    # Mock entity registry with two entities for this entry
+    mock_entity_reg = MagicMock()
+    entity_1 = MagicMock()
+    entity_1.platform = "cable_modem_monitor"
+    entity_1.config_entry_id = "test_entry"
+    entity_1.entity_id = "sensor.modem_1"
+    entity_2 = MagicMock()
+    entity_2.platform = "cable_modem_monitor"
+    entity_2.config_entry_id = "test_entry"
+    entity_2.entity_id = "sensor.modem_2"
+    mock_entity_reg.entities.values.return_value = [entity_1, entity_2]
+
+    # Mock probe detection returning results
+    probe_result = {"supports_icmp": True, "supports_head": False}
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.button.er.async_get",
+            return_value=mock_entity_reg,
+        ),
+        patch.object(button, "_redetect_probes", new=AsyncMock(return_value=probe_result)),
+    ):
+        await button.async_press()
+
+    # Entities removed
+    assert mock_entity_reg.async_remove.call_count == 2
+
+    # Config entry updated with new probes
+    button.hass.config_entries.async_update_entry.assert_called_once()
+
+    # Integration reloaded
+    button.hass.config_entries.async_reload.assert_awaited_once()
+
+    # Notification sent with probe info
+    call_args = button.hass.services.async_call.call_args
+    assert "ICMP=yes" in call_args[0][2]["message"]
+    assert "HEAD=no" in call_args[0][2]["message"]
+
+
+async def test_reset_button_press_probes_failed(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Reset button continues when probe re-detection fails."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.services.async_call = AsyncMock()
+    button.hass.config_entries.async_update_entry = MagicMock()
+    button.hass.config_entries.async_reload = AsyncMock()
+
+    mock_entity_reg = MagicMock()
+    mock_entity_reg.entities.values.return_value = []
+
+    with (
+        patch(
+            "custom_components.cable_modem_monitor.button.er.async_get",
+            return_value=mock_entity_reg,
+        ),
+        patch.object(button, "_redetect_probes", new=AsyncMock(return_value=None)),
+    ):
+        await button.async_press()
+
+    # No config entry update when probes failed
+    button.hass.config_entries.async_update_entry.assert_not_called()
+
+    # Still reloads
+    button.hass.config_entries.async_reload.assert_awaited_once()
+
+
+async def test_redetect_probes_success(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Probe re-detection returns dict on success."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=[
+            MagicMock(),  # load_modem_config
+            {"supports_icmp": True, "supports_head": True},  # detect_probes
+        ]
+    )
+
+    result = await button._redetect_probes()
+
+    assert result == {"supports_icmp": True, "supports_head": True}
+
+
+async def test_redetect_probes_config_load_failure(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Probe re-detection returns None when config load fails."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=FileNotFoundError("modem.yaml not found"),
+    )
+
+    result = await button._redetect_probes()
+
+    assert result is None
+
+
+async def test_redetect_probes_detection_failure(
+    mock_runtime_data: CableModemRuntimeData,
+):
+    """Probe re-detection returns None when probes fail."""
+    entry = _make_entry(mock_runtime_data)
+    button = ResetEntitiesButton(entry)
+    button.hass = MagicMock()
+    button.hass.async_add_executor_job = AsyncMock(
+        side_effect=[
+            MagicMock(),  # load_modem_config succeeds
+            ConnectionError("unreachable"),  # detect_probes fails
+        ],
+    )
+
+    result = await button._redetect_probes()
+
+    assert result is None

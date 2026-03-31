@@ -22,15 +22,20 @@ from custom_components.cable_modem_monitor.services import (
     _build_latency_graph_yaml,
     _build_status_card_yaml,
     _find_loaded_entries,
+    _find_loaded_entry,
     _format_channel_label,
     _format_title_with_type,
     _get_channel_info,
     _get_dashboard_titles,
+    _get_entity_prefix,
     _group_by_type,
     _resolve_config_entry_for_device,
     _resolve_target_entries,
     _unique_types,
+    async_register_services,
     async_request_modem_refresh,
+    async_unregister_services,
+    create_generate_dashboard_handler,
     create_request_health_check_handler,
     create_request_refresh_handler,
 )
@@ -650,3 +655,182 @@ async def test_request_health_check_no_entries() -> None:
 
     # Should not raise
     await handler(call)
+
+
+# -----------------------------------------------------------------------
+# _get_entity_prefix
+# -----------------------------------------------------------------------
+
+
+def test_get_entity_prefix() -> None:
+    """Entity prefix derived from device name via slugification."""
+    entry = MagicMock()
+    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
+    entry.runtime_data.modem_identity.model = "TPS-2000"
+
+    assert _get_entity_prefix(entry) == "cable_modem"
+
+
+# -----------------------------------------------------------------------
+# _find_loaded_entry (singular)
+# -----------------------------------------------------------------------
+
+
+def test_find_loaded_entry_found() -> None:
+    """Returns first loaded entry."""
+    entry = MagicMock()
+    entry.runtime_data = MagicMock()
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    assert _find_loaded_entry(hass) is entry
+
+
+def test_find_loaded_entry_none() -> None:
+    """Returns None when no loaded entries exist."""
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+
+    assert _find_loaded_entry(hass) is None
+
+
+# -----------------------------------------------------------------------
+# _add_channel_graphs — multi-type by_direction
+# -----------------------------------------------------------------------
+
+
+def test_add_channel_graphs_multi_type_by_direction() -> None:
+    """Multi-type by-direction uses base title and full labels."""
+    parts: list[str] = []
+    info = [("qam", 1), ("ofdm", 33)]
+    _add_channel_graphs(
+        parts,
+        info,
+        "Downstream Power Levels (dBmV)",
+        "sensor.cm_ds_{ch_type}_ch_{ch_id}_power",
+        24,
+        "auto",
+        "by_direction",
+        False,
+    )
+    yaml = "\n".join(parts)
+    # Multi-type uses base title (no type prefix)
+    assert "Downstream Power Levels (dBmV)" in yaml
+    # Auto label becomes "full" for multi-type
+    assert "QAM Ch 1" in yaml
+    assert "OFDM Ch 33" in yaml
+
+
+# -----------------------------------------------------------------------
+# generate_dashboard service handler
+# -----------------------------------------------------------------------
+
+
+def test_generate_dashboard_handler(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Dashboard handler generates YAML with channel graphs."""
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {
+        "entity_prefix": "none",
+        "host": "192.168.100.1",
+        "supports_icmp": True,
+    }
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_handler(hass)
+    call = MagicMock()
+    call.data = {
+        "include_downstream_power": True,
+        "include_downstream_snr": False,
+        "include_downstream_frequency": False,
+        "include_upstream_power": True,
+        "include_upstream_frequency": False,
+        "include_errors": True,
+        "include_latency": True,
+        "include_status_card": True,
+        "graph_hours": 24,
+        "short_titles": False,
+        "channel_label": "auto",
+        "channel_grouping": "by_direction",
+    }
+
+    result = handler(call)
+
+    yaml = result["yaml"]
+    assert "Cable Modem Dashboard" in yaml
+    assert "sensor.cable_modem_status" in yaml
+    assert "sensor.cable_modem_ds_qam_ch_1_power" in yaml
+    assert "sensor.cable_modem_ds_ofdm_ch_2_power" in yaml
+    assert "sensor.cable_modem_us_atdma_ch_1_power" in yaml
+    assert "sensor.cable_modem_total_corrected_errors" in yaml
+    assert "sensor.cable_modem_http_latency" in yaml
+
+
+def test_generate_dashboard_no_entry() -> None:
+    """Returns error YAML when no config entry loaded."""
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = []
+
+    handler = create_generate_dashboard_handler(hass)
+    call = MagicMock()
+    call.data = {}
+
+    result = handler(call)
+    assert "Error" in result["yaml"]
+
+
+def test_generate_dashboard_no_snapshot(
+    mock_runtime_data: CableModemRuntimeData,
+) -> None:
+    """Returns error YAML when no modem data available."""
+    mock_runtime_data.data_coordinator.data = None
+
+    entry = _make_mock_entry(mock_runtime_data)
+    entry.data = {"entity_prefix": "none", "host": "192.168.100.1"}
+
+    hass = MagicMock()
+    hass.config_entries.async_entries.return_value = [entry]
+
+    handler = create_generate_dashboard_handler(hass)
+    call = MagicMock()
+    call.data = {}
+
+    result = handler(call)
+    assert "Error" in result["yaml"]
+
+
+# -----------------------------------------------------------------------
+# Service registration / unregistration
+# -----------------------------------------------------------------------
+
+
+def test_register_services() -> None:
+    """Registers all three services."""
+    hass = MagicMock()
+    async_register_services(hass)
+
+    assert hass.services.async_register.call_count == 3
+    registered = {call.args[1] for call in hass.services.async_register.call_args_list}
+    assert registered == {
+        "generate_dashboard",
+        "request_refresh",
+        "request_health_check",
+    }
+
+
+def test_unregister_services() -> None:
+    """Unregisters all three services."""
+    hass = MagicMock()
+    async_unregister_services(hass)
+
+    assert hass.services.async_remove.call_count == 3
+    removed = {call.args[1] for call in hass.services.async_remove.call_args_list}
+    assert removed == {
+        "generate_dashboard",
+        "request_refresh",
+        "request_health_check",
+    }

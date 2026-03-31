@@ -235,9 +235,9 @@ def test_system_uptime_sensor_raw_seconds(mock_runtime_data):
 def test_modem_info_sensor(mock_runtime_data):
     """Modem info shows model name and identity attributes."""
     sensor = _make_sensor(ModemInfoSensor, mock_runtime_data)
-    assert sensor.native_value == "MB7621"
+    assert sensor.native_value == "TPS-2000"
     attrs = sensor.extra_state_attributes
-    assert attrs["manufacturer"] == "Motorola"
+    assert attrs["manufacturer"] == "Solent Labs"
     assert attrs["status"] == "verified"
 
 

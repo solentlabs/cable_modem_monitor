@@ -43,20 +43,14 @@ class PostProcessor:
 
 def _get_version_nodes(resources: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract the nodes list from the Version_Info resource."""
-    data = resources.get("/setup.cgi?todo=Version_Info")
-    if not isinstance(data, dict):
-        return []
-    nodes = data.get("nodes", [])
-    return nodes if isinstance(nodes, list) else []
+    data = resources["/setup.cgi?todo=Version_Info"]
+    nodes: list[dict[str, Any]] = data.get("nodes", [])
+    return nodes
 
 
 def _extract_info_fields(item: dict[str, Any], system_info: dict[str, Any]) -> None:
     """Extract prefixed info fields from a Version_Info node."""
-    if not isinstance(item, dict):
-        return
     info = item.get("info", "")
-    if not isinstance(info, str):
-        return
     for prefix, field_name in _INFO_PREFIX_MAP.items():
         if info.startswith(prefix):
             system_info[field_name] = info[len(prefix) :]

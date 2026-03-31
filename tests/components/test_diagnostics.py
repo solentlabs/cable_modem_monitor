@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 from custom_components.cable_modem_monitor.diagnostics import (
     _create_log_entry,
     _get_logs_from_file,
+    _get_logs_from_system_log_direct,
     _get_logs_from_system_log_handler,
     _get_recent_logs,
     _no_logs_available_entry,
@@ -102,6 +103,42 @@ def test_get_logs_from_system_log_handler_no_records():
 
 
 # -----------------------------------------------------------------------
+# System log direct extraction (legacy HA)
+# -----------------------------------------------------------------------
+
+
+def test_get_logs_from_system_log_direct_filters():
+    """Only cable_modem_monitor records extracted from system_log.records."""
+    record_ours = MagicMock()
+    record_ours.name = "custom_components.cable_modem_monitor"
+    record_ours.message = "Auth failed"
+    record_ours.level = "ERROR"
+    record_ours.timestamp = 1700000000.0
+    del record_ours.getMessage
+
+    record_other = MagicMock()
+    record_other.name = "homeassistant.core"
+    record_other.message = "Other"
+    record_other.level = "INFO"
+    record_other.timestamp = 1700000001.0
+    del record_other.getMessage
+
+    system_log = MagicMock()
+    system_log.records = [record_ours, record_other]
+
+    logs = _get_logs_from_system_log_direct(system_log)
+    assert len(logs) == 1
+    assert logs[0]["level"] == "ERROR"
+
+
+def test_get_logs_from_system_log_direct_no_records():
+    """System log without records attribute returns empty."""
+    system_log = MagicMock(spec=[])
+    logs = _get_logs_from_system_log_direct(system_log)
+    assert logs == []
+
+
+# -----------------------------------------------------------------------
 # Legacy record parsing
 # -----------------------------------------------------------------------
 
@@ -162,6 +199,40 @@ def test_parse_legacy_record_with_get_message():
     assert entry["message"] == "Startup complete"
 
 
+def test_parse_legacy_record_getmessage_non_matching():
+    """Record with getMessage() but wrong logger returns None."""
+    record = MagicMock(spec=logging.LogRecord)
+    record.name = "homeassistant.core"
+    record.created = 1700000000.0
+    record.levelname = "INFO"
+    record.getMessage.return_value = "Other"
+    del record.message
+
+    assert _parse_legacy_record(record) is None
+
+
+def test_parse_legacy_record_integer_level():
+    """Record with integer level is converted via getLevelName."""
+    record = MagicMock()
+    record.name = "custom_components.cable_modem_monitor"
+    record.message = "Auth failed"
+    record.level = 40  # logging.ERROR
+    record.timestamp = 1700000000.0
+    del record.getMessage
+
+    entry = _parse_legacy_record(record)
+    assert entry is not None
+    assert entry["level"] == "ERROR"
+
+
+def test_parse_legacy_record_tuple_integer_level():
+    """Tuple record with integer level is converted to name."""
+    record = ("custom_components.cable_modem_monitor", 1700000000.0, 30, "Warning")
+    entry = _parse_legacy_record(record)
+    assert entry is not None
+    assert entry["level"] == "WARNING"
+
+
 # -----------------------------------------------------------------------
 # Log file reading
 # -----------------------------------------------------------------------
@@ -214,6 +285,76 @@ def test_get_recent_logs_falls_through_to_placeholder():
     assert "No logs captured" in logs[0]["message"]
 
 
+def test_get_recent_logs_system_log_handler_fallback():
+    """Falls back to system_log handler when log buffer is empty."""
+    hass = MagicMock()
+
+    record = MagicMock()
+    record.name = "custom_components.cable_modem_monitor.sensor"
+    record.created = 1700000000.0
+    record.levelname = "WARNING"
+    record.getMessage.return_value = "Timeout"
+
+    handler = MagicMock()
+    handler.records = [record]
+
+    system_log = MagicMock()
+    system_log.handler = handler
+    hass.data = {"system_log": system_log}
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=[],
+    ):
+        logs = _get_recent_logs(hass, max_records=10)
+
+    assert len(logs) == 1
+    assert logs[0]["level"] == "WARNING"
+
+
+def test_get_recent_logs_system_log_direct_fallback():
+    """Falls back to system_log.records when handler returns empty."""
+    hass = MagicMock()
+
+    record = MagicMock()
+    record.name = "custom_components.cable_modem_monitor"
+    record.message = "Auth failed"
+    record.level = "ERROR"
+    record.timestamp = 1700000000.0
+    del record.getMessage
+
+    handler = MagicMock(spec=[])  # no records attribute
+    system_log = MagicMock()
+    system_log.handler = handler
+    system_log.records = [record]
+    hass.data = {"system_log": system_log}
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=[],
+    ):
+        logs = _get_recent_logs(hass, max_records=10)
+
+    assert len(logs) == 1
+    assert logs[0]["level"] == "ERROR"
+
+
+def test_get_recent_logs_log_file_exception():
+    """Exception reading log file falls through to placeholder."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config.path.side_effect = RuntimeError("config error")
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=[],
+    ):
+        logs = _get_recent_logs(hass, max_records=10)
+
+    assert len(logs) == 1
+    assert "No logs captured" in logs[0]["message"]
+
+
 # -----------------------------------------------------------------------
 # async_get_config_entry_diagnostics — entry point
 # -----------------------------------------------------------------------
@@ -238,7 +379,7 @@ async def test_diagnostics_delegates_to_builder(mock_runtime_data):
     entry = MagicMock()
     entry.runtime_data = mock_runtime_data
     entry.data = MOCK_ENTRY_DATA
-    entry.title = "Motorola MB7621"
+    entry.title = "Solent Labs TPS-2000"
     entry.entry_id = "test_123"
 
     # async_add_executor_job should call _build_diagnostics_dict
@@ -260,7 +401,91 @@ async def test_diagnostics_delegates_to_builder(mock_runtime_data):
         result = await async_get_config_entry_diagnostics(hass, entry)
 
     assert "config_entry" in result
-    assert result["config_entry"]["model"] == "MB7621"
+    assert result["config_entry"]["model"] == "TPS-2000"
     assert "core_diagnostics" in result
     assert "modem_data" in result
     assert result["modem_data"]["connection_status"] == "online"
+
+
+# -----------------------------------------------------------------------
+# Diagnostics builder — edge cases
+# -----------------------------------------------------------------------
+
+
+async def test_diagnostics_no_snapshot(mock_runtime_data):
+    """Builder handles missing snapshot gracefully."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.runtime_data = mock_runtime_data
+    entry.data = MOCK_ENTRY_DATA
+    entry.title = "Solent Labs TPS-2000"
+    entry.entry_id = "test_123"
+
+    mock_runtime_data.data_coordinator.data = None
+
+    async def fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = fake_executor
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=SAMPLE_LOG_BUFFER_ENTRY,
+    ):
+        result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["modem_data"]["note"] == "No snapshot available"
+    assert result["downstream_channels"] == []
+    assert result["upstream_channels"] == []
+
+
+async def test_diagnostics_last_exception_truncated(mock_runtime_data):
+    """Builder truncates long exception messages."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.runtime_data = mock_runtime_data
+    entry.data = MOCK_ENTRY_DATA
+    entry.title = "Solent Labs TPS-2000"
+    entry.entry_id = "test_123"
+
+    mock_runtime_data.data_coordinator.last_exception = RuntimeError("x" * 300)
+
+    async def fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = fake_executor
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=SAMPLE_LOG_BUFFER_ENTRY,
+    ):
+        result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert "last_error" in result
+    assert result["last_error"]["type"] == "RuntimeError"
+    assert "truncated" in result["last_error"]["message"]
+
+
+async def test_diagnostics_health_coord_data_none(mock_runtime_data):
+    """Falls back to snapshot health_info when health coordinator has no data."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.runtime_data = mock_runtime_data
+    entry.data = MOCK_ENTRY_DATA
+    entry.title = "Solent Labs TPS-2000"
+    entry.entry_id = "test_123"
+
+    mock_runtime_data.health_coordinator.data = None
+
+    async def fake_executor(fn, *args):
+        return fn(*args)
+
+    hass.async_add_executor_job = fake_executor
+
+    with patch(
+        "custom_components.cable_modem_monitor.diagnostics.get_log_entries",
+        return_value=SAMPLE_LOG_BUFFER_ENTRY,
+    ):
+        result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["modem_data"]["health_status"] == "responsive"

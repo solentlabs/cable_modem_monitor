@@ -768,15 +768,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(CONF_PASSWORD, default=""): str,
                     vol.Required(
                         CONF_SCAN_INTERVAL,
-                        default=_seconds_to_duration(saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+                        default=_seconds_to_duration(
+                            _duration_to_seconds(saved.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                        ),
                     ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                     vol.Required(
                         CONF_HEALTH_CHECK_INTERVAL,
                         default=_seconds_to_duration(
-                            saved.get(
-                                CONF_HEALTH_CHECK_INTERVAL,
-                                DEFAULT_HEALTH_CHECK_INTERVAL,
-                            )
+                            _duration_to_seconds(saved.get(CONF_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_INTERVAL))
                         ),
                     ): selector.DurationSelector(selector.DurationSelectorConfig(enable_day=False)),
                 }
