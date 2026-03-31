@@ -233,6 +233,45 @@ def detect_probes(
 # ---------------------------------------------------------------------------
 
 
+def _try_collect(
+    modem_config: ModemConfig,
+    parser_config: Any,
+    post_processor: Any,
+    base_url: str,
+    username: str,
+    password: str,
+    legacy_ssl: bool,
+) -> ModemResult:
+    """Create a collector and execute one poll attempt.
+
+    Factored out of :func:`_run_validation` so the protocol retry loop
+    can call it with different ``base_url`` / ``legacy_ssl`` values
+    without duplicating collector setup.
+
+    Args:
+        modem_config: Loaded modem configuration.
+        parser_config: Loaded parser configuration (or None).
+        post_processor: Loaded post-processor callable (or None).
+        base_url: Full URL including protocol (e.g., ``https://192.168.100.1``).
+        username: Login credential.
+        password: Login credential.
+        legacy_ssl: Whether to use legacy SSL ciphers.
+
+    Returns:
+        ``ModemResult`` from the collector.
+    """
+    collector = ModemDataCollector(
+        modem_config=modem_config,
+        parser_config=parser_config,
+        post_processor=post_processor,
+        base_url=base_url,
+        username=username,
+        password=password,
+        legacy_ssl=legacy_ssl,
+    )
+    return collector.execute()
+
+
 def _run_validation(
     host: str,
     protocol: str | None,
@@ -267,6 +306,7 @@ def _run_validation(
         RuntimeError: Parse/collection failed.
     """
     # -- Step 1: Protocol detection -------------------------------------------
+    auto_detected_http = False
     if protocol:
         # User specified protocol — skip detection
         base_url = f"{protocol}://{host}"
@@ -279,6 +319,7 @@ def _run_validation(
         base_url = conn.working_url or f"http://{host}"
         protocol = conn.protocol or "http"
         legacy_ssl = conn.legacy_ssl
+        auto_detected_http = protocol == "http"
         _LOGGER.info("Protocol detected: %s (legacy_ssl=%s)", protocol, legacy_ssl)
 
     # -- Step 2: Load config from catalog -------------------------------------
@@ -290,35 +331,63 @@ def _run_validation(
     parser_config = load_parser_config(parser_yaml) if parser_yaml.exists() else None
     post_processor = load_post_processor(parser_py) if parser_py.exists() else None
 
-    # -- Step 3: Health-probe discovery ---------------------------------------
-    probes = detect_probes(host, base_url, modem_config, legacy_ssl=legacy_ssl)
-    supports_icmp = probes["supports_icmp"]
-    supports_head = probes["supports_head"]
-
-    # -- Step 4: Test data collection -----------------------------------------
-    collector = ModemDataCollector(
-        modem_config=modem_config,
-        parser_config=parser_config,
-        post_processor=post_processor,
-        base_url=base_url,
-        username=username,
-        password=password,
-        legacy_ssl=legacy_ssl,
+    # -- Step 3: Test data collection -----------------------------------------
+    result = _try_collect(
+        modem_config,
+        parser_config,
+        post_processor,
+        base_url,
+        username,
+        password,
+        legacy_ssl,
     )
-    result: ModemResult = collector.execute()
+
+    # -- Step 3a: Protocol retry (UC-85) --------------------------------------
+    # Some modems respond on HTTP (port 80) but only authenticate over HTTPS.
+    # If auth failed on auto-detected HTTP, retry with HTTPS before giving up.
+    auth_signals = (CollectorSignal.AUTH_FAILED, CollectorSignal.AUTH_LOCKOUT, CollectorSignal.LOAD_AUTH)
+    if not result.success and auto_detected_http and result.signal in auth_signals:
+        _LOGGER.info("Auth failed on auto-detected HTTP — retrying with HTTPS")
+        https_url = f"https://{host}"
+        result = _try_collect(
+            modem_config,
+            parser_config,
+            post_processor,
+            https_url,
+            username,
+            password,
+            legacy_ssl=False,
+        )
+        if result.success:
+            base_url, protocol, legacy_ssl = https_url, "https", False
+        elif result.signal in auth_signals:
+            # HTTPS with modern ciphers also failed — try legacy SSL
+            _LOGGER.info("HTTPS also failed — retrying with legacy SSL ciphers")
+            result = _try_collect(
+                modem_config,
+                parser_config,
+                post_processor,
+                https_url,
+                username,
+                password,
+                legacy_ssl=True,
+            )
+            if result.success:
+                base_url, protocol, legacy_ssl = https_url, "https", True
 
     if not result.success:
         _LOGGER.error("Validation failed: signal=%s, error=%s", result.signal, result.error)
         error_key = classify_error(result.error, result.signal)
-        if result.signal in (
-            CollectorSignal.AUTH_FAILED,
-            CollectorSignal.AUTH_LOCKOUT,
-            CollectorSignal.LOAD_AUTH,
-        ):
+        if result.signal in auth_signals:
             raise PermissionError(f"auth_error:{error_key}:{result.error}")
         raise RuntimeError(f"collection_error:{error_key}:{result.error}")
 
     _LOGGER.info("Validation succeeded: %d data keys", len(result.modem_data or {}))
+
+    # -- Step 4: Health-probe discovery ---------------------------------------
+    probes = detect_probes(host, base_url, modem_config, legacy_ssl=legacy_ssl)
+    supports_icmp = probes["supports_icmp"]
+    supports_head = probes["supports_head"]
 
     # -- Step 5: Build result dict --------------------------------------------
     return {

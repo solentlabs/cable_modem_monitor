@@ -1341,6 +1341,51 @@ with `legacy_ssl=True`.
 
 ---
 
+### UC-85: Protocol fallback — HTTP reachable but auth requires HTTPS
+
+**Preconditions:** Modem responds on HTTP port 80 (e.g., serves an HTML
+landing page) but its authenticated endpoint (HNAP, form login) only
+works over HTTPS. Protocol detection auto-detected HTTP. User entered a
+bare IP with no protocol prefix.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | `detect_protocol(host)` → HTTP responds (200) | protocol=http | |
+| 2 | `ModemDataCollector(base_url=http://host)` | | |
+| 3 | `collector.execute()` → auth challenge gets HTML, not JSON | | AUTH_FAILED |
+| 4 | Validation pipeline: auto-detected HTTP + AUTH_FAILED → retry | | |
+| 5 | `ModemDataCollector(base_url=https://host, legacy_ssl=False)` | | |
+| 6 | `collector.execute()` → auth succeeds over HTTPS | protocol=https | OK |
+| 7 | Health probes run against `https://host` | | |
+| 8 | Config entry persists `protocol=https, legacy_ssl=False` | | |
+
+**Assertions:**
+- Retry only happens when protocol was auto-detected (not user-specified)
+- Retry only happens on AUTH_FAILED or LOAD_AUTH — not CONNECTIVITY or PARSE_ERROR
+- If HTTPS also fails auth, try HTTPS + legacy SSL before giving up
+- If all three fail, surface the last AUTH_FAILED error to the user
+- User-specified `http://` is never retried — that is an explicit override
+- Auto-detected HTTPS is never downgraded to HTTP
+- Health probes and config entry use the protocol that succeeded
+- Log at INFO level when protocol retry discovers the correct protocol
+
+**Alternative path — HTTPS needs legacy SSL:**
+
+| Step | Action | Observable |
+|------|--------|------------|
+| 5a | HTTPS retry → SSLError or AUTH_FAILED | |
+| 5b | HTTPS + legacy SSL retry → auth succeeds | protocol=https, legacy_ssl=True |
+
+**Alternative path — all protocols fail:**
+
+| Step | Action | Observable |
+|------|--------|------------|
+| 5a | HTTPS retry → AUTH_FAILED | |
+| 5b | HTTPS + legacy SSL → AUTH_FAILED | |
+| 5c | Surface error to user | "Login failed" with original error |
+
+---
+
 ### UC-84: Startup while modem unreachable
 
 **Preconditions:** Consumer starts while modem is powered off or

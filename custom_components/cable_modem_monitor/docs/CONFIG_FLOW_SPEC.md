@@ -187,7 +187,16 @@ Runs in an executor thread to avoid blocking the HA event loop.
    a `ModemDataCollector`, and run `execute()`. This single call
    authenticates with the variant's auth strategy, fetches data pages,
    and runs the parser. Confirm non-empty output.
-3. **Health probes** — test ICMP ping and HTTP HEAD support for the
+3. **Protocol retry** — if authentication failed and the protocol was
+   auto-detected as HTTP, retry the authenticate + parse step with HTTPS
+   (then HTTPS + legacy SSL if needed). Some modems respond on HTTP port
+   80 (e.g., serving an HTML landing page) but only support authenticated
+   endpoints over HTTPS. The retry is scoped to auth failures only —
+   connectivity failures (modem unreachable) and parse errors are not
+   retried because the modem responded on the detected protocol. User-
+   specified protocols are never retried — that is an explicit choice.
+   See ORCHESTRATION_USE_CASES.md UC-85 for the full scenario.
+4. **Health probes** — test ICMP ping and HTTP HEAD support for the
    health monitoring pipeline.
 
 **Implementation — Core API call sequence:**
@@ -204,20 +213,26 @@ config_flow_helpers.validate_connection(hass, host, user, pass, modem_dir, varia
       │     Try HTTP → HTTPS → HTTPS+SECLEVEL=0
       │     → ConnectivityResult(protocol, legacy_ssl, working_url)
       │
-      ├─ 2. test_icmp(hostname)               [Core connectivity]
-      │     → bool (supports ICMP ping)
-      │
-      ├─ 3. test_http_head(url, legacy_ssl)   [Core connectivity]
-      │     → bool (supports HTTP HEAD)
-      │
-      ├─ 4. load_modem_config(modem.yaml)     [Core config_loader]
+      ├─ 2. load_modem_config(modem.yaml)     [Core config_loader]
       │     load_parser_config(parser.yaml)
       │     load_post_processor(parser.py)
       │
-      ├─ 5. ModemDataCollector(legacy_ssl=...)  [Core orchestration]
+      ├─ 3. ModemDataCollector(legacy_ssl=...)  [Core orchestration]
       │     .execute()
       │     Auth → Fetch pages → Parse → Logout
       │     → ModemResult(success, modem_data, signal, error)
+      │
+      ├─ 3a. If AUTH_FAILED and auto-detected HTTP:
+      │       Retry with https://{host} (legacy_ssl=False)
+      │       If still AUTH_FAILED:
+      │         Retry with https://{host} (legacy_ssl=True)
+      │       Update protocol, base_url, legacy_ssl on success
+      │
+      ├─ 4. test_icmp(hostname)               [Core connectivity]
+      │     → bool (supports ICMP ping)
+      │
+      ├─ 5. test_http_head(url, legacy_ssl)   [Core connectivity]
+      │     → bool (supports HTTP HEAD)
       │
       └─ 6. Return results for config entry
             {protocol, legacy_ssl, supports_icmp, supports_head}
