@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.4] - 2026-03-30
+
+### Fixed
+
+- Data-dependent sensor entities (channels, system metrics, LAN stats) are
+  now created via deferred one-shot listener when the first poll fails due
+  to modem being unreachable at HA startup. Previously these entities were
+  never created, leaving the integration permanently incomplete until HA
+  restarted with the modem online.
+- Misleading "session: expired" and "Session invalid" log messages for
+  logout modems (e.g., MB7621) now read "session: none" and "No active
+  session" — the session was intentionally cleared by logout, not expired.
+
+### Documentation
+
+- Added UC-84 (startup while modem unreachable) to orchestration use cases
+- Added "Deferred Entity Creation" section to HA Adapter Spec
+- Fixed incorrect `ConfigEntryNotReady` claim in HA Adapter Spec — the
+  orchestrator never raises, so first refresh always succeeds
+- Added "Modem unreachable at startup" row to Entity Model availability table
+
 ## [3.14.0-alpha.3] - 2026-03-30
 
 ### Fixed
