@@ -6,8 +6,10 @@ headers (e.g., X-Requested-With), and URL token prefixes.
 ``max_concurrent`` cannot be determined from HAR (requires live testing)
 and is always flagged as unknown.
 
-HNAP transport has implicit session (``uid`` cookie + ``HNAP_AUTH``
-header) -- this phase returns an empty session for HNAP.
+HNAP transport has implicit session (``uid`` + ``PrivateKey`` cookies,
+``HNAP_AUTH`` header) -- this phase returns an empty session for HNAP.
+The auth manager sets both cookies from the challenge-response flow;
+no session config is needed in modem.yaml.
 
 Per docs/ONBOARDING_SPEC.md Phase 3.
 """
@@ -63,7 +65,9 @@ def detect_session(
     Returns:
         SessionDetail with detected session configuration.
     """
-    # HNAP session is implicit -- no session block needed
+    # HNAP session is implicit -- the auth manager sets both cookies
+    # (uid + PrivateKey) and signs requests via HNAP_AUTH header.
+    # No session block needed in modem.yaml.
     if transport == "hnap":
         return SessionDetail()
 

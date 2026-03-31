@@ -370,8 +370,8 @@ auth:
 | `hmac_algorithm` | enum | required | `md5` or `sha256` |
 
 HNAP auth is fully constrained by the transport. The endpoint (`/HNAP1/`),
-session mechanism (`uid` cookie + `HNAP_AUTH` header), and protocol are
-all fixed. Only the HMAC algorithm varies across modems.
+session mechanism (`uid` + `PrivateKey` cookies, `HNAP_AUTH` header), and
+protocol are all fixed. Only the HMAC algorithm varies across modems.
 
 **Success detection:** The HNAP login response is a JSON object with
 a `LoginResult` field. Accepted values: `"OK"` or `"OK_CHANGED"`
@@ -526,8 +526,8 @@ How to end a session (logout) is declared in `actions.logout` — see
 the *operations*.
 
 The same auth strategy can use different session mechanisms across
-modems. For HNAP, session is implicit (always `uid` cookie +
-`HNAP_AUTH` header).
+modems. For HNAP, session is implicit (always `uid` + `PrivateKey`
+cookies, `HNAP_AUTH` header).
 
 ```yaml
 session:
@@ -728,6 +728,7 @@ modem declares *what* to find, core handles *how*. Contributors supply
 a simple keyword, not a fragile regex.
 
 **Extraction logic (in `orchestration/actions/http_action.py`):**
+
 1. Fetch `pre_fetch_url`
 2. Search for `<form ... action="...keyword...">` (case-insensitive)
 3. If found → use the full action attribute value as the endpoint
@@ -735,6 +736,7 @@ a simple keyword, not a fragile regex.
 5. If not found and no `endpoint` → fail the action
 
 **Logging on extraction failure:**
+
 - ERROR with the keyword, fallback endpoint (if any), and a 500-char
   page content preview for diagnostics.
 
@@ -979,7 +981,7 @@ failures.
 When a modem model has firmware variants that differ in auth, protocol,
 or behavior, each variant gets its own yaml file:
 
-```
+```text
 modems/arris/sb8200/
 ├── parser.yaml                 # Shared extraction config
 ├── parser.py                   # Shared code overrides
@@ -1014,7 +1016,7 @@ modems/arris/sb8200/
 
 Most modems: one `modem.yaml` file. No variant suffix needed.
 
-```
+```text
 modems/motorola/mb7621/
 ├── parser.yaml
 ├── modem.yaml

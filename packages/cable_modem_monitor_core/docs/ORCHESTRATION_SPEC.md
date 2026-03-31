@@ -7,11 +7,13 @@ platform-agnostic. Clients (Home Assistant, CLI tools, containers) wrap
 these components; they do not reimplement them.
 
 **Relationship to other specs:**
+
 - `RUNTIME_POLLING_SPEC.md` — behavior (what happens when)
 - `ARCHITECTURE.md` — system design (how components fit together)
 - This spec — contracts (method signatures, result types, signal types)
 
 **Design principles:**
+
 - Core's primary API is synchronous (`requests`-based I/O)
 - Core logs and returns results; consumers present them
 - Protocol layers signal conditions; the orchestrator owns all policy
@@ -95,8 +97,9 @@ class ModemDataCollector:
         """Whether the Auth Manager believes the current session is usable.
 
         Strategy-specific local check: HNAP verifies uid cookie +
-        private key; cookie-based strategies verify the session cookie
-        is present; basic and none are always valid.
+        private key (the private key is also set as a PrivateKey
+        cookie); cookie-based strategies verify the session cookie is
+        present; basic and none are always valid.
 
         This is a local check — the server may have expired the session
         even if this returns True. Used for diagnostics and by clients
@@ -181,7 +184,7 @@ class CollectorSignal(Enum):
 | State | Owner | Lifetime |
 |-------|-------|----------|
 | `requests.Session` (cookies, headers, verify=False) | Auth Manager (inside ModemDataCollector), created via `create_session(legacy_ssl=...)` | Until `clear_session()` or process exit |
-| HNAP private key | Auth Manager | Until session cleared |
+| HNAP private key | Auth Manager | Until session cleared (also set as `PrivateKey` cookie) |
 | URL token | Auth Manager | Until session cleared |
 | Parser coordinator instance | ModemDataCollector | Collector lifetime (reused across polls) |
 | `session_is_valid` check | Auth Manager (inside ModemDataCollector) | Evaluated on each `execute()` call |
@@ -197,11 +200,13 @@ When multiple integrations run in the same HA instance, the model tag
 is the primary way to correlate log lines to a specific modem.
 
 Example — HTTP 401 on a data page:
+
 - **Log** (WARNING): `"HTTP 401 on /status.html [MODEL] — session likely expired"`
 - **Signal**: `CollectorSignal.LOAD_AUTH`
 - **ModemResult.error**: `"401 on /status.html — session likely expired"`
 
 Example — successful collection with no channels:
+
 - **Log** (INFO): `"Parse complete [MODEL]: 0 DS, 0 US channels"`
 - **Signal**: `CollectorSignal.OK`
 - **ModemResult.modem_data**: `{downstream: [], upstream: [], system_info: {...}}`
@@ -845,7 +850,7 @@ The modem works fine, then the user changes the password on the
 modem's web UI (or ISP firmware resets it). Session reuse continues
 until the session expires. Then:
 
-```
+```text
 Poll N:   session expired → Auth Manager re-authenticates → wrong password
           → AUTH_FAILED (streak: 1)
 Poll N+1: AUTH_FAILED (streak: 2)
@@ -859,7 +864,8 @@ Poll N+8: AUTH_LOCKOUT (streak: 6) → circuit OPEN, polling stops
 ```
 
 **Root cause detection via logs:**
-```
+
+```text
 INFO  Poll N:   "Auth failed — wrong credentials or strategy mismatch (streak: 1/6)"
 INFO  Poll N+1: "Auth failed — wrong credentials or strategy mismatch (streak: 2/6)"
 WARN  Poll N+2: "Auth lockout — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"
@@ -880,7 +886,7 @@ reconfigures.
 **Transient auth failure:**
 Modem is busy, temporarily rejects a login.
 
-```
+```text
 Poll N:   AUTH_FAILED (streak: 1)
 Poll N+1: collection succeeds (streak: 0) — circuit stays closed
 ```
@@ -890,7 +896,7 @@ Streak resets on success. Transient failures never reach the threshold.
 **LOAD_AUTH on a data page:**
 401/403 on a data page after auth appeared to succeed.
 
-```
+```text
 Poll N:   LOAD_AUTH (streak: 1), session cleared
 Poll N+1: fresh login → collection succeeds (streak: 0)
 ```
@@ -954,23 +960,28 @@ orchestration logging (auth, resource loading, session state) drops
 to DEBUG after the first successful poll to avoid flooding logs.
 
 **Auth lifecycle:**
+
 - INFO (first poll) / DEBUG (after): `"Poll [MODEL] — auth: FormAuth, url: ..., credentials: yes, session: new"`
 - WARNING: `"Auth lockout [MODEL] — firmware anti-brute-force triggered, suppressing login for 3 polls (streak: 3/6)"`
 - ERROR: `"Circuit breaker OPEN [MODEL] — polling stopped. Reconfigure credentials to resume."`
 
 **Backoff and circuit breaker:**
+
 - INFO: `"Backoff active [MODEL] (2 remaining), skipping collection"`
 - INFO: `"Backoff cleared [MODEL], resuming"`
 
 **Collection outcomes:**
+
 - INFO: `"Parse complete [MODEL]: 24 DS, 4 US channels"` (every poll)
 - WARNING: `"Poll failed [MODEL] — signal: connectivity, error: ..."`
 - INFO: `"Counter reset detected [MODEL] — corrected: 1000→0, uncorrected: 50→0"`
 
 **State transitions:**
+
 - INFO: `"Status transition [MODEL]: unreachable → online"`
 
 **Restart:**
+
 - INFO: `"Restart command sent [MODEL] — session cleared (1.2s)"`
 - ERROR: `"Restart failed [MODEL]: ..."`
 
@@ -1294,6 +1305,7 @@ is correct — no other operations should run during restart recovery.
 ### Probe Strategy
 
 Response detection uses the lightest available probe:
+
 1. **HealthMonitor** (preferred) — ICMP ping or HTTP HEAD. Fast,
    lightweight, no auth or session consumption.
 2. **ModemDataCollector** (fallback) — full auth → load → parse cycle.
@@ -1402,7 +1414,7 @@ class RestartMonitor:
 
 ### Recovery Flow
 
-```
+```text
 monitor_recovery(cancel_event) called
  ├─ Clear collector session
  ├─ Wait for modem to respond
@@ -1468,6 +1480,7 @@ discriminator (`http` or `hnap`).
 `http_action.execute_http_action()` handles standard HTTP actions.
 
 Phases:
+
 1. **Pre-fetch** (optional): GET `pre_fetch_url` to establish session
    state (CSRF tokens, nonces).
 2. **Endpoint extraction** (optional): find a `<form>` whose `action`
@@ -1483,6 +1496,7 @@ rebooting during restart). Returns `ActionResult`.
 `hnap_action.execute_hnap_action()` handles HNAP SOAP actions.
 
 Phases:
+
 1. **Pre-fetch** (optional): call `pre_fetch_action` HNAP action to
    retrieve current config values.
 2. **Interpolation**: replace `${var:default}` placeholders in `params`

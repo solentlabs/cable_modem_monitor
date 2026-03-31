@@ -17,6 +17,7 @@ search, test failure diagnosis). The user handles approval (golden file
 review, commit authorization).
 
 **Design principles:**
+
 - HAR is the single source of truth — every config decision traces to wire evidence
 - Config constraints (transport, auth, format) form the decision framework
 - Deterministic logic lives in MCP tools, not in prompts — repeatable and testable
@@ -129,6 +130,7 @@ content, this is valid for `auth: none` modems. The "post-auth only"
 hard stop does not apply when there is no auth to capture.
 
 **How to distinguish `none` auth from post-auth HAR:**
+
 - `none` auth: No `Cookie`, `Authorization`, or session headers on any
   request. Consistent 200 responses. No login endpoints in the URL
   history.
@@ -149,7 +151,7 @@ web search.
 Examine all HAR entries. Transport is determined by the **data transport
 mechanism**, not the login UI.
 
-```
+```text
 For each entry in HAR:
   Check request headers and URL:
     ├── Request URL is /HNAP1/ ?
@@ -195,7 +197,7 @@ fields confirm the protocol but not the algorithm. Default to `md5`
 
 #### HTTP transport
 
-```
+```text
 Check HAR entries for login flow:
   ├── No login flow, all 200s, no session artifacts
   │   └── strategy: none
@@ -257,8 +259,8 @@ the modem rejects concurrent sessions, the HAR won't show it (only one
 session was active). Flag `max_concurrent` as "unknown — verify with
 contributor or modem documentation."
 
-**HNAP transport:** Session is implicit (`uid` cookie + `HNAP_AUTH`
-header). Do not emit a `session` block.
+**HNAP transport:** Session is implicit (`uid` + `PrivateKey` cookies,
+`HNAP_AUTH` header). Do not emit a `session` block.
 
 ### Phase 4: Action Detection
 
@@ -346,14 +348,14 @@ structural details from HAR response bodies:
 **Direction inference:** `response_key` names containing "Downstream"
 or "DSChannel" → downstream. "Upstream" or "USChannel" → upstream.
 
-See PARSING_SPEC.md [HNAPParser](#hnapparser) for the validated
+See [HNAPParser](PARSING_SPEC.md#hnapparser) for the validated
 record layout and parser.yaml example.
 
 #### HTTP format detection
 
 For each data page in the HAR, examine the response body:
 
-```
+```text
 Response body analysis (Content-Type first):
   ├── application/json ?
   │   └── format: json
@@ -476,6 +478,7 @@ the table header row. Column headers like "Frequency", "Power Level",
 label-to-field mapping as above, but rows are labels instead of columns.
 
 **`javascript` format:** Examine JS function bodies to determine:
+
 - Function name (regex target)
 - Delimiter character
 - Fields per channel (count values between delimiters)
@@ -483,6 +486,7 @@ label-to-field mapping as above, but rows are labels instead of columns.
   data to identify which offset contains frequency, power, etc.)
 
 **`hnap` format:** Examine HNAP response JSON to determine:
+
 - `response_key` (action response wrapper key)
 - `data_key` (field containing delimited channel data)
 - `record_delimiter` and `field_delimiter` (split the delimited string)
@@ -490,6 +494,7 @@ label-to-field mapping as above, but rows are labels instead of columns.
   actual data to identify positions)
 
 **`json` format:** Examine JSON response structure to determine:
+
 - `array_path` (dot-notation path to channel array)
 - JSON key names → canonical field names
 - `fallback_key` if the modem uses non-standard key names
@@ -704,7 +709,7 @@ Both the MCP server and the test harness live in **Core**. Catalog
 provides modem data; Core provides the infrastructure to analyze,
 validate, and test it.
 
-```
+```text
 Core (solentlabs-cable-modem-monitor-core)
 ├── Pipeline: auth → load → parse
 ├── MCP server: onboarding tools (analyze, generate, validate)
@@ -750,7 +755,7 @@ harness is consumed by:
 Builds a local HTTP server from HAR entries. Each entry becomes a
 route that replays the recorded response.
 
-```
+```text
 HAR entry:
   request:  { method: GET, url: "/MotoConnection.asp", headers: [...] }
   response: { status: 200, headers: [...], content: { text: "<html>..." } }
@@ -795,6 +800,7 @@ After the pipeline produces `ModemData`, the harness compares it
 against the golden file (`test_data/modem.expected.json`).
 
 **Comparison rules:**
+
 - Deep equality on the full `ModemData` dict
 - Downstream and upstream channel lists are order-sensitive (channel
   order should be deterministic from the same input)
@@ -803,7 +809,8 @@ against the golden file (`test_data/modem.expected.json`).
   diverged, with both expected and actual values
 
 **Diff format example:**
-```
+
+```text
 FAIL: modems/motorola/mb7621
   downstream[3].frequency:
     expected: 507000000
@@ -819,7 +826,7 @@ FAIL: modems/motorola/mb7621
 
 The harness discovers test cases from the Catalog directory structure:
 
-```
+```text
 For each modems/{mfr}/{model}/test_data/ directory:
   For each *.har file:
     1. Find matching *.expected.json (same stem)
@@ -829,13 +836,14 @@ For each modems/{mfr}/{model}/test_data/ directory:
 ```
 
 **Config resolution** (from MODEM_DIRECTORY_SPEC.md):
+
 - `modem.har` → uses `modem.yaml`
 - `modem-{name}.har` → look for `modem-{name}.yaml`; if not found,
   fall back to `modem.yaml`
 
 ### Test Execution Flow
 
-```
+```text
 discover test case:
   modem.har + modem.expected.json + modem.yaml + parser.yaml
     ↓
@@ -911,6 +919,7 @@ detection, format detection, and field mapping extraction.
 
 **Input:** HAR file path + optional overrides (known transport, default host)
 **Output:** Structured analysis result:
+
 ```json
 {
   "transport": "http",
@@ -985,6 +994,7 @@ these to the user for resolution before proceeding.
 handle. When `core_gaps` is non-empty, config generation should not
 proceed — the modem needs a development effort to extend Core's pattern
 set. Each gap has:
+
 - `phase` / `category`: identifies the pipeline phase and gap type
 - `summary`: human-readable description of the gap
 - `evidence`: structured wire data from the HAR for diagnosis
@@ -1029,6 +1039,7 @@ clear guidance on what's missing.
 
 **Input:** Analysis result + optional existing config + optional user input
 **Output:**
+
 ```json
 {
   "metadata": { "...": "complete metadata dict for generate_config" },
@@ -1039,6 +1050,7 @@ clear guidance on what's missing.
 ```
 
 **Inferences from analysis:**
+
 - `default_host` — most common host in HAR request URLs
 - `hardware.docsis_version` — OFDM/OFDMA channels in analysis → 3.1, else 3.0
 - `transport` — from analysis
@@ -1088,6 +1100,7 @@ destination anyway.
 **Input:** Output directory, modem.yaml string, parser.yaml string,
 golden file dict, HAR file path, optional parser.py string
 **Output:**
+
 ```json
 {
   "modem_dir": "modems/motorola/mb7621",
@@ -1097,7 +1110,8 @@ golden file dict, HAR file path, optional parser.py string
 ```
 
 **Creates standard catalog structure:**
-```
+
+```text
 {output_dir}/
 ├── modem.yaml
 ├── parser.yaml
@@ -1229,7 +1243,7 @@ session:
 
 ### Full onboarding flow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ HAR Capture (user + har-capture tool)                   │
 ├─────────────────────────────────────────────────────────┤
@@ -1342,6 +1356,7 @@ Reproduced from [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for qu
 ### Example 1: HTML table modem with form auth
 
 **HAR evidence:**
+
 - First request: GET `/` → 200 with HTML login form
 - POST `/goform/login` with `loginUsername=admin&loginPassword=<base64>`
 - 302 redirect to `/home.asp`
@@ -1350,6 +1365,7 @@ Reproduced from [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#validation-rules) for qu
 - GET `/logout.asp` at end of capture
 
 **Generated modem.yaml:**
+
 ```yaml
 manufacturer: "{Manufacturer}"
 model: "{Model}"
@@ -1382,6 +1398,7 @@ status: awaiting_verification
 ```
 
 **Generated parser.yaml (abbreviated):**
+
 ```yaml
 downstream:
   format: table
@@ -1412,6 +1429,7 @@ system_info:
 Validated against S33v2 HAR (26 DS + 5 US channels).
 
 **HAR evidence:**
+
 - First request: GET `/` → HTML page loading HNAP JavaScript
   (Login.js, SOAPAction.js, hmac_md5.js)
 - POST `/HNAP1/` with `HNAP_AUTH` header, SOAPAction: Login
@@ -1423,6 +1441,7 @@ Validated against S33v2 HAR (26 DS + 5 US channels).
 - US channel data: `"1^Locked^SC-QAM^1^6400000^38400000^47.0^|+|..."`
 
 **Generated modem.yaml:**
+
 ```yaml
 manufacturer: "{Manufacturer}"
 model: "{Model}"
@@ -1440,6 +1459,7 @@ status: awaiting_verification
 ```
 
 **Generated parser.yaml (abbreviated):**
+
 ```yaml
 downstream:
   format: hnap
@@ -1497,11 +1517,13 @@ system_info:
 ### Example 3: HTTP modem with JSON API and no auth
 
 **HAR evidence:**
+
 - First request: GET `/` → 200 with HTML page (modem info, no login)
 - GET `/api/v1/downstream` → 200, `application/json`
 - Response: `{"downstream": {"channels": [{"channelId": 1, ...}]}}`
 
 **Generated modem.yaml:**
+
 ```yaml
 manufacturer: "{Manufacturer}"
 model: "{Model}"
@@ -1518,6 +1540,7 @@ status: awaiting_verification
 ```
 
 **Generated parser.yaml (abbreviated):**
+
 ```yaml
 downstream:
   format: json

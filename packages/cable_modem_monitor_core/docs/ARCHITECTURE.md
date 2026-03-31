@@ -32,11 +32,13 @@ graph TD
 ```
 
 **Import paths:**
+
 - `from solentlabs.cable_modem_monitor_core import ...`
 - `from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH`
 
 **Repository layout:**
-```
+
+```text
 packages/
 ├── cable_modem_monitor_core/
 │   ├── pyproject.toml              # name = "solentlabs-cable-modem-monitor-core"
@@ -63,6 +65,7 @@ the coordinator. Pydantic is only needed by the MCP onboarding tools and
 Catalog's dev-time validation pipeline.
 
 Catalog's dev dependencies reference the extra:
+
 ```toml
 [dependency-groups]
 dev = ["solentlabs-cable-modem-monitor-core[mcp]"]
@@ -124,7 +127,7 @@ optional post-processors invoked by Core's `ModemParserCoordinator`).
 | `parser.py` | Optional post-processor for modem-specific extraction quirks |
 | `tests/` | HAR captures and expected output golden files |
 
-```
+```text
 solentlabs/cable_modem_monitor_catalog/
 ├── __init__.py              # exposes CATALOG_PATH
 └── modems/
@@ -163,6 +166,7 @@ v3.13 was removed — `har-capture` is the tool for collecting raw modem data
 for parser development.
 
 **Startup example:**
+
 ```python
 from solentlabs.cable_modem_monitor_catalog import CATALOG_PATH
 from solentlabs.cable_modem_monitor_core.orchestration import (
@@ -207,7 +211,7 @@ graph TD
     T --> HTTP["<b>http</b><hr/>HTTPLoader → BeautifulSoup | dict"]
 
     HNAP --> HA["<b>AUTH</b><hr/>• HMAC challenge-response"]
-    HA --> HS["<b>SESSION</b><hr/>• uid cookie + HNAP_AUTH header"]
+    HA --> HS["<b>SESSION</b><hr/>• uid + PrivateKey cookies<br/>• HNAP_AUTH header"]
     HS --> HF["<b>FORMAT</b><hr/>• hnap (JSON + delimiters)"]
 
     HTTP --> HTA["<b>AUTH</b><hr/>• none<br/>• basic<br/>• form<br/>• form_nonce<br/>• url_token 🔗<br/>• form_pbkdf2 🔗<br/>• form_sjcl 🔗"]
@@ -308,6 +312,7 @@ See [MODEM_YAML_SPEC.md](MODEM_YAML_SPEC.md#auth) for per-strategy
 config fields.
 
 **Key points:**
+
 - `form` and `form_nonce` are separate strategies because they have different
   response handling — `form` evaluates redirects and cookies, `form_nonce`
   parses text prefixes (`Url:` / `Error:`)
@@ -354,7 +359,8 @@ a string before the base64 token, the other sends bare base64. Both produce
 the same session mechanism.
 
 **Auth flow:**
-```
+
+```text
 1. Encode credentials: base64("username:password")
 2. Login request:
    GET /cmconnectionstatus.html?{login_prefix}{base64_token}
@@ -379,6 +385,7 @@ Session cookie and token prefix are declared in the `session` section
 — see `MODEM_YAML_SPEC.md` Session.
 
 **Example:**
+
 ```yaml
 auth:
   strategy: url_token
@@ -410,7 +417,8 @@ Evidence base: modems using a shared REST API platform with PHPSESSID sessions,
 CSRF tokens, and a JavaScript login flow that performs double PBKDF2 hashing.
 
 **Auth flow:**
-```
+
+```text
 1. POST /api/v1/session/login  { password: "seeksalthash" }
    → Response: { salt: "<salt>", saltwebui: "<saltwebui>" }
 2. Client computes: hash1 = PBKDF2(password, salt, iterations, keylen)
@@ -437,6 +445,7 @@ Session cookie, logout URL, and CSRF header for subsequent requests
 are declared in the `session` section — see `MODEM_YAML_SPEC.md` Session.
 
 **Example:**
+
 ```yaml
 auth:
   strategy: form_pbkdf2
@@ -490,7 +499,8 @@ as JavaScript variables; the login script uses these to AES-CCM encrypt the
 credentials before submission.
 
 **Auth flow:**
-```
+
+```text
 1. GET login page (login_page)
    → Parse JS variables: myIv (hex), mySalt, currentSessionId
 2. Derive AES key: PBKDF2(password, mySalt, iterations, key_len)
@@ -526,6 +536,7 @@ Session cookie and logout are declared in the `session` and `actions`
 sections — see `MODEM_YAML_SPEC.md`.
 
 **Example:**
+
 ```yaml
 auth:
   strategy: form_sjcl
@@ -631,7 +642,7 @@ modem's output.
 
 **Pipeline:**
 
-```
+```text
 ModemParserCoordinator.parse(resources)
   for each section (downstream, upstream, system_info):
     parse primary tables → concatenate → channel list
@@ -683,16 +694,18 @@ already in `system_info` — computed by the parser coordinator.
 breaker state, and per-resource fetch details (`ResourceFetch`).
 
 **`ChannelData`** — per-channel metrics for downstream and upstream:
-  - Fixed fields: channel ID, frequency, power, SNR, lock status,
+
+- Fixed fields: channel ID, frequency, power, SNR, lock status,
     modulation, channel type, corrected and uncorrected codewords
-  - Upstream adds `symbol_rate`, omits SNR and codewords
+- Upstream adds `symbol_rate`, omits SNR and codewords
 
 **`SystemInfo`** — mix of structured and dynamic fields:
-  - Structured: `system_uptime`, `last_boot_time`, `software_version`,
+
+- Structured: `system_uptime`, `last_boot_time`, `software_version`,
     `hardware_version`, `model_name`
-  - Dynamic: modem-specific fields (e.g., `connectivity_state`,
+- Dynamic: modem-specific fields (e.g., `connectivity_state`,
     `boot_status`) pass through without core needing to understand them
-  - Core derives `last_boot_time` from `system_uptime` when the modem
+- Core derives `last_boot_time` from `system_uptime` when the modem
     doesn't provide it natively — consumers see the same field regardless
     of source
 
@@ -750,6 +763,7 @@ during development and CI — an HTTP modem declaring HNAP auth is
 rejected before it ships. Runtime loads into dataclasses.
 
 modem.yaml serves two purposes based on `status`:
+
 - **Working modems** (`confirmed`, `awaiting_verification`, `in_progress`) —
   full config including auth, session, actions, hardware
 - **Database entries** (`unsupported`) — identity and hardware info only,
@@ -808,7 +822,7 @@ server). The only difference is the server: real network endpoint vs
 localhost replay. Every other component — auth, loaders, coordinator,
 parsers — is the same code on the same path.
 
-```
+```text
 Auth Manager ──▶ Resource Loader ──▶ Coordinator + Parsers ──▶ Post-Parse Filters ──▶ ModemData
      │                  │                     │                       │
      ▼                  ▼                     ▼                       ▼
@@ -838,6 +852,7 @@ requests. HNAP auth also produces a `private_key` for request signing.
 Two transport paths, selected by `modem.yaml.transport`:
 
 **HTTP transport** (`HTTPResourceLoader`):
+
 - Derives fetch targets from parser.yaml via `collect_fetch_targets()`
 - Fetches each resource URL independently over HTTP
 - HTML responses → `BeautifulSoup` objects
@@ -845,6 +860,7 @@ Two transport paths, selected by `modem.yaml.transport`:
 - URL token modems append session token to query string
 
 **HNAP transport** (`HNAPLoader`):
+
 - Derives HNAP action names from parser.yaml response keys
 - Sends a single batched SOAP POST to `/HNAP1/`
 - Signs request with HMAC (MD5 or SHA256) using the private key from auth
@@ -944,6 +960,7 @@ correctness must be established.
 ### Two Regression Scopes
 
 **Core regression** — committed configs through the extraction pipeline:
+
 - Uses committed modem.yaml + parser.yaml + parser.py
 - Runs HAR through `HARMockServer` → auth → load → parse → golden file comparison
 - Tests: does the existing, working system still work?
@@ -951,6 +968,7 @@ correctness must be established.
 - Pass criteria: zero golden file drift
 
 **MCP regression** — MCP-generated configs through the extraction pipeline:
+
 - Uses HAR → MCP intake pipeline → generated modem.yaml + parser.yaml
 - Overwrites committed configs with generated versions
 - Runs same extraction pipeline → golden file comparison
@@ -968,7 +986,7 @@ After setup, the integration polls the modem on a user-configured cadence
 execution to three specialized components. Consumers own scheduling —
 HA uses DataUpdateCoordinator, CLI tools use a loop.
 
-```
+```text
 Orchestrator (policy + composition)
  ├─ ModemDataCollector — one collection cycle → ModemData | signal
  ├─ HealthMonitor      — probe cycle → HealthInfo
@@ -1113,7 +1131,7 @@ If firmware variants share a transport (same parsing, same endpoints), they
 belong in one directory with shared `parser.*`. Each variant gets its
 own `modem-{variant}.yaml` with a single auth strategy.
 
-```
+```text
 modems/netgear/cm1200/
 ├── parser.py               # JSEmbedded extraction
 ├── modem-noauth.yaml       # auth: none
@@ -1169,7 +1187,7 @@ subsequent URLs (`?ct_<token>`), the other gets an empty response body and
 relies on cookies only. Each needs its own complete `url_token` config — its
 own variant yaml.
 
-```
+```text
 modems/<mfr>/<model>/
 ├── parser.yaml             # table selectors, column mappings (shared)
 ├── modem-noauth.yaml       # auth: none (ISP firmware with no login)
@@ -1226,6 +1244,7 @@ values, not different behaviors. Every variation maps to a config field:
 | CSRF token | `auth.csrf_header` (strategy-specific; `form_pbkdf2` currently) |
 
 No auth hooks means:
+
 - **Smaller security surface.** Auth touches credentials. One audited
   implementation per strategy, not per-modem overrides that could mishandle
   passwords or leak tokens.
@@ -1252,7 +1271,7 @@ decisions that affect directory structure and package boundaries.
 
 ### Three test scopes
 
-**1. Core — isolated unit tests**
+#### 1. Core — isolated unit tests
 
 Strategy extraction logic, auth strategies, config schema validation,
 data model invariants. Tests use synthetic inputs (hand-crafted HTML
@@ -1264,7 +1283,7 @@ replay, golden file comparison, and structural assertions. The harness
 lives in Core so that Catalog contributors cannot modify test assertions
 or loader logic. Catalog's CI installs Core and uses Core's test harness.
 
-**2. Catalog — HAR replay integration tests**
+#### 2. Catalog — HAR replay integration tests
 
 Each modem's `tests/` directory contains HAR captures (input) and
 expected output golden files (assertions). The test harness in Core
@@ -1272,7 +1291,7 @@ discovers these fixtures, replays each HAR through the `HARMockServer`, runs
 the full pipeline (auth → load → parse), and compares the output
 against the golden file.
 
-```
+```text
 modems/{mfr}/{model}/tests/
 ├── modem.har                  # HAR capture (pipeline input)
 ├── modem.expected.json        # golden file (expected ModemData output)
@@ -1285,6 +1304,7 @@ The test harness discovers HAR files, finds the matching expected
 output, and resolves which `modem*.yaml` applies (base or variant).
 
 **Golden file lifecycle:**
+
 1. Contributor submits HAR capture via `har-capture`
 2. MCP pipeline: `validate_har` → `analyze_har` → `enrich_metadata` → `generate_config` → `generate_golden_file` → `write_modem_package`
 3. `run_tests` replays HAR against `HARMockServer`, compares output to golden file
@@ -1307,7 +1327,7 @@ use that parser**, not just the modem being worked on. Enhancing
 `HTMLTableParser` triggers every Catalog modem test that uses
 `format: table`.
 
-**3. HA Integration — adapter tests**
+#### 3. HA Integration — adapter tests
 
 Config flow, coordinator, entity model, device registry. Tests mock
 Core's engine interface — they verify HA-specific behavior (entity

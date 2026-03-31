@@ -216,8 +216,10 @@ class ModemDataCollector:
         """Whether the Auth Manager believes the current session is usable.
 
         Strategy-specific local check: HNAP verifies uid cookie +
-        private key; cookie-based strategies verify the session cookie
-        is present; basic and none are always valid after first auth.
+        private key (the private key is also set as a PrivateKey
+        cookie by the auth manager); cookie-based strategies verify
+        the session cookie is present; basic and none are always valid
+        after first auth.
 
         This is a local check -- the server may have expired the session
         even if this returns True.

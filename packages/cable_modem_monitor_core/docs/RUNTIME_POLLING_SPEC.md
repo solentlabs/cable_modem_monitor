@@ -6,6 +6,7 @@ that delegates to three specialized components — each independently
 testable with a clear input→output contract.
 
 **Design principles:**
+
 - Protocol layers signal conditions; the orchestrator owns all policy
 - Sessions persist across polls — re-login is the exception, not the rule
 - Auth circuit breaker stops polling after persistent auth failures
@@ -15,7 +16,7 @@ testable with a clear input→output contract.
 
 ## Components
 
-```
+```text
 Orchestrator (scheduler + policy)
  ├─ ModemDataCollector — one poll cycle → ModemData | signal
  ├─ HealthMonitor — probe cycle → HealthInfo
@@ -27,7 +28,7 @@ parse sequence. It owns no scheduling or retry policy; it runs once and
 returns `ModemData` on success or a signal on failure. The orchestrator
 decides whether to retry, backoff, or report.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────┐
 │ ModemDataCollector                                         │
 │                                                            │
@@ -44,16 +45,19 @@ decides whether to retry, backoff, or report.
 ```
 
 **Auth Manager** owns the `requests.Session` and its lifecycle:
+
 - Authenticates using the strategy and config from modem.yaml
 - Reuses valid sessions across polls (avoids re-login every cycle)
 - Validates session state before each poll using strategy-specific
-  checks: HNAP verifies `uid` cookie + private key; cookie-based
-  strategies verify `session.cookie_name` is present in the cookie jar;
+  checks: HNAP verifies `uid` cookie + private key (the private key is
+  also set as a `PrivateKey` cookie); cookie-based strategies verify
+  `session.cookie_name` is present in the cookie jar;
   basic and none are stateless (always valid)
 - Backs off on failure (suppresses login for N polls after lockout)
 - Executes `actions.logout` for single-session modems after each poll
 
 **Resource Loader** uses the authenticated session to fetch data:
+
 - Collects resource paths from parser.yaml at startup
 - Dispatches by transport: HTTP → format-dependent (`BeautifulSoup` or `dict`),
   HNAP → JSON from SOAP response
@@ -64,11 +68,13 @@ See `RESOURCE_LOADING_SPEC.md` for the full resource dict contract,
 loader behavior per transport, and URL construction details.
 
 **Parser** transforms resources into structured data:
+
 - Receives the resource dict, returns channels and system info
 - Pure function — no session, no HTTP, no auth awareness
 - Instantiated once from the catalog package at startup, reused every poll
 
 **Orchestrator** owns scheduling, policy, and error recovery:
+
 - Invokes `ModemDataCollector` for each poll cycle
 - Applies backoff on lockout, circuit breaker on persistent auth failure
 - Coordinates `HealthMonitor` and `RestartMonitor` independently
@@ -82,12 +88,14 @@ from parsed channel data. These appear in `modem_data.system_info`
 before the orchestrator sees the data.
 
 **Channel counts** (always computed by coordinator):
+
 - `downstream_channel_count` — `len(downstream)`, always present
 - `upstream_channel_count` — `len(upstream)`, always present
 - If the parser maps native channel counts from the modem's web UI,
   the native value takes precedence.
 
 **Aggregate fields** (declared in parser.yaml `aggregate` section):
+
 - e.g., `total_corrected` — `sum(corrected)` across scoped channels
 - Scope can be a direction (`downstream`) or type-qualified
   (`downstream.qam`, `downstream.ofdm`)
@@ -140,7 +148,7 @@ for the HA implementation's cascade rules.
 
 ## Poll Cycle
 
-```
+```text
 Each poll:
  1. Orchestrator: circuit breaker open? → return auth_failed.
  2. Orchestrator: connectivity backoff active? → decrement, return unreachable.
@@ -170,7 +178,7 @@ channels, timeout. It never decides what to do about those signals. The
 orchestrator receives signals and applies policy — retry, backoff,
 suppress, report.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │  Orchestrator                                            │
 │                                                          │
@@ -259,7 +267,7 @@ strategy returns `AuthResult.FAILURE`.
 | State | Owner | Purpose | Lifetime |
 |-------|-------|---------|----------|
 | `session` (cookies) | Auth Manager | Avoid re-login every poll | Until expired or cleared |
-| HNAP private key | Auth Manager | SOAP request signing | Until session expires |
+| HNAP private key | Auth Manager | SOAP request signing + `PrivateKey` cookie | Until session expires |
 | Session token | Auth Manager | URL token injection | Until session expires |
 | Login backoff counter | Orchestrator | Anti-brute-force suppression | Decremented each poll |
 | Auth failure streak | Orchestrator | Circuit breaker threshold tracking | Reset on successful collection |
@@ -307,7 +315,7 @@ The user presses a "Restart Modem" button in Home Assistant. The
 orchestrator sends the restart command via the action layer, then a
 restart monitor takes over the polling loop temporarily.
 
-```
+```text
 Button press
  ├─ Authenticate (fresh session for the restart command)
  ├─ Execute restart action (HNAP SOAP / HTML form POST / REST)
@@ -335,7 +343,7 @@ unavailable.
 ISP-initiated restarts, power outages, firmware updates. No button press,
 no restart monitor — the polling loop discovers the outage on its own.
 
-```
+```text
 Normal poll
  ├─ Auth manager: session valid? → yes (stale cookies, modem doesn't know)
  ├─ Resource loader: fetch pages → connection refused / timeout
@@ -361,6 +369,7 @@ state is already reported in the poll log (`session: new` vs
 `session: reused`).
 
 Optional recovery enhancements (may be added based on real-world data):
+
 - Switch to fast polling during the outage window
 - Wait for channel counts to stabilize before reporting `online`
 - Notify the user ("Modem restarted externally")

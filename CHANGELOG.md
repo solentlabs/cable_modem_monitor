@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **HNAP PrivateKey cookie** — HNAP data requests now include the
+  `PrivateKey` cookie alongside `uid`, matching the Login.js protocol.
+  Some firmware returns HTTP 500 without it. Regression from v3.13
+  where the cookie was set but never documented in specs — v3.14's
+  clean-room implementation missed it. (Related to #117)
+
+### Changed
+
+- HNAP session documented as `uid` + `PrivateKey` cookies across all
+  specs (MODEM_YAML_SPEC, ORCHESTRATION_SPEC, RUNTIME_POLLING_SPEC,
+  ONBOARDING_SPEC, ARCHITECTURE).
+
 ## [3.14.0-alpha.5] - 2026-03-31
 
 ### Fixed

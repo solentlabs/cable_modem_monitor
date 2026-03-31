@@ -201,8 +201,14 @@ class HnapAuthManager(BaseAuthManager):
             algorithm=self._hmac_algorithm,
         )
 
-        # Set session cookie from challenge response
+        # Set session cookies from challenge response.
+        # Login.js sets both cookies after deriving the private key:
+        #   $.cookie('uid', obj.Cookie, { path: '/' });
+        #   $.cookie('PrivateKey', PrivateKey, { path: '/' });
+        # Both are HNAP protocol-level cookies — some firmware returns
+        # HTTP 500 on data requests when the PrivateKey cookie is missing.
         session.cookies.set("uid", self._cookie)
+        session.cookies.set("PrivateKey", private_key)
 
         body = {
             "Login": {

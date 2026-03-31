@@ -165,6 +165,20 @@ class TestSuccessfulLogin:
 
         assert session.cookies.get("uid") == _HNAPHandler.cookie
 
+    def test_private_key_cookie_set(self, hnap_server: str) -> None:
+        """Session has PrivateKey cookie after successful login.
+
+        Both uid and PrivateKey are HNAP protocol-level cookies set
+        by Login.js. Some firmware returns HTTP 500 on data requests
+        when the PrivateKey cookie is missing.
+        """
+        manager = _make_manager()
+        session = requests.Session()
+
+        result = manager.authenticate(session, hnap_server, "admin", "pw")
+
+        assert session.cookies.get("PrivateKey") == result.auth_context.private_key
+
 
 # ┌──────────────────┬──────────┬─────────────────────────────────┬───────────────────────────┐
 # │ login_result     │ password │ expected_error_substring        │ description               │
