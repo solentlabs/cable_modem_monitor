@@ -27,18 +27,11 @@ class PostProcessor:
 
         The resource loader wraps the root-level array as ``{"_raw": [...]}``.
         """
-        data = resources.get("/data/getSysInfo.asp")
-        if data is None:
-            return system_info
+        data = resources["/data/getSysInfo.asp"]
 
         # Unwrap: loader wraps root array as {"_raw": [...]}
-        items = data.get("_raw", data) if isinstance(data, dict) else data
-        if not isinstance(items, list) or not items:
-            return system_info
-
+        items = data.get("_raw", data)
         info = items[0]
-        if not isinstance(info, dict):
-            return system_info
 
         field_map = {
             "hwVersion": "hardware_version",

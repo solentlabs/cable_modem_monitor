@@ -6,10 +6,15 @@ All fixtures return realistic but deterministic data for reproducible tests.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from solentlabs.cable_modem_monitor_core.catalog_manager import (
+    ModemSummary,
+    VariantInfo,
+)
 from solentlabs.cable_modem_monitor_core.orchestration.models import (
     HealthInfo,
     ModemIdentity,
@@ -99,11 +104,11 @@ MOCK_ENTRY_DATA: dict[str, Any] = {
     "host": "192.168.100.1",
     "username": "admin",
     "password": "password",
-    CONF_MANUFACTURER: "Motorola",
-    CONF_MODEL: "MB7621",
+    CONF_MANUFACTURER: "Solent Labs",
+    CONF_MODEL: "TPS-2000",
     CONF_VARIANT: None,
     CONF_ENTITY_PREFIX: ENTITY_PREFIX_NONE,
-    CONF_MODEM_DIR: "motorola/mb7621",
+    CONF_MODEM_DIR: "solentlabs/tps-2000",
     CONF_PROTOCOL: "http",
     CONF_LEGACY_SSL: False,
     CONF_SUPPORTS_ICMP: True,
@@ -119,6 +124,85 @@ MOCK_VALIDATION_RESULT: dict[str, Any] = {
     "supports_head": True,
 }
 
+# ---------------------------------------------------------------------------
+# Stub modem config — for _create_core_components wiring tests
+# ---------------------------------------------------------------------------
+
+
+def _make_stub_modem_config(
+    *,
+    health_http_probe: bool = True,
+    health_supports_icmp: bool = True,
+    health_supports_head: bool = True,
+    health_config: bool = True,
+    hardware: bool = True,
+) -> MagicMock:
+    """Build a stub ModemConfig with the attributes _create_core_components accesses.
+
+    Args:
+        health_http_probe: Value for health.http_probe.
+        health_supports_icmp: Value for health.supports_icmp.
+        health_supports_head: Value for health.supports_head.
+        health_config: If False, config.health is None (no health section).
+        hardware: If False, config.hardware is None (no hardware section).
+    """
+    config = MagicMock()
+    config.manufacturer = "Solent Labs"
+    config.model = "TPS-2000"
+    config.status = "verified"
+
+    if hardware:
+        config.hardware.docsis_version = "3.0"
+        config.hardware.release_date = "2024"
+    else:
+        config.hardware = None
+
+    if health_config:
+        config.health.http_probe = health_http_probe
+        config.health.supports_icmp = health_supports_icmp
+        config.health.supports_head = health_supports_head
+    else:
+        config.health = None
+
+    return config
+
+
+STUB_MODEM_CONFIG = _make_stub_modem_config()
+
+# ---------------------------------------------------------------------------
+# Config flow test data — canned catalog entries
+# ---------------------------------------------------------------------------
+
+FAKE_CATALOG = Path("/fake/catalog")
+
+MOCK_SUMMARIES: list[ModemSummary] = [
+    ModemSummary(
+        manufacturer="Solent Labs",
+        model="TPS-2000",
+        default_host="192.168.100.1",
+        auth_strategy="none",
+        status="verified",
+        path=FAKE_CATALOG / "solentlabs" / "tps-2000",
+    ),
+    ModemSummary(
+        manufacturer="Solent Labs",
+        model="TPS-3000",
+        default_host="192.168.100.1",
+        auth_strategy="basic",
+        status="verified",
+        path=FAKE_CATALOG / "solentlabs" / "tps-3000",
+    ),
+]
+
+MOCK_SINGLE_VARIANT: list[VariantInfo] = [
+    VariantInfo(name=None, auth_strategy="none"),
+]
+
+MOCK_MULTI_VARIANTS: list[VariantInfo] = [
+    VariantInfo(name=None, auth_strategy="basic", isps=["ISP-A"]),
+    VariantInfo(name="v2", auth_strategy="form_nonce", isps=["ISP-B"]),
+]
+
 
 # ---------------------------------------------------------------------------
 # Core model fixtures
@@ -127,12 +211,12 @@ MOCK_VALIDATION_RESULT: dict[str, Any] = {
 
 @pytest.fixture
 def mock_modem_identity() -> ModemIdentity:
-    """A realistic ModemIdentity."""
+    """A generic ModemIdentity (no real modem names)."""
     return ModemIdentity(
-        manufacturer="Motorola",
-        model="MB7621",
+        manufacturer="Solent Labs",
+        model="TPS-2000",
         docsis_version="3.0",
-        release_date="2018",
+        release_date="2024",
         status="verified",
     )
 

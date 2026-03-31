@@ -27,5 +27,5 @@ class TestVersion:
     def test_startup_log_message_format(self):
         """The startup log line includes the version string."""
         # Mirrors the format in __init__.py async_setup_entry
-        log_msg = f"Cable Modem Monitor v{VERSION} starting [Motorola MB7621]"
+        log_msg = f"Cable Modem Monitor v{VERSION} starting [Solent Labs TPS-2000]"
         assert VERSION in log_msg

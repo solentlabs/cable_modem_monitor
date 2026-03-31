@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from bs4 import Tag
-
 
 class PostProcessor:
     """Extract system_info from readonlyLabel/value span pairs."""
@@ -22,9 +20,7 @@ class PostProcessor:
         resources: dict[str, Any],
     ) -> dict[str, str]:
         """Extract system_info from readonlyLabel/value span pairs."""
-        soup = resources.get("/network_setup.jst")
-        if soup is None:
-            return system_info
+        soup = resources["/network_setup.jst"]
 
         result: dict[str, str] = {}
         label_map = {
@@ -39,14 +35,12 @@ class PostProcessor:
         }
 
         for span in soup.find_all("span", class_="readonlyLabel"):
-            if not isinstance(span, Tag):
-                continue
             label = span.get_text(strip=True).rstrip(":")
             field = label_map.get(label)
             if field is None:
                 continue
             value_span = span.find_next_sibling("span")
-            if value_span and isinstance(value_span, Tag):
+            if value_span:
                 result[field] = value_span.get_text(strip=True)
 
         return result

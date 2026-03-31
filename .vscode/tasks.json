@@ -22,7 +22,7 @@
       }
     },
     {
-      "label": "🧪 Run All Tests",
+      "label": "🧪 Test: All",
       "type": "shell",
       "command": "make test",
       "group": {
@@ -36,9 +36,51 @@
       "problemMatcher": []
     },
     {
-      "label": "⚡ Run Quick Tests",
+      "label": "⚡ Test: Quick",
       "type": "shell",
       "command": "make test-quick",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Test: Core",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pytest tests/ -o addopts= -q --tb=short --strict-markers --cov=solentlabs/cable_modem_monitor_core --cov-report=term:skip-covered --cov-fail-under=90",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/cable_modem_monitor_core"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Test: Catalog",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pytest tests/ -q --tb=short --cov=solentlabs/cable_modem_monitor_catalog --cov-report=term:skip-covered --cov-fail-under=90",
+      "options": {
+        "cwd": "${workspaceFolder}/packages/cable_modem_monitor_catalog"
+      },
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Test: Cable Modem Monitor (HA)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pytest tests/ -o addopts= -q --tb=short --strict-markers --cov=custom_components/cable_modem_monitor --cov-report=term:skip-covered --cov-fail-under=70",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "test",
       "presentation": {
         "reveal": "always",

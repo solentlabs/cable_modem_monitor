@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.14.0-alpha.5] - 2026-03-31
+
+### Fixed
+
+- Config flow retries with HTTPS when authentication fails on
+  auto-detected HTTP — fixes modems that redirect during auth
+  but not during initial probe.
+- Sensor entity properties (unit, icon, state class) invalidated
+  on coordinator updates, fixing stale values after data changes.
+- Removed dead code in 5 catalog parsers (TG3442DE, CODA56,
+  DM1000, XB6, XB7).
+
+### Changed
+
+- HA adapter test coverage: 70% → 91% (304 tests). New coverage
+  for startup sequence, diagnostics builder, async migration,
+  dashboard YAML generation, and service registration.
+- Test fixtures standardized on generic names (Solent Labs /
+  TPS-2000) with mock boundary at Core/Catalog I/O layer.
+- Consolidated pytest.ini into pyproject.toml.
+
 ## [3.14.0-alpha.4] - 2026-03-30
 
 ### Fixed

@@ -83,7 +83,7 @@ CodeQL test directories contain `test.py` files that VS Code's Python test disco
 
 1. These `test.py` files are **sample code for CodeQL to analyze**, not pytest tests
 2. They're excluded from pytest via:
-   - `pytest.ini` → `norecursedirs = cable-modem-monitor-ql ...`
+   - `pyproject.toml` → `norecursedirs = cable-modem-monitor-ql ...`
    - VS Code settings → `python.testing.ignorePatterns`
 3. If you saw them appear and then vanish, that was pytest trying (and failing) to run them
 
