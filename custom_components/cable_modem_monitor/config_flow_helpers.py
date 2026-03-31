@@ -303,6 +303,7 @@ def _run_validation(
         base_url=base_url,
         username=username,
         password=password,
+        legacy_ssl=legacy_ssl,
     )
     result: ModemResult = collector.execute()
 

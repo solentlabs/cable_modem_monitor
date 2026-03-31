@@ -329,6 +329,7 @@ def _create_core_components(
         base_url=base_url,
         username=data.get(CONF_USERNAME, ""),
         password=data.get(CONF_PASSWORD, ""),
+        legacy_ssl=data.get(CONF_LEGACY_SSL, False),
     )
 
     # Step 4: Create HealthMonitor (conditional)

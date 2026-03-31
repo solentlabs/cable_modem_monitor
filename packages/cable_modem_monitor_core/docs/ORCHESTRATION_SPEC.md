@@ -42,12 +42,20 @@ class ModemDataCollector:
         base_url: str,
         username: str,
         password: str,
+        *,
+        legacy_ssl: bool = False,
     ) -> None:
         """Initialize collector with modem configuration.
 
         Creates the auth manager, resource loader, and parser coordinator
         from the provided config. The collector is reusable across polls —
         the auth manager maintains session state between calls.
+
+        The HTTP session is created via ``create_session()`` from
+        ``connectivity.py``, which sets ``verify=False`` (cable modems
+        use self-signed certificates) and optionally mounts the
+        ``LegacySSLAdapter`` for old firmware requiring SECLEVEL=0
+        ciphers.
 
         The per-request HTTP timeout comes from modem_config.timeout
         (modem.yaml ``timeout`` field, default 10s). This applies to
@@ -63,6 +71,9 @@ class ModemDataCollector:
             base_url: Modem URL (e.g., "http://192.168.100.1").
             username: Login credential.
             password: Login credential.
+            legacy_ssl: Whether HTTPS requires legacy (SECLEVEL=0)
+                ciphers. Discovered during setup by detect_protocol().
+                Passed to create_session(). Defaults to False.
         """
 
     def execute(self) -> ModemResult:
@@ -169,7 +180,7 @@ class CollectorSignal(Enum):
 
 | State | Owner | Lifetime |
 |-------|-------|----------|
-| `requests.Session` (cookies, headers) | Auth Manager (inside ModemDataCollector) | Until `clear_session()` or process exit |
+| `requests.Session` (cookies, headers, verify=False) | Auth Manager (inside ModemDataCollector), created via `create_session(legacy_ssl=...)` | Until `clear_session()` or process exit |
 | HNAP private key | Auth Manager | Until session cleared |
 | URL token | Auth Manager | Until session cleared |
 | Parser coordinator instance | ModemDataCollector | Collector lifetime (reused across polls) |

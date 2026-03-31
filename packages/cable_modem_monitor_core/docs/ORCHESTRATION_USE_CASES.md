@@ -1296,3 +1296,45 @@ sequenceDiagram
 - `reset_auth()` clears all auth state (streak, circuit, backoff, session)
 - No polling between circuit open and reauth completion
 - First poll after reauth attempts fresh login
+
+---
+
+## SSL / TLS
+
+### UC-82: HTTPS modem with self-signed certificate
+
+**Preconditions:** Modem uses HTTPS with self-signed cert. Protocol
+detection discovered `legacy_ssl=False` (modern TLS, but self-signed).
+Collector created with default `legacy_ssl=False`.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer creates ModemDataCollector(legacy_ssl=False) | Session created via create_session(legacy_ssl=False) | session.verify == False |
+| 2 | Collector: authenticate via HTTPS | SSL handshake succeeds (verify=False) | |
+| 3 | Collector: load resources | | |
+| 4 | Return ModemResult(success=True) | | |
+
+**Assertions:**
+- Session created via `create_session()`, not bare `requests.Session()`
+- `session.verify == False` — self-signed cert accepted
+- No `LegacySSLAdapter` mounted (modern TLS is fine)
+
+---
+
+### UC-83: HTTPS modem with legacy SSL firmware
+
+**Preconditions:** Modem uses HTTPS but only supports legacy TLS ciphers.
+Protocol detection discovered `legacy_ssl=True`. Collector created
+with `legacy_ssl=True`.
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer creates ModemDataCollector(legacy_ssl=True) | Session created via create_session(legacy_ssl=True) | LegacySSLAdapter mounted on https:// |
+| 2 | Collector: authenticate via HTTPS | Legacy cipher negotiation succeeds | |
+| 3 | Collector: load resources | | |
+| 4 | Return ModemResult(success=True) | | |
+
+**Assertions:**
+- Session created via `create_session(legacy_ssl=True)`
+- `LegacySSLAdapter` mounted on `https://`
+- `session.verify == False`

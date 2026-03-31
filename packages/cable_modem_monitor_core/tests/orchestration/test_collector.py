@@ -581,6 +581,65 @@ class TestLogout:
 # ------------------------------------------------------------------
 
 
+class TestSessionCreation:
+    """Verify ModemDataCollector creates session via create_session().
+
+    The collector must use connectivity.create_session() — not bare
+    requests.Session() — so that HTTPS modems with self-signed certs
+    get verify=False, and legacy-SSL modems get the LegacySSLAdapter.
+
+    HealthMonitor already does this correctly (modem_health.py).
+
+    Use case coverage:
+    - UC-82: HTTPS modem with self-signed certificate
+    - UC-83: HTTPS modem with legacy SSL firmware
+    """
+
+    def test_session_created_via_factory(self) -> None:
+        """Default construction uses create_session(legacy_ssl=False).
+
+        Regression: bare requests.Session() has verify=True, which
+        breaks HTTPS modems with self-signed certificates (UC-82).
+        """
+        config = _make_config(auth_type="none")
+        with patch(
+            "solentlabs.cable_modem_monitor_core.orchestration.collector.create_session",
+        ) as mock_cs:
+            mock_session = MagicMock(spec=requests.Session)
+            mock_session.headers = {}
+            mock_cs.return_value = mock_session
+
+            ModemDataCollector(config, None, None, "http://localhost", "", "")
+
+            mock_cs.assert_called_once_with(legacy_ssl=False)
+
+    def test_legacy_ssl_forwarded(self) -> None:
+        """legacy_ssl=True is forwarded to create_session() (UC-83).
+
+        HTTPS modems with old firmware need LegacySSLAdapter mounted
+        for cipher negotiation to succeed.
+        """
+        config = _make_config(auth_type="none")
+        with patch(
+            "solentlabs.cable_modem_monitor_core.orchestration.collector.create_session",
+        ) as mock_cs:
+            mock_session = MagicMock(spec=requests.Session)
+            mock_session.headers = {}
+            mock_cs.return_value = mock_session
+
+            ModemDataCollector(
+                config,
+                None,
+                None,
+                "https://192.168.100.1",
+                "",
+                "",
+                legacy_ssl=True,
+            )
+
+            mock_cs.assert_called_once_with(legacy_ssl=True)
+
+
 class TestLoginPageDetection:
     """Login page detection in HTTPResourceLoader."""
 

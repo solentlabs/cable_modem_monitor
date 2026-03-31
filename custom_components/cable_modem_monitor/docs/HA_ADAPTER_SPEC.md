@@ -101,7 +101,8 @@ async_setup_entry(hass, entry)
  │
  ├─ 3. Create ModemDataCollector
  │     ModemDataCollector(modem_config, parser_config,
- │         post_processor, base_url, username, password)
+ │         post_processor, base_url, username, password,
+ │         legacy_ssl=entry.data[CONF_LEGACY_SSL])
  │
  ├─ 4. Create HealthMonitor (conditional)
  │     Read modem.yaml health config for defaults

@@ -16,6 +16,7 @@ import requests
 
 from ..auth.base import AuthContext, AuthResult, BaseAuthManager
 from ..auth.factory import create_auth_manager
+from ..connectivity import create_session
 from ..loaders.fetch_list import collect_fetch_targets
 from ..loaders.http import (
     HTTPResourceLoader,
@@ -56,6 +57,9 @@ class ModemDataCollector:
         base_url: Modem URL (e.g., "http://192.168.100.1").
         username: Login credential.
         password: Login credential.
+        legacy_ssl: Whether HTTPS requires legacy (SECLEVEL=0)
+            ciphers. Discovered during setup by detect_protocol().
+            Passed to create_session(). Defaults to False.
     """
 
     def __init__(
@@ -66,6 +70,8 @@ class ModemDataCollector:
         base_url: str,
         username: str,
         password: str,
+        *,
+        legacy_ssl: bool = False,
     ) -> None:
         self._modem_config = modem_config
         self._parser_config = parser_config
@@ -73,8 +79,10 @@ class ModemDataCollector:
         self._username = username
         self._password = password
 
-        # Persistent session — reused across execute() calls
-        self._session = requests.Session()
+        # Persistent session — reused across execute() calls.
+        # Created via create_session() so HTTPS modems with self-signed
+        # certs get verify=False, and legacy firmware gets SECLEVEL=0.
+        self._session = create_session(legacy_ssl=legacy_ssl)
 
         # Auth manager and context
         self._auth_manager: BaseAuthManager = create_auth_manager(modem_config)

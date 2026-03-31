@@ -214,7 +214,8 @@ config_flow_helpers.validate_connection(hass, host, user, pass, modem_dir, varia
       │     load_parser_config(parser.yaml)
       │     load_post_processor(parser.py)
       │
-      ├─ 5. ModemDataCollector.execute()       [Core orchestration]
+      ├─ 5. ModemDataCollector(legacy_ssl=...)  [Core orchestration]
+      │     .execute()
       │     Auth → Fetch pages → Parse → Logout
       │     → ModemResult(success, modem_data, signal, error)
       │
