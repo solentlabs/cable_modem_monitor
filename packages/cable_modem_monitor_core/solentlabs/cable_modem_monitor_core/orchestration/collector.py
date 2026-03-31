@@ -272,7 +272,7 @@ class ModemDataCollector:
             _logger.debug("Session valid — reusing")
             return self._last_auth_result or AuthResult(success=True)
 
-        _logger.debug("Session invalid — authenticating")
+        _logger.debug("No active session — authenticating")
         result = self._auth_manager.authenticate(
             self._session,
             self._base_url,

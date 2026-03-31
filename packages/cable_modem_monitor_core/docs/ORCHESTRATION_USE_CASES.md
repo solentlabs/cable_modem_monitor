@@ -1338,3 +1338,67 @@ with `legacy_ssl=True`.
 - Session created via `create_session(legacy_ssl=True)`
 - `LegacySSLAdapter` mounted on `https://`
 - `session.verify == False`
+
+---
+
+### UC-84: Startup while modem unreachable
+
+**Preconditions:** Consumer starts while modem is powered off or
+unreachable (e.g., HA boots before network is up, laptop returns from
+off-network). Health monitor created with probes configured.
+
+```mermaid
+sequenceDiagram
+    participant C as Consumer
+    participant O as Orchestrator
+    participant HM as HealthMonitor
+    participant M as Modem
+
+    C->>O: get_modem_data() [first poll]
+    O->>O: Collector: connect timeout
+    O-->>C: ModemSnapshot(UNREACHABLE, modem_data=None)
+    C->>C: Create status/health entities (always available)
+    C->>C: Defer data-dependent entity creation
+    Note over C: Status shows "Unreachable", health shows "Unresponsive"
+
+    loop Scheduled polls
+        C->>O: get_modem_data()
+        O-->>C: ModemSnapshot(UNREACHABLE, modem_data=None)
+        C->>C: Deferred listener: modem_data still None, no-op
+    end
+
+    M->>M: Comes back online
+    C->>HM: ping()
+    HM-->>C: HealthInfo(RESPONSIVE, icmp=8ms, http=104ms)
+    Note over C: Health sensors update immediately
+
+    C->>O: get_modem_data() [manual or scheduled]
+    O-->>C: ModemSnapshot(ONLINE, modem_data={24 DS, 4 US})
+    C->>C: Deferred listener: modem_data present
+    C->>C: Create data-dependent entities (channels, system, LAN)
+    C->>C: Unsubscribe listener (one-shot)
+    Note over C: All entities now available with current data
+```
+
+| Step | Action | State change | Observable |
+|------|--------|-------------|------------|
+| 1 | Consumer setup (UC-70) | Core components created | |
+| 2 | First get_modem_data() | connect timeout | ModemSnapshot(UNREACHABLE, modem_data=None) |
+| 3 | Consumer creates always-available entities | | Status: "Unreachable", Health: "Unresponsive" |
+| 4 | Consumer registers deferred entity listener | | Data-dependent entities pending |
+| 5 | Subsequent polls: modem still down | | Listener fires, modem_data=None, no-op |
+| 6 | Health detects modem responsive | | Health: "Responsive" (ICMP + HTTP OK) |
+| 7 | Next data poll succeeds | UNREACHABLE to ONLINE | ModemSnapshot with channel data |
+| 8 | Deferred listener: creates data entities | | Channel, system, LAN sensors appear |
+| 9 | Listener unsubscribes | | One-shot complete |
+| 10 | Normal polling resumes | | All entities updating normally |
+
+**Assertions:**
+- Status sensor always available during outage (shows "Unreachable")
+- Health sensors always available (show probe results independently)
+- Data-dependent entities created on first successful poll, not at startup
+- No duplicate entities — deferred creation is one-shot
+- Deferred listener does not fire after unsubscribe
+- If consumer unloads before modem recovers, listener is cleaned up
+- Transition logged: "Status transition: unreachable to online"
+- Equivalent to UC-34 at orchestrator level, but consumer handles entity lifecycle

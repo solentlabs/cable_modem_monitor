@@ -28,7 +28,7 @@ Core, it should.
 | [Startup](#startup) | `async_setup_entry` — component creation and wiring |
 | [Unload](#unload) | `async_unload_entry` — cleanup and cancellation |
 | [Async Boundary](#async-boundary) | Which Core calls need executor wrapping |
-| [Data Coordinator](#data-coordinator) | DataUpdateCoordinator wrapping `get_modem_data()` |
+| [Data Coordinator](#data-coordinator) | DataUpdateCoordinator wrapping `get_modem_data()` and deferred entity creation |
 | [Health Coordinator](#health-coordinator) | Second coordinator wrapping `health_monitor.ping()` |
 | [Polling Modes](#polling-modes) | Scheduled, disabled, manual trigger |
 | [Restart Lifecycle](#restart-lifecycle) | Button → executor → cancel_event → cleanup |
@@ -228,8 +228,33 @@ derive availability from the snapshot content (see
 ENTITY_MODEL_SPEC § Availability).
 
 **First refresh:** `async_config_entry_first_refresh()` runs during
-setup. If it fails (modem offline at HA startup), HA raises
-`ConfigEntryNotReady` and retries with exponential backoff.
+setup. Because the orchestrator never raises, this call always
+succeeds — even when the modem is unreachable. A failed first poll
+returns `ModemSnapshot(UNREACHABLE, modem_data=None)`. The sensor
+platform handles this via deferred entity creation (see below).
+
+### Deferred Entity Creation
+
+When the first poll returns `modem_data=None` (modem unreachable at HA
+startup), data-dependent entities (channels, system metrics, LAN stats)
+cannot be created because they require channel IDs and field presence
+from the poll data. The sensor platform handles this by:
+
+1. Creating always-available entities immediately (Status, Info, Health)
+2. Registering a one-shot coordinator listener on the data coordinator
+3. On each coordinator update, the listener checks for `modem_data`
+4. On the first update with `modem_data is not None`: creates
+   data-dependent entities via `async_add_entities` and unsubscribes
+5. `entry.async_on_unload(unsub)` ensures clean teardown if the entry
+   is unloaded before the modem comes online
+
+This guarantees that:
+- Status and health sensors are always visible during outages
+- Data sensors appear as soon as the modem becomes reachable
+- No duplicate entities — the listener is one-shot
+- No leaked listeners — cleanup is automatic
+
+See ORCHESTRATION_USE_CASES.md UC-84 for the full scenario.
 
 ---
 

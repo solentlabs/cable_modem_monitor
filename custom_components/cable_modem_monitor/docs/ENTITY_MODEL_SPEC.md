@@ -293,6 +293,7 @@ two modems, HA auto-suffixes entity_ids (`_2`, `_3`, etc.). Recommend
 | Normal operation | available | available | available |
 | Coordinator update failed | unavailable | unavailable | available |
 | Modem unreachable | unavailable | available¹ | available |
+| Modem unreachable at startup | deferred³ | available¹ | available |
 | Parse error | unavailable | available¹ | available |
 | Fallback mode (unknown modem) | not created² | available | available |
 | Field not parsed by this modem | never created | n/a | n/a |
@@ -303,6 +304,12 @@ produces parse errors — they report the failure state itself (latency
 
 ² In fallback mode, only Status, Modem Info, and health sensors are
 created. No channel sensors, no system sensors.
+
+³ When the modem is unreachable at HA startup, data-dependent entities
+(channels, system metrics, LAN stats) are deferred until the first
+successful poll. Status, Info, and Health sensors are created
+immediately and remain available during the outage. See
+HA_ADAPTER_SPEC § Deferred Entity Creation.
 
 ### Sensor Availability Logic
 

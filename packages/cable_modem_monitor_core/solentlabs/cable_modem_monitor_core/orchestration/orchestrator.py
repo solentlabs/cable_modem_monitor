@@ -390,7 +390,7 @@ class Orchestrator:
         if self._collector.session_is_valid:
             session = "active"
         elif self._first_poll_complete:
-            session = "expired"
+            session = "none"
         else:
             session = "new"
 

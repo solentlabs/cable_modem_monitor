@@ -802,39 +802,18 @@ def _create_lan_sensors(
     return entities
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
+def _create_data_dependent_entities(
+    data_coord: DataUpdateCoordinator[ModemSnapshot],
     entry: CableModemConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up Cable Modem Monitor sensor entities."""
-    runtime = entry.runtime_data
-    data_coord = runtime.data_coordinator
-    health_coord = runtime.health_coordinator
-    snapshot = data_coord.data
+    modem_data: dict[str, Any],
+) -> list[SensorEntity]:
+    """Create entities that require modem poll data.
 
+    Called from async_setup_entry on the happy path (first poll
+    succeeded) and from the deferred creation listener when the modem
+    comes online after a failed first poll (UC-84).
+    """
     entities: list[SensorEntity] = []
-
-    # -- Always created --
-    entities.append(ModemStatusSensor(data_coord, entry))
-    entities.append(ModemInfoSensor(data_coord, entry))
-
-    # -- Health sensors (from health coordinator) --
-    if health_coord is not None:
-        entities.append(HttpLatencySensor(health_coord, entry))
-        if entry.data.get(CONF_SUPPORTS_ICMP, False):
-            entities.append(PingLatencySensor(health_coord, entry))
-
-    # -- Data-dependent sensors (require modem_data from first poll) --
-    modem_data = snapshot.modem_data if snapshot else None
-    if modem_data is None:
-        _LOGGER.info(
-            "No modem data from first poll [%s] — skipping data sensors",
-            runtime.modem_identity.model,
-        )
-        async_add_entities(entities)
-        return
-
     system_info = modem_data.get("system_info", {})
 
     # Channel counts (always computed by parser coordinator)
@@ -869,6 +848,84 @@ async def async_setup_entry(
 
     # LAN stats sensors
     entities.extend(_create_lan_sensors(data_coord, entry, modem_data))
+
+    return entities
+
+
+def _register_deferred_entity_creation(
+    data_coord: DataUpdateCoordinator[ModemSnapshot],
+    entry: CableModemConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Register a one-shot listener to create data-dependent entities.
+
+    When the first poll returns modem_data=None (modem unreachable at
+    startup), data-dependent entities cannot be created because they
+    require channel IDs and field presence from the poll data.  This
+    registers a coordinator listener that fires on each update and
+    creates entities on the first update with modem_data present.
+
+    See UC-84 in ORCHESTRATION_USE_CASES.md and HA_ADAPTER_SPEC
+    § Deferred Entity Creation.
+    """
+
+    @callback
+    def _on_first_data() -> None:
+        """Create data-dependent entities on first successful poll."""
+        snapshot: ModemSnapshot | None = data_coord.data
+        modem_data = snapshot.modem_data if snapshot else None
+        if modem_data is None:
+            return
+
+        unsub()
+
+        new_entities = _create_data_dependent_entities(data_coord, entry, modem_data)
+        _LOGGER.info(
+            "Deferred data sensors created [%s] — %d entities",
+            entry.runtime_data.modem_identity.model,
+            len(new_entities),
+        )
+        async_add_entities(new_entities)
+
+    unsub = data_coord.async_add_listener(_on_first_data)
+    entry.async_on_unload(unsub)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: CableModemConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Cable Modem Monitor sensor entities."""
+    runtime = entry.runtime_data
+    data_coord = runtime.data_coordinator
+    health_coord = runtime.health_coordinator
+    snapshot = data_coord.data
+
+    entities: list[SensorEntity] = []
+
+    # -- Always created --
+    entities.append(ModemStatusSensor(data_coord, entry))
+    entities.append(ModemInfoSensor(data_coord, entry))
+
+    # -- Health sensors (from health coordinator) --
+    if health_coord is not None:
+        entities.append(HttpLatencySensor(health_coord, entry))
+        if entry.data.get(CONF_SUPPORTS_ICMP, False):
+            entities.append(PingLatencySensor(health_coord, entry))
+
+    # -- Data-dependent sensors (require modem_data from first poll) --
+    modem_data = snapshot.modem_data if snapshot else None
+    if modem_data is None:
+        _LOGGER.info(
+            "No modem data from first poll [%s] — deferring data sensors",
+            runtime.modem_identity.model,
+        )
+        async_add_entities(entities)
+        _register_deferred_entity_creation(data_coord, entry, async_add_entities)
+        return
+
+    entities.extend(_create_data_dependent_entities(data_coord, entry, modem_data))
 
     _LOGGER.info("Created %d sensor entities [%s]", len(entities), runtime.modem_identity.model)
     async_add_entities(entities)

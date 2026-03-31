@@ -1,8 +1,14 @@
 """Tests for sensor entity creation and value rendering.
 
 Tests the pure _index_channels function and verifies sensor entity
-creation logic via _create_channel_sensors and _create_lan_sensors.
-Entity value rendering is tested with mock coordinator data.
+creation logic via _create_channel_sensors, _create_lan_sensors, and
+_create_data_dependent_entities.  Entity value rendering is tested
+with mock coordinator data.
+
+Deferred entity creation tests verify UC-84: when the first poll
+returns modem_data=None (modem unreachable at startup), data-dependent
+entities are created on the first successful poll via a one-shot
+coordinator listener.
 """
 
 from __future__ import annotations
@@ -391,3 +397,173 @@ def test_lan_stats_sensor_value(mock_runtime_data):
         unit="B",
     )
     assert sensor.native_value == 42000
+
+
+# -----------------------------------------------------------------------
+# _create_data_dependent_entities — extracted helper
+# -----------------------------------------------------------------------
+
+
+def test_create_data_dependent_entities(mock_runtime_data):
+    """Helper creates system, channel, and LAN sensors from modem data."""
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    coord, entry = _make_coord_and_entry(MOCK_MODEM_DATA, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, MOCK_MODEM_DATA)
+
+    # MOCK_MODEM_DATA has:
+    #   system_info with total_corrected, total_uncorrected, software_version, system_uptime
+    #   2 DS channels (qam + ofdm), 1 US channel (atdma)
+    #   No lan_stats
+    #
+    # Expected entities:
+    #   2 channel counts (DS + US)
+    #   2 error totals (corrected + uncorrected)
+    #   1 software version
+    #   1 system uptime
+    #   1 last boot time (uptime present)
+    #   12 channel sensors (see test_create_channel_sensors_downstream)
+    #   0 LAN sensors (no lan_stats)
+    # Total = 19
+    assert len(entities) == 19
+
+
+def test_create_data_dependent_entities_no_channels(mock_runtime_data):
+    """Helper with empty channel lists creates only system sensors."""
+    from custom_components.cable_modem_monitor.sensor import (
+        _create_data_dependent_entities,
+    )
+
+    minimal_data: dict[str, Any] = {
+        "system_info": {"software_version": "1.0"},
+        "downstream": [],
+        "upstream": [],
+    }
+    coord, entry = _make_coord_and_entry(minimal_data, mock_runtime_data)
+    entities = _create_data_dependent_entities(coord, entry, minimal_data)
+
+    # 2 channel counts + 1 software version + 0 channels + 0 LAN = 3
+    assert len(entities) == 3
+
+
+# -----------------------------------------------------------------------
+# Deferred entity creation (UC-84)
+# -----------------------------------------------------------------------
+
+
+def test_deferred_creation_on_first_data(mock_runtime_data):
+    """Deferred listener creates data entities on first successful poll.
+
+    UC-84 steps 7-9: modem comes back, listener fires, entities created,
+    listener unsubscribes.
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        _register_deferred_entity_creation,
+    )
+
+    # Coordinator starts with modem_data=None (unreachable)
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    add_entities = MagicMock()
+
+    # Register deferred creation
+    _register_deferred_entity_creation(coord, entry, add_entities)
+
+    # Listener should be registered
+    coord.async_add_listener.assert_called_once()
+    listener_fn = coord.async_add_listener.call_args[0][0]
+
+    # entry.async_on_unload should be called with the unsub callable
+    entry.async_on_unload.assert_called_once()
+
+    # Simulate coordinator update with valid data
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.ONLINE,
+        docsis_status=DocsisStatus.OPERATIONAL,
+        modem_data=MOCK_MODEM_DATA,
+    )
+    listener_fn()
+
+    # Entities should be added
+    add_entities.assert_called_once()
+    created = add_entities.call_args[0][0]
+    assert len(created) == 19  # Same as test_create_data_dependent_entities
+
+
+def test_deferred_creation_noop_while_no_data(mock_runtime_data):
+    """Deferred listener does nothing when modem_data is still None.
+
+    UC-84 step 5: subsequent polls still unreachable, listener fires
+    but takes no action.
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        _register_deferred_entity_creation,
+    )
+
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    add_entities = MagicMock()
+
+    _register_deferred_entity_creation(coord, entry, add_entities)
+    listener_fn = coord.async_add_listener.call_args[0][0]
+
+    # Simulate update — still no data
+    listener_fn()
+
+    # async_add_entities should NOT be called
+    add_entities.assert_not_called()
+
+
+def test_deferred_creation_cleanup_on_unload(mock_runtime_data):
+    """Deferred listener is cleaned up when entry unloads.
+
+    UC-84 assertion: if consumer unloads before modem recovers,
+    listener is cleaned up.
+    """
+    from custom_components.cable_modem_monitor.sensor import (
+        _register_deferred_entity_creation,
+    )
+
+    unsub_fn = MagicMock()
+
+    coord = MagicMock()
+    coord.data = ModemSnapshot(
+        connection_status=ConnectionStatus.UNREACHABLE,
+        docsis_status=DocsisStatus.NOT_LOCKED,
+        modem_data=None,
+    )
+    coord.async_add_listener.return_value = unsub_fn
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = MOCK_ENTRY_DATA
+    entry.runtime_data = mock_runtime_data
+
+    add_entities = MagicMock()
+
+    _register_deferred_entity_creation(coord, entry, add_entities)
+
+    # The unsub callable should be registered for cleanup
+    entry.async_on_unload.assert_called_once_with(unsub_fn)
