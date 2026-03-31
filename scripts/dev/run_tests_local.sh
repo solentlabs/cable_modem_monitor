@@ -21,13 +21,13 @@ if [ ! -d ".venv" ]; then
     echo -e "${YELLOW}Creating virtual environment...${NC}"
 
     # Try to create .venv
-    if ! python3 -m .venv .venv 2>/dev/null; then
+    if ! python3 -m venv .venv 2>/dev/null; then
         echo -e "${RED}✗ Failed to create virtual environment${NC}"
         echo ""
-        echo "The python3-.venv package is required but not installed."
+        echo "The python3-venv package is required but not installed."
         echo ""
         echo "To install it:"
-        echo "  sudo apt install python3-.venv"
+        echo "  sudo apt install python3-venv"
         echo ""
         echo "Alternatively, install dependencies globally:"
         echo "  pip3 install -r tests/requirements.txt"

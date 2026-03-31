@@ -217,6 +217,14 @@ class ModemSensorBase(
         """Available when coordinator succeeds and modem_data is present."""
         return self.coordinator.last_update_success and self._snapshot.modem_data is not None
 
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Invalidate cached properties before writing state."""
+        d: dict[str, Any] = self.__dict__  # type: ignore[assignment]
+        d.pop("native_value", None)
+        d.pop("extra_state_attributes", None)
+        super()._handle_coordinator_update()
+
 
 class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     CoordinatorEntity[DataUpdateCoordinator[HealthInfo]],
@@ -247,6 +255,13 @@ class HealthSensorBase(  # pyright: ignore[reportIncompatibleVariableOverride]
     def _health_info(self) -> HealthInfo:
         """Current health info from the health coordinator."""
         return self.coordinator.data
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Invalidate cached properties before writing state."""
+        d: dict[str, Any] = self.__dict__  # type: ignore[assignment]
+        d.pop("native_value", None)
+        super()._handle_coordinator_update()
 
 
 # ------------------------------------------------------------------
@@ -289,6 +304,9 @@ class ModemStatusSensor(ModemSensorBase):
     @callback
     def _handle_health_update(self) -> None:
         """Re-render when health coordinator updates."""
+        d: dict[str, Any] = self.__dict__  # type: ignore[assignment]
+        d.pop("native_value", None)
+        d.pop("extra_state_attributes", None)
         self.async_write_ha_state()
 
     @property

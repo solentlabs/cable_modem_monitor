@@ -356,9 +356,9 @@ If the stale session is rejected (Case A), `LOAD_AUTH` signal handling
 clears the session — the next poll starts with a fresh login. No
 proactive cache clear is needed.
 
-The orchestrator logs the `unreachable → online` transition with
-`session_valid` state so stale session behavior can be diagnosed from
-logs if needed.
+The orchestrator logs the `unreachable → online` transition. Session
+state is already reported in the poll log (`session: new` vs
+`session: reused`).
 
 Optional recovery enhancements (may be added based on real-world data):
 - Switch to fast polling during the outage window

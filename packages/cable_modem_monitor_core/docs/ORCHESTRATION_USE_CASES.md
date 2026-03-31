@@ -497,10 +497,10 @@ Modem has come back online.
 | 3a | If modem rejects stale session → LOAD_AUTH → clear session | | |
 | 3b | If modem accepts (IP-based or ignores stale cookies) → success | | |
 | 4 | Orchestrator: detects UNREACHABLE → ONLINE transition | last_status=ONLINE | |
-| 5 | Log INFO with session_valid state for diagnostics | | |
+| 5 | Log INFO status transition for diagnostics | | |
 
 **Assertions:**
-- Transition is logged: "Status transition: unreachable → online (session_valid: X)"
+- Transition is logged: "Status transition [MODEL]: unreachable → online"
 - If stale session rejected (3a): next poll does fresh login, self-corrects (UC-18)
 - No proactive session clear — LOAD_AUTH handles it naturally
 
@@ -722,7 +722,7 @@ No restart command sent. Normal polling discovers the outage.
 
 **Assertions:**
 - No RestartMonitor involved — normal polling handles recovery
-- UNREACHABLE → ONLINE transition logged with session_valid state
+- UNREACHABLE → ONLINE transition logged
 - Stale session self-corrects via LOAD_AUTH → clear → fresh login
 - Connectivity backoff reduces wasted timeouts during outage
 - LOAD_AUTH resets connectivity state (modem responded)

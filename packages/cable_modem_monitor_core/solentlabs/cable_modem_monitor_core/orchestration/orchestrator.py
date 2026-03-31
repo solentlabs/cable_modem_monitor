@@ -368,11 +368,10 @@ class Orchestrator:
 
         if old_status is not None and old_status != new_status:
             _logger.info(
-                "Status transition [%s]: %s → %s (session_valid: %s)",
+                "Status transition [%s]: %s → %s",
                 self._modem_config.model,
                 old_status.value,
                 new_status.value,
-                self._collector.session_is_valid,
             )
 
     # ------------------------------------------------------------------
