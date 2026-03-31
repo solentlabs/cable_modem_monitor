@@ -968,7 +968,7 @@ to DEBUG after the first successful poll to avoid flooding logs.
 - INFO: `"Counter reset detected [MODEL] — corrected: 1000→0, uncorrected: 50→0"`
 
 **State transitions:**
-- INFO: `"Status transition [MODEL]: unreachable → online (session_valid: True)"`
+- INFO: `"Status transition [MODEL]: unreachable → online"`
 
 **Restart:**
 - INFO: `"Restart command sent [MODEL] — session cleared (1.2s)"`

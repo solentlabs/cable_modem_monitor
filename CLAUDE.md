@@ -83,7 +83,11 @@ wins over convenience.
 13. **Quality gates are not negotiable.** If mypy, ruff, black, or
     pytest fails, fix the code. Don't exclude files, skip checks,
     or weaken thresholds. The only valid exclusions are generated code
-    and vendored dependencies.
+    and vendored dependencies. This applies to all linters including
+    markdownlint — fix the source files, don't silence rules that
+    flag real issues. Only configure away rules that are genuinely
+    inapplicable (e.g. line length for URLs, duplicate headings in
+    changelogs).
 
 14. **Test overrides are a code smell.** If reaching coverage requires
     heavy mocking, monkeypatching, or test overrides, the code
@@ -125,28 +129,28 @@ wins over convenience.
 Authoritative doc indexes:
 
 | Index | Scope |
-|-------|-------|
+| ----- | ----- |
 | `packages/cable_modem_monitor_core/docs/README.md` | Core specs — architecture, auth, parsing, orchestration, onboarding |
 | `custom_components/cable_modem_monitor/docs/README.md` | HA specs — config flow, entities, adapter wiring |
 | `packages/CLAUDE.md` | Coding standards, test patterns, step workflow |
 
 ## Contents
 
-| Section                 | What it covers                              |
-|-------------------------|---------------------------------------------|
+| Section                 | What it covers                                         |
+| ----------------------- | ------------------------------------------------------ |
 | Core Principles         | Architecture, config, specs, quality, testing, process |
-| Code Review Criteria    | See `docs/CODE_REVIEW.md`                   |
-| Pre-Push Verification   | Run `ruff` and `pytest` before pushing      |
-| Async/Blocking I/O      | Wrap sync I/O in executor for HA            |
-| Test Patterns           | Table-driven tests for readability          |
-| Irreversible Operations | Stop and verify before destructive git ops  |
-| Branch Management       | Rebase over cherry-pick                     |
-| Merge Strategy          | Merge commits for releases, squash for PRs  |
-| Release Flow            | Step-by-step release process                |
-| Release Checklist       | Pre-release verification items              |
-| PR and Issue Rules      | No auto-close keywords                      |
-| Issue Labels            | Label meanings and when to change them      |
-| Shell Commands          | Avoid permission check triggers             |
+| Code Review Criteria    | See `docs/CODE_REVIEW.md`                              |
+| Pre-Push Verification   | Run `ruff` and `pytest` before pushing                 |
+| Async/Blocking I/O      | Wrap sync I/O in executor for HA                       |
+| Test Patterns           | Table-driven tests for readability                     |
+| Irreversible Operations | Stop and verify before destructive git ops             |
+| Branch Management       | Rebase over cherry-pick                                |
+| Merge Strategy          | Merge commits for releases, squash for PRs             |
+| Release Flow            | Step-by-step release process                           |
+| Release Checklist       | Pre-release verification items                         |
+| PR and Issue Rules      | No auto-close keywords                                 |
+| Issue Labels            | Label meanings and when to change them                 |
+| Shell Commands          | Avoid permission check triggers                        |
 
 ## Shell Command Generation - Avoid Permission Check Triggers
 
@@ -241,12 +245,14 @@ See `tests/modem_config/test_modem_yaml_validation.py` for reference implementat
 ## Irreversible Operations - STOP and VERIFY
 
 When the user gives explicit constraints (e.g., "without closing the PR", "don't delete X"):
+
 1. **Treat these as HARD BLOCKERS** - not suggestions
 2. **Research/verify the outcome BEFORE executing** - if unsure, ASK first
 3. **If something goes wrong, STOP and ask** - don't try to fix it autonomously
 4. **Never assume** - GitHub branch renames, force pushes, deletions can have cascading effects
 
 Examples of irreversible operations requiring verification:
+
 - Branch renames, deletions, force pushes
 - PR/issue closures
 - Tag deletions
@@ -266,12 +272,14 @@ When applying a fix to multiple feature branches (e.g., v3.11.0 and v3.12.0):
 
 ## Merge Strategy
 
-**Release branches → main: Use merge commits (not squash)**
+### Release branches → main: Use merge commits (not squash)
+
 - Preserves release branch history
 - Child branches rebase cleanly without "skipped commit" noise
 - Shows clear release boundaries in git log
 
-**Small PRs (single feature/fix): Squash merge is fine**
+### Small PRs (single feature/fix): Squash merge is fine
+
 - Creates one clean commit on main
 
 ## Release Flow
@@ -279,24 +287,28 @@ When applying a fix to multiple feature branches (e.g., v3.11.0 and v3.12.0):
 Follow this exact sequence for clean releases:
 
 ### 1. Pre-Release Verification
+
 ```bash
 ruff check .                    # Full project lint
 pytest                          # Full test suite
 ```
 
 ### 2. Dogfood on Local HA
+
 - Ask the user to launch HA via VS Code task ("HA: Start (Fresh)") or `make docker-start`
 - User verifies: integration loads, sensors created, no blocking I/O warnings in logs
 - **Never deploy automatically** — no SSH, no SCP, no remote scripts
 - Fix any issues found, commit to release branch
 
 ### 3. Merge to Main
+
 - Open PR from `feature/vX.Y.Z` → `main`
 - Wait for all CI checks to pass
 - **Use "Create a merge commit"** (not squash)
 - Delete the feature branch after merge
 
 ### 4. Tag the Release
+
 ```bash
 git fetch origin
 git tag vX.Y.Z origin/main
@@ -304,7 +316,9 @@ git push origin vX.Y.Z
 ```
 
 ### 5. Rebase Child Branches
+
 If a child branch exists (e.g., v3.12 while releasing v3.11):
+
 ```bash
 git checkout main && git pull origin main
 git checkout feature/vX.Y+1.Z
@@ -313,6 +327,7 @@ git push --force-with-lease
 ```
 
 ### 6. Post-Release
+
 - Update release plan status
 - Add journal entry for significant releases
 - Close related GitHub issues
@@ -329,6 +344,7 @@ git push --force-with-lease
 **NEVER manually edit version numbers. ALWAYS use `scripts/release.py`.**
 
 **Tool version bump process (quarterly, at start of each release branch):**
+
 1. `pip install --upgrade ruff black mypy` in the local venv
 2. Update pinned versions in `.github/workflows/tests.yml` lint job
 3. Run `ruff check . && black --check . && mypy . --config-file=mypy.ini` locally
@@ -337,6 +353,7 @@ git push --force-with-lease
 ## PR and Issue Rules
 
 **NEVER use "Closes #X", "Fixes #X", or similar auto-close keywords.**
+
 - This applies to **both PR bodies AND commit messages**
 - GitHub scans all commit messages in a merge — a `Fixes #X` buried in any commit on the branch will auto-close the issue when merged to main
 - Users should close their own tickets after confirming fixes work
