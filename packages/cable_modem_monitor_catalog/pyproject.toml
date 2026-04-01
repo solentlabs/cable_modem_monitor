@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "solentlabs-cable-modem-monitor-catalog"
-version = "3.14.0-alpha.6"
+version = "3.14.0-alpha.7"
 description = "Cable Modem Monitor Catalog — modem config files and parser overrides"
 readme = "README.md"
 requires-python = ">=3.12"
